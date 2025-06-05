@@ -113,9 +113,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             </TabsList>
 
             <TabsContent value='extension' className='space-y-4'>
-              <div className='text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800'>
+              <div className='text-center p-4 rounded-lg bg-card'>
                 <Shield className='w-12 h-12 mx-auto mb-3 text-primary' />
-                <p className='text-sm text-gray-600 dark:text-gray-300 mb-4'>
+                <p className='text-sm mb-4'>
                   Login with one click using the browser extension
                 </p>
                 <Button
@@ -138,13 +138,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     id='nsec'
                     value={nsec}
                     onChange={(e) => setNsec(e.target.value)}
-                    className='rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary'
+                    className='rounded-lg focus-visible:ring-primary'
                     placeholder='nsec1...'
                   />
                 </div>
 
                 <div className='text-center'>
-                  <p className='text-sm mb-2 text-gray-600 dark:text-gray-400'>Or upload a key file</p>
+                  <p className='text-sm mb-2'>Or upload a key file</p>
                   <input
                     type='file'
                     accept='.txt'
@@ -153,8 +153,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     onChange={handleFileUpload}
                   />
                   <Button
-                    variant='outline'
-                    className='w-full dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700'
+                    variant='secondary'
+                    className='w-full'
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className='w-4 h-4 mr-2' />

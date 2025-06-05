@@ -1,30 +1,26 @@
-// NOTE: This file should normally not be modified unless you are adding a new provider.
-// To add new routes, edit the AppRouter.tsx file.
-
-import { Suspense } from 'react';
-import NostrProvider from '@/components/NostrProvider'
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { AppRouter } from "./AppRouter";
+import NostrProvider from '@/components/NostrProvider';
 import { NostrLoginProvider } from '@nostrify/react/login';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Suspense } from 'react';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
-import AppRouter from './AppRouter';
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute
+      staleTime: 60000,
       gcTime: Infinity,
     },
   },
 });
 
 const defaultConfig: AppConfig = {
-  theme: "light",
-  relayUrl: "wss://relay.nostr.band",
+  theme: "dark",
+  relayUrl: "wss://haven.slidestr.net",
 };
 
 const presetRelays = [
@@ -32,26 +28,25 @@ const presetRelays = [
   { url: 'wss://relay.nostr.band', name: 'Nostr.Band' },
   { url: 'wss://relay.damus.io', name: 'Damus' },
   { url: 'wss://relay.primal.net', name: 'Primal' },
+  { url: 'wss://haven.slidestr.net', name: 'Haven' },
 ];
 
 export function App() {
   return (
-    <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
-      <QueryClientProvider client={queryClient}>
-        <NostrLoginProvider storageKey='nostr:login'>
-          <NostrProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Suspense>
-                <AppRouter />
-              </Suspense>
-            </TooltipProvider>
-          </NostrProvider>
-        </NostrLoginProvider>
-      </QueryClientProvider>
-    </AppProvider>
+    <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
+      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
+        <QueryClientProvider client={queryClient}>
+          <NostrLoginProvider storageKey='nostr:login'>
+            <NostrProvider>
+              <TooltipProvider>
+                <Suspense>
+                  <AppRouter />
+                </Suspense>
+              </TooltipProvider>
+            </NostrProvider>
+          </NostrLoginProvider>
+        </QueryClientProvider>
+      </AppProvider>
+    </ThemeProvider>
   );
 }
-
-export default App;

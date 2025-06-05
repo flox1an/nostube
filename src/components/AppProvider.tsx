@@ -48,8 +48,9 @@ export function AppProvider(props: AppProviderProps) {
  * Hook to apply theme changes to the document root
  */
 function useApplyTheme(theme: Theme) {
-  useEffect(() => {
-    const root = window.document.documentElement;
+  useEffect(() => { 
+    const root = window.document.getElementById('root');
+    if (!root) return;
 
     root.classList.remove('light', 'dark');
 

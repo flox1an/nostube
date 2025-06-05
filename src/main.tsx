@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client'
-
-import App from './App.tsx'
+import { App } from './App.tsx'
 import './index.css'
 
 // FIXME: a custom font should be used. Eg:

@@ -1,26 +1,18 @@
-import path from "node:path";
+import path from "path"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
 
-import react from "@vitejs/plugin-react-swc";
-import { defineConfig } from "vitest/config";
-
-// https://vitejs.dev/config/
-export default defineConfig(() => ({
+// https://vite.dev/config/
+export default defineConfig({
   server: {
     host: "::",
     port: 8080,
   },
-  plugins: [react()],
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    onConsoleLog(log) {
-      return !log.includes("React Router Future Flag Warning");
-    },
-  },
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+})

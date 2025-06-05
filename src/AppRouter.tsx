@@ -1,19 +1,34 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { ScrollToTop } from "./components/ScrollToTop";
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { MainLayout } from '@/components/MainLayout';
+import { HomePage } from '@/pages/HomePage';
+import { VideoPage } from '@/pages/VideoPage';
+import { UploadPage } from '@/pages/UploadPage';
+import NotFound from '@/pages/NotFound';
 
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+const router = createBrowserRouter([
+  {
+    element: <MainLayout />,
+    children: [
+      {
+        path: '/',
+        element: <HomePage />,
+      },
+      {
+        path: '/video/:id',
+        element: <VideoPage />,
+      },
+      {
+        path: '/upload',
+        element: <UploadPage />,
+      },
+      {
+        path: '*',
+        element: <NotFound />,
+      },
+    ],
+  },
+]);
 
 export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }
-export default AppRouter;

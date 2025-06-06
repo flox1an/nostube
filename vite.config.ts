@@ -15,4 +15,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      // Disable native modules for Vercel deployment
+      external: ['@rollup/rollup-linux-x64-gnu'],
+    },
+  },
 })

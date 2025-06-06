@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthor } from "@/hooks/useAuthor";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistance } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/hooks/useAppContext";
+import { useEffect } from "react";
 
 interface VideoData {
   id: string;
@@ -89,7 +90,11 @@ export function VideoPage() {
 
   const author = useAuthor(video?.pubkey || "");
   const metadata = author.data?.metadata;
-  const authorName = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8);
+  const authorName = metadata?.name || video?.pubkey?.slice(0, 8);
+
+  useEffect(() => {
+    console.log(video);
+  }, [video]);
 
   if (!video) {
     return <div>Video not found</div>;
@@ -113,7 +118,10 @@ export function VideoPage() {
                 <h1 className="text-2xl font-bold">{video.title}</h1>
 
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
+                  <Link
+                    to={`/author/${video.pubkey}`}
+                    className="flex items-center gap-4 hover:bg-accent p-2 rounded-lg transition-colors"
+                  >
                     <Avatar>
                       <AvatarImage src={metadata?.picture} />
                       <AvatarFallback>{authorName[0]}</AvatarFallback>
@@ -128,7 +136,7 @@ export function VideoPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   <div className="flex items-center gap-2">
                     <ButtonWithReactions
@@ -160,9 +168,7 @@ export function VideoPage() {
                   </div>
                 )}
 
-                <div className="whitespace-pre-wrap break-all">
-                  {video.description}
-                </div>
+                <div className="whitespace-pre-wrap">{video.description}</div>
               </div>
             </CardHeader>
           </Card>

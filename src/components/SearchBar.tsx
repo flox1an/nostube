@@ -43,12 +43,12 @@ export function SearchBar({ allTags, onSearch, onTagsChange, className }: Search
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="hidden md:flex gap-2 items-center justify-center">
+        <div className="relative flex-1 max-w-[20em]">
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 "
             placeholder="Search videos..."
           />
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -63,12 +63,14 @@ export function SearchBar({ allTags, onSearch, onTagsChange, className }: Search
             </Button>
           )}
         </div>
+        {/*
         <Button
           variant="outline"
           onClick={() => setShowTagMenu(!showTagMenu)}
         >
           Filter Tags
         </Button>
+        */}
       </div>
 
       {showTagMenu && (

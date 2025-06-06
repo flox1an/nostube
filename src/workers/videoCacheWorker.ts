@@ -19,7 +19,9 @@ const pool = new SimplePool();
 const BATCH_SIZE = 50;
 let isLoading = false;
 let hasMoreVideos = true;
-let lastTimestamp: number | undefined;
+
+// Track last timestamp per relay
+const relayTimestamps = new Map<string, number>();
 
 // Relay URLs - can be configured via message
 let relayUrls = [
@@ -75,27 +77,42 @@ function processEvents(events: NostrEvent[]): VideoCache[] {
 
 async function loadVideoBatch(): Promise<boolean> {
   try {
-    const filter = {
-      kinds: [34235],
-      limit: BATCH_SIZE,
-      ...(lastTimestamp ? { until: lastTimestamp } : {}),
-    };
-    console.log("filter", filter);
+    // Query each relay separately to handle pagination per relay
+    const results = await Promise.all(
+      relayUrls.map(async (relayUrl) => {
+        const lastTimestamp = relayTimestamps.get(relayUrl);
+        const filter = {
+          kinds: [34235,34236,21,22],
+          limit: BATCH_SIZE,
+          ...(lastTimestamp ? { until: lastTimestamp } : {}),
+        };
 
-    const events = await pool.querySync(relayUrls, filter);
+        const events = await pool.querySync([relayUrl], filter);
+        
+        if (events.length > 0) {
+          // Update last timestamp for this relay
+          const minTimestamp = Math.min(...events.map((e) => e.created_at));
+          relayTimestamps.set(relayUrl, minTimestamp);
+        }
 
-    console.log("events", events.length);
-    if (events.length === 0) {
+        return events;
+      })
+    );
+
+    // Flatten and deduplicate events from all relays
+    const allEvents = results.flat();
+    const uniqueEvents = Array.from(
+      new Map(allEvents.map((event) => [event.id, event])).values()
+    );
+
+    if (uniqueEvents.length === 0) {
       hasMoreVideos = false;
       return false;
     }
 
-    // Update last timestamp for next batch
-    lastTimestamp = Math.min(...events.map((e) => e.created_at));
-
     // Process and add new videos
-    const newVideos = processEvents(events);
-
+    const newVideos = processEvents(uniqueEvents);
+    
     // Filter out duplicates based on id
     const existingIds = new Set(videos.map((v) => v.id));
     const uniqueNewVideos = newVideos.filter((v) => !existingIds.has(v.id));
@@ -108,15 +125,21 @@ async function loadVideoBatch(): Promise<boolean> {
       video.tags.forEach((tag) => allTags.add(tag));
     });
 
+    // Check if any relay still has more events
+    const hasMore = relayUrls.some((relayUrl) => {
+      const lastTimestamp = relayTimestamps.get(relayUrl);
+      return lastTimestamp !== undefined;
+    });
+
     // Notify about progress
     self.postMessage({
       type: "LOAD_PROGRESS",
       count: videos.length,
-      hasMore: events.length > 0,
+      hasMore,
       tags: Array.from(allTags),
     });
 
-    return events.length > 0;
+    return hasMore;
   } catch (error) {
     console.error("Error loading videos:", error);
     return false;
@@ -125,9 +148,9 @@ async function loadVideoBatch(): Promise<boolean> {
 
 async function startLoading() {
   if (isLoading) return;
-
+  
   isLoading = true;
-  lastTimestamp = undefined;
+  relayTimestamps.clear();
 
   await loadVideoBatch();
 
@@ -161,10 +184,6 @@ self.onmessage = async (e: MessageEvent) => {
       if (!isLoading && hasMoreVideos) {
         await loadVideoBatch();
       }
-      self.postMessage({
-        type: "SEARCH_RESULTS",
-        results: videos,
-      });
       break;
 
     case "SEARCH":
@@ -206,7 +225,7 @@ self.onmessage = async (e: MessageEvent) => {
 
     case "CLEAR_CACHE":
       videos = [];
-      lastTimestamp = undefined;
+      relayTimestamps.clear();
       hasMoreVideos = true;
       await startLoading();
       break;

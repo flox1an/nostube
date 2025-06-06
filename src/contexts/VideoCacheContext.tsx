@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 
 interface VideoCache {
@@ -68,7 +68,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
           break;
         case 'LOAD_COMPLETE':
           setTotalVideos(count);
-          setHasMore(false);
+          //setHasMore(false);
           setIsLoading(false);
           break;
       }
@@ -99,23 +99,23 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     }
   }, [inView, isLoading, hasMore]);
 
-  const searchVideos = (query: string) => {
+  const searchVideos = useCallback((query: string) => {
     worker.current?.postMessage({
       type: 'SEARCH',
       data: query,
     });
-  };
+  }, []);
 
-  const filterByTags = (tags: string[]) => {
+  const filterByTags = useCallback((tags: string[]) => {
     worker.current?.postMessage({
       type: 'FILTER_TAGS',
       data: tags,
     });
-  };
+  }, []);
 
-  const clearCache = () => {
+  const clearCache = useCallback(() => {
     worker.current?.postMessage({ type: 'CLEAR_CACHE' });
-  };
+  }, []);
 
   const value = {
     videos,

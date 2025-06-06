@@ -39,6 +39,7 @@ export function VideoCard({ video, hideAuthor }: VideoCardProps) {
         <Link to={`/video/${video.identifier}`}>
           <div className="relative">
             <img 
+              loading="lazy"
               src={video.thumb} 
               alt={video.title}
               className="w-full aspect-video object-cover"

@@ -21,9 +21,9 @@ export function SearchBar({ allTags, onSearch, onTagsChange, className }: Search
   const [showTagMenu, setShowTagMenu] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  useEffect(() => {
-    onSearch(debouncedSearch);
-  }, [debouncedSearch, onSearch]);
+    useEffect(() => {
+      onSearch(debouncedSearch);
+    }, [debouncedSearch, onSearch]);
 
   const toggleTag = (tag: string) => {
     const newTags = selectedTags.includes(tag)

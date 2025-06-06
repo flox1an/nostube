@@ -1,4 +1,4 @@
-import { SimplePool, Relay } from "nostr-tools";
+import { SimplePool } from "nostr-tools";
 import type { NostrEvent } from "@nostrify/nostrify";
 
 interface VideoCache {
@@ -80,9 +80,11 @@ async function loadVideoBatch(): Promise<boolean> {
       limit: BATCH_SIZE,
       ...(lastTimestamp ? { until: lastTimestamp } : {}),
     };
+    console.log("filter", filter);
 
     const events = await pool.querySync(relayUrls, filter);
 
+    console.log("events", events.length);
     if (events.length === 0) {
       hasMoreVideos = false;
       return false;
@@ -110,11 +112,11 @@ async function loadVideoBatch(): Promise<boolean> {
     self.postMessage({
       type: "LOAD_PROGRESS",
       count: videos.length,
-      hasMore: events.length === BATCH_SIZE,
+      hasMore: events.length > 0,
       tags: Array.from(allTags),
     });
 
-    return events.length === BATCH_SIZE;
+    return events.length > 0;
   } catch (error) {
     console.error("Error loading videos:", error);
     return false;
@@ -125,15 +127,9 @@ async function startLoading() {
   if (isLoading) return;
 
   isLoading = true;
-  hasMoreVideos = true;
   lastTimestamp = undefined;
 
-  while (hasMoreVideos) {
-    hasMoreVideos = await loadVideoBatch();
-
-    // Small delay to prevent overwhelming the relays
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
+  await loadVideoBatch();
 
   isLoading = false;
   self.postMessage({ type: "LOAD_COMPLETE", count: videos.length });
@@ -142,6 +138,10 @@ async function startLoading() {
 // Handle messages from main thread
 self.onmessage = async (e: MessageEvent) => {
   const { type, data } = e.data;
+  let query: string;
+  let tags: string[];
+  let results: VideoCache[];
+  let allTags: Set<string>;
 
   switch (type) {
     case "INIT":
@@ -149,6 +149,10 @@ self.onmessage = async (e: MessageEvent) => {
         relayUrls = data.relayUrls;
       }
       await startLoading();
+      self.postMessage({
+        type: "SEARCH_RESULTS",
+        results: videos,
+      });
       break;
 
     case "LOAD_MORE":
@@ -157,11 +161,15 @@ self.onmessage = async (e: MessageEvent) => {
       if (!isLoading && hasMoreVideos) {
         await loadVideoBatch();
       }
+      self.postMessage({
+        type: "SEARCH_RESULTS",
+        results: videos,
+      });
       break;
 
     case "SEARCH":
-      const query = data.toLowerCase();
-      const results = query
+      query = data.toLowerCase();
+      results = query
         ? videos.filter((video) => video.searchText.includes(query))
         : videos;
 
@@ -172,8 +180,8 @@ self.onmessage = async (e: MessageEvent) => {
       break;
 
     case "FILTER_TAGS":
-      const tags = data as string[];
-      const tagResults = tags.length
+      tags = data as string[];
+      results = tags.length
         ? videos.filter((video) =>
             tags.every((tag) => video.tags.includes(tag))
           )
@@ -181,12 +189,12 @@ self.onmessage = async (e: MessageEvent) => {
 
       self.postMessage({
         type: "SEARCH_RESULTS",
-        results: tagResults,
+        results: results,
       });
       break;
 
     case "GET_ALL_TAGS":
-      const allTags = new Set<string>();
+      allTags = new Set<string>();
       videos.forEach((video) => {
         video.tags.forEach((tag) => allTags.add(tag));
       });

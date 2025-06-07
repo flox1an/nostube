@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
+import 'media-chrome';
 
 interface VideoPlayerProps {
   url: string;
@@ -9,7 +10,7 @@ interface VideoPlayerProps {
   className?: string;
 }
 
-export function VideoPlayer({ url, mime, poster, onTimeUpdate, className }: VideoPlayerProps) {
+export function VideoPlayer({ url, mime, poster, onTimeUpdate }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -34,17 +35,29 @@ export function VideoPlayer({ url, mime, poster, onTimeUpdate, className }: Vide
   }, [url, mime]);
 
   return (
-    <video
-      ref={videoRef}
-      className={className}
-      controls
-      autoPlay
-      poster={poster}
-      onTimeUpdate={() => {
-        if (onTimeUpdate && videoRef.current) {
-          onTimeUpdate(videoRef.current.currentTime);
-        }
-      }}
-    />
+    <media-controller >
+        <video
+        className='self-center'
+          ref={videoRef}
+          slot="media"
+          autoPlay
+          poster={poster}
+          onTimeUpdate={() => {
+            if (onTimeUpdate && videoRef.current) {
+              onTimeUpdate(videoRef.current.currentTime);
+            }
+          }}
+        />
+        <media-control-bar>
+          <media-play-button />
+          <media-time-display />
+          <media-progress-bar />
+          <media-time-range />
+          <media-mute-button />
+          <media-volume-range />
+          <media-pip-button />
+          <media-fullscreen-button />
+        </media-control-bar>
+      </media-controller>
   );
 }

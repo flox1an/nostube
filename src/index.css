@@ -72,7 +72,6 @@
   --sidebar-ring: oklch(0.541 0.281 293.009);
 }
 
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -117,5 +116,21 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  media-controller {
+    width: 100%;
+  }
+
+  media-controller video {
+    max-height: 80dvh;
+  }
+
+  media-controller:fullscreen video {
+    max-height: 100dvh;
+  }
+
+  media-control-bar * {
+    padding: 6px;
   }
 }

@@ -16,6 +16,7 @@ import { useEffect } from "react";
 import { processEvent, VideoEvent } from "@/utils/video-event";
 import { nip19 } from "nostr-tools";
 import { EventPointer } from "nostr-tools/nip19";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function formatFileSize(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -35,7 +36,7 @@ export function VideoPage() {
   const { nostr } = useNostr();
   const { id, relays, author, kind } = nip19.decode(nevent ?? "").data as EventPointer;
 
-  const { data: video } = useQuery<VideoEvent | null>({
+  const { data: video, isLoading } = useQuery<VideoEvent | null>({
     queryKey: ["video", nevent],
     queryFn: async ({ signal }) => {
       if (!nevent) return null;
@@ -54,37 +55,84 @@ export function VideoPage() {
       if (!events.length) return null;
 
       const event = events[0];
-      console.log(event);
-      return processEvent(event, relays || []);
-      /*{
-        id: event.id,
-        title: event.tags.find((t) => t[0] === "title")?.[1] || "",
-        description:
-          event.tags.find((t) => t[0] === "description")?.[1] ||
-          event.tags.find((t) => t[0] === "summary")?.[1] ||
-          event.content,
-        url: event.tags.find((t) => t[0] === "url")?.[1] || "",
-        mime: event.tags.find((t) => t[0] === "m")?.[1] || "",
-        thumb: event.tags.find((t) => t[0] === "thumb")?.[1] || "",
-        duration: parseInt(
-          event.tags.find((t) => t[0] === "duration")?.[1] || "0"
-        ),
-        dimensions: event.tags.find((t) => t[0] === "dim")?.[1],
-        size: parseInt(event.tags.find((t) => t[0] === "size")?.[1] || "0"),
-        tags: event.tags.filter((t) => t[0] === "t").map((t) => t[1]),
-        pubkey: event.pubkey,
-        created_at: event.created_at,
-      };*/
+      const processedEvent = processEvent(event, relays || []);
+      if (!processedEvent) return null;
+      return processedEvent;
     },
   });
 
   const authorMeta = useAuthor(video?.pubkey || "");
   const metadata = authorMeta.data?.metadata;
-  const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8);
+  const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || "";
 
   useEffect(() => {
     console.log(video);
   }, [video]);
+
+  // Scroll to top when video is loaded
+  useEffect(() => {
+    if (video) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [video]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex gap-6 flex-col md:flex-row">
+          <div className="flex-1">
+            <Card>
+              <CardContent className="p-0">
+                <Skeleton className="w-full aspect-video" />
+              </CardContent>
+              <CardHeader>
+                <div className="flex flex-col gap-4">
+                  <Skeleton className="h-8 w-3/4" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/4" />
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-6 w-16" />
+                      ))}
+                    </div>
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+            <div className="mt-6">
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+          <div className="w-80">
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="w-full aspect-video" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!video) {
     return <div>Video not found</div>;
@@ -97,9 +145,9 @@ export function VideoPage() {
           <Card>
             <CardContent className="p-0">
               <VideoPlayer
-                url={video.url}
-                mime={video.mime}
-                poster={video.thumb}
+                url={video.url || ""}
+                mime={video.mimeType || ""}
+                poster={video.thumb || ""}
                 className="w-full aspect-video"
               />
             </CardContent>
@@ -139,10 +187,10 @@ export function VideoPage() {
 
                 <Separator />
 
-                {(video.dimensions || video.size > 0) && (
+                {(video.dimensions || (video.size && video.size > 0)) && (
                   <div className="text-sm text-muted-foreground space-x-4">
                     {video.dimensions && <span>{video.dimensions}</span>}
-                    {video.size > 0 && (
+                    {video.size && video.size > 0 && (
                       <span>{formatFileSize(video.size)}</span>
                     )}
                   </div>

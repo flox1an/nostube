@@ -20,6 +20,8 @@ export interface VideoEvent {
   link: string;
 }
 
+const videoThumbService = 'https://video-thumb.apps2.slidestr.net'
+
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(
@@ -74,7 +76,7 @@ export function processEvent(
       identifier,
       title: alt,
       description: event.content || "",
-      thumb: image || `http://localhost:3000/${url}` || blurHashToDataURL(blurhash) || "",
+      thumb: image || `${videoThumbService}/${url}` || blurHashToDataURL(blurhash) || "",
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration: 0, // Duration not available in new format
@@ -115,7 +117,7 @@ export function processEvent(
       identifier,
       title,
       description,
-      thumb: thumb || `http://localhost:3000/${url}`,
+      thumb: thumb || `${videoThumbService}/${url}`,
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,

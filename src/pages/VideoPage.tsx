@@ -17,6 +17,7 @@ import { processEvent, VideoEvent } from "@/utils/video-event";
 import { nip19 } from "nostr-tools";
 import { EventPointer } from "nostr-tools/nip19";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CollapsibleText } from "@/components/ui/collapsible-text";
 
 function formatFileSize(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -127,20 +128,20 @@ export function VideoPage() {
             <Card>
               <CardContent className="p-0">
                 <VideoPlayer
-                  url={video.url || ""}
-                  mime={video.mimeType || ""}
-                  poster={video.thumb || ""}
+                  url={video?.url || ""}
+                  mime={video?.mimeType || ""}
+                  poster={video?.thumb || ""}
                   loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full aspect-video"
                 />
               </CardContent>
               <CardHeader>
                 <div className="flex flex-col gap-4">
-                  <h1 className="text-2xl font-bold">{video.title}</h1>
+                  <h1 className="text-2xl font-bold">{video?.title}</h1>
 
                   <div className="flex items-start justify-between">
                     <Link
-                      to={`/author/${nip19.npubEncode(video.pubkey)}`}
+                      to={`/author/${nip19.npubEncode(video?.pubkey || "")}`}
                       className="flex items-center gap-4 hover:bg-accent p-2 rounded-lg transition-colors"
                     >
                       <Avatar>
@@ -150,7 +151,7 @@ export function VideoPage() {
                       <div>
                         <div className="font-semibold">{authorName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatDistance(
+                          {video?.created_at && formatDistance(
                             new Date(video.created_at * 1000),
                             new Date(),
                             { addSuffix: true }
@@ -192,9 +193,12 @@ export function VideoPage() {
                     </div>
                   )}
 
-                  <div className="whitespace-pre-wrap">
-                    {video?.description}
-                  </div>
+                  {video?.description && (
+                    <CollapsibleText 
+                      text={video.description} 
+                      className="text-muted-foreground"
+                    />
+                  )}
                 </div>
               </CardHeader>
             </Card>

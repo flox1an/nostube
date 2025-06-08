@@ -9,7 +9,7 @@ const pool = new SimplePool();
 const BATCH_SIZE = 50;
 let isLoading = false;
 let hasMoreVideos = true;
-let selectedVideoTypes: VideoType = 'all';
+let selectedVideoTypes: VideoType = 'videos';
 
 // Track last timestamp per relay
 const relayTimestamps = new Map<string, number>();

@@ -4,13 +4,14 @@ import 'media-chrome';
 
 interface VideoPlayerProps {
   url: string;
+  loop?: boolean;
   mime: string;
   poster?: string;
   onTimeUpdate?: (time: number) => void;
   className?: string;
 }
 
-export function VideoPlayer({ url, mime, poster, onTimeUpdate }: VideoPlayerProps) {
+export function VideoPlayer({ url, mime, poster, loop = false, onTimeUpdate }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function VideoPlayer({ url, mime, poster, onTimeUpdate }: VideoPlayerProp
           ref={videoRef}
           slot="media"
           autoPlay
+          loop={loop}
           poster={poster}
           onTimeUpdate={() => {
             if (onTimeUpdate && videoRef.current) {

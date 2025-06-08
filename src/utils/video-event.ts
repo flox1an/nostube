@@ -20,7 +20,7 @@ export interface VideoEvent {
   link: string;
 }
 
-const videoThumbService = 'https://video-thumb.apps2.slidestr.net'
+const videoThumbService = "https://video-thumb.apps2.slidestr.net";
 
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {
@@ -29,15 +29,19 @@ function createSearchIndex(video: VideoEvent): string {
   )}`.toLowerCase();
 }
 // Process Nostr events into cache entries
-export function processEvents(events: NostrEvent[], relays: string[]): VideoEvent[] {
+export function processEvents(
+  events: NostrEvent[],
+  relays: string[]
+): VideoEvent[] {
   return events
     .map((event) => processEvent(event, relays))
     .filter(
       (video): video is VideoEvent =>
         video !== undefined &&
+        Boolean(video.id) &&
         Boolean(video.url) &&
-       // Boolean(video.thumb || video.description) &&
-        Boolean(video.id)
+        video?.url !== undefined &&
+        video.url.indexOf("youtube.com") < 0
     );
 }
 
@@ -63,7 +67,6 @@ export function processEvent(
     const image = imetaValues.get("image");
     const thumb = imetaValues.get("thumb");
 
-    
     const alt = imetaValues.get("alt") || event.content || "";
     const blurhash = imetaValues.get("blurhash");
     const identifier = event.tags.find((t) => t[0] === "d")?.[1] || "";
@@ -78,9 +81,14 @@ export function processEvent(
       id: event.id,
       kind: event.kind,
       identifier,
-      title: event.tags.find((t) => t[0] === "title")?.[1]  || alt,
+      title: event.tags.find((t) => t[0] === "title")?.[1] || alt,
       description: event.content || "",
-      thumb: image || thumb || `${videoThumbService}/${url}` || blurHashToDataURL(blurhash) || "",
+      thumb:
+        image ||
+        thumb ||
+        `${videoThumbService}/${url}` ||
+        blurHashToDataURL(blurhash) ||
+        "",
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,
@@ -131,8 +139,8 @@ export function processEvent(
       url,
       mimeType,
       dimensions: event.tags.find((t) => t[0] === "dim")?.[1],
-      size: parseInt(event.tags.find((t) => t[0] === "size")?.[1] || "0"),     
-       link: nip19.neventEncode({
+      size: parseInt(event.tags.find((t) => t[0] === "size")?.[1] || "0"),
+      link: nip19.neventEncode({
         kind: event.kind,
         id: event.id,
         relays,

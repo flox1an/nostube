@@ -130,6 +130,7 @@ export function VideoPage() {
                   url={video.url || ""}
                   mime={video.mimeType || ""}
                   poster={video.thumb || ""}
+                  loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full aspect-video"
                 />
               </CardContent>
@@ -206,11 +207,11 @@ export function VideoPage() {
           )}
         </div>
 
-       
-          <div className="w-full lg:w-80">
-          {video && (<VideoSuggestions currentVideoId={video.id} relays={relays || []} />     )}
-          </div>
-   
+        <div className="w-full lg:w-80">
+          {video && (
+            <VideoSuggestions currentVideoId={video.id} relays={relays || []} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export function DisclaimerBanner() {
   if (!user) return null;
 
   return (
-    <div className="p-4">
+    <div className="p-4 container mx-auto">
       <Alert variant="destructive" className="flex p-1 items-center">
         <AlertDescription className="px-4 grow">
           This is EXPERIMENTAL. Upload does NOT work yet. Following will wipe

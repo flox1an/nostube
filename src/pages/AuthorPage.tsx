@@ -110,7 +110,12 @@ export function AuthorPage() {
         { signal, relays }
       );
 
-      return processEvents(events, relays)
+      const allEvents = events.flat();
+      const uniqueEvents = Array.from(
+        new Map(allEvents.map((event) => [event.id, event])).values()
+      );
+
+      return processEvents(Array.from(uniqueEvents.values()), relays);
     },
     enabled: !!pubkey,
   });

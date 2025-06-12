@@ -19,7 +19,6 @@ let relayUrls = [
   "wss://relay.nostr.band",
   "wss://nos.lol",
   "wss://relay.damus.io",
-  "wss://haven.slidestr.net"
 ];
 
 async function loadVideoBatch(): Promise<boolean> {

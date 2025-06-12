@@ -73,7 +73,6 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
           'wss://relay.nostr.band',
           'wss://nos.lol',
           'wss://relay.damus.io',
-          "wss://haven.slidestr.net"
 
         ],
       },

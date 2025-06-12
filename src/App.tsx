@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 
 const defaultConfig: AppConfig = {
   theme: "dark",
-  relayUrl: "wss://haven.slidestr.net",
+  relayUrl: "wss://relay.damus.io",
   videoType: "videos",
 };
 
@@ -31,7 +31,6 @@ const presetRelays = [
   { url: 'wss://relay.damus.io', name: 'Damus' },
   { url: 'wss://relay.primal.net', name: 'Primal' },
   { url: 'wss://nos.lol/', name: 'nos.lol' },
-  { url: "wss://haven.slidestr.net", name: 'haven' },
 ];
 
 export function App() {

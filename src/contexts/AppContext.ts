@@ -23,6 +23,8 @@ export interface AppContextType {
   isSidebarOpen: boolean;
   /** Toggle the sidebar open/close state */
   toggleSidebar: () => void;
+  /** Public keys of followed authors */
+  followedPubkeys: string[];
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

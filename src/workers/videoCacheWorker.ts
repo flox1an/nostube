@@ -1,4 +1,4 @@
-import { SimplePool } from "nostr-tools";
+import { SimplePool, Filter } from "nostr-tools";
 import { VideoEvent, processEvents } from "../utils/video-event";
 import { getKindsForType, type VideoType } from "../lib/video-types";
 
@@ -9,7 +9,8 @@ const pool = new SimplePool();
 const BATCH_SIZE = 50;
 let isLoading = false;
 let hasMoreVideos = true;
-let selectedVideoTypes: VideoType = 'videos';
+let selectedVideoTypes: VideoType = 'all';
+let followedAuthorsPubkeys: string[] = [];
 
 // Track last timestamp per relay
 const relayTimestamps = new Map<string, number>();
@@ -19,6 +20,7 @@ let relayUrls = [
   "wss://relay.nostr.band",
   "wss://nos.lol",
   "wss://relay.damus.io",
+  "wss://haven.slidestr.net"
 ];
 
 async function loadVideoBatch(): Promise<boolean> {
@@ -28,10 +30,11 @@ async function loadVideoBatch(): Promise<boolean> {
     const results = await Promise.all(
       relayUrls.map(async (relayUrl) => {
         const lastTimestamp = relayTimestamps.get(relayUrl);
-        const filter = {
+        const filter: Filter = {
           kinds: getKindsForType(selectedVideoTypes),
           limit: BATCH_SIZE,
           ...(lastTimestamp ? { until: lastTimestamp } : {}),
+          ...(followedAuthorsPubkeys.length > 0 ? { authors: followedAuthorsPubkeys } : {}),
         };
 
         const events = await pool.querySync([relayUrl], filter);
@@ -139,6 +142,9 @@ self.onmessage = async (e: MessageEvent) => {
     case "INIT":
       if (data.relayUrls) {
         relayUrls = data.relayUrls;
+      }
+      if (data.followedPubkeys) {
+        followedAuthorsPubkeys = data.followedPubkeys;
       }
       await startLoading();
       updateQuery();

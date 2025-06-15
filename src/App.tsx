@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 
 const defaultConfig: AppConfig = {
   theme: "dark",
-  relayUrl: "wss://relay.damus.io",
+  relayUrl: "wss://haven.slidestr.net",
   videoType: "videos",
 };
 
@@ -31,15 +31,16 @@ const presetRelays = [
   { url: 'wss://relay.damus.io', name: 'Damus' },
   { url: 'wss://relay.primal.net', name: 'Primal' },
   { url: 'wss://nos.lol/', name: 'nos.lol' },
+  { url: "wss://haven.slidestr.net", name: 'haven' },
 ];
 
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
-      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
-        <QueryClientProvider client={queryClient}>
-          <NostrLoginProvider storageKey='nostr:login'>
-            <NostrProvider>
+      <QueryClientProvider client={queryClient}>
+        <NostrLoginProvider storageKey='nostr:login'>
+          <NostrProvider relayUrl={defaultConfig.relayUrl} presetRelays={presetRelays}>
+            <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
               <VideoCacheProvider>
                 <TooltipProvider>
                   <Suspense>
@@ -47,10 +48,10 @@ export function App() {
                   </Suspense>
                 </TooltipProvider>
               </VideoCacheProvider>
-            </NostrProvider>
-          </NostrLoginProvider>
-        </QueryClientProvider>
-      </AppProvider>
+            </AppProvider>
+          </NostrProvider>
+        </NostrLoginProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

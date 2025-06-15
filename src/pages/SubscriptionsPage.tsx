@@ -1,44 +1,29 @@
+import { useEffect } from 'react';
 import { useVideoCache } from '@/contexts/VideoCacheContext';
-import { Loader2 } from 'lucide-react';
-import { VideoTypeSelection } from '@/components/VideoTypeSelection';
 import { useAppContext } from '@/hooks/useAppContext';
 import { VideoGrid } from '@/components/VideoGrid';
+import { Loader2 } from 'lucide-react';
 
-export function HomePage() {
-  const { config, updateConfig } = useAppContext();
-  const { 
-    videos,  
-    isLoading, 
-    hasMore,
-    totalVideos,
-    loadMoreRef,
-    setVideoTypes,
-  } = useVideoCache();
+export function SubscriptionsPage() {
+  const { setFilterByFollowedAuthors, totalVideos, videos, isLoading, hasMore, loadMoreRef } = useVideoCache();
+  const { config } = useAppContext();
 
-  const handleTypeChange = (value: 'all' | 'shorts' | 'videos') => {
-    updateConfig(current => ({ ...current, videoType: value }));
-    setVideoTypes(value);
-  };
+  useEffect(() => {
+    setFilterByFollowedAuthors(true);
+    return () => {
+      setFilterByFollowedAuthors(false);
+    };
+  }, [setFilterByFollowedAuthors]);
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <VideoTypeSelection 
-          selectedType={config.videoType}
-          onTypeChange={handleTypeChange}
-        />
-
         <div className="text-sm text-muted-foreground">
           {totalVideos} videos loaded
         </div>
       </div>
 
-      <VideoGrid 
-        videos={videos} 
-        videoType={config.videoType} 
-        isLoading={isLoading} 
-        showSkeletons={true} 
-      />
+      <VideoGrid videos={videos} videoType={config.videoType} isLoading={isLoading} showSkeletons={true} />
 
       {/* Infinite scroll trigger */}
       <div 
@@ -54,4 +39,4 @@ export function HomePage() {
       </div>
     </div>
   );
-}
+} 

@@ -6,6 +6,7 @@ import { AuthorPage } from '@/pages/AuthorPage';
 import { UploadPage } from '@/pages/UploadPage';
 import NotFound from '@/pages/NotFound';
 import PlaylistPage from '@/pages/Playlists';
+import { SubscriptionsPage } from '@/pages/SubscriptionsPage';
 
 const router = createBrowserRouter([
   {
@@ -14,6 +15,10 @@ const router = createBrowserRouter([
       {
         path: '/',
         element: <HomePage />,
+      },
+      {
+        path: '/subscriptions',
+        element: <SubscriptionsPage />,
       },
       {
         path: '/video/:nevent',

@@ -1,6 +1,7 @@
 import { VideoEvent } from '@/utils/video-event';
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { useAppContext } from '@/hooks/useAppContext';
 
 type VideoCache = VideoEvent;
 
@@ -15,6 +16,7 @@ interface VideoCacheContextType {
   clearCache: () => void;
   setVideoTypes: (type: 'all' | 'shorts' | 'videos') => void;
   loadMoreRef: (node?: Element | null) => void;
+  setFilterByFollowedAuthors: (enable: boolean) => void;
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined);
@@ -26,6 +28,8 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [totalVideos, setTotalVideos] = useState(0);
+
+  const { config: _config, followedPubkeys } = useAppContext();
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
@@ -73,15 +77,15 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
           'wss://relay.nostr.band',
           'wss://nos.lol',
           'wss://relay.damus.io',
-
         ],
+        followedPubkeys: followedPubkeys,
       },
     });
 
     return () => {
       worker.current?.terminate();
     };
-  }, []);
+  }, [followedPubkeys]);
 
   // Handle infinite loading
   useEffect(() => {
@@ -115,6 +119,13 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
+  const setFilterByFollowedAuthors = useCallback((enable: boolean) => {
+    worker.current?.postMessage({
+      type: 'SET_AUTHORS_FILTER',
+      data: enable,
+    });
+  }, []);
+
   const value = {
     videos,
     allTags,
@@ -126,6 +137,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     clearCache,
     setVideoTypes,
     loadMoreRef,
+    setFilterByFollowedAuthors,
   };
 
   return (

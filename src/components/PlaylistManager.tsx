@@ -164,7 +164,7 @@ export function PlaylistManager() {
       
       <Accordion type="multiple" className="w-full">
         {sortedPlaylists.map((playlist) => (
-          <AccordionItem key={playlist.id} value={playlist.id}>
+          <AccordionItem key={playlist.identifier} value={playlist.identifier}>
             <AccordionTrigger className="hover:no-underline">
               <div className="flex-1 flex items-center justify-between mr-4">
                 <div>
@@ -193,7 +193,7 @@ export function PlaylistManager() {
             <AccordionContent>
               <VideoList
                 videos={playlist.videos}
-                onRemove={(videoId) => removeVideo(playlist.id, videoId)}
+                onRemove={(videoId) => removeVideo(playlist.identifier, videoId)}
               />
             </AccordionContent>
           </AccordionItem>

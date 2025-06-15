@@ -19,6 +19,7 @@ import { EventPointer } from "nostr-tools/nip19";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
+import { useAppContext } from "@/hooks/useAppContext";
 
 function formatFileSize(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -34,10 +35,15 @@ function formatFileSize(bytes: number): string {
 }
 
 export function VideoPage() {
+  const { presetRelays = [] } = useAppContext();
   const { nevent } = useParams<{ nevent: string }>();
   const { nostr } = useNostr();
   const { id, relays, author, kind } = nip19.decode(nevent ?? "")
     .data as EventPointer;
+
+  const fullRelays = [
+    ...new Set([...(relays || []), ...presetRelays.map((r) => r.url)].map(r => r.replace(/\/$/,''))),
+  ];
 
   const { data: video, isLoading } = useQuery<VideoEvent | null>({
     queryKey: ["video", nevent],
@@ -52,7 +58,7 @@ export function VideoPage() {
             ids: [id],
           },
         ],
-        { signal, relays }
+        { signal, relays: fullRelays }
       );
 
       if (!events.length) return null;
@@ -219,7 +225,11 @@ export function VideoPage() {
 
         <div className="w-full lg:w-80">
           {video && (
-            <VideoSuggestions currentVideoId={video.id} relays={relays || []} />
+            <VideoSuggestions
+              currentVideoId={video.id}
+              relays={fullRelays || []}
+              authorPubkey={video.pubkey}
+            />
           )}
         </div>
       </div>

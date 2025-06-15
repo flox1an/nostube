@@ -48,10 +48,10 @@ export function AddToPlaylistButton({ videoId, videoTitle }: AddToPlaylistButton
         description: `Successfully added to "${playlistName}"`,
       });
       setOpen(false);
-    } catch (e) {
+    } catch (error) {
       toast({
         title: 'Error adding to playlist',
-        description: 'Failed to add video to playlist. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to add video to playlist. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -66,7 +66,7 @@ export function AddToPlaylistButton({ videoId, videoTitle }: AddToPlaylistButton
           variant="ghost"
           size="sm"
           className="w-full justify-start"
-          onClick={() => handleAddToPlaylist(playlists[0].id, playlists[0].name)}
+          onClick={() => handleAddToPlaylist(playlists[0].identifier, playlists[0].name)}
           disabled={isAdding}
         >
           {isAdding ? (
@@ -94,9 +94,9 @@ export function AddToPlaylistButton({ videoId, videoTitle }: AddToPlaylistButton
                   const hasVideo = playlist.videos.some(v => v.id === videoId);
                   return (
                     <CommandItem
-                      key={playlist.id}
+                      key={playlist.identifier}
                       disabled={hasVideo || isAdding}
-                      onSelect={() => handleAddToPlaylist(playlist.id, playlist.name)}
+                      onSelect={() => handleAddToPlaylist(playlist.identifier, playlist.name)}
                     >
                       {playlist.name}
                       {hasVideo && <Check className="ml-2 h-4 w-4" />}

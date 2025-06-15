@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import { useAuthor } from "@/hooks/useAuthor";
 import { Card } from "@/components/ui/card";
 import { processEvent, VideoEvent } from "@/utils/video-event";
-import { useAppContext } from "@/hooks/useAppContext";
 import { getKindsForType } from "@/lib/video-types";
+import { NostrEvent } from '@nostrify/nostrify';
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -51,37 +51,66 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
 interface VideoSuggestionsProps {
   currentVideoId?: string;
   relays: string[];
+  authorPubkey?: string;
 }
 
 export function VideoSuggestions({
   currentVideoId,
   relays,
+  authorPubkey,
 }: VideoSuggestionsProps) {
   const { nostr } = useNostr();
-  const { config } = useAppContext();
+  const { data: suggestions = [] } = useQuery<VideoEvent[]>(
+    {
+      queryKey: ["video-suggestions", currentVideoId, authorPubkey],
+      queryFn: async ({ signal }) => {
+        let combinedEvents: NostrEvent[] = [];
+        console.log(["video-suggestions", currentVideoId, authorPubkey]);
 
-  const { data: suggestions = [] } = useQuery<VideoEvent[]>({
-    queryKey: ["video-suggestions", currentVideoId, config.videoType],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query(
-        [
-          {
-            kinds: getKindsForType(config.videoType),
-            limit: 30,
-          },
-        ],
-        { signal, relays }
-      );
+        // 1. Fetch videos from the specific author if provided
+        if (authorPubkey) {
+          const authorEvents = await nostr.query(
+            [
+              {
+                kinds: getKindsForType('all'),
+                authors: [authorPubkey],
+                limit: 15, // Limit author-specific videos
+                
+              },
+            ],
+            { signal: AbortSignal.any([signal, AbortSignal.timeout(500)]), relays }
+          );
+          combinedEvents = combinedEvents.concat(authorEvents);
+        }
 
-      return events
-        .filter((event) => {
-          const identifier = event.tags.find((t) => t[0] === "d")?.[1];
-          return identifier !== currentVideoId;
-        })
-        .map((event) => processEvent(event, relays))
-        .filter((video) => video) as VideoEvent[];
-    },
-  });
+        // 2. Fetch general recent videos
+        const generalEvents = await nostr.query(
+          [
+            {
+              kinds: getKindsForType('all'),
+              limit: 30, // Fetch more to allow for filtering
+            },
+          ],
+          { signal: AbortSignal.any([signal, AbortSignal.timeout(500)]), relays }
+        );
+        combinedEvents = combinedEvents.concat(generalEvents);
+
+        // Process and filter unique videos, excluding the current video
+        const processedVideos: VideoEvent[] = [];
+        const seenIds = new Set<string>();
+
+        for (const event of combinedEvents) {
+          const processed = processEvent(event, relays);
+          if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
+            processedVideos.push(processed);
+            seenIds.add(processed.id);
+          }
+        }
+
+        return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
+      },
+    }
+  );
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */

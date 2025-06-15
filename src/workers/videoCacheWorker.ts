@@ -38,7 +38,7 @@ async function loadVideoBatch(): Promise<boolean> {
           ...(followedAuthorsPubkeys.length > 0 ? { authors: followedAuthorsPubkeys } : {}),
           ...(likedVideoEventIds.length > 0 ? { ids: likedVideoEventIds } : {}),
         };
-
+console.log('filter', filter);
         const events = await pool.querySync([relayUrl], filter);
 
         if (events.length > 0) {
@@ -136,7 +136,7 @@ const updateQuery = () => {
 
 // Handle messages from main thread
 self.onmessage = async (e: MessageEvent) => {
-  const { type, data, videoType, followedPubkeys } = e.data;
+  const { type, data, videoType } = e.data;
 
   let allTags: Set<string>;
 
@@ -145,14 +145,7 @@ self.onmessage = async (e: MessageEvent) => {
       if (data.relayUrls) {
         relayUrls = data.relayUrls;
       }
-      if (data.followedPubkeys) {
-        followedAuthorsPubkeys = data.followedPubkeys;
-      }
-      if (data.likedVideoIds) {
-        likedVideoEventIds = data.likedVideoIds;
-      }
       selectedVideoTypes = videoType;
-      followedAuthorsPubkeys = followedPubkeys || [];
 
       await startLoading();
       updateQuery();
@@ -200,17 +193,13 @@ self.onmessage = async (e: MessageEvent) => {
       videos = [];
       relayTimestamps.clear();
       hasMoreVideos = true;
-      await startLoading();
-      updateQuery();
       break;
 
-    case "SET_AUTHORS_FILTER":
+    case "SET_FOLLOWED_PUBKEYS":
       followedAuthorsPubkeys = data ? data : [];
       videos = [];
       relayTimestamps.clear();
       hasMoreVideos = true;
-      await startLoading();
-      updateQuery();
       break;
 
     case "SET_LIKED_VIDEO_IDS":
@@ -218,8 +207,6 @@ self.onmessage = async (e: MessageEvent) => {
       videos = [];
       relayTimestamps.clear();
       hasMoreVideos = true;
-      await startLoading();
-      updateQuery();
       break;
   }
 };

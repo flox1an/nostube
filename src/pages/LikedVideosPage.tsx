@@ -2,11 +2,17 @@ import { VideoGrid } from "@/components/VideoGrid";
 import { useVideoCache } from "@/contexts/VideoCacheContext";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useLikedEvents } from "@/hooks/useLikedEvents";
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 export function LikedVideosPage() {
-  const { setVideoTypes, setFilterByFollowedAuthors, videos, setLikedVideoIds, initSearch } = useVideoCache();
-  const {  config } = useAppContext();
+  const {
+    setVideoTypes,
+    videos,
+    setLikedVideoIds,
+    setFollowedPubkeys,
+    initSearch,
+  } = useVideoCache();
+  const { config } = useAppContext();
   const { data: likedEventIds = [] } = useLikedEvents();
 
   // This effect ensures that when the LikedVideosPage is mounted,
@@ -15,19 +21,19 @@ export function LikedVideosPage() {
     // First, clear any other filters.
     // Since liked videos are a specific list of IDs, we don't need a video type filter.
     // We also explicitly disable the followed authors filter.
-    setVideoTypes('all'); // Set to 'all' to ensure no kind filtering is applied
-    setFilterByFollowedAuthors(false);
+    setVideoTypes("all"); // Set to 'all' to ensure no kind filtering is applied
+    setFollowedPubkeys([]);
 
     if (likedEventIds.length > 0) {
       setLikedVideoIds(likedEventIds);
       initSearch();
-  
     }
 
     // When navigating away, we might want to reset the filters, but for now,
     // we'll let the next page's useEffect or user interaction handle it.
-  }, [setVideoTypes, setFilterByFollowedAuthors, setLikedVideoIds, likedEventIds, initSearch]);
-
+  }, [
+    likedEventIds
+  ]);
 
   return (
     <div className="p-4">
@@ -35,4 +41,4 @@ export function LikedVideosPage() {
       <VideoGrid videos={videos} videoType={config.videoType} />
     </div>
   );
-} 
+}

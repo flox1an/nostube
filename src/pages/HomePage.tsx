@@ -14,7 +14,9 @@ export function HomePage() {
     totalVideos,
     loadMoreRef,
     setVideoTypes,
-    initSearch
+    initSearch,
+    setFollowedPubkeys,
+    setLikedVideoIds
   } = useVideoCache();
 
   const handleTypeChange = (value: 'all' | 'shorts' | 'videos') => {
@@ -23,8 +25,10 @@ export function HomePage() {
   };
 
   useEffect(() => {
+    setFollowedPubkeys([]);
+    setLikedVideoIds([]);
     initSearch();
-  });
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-6">

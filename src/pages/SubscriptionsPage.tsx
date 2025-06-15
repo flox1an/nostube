@@ -3,28 +3,29 @@ import { useVideoCache } from "@/contexts/VideoCacheContext";
 import { useAppContext } from "@/hooks/useAppContext";
 import { VideoGrid } from "@/components/VideoGrid";
 import { Loader2 } from "lucide-react";
+import { useFollowedAuthors } from "@/hooks/useFollowedAuthors";
 
 export function SubscriptionsPage() {
   const {
-    setFilterByFollowedAuthors,
     totalVideos,
     videos,
     isLoading,
     hasMore,
+    setFollowedPubkeys,
     loadMoreRef,
     initSearch,
+    setLikedVideoIds
   } = useVideoCache();
   const { config } = useAppContext();
+  const { data: followedPubkeys = [] } = useFollowedAuthors();
 
   useEffect(() => {
-    setFilterByFollowedAuthors(true);
-
-    initSearch();
-
-    return () => {
-      setFilterByFollowedAuthors(false);
-    };
-  }, [setFilterByFollowedAuthors, initSearch]);
+    if (followedPubkeys.length > 0) {
+      setLikedVideoIds([]);
+      setFollowedPubkeys(followedPubkeys);
+      initSearch();
+    }
+  }, [initSearch, setFollowedPubkeys, followedPubkeys]);
 
   return (
     <div className="container mx-auto px-4 py-6">

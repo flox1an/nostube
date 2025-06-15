@@ -16,9 +16,13 @@ interface VideoCacheContextType {
   clearCache: () => void;
   setVideoTypes: (type: 'all' | 'shorts' | 'videos') => void;
   loadMoreRef: (node?: Element | null) => void;
-  setFilterByFollowedAuthors: (enable: boolean) => void;
   setLikedVideoIds: (ids: string[]) => void;
   initSearch: () => void;
+  /** Public keys of followed authors */
+  followedPubkeys: string[];
+  likedVideoIds: string[];
+  /** Set the public keys of followed authors */
+  setFollowedPubkeys: (pubkeys: string[]) => void;
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined);
@@ -30,7 +34,9 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [totalVideos, setTotalVideos] = useState(0);
-  const { config, followedPubkeys, likedVideoIds } = useContext(AppContext)!;
+  const { config } = useContext(AppContext)!;
+  const [followedPubkeys, setFollowedPubkeysState] = useState<string[]>([]);
+  const [likedVideoIds, setLikedVideoIdsState] = useState<string[]>([]);
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
@@ -73,7 +79,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     return () => {
       worker.current?.terminate();
     };
-  }, [config.videoType, followedPubkeys, likedVideoIds]);
+  }, [config.videoType]);
 
   // Handle infinite loading
   useEffect(() => {
@@ -107,11 +113,13 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const setAuthors = useCallback((pubkeys: string[]) => {
+
+  const setFollowedPubkeys = useCallback((pubkeys: string[]) => {
     worker.current?.postMessage({
-      type: 'SET_AUTHORS_FILTER',
+      type: 'SET_FOLLOWED_PUBKEYS',
       data: pubkeys,
     });
+    setFollowedPubkeysState(pubkeys);
   }, []);
 
   const setLikedVideoIds = useCallback((ids: string[]) => {
@@ -119,6 +127,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
       type: 'SET_LIKED_VIDEO_IDS',
       data: ids,
     });
+    setLikedVideoIdsState(ids);
   }, []);
 
   const initSearch = useCallback(() => {
@@ -131,11 +140,9 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
           'wss://relay.damus.io',
         ],
         videoType: config.videoType,
-        followedPubkeys: followedPubkeys,
-        likedVideoIds: likedVideoIds,
       },
     });
-  }, [config.videoType, followedPubkeys, likedVideoIds]);
+  }, [config.videoType]);
 
   const value = {
     videos,
@@ -148,9 +155,11 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     clearCache,
     setVideoTypes,
     loadMoreRef,
-    setAuthors,
     setLikedVideoIds,
     initSearch,
+    followedPubkeys,
+    likedVideoIds,
+    setFollowedPubkeys,
   };
 
   return (

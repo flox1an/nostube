@@ -3,6 +3,7 @@ import { AppRouter } from "./AppRouter";
 import NostrProvider from '@/components/NostrProvider';
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Suspense } from 'react';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
@@ -38,6 +39,7 @@ export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
       <QueryClientProvider client={queryClient}>
+        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
         <NostrLoginProvider storageKey='nostr:login'>
           <NostrProvider relayUrl={defaultConfig.relayUrl} presetRelays={presetRelays}>
             <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>

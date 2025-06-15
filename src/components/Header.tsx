@@ -9,11 +9,11 @@ import { useAppContext } from "@/hooks/useAppContext";
 
 export function Header() {
   const { allTags, searchVideos, filterByTags } = useVideoCache();
-  const { toggleSidebar,isSidebarOpen } = useAppContext();
+  const { toggleSidebar } = useAppContext();
 
   return (
     <header className="border-b sticky top-0 bg-background z-50">
-      <div className={`${isSidebarOpen ? 'w-fulL' : 'container'} mx-auto px-4 h-16 flex items-center justify-between`}
+      <div className={`w-full px-4 h-16 flex items-center justify-between`}
       >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>
@@ -25,14 +25,14 @@ export function Header() {
         </div>
 
         <SearchBar
-          className="flex-1 max-w-2xl"
+          className="flex-1 max-w-2xl px-4"
           allTags={allTags}
           onSearch={searchVideos}
           onTagsChange={filterByTags}
         />
 
         <div className="flex items-center gap-4">
-          <Link to="/upload">
+          <Link to="/upload" className="hidden md:block">
             <Button variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-2" />
               Upload
@@ -41,7 +41,7 @@ export function Header() {
 
           <ThemeToggle />
 
-          <LoginArea className="w-48" />
+          <LoginArea className="lg:w-48" />
         </div>
       </div>
     </header>

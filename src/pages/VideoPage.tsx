@@ -94,7 +94,7 @@ export function VideoPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="sm:py-6">
       <div className="flex gap-6 flex-col lg:flex-row">
         <div className="flex-1">
           {isLoading ? (

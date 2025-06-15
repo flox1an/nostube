@@ -17,7 +17,7 @@ interface VideoCacheContextType {
   setVideoType: (type: 'all' | 'shorts' | 'videos') => void;
   loadMoreRef: (node?: Element | null) => void;
   setLikedVideoIds: (ids: string[]) => void;
-  initSearch: () => void;
+  initSearch: (relays: string[]) => void;
   /** Public keys of followed authors */
   followedPubkeys: string[];
   likedVideoIds: string[];
@@ -130,15 +130,11 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     setLikedVideoIdsState(ids);
   }, []);
 
-  const initSearch = useCallback(() => {
+  const initSearch = useCallback((relays: string[]) => {
     worker.current?.postMessage({
       type: 'INIT',
       data: {
-        relayUrls: [
-          'wss://relay.nostr.band',
-          'wss://nos.lol',
-          'wss://relay.damus.io',
-        ],
+        relayUrls: relays,
         videoType: config.videoType,
       },
     });

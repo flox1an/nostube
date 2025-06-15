@@ -140,7 +140,7 @@ export function AuthorPage() {
     .sort();
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="sm:p-4">
       <Card>
         <CardHeader className="border-b">
           <AuthorProfile pubkey={pubkey} />

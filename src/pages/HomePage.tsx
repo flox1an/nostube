@@ -5,7 +5,6 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { useEffect } from 'react';
 
 export function HomePage() {
-  const { config } = useAppContext();
   const { 
     videos,  
     isLoading, 
@@ -18,18 +17,19 @@ export function HomePage() {
     setLikedVideoIds
   } = useVideoCache();
 
+  const { config } = useAppContext();
 
   useEffect(() => {
     setVideoType('videos');
     setFollowedPubkeys([]);
     setLikedVideoIds([]);
-    initSearch();
+    initSearch(config.relays);
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-sm text-muted-foreground">
+    <div className="sm:px-4 sm:py-6">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground p-2">
           {totalVideos} videos loaded
         </div>
       </div>

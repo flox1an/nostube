@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export function DisclaimerBanner() {

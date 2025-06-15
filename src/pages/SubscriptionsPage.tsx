@@ -3,6 +3,7 @@ import { useVideoCache } from "@/contexts/VideoCacheContext";
 import { VideoGrid } from "@/components/VideoGrid";
 import { Loader2 } from "lucide-react";
 import { useFollowedAuthors } from "@/hooks/useFollowedAuthors";
+import { useAppContext } from "@/hooks/useAppContext";
 
 export function SubscriptionsPage() {
   const {
@@ -17,20 +18,21 @@ export function SubscriptionsPage() {
     setVideoType
   } = useVideoCache();
   const { data: followedPubkeys = [] } = useFollowedAuthors();
+  const { config } = useAppContext();
 
   useEffect(() => {
     if (followedPubkeys.length > 0) {
       setVideoType('all');
       setLikedVideoIds([]);
       setFollowedPubkeys(followedPubkeys);
-      initSearch();
+      initSearch(config.relays);
     }
   }, [initSearch, setFollowedPubkeys, followedPubkeys]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-sm text-muted-foreground">
+    <div className="sm:px-4 sm:spy-6">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground p-2">
           {totalVideos} videos loaded
         </div>
       </div>

@@ -21,7 +21,6 @@ let relayUrls = [
   "wss://relay.nostr.band",
   "wss://nos.lol",
   "wss://relay.damus.io",
-  "wss://haven.slidestr.net"
 ];
 
 async function loadVideoBatch(): Promise<boolean> {
@@ -37,7 +36,7 @@ async function loadVideoBatch(): Promise<boolean> {
           ...(followedAuthorsPubkeys.length > 0 ? { authors: followedAuthorsPubkeys } : {}),
           ...(likedVideoEventIds.length > 0 ? { ids: likedVideoEventIds } : {}),
         };
-console.log('filter', filter);
+
         const events = await pool.querySync([relayUrl], filter);
 
         if (events.length > 0) {

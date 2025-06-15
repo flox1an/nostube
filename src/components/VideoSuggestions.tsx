@@ -114,7 +114,7 @@ export function VideoSuggestions({
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
-    <div className="pr-4 grid grid-cols-2 gap-4 lg:block">
+    <div className="pr-4 sm:grid grid-cols-2 gap-4 lg:block">
       {suggestions.map((video) => (
         <VideoSuggestionItem key={video.id} video={video} />
       ))}

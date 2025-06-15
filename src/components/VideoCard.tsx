@@ -31,7 +31,7 @@ export function VideoCard({
       : format == "square"
       ? "aspect-[1/1]"
       : "aspect-video";
-  const maxWidth = format == "vertical" && "max-w-[280px] mx-auto";
+  const maxWidth = format == "vertical" && "sm:max-w-[280px] mx-auto";
   
   return (
     <div className={cn("transition-all duration-200", maxWidth)}>

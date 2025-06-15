@@ -7,7 +7,7 @@ export interface AppConfig {
   /** Current theme */
   theme: Theme;
   /** Selected relay URL */
-  relayUrl: string;
+  relays: string[];
   /** Selected video type */
   videoType: VideoType;
 }

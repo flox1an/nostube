@@ -1,5 +1,6 @@
 import { VideoGrid } from "@/components/VideoGrid";
 import { useVideoCache } from "@/contexts/VideoCacheContext";
+import { useAppContext } from "@/hooks/useAppContext";
 import { useLikedEvents } from "@/hooks/useLikedEvents";
 import { useEffect } from "react";
 
@@ -12,6 +13,7 @@ export function LikedVideosPage() {
     initSearch,
   } = useVideoCache();
   const { data: likedEventIds = [] } = useLikedEvents();
+  const { config } = useAppContext();
 
   // This effect ensures that when the LikedVideosPage is mounted,
   // the video cache worker is configured to filter by liked video IDs.
@@ -25,7 +27,7 @@ export function LikedVideosPage() {
     if (likedEventIds.length > 0) {
       setVideoType("all");
       setLikedVideoIds(likedEventIds);
-      initSearch();
+      initSearch(config.relays);
     }
 
     // When navigating away, we might want to reset the filters, but for now,

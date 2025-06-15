@@ -24,15 +24,14 @@ import { useToast } from '@/hooks/useToast';
 interface AddToPlaylistButtonProps {
   videoId: string;
   videoTitle?: string;
-  className?: string;
 }
 
 export function AddToPlaylistButton({ videoId, videoTitle }: AddToPlaylistButtonProps) {
   const { user } = useCurrentUser();
   const { playlists, isLoading, addVideo } = usePlaylists();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (!user) return null;
 
@@ -49,7 +48,7 @@ export function AddToPlaylistButton({ videoId, videoTitle }: AddToPlaylistButton
         description: `Successfully added to "${playlistName}"`,
       });
       setOpen(false);
-    } catch (error) {
+    } catch (e) {
       toast({
         title: 'Error adding to playlist',
         description: 'Failed to add video to playlist. Please try again.',

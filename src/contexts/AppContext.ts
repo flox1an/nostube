@@ -19,6 +19,10 @@ export interface AppContextType {
   updateConfig: (updater: (currentConfig: AppConfig) => AppConfig) => void;
   /** Optional list of preset relays to display in the RelaySelector */
   presetRelays?: { name: string; url: string }[];
+  /** Is the sidebar currently open */
+  isSidebarOpen: boolean;
+  /** Toggle the sidebar open/close state */
+  toggleSidebar: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

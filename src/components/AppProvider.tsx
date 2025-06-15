@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, type AppConfig, type AppContextType } from '@/contexts/AppContext';
 
@@ -22,18 +22,24 @@ export function AppProvider(props: AppProviderProps) {
 
   // App configuration state with localStorage persistence
   const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Generic config updater with callback pattern
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
     setConfig(updater);
   };
 
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev);
+  }, []);
+
   const appContextValue: AppContextType = {
     config,
     updateConfig,
     presetRelays,
+    isSidebarOpen,
+    toggleSidebar,
   };
-
 
   return (
     <AppContext.Provider value={appContextValue}>

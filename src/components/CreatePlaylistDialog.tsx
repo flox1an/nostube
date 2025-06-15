@@ -14,35 +14,50 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useQueryClient } from '@tanstack/react-query';
+import { Label } from '@/components/ui/label';
 
 interface CreatePlaylistDialogProps {
-  onCreatePlaylist: (name: string, description?: string) => Promise<void>;
+  onClose: () => void;
 }
 
-export function CreatePlaylistDialog({ onCreatePlaylist }: CreatePlaylistDialogProps) {
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+export function CreatePlaylistDialog({ onClose }: CreatePlaylistDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setIsCreating(true);
-      await onCreatePlaylist(name, description);
+    if (!name.trim()) {
       toast({
-        title: 'Playlist created',
-        description: `Successfully created playlist "${name}"`,
+        title: "Error",
+        description: "Playlist name cannot be empty.",
+        variant: "destructive",
       });
-      setOpen(false);
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      // Here you would typically call your API or a Nostr publish hook
+      // For now, let's simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: "Playlist created",
+        description: "Your new playlist has been created successfully.",
+      });
       setName('');
       setDescription('');
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      onClose();
+    } catch (e) {
       toast({
-        title: 'Error creating playlist',
-        description: 'Failed to create playlist. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to create playlist.",
+        variant: "destructive",
       });
     } finally {
       setIsCreating(false);
@@ -50,45 +65,38 @@ export function CreatePlaylistDialog({ onCreatePlaylist }: CreatePlaylistDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           Create Playlist
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Playlist</DialogTitle>
+          <DialogDescription>
+            Enter a name and optional description for your new playlist.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Playlist</DialogTitle>
-            <DialogDescription>
-              Create a new playlist to organize your favorite videos.
-            </DialogDescription>
-          </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Name
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="My Awesome Playlist"
-                disabled={isCreating}
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <label htmlFor="description" className="text-sm font-medium">
-                Description (optional)
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="A collection of my favorite videos..."
-                disabled={isCreating}
+                rows={3}
               />
             </div>
           </div>

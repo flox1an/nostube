@@ -1,8 +1,7 @@
 import { VideoEvent } from '@/utils/video-event';
-import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { AppContext } from '@/contexts/AppContext';
-import { Video } from '@/hooks/usePlaylist';
 
 type VideoCache = VideoEvent;
 
@@ -18,6 +17,7 @@ interface VideoCacheContextType {
   setVideoTypes: (type: 'all' | 'shorts' | 'videos') => void;
   loadMoreRef: (node?: Element | null) => void;
   setFilterByFollowedAuthors: (enable: boolean) => void;
+  setLikedVideoIds: (ids: string[]) => void;
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined);
@@ -128,6 +128,13 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
+  const setLikedVideoIds = useCallback((ids: string[]) => {
+    worker.current?.postMessage({
+      type: 'SET_LIKED_VIDEO_IDS',
+      data: ids,
+    });
+  }, []);
+
   const value = {
     videos,
     allTags,
@@ -140,6 +147,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     setVideoTypes,
     loadMoreRef,
     setFilterByFollowedAuthors,
+    setLikedVideoIds,
   };
 
   return (

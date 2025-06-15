@@ -2,7 +2,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 
-export function useLikedVideoIds() {
+export function useLikedEvents() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
 
@@ -21,7 +21,7 @@ export function useLikedVideoIds() {
         { signal }
       );
 
-      const videoIds = likedEvents
+      const eventIds = likedEvents
         .filter(event => event.content === '+')
         .map(event => {
           const eTag = event.tags.find(tag => tag[0] === 'e');
@@ -29,7 +29,7 @@ export function useLikedVideoIds() {
         })
         .filter((id): id is string => id !== undefined);
 
-      return videoIds;
+      return eventIds;
     },
     enabled: !!user,
   });

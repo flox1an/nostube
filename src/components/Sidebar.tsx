@@ -47,7 +47,7 @@ export function Sidebar() {
   ]
 
   return (
-    <div className="flex flex-col h-full bg-background border-r pt-4">
+    <div className="flex flex-col h-full bg-background pt-4">
       <div className="flex flex-col h-full">
         <nav className="px-2">
           {navigationItems.map((item) => (

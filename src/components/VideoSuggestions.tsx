@@ -6,6 +6,7 @@ import { processEvent, VideoEvent } from "@/utils/video-event";
 import { getKindsForType } from "@/lib/video-types";
 import { NostrEvent } from "@nostrify/nostrify";
 import { formatDistance } from "date-fns";
+import { Skeleton } from '@/components/ui/skeleton';
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -54,6 +55,21 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
   );
 }
 
+function VideoSuggestionItemSkeleton() {
+  return (
+    <div className="flex mb-4">
+      <div className="relative w-40 h-24 flex-shrink-0">
+        <Skeleton className="w-full h-full rounded-md" />
+      </div>
+      <div className="p-1 pl-3 space-y-2 flex-1">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 interface VideoSuggestionsProps {
   currentVideoId?: string;
   relays: string[];
@@ -66,7 +82,8 @@ export function VideoSuggestions({
   authorPubkey,
 }: VideoSuggestionsProps) {
   const { nostr } = useNostr();
-  const { data: suggestions = [] } = useQuery<VideoEvent[]>({
+  const { data: suggestions = [], isLoading, isPending } = useQuery<VideoEvent[]>({
+    enabled: currentVideoId !== undefined && authorPubkey != undefined,
     queryKey: ["video-suggestions", currentVideoId, authorPubkey],
     queryFn: async ({ signal }) => {
       let combinedEvents: NostrEvent[] = [];
@@ -125,9 +142,15 @@ export function VideoSuggestions({
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div className="sm:grid grid-cols-2 gap-4 lg:block">
-      {suggestions.map((video) => (
-        <VideoSuggestionItem key={video.id} video={video} />
-      ))}
+      {isPending || isLoading ? (
+        Array.from({ length: 10 }).map((_, i) => (
+          <VideoSuggestionItemSkeleton key={i} />
+        ))
+      ) : (
+        suggestions.map((video) => (
+          <VideoSuggestionItem key={video.id} video={video} />
+        ))
+      )}
     </div>
   );
 }

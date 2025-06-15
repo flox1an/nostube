@@ -11,7 +11,7 @@ export function MainLayout() {
       <Header />
       <div className="flex flex-1">
         {isSidebarOpen && (
-          <div className="w-64 flex-shrink-0">
+          <div className="w-56 flex-shrink-0">
             <Sidebar />
           </div>
         )}

@@ -55,9 +55,11 @@ export function VideoCard({
 
   const handleVideoLoadedData = () => {
     setVideoLoaded(true);
-    videoRef.current?.play().catch(error => console.error("Video autoplay blocked:", error));
+    videoRef.current
+      ?.play()
+      .catch((error) => console.error("Video autoplay blocked:", error));
   };
-  
+
   return (
     <div
       className={cn("transition-all duration-200", maxWidth)}
@@ -156,15 +158,18 @@ export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
       ? "aspect-[1/1]"
       : "aspect-video";
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Skeleton className={cn("w-full", aspectRatio)} />
-        <div className="p-4 space-y-2">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
-          <Skeleton className="h-3 w-1/4" />
+    <div className="p-0">
+      <Skeleton className={cn("w-full", aspectRatio)} />
+      <div className="pt-3">
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

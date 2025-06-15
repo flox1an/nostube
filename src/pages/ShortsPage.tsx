@@ -28,11 +28,6 @@ export function ShortsPage() {
 
   return (
     <div className=" sm:px-4 sm:py-6">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground p-2">
-          {totalVideos} videos loaded
-        </div>
-      </div>
 
       <VideoGrid
         videos={videos}

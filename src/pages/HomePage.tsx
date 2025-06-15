@@ -29,19 +29,12 @@ export function HomePage() {
     }
   }, [config.relays, isWorkerReady]);
 
-
-
   return (
     <div className="sm:px-4 sm:py-6">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground p-2">
-          {totalVideos} videos loaded
-        </div>
-      </div>
 
       <VideoGrid
         videos={videos}
-        videoType={config.videoType}
+        videoType={'videos'}
         isLoading={isLoading}
         showSkeletons={true}
       />

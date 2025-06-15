@@ -1,7 +1,8 @@
 import { VideoEvent } from '@/utils/video-event';
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { useAppContext } from '@/hooks/useAppContext';
+import { AppContext } from '@/contexts/AppContext';
+import { Video } from '@/hooks/usePlaylist';
 
 type VideoCache = VideoEvent;
 
@@ -28,8 +29,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [totalVideos, setTotalVideos] = useState(0);
-
-  const { config: _config, followedPubkeys } = useAppContext();
+  const { config, followedPubkeys, likedVideoIds } = useContext(AppContext)!;
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
@@ -78,14 +78,16 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
           'wss://nos.lol',
           'wss://relay.damus.io',
         ],
+        videoType: config.videoType,
         followedPubkeys: followedPubkeys,
+        likedVideoIds: likedVideoIds,
       },
     });
 
     return () => {
       worker.current?.terminate();
     };
-  }, [followedPubkeys]);
+  }, [config.videoType, followedPubkeys, likedVideoIds]);
 
   // Handle infinite loading
   useEffect(() => {

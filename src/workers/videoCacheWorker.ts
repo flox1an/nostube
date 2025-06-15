@@ -11,6 +11,7 @@ let isLoading = false;
 let hasMoreVideos = true;
 let selectedVideoTypes: VideoType = 'all';
 let followedAuthorsPubkeys: string[] = [];
+let likedVideoEventIds: string[] = [];
 
 // Track last timestamp per relay
 const relayTimestamps = new Map<string, number>();
@@ -35,6 +36,7 @@ async function loadVideoBatch(): Promise<boolean> {
           limit: BATCH_SIZE,
           ...(lastTimestamp ? { until: lastTimestamp } : {}),
           ...(followedAuthorsPubkeys.length > 0 ? { authors: followedAuthorsPubkeys } : {}),
+          ...(likedVideoEventIds.length > 0 ? { ids: likedVideoEventIds } : {}),
         };
 
         const events = await pool.querySync([relayUrl], filter);
@@ -134,7 +136,7 @@ const updateQuery = () => {
 
 // Handle messages from main thread
 self.onmessage = async (e: MessageEvent) => {
-  const { type, data } = e.data;
+  const { type, data, videoType, followedPubkeys } = e.data;
 
   let allTags: Set<string>;
 
@@ -146,6 +148,12 @@ self.onmessage = async (e: MessageEvent) => {
       if (data.followedPubkeys) {
         followedAuthorsPubkeys = data.followedPubkeys;
       }
+      if (data.likedVideoIds) {
+        likedVideoEventIds = data.likedVideoIds;
+      }
+      selectedVideoTypes = videoType;
+      followedAuthorsPubkeys = followedPubkeys || [];
+
       await startLoading();
       updateQuery();
       break;
@@ -189,6 +197,24 @@ self.onmessage = async (e: MessageEvent) => {
 
     case "SET_VIDEO_TYPES":
       selectedVideoTypes = data;
+      videos = [];
+      relayTimestamps.clear();
+      hasMoreVideos = true;
+      await startLoading();
+      updateQuery();
+      break;
+
+    case "SET_AUTHORS_FILTER":
+      followedAuthorsPubkeys = data ? data : [];
+      videos = [];
+      relayTimestamps.clear();
+      hasMoreVideos = true;
+      await startLoading();
+      updateQuery();
+      break;
+
+    case "SET_LIKED_VIDEO_IDS":
+      likedVideoEventIds = data || [];
       videos = [];
       relayTimestamps.clear();
       hasMoreVideos = true;

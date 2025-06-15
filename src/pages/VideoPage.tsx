@@ -8,7 +8,6 @@ import { VideoSuggestions } from "@/components/VideoSuggestions";
 import { ButtonWithReactions } from "@/components/ButtonWithReactions";
 import { FollowButton } from "@/components/FollowButton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDistance } from "date-fns";
 import { Separator } from "@/components/ui/separator";
@@ -136,7 +135,9 @@ export function VideoPage() {
                 className="w-full aspect-video rounded-lg"
               />
               <div className="flex flex-col gap-4 p-4">
-                <h1 className="text-2xl font-bold">{video?.title}</h1>
+                {video?.title && (
+                  <h1 className="text-2xl font-bold">{video?.title}</h1>
+                )}
 
                 <div className="flex items-start justify-between">
                   <Link
@@ -215,12 +216,11 @@ export function VideoPage() {
         </div>
 
         <div className="w-full lg:w-96">
-            <VideoSuggestions
-              currentVideoId={video?.id}
-              relays={fullRelays || []}
-              authorPubkey={video?.pubkey}
-            />
-        
+          <VideoSuggestions
+            currentVideoId={video?.id}
+            relays={fullRelays || []}
+            authorPubkey={video?.pubkey}
+          />
         </div>
       </div>
     </div>

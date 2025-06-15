@@ -6,7 +6,6 @@ import { nip19 } from "nostr-tools";
 import { formatDuration } from "../lib/formatDuration";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef } from "react";
 

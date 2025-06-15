@@ -9,7 +9,6 @@ export function ShortsPage() {
     videos,
     isLoading,
     hasMore,
-    totalVideos,
     loadMoreRef,
     setVideoType,
     initSearch,

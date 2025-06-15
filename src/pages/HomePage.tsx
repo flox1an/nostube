@@ -9,7 +9,6 @@ export function HomePage() {
     videos,
     isLoading,
     hasMore,
-    totalVideos,
     loadMoreRef,
     setVideoType,
     initSearch,

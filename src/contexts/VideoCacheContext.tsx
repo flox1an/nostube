@@ -18,6 +18,7 @@ interface VideoCacheContextType {
   loadMoreRef: (node?: Element | null) => void;
   setFilterByFollowedAuthors: (enable: boolean) => void;
   setLikedVideoIds: (ids: string[]) => void;
+  initSearch: () => void;
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined);
@@ -69,21 +70,6 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
       }
     };
 
-    // Start initial load
-    worker.current.postMessage({
-      type: 'INIT',
-      data: {
-        relayUrls: [
-          'wss://relay.nostr.band',
-          'wss://nos.lol',
-          'wss://relay.damus.io',
-        ],
-        videoType: config.videoType,
-        followedPubkeys: followedPubkeys,
-        likedVideoIds: likedVideoIds,
-      },
-    });
-
     return () => {
       worker.current?.terminate();
     };
@@ -121,10 +107,10 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const setFilterByFollowedAuthors = useCallback((enable: boolean) => {
+  const setAuthors = useCallback((pubkeys: string[]) => {
     worker.current?.postMessage({
       type: 'SET_AUTHORS_FILTER',
-      data: enable,
+      data: pubkeys,
     });
   }, []);
 
@@ -134,6 +120,22 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
       data: ids,
     });
   }, []);
+
+  const initSearch = useCallback(() => {
+    worker.current?.postMessage({
+      type: 'INIT',
+      data: {
+        relayUrls: [
+          'wss://relay.nostr.band',
+          'wss://nos.lol',
+          'wss://relay.damus.io',
+        ],
+        videoType: config.videoType,
+        followedPubkeys: followedPubkeys,
+        likedVideoIds: likedVideoIds,
+      },
+    });
+  }, [config.videoType, followedPubkeys, likedVideoIds]);
 
   const value = {
     videos,
@@ -146,8 +148,9 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     clearCache,
     setVideoTypes,
     loadMoreRef,
-    setFilterByFollowedAuthors,
+    setAuthors,
     setLikedVideoIds,
+    initSearch,
   };
 
   return (

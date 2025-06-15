@@ -5,7 +5,7 @@ import { useLikedEvents } from "@/hooks/useLikedEvents";
 import { useEffect } from 'react';
 
 export function LikedVideosPage() {
-  const { setVideoTypes, setFilterByFollowedAuthors, videos, setLikedVideoIds } = useVideoCache();
+  const { setVideoTypes, setFilterByFollowedAuthors, videos, setLikedVideoIds, initSearch } = useVideoCache();
   const {  config } = useAppContext();
   const { data: likedEventIds = [] } = useLikedEvents();
 
@@ -18,9 +18,15 @@ export function LikedVideosPage() {
     setVideoTypes('all'); // Set to 'all' to ensure no kind filtering is applied
     setFilterByFollowedAuthors(false);
 
+    if (likedEventIds.length > 0) {
+      setLikedVideoIds(likedEventIds);
+      initSearch();
+  
+    }
+
     // When navigating away, we might want to reset the filters, but for now,
     // we'll let the next page's useEffect or user interaction handle it.
-  }, [setVideoTypes, setFilterByFollowedAuthors, setLikedVideoIds, likedEventIds]);
+  }, [setVideoTypes, setFilterByFollowedAuthors, setLikedVideoIds, likedEventIds, initSearch]);
 
 
   return (

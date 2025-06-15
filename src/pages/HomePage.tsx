@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { VideoTypeSelection } from '@/components/VideoTypeSelection';
 import { useAppContext } from '@/hooks/useAppContext';
 import { VideoGrid } from '@/components/VideoGrid';
+import { useEffect } from 'react';
 
 export function HomePage() {
   const { config, updateConfig } = useAppContext();
@@ -13,12 +14,17 @@ export function HomePage() {
     totalVideos,
     loadMoreRef,
     setVideoTypes,
+    initSearch
   } = useVideoCache();
 
   const handleTypeChange = (value: 'all' | 'shorts' | 'videos') => {
     updateConfig(current => ({ ...current, videoType: value }));
     setVideoTypes(value);
   };
+
+  useEffect(() => {
+    initSearch();
+  });
 
   return (
     <div className="container mx-auto px-4 py-6">

@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAppContext } from "@/hooks/useAppContext";
 import { nip19 } from "nostr-tools";
+import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   const { user } = useCurrentUser();
@@ -25,16 +26,16 @@ export function Sidebar() {
   ];
 
   const libraryItems = [
-    { name: "History", icon: History, href: "/history" },
-    { name: "Playlists", icon: ListVideo, href: "/playlists" },
+    { name: "History", icon: History, href: "/history", disabled: true },
+    { name: "Playlists", icon: ListVideo, href: "/playlists", disabled: true },
     {
       name: "Your videos",
       icon: Play,
       href: `/author/${user?.pubkey ? nip19.npubEncode(user.pubkey) : ""}`,
     },
-    { name: "Watch later", icon: Clock, href: "/watch-later" },
+    { name: "Watch later", icon: Clock, href: "/watch-later", disabled: true },
     { name: "Liked videos", icon: ThumbsUp, href: "/liked-videos" },
-    { name: "Your clips", icon: Scissors, href: "/clips" },
+    { name: "Your clips", icon: Scissors, href: "/clips", disabled: true },
   ];
 
   return (
@@ -63,8 +64,13 @@ export function Sidebar() {
               {libraryItems.map((item) => (
                 <Link
                   key={item.name}
-                  to={item.href}
-                  className="flex items-center gap-4 py-2 px-3 rounded-lg hover:bg-accent transition-colors"
+                  to={item.disabled ? "#" : item.href}
+                  className={cn(
+                    "flex items-center gap-4 py-2 px-3 rounded-lg transition-colors",
+                    item.disabled
+                      ? "pointer-events-none opacity-50 cursor-not-allowed"
+                      : "hover:bg-accent"
+                  )}
                 >
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.name}</span>

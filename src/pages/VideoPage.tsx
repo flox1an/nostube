@@ -18,6 +18,7 @@ import { nip19 } from "nostr-tools";
 import { EventPointer } from "nostr-tools/nip19";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
+import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
 
 function formatFileSize(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -151,17 +152,22 @@ export function VideoPage() {
                       <div>
                         <div className="font-semibold">{authorName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {video?.created_at && formatDistance(
-                            new Date(video.created_at * 1000),
-                            new Date(),
-                            { addSuffix: true }
-                          )}
+                          {video?.created_at &&
+                            formatDistance(
+                              new Date(video.created_at * 1000),
+                              new Date(),
+                              { addSuffix: true }
+                            )}
                         </div>
                       </div>
                     </Link>
 
                     {video && (
                       <div className="flex items-center gap-2">
+                        <AddToPlaylistButton
+                          videoId={video.id}
+                          videoTitle={video.title}
+                        />
                         <ButtonWithReactions
                           eventId={video.id}
                           authorPubkey={video.pubkey}
@@ -194,8 +200,8 @@ export function VideoPage() {
                   )}
 
                   {video?.description && (
-                    <CollapsibleText 
-                      text={video.description} 
+                    <CollapsibleText
+                      text={video.description}
                       className="text-muted-foreground"
                     />
                   )}

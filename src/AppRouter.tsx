@@ -5,6 +5,7 @@ import { VideoPage } from '@/pages/VideoPage';
 import { AuthorPage } from '@/pages/AuthorPage';
 import { UploadPage } from '@/pages/UploadPage';
 import NotFound from '@/pages/NotFound';
+import PlaylistPage from '@/pages/Playlists';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: '/upload',
         element: <UploadPage />,
+      },
+      {
+        path: '/playlists',
+        element: <PlaylistPage />,
       },
       {
         path: '*',

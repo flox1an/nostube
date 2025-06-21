@@ -23,7 +23,7 @@ export interface VideoEvent {
   size?: number;
   link: string;
   type: VideoType;
-  contentWarning: boolean;
+  contentWarning: string | undefined;
 }
 
 const videoThumbService = "https://video-thumb.apps2.slidestr.net";
@@ -60,7 +60,7 @@ export function processEvent(
 ): VideoEvent | undefined {
   // First check for imeta tag
   const imetaTag = event.tags.find((t) => t[0] === "imeta");
-  const contentWarning = event.tags.some(t => t[0] == 'content-warning');
+  const contentWarning = event.tags.find(t => t[0] == 'content-warning')?.[1];
 
   if (imetaTag) {
     // Parse imeta tag values

@@ -50,6 +50,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "hls-video-element": "^1.5.4",
     "hls.js": "^1.6.5",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.513.0",

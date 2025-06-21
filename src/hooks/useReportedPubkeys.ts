@@ -4,8 +4,10 @@ import { useReports, type ProcessedReportEvent } from "./useReports";
 import { nip19 } from "nostr-tools";
 
 const blockPubkeys: Record<string, boolean> = [
-  "npub18hgsruk953pkx5th2xdreureplkekuja7c8f9ffc9arsghwtfvqsuhsl9c"
-].map(p => (nip19.decode(p).data as string)).reduce((prev, cur) => ({...prev, [cur]:true}), {});
+  "npub18hgsruk953pkx5th2xdreureplkekuja7c8f9ffc9arsghwtfvqsuhsl9c",
+]
+  .map((p) => nip19.decode(p).data as string)
+  .reduce((prev, cur) => ({ ...prev, [cur]: true }), {});
 
 export type ReportedPubkeys = Record<string, ProcessedReportEvent | boolean>;
 
@@ -36,6 +38,5 @@ export const useReportedPubkeys = (): ReportedPubkeys | undefined => {
     return { ...blockPubkeys, ...illegalReports };
   }, [reports]);
 
-  console.log(reportedPubkeys);
   return reportedPubkeys;
 };

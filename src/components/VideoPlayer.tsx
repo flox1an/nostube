@@ -1,7 +1,7 @@
 import * as React from "react";
-import { useEffect, useRef } from "react";
-import Hls from "hls.js";
+import { useRef } from "react";
 import "media-chrome";
+import "hls-video-element";
 
 interface VideoPlayerProps {
   url: string;
@@ -18,46 +18,46 @@ export function VideoPlayer({
   poster,
   loop = false,
   onTimeUpdate,
+  className,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    let hls: Hls | null = null;
-
-    if (mime === "application/vnd.apple.mpegurl" && Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(video);
-    } else {
-      video.src = url;
-    }
-
-    return () => {
-      if (hls) {
-        hls.destroy();
-      }
-    };
-  }, [url, mime]);
+  const isHls = React.useMemo(
+    () => mime === "application/vnd.apple.mpegurl" || url.endsWith(".m3u8"),
+    [mime, url]
+  );
 
   return (
-    <media-controller>
-      <video
-        className="self-center"
-        ref={videoRef}
-        slot="media"
-        autoPlay
-        loop={loop}
-        poster={poster}
-        onTimeUpdate={() => {
-          if (onTimeUpdate && videoRef.current) {
-            onTimeUpdate(videoRef.current.currentTime);
-          }
-        }}
-      />
-
+    <media-controller           className={className}>
+      {isHls ? (
+        <hls-video
+          src={url}
+          slot="media"
+          autoPlay
+          loop={loop}
+          poster={poster}
+          crossorigin
+          onTimeUpdate={() => {
+            if (onTimeUpdate && videoRef.current) {
+              onTimeUpdate(videoRef.current.currentTime);
+            }
+          }}
+        ></hls-video>
+      ) : (
+        <video
+          src={url}
+          ref={videoRef}
+          slot="media"
+          autoPlay
+          loop={loop}
+          poster={poster}
+          onTimeUpdate={() => {
+            if (onTimeUpdate && videoRef.current) {
+              onTimeUpdate(videoRef.current.currentTime);
+            }
+          }}
+        />
+      )}
       <media-control-bar>
         <media-play-button />
         <media-mute-button />

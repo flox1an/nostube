@@ -132,7 +132,7 @@ export function VideoPage() {
                 mime={video?.mimeType || ""}
                 poster={video?.thumb || ""}
                 loop={[34236, 22].includes(video?.kind || 0)}
-                className="w-full aspect-video rounded-lg"
+                className="w-full max-h-[80dvh] aspect-video rounded-lg"
               />
               <div className="flex flex-col gap-4 p-4">
                 {video?.title && (

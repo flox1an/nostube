@@ -75,12 +75,15 @@ export function VideoCard({
               src={video.thumb}
               alt={video.title}
               className={cn(
-                video.contentWarning ? 'blur-lg' : '',
+                video.contentWarning ? "blur-lg" : "",
                 "w-full object-cover transition-opacity duration-300",
                 aspectRatio,
                 isHovered && videoLoaded ? "opacity-0 absolute" : "opacity-100"
               )}
             />
+            {video.contentWarning && (
+              <div className="absolute text-sm">{video.contentWarning}</div>
+            )}
             {isHovered && video.url && (
               <video
                 ref={videoRef}

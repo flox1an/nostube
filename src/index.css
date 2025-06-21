@@ -39,7 +39,7 @@
 }
 
 .dark {
-  --background: oklch(0.180 0.005 285.823);
+  --background: oklch(0.18 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
@@ -123,13 +123,14 @@
     align-content: center;
   }
 
-  media-controller video {
-    max-height: 80dvh;
+  media-controller video,
+  media-controller hls-video {
+    height: 80dvh;
   }
 
-  media-controller:fullscreen video {
-    max-height: 100dvh;
-
+  media-controller:fullscreen video,
+  media-controller:fullscreen hls-video {
+    height: 100dvh;
   }
 
   media-control-bar * {

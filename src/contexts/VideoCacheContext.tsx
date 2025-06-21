@@ -1,3 +1,4 @@
+import { useReportedPubkeys } from "@/hooks/useReportedPubkeys";
 import { VideoEvent } from "@/utils/video-event";
 import {
   createContext,
@@ -41,7 +42,7 @@ export function VideoCacheProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const worker = useRef<Worker>();
+  const workerRef = useRef<Worker | null>(null);
   const [videos, setVideos] = useState<VideoCache[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,15 +58,18 @@ export function VideoCacheProvider({
     rootMargin: "200px",
   });
 
+  const blockedPubkeys = useReportedPubkeys();
+
   useEffect(() => {
     // Initialize worker
-    worker.current = new Worker(
+    const worker = new Worker(
       new URL("../workers/videoCacheWorker.ts", import.meta.url),
       { type: "module" }
     );
+    workerRef.current = worker;
 
     // Set up message handler
-    worker.current.onmessage = (e) => {
+    worker.onmessage = (e) => {
       const { type, results, tags, count, hasMore } = e.data;
 
       switch (type) {
@@ -92,44 +96,50 @@ export function VideoCacheProvider({
     };
 
     return () => {
-      worker.current?.terminate();
+      worker.terminate();
     };
   }, []);
+
+  useEffect(() => {
+    if (workerRef.current && blockedPubkeys) {
+      workerRef.current.postMessage({ type: "SET_BLOCKED_PUBKEYS", data: blockedPubkeys });
+    }
+  }, [blockedPubkeys]);
 
   // Handle infinite loading
   useEffect(() => {
     if (inView && !isLoading && hasMore) {
-      worker.current?.postMessage({ type: "LOAD_MORE" });
+      workerRef.current?.postMessage({ type: "LOAD_MORE" });
     }
   }, [inView, isLoading, hasMore]);
 
   const searchVideos = useCallback((query: string) => {
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "SEARCH",
       data: query,
     });
   }, []);
 
   const filterByTags = useCallback((tags: string[]) => {
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "FILTER_TAGS",
       data: tags,
     });
   }, []);
 
   const clearCache = useCallback(() => {
-    worker.current?.postMessage({ type: "CLEAR_CACHE" });
+    workerRef.current?.postMessage({ type: "CLEAR_CACHE" });
   }, []);
 
   const setVideoType = useCallback((type: "all" | "shorts" | "videos") => {
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "SET_VIDEO_TYPE",
       data: type,
     });
   }, []);
 
   const setFollowedPubkeys = useCallback((pubkeys: string[]) => {
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "SET_FOLLOWED_PUBKEYS",
       data: pubkeys,
     });
@@ -137,7 +147,7 @@ export function VideoCacheProvider({
   }, []);
 
   const setLikedVideoIds = useCallback((ids: string[]) => {
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "SET_LIKED_VIDEO_IDS",
       data: ids,
     });
@@ -147,7 +157,7 @@ export function VideoCacheProvider({
   const initSearch = useCallback((relays: string[]) => {
     console.log(" initSearch ", relays);
 
-    worker.current?.postMessage({
+    workerRef.current?.postMessage({
       type: "INIT",
       data: {
         relayUrls: relays,

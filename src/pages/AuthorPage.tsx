@@ -17,6 +17,7 @@ import { processEvents } from "@/utils/video-event";
 import { nip19 } from "nostr-tools";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { useEffect, useMemo, useState } from "react";
+import { useReportedPubkeys } from "@/hooks/useReportedPubkeys";
 
 interface AuthorStats {
   videoCount: number;
@@ -98,6 +99,8 @@ export function AuthorPage() {
 
   const pubkey = nip19.decode(npub ?? "").data as string;
 
+  const blockedPubkeys = useReportedPubkeys();
+
   // Query for author's videos
   const { data: allVideos = [], isLoading: isLoadingVideos } = useQuery({
     queryKey: ["author-videos", pubkey],
@@ -123,9 +126,9 @@ export function AuthorPage() {
         new Map(allEvents.map((event) => [event.id, event])).values()
       );
 
-      return processEvents(Array.from(uniqueEvents.values()), config.relays);
+      return processEvents(Array.from(uniqueEvents.values()), config.relays, blockedPubkeys);
     },
-    enabled: !!pubkey,
+    enabled: !!pubkey && blockedPubkeys !== undefined,
   });
 
   // Get author stats

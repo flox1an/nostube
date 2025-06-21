@@ -1,3 +1,4 @@
+import { ReportedPubkeys } from "@/hooks/useReportedPubkeys";
 import { getTypeForKind, VideoType } from "@/lib/video-types";
 import { blurHashToDataURL } from "@/workers/blurhashDataURL";
 import type { NostrEvent } from "@nostrify/nostrify";
@@ -22,6 +23,7 @@ export interface VideoEvent {
   size?: number;
   link: string;
   type: VideoType;
+  contentWarning: boolean;
 }
 
 const videoThumbService = "https://video-thumb.apps2.slidestr.net";
@@ -35,7 +37,8 @@ function createSearchIndex(video: VideoEvent): string {
 // Process Nostr events into cache entries
 export function processEvents(
   events: NostrEvent[],
-  relays: string[]
+  relays: string[],
+  blockPubkeys?: ReportedPubkeys
 ): VideoEvent[] {
   return events
     .map((event) => processEvent(event, relays))
@@ -46,7 +49,8 @@ export function processEvents(
         Boolean(video.url) &&
         Boolean(video.video) &&
         video?.url !== undefined &&
-        video.url.indexOf("youtube.com") < 0
+        video.url.indexOf("youtube.com") < 0 &&
+        (!blockPubkeys || !blockPubkeys[video.pubkey])
     );
 }
 
@@ -56,6 +60,7 @@ export function processEvent(
 ): VideoEvent | undefined {
   // First check for imeta tag
   const imetaTag = event.tags.find((t) => t[0] === "imeta");
+  const contentWarning = event.tags.some(t => t[0] == 'content-warning');
 
   if (imetaTag) {
     // Parse imeta tag values
@@ -83,6 +88,7 @@ export function processEvent(
     // Only process if it's a video
     //if (!url || !mimeType?.startsWith('video/')) return null;
 
+
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
@@ -109,6 +115,7 @@ export function processEvent(
         relays,
       }),
       type: getTypeForKind(event.kind),
+      contentWarning
     };
 
     // Create search index
@@ -154,6 +161,7 @@ export function processEvent(
         relays,
       }),
       type: getTypeForKind(event.kind),
+      contentWarning
     };
 
     // Create search index

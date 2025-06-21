@@ -1,6 +1,7 @@
 import { SimplePool, Filter } from "nostr-tools";
 import { VideoEvent, processEvents } from "../utils/video-event";
 import { getKindsForType, type VideoType } from "../lib/video-types";
+import { ReportedPubkeys } from "@/hooks/useReportedPubkeys";
 
 type VideoCache = VideoEvent;
 
@@ -12,6 +13,7 @@ let hasMoreVideos = true;
 let selectedVideoType: VideoType = "all";
 let followedAuthorsPubkeys: string[] = [];
 let likedVideoEventIds: string[] = [];
+let blockedPubkeys: ReportedPubkeys = {};
 
 // Track last timestamp per relay
 const relayTimestamps = new Map<string, number>();
@@ -72,7 +74,7 @@ async function loadVideoBatch(): Promise<boolean> {
     }
 
     // Process and add new videos
-    const newVideos = processEvents(uniqueEvents, relayUrls);
+    const newVideos = processEvents(uniqueEvents, relayUrls, blockedPubkeys);
 
     // Filter out duplicates based on id
     const existingIds = new Set(videos.map((v) => v.id));
@@ -202,6 +204,10 @@ self.onmessage = async (e: MessageEvent) => {
       videos = [];
       relayTimestamps.clear();
       hasMoreVideos = true;
+      break;
+
+    case "SET_BLOCKED_PUBKEYS":
+      blockedPubkeys = data || {};
       break;
 
     case "SET_FOLLOWED_PUBKEYS":

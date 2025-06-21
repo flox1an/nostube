@@ -38,6 +38,9 @@ export function VideoCard({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleMouseEnter = () => {
+    // don't show hover preview for video with content warning
+    if (video.contentWarning) return;
+
     if (video.video) {
       setIsHovered(true);
     }
@@ -67,13 +70,13 @@ export function VideoCard({
     >
       <div className="p-0">
         <Link to={`/video/${video.link}`}>
-          <div className="relative">
+          <div className="w-full overflow-hidden rounded-lg relative">
             <img
-              loading="lazy"
               src={video.thumb}
               alt={video.title}
               className={cn(
-                "w-full object-cover rounded-lg transition-opacity duration-300",
+                video.contentWarning ? 'blur-lg' : '',
+                "w-full object-cover transition-opacity duration-300",
                 aspectRatio,
                 isHovered && videoLoaded ? "opacity-0 absolute" : "opacity-100"
               )}

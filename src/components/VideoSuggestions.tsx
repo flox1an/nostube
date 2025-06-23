@@ -6,7 +6,8 @@ import { processEvent, VideoEvent } from "@/utils/video-event";
 import { getKindsForType, VideoType } from "@/lib/video-types";
 import { NostrEvent } from "@nostrify/nostrify";
 import { formatDistance } from "date-fns";
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
+import { useReportedPubkeys } from "@/hooks/useReportedPubkeys";
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -84,7 +85,12 @@ export function VideoSuggestions({
   authorPubkey,
 }: VideoSuggestionsProps) {
   const { nostr } = useNostr();
-  const { data: suggestions = [], isLoading, isPending } = useQuery<VideoEvent[]>({
+  const blockedPubkeys = useReportedPubkeys();
+  const {
+    data: suggestions = [],
+    isLoading,
+    isPending,
+  } = useQuery<VideoEvent[]>({
     enabled: currentVideoId !== undefined && authorPubkey != undefined,
     queryKey: ["video-suggestions", currentVideoId, authorPubkey],
     queryFn: async ({ signal }) => {
@@ -113,7 +119,9 @@ export function VideoSuggestions({
       const generalEvents = await nostr.query(
         [
           {
-            kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType("all"),
+            kinds: currentVideoType
+              ? getKindsForType(currentVideoType)
+              : getKindsForType("all"),
             limit: 30, // Fetch more to allow for filtering
           },
         ],
@@ -126,6 +134,7 @@ export function VideoSuggestions({
       const seenIds = new Set<string>();
 
       for (const event of combinedEvents) {
+        if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue;
         const processed = processEvent(event, relays);
         if (
           processed &&
@@ -144,15 +153,13 @@ export function VideoSuggestions({
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div className="sm:grid grid-cols-2 gap-4 lg:block">
-      {isPending || isLoading ? (
-        Array.from({ length: 10 }).map((_, i) => (
-          <VideoSuggestionItemSkeleton key={i} />
-        ))
-      ) : (
-        suggestions.map((video) => (
-          <VideoSuggestionItem key={video.id} video={video} />
-        ))
-      )}
+      {isPending || isLoading
+        ? Array.from({ length: 10 }).map((_, i) => (
+            <VideoSuggestionItemSkeleton key={i} />
+          ))
+        : suggestions.map((video) => (
+            <VideoSuggestionItem key={video.id} video={video} />
+          ))}
     </div>
   );
 }

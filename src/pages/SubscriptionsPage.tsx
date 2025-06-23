@@ -29,7 +29,7 @@ export function SubscriptionsPage() {
   }, [initSearch, setFollowedPubkeys, followedPubkeys]);
 
   return (
-    <div className="sm:px-4 sm:spy-6">
+    <div className="sm:p-4">
 
       <VideoGrid
         videos={videos}

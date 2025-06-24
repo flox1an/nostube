@@ -80,9 +80,15 @@ export function VideoCard({
                 aspectRatio,
                 isHovered && videoLoaded ? "opacity-0 absolute" : "opacity-100"
               )}
+              onLoad={(info) => console.log("loaded", video.thumb, info)}
+              onError={(err) =>
+                console.error("error loading", video.thumb, err)
+              }
             />
             {video.contentWarning && (
-              <div className="absolute text-sm">{video.contentWarning}</div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-sm">
+                <b>Content warning</b><br/>{video.contentWarning}
+              </div>
             )}
             {isHovered && video.url && (
               <video

@@ -20,16 +20,37 @@ import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
 import { useAppContext } from "@/hooks/useAppContext";
 import { mergeRelays } from "@/lib/utils";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Facebook, Mail, Twitter, Link as LinkIcon, Clock, Globe, Send, Share2 } from "lucide-react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Facebook,
+  Mail,
+  Twitter,
+  Link as LinkIcon,
+  Clock,
+  Globe,
+  Send,
+  Share2,
+} from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { NUser } from "@nostrify/react/login";
+import { useVideoCache } from "@/contexts/VideoCacheContext";
 
 // Custom hook for debounced play position storage
-function useDebouncedPlayPositionStorage(playPos: number, user: NUser | undefined, videoId: string | undefined) {
+function useDebouncedPlayPositionStorage(
+  playPos: number,
+  user: NUser | undefined,
+  videoId: string | undefined
+) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastWriteRef = useRef<number>(0);
   useEffect(() => {
@@ -68,25 +89,25 @@ export function VideoPage() {
   const { config } = useAppContext();
   const { nevent } = useParams<{ nevent: string }>();
   const { nostr } = useNostr();
+  const { videos } = useVideoCache();
+
   const { id, relays, author, kind } = nip19.decode(nevent ?? "")
     .data as EventPointer;
 
+  // TODO also use the authors outbox relays
   const fullRelays = mergeRelays([relays || [], config.relays]);
 
   const { data: video, isLoading } = useQuery<VideoEvent | null>({
     queryKey: ["video", nevent],
     queryFn: async ({ signal }) => {
       if (!nevent) return null;
-      console.log(
-        [
-          {
-            authors: author ? [author] : undefined,
-            kinds: kind ? [kind] : undefined,
-            ids: [id],
-          },
-        ],
-        fullRelays
-      );
+
+      // First try to get the video from the cache
+      const found = videos.find((v) => v.id === id);
+      if (found) {
+        return found;
+      }
+
       const events = await nostr.query(
         [
           {
@@ -134,21 +155,23 @@ export function VideoPage() {
   const [currentPlayPos, setCurrentPlayPos] = useState(0);
 
   // Compute initial play position from ?t=... param or localStorage
-  let initialPlayPos = 0;
   const { user } = useCurrentUser();
-  if (typeof window !== "undefined" && user && video) {
-    const params = new URLSearchParams(window.location.search);
-    const t = parseInt(params.get("t") || "", 10);
-    if (!isNaN(t)) initialPlayPos = t;
-    if (initialPlayPos === 0) {
+  const initialPlayPos = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = parseInt(params.get("t") || "", 10);
+      if (!isNaN(t)) return t;
+    }
+    if (user && video) {
       const key = `playpos:${user.pubkey}:${video.id}`;
       const saved = localStorage.getItem(key);
       if (saved) {
         const time = parseFloat(saved);
-        if (!isNaN(time)) initialPlayPos = time;
+        if (!isNaN(time)) return time;
       }
     }
-  }
+    return 0;
+  }, [user, video]);
 
   // Use the custom hook for debounced play position storage
   useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id);
@@ -290,7 +313,8 @@ export function VideoPage() {
                           <DialogHeader>
                             <DialogTitle>Share this video</DialogTitle>
                             <DialogDescription>
-                              Share this video on your favorite platform or copy the link.
+                              Share this video on your favorite platform or copy
+                              the link.
                             </DialogDescription>
                           </DialogHeader>
                           <div className="flex items-center gap-2 mb-4">
@@ -299,7 +323,7 @@ export function VideoPage() {
                               value={shareUrl}
                               readOnly
                               className="flex-1 text-xs"
-                              onFocus={e => e.target.select()}
+                              onFocus={(e) => e.target.select()}
                             />
                             <Button
                               size="sm"
@@ -315,30 +339,65 @@ export function VideoPage() {
                             <Checkbox
                               id="timestamp-checkbox"
                               checked={includeTimestamp}
-                              onCheckedChange={checked => setIncludeTimestamp(!!checked)}
+                              onCheckedChange={(checked) =>
+                                setIncludeTimestamp(!!checked)
+                              }
                             />
-                            <label htmlFor="timestamp-checkbox" className="flex items-center gap-2 cursor-pointer select-none">
+                            <label
+                              htmlFor="timestamp-checkbox"
+                              className="flex items-center gap-2 cursor-pointer select-none"
+                            >
                               <Clock className="w-4 h-4" />
                               <span>Include current timestamp</span>
                             </label>
                           </div>
                           <div className="flex flex-wrap gap-4 justify-center mt-2">
-                            <a href={shareLinks.mailto} target="_blank" rel="noopener noreferrer" title="Share via Email">
+                            <a
+                              href={shareLinks.mailto}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share via Email"
+                            >
                               <Mail className="w-7 h-7" />
                             </a>
-                            <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" title="Share on WhatsApp">
+                            <a
+                              href={shareLinks.whatsapp}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share on WhatsApp"
+                            >
                               <Send className="w-7 h-7" />
                             </a>
-                            <a href={shareLinks.x} target="_blank" rel="noopener noreferrer" title="Share on X">
+                            <a
+                              href={shareLinks.x}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share on X"
+                            >
                               <Twitter className="w-7 h-7" />
                             </a>
-                            <a href={shareLinks.reddit} target="_blank" rel="noopener noreferrer" title="Share on Reddit">
+                            <a
+                              href={shareLinks.reddit}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share on Reddit"
+                            >
                               <Globe className="w-7 h-7" />
                             </a>
-                            <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" title="Share on Facebook">
+                            <a
+                              href={shareLinks.facebook}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share on Facebook"
+                            >
                               <Facebook className="w-7 h-7" />
                             </a>
-                            <a href={shareLinks.pinterest} target="_blank" rel="noopener noreferrer" title="Share on Pinterest">
+                            <a
+                              href={shareLinks.pinterest}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Share on Pinterest"
+                            >
                               <Share2 className="w-7 h-7" />
                             </a>
                           </div>

@@ -23,7 +23,7 @@ export function SearchBar({
 }: SearchBarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [showTagMenu] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   useEffect(() => {

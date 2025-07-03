@@ -59,7 +59,7 @@ export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
       const events = await nostr.query(
         [
           {
-            kinds: [1],
+            kinds: [1, 1111],
             "#e": [videoId],
             limit: 100,
           },
@@ -82,12 +82,14 @@ export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
     if (!user || !newComment.trim()) return;
 
     publish({
-      kind: 1,
+      kind: 1111,
       content: newComment,
       tags: [
+        ["E", videoId],
+        ["P", authorPubkey],
         ["e", videoId],
         ["p", authorPubkey],
-        ["client", "nostr-tube"],
+        ["client", "nostube"],
       ],
     });
 

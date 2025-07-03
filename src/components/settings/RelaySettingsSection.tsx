@@ -54,13 +54,12 @@ export function RelaySettingsSection() {
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Relay Settings</CardTitle>
+        <CardTitle>Relays</CardTitle>
         <CardDescription>Manage the Nostr relays your client connects to.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-medium">Current Relays</h3>
             {config.relays.length === 0 ? (
               <p className="text-muted-foreground">No relays configured. Add some below or reset to defaults.</p>
             ) : (

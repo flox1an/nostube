@@ -16,7 +16,7 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
 
         // Add the client tag if it doesn't exist
         if (!tags.some((tag) => tag[0] === "client")) {
-          tags.push(["client", location.hostname]);
+          tags.push(["client", "nostube"]);
         }
 
         const event = await user.signer.signEvent({
@@ -26,7 +26,7 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
           created_at: t.created_at ?? Math.floor(Date.now() / 1000),
         });
 
-        await nostr.event(event, { signal: AbortSignal.timeout(5000) });
+        await nostr.event(event, { signal: AbortSignal.timeout(5000), relays: ["wss://haven.slidestr.net"] });
         return event;
       } else {
         throw new Error("User is not logged in");

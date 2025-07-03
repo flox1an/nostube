@@ -34,4 +34,4 @@ The content field contains a JSON object with the following structure:
 
 #### Tags
 
-- Recommended: `["client", "playplay"]` to identify the client application
+- Recommended: `["client", "nostube"]` to identify the client application

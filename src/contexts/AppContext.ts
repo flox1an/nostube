@@ -6,6 +6,7 @@ export type BlossomServerTag = "mirror" | "initial upload";
 
 export interface BlossomServer {
   url: string;
+  name: string;
   tags: BlossomServerTag[];
 }
 

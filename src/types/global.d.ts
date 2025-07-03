@@ -21,6 +21,13 @@ declare global {
   }
 }
 
+interface BlossomServer {
+  url: string;
+  tags: ("mirror" | "initial upload")[];
+}
+
+type BlossomServerTag = "mirror" | "initial upload";
+
 interface AppConfig {
-  blossomServers?: string[];
+  blossomServers?: BlossomServer[];
 } 

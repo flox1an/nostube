@@ -62,6 +62,20 @@ export function AppProvider(props: AppProviderProps) {
     }
   }, [userRelays.data]);
 
+  // MIGRATION: convert string[] blossomServers to BlossomServer[]
+  useEffect(() => {
+    if (
+      Array.isArray(config.blossomServers) &&
+      config.blossomServers.length > 0 &&
+      typeof config.blossomServers[0] === 'string'
+    ) {
+      setConfig({
+        ...config,
+        blossomServers: (config.blossomServers as unknown as string[]).map(url => ({ url, tags: [] })),
+      });
+    }
+  }, [config.blossomServers]);
+
   const appContextValue: AppContextType = {
     config,
     updateConfig,

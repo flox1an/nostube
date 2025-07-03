@@ -5,10 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { XIcon } from 'lucide-react';
+import { BlossomServer, BlossomServerTag } from '@/contexts/AppContext';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
 
-const presetBlossomServers = [
-  'https://temp-st.apps2.slidestr.net',
+const presetBlossomServers: BlossomServer[] = [
+  { url: 'https://temp-st.apps2.slidestr.net', tags: [] },
 ];
+
+const availableTags: BlossomServerTag[] = ['mirror', 'initial upload'];
 
 export function BlossomServersSection() {
   const { config, updateConfig } = useAppContext();
@@ -17,10 +27,14 @@ export function BlossomServersSection() {
   const handleAddServer = () => {
     if (newServerUrl.trim()) {
       const normalizedUrl = normalizeServerUrl(newServerUrl.trim());
-      updateConfig((currentConfig) => ({
-        ...currentConfig,
-        blossomServers: Array.from(new Set([...(currentConfig.blossomServers || []), normalizedUrl])),
-      }));
+      updateConfig((currentConfig) => {
+        const servers = currentConfig.blossomServers || [];
+        if (servers.some(s => s.url === normalizedUrl)) return currentConfig;
+        return {
+          ...currentConfig,
+          blossomServers: [...servers, { url: normalizedUrl, tags: [] }],
+        };
+      });
       setNewServerUrl('');
     }
   };
@@ -28,7 +42,7 @@ export function BlossomServersSection() {
   const handleRemoveServer = (urlToRemove: string) => {
     updateConfig((currentConfig) => ({
       ...currentConfig,
-      blossomServers: (currentConfig.blossomServers || []).filter(url => url !== urlToRemove),
+      blossomServers: (currentConfig.blossomServers || []).filter(s => s.url !== urlToRemove),
     }));
   };
 
@@ -36,6 +50,17 @@ export function BlossomServersSection() {
     updateConfig((currentConfig) => ({
       ...currentConfig,
       blossomServers: [...presetBlossomServers],
+    }));
+  };
+
+  const handleToggleTag = (serverUrl: string, tag: BlossomServerTag) => {
+    updateConfig((currentConfig) => ({
+      ...currentConfig,
+      blossomServers: (currentConfig.blossomServers || []).map(s =>
+        s.url === serverUrl
+          ? { ...s, tags: s.tags.includes(tag) ? s.tags.filter(t => t !== tag) : [...s.tags, tag] }
+          : s
+      ),
     }));
   };
 
@@ -63,12 +88,40 @@ export function BlossomServersSection() {
             ) : (
               <ScrollArea className="w-full rounded-md border p-4">
                 <ul className="space-y-2">
-                  {config.blossomServers?.map((serverUrl) => (
-                    <li key={serverUrl} className="flex items-center justify-between text-sm">
-                      <span>{serverUrl}</span>
-                      <Button variant="ghost" size="icon" onClick={() => handleRemoveServer(serverUrl)}>
-                        <XIcon className="h-4 w-4" />
-                      </Button>
+                  {config.blossomServers?.map((server) => (
+                    <li key={server.url} className="flex items-center justify-between text-sm">
+                      <div className="flex flex-col gap-1">
+                        <span>{server.url}</span>
+                        <div className="flex gap-1 mt-1">
+                          {server.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label="Edit tags">
+                              <span className="sr-only">Edit tags</span>
+                              🏷️
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {availableTags.map((tag) => (
+                              <DropdownMenuCheckboxItem
+                                key={tag}
+                                checked={server.tags.includes(tag)}
+                                onCheckedChange={() => handleToggleTag(server.url, tag)}
+                              >
+                                {tag}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveServer(server.url)}>
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>

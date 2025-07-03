@@ -2,6 +2,12 @@ import { createContext } from "react";
 
 export type Theme = "dark" | "light" | "system";
 export type VideoType = "all" | "shorts" | "videos";
+export type BlossomServerTag = "mirror" | "initial upload";
+
+export interface BlossomServer {
+  url: string;
+  tags: BlossomServerTag[];
+}
 
 export interface AppConfig {
   /** Current theme */
@@ -11,7 +17,7 @@ export interface AppConfig {
   /** Selected video type */
   videoType: VideoType;
   /** Blossom servers for file uploads */
-  blossomServers?: string[];
+  blossomServers?: BlossomServer[];
 }
 
 export interface AppContextType {

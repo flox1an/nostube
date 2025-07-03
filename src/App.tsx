@@ -29,8 +29,8 @@ export const presetRelays = [
 ];
 
 const presetBlossomServers = [
-  'https://blossom.nostr.build',
-  'https://blossom.slidestr.net',
+  { url: 'https://blossom.nostr.build', tags: [] },
+  { url: 'https://blossom.slidestr.net', tags: [] },
 ];
 
 const defaultConfig: AppConfig = {

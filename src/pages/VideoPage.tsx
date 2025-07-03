@@ -117,7 +117,7 @@ export function VideoPage() {
           },
         ],
         {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]),
+          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
           relays: fullRelays,
         }
       );

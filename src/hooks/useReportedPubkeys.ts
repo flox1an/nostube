@@ -5,7 +5,8 @@ import { nip19 } from "nostr-tools";
 
 const blockPubkeys: Record<string, boolean> = [
   "npub18hgsruk953pkx5th2xdreureplkekuja7c8f9ffc9arsghwtfvqsuhsl9c",
-  "npub19q6xeyj5ve7572k84vgr2rchth00tl7t0j530k67jh36q5vjn02qaw3cpz"
+  "npub19q6xeyj5ve7572k84vgr2rchth00tl7t0j530k67jh36q5vjn02qaw3cpz",
+  "npub1rk27vy78zk8kszeyauu560xadd3vzh5dltgg0wd2vpsjujyvquws4rzulu",
 ]
   .map((p) => nip19.decode(p).data as string)
   .reduce((prev, cur) => ({ ...prev, [cur]: true }), {});

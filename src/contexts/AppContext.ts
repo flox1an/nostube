@@ -10,6 +10,8 @@ export interface AppConfig {
   relays: string[];
   /** Selected video type */
   videoType: VideoType;
+  /** Blossom servers for file uploads */
+  blossomServers?: string[];
 }
 
 export interface AppContextType {

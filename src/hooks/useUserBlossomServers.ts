@@ -11,7 +11,7 @@ export function useUserBlossomServers() {
     enabled: !!user?.pubkey,
     queryFn: async (ctx) => {
       if (!user?.pubkey) return [];
-      const signal = AbortSignal.any([ctx.signal, AbortSignal.timeout(2000)]);
+      const signal = AbortSignal.any([ctx.signal, AbortSignal.timeout(3000)]);
       const events = await nostr.query([
         {
           kinds: [10063],

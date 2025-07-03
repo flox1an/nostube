@@ -10,7 +10,7 @@ import { AuthorPage } from '@/pages/AuthorPage';
 import { UploadPage } from '@/pages/UploadPage';
 import PlaylistPage from '@/pages/Playlists';
 import { ShortsPage } from './pages/ShortsPage';
-import { RelaySettingsPage } from './pages/settings/RelaySettingsPage';
+import SettingsPage from './pages/settings/SettingsPage';
 
 export function AppRouter() {
   return (
@@ -26,7 +26,7 @@ export function AppRouter() {
           <Route path="/author/:npub" element={<AuthorPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/playlists" element={<PlaylistPage />} />
-          <Route path="/settings/relays" element={<RelaySettingsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

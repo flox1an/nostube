@@ -28,10 +28,16 @@ export const presetRelays = [
   { url: "wss://nos.lol/", name: "nos.lol" },
 ];
 
+const presetBlossomServers = [
+  'https://blossom.nostr.build',
+  'https://blossom.slidestr.net',
+];
+
 const defaultConfig: AppConfig = {
   theme: "dark",
   relays: presetRelays.map((r) => r.url),
   videoType: "videos",
+  blossomServers: [...presetBlossomServers],
 };
 
 export function App() {

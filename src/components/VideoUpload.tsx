@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useUploadFile } from '@/hooks/useUploadFile';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { Button } from '@/components/ui/button';
@@ -15,8 +14,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from './ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { uploadFileWithProgress } from '@/lib/blossom-upload';
 
 export function VideoUpload() {
   const [title, setTitle] = useState('');
@@ -26,9 +27,9 @@ export function VideoUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0);
   
   const { user } = useCurrentUser();
-  const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publish } = useNostrPublish();
   const { data: blossomServers = [] } = useUserBlossomServers();
 
@@ -37,9 +38,20 @@ export function VideoUpload() {
     if (!file || !thumbnail || !user) return;
 
     try {
+      // Set progress to 0 at the start
       // Upload video and thumbnail to Blossom (TODO: use selectedServers)
-      const [[, videoUrl]] = await uploadFile(file);
-      const [[, thumbUrl]] = await uploadFile(thumbnail);
+      const [[, videoUrl]] = await uploadFileWithProgress({
+        file,
+        server: selectedServers[0] || blossomServers[0],
+        signer: user.signer.signEvent,
+        onProgress: setProgress,
+      });
+      const [[, thumbUrl]] = await uploadFileWithProgress({
+        file: thumbnail,
+        server: selectedServers[0] || blossomServers[0],
+        signer: user.signer.signEvent,
+        onProgress: setProgress,
+      });
 
       // Calculate video duration and dimensions
       const video = document.createElement('video');
@@ -50,27 +62,33 @@ export function VideoUpload() {
       const duration = Math.round(video.duration);
       const dimensions = `${video.videoWidth}x${video.videoHeight}`;
 
-      // Generate unique identifier
-      const videoId = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+      const [width, height] = dimensions.split('x').map(Number);
+      const kind = height > width ? 22 : 21;
 
       // Publish Nostr event (NIP-71)
-      publish({
-        kind: 21, // TODO choose based on dimension
+      const imetaTag = [
+        "imeta",
+        `dim ${dimensions}`,
+        `url ${videoUrl}`,
+        `m ${file.type}`,
+        ...(thumbUrl ? [`image ${thumbUrl}`] : []),
+        //"fallback https://backup.com/1080/12345.mp4", // other servers?
+      ];
+
+      const event = {
+        kind,
         content: description,
         tags: [
-          ['d', videoId],
-          ['title', title],
-          ['description', description],
-          ['url', videoUrl],
-          ['m', file.type],
-          ['thumb', thumbUrl],
-          ['duration', duration.toString()],
-          ['dim', dimensions],
-          ['size', file.size.toString()],
-          ...tags.map(tag => ['t', tag]),
-          ['client', 'nostube'],
+          ["title", title],
+          ["published_at", Math.floor(Date.now() / 1000).toString()],
+          ["duration", duration.toString()],
+          imetaTag,
+          ...tags.map(tag => ["t", tag]),
+          ["client", "nostube"]
         ]
-      });
+      };
+
+      console.log(event);
 
       // Reset form
       setTitle('');
@@ -80,7 +98,9 @@ export function VideoUpload() {
       setTags([]);
       setTagInput('');
       setSelectedServers([]);
+      setProgress(0);
     } catch (error) {
+      setProgress(0);
       console.error('Upload failed:', error);
     }
   };
@@ -195,37 +215,36 @@ export function VideoUpload() {
                 <Button variant="outline" className="w-full justify-between">
                   {selectedServers.length > 0
                     ? `${selectedServers.length} selected`
-                    : 'Select Blossom servers'}
+                    : "Select servers"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-full min-w-[16rem] max-h-60 overflow-y-auto">
-                {blossomServers.length === 0 && (
-                  <DropdownMenuItem disabled>No Blossom servers found</DropdownMenuItem>
-                )}
-                {blossomServers.map(server => (
-                  <DropdownMenuCheckboxItem
-                    key={server}
-                    checked={selectedServers.includes(server)}
-                    onCheckedChange={() => toggleServer(server)}
-                  >
-                    {server}
-                  </DropdownMenuCheckboxItem>
+              <DropdownMenuContent className="w-[200px]">
+                {blossomServers.map((server) => (
+                  <DropdownMenuItem key={server} onClick={() => toggleServer(server)}>
+                    <Checkbox
+                      checked={selectedServers.includes(server)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          toggleServer(server);
+                        }
+                      }}
+                    />
+                    <span>{server}</span>
+                  </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {selectedServers.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {selectedServers.map(server => (
-                  <Badge key={server} variant="outline">{server}</Badge>
-                ))}
-              </div>
-            )}
           </div>
+
+          {progress > 0 && progress < 100 && (
+            <div className="my-4">
+              <Progress value={progress} max={100} />
+              <div className="text-xs text-muted-foreground mt-1">{progress}%</div>
+            </div>
+          )}
         </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={!file || !thumbnail}>
-            Upload Video
-          </Button>
+        <CardFooter className="flex justify-end">
+          <Button type="submit">Upload</Button>
         </CardFooter>
       </form>
     </Card>

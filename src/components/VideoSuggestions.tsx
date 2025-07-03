@@ -125,7 +125,7 @@ export function VideoSuggestions({
             limit: 30, // Fetch more to allow for filtering
           },
         ],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(500)]), relays }
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]), relays }
       );
       combinedEvents = combinedEvents.concat(generalEvents);
 

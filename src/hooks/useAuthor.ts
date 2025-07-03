@@ -14,7 +14,7 @@ export function useAuthor(pubkey: string | undefined) {
 
       const [event] = await nostr.query(
         [{ kinds: [0], authors: [pubkey!], limit: 1 }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]), relays: ['wss://relay.damus.io', 'wss://purplepag.es', 'wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://purplepag.es'] },
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]), relays: ['wss://relay.damus.io', 'wss://purplepag.es', 'wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://purplepag.es'] },
       );
 
       if (!event) {

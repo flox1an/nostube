@@ -80,7 +80,6 @@ export function VideoCard({
                 aspectRatio,
                 isHovered && videoLoaded ? "opacity-0 absolute" : "opacity-100"
               )}
-              onLoad={(info) => console.log("loaded", video.thumb, info)}
               onError={(err) =>
                 console.error("error loading", video.thumb, err)
               }

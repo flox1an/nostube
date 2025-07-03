@@ -4,6 +4,12 @@ import { blurHashToDataURL } from "@/workers/blurhashDataURL";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { nip19 } from "nostr-tools";
 
+
+type TextTrack = {
+  url: string;
+  lang: string;
+}
+
 export interface VideoEvent {
   id: string;
   kind: number;
@@ -23,6 +29,7 @@ export interface VideoEvent {
   size?: number;
   link: string;
   type: VideoType;
+  // captions: TextTrack[];
   contentWarning: string | undefined;
 }
 
@@ -87,6 +94,12 @@ export function processEvent(
     );
     // Only process if it's a video
     //if (!url || !mimeType?.startsWith('video/')) return null;
+
+    const textTrackTags = event.tags.filter((t) => t[0] === "text-track");
+    if (textTrackTags.length>0) {
+      console.error('text-track', textTrackTags);
+
+    }
 
 
     const videoEvent: VideoEvent = {

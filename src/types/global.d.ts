@@ -19,4 +19,8 @@ declare global {
       "media-control-bar": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     }
   }
+}
+
+interface AppConfig {
+  blossomServers?: string[];
 } 

@@ -22,7 +22,7 @@ export function useFollowedAuthors() {
           },
         ],
         {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(1000)]),
+          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
           relays: config.relays,
         }
       );

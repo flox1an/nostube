@@ -35,7 +35,7 @@ export function VideoUpload() {
     videoCodec?: string;
     audioCodec?: string;
   }>({ uploadedBlobs: [], mirroredBlobs: [] });
-  const [uploadStarted, setUploadStarted] = useState(false);
+  const [uploadState, setUploadState] = useState<'initial'|'uploading'|'finished'>('initial');
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated');
 
@@ -202,7 +202,7 @@ export function VideoUpload() {
       const file = acceptedFiles[0] ?? null;
       setFile(file);
       setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
-      setUploadStarted(true);
+      setUploadState('uploading');
       // Start upload automatically
       try {
         const uploadedBlobs = await uploadFileToMultipleServers({
@@ -275,12 +275,12 @@ export function VideoUpload() {
           }));
         }
       } catch {
-        setUploadStarted(false);
+        setUploadState('initial');
         setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
         // Optionally show error toast
       }
     }
-    setUploadStarted(false);
+    setUploadState('finished');
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -381,7 +381,7 @@ export function VideoUpload() {
     setFile(null);
     setThumbnail(null);
     setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
-    setUploadStarted(false);
+    setUploadState('initial');
     setThumbnailBlob(null);
     setThumbnailSource('generated');
   };
@@ -575,7 +575,7 @@ export function VideoUpload() {
               </div>
             )}
             {/* Infinite progress spinner while uploading */}
-            {uploadStarted && (
+            {uploadState == 'uploading' && (
               <div className="flex items-center gap-2 mt-4">
                 <Loader2 className="animate-spin h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground">Uploading...</span>
@@ -584,7 +584,7 @@ export function VideoUpload() {
           </div>
 
           {/* Show form fields only after upload has started */}
-          {uploadStarted && (
+          {uploadState !== 'initial' && (
             <>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="title">Title</Label>

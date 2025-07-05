@@ -3,13 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { NoteContent } from './NoteContent';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { nowInSecs } from '@/lib/utils';
 
 describe('NoteContent', () => {
   it('linkifies URLs in kind 1 events', () => {
     const event: NostrEvent = {
       id: 'test-id',
       pubkey: 'test-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowInSecs(),
       kind: 1,
       tags: [],
       content: 'Check out this link: https://example.com',
@@ -32,7 +33,7 @@ describe('NoteContent', () => {
     const event: NostrEvent = {
       id: 'test-comment-id',
       pubkey: 'test-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowInSecs(),
       kind: 1111,
       tags: [
         ['a', '30040:pubkey:identifier'],
@@ -59,7 +60,7 @@ describe('NoteContent', () => {
     const event: NostrEvent = {
       id: 'test-id',
       pubkey: 'test-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowInSecs(),
       kind: 1111,
       tags: [],
       content: 'This is just plain text without any links.',
@@ -80,7 +81,7 @@ describe('NoteContent', () => {
     const event: NostrEvent = {
       id: 'test-id',
       pubkey: 'test-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowInSecs(),
       kind: 1,
       tags: [],
       content: 'This is a post about #nostr and #bitcoin development.',
@@ -107,7 +108,7 @@ describe('NoteContent', () => {
     const event: NostrEvent = {
       id: 'test-id',
       pubkey: 'test-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowInSecs(),
       kind: 1,
       tags: [],
       content: `Mentioning nostr:npub1zg69v7ys40x77y352eufp27daufrg4ncjz4ummcjx3t83y9tehhsqepuh0`,

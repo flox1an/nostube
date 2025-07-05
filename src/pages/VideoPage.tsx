@@ -251,7 +251,7 @@ export function VideoPage() {
                 <div className="flex items-start justify-between">
                   <Link
                     to={`/author/${nip19.npubEncode(video?.pubkey || "")}`}
-                    className="flex items-center gap-4 hover:bg-accent p-2 rounded-lg transition-colors"
+                    className="flex items-center gap-4"
                   >
                     <Avatar>
                       <AvatarImage src={metadata?.picture} />

@@ -26,6 +26,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import * as MP4Box from "mp4box";
 import type { Movie } from "mp4box";
 import { nip19 } from "nostr-tools";
+import { nowInSecs } from "@/lib/utils";
 
 export function VideoUpload() {
   const [title, setTitle] = useState("");
@@ -117,10 +118,10 @@ export function VideoUpload() {
       const event = {
         kind,
         content: description,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nowInSecs(),
         tags: [
           ["title", title],
-          ["published_at", Math.floor(Date.now() / 1000).toString()],
+          ["published_at", nowInSecs().toString()],
           ["duration", uploadInfo.duration?.toString() || "0"],
           imetaTag,
           ...tags.map((tag) => ["t", tag]),

@@ -1,0 +1,16 @@
+{
+  "printWidth": 120,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "avoid",
+  "rangeStart": 0,
+  "rangeEnd": 9007199254740991,
+  "requirePragma": false,
+  "insertPragma": false,
+  "proseWrap": "preserve"
+}

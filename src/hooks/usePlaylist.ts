@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { nowInSecs } from '@/lib/utils';
 
 export interface Video {
   id: string;
@@ -130,7 +131,7 @@ export function usePlaylists() {
           id: videoId,
           kind: videoKind,
           title: videoTitle,
-          added_at: Math.floor(Date.now() / 1000),
+          added_at: nowInSecs(),
         },
       ],
     };
@@ -153,13 +154,14 @@ export function usePlaylists() {
   const deletePlaylist = async (identifier: string) => {
     if (!user?.pubkey) throw new Error('User not logged in');
 
-    await publishEvent({
+    await publishEvent({event: {
       kind: PLAYLIST_KIND,
+      created_at: nowInSecs(),
       tags: [
         ['d', identifier],
       ],
       content: '',
-    });
+    }});
 
     queryClient.invalidateQueries({ queryKey: ['playlists', user?.pubkey] });
   };

@@ -43,3 +43,7 @@ export function formatFileSize(bytes: number): string {
 
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
+
+export function nowInSecs() {
+  return Math.floor(Date.now() / 1000);
+}

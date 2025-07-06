@@ -44,6 +44,8 @@ export function VideoUpload() {
     uploading: boolean;
     error?: string;
   }>({ uploadedBlobs: [], mirroredBlobs: [], uploading: false });
+  const [contentWarningEnabled, setContentWarningEnabled] = useState(false);
+  const [contentWarningReason, setContentWarningReason] = useState('');
 
   const { user } = useCurrentUser();
   const { config } = useAppContext();
@@ -121,6 +123,10 @@ export function VideoUpload() {
           imetaTag,
           // TODO remove
           // ['text-track', 'https://temp-st.apps2.slidestr.net/3ef2be82896a81037d4f31f789e5f3fc670f291fe18484f700557fc6bf82cfaa.vtt', 'en-US'],
+          ...(contentWarningEnabled ? [[
+            'content-warning',
+            contentWarningReason.trim() ? contentWarningReason : 'NSFW',
+          ]] : []),
           ...tags.map(tag => ['t', tag]),
           ['client', 'nostube'],
         ],
@@ -751,6 +757,27 @@ export function VideoUpload() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                )}
+                {/* Content warning option */}
+                <div className="flex items-center gap-2 mt-4">
+                  <input
+                    type="checkbox"
+                    id="content-warning"
+                    checked={contentWarningEnabled}
+                    onChange={e => setContentWarningEnabled(e.target.checked)}
+                  />
+                  <Label htmlFor="content-warning">Mark as NSFW / add content warning</Label>
+                </div>
+                {contentWarningEnabled && (
+                  <div className="flex flex-col gap-1 mt-2">
+                    <Label htmlFor="content-warning-reason">Reason (optional)</Label>
+                    <Input
+                      id="content-warning-reason"
+                      value={contentWarningReason}
+                      onChange={e => setContentWarningReason(e.target.value)}
+                      placeholder="e.g. nudity, violence, etc."
+                    />
                   </div>
                 )}
               </div>

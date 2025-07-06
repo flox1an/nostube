@@ -9,6 +9,7 @@ import { formatDistance } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { PlayProgressBar } from './PlayProgressBar';
+import { useMemo } from 'react';
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -77,37 +78,35 @@ interface VideoSuggestionsProps {
 export function VideoSuggestions({ currentVideoId, currentVideoType, relays, authorPubkey }: VideoSuggestionsProps) {
   const { nostr } = useNostr();
   const blockedPubkeys = useReportedPubkeys();
-  const {
-    data: suggestions = [],
-    isLoading,
-    isPending,
-  } = useQuery<VideoEvent[]>({
-    enabled: currentVideoId !== undefined && authorPubkey != undefined,
-    queryKey: ['video-suggestions', currentVideoId, authorPubkey],
+
+  const { data: authorSuggestions = [], isLoading: authorIsLoading } = useQuery<NostrEvent[]>({
+    enabled: authorPubkey != undefined,
+    queryKey: ['video-suggestions-author', authorPubkey],
     queryFn: async ({ signal }) => {
-      let combinedEvents: NostrEvent[] = [];
-      console.log(['video-suggestions', currentVideoId, authorPubkey]);
+      console.log(['video-suggestions-author', authorPubkey]);
 
-      // 1. Fetch videos from the specific author if provided
-      if (authorPubkey) {
-        const authorEvents = await nostr.query(
-          [
-            {
-              kinds: getKindsForType('all'),
-              authors: [authorPubkey],
-              limit: 15, // Limit author-specific videos
-            },
-          ],
+      return await nostr.query(
+        [
           {
-            signal: AbortSignal.any([signal, AbortSignal.timeout(500)]),
-            relays,
-          }
-        );
-        combinedEvents = combinedEvents.concat(authorEvents);
-      }
+            kinds: getKindsForType('all'),
+            authors: [authorPubkey!],
+            limit: 30, // Limit author-specific videos
+          },
+        ],
+        {
+          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+          relays,
+        }
+      );
+    },
+  });
 
-      // 2. Fetch general recent videos
-      const generalEvents = await nostr.query(
+  const { data: globalSuggestions = [], isLoading: globalIsLoading } = useQuery<NostrEvent[]>({
+    queryKey: ['video-suggestions-global'],
+    queryFn: async ({ signal }) => {
+      console.log(['video-suggestions-global']);
+
+      return await nostr.query(
         [
           {
             kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
@@ -116,29 +115,32 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, relays, aut
         ],
         { signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]), relays }
       );
-      combinedEvents = combinedEvents.concat(generalEvents);
-
-      // Process and filter unique videos, excluding the current video
-      const processedVideos: VideoEvent[] = [];
-      const seenIds = new Set<string>();
-
-      for (const event of combinedEvents) {
-        if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue;
-        const processed = processEvent(event, relays);
-        if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
-          processedVideos.push(processed);
-          seenIds.add(processed.id);
-        }
-      }
-
-      return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
     },
   });
+
+  const suggestions = useMemo(() => {
+    const events = [...authorSuggestions, ...globalSuggestions];
+
+    // Process and filter unique videos, excluding the current video
+    const processedVideos: VideoEvent[] = [];
+    const seenIds = new Set<string>();
+
+    for (const event of events) {
+      if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue;
+      const processed = processEvent(event, relays);
+      if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
+        processedVideos.push(processed);
+        seenIds.add(processed.id);
+      }
+    }
+
+    return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
+  }, [authorSuggestions, globalSuggestions]);
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div className="sm:grid grid-cols-2 gap-4 lg:block">
-      {isPending || isLoading
+      {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
         : suggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)}
     </div>

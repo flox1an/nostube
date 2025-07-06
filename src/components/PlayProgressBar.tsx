@@ -41,4 +41,4 @@ export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
       />
     </div>
   );
-} 
+}

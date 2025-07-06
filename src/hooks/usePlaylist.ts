@@ -92,9 +92,12 @@ export function usePlaylists() {
       ];
 
       await publishEvent({
-        kind: PLAYLIST_KIND,
-        tags,
-        content: '', // Content can be empty as per NIP-51
+        event: {
+          kind: PLAYLIST_KIND,
+          created_at: nowInSecs(),
+          tags,
+          content: '', // Content can be empty as per NIP-51
+        },
       });
 
       return playlist;

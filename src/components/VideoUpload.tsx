@@ -17,7 +17,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import * as MP4Box from 'mp4box';
 import type { Movie } from 'mp4box';
 import { nip19 } from 'nostr-tools';
-import { nowInSecs } from '@/lib/utils';
+import { formatBlobUrl, nowInSecs } from '@/lib/utils';
 
 export function VideoUpload() {
   const [title, setTitle] = useState('');
@@ -35,7 +35,7 @@ export function VideoUpload() {
     videoCodec?: string;
     audioCodec?: string;
   }>({ uploadedBlobs: [], mirroredBlobs: [] });
-  const [uploadState, setUploadState] = useState<'initial'|'uploading'|'finished'>('initial');
+  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial');
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated');
 
@@ -389,10 +389,6 @@ export function VideoUpload() {
   if (!user) {
     return <div>Please log in to upload videos</div>;
   }
-
-  const formatBlobUrl = (url: string) => {
-    return url.replace('https://', '').replace('http://', '').replace(/\/.*$/, '');
-  };
 
   return (
     <Card>

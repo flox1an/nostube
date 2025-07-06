@@ -12,15 +12,15 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Upload } from 'lucide-react';
 import { NSchema as n, type NostrMetadata } from '@nostrify/nostrify';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUploadFile } from '@/hooks/useUploadFile';
+import { nowInSecs } from '@/lib/utils';
 
 export const EditProfileForm: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { user, metadata } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
-  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { toast } = useToast();
+  const isUploading = false;
 
   // Initialize the form with default values
   const form = useForm<NostrMetadata>({
@@ -55,8 +55,8 @@ export const EditProfileForm: React.FC = () => {
   const uploadPicture = async (file: File, field: 'picture' | 'banner') => {
     try {
       // The first tuple in the array contains the URL
-      const [[_, url]] = await uploadFile(file);
-      form.setValue(field, url);
+      // const [[_, url]] = await uploadFile(file);
+      // form.setValue(field, url);
       toast({
         title: 'Success',
         description: `${field === 'picture' ? 'Profile picture' : 'Banner'} uploaded successfully`,
@@ -94,8 +94,12 @@ export const EditProfileForm: React.FC = () => {
 
       // Publish the metadata event (kind 0)
       await publishEvent({
-        kind: 0,
-        content: JSON.stringify(data),
+        event: {
+          created_at: nowInSecs(),
+          kind: 0,
+          content: JSON.stringify(data),
+          tags: [],
+        },
       });
 
       // Invalidate queries to refresh the data

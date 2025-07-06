@@ -47,3 +47,7 @@ export function formatFileSize(bytes: number): string {
 export function nowInSecs() {
   return Math.floor(Date.now() / 1000);
 }
+
+export const formatBlobUrl = (url: string) => {
+  return url.replace('https://', '').replace('http://', '').replace(/\/.*$/, '');
+};

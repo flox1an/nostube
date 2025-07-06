@@ -80,7 +80,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             )}
             {/* Progress bar at bottom of thumbnail */}
             <PlayProgressBar videoId={video.id} duration={video.duration} />
-            {isHovered && video.urls && video.urls.length>0 && (
+            {isHovered && video.urls && video.urls.length > 0 && (
               <video
                 ref={videoRef}
                 src={video.urls[0]}

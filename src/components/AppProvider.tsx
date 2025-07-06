@@ -3,7 +3,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, type AppConfig, type AppContextType } from '@/contexts/AppContext';
 import { useUserRelays } from '@/hooks/useUserRelays';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { mergeRelays } from '@/lib/utils';
+import { formatBlobUrl, mergeRelays } from '@/lib/utils';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -59,7 +59,11 @@ export function AppProvider(props: AppProviderProps) {
     ) {
       setConfig({
         ...config,
-        blossomServers: (config.blossomServers as unknown as string[]).map(url => ({ url, tags: [] })),
+        blossomServers: (config.blossomServers as unknown as string[]).map(url => ({
+          url,
+          tags: [],
+          name: formatBlobUrl(url),
+        })),
       });
     }
   }, [config.blossomServers]);

@@ -30,6 +30,7 @@ declare global {
 
 interface BlossomServer {
   url: string;
+  name: string;
   tags: ('mirror' | 'initial upload')[];
 }
 

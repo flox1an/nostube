@@ -28,10 +28,7 @@ export const presetRelays = [
   { url: 'wss://nos.lol/', name: 'nos.lol' },
 ];
 
-const presetBlossomServers = [
-  { url: 'https://blossom.nostr.build', tags: [] },
-  { url: 'https://blossom.slidestr.net', tags: [] },
-];
+const presetBlossomServers: BlossomServer[] = [];
 
 const defaultConfig: AppConfig = {
   theme: 'dark',

@@ -1,4 +1,4 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Scissors, Cog, Server } from 'lucide-react';
+import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Scissors, Cog } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -29,7 +29,7 @@ export function Sidebar() {
     { name: 'Your clips', icon: Scissors, href: '/clips', disabled: true },
   ];
 
-  const configItems = [{ name: 'Settings', icon: Cog, href: '/settings' }];
+  const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }];
 
   return (
     <div className="flex flex-col h-full bg-background pt-4">

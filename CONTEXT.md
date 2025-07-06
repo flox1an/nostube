@@ -352,13 +352,13 @@ Use the `useUploadFile` hook to upload files. This hook uses Blossom servers for
 import { useUploadFile } from "@/hooks/useUploadFile";
 
 function MyComponent() {
-  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  //const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
 
   const handleUpload = async (file: File) => {
     try {
       // Provides an array of NIP-94 compatible tags
       // The first tag in the array contains the URL
-      const [[_, url]] = await uploadFile(file);
+      //const [[_, url]] = await uploadFile(file);
       // ...use the url
     } catch (error) {
       // ...handle errors

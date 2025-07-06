@@ -121,6 +121,7 @@
   media-controller {
     width: 100%;
     align-content: center;
+    background-color: var(--background);
   }
 
   media-controller video {

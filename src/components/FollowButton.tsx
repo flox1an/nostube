@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserPlusIcon, UserCheckIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, nowInSecs } from '@/lib/utils';
 import { useEffect } from 'react';
 
 interface FollowButtonProps {
@@ -77,9 +77,12 @@ export function FollowButton({ pubkey, className }: FollowButtonProps) {
 
     // Publish the new contact list
     publish({
-      kind: 3,
-      content: '', // Content can be empty for contact lists
-      tags,
+      event: {
+        kind: 3,
+        created_at: nowInSecs(),
+        content: '', // Content can be empty for contact lists
+        tags,
+      },
     });
 
     // Refetch the follow list to update UI

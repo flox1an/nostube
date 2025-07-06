@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { formatDistance } from 'date-fns';
 import { useAppContext } from '@/hooks/useAppContext';
 import { NostrEvent } from 'nostr-tools';
+import { nowInSecs } from '@/lib/utils';
 
 interface Comment {
   id: string;
@@ -94,6 +95,7 @@ export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
     const draftEvent = {
       kind: 1111,
       content: newComment,
+      created_at: nowInSecs(),
       tags: [
         ['E', videoId],
         ['P', authorPubkey],
@@ -102,7 +104,7 @@ export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
         ['client', 'nostube'],
       ],
     };
-    publish(draftEvent);
+    publish({ event: draftEvent });
 
     setNewComment('');
   };

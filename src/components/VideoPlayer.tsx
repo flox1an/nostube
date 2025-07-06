@@ -31,7 +31,10 @@ export function VideoPlayer({
   const [allFailed, setAllFailed] = useState(false);
   const [triedHead, setTriedHead] = useState(false);
 
-  const isHls = React.useMemo(() => mime === 'application/vnd.apple.mpegurl' || urls[currentUrlIndex]?.endsWith('.m3u8'), [mime, urls, currentUrlIndex]);
+  const isHls = React.useMemo(
+    () => mime === 'application/vnd.apple.mpegurl' || urls[currentUrlIndex]?.endsWith('.m3u8'),
+    [mime, urls, currentUrlIndex]
+  );
 
   // Set initial play position on mount
   useEffect(() => {
@@ -89,7 +92,7 @@ export function VideoPlayer({
       // Try HEAD requests for all remaining URLs in parallel
       const remaining = urls.slice(currentUrlIndex + 1);
       const checks = await Promise.all(
-        remaining.map(async (url) => {
+        remaining.map(async url => {
           try {
             const res = await fetch(url, { method: 'HEAD', mode: 'cors' });
             return res.ok;

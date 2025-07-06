@@ -3,6 +3,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import 'media-chrome';
 import 'hls-video-element';
 import { TextTrack } from '@/utils/video-event';
+import { getLanguageLabel } from '@/lib/utils';
 import 'media-chrome/menu';
 
 interface VideoPlayerProps {
@@ -165,7 +166,7 @@ export function VideoPlayer({
         >
           {/* TODO translate label */}
           {textTracks.map(vtt => (
-            <track label={vtt.lang} kind="captions" srcLang={vtt.lang} src={vtt.url}></track>
+            <track label={getLanguageLabel(vtt.lang)} kind="captions" srcLang={vtt.lang} src={vtt.url}></track>
           ))}
           {/* TODO: add captions <track kind="captions" /> */}
           {/* TODO: add fallback sources <source src={url} type={mime} /> */}

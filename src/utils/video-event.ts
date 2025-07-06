@@ -61,7 +61,15 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
     // Parse imeta tag values
     const imetaValues = new Map<string, string[]>();
     for (let i = 1; i < imetaTag.length; i++) {
-      const [key, value] = imetaTag[i].split(' ');
+      const firstSpace = imetaTag[i].indexOf(' ');
+      let key: string | undefined, value: string | undefined;
+      if (firstSpace !== -1) {
+        key = imetaTag[i].slice(0, firstSpace);
+        value = imetaTag[i].slice(firstSpace + 1);
+      } else {
+        key = imetaTag[i];
+        value = undefined;
+      }
       if (key && value) {
         if (!imetaValues.has(key)) {
           imetaValues.set(key, [value]);

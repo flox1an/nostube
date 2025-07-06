@@ -55,6 +55,7 @@
     "hls-video-element": "^1.5.4",
     "hls.js": "^1.6.5",
     "input-otp": "^1.4.2",
+    "langs": "^2.0.0",
     "lucide-react": "^0.513.0",
     "media-chrome": "^4.11.0",
     "mp4box": "^1.0.6",

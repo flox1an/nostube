@@ -15,7 +15,7 @@ export interface VideoEvent {
   identifier?: string;
   title: string;
   description: string;
-  thumb: string;
+  images: string[];
   pubkey: string;
   created_at: number;
   duration: number;
@@ -73,8 +73,9 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
 
     const url = imetaValues.get('url')?.[0];
     const mimeType: string | undefined = imetaValues.get('m')?.[0];
-    const image: string | undefined = imetaValues.get('image')?.[0];
-    const thumb: string | undefined = imetaValues.get('thumb')?.[0];
+
+    const images: string[] = [];
+    imetaValues.get('image')?.forEach(url => images.push(url));
 
     const videoUrls: string[] = url ? [url] : [];
     imetaValues.get('fallback')?.forEach(url => videoUrls.push(url));
@@ -100,7 +101,7 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       kind: event.kind,
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
-      thumb: image || thumb || (url ? `${videoThumbService}/${url}` : '') || blurHashToDataURL(blurhash) || '',
+      images: images.length > 0 ? images : [(url ? `${videoThumbService}/${url}` : '') || blurHashToDataURL(blurhash) || ''],
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,
@@ -139,7 +140,7 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       identifier,
       title,
       description,
-      thumb: thumb || `${videoThumbService}/${url}`,
+      images: [thumb || `${videoThumbService}/${url}`],
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,

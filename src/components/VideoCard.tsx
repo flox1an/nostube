@@ -61,7 +61,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
         <Link to={`/video/${video.link}`}>
           <div className="w-full overflow-hidden rounded-lg relative">
             <img
-              src={video.thumb}
+              src={video.images[0]}
               alt={video.title}
               className={cn(
                 video.contentWarning ? 'blur-lg' : '',
@@ -69,7 +69,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
                 aspectRatio,
                 isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
               )}
-              onError={err => console.error('error loading', video.thumb, err)}
+              onError={err => console.error('error loading', video.images[0], err)}
             />
             {video.contentWarning && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-sm">

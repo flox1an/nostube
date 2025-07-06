@@ -167,7 +167,7 @@ export function VideoPage() {
   const shareUrl = timestamp > 0 ? `${videoUrl}?t=${timestamp}` : videoUrl;
   const fullUrl = shareUrl;
   const title = video?.title || 'Watch this video';
-  const thumbnailUrl = video?.thumb || '';
+  const thumbnailUrl = video?.images[0] || '';
 
   const shareLinks = useMemo(() => {
     const eUrl = encode(shareUrl);
@@ -231,7 +231,7 @@ export function VideoPage() {
                   urls={video.urls}
                   textTracks={video.textTracks}
                   mime={video.mimeType || ''}
-                  poster={video.thumb || ''}
+                  poster={video.images[0] || ''}
                   loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full max-h-[80dvh] aspect-video rounded-lg"
                   onTimeUpdate={setCurrentPlayPos}

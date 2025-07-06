@@ -31,7 +31,7 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
     <Link to={`/video/${video.link}`}>
       <div className="flex mb-4 hover:bg-accent rounded-lg transition-colors border-none ">
         <div className="relative w-40 h-24 flex-shrink-0">
-          <img src={video.thumb} alt={video.title} className="w-full h-full object-cover rounded-md" />
+          <img src={video.images[0]} alt={video.title} className="w-full h-full object-cover rounded-md" />
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
             <div className="absolute bottom-1 right-1 bg-black/80 text-white px-1 rounded text-xs">

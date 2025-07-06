@@ -4,6 +4,11 @@ import { blurHashToDataURL } from '@/workers/blurhashDataURL';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 
+export type TextTrack = {
+  lang: string;
+  url: string;
+}
+
 export interface VideoEvent {
   id: string;
   kind: number;
@@ -22,7 +27,7 @@ export interface VideoEvent {
   size?: number;
   link: string;
   type: VideoType;
-  // captions: TextTrack[];
+  textTracks: TextTrack[];
   contentWarning: string | undefined;
 }
 
@@ -84,10 +89,12 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
     // Only process if it's a video
     //if (!url || !mimeType?.startsWith('video/')) return null;
 
+    const textTracks: TextTrack[] = [];
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track');
-    if (textTrackTags.length > 0) {
-      console.error('text-track', textTrackTags);
-    }
+    textTrackTags.forEach(vtt => {
+      const [_, url, lang] = vtt;
+      textTracks.push({url, lang});
+    });
 
     const videoEvent: VideoEvent = {
       id: event.id,
@@ -103,6 +110,7 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       searchText: '',
       urls: videoUrls,
       mimeType,
+      textTracks,
       link: nip19.neventEncode({
         kind: event.kind,
         id: event.id,
@@ -140,6 +148,7 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       tags,
       searchText: '',
       urls: [url],
+      textTracks: [],
       mimeType,
       dimensions: event.tags.find(t => t[0] === 'dim')?.[1],
       size: parseInt(event.tags.find(t => t[0] === 'size')?.[1] || '0'),

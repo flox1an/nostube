@@ -38,6 +38,12 @@ export function VideoUpload() {
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial');
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated');
+  const [thumbnailUploadInfo, setThumbnailUploadInfo] = useState<{
+    uploadedBlobs: BlobDescriptor[];
+    mirroredBlobs: BlobDescriptor[];
+    uploading: boolean;
+    error?: string;
+  }>({ uploadedBlobs: [], mirroredBlobs: [], uploading: false });
 
   const { user } = useCurrentUser();
   const { config } = useAppContext();
@@ -113,10 +119,13 @@ export function VideoUpload() {
           ['published_at', nowInSecs().toString()],
           ['duration', uploadInfo.duration?.toString() || '0'],
           imetaTag,
+          // TODO remove
+          // ['text-track', 'https://temp-st.apps2.slidestr.net/3ef2be82896a81037d4f31f789e5f3fc670f291fe18484f700557fc6bf82cfaa.vtt', 'en-US'],
           ...tags.map(tag => ['t', tag]),
           ['client', 'nostube'],
         ],
       };
+
 
       /*
           ["text-track", "<encoded `kind 6000` event>", "<recommended relay urls>"],
@@ -179,9 +188,41 @@ export function VideoUpload() {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setThumbnail(e.target.files?.[0] || null);
+  // Thumbnail dropzone logic
+  const handleThumbnailDrop = async (acceptedFiles: File[]) => {
+    if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return;
+    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true });
+    try {
+      // Upload to initial servers
+      const uploadedBlobs = await uploadFileToMultipleServers({
+        file: acceptedFiles[0],
+        servers: blossomInitalUploadServers.map(server => server.url),
+        signer: async draft => await user.signer.signEvent(draft),
+      });
+      // Mirror to mirror servers
+      let mirroredBlobs: BlobDescriptor[] = [];
+      if (blossomMirrorServers && blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
+        mirroredBlobs = await mirrorBlobsToServers({
+          mirrorServers: blossomMirrorServers.map(s => s.url),
+          blob: uploadedBlobs[0],
+          signer: async draft => await user.signer.signEvent(draft),
+        });
+      }
+      setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false });
+      setThumbnail(acceptedFiles[0]);
+    } catch {
+      setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false, error: 'Failed to upload thumbnail.' });
+    }
   };
+  const {
+    getRootProps: getThumbRootProps,
+    getInputProps: getThumbInputProps,
+    isDragActive: isThumbDragActive,
+  } = useDropzone({
+    onDrop: handleThumbnailDrop,
+    accept: { 'image/*': [] },
+    multiple: false,
+  });
 
   const handleThumbnailSourceChange = (value: string) => {
     setThumbnailSource(value as 'generated' | 'upload');
@@ -384,6 +425,7 @@ export function VideoUpload() {
     setUploadState('initial');
     setThumbnailBlob(null);
     setThumbnailSource('generated');
+    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false });
   };
 
   if (!user) {
@@ -655,7 +697,61 @@ export function VideoUpload() {
                   </div>
                 )}
                 {thumbnailSource === 'upload' && (
-                  <Input id="thumbnail" type="file" accept="image/*" onChange={handleThumbnailChange} required />
+                  <div className="mb-2">
+                    <div
+                      {...getThumbRootProps()}
+                      className={
+                        `flex flex-col items-center h-24 justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ` +
+                        (isThumbDragActive ? 'border-primary bg-muted' : 'border-gray-300 bg-background hover:bg-muted')
+                      }
+                    >
+                      <input {...getThumbInputProps()} />
+                      <span className="text-base text-muted-foreground">
+                        {isThumbDragActive ? 'Drop the thumbnail here...' : 'Drag & drop a thumbnail image, or click to select'}
+                      </span>
+                    </div>
+                    {thumbnailUploadInfo.uploading && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Loader2 className="animate-spin h-5 w-5 text-primary" />
+                        <span className="text-sm text-muted-foreground">Uploading thumbnail...</span>
+                      </div>
+                    )}
+                    {thumbnailUploadInfo.error && (
+                      <div className="text-red-600 text-sm mt-2">{thumbnailUploadInfo.error}</div>
+                    )}
+                    {thumbnailUploadInfo.uploadedBlobs.length > 0 && (
+                      <div className="mt-2">
+                        <Label>Uploaded to...</Label>
+                        <ul className="flex flex-col gap-1">
+                          {thumbnailUploadInfo.uploadedBlobs.map(blob => (
+                            <li key={blob.url} className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
+                              <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open uploaded thumbnail URL">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {thumbnailUploadInfo.mirroredBlobs.length > 0 && (
+                      <div className="mt-2">
+                        <Label>Mirrored to...</Label>
+                        <ul className="flex flex-col gap-1">
+                          {thumbnailUploadInfo.mirroredBlobs.map(blob => (
+                            <li key={blob.url} className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
+                              <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open mirrored thumbnail URL">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </>

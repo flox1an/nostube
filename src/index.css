@@ -118,6 +118,10 @@
     @apply bg-background text-foreground;
   }
 
+  ::cue {
+    line-height: 150%;
+  }
+
   media-controller {
     width: 100%;
     align-content: center;

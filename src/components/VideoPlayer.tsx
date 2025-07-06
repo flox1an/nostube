@@ -2,10 +2,13 @@ import * as React from 'react';
 import { useRef, useEffect, useCallback, useState } from 'react';
 import 'media-chrome';
 import 'hls-video-element';
+import { TextTrack } from '@/utils/video-event';
+import "media-chrome/menu";
 
 interface VideoPlayerProps {
   urls: string[];
   loop?: boolean;
+  textTracks: TextTrack[];
   mime: string;
   poster?: string;
   onTimeUpdate?: (time: number) => void;
@@ -20,6 +23,7 @@ export function VideoPlayer({
   urls,
   mime,
   poster,
+  textTracks,
   loop = false,
   onTimeUpdate,
   className,
@@ -123,6 +127,8 @@ export function VideoPlayer({
     setTriedHead(false);
   }, [currentUrlIndex]);
 
+const hasCaptions = textTracks.length > 0;
+
   return (
     <media-controller className={className}>
       {allFailed ? (
@@ -144,7 +150,7 @@ export function VideoPlayer({
           onError={handleVideoError}
         ></hls-video>
       ) : (
-        <video
+        <video crossOrigin='anonymous'
           src={urls[currentUrlIndex]}
           ref={videoRef}
           slot="media"
@@ -156,10 +162,16 @@ export function VideoPlayer({
           tabIndex={0}
           onError={handleVideoError}
         >
+          {/* TODO translate label */}
+          {textTracks.map(vtt => (
+            <track label={vtt.lang} kind="captions" srcLang={vtt.lang} src={vtt.url}></track>
+          ))}
           {/* TODO: add captions <track kind="captions" /> */}
           {/* TODO: add fallback sources <source src={url} type={mime} /> */}
         </video>
       )}
+      {hasCaptions && <media-captions-menu hidden anchor="auto"></media-captions-menu>}
+
       <media-control-bar>
         <media-play-button />
         <media-mute-button />
@@ -168,6 +180,7 @@ export function VideoPlayer({
         <media-time-range />
         <media-playback-rate-button></media-playback-rate-button>
         <media-pip-button />
+        {hasCaptions && <media-captions-menu-button></media-captions-menu-button>}
         <media-fullscreen-button />
       </media-control-bar>
     </media-controller>

@@ -229,6 +229,7 @@ export function VideoPage() {
               <div>
                 <VideoPlayer
                   urls={video.urls}
+                  textTracks={video.textTracks}
                   mime={video.mimeType || ''}
                   poster={video.thumb || ''}
                   loop={[34236, 22].includes(video?.kind || 0)}

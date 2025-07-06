@@ -51,3 +51,26 @@ export function nowInSecs() {
 export const formatBlobUrl = (url: string) => {
   return url.replace('https://', '').replace('http://', '').replace(/\/.*$/, '');
 };
+
+export function buildAdvancedMimeType(baseMimetype: string, videoCodec?: string, audioCodec?: string): string {
+  // If baseMimetype already contains a codecs parameter, return as is
+  if (/codecs\s*=/.test(baseMimetype)) {
+    return baseMimetype;
+  }
+
+  const codecs: string[] = [];
+
+  if (videoCodec) {
+    codecs.push(videoCodec);
+  }
+  if (audioCodec) {
+    codecs.push(audioCodec);
+  }
+
+  if (codecs.length === 0) {
+    return baseMimetype;
+  }
+
+  const codecParam = `codecs="${codecs.join(',')}"`;
+  return `${baseMimetype}; ${codecParam}`;
+}

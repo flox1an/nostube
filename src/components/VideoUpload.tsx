@@ -17,7 +17,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import * as MP4Box from 'mp4box';
 import type { Movie } from 'mp4box';
 import { nip19 } from 'nostr-tools';
-import { formatBlobUrl, nowInSecs } from '@/lib/utils';
+import { buildAdvancedMimeType, formatBlobUrl, nowInSecs } from '@/lib/utils';
 
 export function VideoUpload() {
   const [title, setTitle] = useState('');
@@ -79,26 +79,17 @@ export function VideoUpload() {
       const [width, height] = uploadInfo.dimension?.split('x').map(Number) || [0, 0];
       const kind = height > width ? 22 : 21;
 
-      const thumbnailBlobs = await uploadFileToMultipleServers({
-        file: thumbnailFile,
-        servers: blossomInitalUploadServers.map(server => server.url),
-        signer: async draft => await user.signer.signEvent(draft),
-      });
-
       // Publish Nostr event (NIP-71)
       const imetaTag = [
         'imeta',
         `dim ${uploadInfo.dimension}`,
         `url ${uploadInfo.uploadedBlobs?.[0].url}`,
         `x ${uploadInfo.uploadedBlobs?.[0].sha256}`,
-        `m ${file.type}`,
+        `m ${buildAdvancedMimeType(file.type, uploadInfo.videoCodec, uploadInfo.audioCodec)}`,
       ];
 
-      if (thumbnailBlobs && thumbnailBlobs.length > 0) {
-        for (const blob of thumbnailBlobs) {
-          imetaTag.push(`image ${blob.url}`);
-        }
-      }
+      thumbnailUploadInfo.uploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`));
+      thumbnailUploadInfo.mirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`));
 
       if (uploadInfo.uploadedBlobs.length > 1) {
         for (const blob of uploadInfo.uploadedBlobs.slice(1)) {
@@ -123,20 +114,17 @@ export function VideoUpload() {
           imetaTag,
           // TODO remove
           // ['text-track', 'https://temp-st.apps2.slidestr.net/3ef2be82896a81037d4f31f789e5f3fc670f291fe18484f700557fc6bf82cfaa.vtt', 'en-US'],
-          ...(contentWarningEnabled ? [[
-            'content-warning',
-            contentWarningReason.trim() ? contentWarningReason : 'NSFW',
-          ]] : []),
+          ...(contentWarningEnabled
+            ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
+            : []),
           ...tags.map(tag => ['t', tag]),
           ['client', 'nostube'],
         ],
       };
 
-
       /*
           ["text-track", "<encoded `kind 6000` event>", "<recommended relay urls>"],
-    ["content-warning", "<reason>"],
-    ["segment", <start>, <end>, "<title>", "<thumbnail URL>"],
+          ["segment", <start>, <end>, "<title>", "<thumbnail URL>"],
 
     // participants
     ["p", "<32-bytes hex of a pubkey>", "<optional recommended relay URL>"],
@@ -217,7 +205,12 @@ export function VideoUpload() {
       setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false });
       setThumbnail(acceptedFiles[0]);
     } catch {
-      setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false, error: 'Failed to upload thumbnail.' });
+      setThumbnailUploadInfo({
+        uploadedBlobs: [],
+        mirroredBlobs: [],
+        uploading: false,
+        error: 'Failed to upload thumbnail.',
+      });
     }
   };
   const {
@@ -713,7 +706,9 @@ export function VideoUpload() {
                     >
                       <input {...getThumbInputProps()} />
                       <span className="text-base text-muted-foreground">
-                        {isThumbDragActive ? 'Drop the thumbnail here...' : 'Drag & drop a thumbnail image, or click to select'}
+                        {isThumbDragActive
+                          ? 'Drop the thumbnail here...'
+                          : 'Drag & drop a thumbnail image, or click to select'}
                       </span>
                     </div>
                     {thumbnailUploadInfo.uploading && (
@@ -733,7 +728,12 @@ export function VideoUpload() {
                             <li key={blob.url} className="flex items-center gap-2">
                               <Check className="w-4 h-4 text-green-500" />
                               <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
-                              <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open uploaded thumbnail URL">
+                              <a
+                                href={blob.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open uploaded thumbnail URL"
+                              >
                                 <ExternalLink className="w-4 h-4" />
                               </a>
                             </li>
@@ -749,7 +749,12 @@ export function VideoUpload() {
                             <li key={blob.url} className="flex items-center gap-2">
                               <Check className="w-4 h-4 text-green-500" />
                               <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
-                              <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open mirrored thumbnail URL">
+                              <a
+                                href={blob.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open mirrored thumbnail URL"
+                              >
                                 <ExternalLink className="w-4 h-4" />
                               </a>
                             </li>

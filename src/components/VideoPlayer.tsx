@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import 'media-chrome';
 import 'hls-video-element';
 import { TextTrack } from '@/utils/video-event';
-import "media-chrome/menu";
+import 'media-chrome/menu';
 
 interface VideoPlayerProps {
   urls: string[];
@@ -127,7 +127,7 @@ export function VideoPlayer({
     setTriedHead(false);
   }, [currentUrlIndex]);
 
-const hasCaptions = textTracks.length > 0;
+  const hasCaptions = textTracks.length > 0;
 
   return (
     <media-controller className={className}>
@@ -150,7 +150,8 @@ const hasCaptions = textTracks.length > 0;
           onError={handleVideoError}
         ></hls-video>
       ) : (
-        <video crossOrigin='anonymous'
+        <video
+          crossOrigin="anonymous"
           src={urls[currentUrlIndex]}
           ref={videoRef}
           slot="media"

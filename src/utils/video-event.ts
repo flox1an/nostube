@@ -7,7 +7,7 @@ import { nip19 } from 'nostr-tools';
 export type TextTrack = {
   lang: string;
   url: string;
-}
+};
 
 export interface VideoEvent {
   id: string;
@@ -83,7 +83,6 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
 
     const alt = imetaValues.get('alt')?.[0] || event.content || '';
     const blurhash = imetaValues.get('blurhash')?.[0];
-    const identifier = event.tags.find(t => t[0] === 'd')?.[1] || '';
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1]);
     const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0');
     // Only process if it's a video
@@ -93,13 +92,12 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track');
     textTrackTags.forEach(vtt => {
       const [_, url, lang] = vtt;
-      textTracks.push({url, lang});
+      textTracks.push({ url, lang });
     });
 
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
-      identifier,
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
       thumb: image || thumb || (url ? `${videoThumbService}/${url}` : '') || blurHashToDataURL(blurhash) || '',

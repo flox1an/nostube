@@ -130,7 +130,6 @@
 
   media-controller video {
     max-height: 80dvh;
-    min-height: 50dvh;
   }
 
   media-controller:fullscreen video {
@@ -139,7 +138,6 @@
 
   media-controller hls-video {
     height: 80dvh;
-    min-height: 50dvh;
   }
 
   media-controller:fullscreen hls-video {

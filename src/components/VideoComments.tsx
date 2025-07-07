@@ -11,6 +11,7 @@ import { formatDistance } from 'date-fns';
 import { useAppContext } from '@/hooks/useAppContext';
 import { NostrEvent } from 'nostr-tools';
 import { nowInSecs } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 interface Comment {
   id: string;
@@ -22,6 +23,7 @@ interface Comment {
 interface VideoCommentsProps {
   videoId: string;
   authorPubkey: string;
+  link: string;
 }
 
 function mapEventToComment(event: NostrEvent): Comment {
@@ -33,7 +35,47 @@ function mapEventToComment(event: NostrEvent): Comment {
   };
 }
 
-function CommentItem({ comment }: { comment: Comment }) {
+function renderCommentContent(content: string, link: string) {
+  // Regex to match mm:ss timestamps (optionally h:mm:ss)
+  const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g;
+  const baseUrl = `/video/${link}`;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = timestampRegex.exec(content)) !== null) {
+    const [full, h, m, s] = match;
+    const start = match.index;
+    const end = start + full.length;
+    // Push preceding text
+    if (start > lastIndex) {
+      parts.push(content.slice(lastIndex, start));
+    }
+    // Calculate seconds
+    const hours = h ? parseInt(h, 10) : 0;
+    const minutes = parseInt(m, 10);
+    const seconds = parseInt(s, 10);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    // Push link
+    parts.push(
+      <Link
+        key={`ts-${start}`}
+        to={`${baseUrl}?t=${totalSeconds}`}
+        className="text-primary hover:text-primary/80 cursor-pointer"
+      >
+        {full}
+      </Link>
+    );
+    lastIndex = end;
+  }
+  // Push any remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.slice(lastIndex));
+  }
+  return parts;
+}
+
+function CommentItem({ comment, link }: { comment: Comment; link: string }) {
   const author = useAuthor(comment.pubkey);
   const metadata = author.data?.metadata;
   const name = metadata?.name || comment.pubkey.slice(0, 8);
@@ -53,13 +95,13 @@ function CommentItem({ comment }: { comment: Comment }) {
             })}
           </div>
         </div>
-        <div className="mt-1">{comment.content}</div>
+        <div className="mt-1">{renderCommentContent(comment.content, link)}</div>
       </div>
     </div>
   );
 }
 
-export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
+export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProps) {
   const [newComment, setNewComment] = useState('');
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -128,7 +170,7 @@ export function VideoComments({ videoId, authorPubkey }: VideoCommentsProps) {
 
       <div>
         {comments.map(comment => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem key={comment.id} comment={comment} link={link} />
         ))}
       </div>
     </>

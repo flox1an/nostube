@@ -514,12 +514,14 @@ export function VideoUpload() {
                       </>
                     )}
 
-                    {/*uploadInfo.audioCodec && (
+                    {uploadInfo.audioCodec && (
                       <>
                         <div className="text-muted-foreground">Audio Codec:</div>
-                        <div><span className="font-mono">{uploadInfo.audioCodec}</span></div>
+                        <div>
+                          <span className="font-mono">{uploadInfo.audioCodec}</span>
+                        </div>
                       </>
-                    )*/}
+                    )}
                   </div>
                 </div>
               </div>

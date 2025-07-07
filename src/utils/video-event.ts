@@ -29,6 +29,7 @@ export interface VideoEvent {
   type: VideoType;
   textTracks: TextTrack[];
   contentWarning: string | undefined;
+  x?: string;
 }
 
 const videoThumbService = 'https://video-thumb.apps2.slidestr.net';
@@ -92,6 +93,8 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
 
     const alt = imetaValues.get('alt')?.[0] || event.content || '';
     const blurhash = imetaValues.get('blurhash')?.[0];
+    const x = imetaValues.get('x')?.[0];
+
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1]);
     const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0');
     // Only process if it's a video
@@ -113,6 +116,7 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,
+      x,
       tags,
       searchText: '',
       urls: videoUrls,

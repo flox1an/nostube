@@ -41,16 +41,16 @@ export function VideoPlayer({
     [mime, urls, currentUrlIndex]
   );
 
-  // Set initial play position on mount
+  // Set initial play position on mount or when initialPlayPos changes
   useEffect(() => {
+    const el = isHls ? hlsEl : videoRef.current;
+    if (!el) return;
     if (initialPlayPos > 0) {
-      const el = isHls ? hlsEl : videoRef.current;
-      if (el) {
+      // Only seek if the difference is significant (e.g., >1s)
+      if (Math.abs(el.currentTime - initialPlayPos) > 1) {
         el.currentTime = initialPlayPos;
       }
     }
-    // Only run on mount or when initialPlayPos changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlayPos, isHls, hlsEl]);
 
   // Frame-by-frame navigation with . and , keys (global listener)
@@ -60,6 +60,7 @@ export function VideoPlayer({
 
     function handleKeyDown(e: KeyboardEvent) {
       if (!el) return;
+      
       // Only step if video is paused and present
       if (!el.paused) return;
       // Assume 30fps for frame step

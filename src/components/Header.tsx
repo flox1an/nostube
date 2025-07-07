@@ -14,11 +14,12 @@ export function Header() {
   return (
     <header className="border-b sticky top-0 bg-background z-50">
       <div className={`w-full px-4 h-16 flex items-center justify-between`}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>
             <MenuIcon />
           </Button>
-          <Link to="/" className="text-xl font-bold">
+          <Link to="/" className="text-xl font-bold flex flex-row gap-2 items-center">
+          <img className='w-8' src="/nostube.svg"></img>
             nostube
           </Link>
         </div>

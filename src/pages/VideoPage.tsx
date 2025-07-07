@@ -61,6 +61,27 @@ function useDebouncedPlayPositionStorage(playPos: number, user: NUser | undefine
   }, [playPos, user, videoId]);
 }
 
+// Utility to parse t= parameter (supports seconds, mm:ss, h:mm:ss)
+function parseTimeParam(t: string | null): number {
+  if (!t) return 0;
+  if (/^\d+$/.test(t)) {
+    // Simple seconds
+    return parseInt(t, 10);
+  }
+  // mm:ss or h:mm:ss
+  const parts = t.split(":").map(Number);
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 2) {
+    // mm:ss
+    return parts[0] * 60 + parts[1];
+  }
+  if (parts.length === 3) {
+    // h:mm:ss
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return 0;
+}
+
 export function VideoPage() {
   const { config } = useAppContext();
   const { nevent } = useParams<{ nevent: string }>();
@@ -130,8 +151,9 @@ export function VideoPage() {
   const initialPlayPos = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const t = parseInt(params.get('t') || '', 10);
-      if (!isNaN(t)) return t;
+      const tRaw = params.get('t');
+      const t = parseTimeParam(tRaw);
+      if (t > 0) return t;
     }
     if (user && video) {
       const key = `playpos:${user.pubkey}:${video.id}`;
@@ -300,7 +322,7 @@ export function VideoPage() {
 
           {video && (
             <div className="p-4">
-              <VideoComments videoId={video.id} authorPubkey={video.pubkey} />
+              <VideoComments videoId={video.id} authorPubkey={video.pubkey} link={video.link}  />
             </div>
           )}
         </div>

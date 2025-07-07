@@ -7,23 +7,50 @@
    viewBox="0 0 72 72.000008"
    version="1.1"
    id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
-     id="defs1" />
+     id="defs1">
+    <linearGradient
+       id="linearGradient1">
+      <stop
+         style="stop-color:#9e51ff;stop-opacity:1;"
+         offset="0"
+         id="stop1" />
+      <stop
+         style="stop-color:#8e51ff;stop-opacity:1;"
+         offset="0.5"
+         id="stop3" />
+      <stop
+         style="stop-color:#7524ff;stop-opacity:1;"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       xlink:href="#linearGradient1"
+       id="linearGradient2"
+       x1="66.581963"
+       y1="131.62787"
+       x2="125.56095"
+       y2="90.33033"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0,-221.95821)" />
+  </defs>
   <g
      id="layer1"
      transform="translate(-60.071455,-74.979101)">
     <circle
-       style="fill:#7f22fe;fill-opacity:1;stroke-width:0.225821"
+       style="fill:url(#linearGradient2);stroke-width:0.225821"
        id="path1"
        cx="96.071457"
-       cy="110.9791"
-       r="36" />
+       cy="-110.9791"
+       r="36"
+       transform="scale(1,-1)" />
     <path
        style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
        id="path2"
        d="M 76.194607,15.617529 -2.193067,61.821191 -3.0127747,-29.166357 Z"
-       transform="matrix(0.45628153,0,0,0.4486565,84.383116,104.60022)" />
+       transform="matrix(0.39384942,0,0,0.38729471,85.253356,104.9272)" />
   </g>
 </svg>

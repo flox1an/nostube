@@ -24,6 +24,26 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { NUser } from '@nostrify/react/login';
 import { useVideoCache } from '@/contexts/VideoCacheContext';
 import ShareButton from '@/components/ShareButton';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { MoreVertical, TrashIcon } from 'lucide-react';
+import { nowInSecs } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(playPos: number, user: NUser | undefined, videoId: string | undefined) {
@@ -69,7 +89,7 @@ function parseTimeParam(t: string | null): number {
     return parseInt(t, 10);
   }
   // mm:ss or h:mm:ss
-  const parts = t.split(":").map(Number);
+  const parts = t.split(':').map(Number);
   if (parts.some(isNaN)) return 0;
   if (parts.length === 2) {
     // mm:ss
@@ -135,12 +155,6 @@ export function VideoPage() {
     console.log(video);
   }, [video]);
 
-  // Scroll to top when video is loaded
-  useEffect(() => {
-    if (video) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
-  }, [video]);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [includeTimestamp, setIncludeTimestamp] = useState(false);
@@ -149,6 +163,8 @@ export function VideoPage() {
 
   // Compute initial play position from ?t=... param or localStorage
   const { user } = useCurrentUser();
+  const { mutateAsync: publishDelete, isPending: isDeleting } = useNostrPublish();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const initialPlayPos = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(location.search);
@@ -170,6 +186,14 @@ export function VideoPage() {
     return 0;
   }, [user, video, location.search]);
 
+    // Scroll to top when video is loaded
+    useEffect(() => {
+      if (video) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    }, [video, initialPlayPos]);
+
+    
   // Use the custom hook for debounced play position storage
   useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id);
 
@@ -290,6 +314,22 @@ export function VideoPage() {
                         setIncludeTimestamp={setIncludeTimestamp}
                         shareLinks={shareLinks}
                       />
+                      {/* Dropdown menu for video actions */}
+                      {user?.pubkey === video.pubkey && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="secondary" aria-label="More actions">
+                              <MoreVertical className="w-5 h-5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" side="top">
+                            <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
+                              <TrashIcon className="w-5 h-5" />
+                              &nbsp; Delete Video
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
 
@@ -317,13 +357,47 @@ export function VideoPage() {
 
                   {video?.description && <CollapsibleText text={video.description} className="text-muted-foreground" />}
                 </div>
+                {/* Delete confirmation dialog */}
+                <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Video?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this video? This action cannot be undone. A deletion event will
+                        be published to all relays.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700"
+                        disabled={isDeleting}
+                        onClick={async () => {
+                          if (!video) return;
+                          await publishDelete({
+                            event: {
+                              kind: 5, // NIP-9 deletion event
+                              content: 'Deleted by author',
+                              tags: [['e', video.id]],
+                              created_at: nowInSecs(),
+                            },
+                            relays: fullRelays,
+                          });
+                          setShowDeleteDialog(false);
+                        }}
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )
           )}
 
           {video && (
             <div className="p-4">
-              <VideoComments videoId={video.id} authorPubkey={video.pubkey} link={video.link}  />
+              <VideoComments videoId={video.id} authorPubkey={video.pubkey} link={video.link} />
             </div>
           )}
         </div>

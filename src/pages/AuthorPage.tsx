@@ -18,6 +18,9 @@ import { nip19 } from 'nostr-tools';
 import { CollapsibleText } from '@/components/ui/collapsible-text';
 import { useEffect, useMemo, useState } from 'react';
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
+import { useUserPlaylists, type Playlist } from '@/hooks/usePlaylist';
+import { processEvent } from '@/utils/video-event';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 interface AuthorStats {
   videoCount: number;
@@ -89,6 +92,34 @@ export function AuthorPage() {
   const [activeTab, setActiveTab] = useState<Tabs>('videos');
 
   const pubkey = nip19.decode(npub ?? '').data as string;
+
+  // Fetch playlists for this author
+  const { data: playlists = [] } = useUserPlaylists(pubkey);
+
+  // State for selected playlist videos
+  const [playlistVideos, setPlaylistVideos] = useState<Record<string, NostrEvent[]>>({});
+  const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
+
+  // Helper to fetch full video events for a playlist
+  const fetchPlaylistVideos = async (playlist: Playlist) => {
+    if (!playlist || !playlist.videos?.length) return [];
+    setLoadingPlaylist(playlist.identifier);
+    const ids = playlist.videos.map(v => v.id);
+    const kinds = playlist.videos.map(v => v.kind);
+    // Query for all video events by id (across all relays)
+    const events = await nostr.query(
+      [
+        {
+          ids,
+          kinds,
+        },
+      ],
+      { relays: readRelays, signal: AbortSignal.timeout(3000) }
+    );
+    setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
+    setLoadingPlaylist(null);
+    return events;
+  };
 
   const blockedPubkeys = useReportedPubkeys();
 
@@ -174,14 +205,29 @@ export function AuthorPage() {
             <TabsList>
               {videos.length > 0 && (
                 <TabsTrigger value="videos" className="cursor-pointer">
-                  Videos ({videos.length})
+                  All videos ({videos.length})
                 </TabsTrigger>
               )}
               {shorts.length > 0 && (
                 <TabsTrigger value="shorts" className="cursor-pointer">
-                  Shorts ({shorts.length})
+                  All shorts ({shorts.length})
                 </TabsTrigger>
               )}
+
+              {playlists.map(playlist => (
+                <TabsTrigger
+                  key={playlist.identifier}
+                  value={playlist.identifier}
+                  className="cursor-pointer"
+                  onClick={async () => {
+                    if (!playlistVideos[playlist.identifier]) {
+                      await fetchPlaylistVideos(playlist);
+                    }
+                  }}
+                >
+                  {playlist.name}
+                </TabsTrigger>
+              ))}
               <TabsTrigger value="tags" className="cursor-pointer">
                 Tags
               </TabsTrigger>
@@ -244,6 +290,28 @@ export function AuthorPage() {
                 </div>
               </ScrollArea>
             </TabsContent>
+
+            {/* Playlist tabs */}
+            {playlists.map(playlist => (
+              <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
+                <h2 className="text-xl font-semibold mb-4">{playlist.name}</h2>
+                {playlist.description && <div className="mb-2 text-muted-foreground">{playlist.description}</div>}
+                {loadingPlaylist === playlist.identifier ? (
+                  <div className="text-center py-12 text-muted-foreground">Loading playlist...</div>
+                ) : playlistVideos[playlist.identifier]?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {playlistVideos[playlist.identifier]
+                      .map(event => processEvent(event, readRelays))
+                      .filter((v): v is NonNullable<typeof v> => !!v)
+                      .map(video => (
+                        <VideoCard key={video.id} video={video} hideAuthor format="horizontal" />
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">No videos in this playlist</div>
+                )}
+              </TabsContent>
+            ))}
           </Tabs>
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery as useQueryBase } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -187,4 +188,46 @@ export function usePlaylists() {
     deletePlaylist,
     updatePlaylist,
   };
+}
+
+// Query playlists for any user by pubkey
+export function useUserPlaylists(pubkey: string | undefined) {
+  const { nostr } = useNostr();
+  return useQueryBase({
+    queryKey: ['playlists', pubkey],
+    queryFn: async ({ signal }) => {
+      if (!pubkey) return [];
+      const events = await nostr.query(
+        [
+          {
+            kinds: [PLAYLIST_KIND],
+            authors: [pubkey],
+          },
+        ],
+        { signal }
+      );
+      return events.map(event => {
+        const titleTag = event.tags.find(t => t[0] === 'title');
+        const descTag = event.tags.find(t => t[0] === 'description');
+        const name = titleTag ? titleTag[1] : 'Untitled Playlist';
+        const description = descTag ? descTag[1] : undefined;
+        const videos: Video[] = event.tags
+          .filter(t => t[0] === 'a')
+          .map(t => ({
+            kind: parseInt(t[1].split(':')[0], 10),
+            id: t[1].split(':')[1],
+            title: t[2],
+            added_at: parseInt(t[3] || '0', 10) || event.created_at,
+          }));
+        return {
+          identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
+          name,
+          description,
+          videos,
+          eventId: event.id,
+        };
+      });
+    },
+    enabled: !!pubkey,
+  });
 }

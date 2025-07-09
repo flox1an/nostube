@@ -21,6 +21,7 @@ import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { useUserPlaylists, type Playlist } from '@/hooks/usePlaylist';
 import { processEvent } from '@/utils/video-event';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { imageProxy } from '@/lib/utils';
 
 interface AuthorStats {
   videoCount: number;

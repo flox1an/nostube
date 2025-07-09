@@ -5,7 +5,7 @@ import { VideoEvent } from '@/utils/video-event';
 import { nip19 } from 'nostr-tools';
 import { formatDuration } from '../lib/formatDuration';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, imageProxy } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { useRef, useState } from 'react';
 import { PlayProgressBar } from './PlayProgressBar';
@@ -27,6 +27,8 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+
+  const hoverPreviewEnabled = false;
 
   const handleMouseEnter = () => {
     // don't show hover preview for video with content warning
@@ -63,6 +65,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             <img
               src={video.images[0]}
               alt={video.title}
+              referrerPolicy='no-referrer'
               className={cn(
                 video.contentWarning ? 'blur-lg' : '',
                 'w-full object-cover transition-opacity duration-300',
@@ -80,7 +83,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             )}
             {/* Progress bar at bottom of thumbnail */}
             <PlayProgressBar videoId={video.id} duration={video.duration} />
-            {isHovered && video.urls && video.urls.length > 0 && (
+            {isHovered && hoverPreviewEnabled && video.urls && video.urls.length > 0 && (
               <video
                 ref={videoRef}
                 src={video.urls[0]}
@@ -109,7 +112,10 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             {!hideAuthor && (
               <Link to={`/author/${nip19.npubEncode(video.pubkey)}`} className="shrink-0">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={author.data?.metadata?.picture} alt={name} />
+                  <AvatarImage
+                    src={imageProxy(author.data?.metadata?.picture)}
+                    alt={name}
+                  />
                   <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Link>

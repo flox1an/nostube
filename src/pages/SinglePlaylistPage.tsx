@@ -8,6 +8,7 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthor } from '@/hooks/useAuthor';
+import { imageProxy } from '@/lib/utils';
 
 function isNeventPointer(ptr: unknown): ptr is { id: string } {
   return typeof ptr === 'object' && ptr !== null && 'id' in ptr;
@@ -108,7 +109,7 @@ export default function SinglePlaylistPage() {
           className="shrink-0 flex flex-row gap-2 items-center"
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src={author.data?.metadata?.picture} alt={name} />
+            <AvatarImage src={imageProxy(author.data?.metadata?.picture)} alt={name} />
             <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
           </Avatar>
           {name}

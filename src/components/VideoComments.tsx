@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { formatDistance } from 'date-fns';
 import { useAppContext } from '@/hooks/useAppContext';
 import { NostrEvent } from 'nostr-tools';
-import { nowInSecs } from '@/lib/utils';
+import { imageProxy, nowInSecs } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
 interface Comment {
@@ -83,7 +83,7 @@ function CommentItem({ comment, link }: { comment: Comment; link: string }) {
   return (
     <div className="flex gap-4 mb-6">
       <Avatar>
-        <AvatarImage src={metadata?.picture} />
+        <AvatarImage src={imageProxy(metadata?.picture)} />
         <AvatarFallback>{name[0]}</AvatarFallback>
       </Avatar>
       <div>

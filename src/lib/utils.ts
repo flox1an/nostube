@@ -120,3 +120,10 @@ export function getLanguageLabel(lang: string): string {
   }
   return label;
 }
+
+export const imageProxy = (url?: string) => {
+  return `https://images.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${url}`;
+};
+export const imageProxyVideoPreview = (url?: string) => {
+  return `https://images.slidestr.net/insecure/f:webp/rs:fill:320:320/plain/${url}`;
+};

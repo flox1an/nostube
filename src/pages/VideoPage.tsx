@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { MoreVertical, TrashIcon } from 'lucide-react';
-import { nowInSecs } from '@/lib/utils';
+import { imageProxy, nowInSecs } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 // Custom hook for debounced play position storage
@@ -284,7 +284,7 @@ export function VideoPage() {
                   <div className="flex items-start justify-between">
                     <Link to={`/author/${nip19.npubEncode(video?.pubkey || '')}`} className="flex items-center gap-4">
                       <Avatar>
-                        <AvatarImage src={metadata?.picture} />
+                        <AvatarImage src={imageProxy(metadata?.picture)} />
                         <AvatarFallback>{authorName[0]}</AvatarFallback>
                       </Avatar>
                       <div>

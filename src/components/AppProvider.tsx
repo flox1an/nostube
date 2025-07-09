@@ -47,7 +47,7 @@ export function AppProvider(props: AppProviderProps) {
         ...config,
         relays: [
           ...(config.relays || []),
-          ...userRelays.data.map(r => ({ url: r.url, name: r.url, tags: ['read'] } as Relay)),
+          ...userRelays.data.map(r => ({ url: r.url, name: r.url, tags: ['read'] }) as Relay),
         ],
       });
     }

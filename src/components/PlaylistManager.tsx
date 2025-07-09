@@ -18,7 +18,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { nip19 } from 'nostr-tools';
 import { Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -178,7 +178,7 @@ export function PlaylistManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
         <CreatePlaylistDialog onCreatePlaylist={createPlaylist} onClose={() => {}} />
       </div>
 
@@ -189,7 +189,13 @@ export function PlaylistManager() {
               <div className="flex-1 flex items-center justify-between mr-4">
                 <div>
                   <h3 className="text-base font-semibold flex items-center gap-2">
-                    {playlist.name}
+                    <Button asChild variant="link" className="px-0 text-base font-semibold">
+                      <Link
+                        to={`/playlist/${nip19.neventEncode({ id: playlist.eventId, kind: 30005, author: user.pubkey })}`}
+                      >
+                        {playlist.name}
+                      </Link>
+                    </Button>
                     {user?.pubkey && (
                       <Button
                         variant="ghost"

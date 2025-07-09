@@ -57,13 +57,7 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full justify-start"
-          onClick={() => handleAddToPlaylist(playlists[0].identifier, playlists[0].name)}
-          disabled={isAdding}
-        >
+        <Button variant="secondary" size="sm" className="w-full justify-start" disabled={isAdding}>
           {isAdding ? <Skeleton className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {isAdding ? 'Adding...' : 'Add to Playlist'}
         </Button>

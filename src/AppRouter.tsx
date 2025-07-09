@@ -9,6 +9,7 @@ import { VideoPage } from '@/pages/VideoPage';
 import { AuthorPage } from '@/pages/AuthorPage';
 import { UploadPage } from '@/pages/UploadPage';
 import PlaylistPage from '@/pages/Playlists';
+import SinglePlaylistPage from '@/pages/SinglePlaylistPage';
 import { ShortsPage } from './pages/ShortsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 
@@ -26,6 +27,7 @@ export function AppRouter() {
           <Route path="/author/:npub" element={<AuthorPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/playlists" element={<PlaylistPage />} />
+          <Route path="/playlist/:nip19" element={<SinglePlaylistPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />

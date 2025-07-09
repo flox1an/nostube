@@ -34,7 +34,11 @@ export function RelaySettingsSection() {
           ...currentConfig,
           relays: [
             ...relays,
-            { url: normalizedUrl, name: normalizedUrl.replace(/^wss:\/\//, '').replace(/\/$/,'') , tags: ['read', 'write'] as RelayTag[] },
+            {
+              url: normalizedUrl,
+              name: normalizedUrl.replace(/^wss:\/\//, '').replace(/\/$/, ''),
+              tags: ['read', 'write'] as RelayTag[],
+            },
           ],
         };
       });

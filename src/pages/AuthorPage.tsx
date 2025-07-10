@@ -21,7 +21,6 @@ import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { useUserPlaylists, type Playlist } from '@/hooks/usePlaylist';
 import { processEvent } from '@/utils/video-event';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { imageProxy } from '@/lib/utils';
 
 interface AuthorStats {
   videoCount: number;
@@ -181,6 +180,21 @@ export function AuthorPage() {
       setActiveTab('shorts');
     }
   }, [shorts, videos]);
+
+  const { data: authorData } = useAuthor(pubkey);
+  const authorMeta = authorData?.metadata;
+  const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey;
+
+  useEffect(() => {
+    if (authorName) {
+      document.title = `${authorName} - nostube`;
+    } else {
+      document.title = 'nostube';
+    }
+    return () => {
+      document.title = 'nostube';
+    };
+  }, [authorName]);
 
   if (!pubkey) return null;
 

@@ -151,6 +151,17 @@ export function VideoPage() {
     console.log(video);
   }, [video]);
 
+  useEffect(() => {
+    if (video?.title) {
+      document.title = `${video.title} - nostube`;
+    } else {
+      document.title = 'nostube';
+    }
+    return () => {
+      document.title = 'nostube';
+    };
+  }, [video?.title]);
+
   const [shareOpen, setShareOpen] = useState(false);
   const [includeTimestamp, setIncludeTimestamp] = useState(false);
   const [currentPlayPos, setCurrentPlayPos] = useState(0);

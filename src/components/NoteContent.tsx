@@ -1,13 +1,23 @@
 import { useMemo } from 'react';
-import { type NostrEvent } from '@nostrify/nostrify';
 import { Link } from 'react-router-dom';
 import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { cn } from '@/lib/utils';
 
+// Define a simple Event interface that matches what we need
+interface Event {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig: string;
+}
+
 interface NoteContentProps {
-  event: NostrEvent;
+  event: Event;
   className?: string;
 }
 

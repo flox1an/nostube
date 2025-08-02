@@ -1,3 +1,4 @@
+import { RelayPool } from 'applesauce-relay';
 import { createContext } from 'react';
 
 export type Theme = 'dark' | 'light' | 'system';
@@ -39,6 +40,8 @@ export interface AppContextType {
   isSidebarOpen: boolean;
   /** Toggle the sidebar open/close state */
   toggleSidebar: () => void;
+
+  pool: RelayPool;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

@@ -1,17 +1,16 @@
-import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useEventStore } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useAuthor } from '@/hooks/useAuthor';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useState } from 'react';
 import { formatDistance } from 'date-fns';
-import { useAppContext } from '@/hooks/useAppContext';
 import { NostrEvent } from 'nostr-tools';
 import { imageProxy, nowInSecs } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { useProfile } from '@/hooks/useProfile';
 
 interface Comment {
   id: string;
@@ -76,8 +75,7 @@ function renderCommentContent(content: string, link: string) {
 }
 
 function CommentItem({ comment, link }: { comment: Comment; link: string }) {
-  const author = useAuthor(comment.pubkey);
-  const metadata = author.data?.metadata;
+  const metadata = useProfile({ pubkey: comment.pubkey });
   const name = metadata?.name || comment.pubkey.slice(0, 8);
 
   return (
@@ -103,32 +101,26 @@ function CommentItem({ comment, link }: { comment: Comment; link: string }) {
 
 export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProps) {
   const [newComment, setNewComment] = useState('');
-  const { nostr } = useNostr();
+  const eventStore = useEventStore();
   const { user } = useCurrentUser();
   const { mutate: publish } = useNostrPublish();
-  const { config } = useAppContext();
 
-  const { data: comments = [] } = useQuery<Comment[]>({
-    queryKey: ['video-comments', videoId],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query(
-        [
-          {
-            kinds: [1],
-            '#e': [videoId],
-            limit: 100,
-          },
-          {
-            kinds: [1111],
-            '#E': [videoId],
-            limit: 100,
-          },
-        ],
-        { signal, relays: config.relays.filter(r => r.tags.includes('read')).map(r => r.url) }
-      );
-      return events.sort((a, b) => b.created_at - a.created_at).map(mapEventToComment);
+  // Use EventStore timeline to get comments for this video
+  const commentsObservable = eventStore.timeline([
+    {
+      kinds: [1],
+      '#e': [videoId],
+      limit: 100,
     },
-  });
+    {
+      kinds: [1111],
+      '#E': [videoId],
+      limit: 100,
+    },
+  ]);
+
+  const commentsEvents = useObservableState(commentsObservable, []);
+  const comments = commentsEvents.sort((a, b) => b.created_at - a.created_at).map(mapEventToComment);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

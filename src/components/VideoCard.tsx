@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { useAuthor } from '@/hooks/useAuthor';
 import { formatDistance } from 'date-fns';
 import { VideoEvent } from '@/utils/video-event';
 import { nip19 } from 'nostr-tools';
@@ -9,6 +8,7 @@ import { cn, imageProxy, imageProxyVideoPreview } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import React, { useRef, useState } from 'react';
 import { PlayProgressBar } from './PlayProgressBar';
+import { useProfile } from '@/hooks/useProfile';
 
 interface VideoCardProps {
   video: VideoEvent;
@@ -17,11 +17,10 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardProps) {
-  const author = useAuthor(video.pubkey);
-  const metadata = author.data?.metadata;
+  const metadata = useProfile({ pubkey: video.pubkey });
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8);
 
-  const aspectRatio = format == 'vertical' ? 'aspect-[9/16]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
+  const aspectRatio = format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
   const maxWidth = format == 'vertical' && 'sm:max-w-[280px] mx-auto';
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -113,7 +112,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             {!hideAuthor && (
               <Link to={`/author/${nip19.npubEncode(video.pubkey)}`} className="shrink-0">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={imageProxy(author.data?.metadata?.picture)} alt={name} />
+                  <AvatarImage src={imageProxy(metadata?.picture)} alt={name} />
                   <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Link>
@@ -150,7 +149,7 @@ interface VideoCardSkeletonProps {
 }
 
 export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
-  const aspectRatio = format == 'vertical' ? 'aspect-[9/16]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
+  const aspectRatio = format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
   return (
     <div className="p-0">
       <Skeleton className={cn('w-full', aspectRatio)} />

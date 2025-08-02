@@ -16,7 +16,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import * as MP4Box from 'mp4box';
 import type { Movie } from 'mp4box';
-import { nip19 } from 'nostr-tools';
 import { buildAdvancedMimeType, formatBlobUrl, nowInSecs } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 
@@ -140,21 +139,13 @@ export function VideoUpload() {
     ["r", "<url>"]
     */
 
-      publish(
-        { event, relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url) },
-        {
-          onSuccess: (publishedEvent, vars) => {
-            navigate(
-              `/video/${nip19.neventEncode({
-                kind: publishedEvent.kind,
-                id: publishedEvent.id,
-                author: publishedEvent.pubkey,
-                relays: vars.relays,
-              })}`
-            );
-          },
-        }
-      );
+      await publish({
+        event,
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+      });
+
+      // Navigate to home or videos page since we don't have the event ID yet
+      navigate('/');
       console.log(event);
 
       // Reset form

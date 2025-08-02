@@ -2,12 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { NoteContent } from './NoteContent';
-import type { NostrEvent } from '@nostrify/nostrify';
 import { nowInSecs } from '@/lib/utils';
+
+// Define a simple Event interface that matches what we need
+interface Event {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig: string;
+}
 
 describe('NoteContent', () => {
   it('linkifies URLs in kind 1 events', () => {
-    const event: NostrEvent = {
+    const event: Event = {
       id: 'test-id',
       pubkey: 'test-pubkey',
       created_at: nowInSecs(),
@@ -30,7 +40,7 @@ describe('NoteContent', () => {
   });
 
   it('linkifies URLs in kind 1111 events (comments)', () => {
-    const event: NostrEvent = {
+    const event: Event = {
       id: 'test-comment-id',
       pubkey: 'test-pubkey',
       created_at: nowInSecs(),
@@ -58,7 +68,7 @@ describe('NoteContent', () => {
   });
 
   it('handles text without URLs correctly', () => {
-    const event: NostrEvent = {
+    const event: Event = {
       id: 'test-id',
       pubkey: 'test-pubkey',
       created_at: nowInSecs(),
@@ -79,7 +89,7 @@ describe('NoteContent', () => {
   });
 
   it('renders hashtags as links', () => {
-    const event: NostrEvent = {
+    const event: Event = {
       id: 'test-id',
       pubkey: 'test-pubkey',
       created_at: nowInSecs(),
@@ -106,7 +116,7 @@ describe('NoteContent', () => {
 
   it('generates deterministic names for users without metadata and styles them differently', () => {
     // Use a valid npub for testing
-    const event: NostrEvent = {
+    const event: Event = {
       id: 'test-id',
       pubkey: 'test-pubkey',
       created_at: nowInSecs(),

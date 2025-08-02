@@ -1,54 +1,40 @@
-import { useNostr } from '@nostrify/react';
-import { useNostrLogin } from '@nostrify/react/login';
-import { useQuery } from '@tanstack/react-query';
-import { NSchema as n, NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+import { useAccountManager } from "applesauce-react/hooks";
+import { IAccount } from "applesauce-accounts";
 
 export interface Account {
   id: string;
   pubkey: string;
-  event?: NostrEvent;
-  metadata: NostrMetadata;
+  event?: unknown;
+  metadata: Record<string, unknown>;
 }
 
 export function useLoggedInAccounts() {
-  const { nostr } = useNostr();
-  const { logins, setLogin, removeLogin } = useNostrLogin();
 
-  const { data: authors = [] } = useQuery({
-    queryKey: ['logins', logins.map(l => l.id).join(';')],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query([{ kinds: [0], authors: logins.map(l => l.pubkey) }], {
-        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-      });
+  const accountManager = useAccountManager();
 
-      return logins.map(({ id, pubkey }): Account => {
-        const event = events.find(e => e.pubkey === pubkey);
-        try {
-          const metadata = n.json().pipe(n.metadata()).parse(event?.content);
-          return { id, pubkey, metadata, event };
-        } catch {
-          return { id, pubkey, metadata: {}, event };
-        }
-      });
-    },
-    retry: 3,
-  });
+  // Get all accounts from AccountManager
+  const accounts = accountManager?.accounts || [];
+    
 
-  // Current user is the first login
-  const currentUser: Account | undefined = (() => {
-    const login = logins[0];
-    if (!login) return undefined;
-    const author = authors.find(a => a.id === login.id);
-    return { metadata: {}, ...author, id: login.id, pubkey: login.pubkey };
-  })();
+  // Current user is the first account (assuming first is active)
+  const currentUser: IAccount | undefined = accounts[0];
 
-  // Other users are all logins except the current one
-  const otherUsers = (authors || []).slice(1) as Account[];
+
+  // Account management functions
+  const setLogin = (_account: Record<string, unknown>) => {
+    // This would need to be implemented based on how applesauce handles account switching
+    // For now, we'll leave it as a placeholder
+    console.warn('setLogin not implemented for applesauce migration');
+  };
+
+  const removeLogin = (_accountId: string) => {
+    // This would need to be implemented based on how applesauce handles account removal
+    // For now, we'll leave it as a placeholder
+    console.warn('removeLogin not implemented for applesauce migration');
+  };
 
   return {
-    authors,
     currentUser,
-    otherUsers,
     setLogin,
     removeLogin,
   };

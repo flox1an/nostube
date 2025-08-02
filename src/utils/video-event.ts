@@ -1,8 +1,18 @@
 import { ReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { getTypeForKind, VideoType } from '@/lib/video-types';
 import { blurHashToDataURL } from '@/workers/blurhashDataURL';
-import type { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
+
+// Define a simple Event interface that matches what we need
+interface Event {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig: string;
+}
 
 export type TextTrack = {
   lang: string;
@@ -39,8 +49,13 @@ function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(' ')}`.toLowerCase();
 }
 // Process Nostr events into cache entries
-export function processEvents(events: NostrEvent[], relays: string[], blockPubkeys?: ReportedPubkeys): VideoEvent[] {
+export function processEvents(
+  events: (Event | undefined)[],
+  relays: string[],
+  blockPubkeys?: ReportedPubkeys
+): VideoEvent[] {
   return events
+    .filter((event): event is Event => event !== undefined)
     .map(event => processEvent(event, relays))
     .filter(
       (video): video is VideoEvent =>
@@ -53,7 +68,7 @@ export function processEvents(events: NostrEvent[], relays: string[], blockPubke
     );
 }
 
-export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | undefined {
+export function processEvent(event: Event, relays: string[]): VideoEvent | undefined {
   // First check for imeta tag
   const imetaTag = event.tags.find(t => t[0] === 'imeta');
   const contentWarning = event.tags.find(t => t[0] == 'content-warning')?.[1];
@@ -119,7 +134,9 @@ export function processEvent(event: NostrEvent, relays: string[]): VideoEvent | 
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
       images:
-        images.length > 0 ? images : [(url ? `${videoThumbService}${btoa(url)}` : '') || blurHashToDataURL(blurhash) || ''],
+        images.length > 0
+          ? images
+          : [(url ? `${videoThumbService}${btoa(url)}` : '') || blurHashToDataURL(blurhash) || ''],
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,

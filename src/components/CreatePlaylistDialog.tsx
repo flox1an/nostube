@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
-import { useQueryClient } from '@tanstack/react-query';
 import { Label } from '@/components/ui/label';
 
 interface CreatePlaylistDialogProps {
@@ -26,7 +25,6 @@ export function CreatePlaylistDialog({ onClose, onCreatePlaylist }: CreatePlayli
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +48,7 @@ export function CreatePlaylistDialog({ onClose, onCreatePlaylist }: CreatePlayli
       });
       setName('');
       setDescription('');
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      // Cache invalidation is handled automatically by applesauce EventStore
       onClose();
     } catch (error) {
       toast({

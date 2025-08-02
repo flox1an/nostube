@@ -1,12 +1,11 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostr } from '@nostrify/react';
+import { useEventStore, useEventModel } from 'applesauce-react/hooks';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useQuery } from '@tanstack/react-query';
+import { ContactsModel } from 'applesauce-core/models';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserPlusIcon, UserCheckIcon } from 'lucide-react';
 import { cn, nowInSecs } from '@/lib/utils';
-import { useEffect } from 'react';
 
 interface FollowButtonProps {
   pubkey: string;
@@ -15,62 +14,30 @@ interface FollowButtonProps {
 
 export function FollowButton({ pubkey, className }: FollowButtonProps) {
   const { user } = useCurrentUser();
-  const { nostr } = useNostr();
+  const eventStore = useEventStore();
   const { mutate: publish } = useNostrPublish();
 
-  // Query to get user's contact list
-  const { data: followList, refetch: refetchFollows } = useQuery({
-    queryKey: ['contacts', user?.pubkey],
-    queryFn: async ({ signal }) => {
-      if (!user) return null;
+  // Use ContactsModel to get user's contact list
+  const contacts = useEventModel(ContactsModel, user?.pubkey ? [user.pubkey] : null) || [];
 
-      const events = await nostr.query(
-        [
-          {
-            kinds: [3], // NIP-02 contacts
-            authors: [user.pubkey],
-            limit: 1,
-          },
-        ],
-        { signal }
-      );
-
-      if (!events.length) return null;
-
-      // Parse the tags to get the list of followed pubkeys
-      return events[0].tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-    },
-    enabled: !!user,
-  });
-
-  const isFollowing = followList?.includes(pubkey);
+  // Check if we're following this pubkey
+  const isFollowing = contacts.some(contact => contact.pubkey === pubkey);
 
   const handleFollow = async () => {
     if (!user) return;
 
-    // Get the current contact list event
-    const currentList = await nostr.query(
-      [
-        {
-          kinds: [3],
-          authors: [user.pubkey],
-          limit: 1,
-        },
-      ],
-      {}
-    );
+    // Get the current contact list event from EventStore
+    const currentContactEvent = eventStore.getReplaceable(3, user.pubkey);
 
     // Prepare the new contact list
     let tags: string[][] = [];
 
-    if (currentList.length > 0) {
-      // Start with existing tags
-      tags = currentList[0].tags.filter(
-        tag => tag[0] === 'p' && tag[1] !== pubkey // Remove the target pubkey if it exists
-      );
+    if (currentContactEvent) {
+      // Start with existing tags, excluding the target pubkey
+      tags = currentContactEvent.tags.filter(tag => tag[0] === 'p' && tag[1] !== pubkey);
     }
 
-    // Add the new pubkey if we're following
+    // Add the new pubkey if we're following (toggle behavior)
     if (!isFollowing) {
       tags.push(['p', pubkey]);
     }
@@ -80,20 +47,11 @@ export function FollowButton({ pubkey, className }: FollowButtonProps) {
       event: {
         kind: 3,
         created_at: nowInSecs(),
-        content: '', // Content can be empty for contact lists
+        content: currentContactEvent?.content || '', // Preserve existing content
         tags,
       },
     });
-
-    // Refetch the follow list to update UI
-    setTimeout(() => {
-      refetchFollows();
-    }, 1000);
   };
-
-  useEffect(() => {
-    console.log(followList);
-  }, []);
 
   if (!user || user.pubkey === pubkey) {
     return null;

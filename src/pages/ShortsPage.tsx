@@ -1,25 +1,21 @@
-import { useVideoCache } from '@/contexts/VideoCacheContext';
 import { Loader2 } from 'lucide-react';
 import { VideoGrid } from '@/components/VideoGrid';
-import { useEffect } from 'react';
-import { useAppContext } from '@/hooks/useAppContext';
+import { useInView } from 'react-intersection-observer';
+import useVideoTimeline from '@/hooks/useVideoTimeline';
+
 
 export function ShortsPage() {
-  const { videos, isLoading, hasMore, loadMoreRef, setVideoType, initSearch, setFollowedPubkeys, setLikedVideoIds } =
-    useVideoCache();
+  const { videosLoading, videos } = useVideoTimeline('shorts');
 
-  const { config } = useAppContext();
-
-  useEffect(() => {
-    setVideoType('shorts');
-    setFollowedPubkeys([]);
-    setLikedVideoIds([]);
-    initSearch(config.relays.filter(r => r.tags.includes('read')).map(r => r.url));
-  }, []);
-
+  // Intersection observer for infinite loading
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    rootMargin: '200px',
+  });
+  const hasMore = true;
   return (
     <div className=" sm:px-4 sm:py-6">
-      <VideoGrid videos={videos} isLoading={isLoading} showSkeletons={true} layoutMode="vertical" />
+      <VideoGrid videos={videos} isLoading={videosLoading} showSkeletons={true} layoutMode="vertical" />
 
       <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
         {hasMore && videos.length > 0 && (

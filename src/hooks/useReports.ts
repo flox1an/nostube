@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-
-import { useNostr } from '@/hooks/useNostr';
-import type { NostrFilter } from '@nostrify/nostrify';
+import { useEventStore } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
+import { useMemo } from 'react';
+import type { Filter } from 'nostr-tools';
 
 export interface ProcessedReportEvent {
   justification: string;
@@ -20,55 +20,61 @@ interface UseReportsParams {
 }
 
 export const useReports = ({ p, e, x }: UseReportsParams = {}) => {
-  const { nostr } = useNostr();
+  const eventStore = useEventStore();
 
-  return useQuery<ProcessedReportEvent[]>({
-    queryKey: ['reports', p, e, x],
-    queryFn: async c => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+  // Build filter for reports (kind 1984)
+  const filter = useMemo(() => {
+    const baseFilter: Filter = {
+      kinds: [1984],
+    };
 
-      const filter: NostrFilter = {
-        kinds: [1984],
+    if (p) {
+      baseFilter['#p'] = [p];
+    }
+    if (e) {
+      baseFilter['#e'] = [e];
+    }
+    if (x) {
+      baseFilter['#x'] = [x];
+    }
+
+    return baseFilter;
+  }, [p, e, x]);
+
+  // Use EventStore timeline to get reports
+  const reportsObservable = eventStore.timeline([filter]);
+  const reportEvents = useObservableState(reportsObservable, []);
+
+  const processedReports = useMemo(() => {
+    return reportEvents.map(event => {
+      const processed: ProcessedReportEvent = {
+        justification: event.content,
       };
 
-      if (p) {
-        filter['#p'] = [p];
-      }
-      if (e) {
-        filter['#e'] = [e];
-      }
-      if (x) {
-        filter['#x'] = [x];
+      const pTag = event.tags.find(tag => tag[0] === 'p' && tag[1]);
+      if (pTag) {
+        processed.pubkey = pTag[1];
+        processed.pubkeyReason = pTag[2];
       }
 
-      const events = await nostr.query([filter], { signal });
+      const eTag = event.tags.find(tag => tag[0] === 'e' && tag[1]);
+      if (eTag) {
+        processed.eventId = eTag[1];
+        processed.eventReason = eTag[2];
+      }
 
-      return events.map(event => {
-        const processed: ProcessedReportEvent = {
-          justification: event.content,
-        };
+      const xTag = event.tags.find(tag => tag[0] === 'x' && tag[1]);
+      if (xTag) {
+        processed.hash = xTag[1];
+        processed.hashReason = xTag[2];
+      }
 
-        const pTag = event.tags.find(tag => tag[0] === 'p' && tag[1]);
-        if (pTag) {
-          processed.pubkey = pTag[1];
-          processed.pubkeyReason = pTag[2];
-        }
+      return processed;
+    });
+  }, [reportEvents]);
 
-        const eTag = event.tags.find(tag => tag[0] === 'e' && tag[1]);
-        if (eTag) {
-          processed.eventId = eTag[1];
-          processed.eventReason = eTag[2];
-        }
-
-        const xTag = event.tags.find(tag => tag[0] === 'x' && tag[1]);
-        if (xTag) {
-          processed.hash = xTag[1];
-          processed.hashReason = xTag[2];
-        }
-
-        return processed;
-      });
-    },
-    staleTime: Infinity,
-  });
+  return {
+    data: processedReports,
+    isLoading: reportEvents.length === 0,
+  };
 };

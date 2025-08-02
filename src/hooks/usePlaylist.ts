@@ -1,10 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useQuery as useQueryBase } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
+import { useEventStore, useObservableMemo } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { nowInSecs } from '@/lib/utils';
 import { useAppContext } from './useAppContext';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { createTimelineLoader } from 'applesauce-loaders/loaders';
+import { Event } from 'nostr-tools';
+import { defer, map, merge, Observable, scan } from 'rxjs';
 
 export interface Video {
   id: string;
@@ -25,163 +28,163 @@ export interface Playlist {
 const PLAYLIST_KIND = 30005;
 
 export function usePlaylists() {
-  const { nostr } = useNostr();
+  const eventStore = useEventStore();
   const { user } = useCurrentUser();
   const { mutate: publishEvent } = useNostrPublish();
-  const queryClient = useQueryClient();
   const { config } = useAppContext();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const query = useQuery({
-    queryKey: ['playlists', user?.pubkey],
-    queryFn: async ({ signal }) => {
-      if (!user?.pubkey) return [];
+  // Use EventStore timeline to get playlists for current user
+  const playlistsObservable = eventStore.timeline(playlistFilter(user?.pubkey));
 
-      const events = await nostr.query(
-        [
-          {
-            kinds: [PLAYLIST_KIND],
-            authors: [user.pubkey],
-          },
-        ],
-        { signal }
-      );
+  const playlistEvents = useObservableState(playlistsObservable, []);
 
-      return events.map(event => {
-        // Find the title from tags
-        const titleTag = event.tags.find(t => t[0] === 'title');
-        const descTag = event.tags.find(t => t[0] === 'description');
-        const name = titleTag ? titleTag[1] : 'Untitled Playlist';
-        const description = descTag ? descTag[1] : undefined;
+  const playlists = playlistEvents.map(event => {
+    // Find the title from tags
+    const titleTag = event.tags.find(t => t[0] === 'title');
+    const descTag = event.tags.find(t => t[0] === 'description');
+    const name = titleTag ? titleTag[1] : 'Untitled Playlist';
+    const description = descTag ? descTag[1] : undefined;
 
-        // Get video references from 'a' tags
-        const videos: Video[] = event.tags
-          .filter(t => t[0] === 'a') // TODO check kinds
-          .map(t => ({
-            kind: parseInt(t[1].split(':')[0], 10),
-            id: t[1].split(':')[1], // Extract note ID from "1:&lt;note-id&gt;"
-            title: t[2], // Optional title specified in tag
-            added_at: parseInt(t[3] || '0', 10) || event.created_at,
-          }));
+    // Get video references from 'a' tags
+    const videos: Video[] = event.tags
+      .filter(t => t[0] === 'a') // TODO check kinds
+      .map(t => ({
+        kind: parseInt(t[1].split(':')[0], 10),
+        id: t[1].split(':')[1], // Extract note ID from "1:<note-id>"
+        title: t[2], // Optional title specified in tag
+        added_at: parseInt(t[3] || '0', 10) || event.created_at,
+      }));
 
-        return {
-          identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
-          name,
-          description,
-          videos,
-          eventId: event.id, // Keep eventId for deletion
-        };
-      });
-    },
-    enabled: !!user?.pubkey,
-  });
-
-  const updatePlaylist = useMutation({
-    mutationFn: async (playlist: Playlist) => {
-      if (!user?.pubkey) throw new Error('User not logged in');
-
-      // Create tags array following NIP-51 format
-      const tags = [
-        ['d', playlist.identifier],
-        ['title', playlist.name],
-        ['description', playlist.description || ''],
-        // Add video references as 'a' tags
-        ...playlist.videos.map(video => [
-          'a',
-          `${video.kind}:${video.id}`, // Reference format for notes
-          video.title || '',
-          video.added_at.toString(),
-        ]),
-        ['client', 'nostube'],
-      ];
-
-      await publishEvent({
-        event: {
-          kind: PLAYLIST_KIND,
-          created_at: nowInSecs(),
-          tags,
-          content: '', // Content can be empty as per NIP-51
-        },
-      });
-
-      return playlist;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists', user?.pubkey] });
-    },
-  });
-
-  const createPlaylist = async (name: string, description?: string) => {
-    const playlist: Playlist = {
-      eventId: undefined,
-      identifier: 'nostube-' + crypto.randomUUID(),
+    return {
+      identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
       name,
       description,
-      videos: [],
+      videos,
+      eventId: event.id, // Keep eventId for deletion
     };
+  });
 
-    await updatePlaylist.mutateAsync(playlist);
-  };
+  const updatePlaylist = useCallback(
+    async (playlist: Playlist) => {
+      if (!user?.pubkey) throw new Error('User not logged in');
+      setIsLoading(true);
 
-  const addVideo = async (playlistId: string, videoId: string, videoKind: number, videoTitle?: string) => {
-    const playlist = query.data?.find(p => p.identifier === playlistId);
-    if (!playlist) throw new Error('Playlist not found');
+      try {
+        // Create tags array following NIP-51 format
+        const tags = [
+          ['d', playlist.identifier],
+          ['title', playlist.name],
+          ['description', playlist.description || ''],
+          // Add video references as 'a' tags
+          ...playlist.videos.map(video => [
+            'a',
+            `${video.kind}:${video.id}`, // Reference format for notes
+            video.title || '',
+            video.added_at.toString(),
+          ]),
+          ['client', 'nostube'],
+        ];
 
-    // Don't add if already exists
-    if (playlist.videos.some(v => v.id === videoId)) {
-      return;
-    }
+        await publishEvent({
+          event: {
+            kind: PLAYLIST_KIND,
+            created_at: nowInSecs(),
+            tags,
+            content: '', // Content can be empty as per NIP-51
+          },
+        });
 
-    const updatedPlaylist = {
-      ...playlist,
-      videos: [
-        ...playlist.videos,
-        {
-          id: videoId,
-          kind: videoKind,
-          title: videoTitle,
-          added_at: nowInSecs(),
-        },
-      ],
-    };
+        return playlist;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user?.pubkey, publishEvent]
+  );
 
-    await updatePlaylist.mutateAsync(updatedPlaylist);
-  };
+  const createPlaylist = useCallback(
+    async (name: string, description?: string) => {
+      const playlist: Playlist = {
+        eventId: undefined,
+        identifier: 'nostube-' + crypto.randomUUID(),
+        name,
+        description,
+        videos: [],
+      };
 
-  const removeVideo = async (playlistId: string, videoId: string) => {
-    const playlist = query.data?.find(p => p.identifier === playlistId);
-    if (!playlist) throw new Error('Playlist not found');
+      await updatePlaylist(playlist);
+    },
+    [updatePlaylist]
+  );
 
-    const updatedPlaylist = {
-      ...playlist,
-      videos: playlist.videos.filter(video => video.id !== videoId),
-    };
+  const addVideo = useCallback(
+    async (playlistId: string, videoId: string, videoKind: number, videoTitle?: string) => {
+      const playlist = playlists.find(p => p.identifier === playlistId);
+      if (!playlist) throw new Error('Playlist not found');
 
-    await updatePlaylist.mutateAsync(updatedPlaylist);
-  };
+      // Don't add if already exists
+      if (playlist.videos.some(v => v.id === videoId)) {
+        return;
+      }
 
-  const deletePlaylist = async (eventId: string) => {
-    if (!user?.pubkey) throw new Error('User not logged in');
-
-    // NIP-9 delete event: kind 5, 'e' tag for eventId, 'k' tag for kind
-    await publishEvent({
-      event: {
-        kind: 5,
-        created_at: nowInSecs(),
-        tags: [
-          ['e', eventId],
-          ['k', PLAYLIST_KIND.toString()],
+      const updatedPlaylist = {
+        ...playlist,
+        videos: [
+          ...playlist.videos,
+          {
+            id: videoId,
+            kind: videoKind,
+            title: videoTitle,
+            added_at: nowInSecs(),
+          },
         ],
-        content: 'Deleted by author',
-      },
-      relays: config.relays.map(r => r.url),
-    });
+      };
 
-    queryClient.invalidateQueries({ queryKey: ['playlists', user?.pubkey] });
-  };
+      await updatePlaylist(updatedPlaylist);
+    },
+    [playlists, updatePlaylist]
+  );
+
+  const removeVideo = useCallback(
+    async (playlistId: string, videoId: string) => {
+      const playlist = playlists.find(p => p.identifier === playlistId);
+      if (!playlist) throw new Error('Playlist not found');
+
+      const updatedPlaylist = {
+        ...playlist,
+        videos: playlist.videos.filter(video => video.id !== videoId),
+      };
+
+      await updatePlaylist(updatedPlaylist);
+    },
+    [playlists, updatePlaylist]
+  );
+
+  const deletePlaylist = useCallback(
+    async (eventId: string) => {
+      if (!user?.pubkey) throw new Error('User not logged in');
+
+      // NIP-9 delete event: kind 5, 'e' tag for eventId, 'k' tag for kind
+      await publishEvent({
+        event: {
+          kind: 5,
+          created_at: nowInSecs(),
+          tags: [
+            ['e', eventId],
+            ['k', PLAYLIST_KIND.toString()],
+          ],
+          content: 'Deleted by author',
+        },
+        relays: config.relays.map(r => r.url),
+      });
+    },
+    [user?.pubkey, publishEvent, config.relays]
+  );
 
   return {
-    playlists: query.data || [],
-    isLoading: query.isLoading,
+    playlists,
+    isLoading,
     createPlaylist,
     addVideo,
     removeVideo,
@@ -190,44 +193,61 @@ export function usePlaylists() {
   };
 }
 
+const playlistFilter = (pubkey?: string) => ({
+  kinds: [PLAYLIST_KIND],
+  authors: pubkey ? [pubkey] : [],
+});
+
 // Query playlists for any user by pubkey
-export function useUserPlaylists(pubkey: string | undefined) {
-  const { nostr } = useNostr();
-  return useQueryBase({
-    queryKey: ['playlists', pubkey],
-    queryFn: async ({ signal }) => {
-      if (!pubkey) return [];
-      const events = await nostr.query(
-        [
-          {
-            kinds: [PLAYLIST_KIND],
-            authors: [pubkey],
-          },
-        ],
-        { signal }
-      );
-      return events.map(event => {
-        const titleTag = event.tags.find(t => t[0] === 'title');
-        const descTag = event.tags.find(t => t[0] === 'description');
-        const name = titleTag ? titleTag[1] : 'Untitled Playlist';
-        const description = descTag ? descTag[1] : undefined;
-        const videos: Video[] = event.tags
-          .filter(t => t[0] === 'a')
-          .map(t => ({
-            kind: parseInt(t[1].split(':')[0], 10),
-            id: t[1].split(':')[1],
-            title: t[2],
-            added_at: parseInt(t[3] || '0', 10) || event.created_at,
-          }));
-        return {
-          identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
-          name,
-          description,
-          videos,
-          eventId: event.id,
-        };
-      });
-    },
-    enabled: !!pubkey,
+export function useUserPlaylists(pubkey?: string) {
+  const eventStore = useEventStore();
+  const { pool, config } = useAppContext();
+
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+
+  const playlistEvents = useObservableState(eventStore.timeline([playlistFilter(pubkey)]), []);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const loader = useMemo(() => createTimelineLoader(pool, readRelays, [playlistFilter(pubkey)]), [pool, readRelays]);
+
+  useEffect(() => {
+    const needLoad = playlistEvents.length === 0 && !!pubkey && !hasLoadedOnce;
+
+    if (needLoad) {
+      console.log('using loader');
+      const load$ = loader();
+
+      load$.subscribe(e => eventStore.add(e));
+      setHasLoadedOnce(true);
+    }
+  }, [playlistEvents, pubkey, hasLoadedOnce, loader]);
+
+  console.log(playlistEvents);
+
+  const playlists = playlistEvents?.map(event => {
+    const titleTag = event.tags.find(t => t[0] === 'title');
+    const descTag = event.tags.find(t => t[0] === 'description');
+    const name = titleTag ? titleTag[1] : 'Untitled Playlist';
+    const description = descTag ? descTag[1] : undefined;
+    const videos: Video[] = event.tags
+      .filter(t => t[0] === 'a')
+      .map(t => ({
+        kind: parseInt(t[1].split(':')[0], 10),
+        id: t[1].split(':')[1],
+        title: t[2],
+        added_at: parseInt(t[3] || '0', 10) || event.created_at,
+      }));
+    return {
+      identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
+      name,
+      description,
+      videos,
+      eventId: event.id,
+    };
   });
+
+  return {
+    data: playlists,
+    isLoading: false, // applesauce handles loading states internally
+    enabled: !!pubkey,
+  };
 }

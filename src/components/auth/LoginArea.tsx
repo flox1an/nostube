@@ -6,16 +6,16 @@ import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 import LoginDialog from './LoginDialog';
 import SignupDialog from './SignupDialog';
-import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { AccountSwitcher } from './AccountSwitcher';
 import { cn } from '@/lib/utils';
+import { useActiveAccount } from 'applesauce-react/hooks';
 
 export interface LoginAreaProps {
   className?: string;
 }
 
 export function LoginArea({ className }: LoginAreaProps) {
-  const { currentUser } = useLoggedInAccounts();
+  const currentUser  = useActiveAccount();
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
 

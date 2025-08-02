@@ -122,8 +122,10 @@ export function getLanguageLabel(lang: string): string {
 }
 
 export const imageProxy = (url?: string) => {
+  if (!url) return '';
   return `https://images.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`;
 };
 export const imageProxyVideoPreview = (url?: string) => {
+  if (!url) return '';
   return `https://images.slidestr.net/insecure/f:webp/rs:fill:480:480/plain/${encodeURIComponent(url)}`;
 };

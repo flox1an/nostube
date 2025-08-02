@@ -1,7 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NostrLoginProvider } from '@nostrify/react/login';
-import NostrProvider from '@/components/NostrProvider';
+import { AccountsProvider, EventStoreProvider } from 'applesauce-react';
+import { AccountManager } from 'applesauce-accounts';
+import { EventStore } from 'applesauce-core';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
 
@@ -10,12 +10,8 @@ interface TestAppProps {
 }
 
 export function TestApp({ children }: TestAppProps) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
+  const accountManager = new AccountManager();
+  const eventStore = new EventStore();
 
   const defaultConfig: AppConfig = {
     theme: 'light',
@@ -26,11 +22,9 @@ export function TestApp({ children }: TestAppProps) {
   return (
     <BrowserRouter>
       <AppProvider storageKey="test-app-config" defaultConfig={defaultConfig}>
-        <QueryClientProvider client={queryClient}>
-          <NostrLoginProvider storageKey="test-login">
-            <NostrProvider relayUrl={defaultConfig.relays[0].url}>{children}</NostrProvider>
-          </NostrLoginProvider>
-        </QueryClientProvider>
+        <AccountsProvider manager={accountManager}>
+          <EventStoreProvider eventStore={eventStore}>{children}</EventStoreProvider>
+        </AccountsProvider>
       </AppProvider>
     </BrowserRouter>
   );

@@ -1,51 +1,73 @@
-import { type NLoginType, NUser, useNostrLogin } from '@nostrify/react/login';
-import { useNostr } from '@nostrify/react';
-import { useCallback, useMemo } from 'react';
-
-import { useAuthor } from './useAuthor.ts';
+import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks';
+import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts';
+import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers/signers';
+import { useProfile } from './useProfile';
 
 export function useCurrentUser() {
-  const { nostr } = useNostr();
-  const { logins } = useNostrLogin();
+  const accountManager = useAccountManager(false);
+  const activeAccount = useActiveAccount();
 
-  const loginToUser = useCallback(
-    (login: NLoginType): NUser => {
-      switch (login.type) {
-        case 'nsec': // Nostr login with secret key
-          return NUser.fromNsecLogin(login);
-        case 'bunker': // Nostr login with NIP-46 "bunker://" URI
-          return NUser.fromBunkerLogin(login, nostr);
-        case 'extension': // Nostr login with NIP-07 browser extension
-          return NUser.fromExtensionLogin(login);
-        // Other login types can be defined here
-        default:
-          throw new Error(`Unsupported login type: ${login.type}`);
+  // Create a user object compatible with the existing interface
+  const user = activeAccount
+    ? {
+        pubkey: activeAccount.pubkey,
+        signer: activeAccount.signer,
       }
-    },
-    [nostr]
-  );
+    : undefined;
 
-  const users = useMemo(() => {
-    const users: NUser[] = [];
+  // Get all accounts as users array
+  const users =
+    accountManager?.accounts.map(account => ({
+      pubkey: account.pubkey,
+      signer: account.signer,
+    })) || [];
 
-    for (const login of logins) {
-      try {
-        const user = loginToUser(login);
-        users.push(user);
-      } catch (error) {
-        console.warn('Skipped invalid login', login.id, error);
-      }
+  // Login functions using account manager
+  const loginWithExtension = async () => {
+    if (!accountManager) throw new Error('Account manager not available');
+
+    const signer = new ExtensionSigner();
+    const pubkey = await signer.getPublicKey();
+    const account = new ExtensionAccount(pubkey, signer);
+
+    await accountManager.addAccount(account);
+  };
+
+  const loginWithNsec = async (nsec: string) => {
+    if (!accountManager) throw new Error('Account manager not available');
+
+    const signer = SimpleSigner.fromKey(nsec);
+    const pubkey = await signer.getPublicKey();
+    const account = new SimpleAccount(pubkey, signer);
+
+    await accountManager.addAccount(account);
+  };
+
+  const loginWithBunker = async (bunkerUri: string) => {
+    if (!accountManager) throw new Error('Account manager not available');
+
+    const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri);
+    const pubkey = await signer.getPublicKey();
+    const account = new NostrConnectAccount(pubkey, signer);
+
+    await accountManager.addAccount(account);
+  };
+
+  const logout = () => {
+    if (activeAccount && accountManager) {
+      accountManager.removeAccount(activeAccount.pubkey);
     }
+  };
 
-    return users;
-  }, [logins, loginToUser]);
-
-  const user = users[0] as NUser | undefined;
-  const author = useAuthor(user?.pubkey);
+  const author = useProfile({ pubkey: user?.pubkey || '' });
 
   return {
     user,
     users,
-    ...author.data,
+    loginWithExtension,
+    loginWithNsec,
+    loginWithBunker,
+    logout,
+    ...author,
   };
 }

@@ -1,24 +1,14 @@
 import { ThemeProvider } from '@/providers/theme-provider';
 import { AppRouter } from './AppRouter';
-import NostrProvider from '@/components/NostrProvider';
-import { NostrLoginProvider } from '@nostrify/react/login';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Suspense } from 'react';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig, Relay } from '@/contexts/AppContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { VideoCacheProvider } from '@/contexts/VideoCacheContext';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 60000,
-      gcTime: Infinity,
-    },
-  },
-});
+import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers';
+import { AccountManager } from 'applesauce-accounts';
+import { EventStore } from 'applesauce-core/event-store';
+import { EventFactory } from 'applesauce-factory';
+import { registerCommonAccountTypes } from 'applesauce-accounts/accounts';
 
 export const presetRelays: Relay[] = [
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },
@@ -37,25 +27,33 @@ const defaultConfig: AppConfig = {
   blossomServers: [...presetBlossomServers],
 };
 
+// Create account manager and event store for applesauce
+const accountManager = new AccountManager();
+
+registerCommonAccountTypes(accountManager);
+
+const eventStore = new EventStore();
+const factory = new EventFactory({
+  // use the active signer from the account manager
+  signer: accountManager.signer,
+});
+
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
-      <QueryClientProvider client={queryClient}>
-        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
-        <NostrLoginProvider storageKey="nostr:login">
-          <NostrProvider relayUrl={defaultConfig.relays[0].url} presetRelays={presetRelays}>
-            <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
-              <VideoCacheProvider>
+      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
+        <AccountsProvider manager={accountManager}>
+          <EventStoreProvider eventStore={eventStore}>
+            <FactoryProvider factory={factory}>
                 <TooltipProvider>
                   <Suspense>
                     <AppRouter />
                   </Suspense>
                 </TooltipProvider>
-              </VideoCacheProvider>
-            </AppProvider>
-          </NostrProvider>
-        </NostrLoginProvider>
-      </QueryClientProvider>
+            </FactoryProvider>
+          </EventStoreProvider>
+        </AccountsProvider>
+      </AppProvider>
     </ThemeProvider>
   );
 }

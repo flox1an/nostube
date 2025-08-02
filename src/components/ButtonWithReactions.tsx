@@ -1,13 +1,12 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostr } from '@nostrify/react';
+import { useEventModel } from 'applesauce-react/hooks';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ReactionsModel } from 'applesauce-core/models';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HeartIcon } from 'lucide-react';
 import { cn, nowInSecs } from '@/lib/utils';
 import { NostrEvent } from 'nostr-tools';
-import { useAppContext } from '@/hooks/useAppContext';
 
 interface ButtonWithReactionsProps {
   eventId: string;
@@ -18,27 +17,22 @@ interface ButtonWithReactionsProps {
 
 export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: ButtonWithReactionsProps) {
   const { user } = useCurrentUser();
-  const { nostr } = useNostr();
   const { mutate: publish } = useNostrPublish();
-  const queryClient = useQueryClient();
-  const { config } = useAppContext();
 
-  // Query to get reactions
-  const { data: reactions = [], refetch: refetchReactions } = useQuery({
-    queryKey: ['reactions', eventId],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query(
-        [
-          {
-            kinds: [7], // NIP-25 reactions
-            '#e': [eventId],
-          },
-        ],
-        { signal, relays: config.relays.filter(r => r.tags.includes('read')).map(r => r.url) }
-      );
-      return events;
-    },
-  });
+  // Create a dummy event object for ReactionsModel
+  // ReactionsModel expects a NostrEvent, so we create a minimal one
+  const dummyEvent: NostrEvent = {
+    id: eventId,
+    pubkey: authorPubkey,
+    created_at: 0,
+    kind: kind,
+    tags: [],
+    content: '',
+    sig: '',
+  };
+
+  // Use ReactionsModel to get reactions for this event
+  const reactions = useEventModel(ReactionsModel, [dummyEvent]) || [];
 
   // Check if current user has liked
   const hasLiked = user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+');
@@ -51,31 +45,19 @@ export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: 
 
     // If already liked, we'll unlike by doing nothing (as reactions are ephemeral)
     if (!hasLiked) {
-      publish(
-        {
-          event: {
-            kind: 7,
-            created_at: nowInSecs(),
-            content: '+',
-            tags: [
-              ['e', eventId],
-              ['p', authorPubkey],
-              ['k', `${kind}`],
-            ],
-          },
+      publish({
+        event: {
+          kind: 7,
+          created_at: nowInSecs(),
+          content: '+',
+          tags: [
+            ['e', eventId],
+            ['p', authorPubkey],
+            ['k', `${kind}`],
+          ],
         },
-        {
-          onSuccess: (publishedEvent: NostrEvent) => {
-            queryClient.setQueryData(['reactions', eventId], (old: NostrEvent[]) => [...old, publishedEvent]);
-          },
-        }
-      );
+      });
     }
-
-    // Refetch reactions to update the UI
-    setTimeout(() => {
-      refetchReactions();
-    }, 1000);
   };
 
   return (

@@ -1,33 +1,19 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostr } from '@/hooks/useNostr';
-import { useQuery } from '@tanstack/react-query';
+import { useEventModel } from 'applesauce-react/hooks';
+import { UserBlossomServersModel } from 'applesauce-core/models';
 
 export function useUserBlossomServers() {
   const { user } = useCurrentUser();
-  const { nostr } = useNostr();
 
-  return useQuery<string[]>({
-    queryKey: ['blossom-servers', user?.pubkey],
+  // Use UserBlossomServersModel to get user's blossom servers
+  const blossomServers = useEventModel(UserBlossomServersModel, user?.pubkey ? [user.pubkey] : null) || [];
+
+  // Convert URL objects to strings for compatibility
+  const serverUrls = blossomServers.map(url => url.toString());
+
+  return {
+    data: serverUrls,
+    isLoading: user && serverUrls.length === 0,
     enabled: !!user?.pubkey,
-    queryFn: async ctx => {
-      if (!user?.pubkey) return [];
-      const signal = AbortSignal.any([ctx.signal, AbortSignal.timeout(3000)]);
-      const events = await nostr.query(
-        [
-          {
-            kinds: [10063],
-            authors: [user.pubkey],
-            limit: 1,
-          },
-        ],
-        { signal }
-      );
-      if (!events.length) return [];
-      // Use the most recent event
-      const event = events[0];
-      // Extract all 'r' tags
-      return event.tags.filter(tag => (tag[0] === 'r' || tag[0] == 'server') && tag[1]).map(tag => tag[1]);
-    },
-    staleTime: 60_000,
-  });
+  };
 }

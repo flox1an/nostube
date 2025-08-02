@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
-import { useAuthor } from '@/hooks/useAuthor';
-import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useEventStore } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
 import { VideoCard } from '@/components/VideoCard';
 import { FollowButton } from '@/components/FollowButton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -20,7 +19,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { useUserPlaylists, type Playlist } from '@/hooks/usePlaylist';
 import { processEvent } from '@/utils/video-event';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent } from 'nostr-tools';
+import { useProfile } from '@/hooks/useProfile';
+import { createTimelineLoader } from 'applesauce-loaders/loaders';
 
 interface AuthorStats {
   videoCount: number;
@@ -31,9 +32,9 @@ interface AuthorStats {
 type Tabs = 'videos' | 'shorts' | 'tags';
 
 function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Date }) {
-  const { data: metadata, isLoading } = useAuthor(pubkey);
+  const profile = useProfile({ pubkey });
 
-  if (isLoading) {
+  if (!profile) {
     return (
       <div className="flex items-center gap-6">
         <Skeleton className="h-32 w-32 rounded-full" />
@@ -46,31 +47,30 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
     );
   }
 
-  const author = metadata?.metadata;
-  const name = author?.name || pubkey.slice(0, 8);
+  const name = profile?.name || pubkey.slice(0, 8);
 
   return (
     <div className="flex  items-start gap-6">
       <Avatar className="h-32 w-32">
-        <AvatarImage src={author?.picture} />
+        <AvatarImage src={profile?.picture} />
         <AvatarFallback className="text-4xl">{name[0]}</AvatarFallback>
       </Avatar>
 
       <div className="space-y-4 flex-1">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{author?.display_name || name}</h1>
-            {author?.nip05 && <p className="text-muted-foreground">{author.nip05}</p>}
+            <h1 className="text-2xl font-bold">{profile?.display_name || name}</h1>
+            {profile?.nip05 && <p className="text-muted-foreground">{profile.nip05}</p>}
           </div>
           <FollowButton pubkey={pubkey} />
         </div>
 
-        {author?.about && <CollapsibleText text={author.about} className="text-muted-foreground" />}
+        {profile?.about && <CollapsibleText text={profile.about} className="text-muted-foreground" />}
 
         <div className="flex items-center gap-4">
-          {author?.website && (
+          {profile?.website && (
             <a
-              href={author.website}
+              href={profile.website}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
@@ -91,8 +91,8 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
 
 export function AuthorPage() {
   const { npub } = useParams<{ npub: string }>();
-  const { nostr } = useNostr();
-  const { config } = useAppContext();
+  const eventStore = useEventStore();
+  const { config, pool } = useAppContext();
   const [activeTab, setActiveTab] = useState<Tabs>('videos');
 
   const pubkey = nip19.decode(npub ?? '').data as string;
@@ -109,17 +109,10 @@ export function AuthorPage() {
     if (!playlist || !playlist.videos?.length) return [];
     setLoadingPlaylist(playlist.identifier);
     const ids = playlist.videos.map(v => v.id);
-    const kinds = playlist.videos.map(v => v.kind);
-    // Query for all video events by id (across all relays)
-    const events = await nostr.query(
-      [
-        {
-          ids,
-          kinds,
-        },
-      ],
-      { relays: readRelays, signal: AbortSignal.timeout(3000) }
-    );
+
+    // Get events from EventStore
+    const events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as NostrEvent[];
+
     setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
     setLoadingPlaylist(null);
     return events;
@@ -127,35 +120,48 @@ export function AuthorPage() {
 
   const blockedPubkeys = useReportedPubkeys();
 
-  const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url);
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
 
-  // Query for author's videos
-  const { data: allVideos = [], isLoading: isLoadingVideos } = useQuery({
-    queryKey: ['author-videos', pubkey],
-    queryFn: async ({ signal }) => {
-      if (!pubkey) return [];
+  const videoFilter = useMemo(
+    () => ({
+      kinds: [34235, 34236, 21, 22],
+      authors: pubkey ? [pubkey] : [],
+      limit: 500,
+    }),
+    [pubkey]
+  );
 
-      const events = await nostr.query(
-        [
-          {
-            kinds: [34235, 34236, 21, 22],
-            authors: [pubkey],
-            limit: 500,
-          },
-        ],
-        {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-          relays: readRelays,
-        }
-      );
+  // Use EventStore timeline to get author's videos
+  const videosObservable = eventStore.timeline([videoFilter]);
 
-      const allEvents = events.flat();
-      const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values());
+  const videoEvents = useObservableState(videosObservable, []);
+console.log(videoEvents);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+console.log(readRelays);
+  const loader = useMemo(() => createTimelineLoader(pool, readRelays, [videoFilter]), [pool, readRelays, videoFilter]);
+  
+  useEffect(() => {
+    const needLoad = videoEvents.length === 0 && !!pubkey && !hasLoadedOnce;
 
-      return processEvents(Array.from(uniqueEvents.values()), readRelays, blockedPubkeys);
-    },
-    enabled: !!pubkey && blockedPubkeys !== undefined,
-  });
+    if (needLoad) {
+      console.log('using loader');
+      const load$ = loader()
+
+      load$.subscribe(e=>eventStore.add(e));
+      setHasLoadedOnce(true);
+    }
+
+  }, [videoEvents, pubkey, hasLoadedOnce, loader]);
+
+  const isLoadingVideos = videoEvents.length === 0 && pubkey !== undefined;
+
+  // Process the video events
+  const allVideos = useMemo(() => {
+    if (!pubkey || !videoEvents.length || blockedPubkeys === undefined) return [];
+
+    const uniqueEvents = Array.from(new Map(videoEvents.map(event => [event.id, event])).values());
+    return processEvents(Array.from(uniqueEvents.values()), readRelays, blockedPubkeys);
+  }, [pubkey, videoEvents, blockedPubkeys, readRelays]);
 
   // Get unique tags from all videos
   const uniqueTags = useMemo(
@@ -178,8 +184,7 @@ export function AuthorPage() {
     }
   }, [shorts, videos]);
 
-  const { data: authorData } = useAuthor(pubkey);
-  const authorMeta = authorData?.metadata;
+  const authorMeta = useProfile({ pubkey });
   const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey;
 
   useEffect(() => {

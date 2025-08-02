@@ -107,7 +107,7 @@ export function PlaylistManager() {
     setIsEditing(true);
     try {
       // Save changes using update logic
-      await updatePlaylist.mutateAsync({
+      await updatePlaylist({
         ...playlistToEdit,
         name: editName,
         description: editDescription,

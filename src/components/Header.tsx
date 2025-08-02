@@ -4,11 +4,10 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { MenuIcon, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SearchBar } from './SearchBar';
-import { useVideoCache } from '@/contexts/VideoCacheContext';
 import { useAppContext } from '@/hooks/useAppContext';
 
 export function Header() {
-  const { allTags, searchVideos, filterByTags } = useVideoCache();
+  //const { allTags, searchVideos, filterByTags } = useVideoCache();
   const { toggleSidebar } = useAppContext();
 
   return (
@@ -23,14 +22,14 @@ export function Header() {
             nostube
           </Link>
         </div>
-
+{/*
         <SearchBar
           className="flex-1 max-w-2xl px-4"
           allTags={allTags}
           onSearch={searchVideos}
           onTagsChange={filterByTags}
         />
-
+*/}
         <div className="flex items-center gap-4">
           <Link to="/upload" className="hidden md:block">
             <Button variant="outline" size="sm">

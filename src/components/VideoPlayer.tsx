@@ -5,6 +5,7 @@ import 'hls-video-element';
 import { TextTrack } from '@/utils/video-event';
 import { getLanguageLabel } from '@/lib/utils';
 import 'media-chrome/menu';
+import '@/types/media-chrome.d.ts';
 
 interface VideoPlayerProps {
   urls: string[];
@@ -145,7 +146,7 @@ export function VideoPlayer({
           autoPlay
           loop={loop}
           poster={poster}
-          crossorigin
+          crossOrigin="anonymous"
           onTimeUpdate={handleTimeUpdate}
           ref={hlsRef}
           tabIndex={0}

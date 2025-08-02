@@ -1,9 +1,7 @@
-import { ReactNode, useState, useCallback, useEffect } from 'react';
+import { ReactNode, useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext';
-import { useUserRelays } from '@/hooks/useUserRelays';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatBlobUrl } from '@/lib/utils';
+import { RelayPool } from 'applesauce-relay';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -21,9 +19,10 @@ export function AppProvider(props: AppProviderProps) {
   // App configuration state with localStorage persistence
   const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const { user } = useCurrentUser();
-  const userRelays = useUserRelays(user?.pubkey);
+  const pool = new RelayPool();
+  pool.group(config.relays.map(r => r.url));
+  //const { user } = useCurrentUser();
+ // const userRelays = useUserRelays(user?.pubkey);
 
   // Generic config updater with callback pattern
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
@@ -40,6 +39,7 @@ export function AppProvider(props: AppProviderProps) {
     });
   }, []);
 
+  /*
   useEffect(() => {
     if ((config.relays || []).length == 0 && !userRelays.isLoading && userRelays.data && userRelays.data.length > 0) {
       console.log([config.relays || [], userRelays.data.map(r => r.url)]);
@@ -81,13 +81,14 @@ export function AppProvider(props: AppProviderProps) {
       }
     }
   }, [config.relays]);
-
+*/
   const appContextValue: AppContextType = {
     config,
     updateConfig,
     presetRelays,
     isSidebarOpen,
     toggleSidebar,
+    pool
   };
 
   return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>;

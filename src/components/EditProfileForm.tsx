@@ -10,13 +10,23 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Upload } from 'lucide-react';
-import { NSchema as n, type NostrMetadata } from '@nostrify/nostrify';
-import { useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 import { nowInSecs } from '@/lib/utils';
 
-export const EditProfileForm: React.FC = () => {
-  const queryClient = useQueryClient();
+// Define metadata schema using zod instead of nostrify
+const metadataSchema = z.object({
+  name: z.string().optional(),
+  about: z.string().optional(),
+  picture: z.string().url().optional().or(z.literal('')),
+  banner: z.string().url().optional().or(z.literal('')),
+  website: z.string().url().optional().or(z.literal('')),
+  nip05: z.string().optional(),
+  bot: z.boolean().optional(),
+});
 
+type NostrMetadata = z.infer<typeof metadataSchema>;
+
+export const EditProfileForm: React.FC = () => {
   const { user, metadata } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
   const { toast } = useToast();
@@ -24,7 +34,7 @@ export const EditProfileForm: React.FC = () => {
 
   // Initialize the form with default values
   const form = useForm<NostrMetadata>({
-    resolver: zodResolver(n.metadata()),
+    resolver: zodResolver(metadataSchema),
     defaultValues: {
       name: '',
       about: '',
@@ -39,6 +49,7 @@ export const EditProfileForm: React.FC = () => {
   // Update form values when user data is loaded
   useEffect(() => {
     if (metadata) {
+      const metadataWithBot = metadata as Record<string, unknown>;
       form.reset({
         name: metadata.name || '',
         about: metadata.about || '',
@@ -46,7 +57,7 @@ export const EditProfileForm: React.FC = () => {
         banner: metadata.banner || '',
         website: metadata.website || '',
         nip05: metadata.nip05 || '',
-        bot: metadata.bot || false,
+        bot: Boolean(metadataWithBot.bot) || false,
       });
     }
   }, [metadata, form]);
@@ -102,9 +113,8 @@ export const EditProfileForm: React.FC = () => {
         },
       });
 
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['logins'] });
-      queryClient.invalidateQueries({ queryKey: ['author', user.pubkey] });
+      // Note: With applesauce EventStore, cache invalidation is handled automatically
+      // No need to manually invalidate queries like with react-query
 
       toast({
         title: 'Success',

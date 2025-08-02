@@ -1,12 +1,17 @@
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
-import { VideoEvent } from '@/utils/video-event';
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { processEvents, VideoEvent } from '@/utils/video-event';
+import { createTimelineLoader } from 'applesauce-loaders/loaders';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { AppContext } from './AppContext';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useEventStore, useObservableMemo, useObservableState } from 'applesauce-react/hooks';
+import { getKindsForType } from '@/lib/video-types';
+import { from, map, of, switchMap } from 'rxjs';
 
-type VideoCache = VideoEvent;
 
 interface VideoCacheContextType {
-  videos: VideoCache[];
+  videos: VideoEvent[];
   allTags: string[];
   isLoading: boolean;
   hasMore: boolean;
@@ -24,13 +29,17 @@ interface VideoCacheContextType {
   /** Set the public keys of followed authors */
   setFollowedPubkeys: (pubkeys: string[]) => void;
   isWorkerReady: boolean;
+  /** Get video observable with fallback to loader */
+  getVideoObservable: (id: string) => any;
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined);
 
+
 export function VideoCacheProvider({ children }: { children: React.ReactNode }) {
-  const workerRef = useRef<Worker | null>(null);
-  const [videos, setVideos] = useState<VideoCache[]>([]);
+  // const workerRef = useRef<Worker | null>(null);
+  //const [videos, setVideos] = useState<VideoCache[]>([]);
+  /*
   const [allTags, setAllTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -44,9 +53,8 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     threshold: 0,
     rootMargin: '200px',
   });
-
-  const blockedPubkeys = useReportedPubkeys();
-
+*/
+/*
   useEffect(() => {
     // Initialize worker
     const worker = new Worker(new URL('../workers/videoCacheWorker.ts', import.meta.url), { type: 'module' });
@@ -96,62 +104,57 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
       workerRef.current?.postMessage({ type: 'LOAD_MORE' });
     }
   }, [inView, isLoading, hasMore]);
+*/
+
+  const blockedPubkeys = useReportedPubkeys();
+  const eventStore = useEventStore();
+  const { pool, config } = useAppContext();
+
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+  const loader = useMemo(() => createTimelineLoader(pool, readRelays, {kinds: getKindsForType('all')}), [pool, readRelays]);
+
+  // Function to get video observable with fallback
+  const getVideoObservable = useCallback((id: string) => {
+    const storeEvent = eventStore.event(id);
+    
+    // If event exists in store, return it as observable
+    if (storeEvent) {
+      return of(storeEvent);
+    }
+    
+    // Otherwise, use loader to fetch it
+    return loader.load(id);
+  }, [eventStore, loader]);
+
 
   const searchVideos = useCallback((query: string) => {
-    workerRef.current?.postMessage({
-      type: 'SEARCH',
-      data: query,
-    });
   }, []);
 
   const filterByTags = useCallback((tags: string[]) => {
-    workerRef.current?.postMessage({
-      type: 'FILTER_TAGS',
-      data: tags,
-    });
   }, []);
 
   const clearCache = useCallback(() => {
-    workerRef.current?.postMessage({ type: 'CLEAR_CACHE' });
   }, []);
 
   const setVideoType = useCallback((type: 'all' | 'shorts' | 'videos') => {
-    workerRef.current?.postMessage({
-      type: 'SET_VIDEO_TYPE',
-      data: type,
-    });
   }, []);
 
   const setFollowedPubkeys = useCallback((pubkeys: string[]) => {
-    workerRef.current?.postMessage({
-      type: 'SET_FOLLOWED_PUBKEYS',
-      data: pubkeys,
-    });
     setFollowedPubkeysState(pubkeys);
   }, []);
 
   const setLikedVideoIds = useCallback((ids: string[]) => {
-    workerRef.current?.postMessage({
-      type: 'SET_LIKED_VIDEO_IDS',
-      data: ids,
-    });
     setLikedVideoIdsState(ids);
   }, []);
 
   const initSearch = useCallback((relays: string[]) => {
     console.log(' initSearch ', relays);
 
-    workerRef.current?.postMessage({
-      type: 'INIT',
-      data: {
-        relayUrls: relays,
-      },
-    });
   }, []);
 
   const value = {
     videos,
-    setVideos,
+    
     allTags,
     isLoading,
     hasMore,
@@ -167,6 +170,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     likedVideoIds,
     setFollowedPubkeys,
     isWorkerReady,
+    getVideoObservable,
   };
 
   return <VideoCacheContext.Provider value={value}>{children}</VideoCacheContext.Provider>;

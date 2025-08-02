@@ -1,16 +1,17 @@
-import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useEventStore, useObservableMemo } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
 import { Link } from 'react-router-dom';
-import { useAuthor } from '@/hooks/useAuthor';
 import { processEvent, VideoEvent } from '@/utils/video-event';
 import { getKindsForType, VideoType } from '@/lib/video-types';
-import { NostrEvent } from '@nostrify/nostrify';
 import { formatDistance } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
 import { PlayProgressBar } from './PlayProgressBar';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { imageProxyVideoPreview } from '@/lib/utils';
+import { useProfile } from '@/hooks/useProfile';
+import { useAppContext } from '@/hooks/useAppContext';
+import { createTimelineLoader } from 'applesauce-loaders/loaders';
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -24,8 +25,7 @@ function formatDuration(seconds: number): string {
 }
 
 function VideoSuggestionItem({ video }: { video: VideoEvent }) {
-  const author = useAuthor(video.pubkey);
-  const metadata = author.data?.metadata;
+  const metadata = useProfile({ pubkey: video.pubkey });
   const name = metadata?.name || video.pubkey.slice(0, 8);
 
   return (
@@ -82,47 +82,51 @@ interface VideoSuggestionsProps {
 }
 
 export function VideoSuggestions({ currentVideoId, currentVideoType, relays, authorPubkey }: VideoSuggestionsProps) {
-  const { nostr } = useNostr();
+  const eventStore = useEventStore();
+  const { pool, config } = useAppContext();
   const blockedPubkeys = useReportedPubkeys();
 
-  const { data: authorSuggestions = [], isLoading: authorIsLoading } = useQuery<NostrEvent[]>({
-    enabled: authorPubkey != undefined,
-    queryKey: ['video-suggestions-author', authorPubkey],
-    queryFn: async ({ signal }) => {
-      console.log(['video-suggestions-author', authorPubkey]);
+  // Load the shared event from the pointer
+  useEffect(() => {
+    if (!authorPubkey) return;
+    const playlistLoader = createTimelineLoader(
+      pool,
+      config.relays.map(r => r.url),
+      [{
+        kinds: getKindsForType('all'),
+        authors: authorPubkey ? [authorPubkey] : [],
+      },{
+        kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
+        limit: 30,
+      }]
+    );
+    const sub = playlistLoader().subscribe();
+    return () => sub.unsubscribe();
+  }, [authorPubkey, currentVideoType]);
 
-      return await nostr.query(
-        [
-          {
-            kinds: getKindsForType('all'),
-            authors: [authorPubkey!],
-            limit: 30, // Limit author-specific videos
-          },
-        ],
-        {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-          relays,
-        }
-      );
+
+  // Use EventStore timeline for author-specific suggestions
+  const authorSuggestionsObservable = eventStore.timeline([
+    {
+      kinds: getKindsForType('all'),
+      authors: authorPubkey ? [authorPubkey] : [],
+      limit: 30,
     },
-  });
+  ]);
 
-  const { data: globalSuggestions = [], isLoading: globalIsLoading } = useQuery<NostrEvent[]>({
-    queryKey: ['video-suggestions-global'],
-    queryFn: async ({ signal }) => {
-      console.log(['video-suggestions-global']);
+  const authorSuggestions = useObservableState(authorSuggestionsObservable, []);
+  const authorIsLoading = authorPubkey && authorSuggestions.length === 0;
 
-      return await nostr.query(
-        [
-          {
-            kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
-            limit: 30, // Fetch more to allow for filtering
-          },
-        ],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]), relays }
-      );
+  // Use EventStore timeline for global suggestions
+  const globalSuggestionsObservable = eventStore.timeline([
+    {
+      kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
+      limit: 30,
     },
-  });
+  ]);
+
+  const globalSuggestions = useObservableState(globalSuggestionsObservable, []);
+  const globalIsLoading = globalSuggestions.length === 0;
 
   const suggestions = useMemo(() => {
     const events = [...authorSuggestions, ...globalSuggestions];
@@ -141,7 +145,7 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, relays, aut
     }
 
     return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
-  }, [authorSuggestions, globalSuggestions]);
+  }, [authorSuggestions, globalSuggestions, blockedPubkeys, relays, currentVideoId]);
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */

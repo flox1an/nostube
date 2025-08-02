@@ -1,28 +1,24 @@
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
-import { useAuthor } from '@/hooks/useAuthor';
+import { useEventStore } from 'applesauce-react/hooks';
+import { useObservableState } from 'observable-hooks';
+import { of } from 'rxjs';
+import { switchMap, catchError } from 'rxjs/operators';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { VideoComments } from '@/components/VideoComments';
 import { VideoSuggestions } from '@/components/VideoSuggestions';
-import { ButtonWithReactions } from '@/components/ButtonWithReactions';
-import { FollowButton } from '@/components/FollowButton';
+
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistance } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { processEvent, VideoEvent } from '@/utils/video-event';
+import { processEvent } from '@/utils/video-event';
 import { nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CollapsibleText } from '@/components/ui/collapsible-text';
-import { AddToPlaylistButton } from '@/components/AddToPlaylistButton';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import type { NUser } from '@nostrify/react/login';
-import { useVideoCache } from '@/contexts/VideoCacheContext';
-import ShareButton from '@/components/ShareButton';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -43,9 +39,19 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { MoreVertical, TrashIcon } from 'lucide-react';
 import { imageProxy, nowInSecs } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useProfile } from '@/hooks/useProfile';
+import { createEventLoader } from 'applesauce-loaders/loaders';
+import { AddToPlaylistButton } from '@/components/AddToPlaylistButton';
+import { ButtonWithReactions } from '@/components/ButtonWithReactions';
+import { FollowButton } from '@/components/FollowButton';
+import ShareButton from '@/components/ShareButton';
 
 // Custom hook for debounced play position storage
-function useDebouncedPlayPositionStorage(playPos: number, user: NUser | undefined, videoId: string | undefined) {
+function useDebouncedPlayPositionStorage(
+  playPos: number,
+  user: { pubkey: string } | undefined,
+  videoId: string | undefined
+) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastWriteRef = useRef<number>(0);
   useEffect(() => {
@@ -104,47 +110,49 @@ function parseTimeParam(t: string | null): number {
 export function VideoPage() {
   const { config } = useAppContext();
   const { nevent } = useParams<{ nevent: string }>();
-  const { nostr } = useNostr();
-  const { videos } = useVideoCache();
+  const eventStore = useEventStore();
+  const { pool } = useAppContext();
 
-  const { id, relays, author, kind } = nip19.decode(nevent ?? '').data as EventPointer;
+  const eventPointer = useMemo(() => nip19.decode(nevent ?? '').data as EventPointer, [nevent]);
 
-  const { data: video, isLoading } = useQuery<VideoEvent | null>({
-    queryKey: ['video', nevent],
-    queryFn: async ({ signal }) => {
-      if (!nevent) return null;
+  const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore]);
 
-      // First try to get the video from the cache
-      const found = videos.find(v => v.id === id);
-      if (found) {
-        return found;
-      }
 
-      const events = await nostr.query(
-        [
-          {
-            authors: author ? [author] : undefined,
-            kinds: kind ? [kind] : undefined,
-            ids: [id],
-          },
-        ],
-        {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-          relays: config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
+  // Use EventStore to get the video event with fallback to loader
+  const videoObservable = useMemo(() => {
+    return eventStore.event(eventPointer.id).pipe(
+      switchMap(event => {
+        if (event) {
+          return of(event);
         }
-      );
+        // If no event in store, fallback to loader
+        return loader(eventPointer);
+      }),
+      catchError(() => {
+        // If eventStore fails, fallback to loader
+        return loader(eventPointer);
+      })
+    );
+  }, [eventStore, loader, eventPointer]);
+  
+  const videoEvent = useObservableState(videoObservable);
 
-      if (!events.length) return null;
+  // Process the video event or get from cache
+  const video = useMemo(() => {
+    if (!nevent) return null;
 
-      const event = events[0];
-      const processedEvent = processEvent(event, relays || []);
-      if (!processedEvent) return null;
+    // If we have the event from EventStore, process it
+    if (videoEvent) {
+      const processedEvent = processEvent(videoEvent, []); // TODO use currect relays from eventstore
       return processedEvent;
-    },
-  });
+    }
 
-  const authorMeta = useAuthor(video?.pubkey || '');
-  const metadata = authorMeta.data?.metadata;
+    return null;
+  }, [nevent, videoEvent]);
+
+  const isLoading = !video && videoEvent === undefined;
+
+  const metadata = useProfile({ pubkey: video?.pubkey || '' });
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || '';
 
   useEffect(() => {
@@ -308,9 +316,10 @@ export function VideoPage() {
                     </Link>
 
                     <div className="flex items-center gap-2">
+                      {/* 
                       <AddToPlaylistButton videoId={video.id} videoKind={video.kind} videoTitle={video.title} />
                       <ButtonWithReactions eventId={video.id} authorPubkey={video.pubkey} kind={video.kind} />
-                      <FollowButton pubkey={video.pubkey} />
+                      <FollowButton pubkey={video.pubkey} />*/}
                       <ShareButton
                         shareOpen={shareOpen}
                         setShareOpen={setShareOpen}

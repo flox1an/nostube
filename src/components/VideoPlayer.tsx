@@ -168,12 +168,19 @@ export function VideoPlayer({
         >
           {/* TODO translate label */}
           {textTracks.map(vtt => (
-            <track label={getLanguageLabel(vtt.lang)} kind="captions" srcLang={vtt.lang} src={vtt.url}></track>
+            <track
+              key={vtt.lang}
+              label={getLanguageLabel(vtt.lang)}
+              kind="captions"
+              srcLang={vtt.lang}
+              src={vtt.url}
+            ></track>
           ))}
           {/* TODO: add captions <track kind="captions" /> */}
           {/* TODO: add fallback sources <source src={url} type={mime} /> */}
         </video>
       )}
+
       {hasCaptions && <media-captions-menu hidden anchor="auto"></media-captions-menu>}
 
       <media-control-bar>

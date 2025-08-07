@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export function Sidebar() {
   const { user } = useCurrentUser();
-  const { config: _config } = useAppContext();
+  const { config: _config, toggleSidebar } = useAppContext();
 
   const navigationItems = [
     { name: 'Home', icon: Home, href: '/' },
@@ -32,13 +32,14 @@ export function Sidebar() {
   const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }];
 
   return (
-    <div className="flex flex-col h-full bg-background pt-4">
+    <div className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg pt-4">
       <div className="flex flex-col h-full">
         <nav className="px-2">
           {navigationItems.map(item => (
             <Link
               key={item.name}
               to={item.href}
+              onClick={toggleSidebar}
               className="flex items-center gap-4 py-2 px-3 rounded-lg hover:bg-accent transition-colors"
             >
               <item.icon className="h-5 w-5" />
@@ -56,6 +57,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   to={item.disabled ? '#' : item.href}
+                  onClick={item.disabled ? undefined : toggleSidebar}
                   className={cn(
                     'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                     item.disabled ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'hover:bg-accent'
@@ -74,6 +76,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   to={item.disabled ? '#' : item.href}
+                  onClick={item.disabled ? undefined : toggleSidebar}
                   className={cn(
                     'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                     item.disabled ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'hover:bg-accent'

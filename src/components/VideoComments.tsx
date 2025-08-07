@@ -5,12 +5,16 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { formatDistance } from 'date-fns';
 import { NostrEvent } from 'nostr-tools';
 import { imageProxy, nowInSecs } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useProfile } from '@/hooks/useProfile';
+import { of } from 'rxjs';
+import { switchMap, catchError, map } from 'rxjs/operators';
+import { createTimelineLoader } from 'applesauce-loaders/loaders';
+import { useAppContext } from '@/hooks/useAppContext';
 
 interface Comment {
   id: string;
@@ -104,9 +108,10 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
   const eventStore = useEventStore();
   const { user } = useCurrentUser();
   const { mutate: publish } = useNostrPublish();
+  const { pool, config } = useAppContext();
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
 
-  // Use EventStore timeline to get comments for this video
-  const commentsObservable = eventStore.timeline([
+  const filters = useMemo(() => [
     {
       kinds: [1],
       '#e': [videoId],
@@ -117,10 +122,34 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
       '#E': [videoId],
       limit: 100,
     },
-  ]);
+  ], [videoId]);
 
-  const commentsEvents = useObservableState(commentsObservable, []);
-  const comments = commentsEvents.sort((a, b) => b.created_at - a.created_at).map(mapEventToComment);
+  const loader = useMemo(
+    () => createTimelineLoader(pool, readRelays, filters, { limit: 50, eventStore }),
+    [pool, readRelays, filters]
+  );
+
+  // Use EventStore timeline to get comments for this video with fallback to loader
+  const comments$ = useMemo(() => {
+    return eventStore.timeline(filters).pipe(
+      switchMap(events => {
+        if (events && events.length > 0) {
+          return of(events);
+        }
+        // If no events in store, subscribe to loader and add events to store
+        loader().subscribe(e => eventStore.add(e));
+        return of([]); // Return empty array initially, timeline will update when events are added
+      }),
+      catchError(() => {
+        // If eventStore fails, subscribe to loader and add events to store
+        loader().subscribe(e => eventStore.add(e));
+        return of([]); // Return empty array initially, timeline will update when events are added
+      }),
+      map(events => events.map(mapEventToComment))
+    );
+  }, [eventStore, filters, loader]);
+
+  const comments = useObservableState(comments$, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

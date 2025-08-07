@@ -123,9 +123,28 @@ export function getLanguageLabel(lang: string): string {
 
 export const imageProxy = (url?: string) => {
   if (!url) return '';
+  // Check for data URLs and return them immediately
+  if (url.startsWith('data:')) return url;
   return `https://images.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`;
 };
+
 export const imageProxyVideoPreview = (url?: string) => {
   if (!url) return '';
+  // Check for data URLs and return them immediately
+  if (url.startsWith('data:')) return url;
   return `https://images.slidestr.net/insecure/f:webp/rs:fill:480:480/plain/${encodeURIComponent(url)}`;
 };
+
+function bigIntHash(str: string): string {
+  let hash = BigInt(0)
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << BigInt(5)) - hash + BigInt(str.charCodeAt(i))
+    hash &= BigInt("0xFFFFFFFFFFFFFFFF") // simulate 64-bit unsigned
+  }
+  return hash.toString(16) // hex string
+}
+
+export function hashObjectBigInt(obj: object): string {
+  const json = JSON.stringify(obj, Object.keys(obj).sort())
+  return bigIntHash(json)
+}

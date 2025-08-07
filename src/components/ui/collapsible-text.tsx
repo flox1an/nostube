@@ -57,7 +57,7 @@ export function CollapsibleText({ text, maxLines = 5, className }: CollapsibleTe
 
   return (
     <div className={className}>
-      <p ref={textRef} className={cn('whitespace-pre-wrap', !isExpanded && 'line-clamp-5')}>
+      <p ref={textRef} className={cn('whitespace-pre-wrap break-words break-all', !isExpanded && 'line-clamp-5')}>
         {renderTextWithLinks(text)}
       </p>
       {showButton && (

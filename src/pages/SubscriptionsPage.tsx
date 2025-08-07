@@ -1,28 +1,24 @@
-import { useEffect } from 'react';
-import { useVideoCache } from '@/contexts/VideoCacheContext';
 import { VideoGrid } from '@/components/VideoGrid';
 import { Loader2 } from 'lucide-react';
 import { useFollowedAuthors } from '@/hooks/useFollowedAuthors';
-import { useAppContext } from '@/hooks/useAppContext';
+import useVideoTimeline from '@/hooks/useVideoTimeline';
+import { useInView } from 'react-intersection-observer';
 
 export function SubscriptionsPage() {
-  const { videos, isLoading, hasMore, setFollowedPubkeys, loadMoreRef, initSearch, setLikedVideoIds, setVideoType } =
-    useVideoCache();
-  const { data: followedPubkeys = [] } = useFollowedAuthors();
-  const { config } = useAppContext();
-
-  useEffect(() => {
-    if (followedPubkeys.length > 0) {
-      setVideoType('all');
-      setLikedVideoIds([]);
-      setFollowedPubkeys(followedPubkeys);
-      initSearch(config.relays.filter(r => r.tags.includes('read')).map(r => r.url));
-    }
-  }, [initSearch, setFollowedPubkeys, followedPubkeys]);
-
+  const { data: followedProfiles = [] } = useFollowedAuthors();
+console.log('followedPubkeys',followedProfiles);
+  const {videos, videosLoading} = useVideoTimeline('all', followedProfiles.map(profile => profile.pubkey));
+ 
+    // Intersection observer for infinite loading
+    const { ref: loadMoreRef, inView } = useInView({
+      threshold: 0,
+      rootMargin: '200px',
+    });
+    const hasMore = true;
+  
   return (
     <div className="sm:p-4">
-      <VideoGrid videos={videos} isLoading={isLoading} showSkeletons={true} layoutMode="auto" />
+      <VideoGrid videos={videos} isLoading={videosLoading} showSkeletons={true} layoutMode="auto" />
 
       {/* Infinite scroll trigger */}
       <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">

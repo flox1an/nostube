@@ -22,6 +22,7 @@ import { processEvent } from '@/utils/video-event';
 import type { NostrEvent } from 'nostr-tools';
 import { useProfile } from '@/hooks/useProfile';
 import { createTimelineLoader } from 'applesauce-loaders/loaders';
+import useVideoTimeline from '@/hooks/useVideoTimeline';
 
 interface AuthorStats {
   videoCount: number;
@@ -118,50 +119,10 @@ export function AuthorPage() {
     return events;
   };
 
-  const blockedPubkeys = useReportedPubkeys();
 
   const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+  const {videos: allVideos, videosLoading: isLoadingVideos} = useVideoTimeline('all', [pubkey]);
 
-  const videoFilter = useMemo(
-    () => ({
-      kinds: [34235, 34236, 21, 22],
-      authors: pubkey ? [pubkey] : [],
-      limit: 500,
-    }),
-    [pubkey]
-  );
-
-  // Use EventStore timeline to get author's videos
-  const videosObservable = eventStore.timeline([videoFilter]);
-
-  const videoEvents = useObservableState(videosObservable, []);
-console.log(videoEvents);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-console.log(readRelays);
-  const loader = useMemo(() => createTimelineLoader(pool, readRelays, [videoFilter]), [pool, readRelays, videoFilter]);
-  
-  useEffect(() => {
-    const needLoad = videoEvents.length === 0 && !!pubkey && !hasLoadedOnce;
-
-    if (needLoad) {
-      console.log('using loader');
-      const load$ = loader()
-
-      load$.subscribe(e=>eventStore.add(e));
-      setHasLoadedOnce(true);
-    }
-
-  }, [videoEvents, pubkey, hasLoadedOnce, loader]);
-
-  const isLoadingVideos = videoEvents.length === 0 && pubkey !== undefined;
-
-  // Process the video events
-  const allVideos = useMemo(() => {
-    if (!pubkey || !videoEvents.length || blockedPubkeys === undefined) return [];
-
-    const uniqueEvents = Array.from(new Map(videoEvents.map(event => [event.id, event])).values());
-    return processEvents(Array.from(uniqueEvents.values()), readRelays, blockedPubkeys);
-  }, [pubkey, videoEvents, blockedPubkeys, readRelays]);
 
   // Get unique tags from all videos
   const uniqueTags = useMemo(

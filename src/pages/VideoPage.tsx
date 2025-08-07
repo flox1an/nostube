@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { MoreVertical, TrashIcon } from 'lucide-react';
-import { imageProxy, nowInSecs } from '@/lib/utils';
+import { imageProxy, imageProxyVideoPreview, nowInSecs } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import { createEventLoader } from 'applesauce-loaders/loaders';
@@ -291,7 +291,7 @@ export function VideoPage() {
                   urls={video.urls}
                   textTracks={video.textTracks}
                   mime={video.mimeType || ''}
-                  poster={video.images[0] || ''}
+                  poster={imageProxyVideoPreview(video.images[0]) || ''}
                   loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full max-h-[80dvh] aspect-video rounded-lg"
                   onTimeUpdate={setCurrentPlayPos}
@@ -419,7 +419,6 @@ export function VideoPage() {
         <div className="w-full lg:w-96">
           <VideoSuggestions
             currentVideoId={video?.id}
-            relays={config.relays.filter(r => r.tags.includes('read')).map(r => r.url) || []}
             authorPubkey={video?.pubkey}
             currentVideoType={video?.type}
           />

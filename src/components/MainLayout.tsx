@@ -9,9 +9,10 @@ export function MainLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative">
+        {/* Floating sidebar */}
         {isSidebarOpen && (
-          <div className="w-56 flex-shrink-0">
+          <div className="absolute left-0 top-0 z-50 h-full">
             <Sidebar />
           </div>
         )}

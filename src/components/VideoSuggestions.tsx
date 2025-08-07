@@ -51,7 +51,7 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(video.created_at * 1000), new Date(), {
               addSuffix: true,
-            })}{' '}
+            })}
           </div>
         </div>
       </div>
@@ -76,16 +76,15 @@ function VideoSuggestionItemSkeleton() {
 
 interface VideoSuggestionsProps {
   currentVideoId?: string;
-  relays: string[];
   authorPubkey?: string;
   currentVideoType?: VideoType;
 }
 
-export function VideoSuggestions({ currentVideoId, currentVideoType, relays, authorPubkey }: VideoSuggestionsProps) {
+export function VideoSuggestions({ currentVideoId, currentVideoType, authorPubkey }: VideoSuggestionsProps) {
   const eventStore = useEventStore();
   const { pool, config } = useAppContext();
   const blockedPubkeys = useReportedPubkeys();
-
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
   // Load the shared event from the pointer
   useEffect(() => {
     if (!authorPubkey) return;
@@ -137,7 +136,7 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, relays, aut
 
     for (const event of events) {
       if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue;
-      const processed = processEvent(event, relays);
+      const processed = processEvent(event, readRelays); // TODO use currect relays from eventstore
       if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
         processedVideos.push(processed);
         seenIds.add(processed.id);
@@ -145,7 +144,7 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, relays, aut
     }
 
     return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
-  }, [authorSuggestions, globalSuggestions, blockedPubkeys, relays, currentVideoId]);
+  }, [authorSuggestions, globalSuggestions, blockedPubkeys, currentVideoId, readRelays]);
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
@@ -156,3 +155,4 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, relays, aut
     </div>
   );
 }
+ 

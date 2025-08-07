@@ -7,7 +7,6 @@ import { SearchBar } from './SearchBar';
 import { useAppContext } from '@/hooks/useAppContext';
 
 export function Header() {
-  //const { allTags, searchVideos, filterByTags } = useVideoCache();
   const { toggleSidebar } = useAppContext();
 
   return (

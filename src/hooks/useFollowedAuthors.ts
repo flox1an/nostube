@@ -12,8 +12,12 @@ export function useFollowedAuthors() {
   const { pool, config } = useAppContext();
   const eventStore = useEventStore();
 
+  const pubkey = useMemo(() => {
+    return user?.pubkey ? [user.pubkey] : null;
+  }, [user?.pubkey]);
+
   // Use ContactsModel to get user's contact list
-  const contacts = useEventModel(ContactsModel, user?.pubkey ? [user.pubkey] : null);
+  const contacts = useEventModel(ContactsModel, pubkey);
 
   const readRelays = useMemo(() => {
     return config.relays.filter(relay => relay.tags.includes('read')).map(relay => relay.url);

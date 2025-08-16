@@ -42,6 +42,12 @@ export function VideoPlayer({
     [mime, urls, currentUrlIndex]
   );
 
+  useEffect(() => {
+    setAllFailed(false);
+    setCurrentUrlIndex(0);
+    setTriedHead(false);
+  }, [urls]);
+
   // Set initial play position on mount or when initialPlayPos changes
   useEffect(() => {
     const el = isHls ? hlsEl : videoRef.current;

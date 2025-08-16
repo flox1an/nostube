@@ -1,11 +1,17 @@
 import { Loader2 } from 'lucide-react';
 import { VideoGrid } from '@/components/VideoGrid';
 import { useInView } from 'react-intersection-observer';
-import useVideoTimeline from '@/hooks/useVideoTimeline';
+import { useVideoTimelineContext } from '@/contexts/VideoTimelineContext';
+import { useEffect } from 'react';
 
 
 export function ShortsPage() {
-  const { videosLoading, videos } = useVideoTimeline('shorts');
+  const { videosLoading, videos, loadTimeline } = useVideoTimelineContext();
+  
+  // Load shorts timeline when component mounts
+  useEffect(() => {
+    loadTimeline('shorts');
+  }, [loadTimeline]);
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({

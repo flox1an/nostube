@@ -97,7 +97,7 @@ function CommentItem({ comment, link }: { comment: Comment; link: string }) {
             })}
           </div>
         </div>
-        <div className="mt-1">{renderCommentContent(comment.content, link)}</div>
+        <div className="mt-1 break-words break-all">{renderCommentContent(comment.content, link)}</div>
       </div>
     </div>
   );

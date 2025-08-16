@@ -30,7 +30,7 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
 
   return (
     <Link to={`/video/${video.link}`}>
-      <div className="flex mb-4 hover:bg-accent rounded-lg transition-colors border-none ">
+      <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
         <div className="relative w-40 h-24 flex-shrink-0">
           <img
             src={imageProxyVideoPreview(video.images[0])}

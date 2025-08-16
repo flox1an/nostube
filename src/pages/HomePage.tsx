@@ -1,21 +1,33 @@
+import React, { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { VideoGrid } from '@/components/VideoGrid';
 import { useInView } from 'react-intersection-observer';
-import useVideoTimeline from '@/hooks/useVideoTimeline';
+import { useVideoTimelineContext } from '@/contexts/VideoTimelineContext';
 
 export function HomePage() {
-  const { videos } = useVideoTimeline('videos');
+  const { videos, videosLoading, hasMore, loadTimeline } = useVideoTimelineContext();
+  
+  // Load videos timeline when component mounts
+  useEffect(() => {
+    loadTimeline('videos');
+  }, [loadTimeline]);
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,
     rootMargin: '200px',
   });
-  const hasMore = true;
+  // Trigger load more when in view
+  React.useEffect(() => {
+    if (inView && hasMore && !videosLoading) {
+      // TODO: Implement load more functionality
+      console.log('Load more triggered');
+    }
+  }, [inView, hasMore, videosLoading]);
 
   return (
     <div className="sm:px-4 sm:py-6">
-      <VideoGrid videos={videos} isLoading={false} showSkeletons={true} layoutMode="horizontal" />
+      <VideoGrid videos={videos} isLoading={videosLoading} showSkeletons={true} layoutMode="horizontal" />
 
       {/* Infinite scroll trigger */}
       <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">

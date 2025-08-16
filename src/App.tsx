@@ -9,6 +9,7 @@ import { AccountManager } from 'applesauce-accounts';
 import { EventStore } from 'applesauce-core/event-store';
 import { EventFactory } from 'applesauce-factory';
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts';
+import { VideoTimelineProvider } from '@/contexts/VideoTimelineContext';
 
 export const presetRelays: Relay[] = [
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },
@@ -45,11 +46,13 @@ export function App() {
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
             <FactoryProvider factory={factory}>
+              <VideoTimelineProvider>
                 <TooltipProvider>
                   <Suspense>
                     <AppRouter />
                   </Suspense>
                 </TooltipProvider>
+              </VideoTimelineProvider>
             </FactoryProvider>
           </EventStoreProvider>
         </AccountsProvider>

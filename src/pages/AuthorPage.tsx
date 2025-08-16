@@ -22,7 +22,7 @@ import { processEvent } from '@/utils/video-event';
 import type { NostrEvent } from 'nostr-tools';
 import { useProfile } from '@/hooks/useProfile';
 import { createTimelineLoader } from 'applesauce-loaders/loaders';
-import useVideoTimeline from '@/hooks/useVideoTimeline';
+import { useVideoTimelineContext } from '@/contexts/VideoTimelineContext';
 
 interface AuthorStats {
   videoCount: number;
@@ -121,7 +121,12 @@ export function AuthorPage() {
 
 
   const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
-  const {videos: allVideos, videosLoading: isLoadingVideos} = useVideoTimeline('all', [pubkey]);
+  const {videos: allVideos, videosLoading: isLoadingVideos, loadTimeline} = useVideoTimelineContext();
+  
+  // Load author videos when component mounts
+  useEffect(() => {
+    loadTimeline('all', [pubkey]);
+  }, [loadTimeline, pubkey]);
 
 
   // Get unique tags from all videos

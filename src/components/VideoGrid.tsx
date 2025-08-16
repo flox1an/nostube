@@ -2,7 +2,6 @@ import { VideoCard, VideoCardSkeleton } from '@/components/VideoCard';
 import { VideoEvent } from '@/utils/video-event';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
-import { RelaySelector } from '@/components/RelaySelector';
 import { useWindowWidth } from '@/hooks/useWindowWidth';
 import { useCallback } from 'react';
 
@@ -127,7 +126,6 @@ export function VideoGrid({ videos, isLoading, showSkeletons, layoutMode = 'auto
           <CardContent className="py-12 px-8 text-center">
             <div className="max-w-sm mx-auto space-y-6">
               <p className="text-muted-foreground">No results found. Try another relay?</p>
-              <RelaySelector className="w-full" />
             </div>
           </CardContent>
         </Card>

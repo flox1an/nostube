@@ -6,10 +6,10 @@ import { AppConfig, Relay } from '@/contexts/AppContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers';
 import { AccountManager } from 'applesauce-accounts';
-import { EventStore } from 'applesauce-core/event-store';
 import { EventFactory } from 'applesauce-factory';
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts';
-import { VideoTimelineProvider } from '@/contexts/VideoTimelineContext';
+import { eventStore } from '@/nostr/core';
+import { RelaySyncProvider } from '@/components/RelaySyncProvider';
 
 export const presetRelays: Relay[] = [
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },
@@ -28,16 +28,18 @@ const defaultConfig: AppConfig = {
   blossomServers: [...presetBlossomServers],
 };
 
-// Create account manager and event store for applesauce
+// Create account manager for applesauce
 const accountManager = new AccountManager();
 
 registerCommonAccountTypes(accountManager);
 
-const eventStore = new EventStore();
 const factory = new EventFactory({
   // use the active signer from the account manager
   signer: accountManager.signer,
 });
+
+// Initialize relay pool with default relays
+console.log('Initializing relay pool with relays:', presetRelays.map(r => r.url));
 
 export function App() {
   return (
@@ -46,13 +48,13 @@ export function App() {
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
             <FactoryProvider factory={factory}>
-              <VideoTimelineProvider>
+              <RelaySyncProvider>
                 <TooltipProvider>
                   <Suspense>
                     <AppRouter />
                   </Suspense>
                 </TooltipProvider>
-              </VideoTimelineProvider>
+              </RelaySyncProvider>
             </FactoryProvider>
           </EventStoreProvider>
         </AccountsProvider>

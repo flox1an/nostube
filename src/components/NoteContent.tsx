@@ -116,8 +116,8 @@ export function NoteContent({ event, className }: NoteContentProps) {
 function NostrMention({ pubkey }: { pubkey: string }) {
   const author = useAuthor(pubkey);
   const npub = nip19.npubEncode(pubkey);
-  const hasRealName = !!author.data?.metadata?.name;
-  const displayName = author.data?.metadata?.display_name || author.data?.metadata?.name || genUserName(pubkey);
+  const hasRealName = !!author?.name;
+  const displayName = author?.display_name || author?.name || genUserName(pubkey);
 
   return (
     <Link

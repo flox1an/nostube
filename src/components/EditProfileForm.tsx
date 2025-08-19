@@ -1,15 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Upload } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Upload } from 'lucide-react';
 import { z } from 'zod';
 import { nowInSecs } from '@/lib/utils';
 
@@ -17,9 +17,9 @@ import { nowInSecs } from '@/lib/utils';
 const metadataSchema = z.object({
   name: z.string().optional(),
   about: z.string().optional(),
-  picture: z.string().url().optional().or(z.literal('')),
-  banner: z.string().url().optional().or(z.literal('')),
-  website: z.string().url().optional().or(z.literal('')),
+  picture: z.string().optional(),
+  banner: z.string().optional(),
+  website: z.string().optional(),
   nip05: z.string().optional(),
   bot: z.boolean().optional(),
 });
@@ -27,7 +27,7 @@ const metadataSchema = z.object({
 type NostrMetadata = z.infer<typeof metadataSchema>;
 
 export const EditProfileForm: React.FC = () => {
-  const { user, metadata } = useCurrentUser();
+  const { user } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
   const { toast } = useToast();
   const isUploading = false;
@@ -48,19 +48,9 @@ export const EditProfileForm: React.FC = () => {
 
   // Update form values when user data is loaded
   useEffect(() => {
-    if (metadata) {
-      const metadataWithBot = metadata as Record<string, unknown>;
-      form.reset({
-        name: metadata.name || '',
-        about: metadata.about || '',
-        picture: metadata.picture || '',
-        banner: metadata.banner || '',
-        website: metadata.website || '',
-        nip05: metadata.nip05 || '',
-        bot: Boolean(metadataWithBot.bot) || false,
-      });
-    }
-  }, [metadata, form]);
+    // For now, we'll just use empty defaults
+    // Profile data can be loaded later when the structure is clear
+  }, [form]);
 
   // Handle file uploads for profile picture and banner
   const uploadPicture = async (file: File, field: 'picture' | 'banner') => {
@@ -94,7 +84,7 @@ export const EditProfileForm: React.FC = () => {
 
     try {
       // Combine existing metadata with new values
-      const data = { ...metadata, ...values };
+      const data = { ...values };
 
       // Clean up empty values
       for (const key in data) {
@@ -124,7 +114,7 @@ export const EditProfileForm: React.FC = () => {
       console.error('Failed to update profile:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update your profile. Please try again.',
+        description: 'Failed to update profile. Please try again.',
         variant: 'destructive',
       });
     }
@@ -275,7 +265,7 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   previewType,
   onUpload,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <FormItem>

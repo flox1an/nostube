@@ -1,28 +1,17 @@
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useEventStore } from 'applesauce-react/hooks';
-import { useObservableState } from 'observable-hooks';
-import { VideoCard } from '@/components/VideoCard';
-import { FollowButton } from '@/components/FollowButton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Link } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { useAppContext } from '@/hooks/useAppContext';
-import { processEvents } from '@/utils/video-event';
 import { nip19 } from 'nostr-tools';
-import { CollapsibleText } from '@/components/ui/collapsible-text';
-import { useEffect, useMemo, useState } from 'react';
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
-import { useUserPlaylists, type Playlist } from '@/hooks/usePlaylist';
-import { processEvent } from '@/utils/video-event';
-import type { NostrEvent } from 'nostr-tools';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { VideoGrid } from '@/components/VideoGrid';
 import { useProfile } from '@/hooks/useProfile';
-import { createTimelineLoader } from 'applesauce-loaders/loaders';
-import { useVideoTimelineContext } from '@/contexts/VideoTimelineContext';
+import { useUserPlaylists, Playlist } from '@/hooks/usePlaylist';
+import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline';
+import { authorVideoTypeLoader } from '@/nostr/loaders';
+import { VideoType } from '@/contexts/AppContext';
+import { eventStore } from '@/nostr/core';
+
+type Tabs = 'videos' | 'shorts' | 'tags' | string;
 
 interface AuthorStats {
   videoCount: number;
@@ -30,61 +19,32 @@ interface AuthorStats {
   joinedDate: Date;
 }
 
-type Tabs = 'videos' | 'shorts' | 'tags';
-
 function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Date }) {
-  const profile = useProfile({ pubkey });
-
-  if (!profile) {
-    return (
-      <div className="flex items-center gap-6">
-        <Skeleton className="h-32 w-32 rounded-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-20 w-96" />
-        </div>
-      </div>
-    );
-  }
-
-  const name = profile?.name || pubkey.slice(0, 8);
+  const metadata = useProfile({ pubkey });
+  const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey;
+  const picture = metadata?.picture;
 
   return (
-    <div className="flex  items-start gap-6">
-      <Avatar className="h-32 w-32">
-        <AvatarImage src={profile?.picture} />
-        <AvatarFallback className="text-4xl">{name[0]}</AvatarFallback>
-      </Avatar>
-
-      <div className="space-y-4 flex-1">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{profile?.display_name || name}</h1>
-            {profile?.nip05 && <p className="text-muted-foreground">{profile.nip05}</p>}
-          </div>
-          <FollowButton pubkey={pubkey} />
-        </div>
-
-        {profile?.about && <CollapsibleText text={profile.about} className="text-muted-foreground" />}
-
-        <div className="flex items-center gap-4">
-          {profile?.website && (
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-            >
-              <Link className="h-4 w-4" />
-              Website
-            </a>
-          )}
-          <div className="text-sm">
-            <span className="text-muted-foreground">Joined</span>
-            <span className="ml-2">{formatDistanceToNow(joinedDate, { addSuffix: true })}</span>
-          </div>
-        </div>
+    <div className="flex items-center space-x-4">
+      <div className="flex-shrink-0">
+        <img
+          src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
+          alt={displayName}
+          className="w-16 h-16 rounded-full"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`;
+          }}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
+        <p className="text-sm text-muted-foreground">
+          Joined {joinedDate.toLocaleDateString()}
+        </p>
+        {metadata?.about && (
+          <p className="text-sm text-muted-foreground mt-1">{metadata.about}</p>
+        )}
       </div>
     </div>
   );
@@ -92,8 +52,6 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
 
 export function AuthorPage() {
   const { npub } = useParams<{ npub: string }>();
-  const eventStore = useEventStore();
-  const { config, pool } = useAppContext();
   const [activeTab, setActiveTab] = useState<Tabs>('videos');
 
   const pubkey = nip19.decode(npub ?? '').data as string;
@@ -102,7 +60,7 @@ export function AuthorPage() {
   const { data: playlists = [] } = useUserPlaylists(pubkey);
 
   // State for selected playlist videos
-  const [playlistVideos, setPlaylistVideos] = useState<Record<string, NostrEvent[]>>({});
+  const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({});
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
 
   // Helper to fetch full video events for a playlist
@@ -112,22 +70,27 @@ export function AuthorPage() {
     const ids = playlist.videos.map(v => v.id);
 
     // Get events from EventStore
-    const events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as NostrEvent[];
+    const events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
 
     setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
     setLoadingPlaylist(null);
     return events;
   };
 
+  // Choose loader for author videos
+  const getLoader = useMemo(() => {
+    return () => authorVideoTypeLoader('all', pubkey)();
+  }, [pubkey]);
 
-  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
-  const {videos: allVideos, videosLoading: isLoadingVideos, loadTimeline} = useVideoTimelineContext();
+  const { videos: allVideos, loading: isLoadingVideos, exhausted, loadMore, reset } = useInfiniteTimeline(getLoader);
   
   // Load author videos when component mounts
   useEffect(() => {
-    loadTimeline('all', [pubkey]);
-  }, [loadTimeline, pubkey]);
-
+    reset();
+    // auto-load first page
+    const unsub = loadMore();
+    return () => { if (typeof unsub === "function") unsub(); };
+  }, [pubkey]); // Only depend on pubkey, not loadMore/reset
 
   // Get unique tags from all videos
   const uniqueTags = useMemo(
@@ -217,80 +180,68 @@ export function AuthorPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
-                      <Skeleton className="w-full aspect-video" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+                      <div className="aspect-video bg-muted animate-pulse rounded-lg" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                      <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
                     </div>
                   ))}
                 </div>
-              ) : videos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {videos.map(video => (
-                    <VideoCard key={video.id} video={video} hideAuthor format="horizontal" />
-                  ))}
-                </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">No videos uploaded yet</div>
+                <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
               )}
             </TabsContent>
 
             <TabsContent value="shorts" className="mt-6">
               {isLoadingVideos ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
-                      <Skeleton className="w-full aspect-video" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+                      <div className="aspect-video bg-muted animate-pulse rounded-lg" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                      <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
                     </div>
                   ))}
                 </div>
-              ) : shorts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-                  {shorts
-                    .filter(v => v.type)
-                    .map(video => (
-                      <VideoCard key={video.id} video={video} hideAuthor format="vertical" />
-                    ))}
-                </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">No videos uploaded yet</div>
+                <VideoGrid videos={shorts} isLoading={false} showSkeletons={false} layoutMode="vertical" />
               )}
             </TabsContent>
 
-            <TabsContent value="tags" className="mt-6">
-              <ScrollArea className="h-[400px]">
-                <div className="flex flex-wrap gap-2">
-                  {uniqueTags.map(tag => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            {/* Playlist tabs */}
             {playlists.map(playlist => (
               <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
-                <h2 className="text-xl font-semibold mb-4">{playlist.name}</h2>
-                {playlist.description && <div className="mb-2 text-muted-foreground">{playlist.description}</div>}
                 {loadingPlaylist === playlist.identifier ? (
-                  <div className="text-center py-12 text-muted-foreground">Loading playlist...</div>
-                ) : playlistVideos[playlist.identifier]?.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {playlistVideos[playlist.identifier]
-                      .map(event => processEvent(event, readRelays))
-                      .filter((v): v is NonNullable<typeof v> => !!v)
-                      .map(video => (
-                        <VideoCard key={video.id} video={video} hideAuthor format="horizontal" />
-                      ))}
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="aspect-video bg-muted animate-pulse rounded-lg" />
+                        <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">No videos in this playlist</div>
+                  <VideoGrid 
+                    videos={playlistVideos[playlist.identifier] || []} 
+                    isLoading={false} 
+                    showSkeletons={false} 
+                    layoutMode="auto" 
+                  />
                 )}
               </TabsContent>
             ))}
+
+            <TabsContent value="tags" className="mt-6">
+              <div className="flex flex-wrap gap-2">
+                {uniqueTags.map(tag => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>

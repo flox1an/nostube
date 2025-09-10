@@ -13,14 +13,9 @@ export function ShortsPage() {
   const [loader, setLoader] = useState<TimelineLoader | undefined>();
 
   useEffect(() => {
-    try {
       const newLoader = videoTypeLoader('shorts', relays);
       console.log('Shorts.newLoader =', newLoader);
       setLoader(newLoader);
-    } catch (error) {
-      console.error('Error creating shorts loader:', error);
-      setLoader(undefined);
-    }
   }, [relays]);
 
   console.log('Shorts.loader =', loader);

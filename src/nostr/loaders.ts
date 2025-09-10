@@ -4,23 +4,23 @@ import { getKindsForType } from '@/lib/video-types';
 
 // Kind 21 (videos)
 export const videoLoader = () =>
-  getTimelineLoader("k21", { kinds: getKindsForType('videos') });
+  getTimelineLoader("k21", { kinds: getKindsForType('videos'), limit: 50 });
 
 // Kind 22 (shorts)
 export const shortsLoader = () =>
-  getTimelineLoader("k22", { kinds: getKindsForType('shorts') });
+  getTimelineLoader("k22", { kinds: getKindsForType('shorts'), limit: 50 });
 
 // Combined 21+22 (all video content)
 export const allVideoLoader = () =>
-  getTimelineLoader("k21k22", { kinds: getKindsForType('all') });
+  getTimelineLoader("k21k22", { kinds: getKindsForType('all'), limit: 50 });
 
 // By author (pubkey hex)
 export const authorVideoLoader = (pubkey: string) =>
-  getTimelineLoader(`k21:author:${pubkey}`, { kinds: getKindsForType('all'), authors: [pubkey] });
+  getTimelineLoader(`k21:author:${pubkey}`, { kinds: getKindsForType('all'), authors: [pubkey], limit: 50 });
 
 // By video type
 export const videoTypeLoader = (type: VideoType, relays?: string[]) => () =>
-  getTimelineLoader(`k21:type:${type}`, { kinds: getKindsForType(type) }, relays);
+  getTimelineLoader(`k21:type:${type}`, { kinds: getKindsForType(type), limit: 20 }, relays);
 
 // By video type and author
 export const authorVideoTypeLoader = (type: VideoType, pubkey: string) => () =>

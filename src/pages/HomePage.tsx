@@ -27,13 +27,13 @@ export function HomePage() {
       console.log('Home: loader not ready yet');
       return;
     }
-    reset();
-    console.log('Home.reset called');
+    // reset();
+    //console.log('Home.reset called');
     // auto-load first page
-    const unsub = loadMore();
-    return () => {
-      if (typeof unsub === 'function') unsub();
-    };
+    //const unsub = loadMore();
+    //return () => {
+    //  if (typeof unsub === 'function') unsub();
+    //};
   }, [loader, reset, loadMore]); // Reset when pathname changes (route navigation)
 
   // Intersection observer for infinite loading
@@ -48,6 +48,8 @@ export function HomePage() {
       loadMore();
     }
   }, [inView, exhausted, loadMore]);
+
+  if (!videos) return null;
 
   return (
     <div className="sm:px-4 sm:py-6">

@@ -80,14 +80,14 @@ export function VideoGrid({ videos, isLoading, showSkeletons, layoutMode = 'auto
       const portraitCols = getCols('vertical');
       return (
         <div className="flex flex-col gap-8">
-          {chunk(Array.from({ length: 12 }), wideCols).map((row, i) => (
+          {chunk(Array.from({ length: 24 }), wideCols).map((row, i) => (
             <div key={'wide-skel-' + i} className={`grid gap-6 ${gridColsClass(wideCols)}`}>
               {row.map((_, j) => (
                 <VideoCardSkeleton key={j} format="horizontal" />
               ))}
             </div>
           ))}
-          {chunk(Array.from({ length: 12 }), portraitCols).map((row, i) => (
+          {chunk(Array.from({ length: 24 }), portraitCols).map((row, i) => (
             <div key={'portrait-skel-' + i} className={`grid gap-6 ${gridColsClass(portraitCols)}`}>
               {row.map((_, j) => (
                 <VideoCardSkeleton key={j} format="vertical" />
@@ -112,7 +112,7 @@ export function VideoGrid({ videos, isLoading, showSkeletons, layoutMode = 'auto
               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
         )}
       >
-        {Array.from({ length: 12 }).map((_, i) => (
+        {Array.from({ length: 24 }).map((_, i) => (
           <VideoCardSkeleton key={i} format={cardFormat} />
         ))}
       </div>

@@ -19,22 +19,7 @@ export function HomePage() {
   }, [relays]);
 
   console.log('Home.loader =', loader);
-  const { videos, loading, exhausted, loadMore, reset } = useInfiniteTimeline(loader, relays);
-
-  // Load videos timeline when component mounts or when route changes to this page
-  useEffect(() => {
-    if (!loader) {
-      console.log('Home: loader not ready yet');
-      return;
-    }
-    // reset();
-    //console.log('Home.reset called');
-    // auto-load first page
-    //const unsub = loadMore();
-    //return () => {
-    //  if (typeof unsub === 'function') unsub();
-    //};
-  }, [loader, reset, loadMore]); // Reset when pathname changes (route navigation)
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays);
 
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({

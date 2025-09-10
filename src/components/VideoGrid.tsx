@@ -73,7 +73,7 @@ export function VideoGrid({ videos, isLoading, showSkeletons, layoutMode = 'auto
     }
   };
 
-  if (isLoading && showSkeletons) {
+  if (isLoading && showSkeletons && videos.length == 0) {
     // Show skeletons for both types if auto, else just one
     if (layoutMode === 'auto') {
       const wideCols = getCols('horizontal');

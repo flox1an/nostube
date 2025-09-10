@@ -146,7 +146,6 @@ export function VideoPlayer({
         </div>
       ) : isHls ? (
         <hls-video
-          className="rounded-lg"
           src={urls[currentUrlIndex]}
           slot="media"
           autoPlay
@@ -167,7 +166,6 @@ export function VideoPlayer({
           autoPlay
           loop={loop}
           poster={poster}
-          className="rounded-lg "
           onTimeUpdate={handleTimeUpdate}
           tabIndex={0}
           onError={handleVideoError}

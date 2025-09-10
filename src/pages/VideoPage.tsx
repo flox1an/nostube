@@ -291,7 +291,7 @@ export function VideoPage() {
                   urls={video.urls}
                   textTracks={video.textTracks}
                   mime={video.mimeType || ''}
-                  poster={imageProxyVideoPreview(video.images[0]) || ''}
+                  poster={video.images[0]|| ''}
                   loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full max-h-[80dvh] aspect-video rounded-lg"
                   onTimeUpdate={setCurrentPlayPos}

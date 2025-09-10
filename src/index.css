@@ -134,18 +134,22 @@
 
   media-controller video {
     max-height: 80dvh;
+    border-radius: var(--radius);
   }
 
   media-controller:fullscreen video {
     max-height: 100dvh;
+    border-radius: 0;
   }
 
   media-controller hls-video {
     height: 80dvh;
+    border-radius: var(--radius);
   }
 
   media-controller:fullscreen hls-video {
     height: 100dvh;
+    border-radius: 0;
   }
 
   media-control-bar * {

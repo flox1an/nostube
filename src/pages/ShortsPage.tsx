@@ -19,23 +19,8 @@ export function ShortsPage() {
   }, [relays]);
 
   console.log('Shorts.loader =', loader);
-  const { videos, loading, exhausted, loadMore, reset } = useInfiniteTimeline(loader, relays);
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays);
   
-  // Load shorts timeline when component mounts or when route changes to this page
-  useEffect(() => {
-    if (!loader) {
-      console.log('Shorts: loader not ready yet');
-      return;
-    }
-    reset();
-    console.log('Shorts.reset called');
-    // auto-load first page
-    const unsub = loadMore();
-    return () => {
-      if (typeof unsub === 'function') unsub();
-    };
-  }, [loader, reset, loadMore]); // Reset when loader changes
-
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,

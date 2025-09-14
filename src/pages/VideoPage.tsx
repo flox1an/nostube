@@ -1,4 +1,4 @@
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEventStore } from 'applesauce-react/hooks';
 import { useObservableState } from 'observable-hooks';
 import { of } from 'rxjs';
@@ -112,11 +112,10 @@ export function VideoPage() {
   const { nevent } = useParams<{ nevent: string }>();
   const eventStore = useEventStore();
   const { pool } = useAppContext();
-
+  const navigate = useNavigate();
   const eventPointer = useMemo(() => nip19.decode(nevent ?? '').data as EventPointer, [nevent]);
 
   const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore]);
-
 
   // Use EventStore to get the video event with fallback to loader
   const videoObservable = useMemo(() => {
@@ -134,7 +133,7 @@ export function VideoPage() {
       })
     );
   }, [eventStore, loader, eventPointer]);
-  
+
   const videoEvent = useObservableState(videoObservable);
 
   // Process the video event or get from cache
@@ -177,7 +176,7 @@ export function VideoPage() {
 
   // Compute initial play position from ?t=... param or localStorage
   const { user } = useCurrentUser();
-  const { mutateAsync: publishDelete, isPending: isDeleting } = useNostrPublish();
+  const { publish, isPending: isDeleting } = useNostrPublish();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const initialPlayPos = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -250,6 +249,20 @@ export function VideoPage() {
 
   return (
     <div className="max-w-[140rem] mx-auto sm:py-6">
+      {/*video && (
+        <div className="md:px-6 lg:flex-row">
+          <VideoPlayer
+            urls={video.urls}
+            textTracks={video.textTracks}
+            mime={video.mimeType || ''}
+            poster={video.images[0] || ''}
+            loop={[34236, 22].includes(video?.kind || 0)}
+            className="w-full max-h-[80dvh] aspect-video rounded-lg"
+            onTimeUpdate={setCurrentPlayPos}
+            initialPlayPos={initialPlayPos}
+          />
+        </div>
+      )*/}
       <div className="flex gap-6 md:px-6 flex-col lg:flex-row">
         <div className="flex-1">
           {isLoading ? (
@@ -291,7 +304,7 @@ export function VideoPage() {
                   urls={video.urls}
                   textTracks={video.textTracks}
                   mime={video.mimeType || ''}
-                  poster={video.images[0]|| ''}
+                  poster={video.images[0] || ''}
                   loop={[34236, 22].includes(video?.kind || 0)}
                   className="w-full max-h-[80dvh] aspect-video rounded-lg"
                   onTimeUpdate={setCurrentPlayPos}
@@ -388,7 +401,7 @@ export function VideoPage() {
                         disabled={isDeleting}
                         onClick={async () => {
                           if (!video) return;
-                          await publishDelete({
+                          await publish({
                             event: {
                               kind: 5, // NIP-9 deletion event
                               content: 'Deleted by author',
@@ -398,6 +411,7 @@ export function VideoPage() {
                             relays: config.relays.map(r => r.url),
                           });
                           setShowDeleteDialog(false);
+                          navigate('/');
                         }}
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -417,11 +431,7 @@ export function VideoPage() {
         </div>
 
         <div className="w-full lg:w-96">
-          <VideoSuggestions
-            currentVideoId={video?.id}
-            authorPubkey={video?.pubkey}
-            currentVideoType={video?.type}
-          />
+          <VideoSuggestions currentVideoId={video?.id} authorPubkey={video?.pubkey} currentVideoType={video?.type} />
         </div>
       </div>
     </div>

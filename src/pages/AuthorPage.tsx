@@ -7,9 +7,12 @@ import { VideoGrid } from '@/components/VideoGrid';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserPlaylists, Playlist } from '@/hooks/usePlaylist';
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline';
-import { authorVideoTypeLoader } from '@/nostr/loaders';
-import { VideoType } from '@/contexts/AppContext';
 import { eventStore } from '@/nostr/core';
+import { TimelineLoader } from 'applesauce-loaders/loaders';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useInView } from 'react-intersection-observer';
+import { authorVideoLoader } from '@/nostr/loaders';
+import { Loader2 } from 'lucide-react';
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string;
 
@@ -31,7 +34,7 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}
           className="w-16 h-16 rounded-full"
-          onError={(e) => {
+          onError={e => {
             const target = e.target as HTMLImageElement;
             target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`;
           }}
@@ -39,12 +42,8 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
       </div>
       <div className="flex-1 min-w-0">
         <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
-        <p className="text-sm text-muted-foreground">
-          Joined {joinedDate.toLocaleDateString()}
-        </p>
-        {metadata?.about && (
-          <p className="text-sm text-muted-foreground mt-1">{metadata.about}</p>
-        )}
+        <p className="text-sm text-muted-foreground">Joined {joinedDate.toLocaleDateString()}</p>
+        {metadata?.about && <p className="text-sm text-muted-foreground mt-1">{metadata.about}</p>}
       </div>
     </div>
   );
@@ -62,6 +61,8 @@ export function AuthorPage() {
   // State for selected playlist videos
   const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({});
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
+  const { config } = useAppContext();
+  const relays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = async (playlist: Playlist) => {
@@ -77,20 +78,27 @@ export function AuthorPage() {
     return events;
   };
 
-  // Choose loader for author videos
-  const getLoader = useMemo(() => {
-    return () => authorVideoTypeLoader('all', pubkey)();
-  }, [pubkey]);
+  const [loader, setLoader] = useState<TimelineLoader | undefined>();
 
-  const { videos: allVideos, loading: isLoadingVideos, exhausted, loadMore, reset } = useInfiniteTimeline(getLoader);
-  
-  // Load author videos when component mounts
   useEffect(() => {
-    reset();
-    // auto-load first page
-    const unsub = loadMore();
-    return () => { if (typeof unsub === "function") unsub(); };
-  }, [pubkey]); // Only depend on pubkey, not loadMore/reset
+    const newLoader = authorVideoLoader(pubkey, relays);
+    console.log('newLoader =', newLoader);
+    setLoader(newLoader);
+  }, [relays, pubkey]);
+
+  const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays);
+  // Intersection observer for infinite loading
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    rootMargin: '200px',
+  });
+
+  // Trigger load more when in view
+  React.useEffect(() => {
+    if ( inView && !exhausted && !loading) {
+      loadMore();
+    }
+  }, [exhausted, loading, loadMore, inView]);
 
   // Get unique tags from all videos
   const uniqueTags = useMemo(
@@ -176,7 +184,7 @@ export function AuthorPage() {
             </TabsList>
 
             <TabsContent value="videos" className="mt-6">
-              {isLoadingVideos ? (
+              {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
@@ -187,12 +195,28 @@ export function AuthorPage() {
                   ))}
                 </div>
               ) : (
-                <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
+                <>
+                  <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
+
+                  {/* Infinite scroll trigger */}
+                  <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
+                    {!exhausted && videos.length > 0 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading more videos...
+                      </div>
+                    )}
+                    {exhausted && videos.length > 0 && (
+                      <div className="text-muted-foreground">No more videos to load.</div>
+                    )}
+                    {videos.length === 0 && !loading && <div className="text-muted-foreground">No videos found.</div>}
+                  </div>
+                </>
               )}
             </TabsContent>
 
             <TabsContent value="shorts" className="mt-6">
-              {isLoadingVideos ? (
+              {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
@@ -203,7 +227,23 @@ export function AuthorPage() {
                   ))}
                 </div>
               ) : (
-                <VideoGrid videos={shorts} isLoading={false} showSkeletons={false} layoutMode="vertical" />
+                <>
+                  <VideoGrid videos={shorts} isLoading={false} showSkeletons={false} layoutMode="vertical" />
+
+                  {/* Infinite scroll trigger */}
+                  <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
+                    {!exhausted && videos.length > 0 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading more videos...
+                      </div>
+                    )}
+                    {exhausted && videos.length > 0 && (
+                      <div className="text-muted-foreground">No more videos to load.</div>
+                    )}
+                    {videos.length === 0 && !loading && <div className="text-muted-foreground">No videos found.</div>}
+                  </div>
+                </>
               )}
             </TabsContent>
 
@@ -220,11 +260,11 @@ export function AuthorPage() {
                     ))}
                   </div>
                 ) : (
-                  <VideoGrid 
-                    videos={playlistVideos[playlist.identifier] || []} 
-                    isLoading={false} 
-                    showSkeletons={false} 
-                    layoutMode="auto" 
+                  <VideoGrid
+                    videos={playlistVideos[playlist.identifier] || []}
+                    isLoading={false}
+                    showSkeletons={false}
+                    layoutMode="auto"
                   />
                 )}
               </TabsContent>
@@ -233,10 +273,7 @@ export function AuthorPage() {
             <TabsContent value="tags" className="mt-6">
               <div className="flex flex-wrap gap-2">
                 {uniqueTags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
-                  >
+                  <span key={tag} className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
                     #{tag}
                   </span>
                 ))}

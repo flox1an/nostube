@@ -1,15 +1,25 @@
 import { EventStore } from 'applesauce-core';
 import { RelayPool } from 'applesauce-relay';
 import { createTimelineLoader } from 'applesauce-loaders/loaders';
-import { getKindsForType } from '@/lib/video-types';
-import { VideoType } from '@/contexts/AppContext';
 import type { Filter } from 'nostr-tools';
-import { openDB, getEventsForFilters, addEvents } from 'nostr-idb';
+import { openDB, getEventsForFilters, addEvents, NostrIDB } from 'nostr-idb';
 import { presistEventsToCache } from 'applesauce-core/helpers';
 
-// Setup a local event cache
-const cache = await openDB();
+// Setup a local event 
+
+let cache: NostrIDB|undefined;
+
+async function ensureCache() {
+  if (!cache) {
+    cache = await openDB();
+  }
+  return cache;
+}
+ensureCache();
+
+
 export async function cacheRequest(filters: Filter[]) {
+  const cache = await ensureCache();
   return getEventsForFilters(cache, filters).then(events => {
     console.log('loaded events from cache', events.length);
     return events;
@@ -21,7 +31,7 @@ export const eventStore = new EventStore();
 export const relayPool = new RelayPool();
 
 // Save all new events to the cache
-presistEventsToCache(eventStore, events => addEvents(cache, events));
+presistEventsToCache(eventStore, events => addEvents(cache!, events));
 
 // Default relays for video content - these will be overridden by user config
 export const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band'];
@@ -52,21 +62,3 @@ export function getTimelineLoader(key: FilterKey, baseFilters: Filter, relays: s
   return loader;
 }
 
-// ---- "named" loaders for common feeds ----
-
-// Kind 21 (videos)
-export const videoLoader = () => getTimelineLoader('k21', { kinds: getKindsForType('videos') });
-
-// Kind 22 (shorts)
-export const shortsLoader = () => getTimelineLoader('k22', { kinds: getKindsForType('shorts') });
-
-// Combined 21+22 (all video content)
-export const allVideoLoader = () => getTimelineLoader('k21k22', { kinds: getKindsForType('all') });
-
-// By author (pubkey hex)
-export const authorVideoLoader = (pubkey: string) =>
-  getTimelineLoader(`k21:author:${pubkey}`, { kinds: getKindsForType('all'), authors: [pubkey] });
-
-// By video type and author
-export const authorVideoTypeLoader = (type: VideoType, pubkey: string) =>
-  getTimelineLoader(`k21:type:${type}:author:${pubkey}`, { kinds: getKindsForType(type), authors: [pubkey] });

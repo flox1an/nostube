@@ -49,7 +49,7 @@ export function VideoUpload() {
 
   const { user } = useCurrentUser();
   const { config } = useAppContext();
-  const { mutate: publish } = useNostrPublish();
+  const { publish } = useNostrPublish();
   const blossomInitalUploadServers = config.blossomServers?.filter(server => server.tags.includes('initial upload'));
   const blossomMirrorServers = config.blossomServers?.filter(server => server.tags.includes('mirror'));
   const navigate = useNavigate();

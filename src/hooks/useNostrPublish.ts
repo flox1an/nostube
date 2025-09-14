@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useCurrentUser } from './useCurrentUser';
 import { useAppContext } from './useAppContext';
 import { EventTemplate, Event } from 'nostr-tools';
 import { nowInSecs } from '@/lib/utils';
+import { relayPool } from '@/nostr/core';
 
 type PublishArgs = {
   event: EventTemplate;
@@ -10,8 +11,7 @@ type PublishArgs = {
 };
 
 interface PublishResult {
-  mutateAsync: (args: PublishArgs) => Promise<Event>;
-  mutate: (args: PublishArgs) => void;
+  publish: (args: PublishArgs) => Promise<Event>;
   isPending: boolean;
   error: Error | null;
 }
@@ -22,8 +22,7 @@ export function useNostrPublish(): PublishResult {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const mutateAsync = useCallback(
-    async (args: PublishArgs): Promise<Event> => {
+  const publish = async (args: PublishArgs): Promise<Event> => {
       if (!user) {
         throw new Error('User is not logged in');
       }
@@ -57,8 +56,8 @@ export function useNostrPublish(): PublishResult {
         console.log('Publishing event to relays:', relaysToUse);
         console.log('Event:', signedEvent);
 
-        // TODO: Implement actual relay publishing
-        // This would involve connecting to WebSocket relays and sending the event
+        // TODO better use an actionHub here
+        await relayPool.publish(relaysToUse, signedEvent);
 
         return signedEvent;
       } catch (err) {
@@ -69,22 +68,12 @@ export function useNostrPublish(): PublishResult {
       } finally {
         setIsPending(false);
       }
-    },
-    [user, config.relays]
-  );
+    }
+  
 
-  const mutate = useCallback(
-    (args: PublishArgs) => {
-      mutateAsync(args).catch(err => {
-        console.error('Publish failed:', err);
-      });
-    },
-    [mutateAsync]
-  );
 
   return {
-    mutateAsync,
-    mutate,
+    publish,
     isPending,
     error,
   };

@@ -119,7 +119,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             )}
             <div className="min-w-0 flex-1">
               <Link to={`/video/${video.link}`}>
-                <h3 className="font-medium line-clamp-2">{video.title}</h3>
+                <h3 className="font-medium line-clamp-2 break-all">{video.title}</h3>
               </Link>
 
               {!hideAuthor && (

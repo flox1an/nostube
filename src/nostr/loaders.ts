@@ -15,8 +15,8 @@ export const allVideoLoader = () =>
   getTimelineLoader("k21k22", { kinds: getKindsForType('all'), limit: 50 });
 
 // By author (pubkey hex)
-export const authorVideoLoader = (pubkey: string) =>
-  getTimelineLoader(`k21:author:${pubkey}`, { kinds: getKindsForType('all'), authors: [pubkey], limit: 50 });
+export const authorVideoLoader = (pubkey: string, relays: string[]) => () =>
+  getTimelineLoader(`k21:author:${pubkey}`, { kinds: getKindsForType('all'), authors: [pubkey], limit: 100 }, relays);
 
 // By video type
 export const videoTypeLoader = (type: VideoType, relays?: string[]) => () =>

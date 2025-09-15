@@ -32,7 +32,7 @@ export interface VideoEvent {
   x?: string;
 }
 
-const videoThumbService = 'https://video-thumb.apps2.slidestr.net/thumbnail?url=';
+const videoThumbService = 'https://video-thumb.apps3.slidestr.net/thumbnail?url=';
 
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {

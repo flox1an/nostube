@@ -107,7 +107,7 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
   const [newComment, setNewComment] = useState('');
   const eventStore = useEventStore();
   const { user } = useCurrentUser();
-  const { mutate: publish } = useNostrPublish();
+  const { publish } = useNostrPublish();
   const { pool, config } = useAppContext();
   const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
 
@@ -151,7 +151,7 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
 
   const comments = useObservableState(comments$, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newComment.trim()) return;
 
@@ -167,9 +167,20 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
         ['client', 'nostube'],
       ],
     };
-    publish({ event: draftEvent });
 
-    setNewComment('');
+    try {
+      const signedEvent = await publish({
+        event: draftEvent,
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+      });
+      
+      // Add the comment to the event store immediately for instant feedback
+      eventStore.add(signedEvent);
+      
+      setNewComment('');
+    } catch (error) {
+      console.error('Failed to publish comment:', error);
+    }
   };
 
   return (

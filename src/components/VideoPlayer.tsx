@@ -68,6 +68,17 @@ export function VideoPlayer({
     function handleKeyDown(e: KeyboardEvent) {
       if (!el) return;
 
+      // Don't capture keys if user is typing in an input field
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.isContentEditable
+      )) {
+        return;
+      }
+
       // Only step if video is paused and present
       if (!el.paused) return;
       // Assume 30fps for frame step

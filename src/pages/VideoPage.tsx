@@ -329,9 +329,10 @@ export function VideoPage() {
                     </Link>
 
                     <div className="flex items-center gap-2">
-                      {/* 
+                      
                       <AddToPlaylistButton videoId={video.id} videoKind={video.kind} videoTitle={video.title} />
-                      <ButtonWithReactions eventId={video.id} authorPubkey={video.pubkey} kind={video.kind} />
+                      <ButtonWithReactions eventId={video.id} authorPubkey={video.pubkey} kind={video.kind} /> 
+                      {/*
                       <FollowButton pubkey={video.pubkey} />*/}
                       <ShareButton
                         shareOpen={shareOpen}

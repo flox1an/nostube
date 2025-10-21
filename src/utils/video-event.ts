@@ -42,8 +42,6 @@ export interface VideoEvent {
   x?: string;
 }
 
-const videoThumbService = 'https://video-thumb.apps3.slidestr.net/thumbnail?url=';
-
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(' ')}`.toLowerCase();
@@ -128,6 +126,13 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       url = url.split(' ')[0];
     }
 
+    const videoUrls2 = videoUrls.map(url => {
+      if (url.includes('https://temp-st.apps2.slidestr.net/')) {
+        return url.replace('https://temp-st.apps2.slidestr.net/', 'https://almond.slidestr.net/');
+      }
+      return url;
+    });
+
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
@@ -136,14 +141,14 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       images:
         images.length > 0
           ? images
-          : [(url ? `${videoThumbService}${btoa(url)}` : '') || blurHashToDataURL(blurhash) || ''],
+          : [url  || blurHashToDataURL(blurhash) || ''], // use the video url, which is converted to an image by the image proxy
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,
       x,
       tags,
       searchText: '',
-      urls: videoUrls,
+      urls: videoUrls2,
       mimeType,
       textTracks,
       link: nip19.neventEncode({
@@ -182,7 +187,7 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       identifier,
       title,
       description,
-      images: [thumb || `${videoThumbService}${btoa(url)}`],
+      images: [thumb || url], // use the video url, which is converted to an image by the image proxy
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,

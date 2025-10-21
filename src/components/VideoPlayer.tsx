@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import 'media-chrome';
 import 'hls-video-element';
 import { TextTrack } from '@/utils/video-event';
-import { getLanguageLabel } from '@/lib/utils';
+import { getLanguageLabel, imageProxyVideoPreview, isVideoUrl } from '@/lib/utils';
 import 'media-chrome/menu';
 import '@/types/media-chrome.d.ts';
 
@@ -70,12 +70,13 @@ export function VideoPlayer({
 
       // Don't capture keys if user is typing in an input field
       const activeElement = document.activeElement;
-      if (activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT' ||
-        activeElement.isContentEditable
-      )) {
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT' ||
+          activeElement.isContentEditable)
+      ) {
         return;
       }
 
@@ -149,6 +150,11 @@ export function VideoPlayer({
 
   const hasCaptions = textTracks.length > 0;
 
+  const posterUrl = React.useMemo(
+    () => (poster !== undefined ? imageProxyVideoPreview(poster) : undefined),
+    [poster]
+  );
+
   return (
     <media-controller className={className}>
       {allFailed ? (
@@ -161,7 +167,7 @@ export function VideoPlayer({
           slot="media"
           autoPlay
           loop={loop}
-          poster={poster}
+          poster={posterUrl}
           crossOrigin="anonymous"
           onTimeUpdate={handleTimeUpdate}
           ref={hlsRef}
@@ -176,7 +182,7 @@ export function VideoPlayer({
           slot="media"
           autoPlay
           loop={loop}
-          poster={poster}
+          poster={posterUrl}
           onTimeUpdate={handleTimeUpdate}
           tabIndex={0}
           onError={handleVideoError}

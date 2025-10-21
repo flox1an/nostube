@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { nip19 } from 'nostr-tools';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -55,28 +55,80 @@ export function AuthorPage() {
 
   const pubkey = nip19.decode(npub ?? '').data as string;
 
-  // Fetch playlists for this author
-  const { data: playlists = [] } = useUserPlaylists(pubkey);
-
   // State for selected playlist videos
   const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({});
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
+  const loadedPlaylistsRef = useRef<Set<string>>(new Set());
+
+  // Fetch playlists for this author
+  const { data: playlists = [] } = useUserPlaylists(pubkey);
   const { config } = useAppContext();
   const relays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
 
   // Helper to fetch full video events for a playlist
-  const fetchPlaylistVideos = async (playlist: Playlist) => {
+  const fetchPlaylistVideos = useCallback(async (playlist: Playlist) => {
     if (!playlist || !playlist.videos?.length) return [];
     setLoadingPlaylist(playlist.identifier);
     const ids = playlist.videos.map(v => v.id);
 
-    // Get events from EventStore
-    const events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
+    try {
+      // First try to get events from EventStore
+      let events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
+      
+      // If we don't have all events, fetch missing ones from relays
+      const missingIds = ids.filter(id => !eventStore.getEvent(id));
+      
+      if (missingIds.length > 0) {
+        console.log(`Fetching ${missingIds.length} missing video events for playlist:`, playlist.name);
+        
+        // Create a simple loader to fetch the missing events
+        const { createEventLoader } = await import('applesauce-loaders/loaders');
+        const { pool } = config;
+        const loader = createEventLoader(pool, { eventStore });
+        
+        // Fetch missing events
+        const fetchPromises = missingIds.map(id => 
+          loader({ ids: [id] }).toPromise().catch(err => {
+            console.warn(`Failed to fetch event ${id}:`, err);
+            return null;
+          })
+        );
+        
+        const fetchedEvents = (await Promise.all(fetchPromises)).filter(Boolean);
+        
+        // Add fetched events to the store
+        fetchedEvents.forEach(event => {
+          if (event) eventStore.add(event);
+        });
+        
+        // Get all events again (now including fetched ones)
+        events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
+      }
 
-    setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
-    setLoadingPlaylist(null);
-    return events;
-  };
+      setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
+      loadedPlaylistsRef.current.add(playlist.identifier);
+      return events;
+    } catch (error) {
+      console.error('Failed to fetch playlist videos:', error);
+      setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: [] }));
+      loadedPlaylistsRef.current.add(playlist.identifier); // Mark as attempted even if failed
+      return [];
+    } finally {
+      setLoadingPlaylist(null);
+    }
+  }, [config]);
+
+  // Auto-fetch video events for all playlists when playlists are loaded
+  useEffect(() => {
+    if (playlists.length > 0) {
+      playlists.forEach(async (playlist) => {
+        // Only fetch if we haven't already loaded this playlist's videos
+        if (!loadedPlaylistsRef.current.has(playlist.identifier) && playlist.videos.length > 0) {
+          await fetchPlaylistVideos(playlist);
+        }
+      });
+    }
+  }, [playlists, fetchPlaylistVideos]); // Include fetchPlaylistVideos dependency
 
   const [loader, setLoader] = useState<TimelineLoader | undefined>();
 

@@ -125,26 +125,50 @@ export const imageProxy = (url?: string) => {
   if (!url) return '';
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url;
-  return `https://images.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`;
+  return `http://127.0.0.1:8081/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`;
 };
 
 export const imageProxyVideoPreview = (url?: string) => {
   if (!url) return '';
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url;
-  return `https://images.slidestr.net/insecure/f:webp/rs:fill:480:480/plain/${encodeURIComponent(url)}`;
+  return `http://127.0.0.1:8081/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`;
 };
 
 function bigIntHash(str: string): string {
-  let hash = BigInt(0)
+  let hash = BigInt(0);
   for (let i = 0; i < str.length; i++) {
-    hash = (hash << BigInt(5)) - hash + BigInt(str.charCodeAt(i))
-    hash &= BigInt("0xFFFFFFFFFFFFFFFF") // simulate 64-bit unsigned
+    hash = (hash << BigInt(5)) - hash + BigInt(str.charCodeAt(i));
+    hash &= BigInt('0xFFFFFFFFFFFFFFFF'); // simulate 64-bit unsigned
   }
-  return hash.toString(16) // hex string
+  return hash.toString(16); // hex string
 }
 
 export function hashObjectBigInt(obj: object): string {
-  const json = JSON.stringify(obj, Object.keys(obj).sort())
-  return bigIntHash(json)
+  const json = JSON.stringify(obj, Object.keys(obj).sort());
+  return bigIntHash(json);
+}
+
+export function isVideoUrl(url: string) {
+  return (
+    url.endsWith('.mp4') ||
+    url.endsWith('.webm') ||
+    url.endsWith('.mov') ||
+    url.endsWith('.avi') ||
+    url.endsWith('.mkv') ||
+    url.endsWith('.flv') ||
+    url.endsWith('.wmv') ||
+    url.endsWith('.m4v') ||
+    url.endsWith('.m4a') ||
+    url.endsWith('.m4b') ||
+    url.endsWith('.m4p') ||
+    url.endsWith('.m4v') ||
+    url.endsWith('.m4a') ||
+    url.endsWith('.m4b') ||
+    url.endsWith('.m4p') ||
+    url.endsWith('.m4v') ||
+    url.endsWith('.m4a') ||
+    url.endsWith('.m4b') ||
+    url.endsWith('.m4p')
+  );
 }

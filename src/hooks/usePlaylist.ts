@@ -1,4 +1,4 @@
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks';
+import { useEventStore } from 'applesauce-react/hooks';
 import { useObservableState } from 'observable-hooks';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
@@ -6,8 +6,6 @@ import { nowInSecs } from '@/lib/utils';
 import { useAppContext } from './useAppContext';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { createTimelineLoader } from 'applesauce-loaders/loaders';
-import { Event } from 'nostr-tools';
-import { defer, map, merge, Observable, scan } from 'rxjs';
 
 export interface Video {
   id: string;
@@ -30,14 +28,42 @@ const PLAYLIST_KIND = 30005;
 export function usePlaylists() {
   const eventStore = useEventStore();
   const { user } = useCurrentUser();
-  const { mutate: publishEvent } = useNostrPublish();
-  const { config } = useAppContext();
+  const { publish } = useNostrPublish();
+  const { config, pool } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+  const filters = useMemo(() => [playlistFilter(user?.pubkey)], [user?.pubkey]);
+  const loader = useMemo(() => createTimelineLoader(pool, readRelays, filters), [pool, readRelays, filters]);
 
   // Use EventStore timeline to get playlists for current user
-  const playlistsObservable = eventStore.timeline(playlistFilter(user?.pubkey));
-
+  const playlistsObservable = eventStore.timeline(filters);
   const playlistEvents = useObservableState(playlistsObservable, []);
+
+  // Load playlists on page load if not already loaded
+  useEffect(() => {
+    const needLoad = playlistEvents.length === 0 && !!user?.pubkey && !hasLoadedOnce;
+    
+    if (needLoad) {
+      console.log('Loading user playlists...');
+      setIsLoading(true);
+      const load$ = loader();
+      
+      load$.subscribe({
+        next: (event) => eventStore.add(event),
+        complete: () => {
+          setIsLoading(false);
+          setHasLoadedOnce(true);
+        },
+        error: (error) => {
+          console.error('Failed to load playlists:', error);
+          setIsLoading(false);
+          setHasLoadedOnce(true);
+        }
+      });
+    }
+  }, [playlistEvents.length, user?.pubkey, hasLoadedOnce, loader, eventStore]);
 
   const playlists = playlistEvents.map(event => {
     // Find the title from tags
@@ -86,21 +112,27 @@ export function usePlaylists() {
           ['client', 'nostube'],
         ];
 
-        await publishEvent({
-          event: {
-            kind: PLAYLIST_KIND,
-            created_at: nowInSecs(),
-            tags,
-            content: '', // Content can be empty as per NIP-51
-          },
+        const draftEvent = {
+          kind: PLAYLIST_KIND,
+          created_at: nowInSecs(),
+          tags,
+          content: '', // Content can be empty as per NIP-51
+        };
+
+        const signedEvent = await publish({
+          event: draftEvent,
+          relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
         });
+
+        // Add the updated playlist to the event store immediately for instant feedback
+        eventStore.add(signedEvent);
 
         return playlist;
       } finally {
         setIsLoading(false);
       }
     },
-    [user?.pubkey, publishEvent]
+    [user?.pubkey, publish, config.relays, eventStore]
   );
 
   const createPlaylist = useCallback(
@@ -166,20 +198,25 @@ export function usePlaylists() {
       if (!user?.pubkey) throw new Error('User not logged in');
 
       // NIP-9 delete event: kind 5, 'e' tag for eventId, 'k' tag for kind
-      await publishEvent({
-        event: {
-          kind: 5,
-          created_at: nowInSecs(),
-          tags: [
-            ['e', eventId],
-            ['k', PLAYLIST_KIND.toString()],
-          ],
-          content: 'Deleted by author',
-        },
-        relays: config.relays.map(r => r.url),
+      const deleteEvent = {
+        kind: 5,
+        created_at: nowInSecs(),
+        tags: [
+          ['e', eventId],
+          ['k', PLAYLIST_KIND.toString()],
+        ],
+        content: 'Deleted by author',
+      };
+
+      const signedDeleteEvent = await publish({
+        event: deleteEvent,
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
       });
+
+      // Add the deletion event to the event store immediately for instant feedback
+      eventStore.add(signedDeleteEvent);
     },
-    [user?.pubkey, publishEvent, config.relays]
+    [user?.pubkey, publish, config.relays, eventStore]
   );
 
   return {

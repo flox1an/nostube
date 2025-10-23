@@ -10,7 +10,10 @@ export function Header() {
   const { toggleSidebar } = useAppContext()
 
   return (
-    <header className="border-b sticky top-0 bg-background z-50">
+    <header
+      className="border-b sticky top-0 bg-background z-50"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
+    >
       <div className={`w-full px-4 h-16 flex items-center justify-between`}>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>

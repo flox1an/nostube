@@ -1,31 +1,31 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { nip19 } from 'nostr-tools';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { VideoGrid } from '@/components/VideoGrid';
-import { useProfile } from '@/hooks/useProfile';
-import { useUserPlaylists, Playlist } from '@/hooks/usePlaylist';
-import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline';
-import { eventStore } from '@/nostr/core';
-import { TimelineLoader } from 'applesauce-loaders/loaders';
-import { useAppContext } from '@/hooks/useAppContext';
-import { useInView } from 'react-intersection-observer';
-import { authorVideoLoader } from '@/nostr/loaders';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
+import { nip19 } from 'nostr-tools'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { VideoGrid } from '@/components/VideoGrid'
+import { useProfile } from '@/hooks/useProfile'
+import { useUserPlaylists, Playlist } from '@/hooks/usePlaylist'
+import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
+import { eventStore } from '@/nostr/core'
+import { TimelineLoader } from 'applesauce-loaders/loaders'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useInView } from 'react-intersection-observer'
+import { authorVideoLoader } from '@/nostr/loaders'
+import { Loader2 } from 'lucide-react'
 
-type Tabs = 'videos' | 'shorts' | 'tags' | string;
+type Tabs = 'videos' | 'shorts' | 'tags' | string
 
 interface AuthorStats {
-  videoCount: number;
-  totalViews: number;
-  joinedDate: Date;
+  videoCount: number
+  totalViews: number
+  joinedDate: Date
 }
 
 function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Date }) {
-  const metadata = useProfile({ pubkey });
-  const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey;
-  const picture = metadata?.picture;
+  const metadata = useProfile({ pubkey })
+  const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
+  const picture = metadata?.picture
 
   return (
     <div className="flex items-center space-x-4">
@@ -35,8 +35,8 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
           alt={displayName}
           className="w-16 h-16 rounded-full"
           onError={e => {
-            const target = e.target as HTMLImageElement;
-            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`;
+            const target = e.target as HTMLImageElement
+            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
           }}
         />
       </div>
@@ -46,111 +46,122 @@ function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Dat
         {metadata?.about && <p className="text-sm text-muted-foreground mt-1">{metadata.about}</p>}
       </div>
     </div>
-  );
+  )
 }
 
 export function AuthorPage() {
-  const { npub } = useParams<{ npub: string }>();
-  const [activeTab, setActiveTab] = useState<Tabs>('videos');
+  const { npub } = useParams<{ npub: string }>()
+  const [activeTab, setActiveTab] = useState<Tabs>('videos')
 
-  const pubkey = nip19.decode(npub ?? '').data as string;
+  const pubkey = nip19.decode(npub ?? '').data as string
 
   // State for selected playlist videos
-  const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({});
-  const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
-  const loadedPlaylistsRef = useRef<Set<string>>(new Set());
+  const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({})
+  const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null)
+  const loadedPlaylistsRef = useRef<Set<string>>(new Set())
 
   // Fetch playlists for this author
-  const { data: playlists = [] } = useUserPlaylists(pubkey);
-  const { config } = useAppContext();
-  const relays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+  const { data: playlists = [] } = useUserPlaylists(pubkey)
+  const { config } = useAppContext()
+  const relays = useMemo(
+    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
+    [config.relays]
+  )
 
   // Helper to fetch full video events for a playlist
-  const fetchPlaylistVideos = useCallback(async (playlist: Playlist) => {
-    if (!playlist || !playlist.videos?.length) return [];
-    setLoadingPlaylist(playlist.identifier);
-    const ids = playlist.videos.map(v => v.id);
+  const fetchPlaylistVideos = useCallback(
+    async (playlist: Playlist) => {
+      if (!playlist || !playlist.videos?.length) return []
+      setLoadingPlaylist(playlist.identifier)
+      const ids = playlist.videos.map(v => v.id)
 
-    try {
-      // First try to get events from EventStore
-      let events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
-      
-      // If we don't have all events, fetch missing ones from relays
-      const missingIds = ids.filter(id => !eventStore.getEvent(id));
-      
-      if (missingIds.length > 0) {
-        console.log(`Fetching ${missingIds.length} missing video events for playlist:`, playlist.name);
-        
-        // Create a simple loader to fetch the missing events
-        const { createEventLoader } = await import('applesauce-loaders/loaders');
-        const { pool } = config;
-        const loader = createEventLoader(pool, { eventStore });
-        
-        // Fetch missing events
-        const fetchPromises = missingIds.map(id => 
-          loader({ ids: [id] }).toPromise().catch(err => {
-            console.warn(`Failed to fetch event ${id}:`, err);
-            return null;
+      try {
+        // First try to get events from EventStore
+        let events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[]
+
+        // If we don't have all events, fetch missing ones from relays
+        const missingIds = ids.filter(id => !eventStore.getEvent(id))
+
+        if (missingIds.length > 0) {
+          console.log(
+            `Fetching ${missingIds.length} missing video events for playlist:`,
+            playlist.name
+          )
+
+          // Create a simple loader to fetch the missing events
+          const { createEventLoader } = await import('applesauce-loaders/loaders')
+          const { pool } = config
+          const loader = createEventLoader(pool, { eventStore })
+
+          // Fetch missing events
+          const fetchPromises = missingIds.map(id =>
+            loader({ ids: [id] })
+              .toPromise()
+              .catch(err => {
+                console.warn(`Failed to fetch event ${id}:`, err)
+                return null
+              })
+          )
+
+          const fetchedEvents = (await Promise.all(fetchPromises)).filter(Boolean)
+
+          // Add fetched events to the store
+          fetchedEvents.forEach(event => {
+            if (event) eventStore.add(event)
           })
-        );
-        
-        const fetchedEvents = (await Promise.all(fetchPromises)).filter(Boolean);
-        
-        // Add fetched events to the store
-        fetchedEvents.forEach(event => {
-          if (event) eventStore.add(event);
-        });
-        
-        // Get all events again (now including fetched ones)
-        events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[];
-      }
 
-      setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }));
-      loadedPlaylistsRef.current.add(playlist.identifier);
-      return events;
-    } catch (error) {
-      console.error('Failed to fetch playlist videos:', error);
-      setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: [] }));
-      loadedPlaylistsRef.current.add(playlist.identifier); // Mark as attempted even if failed
-      return [];
-    } finally {
-      setLoadingPlaylist(null);
-    }
-  }, [config]);
+          // Get all events again (now including fetched ones)
+          events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[]
+        }
+
+        setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }))
+        loadedPlaylistsRef.current.add(playlist.identifier)
+        return events
+      } catch (error) {
+        console.error('Failed to fetch playlist videos:', error)
+        setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: [] }))
+        loadedPlaylistsRef.current.add(playlist.identifier) // Mark as attempted even if failed
+        return []
+      } finally {
+        setLoadingPlaylist(null)
+      }
+    },
+    [config]
+  )
 
   // Auto-fetch video events for all playlists when playlists are loaded
   useEffect(() => {
     if (playlists.length > 0) {
-      playlists.forEach(async (playlist) => {
+      playlists.forEach(async playlist => {
         // Only fetch if we haven't already loaded this playlist's videos
         if (!loadedPlaylistsRef.current.has(playlist.identifier) && playlist.videos.length > 0) {
-          await fetchPlaylistVideos(playlist);
+          await fetchPlaylistVideos(playlist)
         }
-      });
+      })
     }
-  }, [playlists, fetchPlaylistVideos]); // Include fetchPlaylistVideos dependency
+  }, [playlists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
 
-  const [loader, setLoader] = useState<TimelineLoader | undefined>();
+  const [loader, setLoader] = useState<TimelineLoader | undefined>()
 
   useEffect(() => {
-    const newLoader = authorVideoLoader(pubkey, relays);
-    console.log('newLoader =', newLoader);
-    setLoader(newLoader);
-  }, [relays, pubkey]);
+    const newLoader = authorVideoLoader(pubkey, relays)
+    console.log('newLoader =', newLoader)
+    setLoader(newLoader)
+  }, [relays, pubkey])
 
-  const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays);
+  const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
   // Intersection observer for infinite loading
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,
     rootMargin: '200px',
-  });
+  })
 
   // Trigger load more when in view
   React.useEffect(() => {
-    if ( inView && !exhausted && !loading) {
-      loadMore();
+    if (inView && !exhausted && !loading) {
+      loadMore()
     }
-  }, [exhausted, loading, loadMore, inView]);
+  }, [exhausted, loading, loadMore, inView])
 
   // Get unique tags from all videos
   const uniqueTags = useMemo(
@@ -159,42 +170,45 @@ export function AuthorPage() {
         .filter(Boolean)
         .sort(),
     [allVideos]
-  );
+  )
 
-  const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos]);
+  const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos])
 
-  const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos]);
+  const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos])
 
   useEffect(() => {
     if (videos.length > shorts.length) {
-      setActiveTab('videos');
+      setActiveTab('videos')
     } else {
-      setActiveTab('shorts');
+      setActiveTab('shorts')
     }
-  }, [shorts, videos]);
+  }, [shorts, videos])
 
-  const authorMeta = useProfile({ pubkey });
-  const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey;
+  const authorMeta = useProfile({ pubkey })
+  const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey
 
   useEffect(() => {
     if (authorName) {
-      document.title = `${authorName} - nostube`;
+      document.title = `${authorName} - nostube`
     } else {
-      document.title = 'nostube';
+      document.title = 'nostube'
     }
     return () => {
-      document.title = 'nostube';
-    };
-  }, [authorName]);
+      document.title = 'nostube'
+    }
+  }, [authorName])
 
   // Get author stats
   const stats: AuthorStats = {
     videoCount: allVideos.length,
     totalViews: 0, // Could be implemented with NIP-78 view counts
-    joinedDate: allVideos.length > 0 ? new Date(Math.min(...allVideos.map(v => v.created_at * 1000))) : new Date(),
-  };
+    joinedDate:
+      allVideos.length > 0
+        ? new Date(Math.min(...allVideos.map(v => v.created_at * 1000)))
+        : new Date(),
+  }
 
-  if (!pubkey) return null;
+  if (!pubkey) return null
 
   return (
     <div className="sm:p-4">
@@ -223,7 +237,7 @@ export function AuthorPage() {
                   className="cursor-pointer"
                   onClick={async () => {
                     if (!playlistVideos[playlist.identifier]) {
-                      await fetchPlaylistVideos(playlist);
+                      await fetchPlaylistVideos(playlist)
                     }
                   }}
                 >
@@ -248,7 +262,12 @@ export function AuthorPage() {
                 </div>
               ) : (
                 <>
-                  <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
+                  <VideoGrid
+                    videos={videos}
+                    isLoading={false}
+                    showSkeletons={false}
+                    layoutMode="auto"
+                  />
 
                   {/* Infinite scroll trigger */}
                   <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
@@ -261,7 +280,9 @@ export function AuthorPage() {
                     {exhausted && videos.length > 0 && (
                       <div className="text-muted-foreground">No more videos to load.</div>
                     )}
-                    {videos.length === 0 && !loading && <div className="text-muted-foreground">No videos found.</div>}
+                    {videos.length === 0 && !loading && (
+                      <div className="text-muted-foreground">No videos found.</div>
+                    )}
                   </div>
                 </>
               )}
@@ -280,7 +301,12 @@ export function AuthorPage() {
                 </div>
               ) : (
                 <>
-                  <VideoGrid videos={shorts} isLoading={false} showSkeletons={false} layoutMode="vertical" />
+                  <VideoGrid
+                    videos={shorts}
+                    isLoading={false}
+                    showSkeletons={false}
+                    layoutMode="vertical"
+                  />
 
                   {/* Infinite scroll trigger */}
                   <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
@@ -293,7 +319,9 @@ export function AuthorPage() {
                     {exhausted && videos.length > 0 && (
                       <div className="text-muted-foreground">No more videos to load.</div>
                     )}
-                    {videos.length === 0 && !loading && <div className="text-muted-foreground">No videos found.</div>}
+                    {videos.length === 0 && !loading && (
+                      <div className="text-muted-foreground">No videos found.</div>
+                    )}
                   </div>
                 </>
               )}
@@ -325,7 +353,10 @@ export function AuthorPage() {
             <TabsContent value="tags" className="mt-6">
               <div className="flex flex-wrap gap-2">
                 {uniqueTags.map(tag => (
-                  <span key={tag} className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
+                  <span
+                    key={tag}
+                    className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
+                  >
                     #{tag}
                   </span>
                 ))}
@@ -335,5 +366,5 @@ export function AuthorPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

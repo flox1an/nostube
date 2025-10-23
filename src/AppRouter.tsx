@@ -1,17 +1,17 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { HomePage } from './pages/HomePage';
-import NotFound from '@/pages/NotFound';
-import { ScrollToTop } from '@/components/ScrollToTop';
-import { SubscriptionsPage } from './pages/SubscriptionsPage';
-import { LikedVideosPage } from './pages/LikedVideosPage';
-import { MainLayout } from '@/components/MainLayout';
-import { VideoPage } from '@/pages/VideoPage';
-import { AuthorPage } from '@/pages/AuthorPage';
-import { UploadPage } from '@/pages/UploadPage';
-import PlaylistPage from '@/pages/Playlists';
-import SinglePlaylistPage from '@/pages/SinglePlaylistPage';
-import { ShortsPage } from './pages/ShortsPage';
-import SettingsPage from './pages/settings/SettingsPage';
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { HomePage } from './pages/HomePage'
+import NotFound from '@/pages/NotFound'
+import { ScrollToTop } from '@/components/ScrollToTop'
+import { SubscriptionsPage } from './pages/SubscriptionsPage'
+import { LikedVideosPage } from './pages/LikedVideosPage'
+import { MainLayout } from '@/components/MainLayout'
+import { VideoPage } from '@/pages/VideoPage'
+import { AuthorPage } from '@/pages/AuthorPage'
+import { UploadPage } from '@/pages/UploadPage'
+import PlaylistPage from '@/pages/Playlists'
+import SinglePlaylistPage from '@/pages/SinglePlaylistPage'
+import { ShortsPage } from './pages/ShortsPage'
+import SettingsPage from './pages/settings/SettingsPage'
 
 export function AppRouter() {
   return (
@@ -33,5 +33,5 @@ export function AppRouter() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
-  );
+  )
 }

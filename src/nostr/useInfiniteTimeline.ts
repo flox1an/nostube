@@ -1,31 +1,31 @@
-import { processEvents } from '@/utils/video-event';
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
-import { TimelineLoader } from 'applesauce-loaders/loaders';
-import { NostrEvent } from 'nostr-tools';
-import { useCallback, useMemo, useState } from 'react';
-import { insertEventIntoDescendingList } from 'nostr-tools/utils';
+import { processEvents } from '@/utils/video-event'
+import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
+import { TimelineLoader } from 'applesauce-loaders/loaders'
+import { NostrEvent } from 'nostr-tools'
+import { useCallback, useMemo, useState } from 'react'
+import { insertEventIntoDescendingList } from 'nostr-tools/utils'
 
 export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[] = []) {
-  const blockedPubkeys = useReportedPubkeys();
+  const blockedPubkeys = useReportedPubkeys()
 
-  const [events, setEvents] = useState<NostrEvent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<NostrEvent[]>([])
+  const [loading, setLoading] = useState(false)
   const next = useCallback(() => {
-    if (!loader) return;
-    setLoading(true);
+    if (!loader) return
+    setLoading(true)
     loader().subscribe({
-      next: (evnet) => setEvents((prev) => Array.from(insertEventIntoDescendingList(prev, evnet))),
+      next: evnet => setEvents(prev => Array.from(insertEventIntoDescendingList(prev, evnet))),
       complete: () => {
-        setLoading(false);
+        setLoading(false)
       },
-    });
-  }, [loader]);
+    })
+  }, [loader])
 
-    // Process events to VideoEvent format
-    const videos = useMemo(() => {
-      return processEvents(events, readRelays, blockedPubkeys);
-    }, [events, readRelays, blockedPubkeys]);
-/*
+  // Process events to VideoEvent format
+  const videos = useMemo(() => {
+    return processEvents(events, readRelays, blockedPubkeys)
+  }, [events, readRelays, blockedPubkeys])
+  /*
   const videos = useObservableMemo(
     () =>
       relayPool
@@ -92,5 +92,5 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
     exhausted: false,
     loadMore: next,
     reset: () => {},
-  };
+  }
 }

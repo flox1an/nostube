@@ -1,22 +1,22 @@
-import { BlobDescriptor } from 'blossom-client-sdk';
-import { Check, ExternalLink, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { formatBlobUrl } from '@/lib/utils';
+import { BlobDescriptor } from 'blossom-client-sdk'
+import { Check, ExternalLink, Loader2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { formatBlobUrl } from '@/lib/utils'
 
 export interface UploadServerProps {
   /** The input method being used */
-  inputMethod: 'file' | 'url';
+  inputMethod: 'file' | 'url'
   /** Current upload/processing state */
-  uploadState: 'initial' | 'uploading' | 'finished';
+  uploadState: 'initial' | 'uploading' | 'finished'
   /** Blobs that were uploaded (for file uploads) */
-  uploadedBlobs?: BlobDescriptor[];
+  uploadedBlobs?: BlobDescriptor[]
   /** Blobs that were mirrored */
-  mirroredBlobs?: BlobDescriptor[];
+  mirroredBlobs?: BlobDescriptor[]
   /** Whether initial upload servers are configured */
-  hasInitialUploadServers?: boolean;
+  hasInitialUploadServers?: boolean
   /** Show the component even if no blobs are present */
-  forceShow?: boolean;
+  forceShow?: boolean
 }
 
 export function UploadServer({
@@ -28,10 +28,11 @@ export function UploadServer({
   forceShow = false,
 }: UploadServerProps) {
   // Determine if we should show the component
-  const shouldShow = forceShow || inputMethod === 'file' || (inputMethod === 'url' && mirroredBlobs.length > 0);
+  const shouldShow =
+    forceShow || inputMethod === 'file' || (inputMethod === 'url' && mirroredBlobs.length > 0)
 
   if (!shouldShow) {
-    return null;
+    return null
   }
 
   return (
@@ -59,7 +60,12 @@ export function UploadServer({
                   <li key={blob.url} className="flex items-center gap-2">
                     <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
                     <Check className="w-5 h-5 text-green-500" />
-                    <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open uploaded file URL">
+                    <a
+                      href={blob.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open uploaded file URL"
+                    >
                       <ExternalLink className="w-5 h-5" />
                     </a>
                   </li>
@@ -70,14 +76,21 @@ export function UploadServer({
 
           {/* Show mirrored blobs for both file uploads and URL mirroring */}
           {mirroredBlobs.length > 0 && (
-            <div className={`flex flex-col gap-2 ${inputMethod === 'file' && uploadedBlobs.length > 0 ? 'mt-4' : ''}`}>
+            <div
+              className={`flex flex-col gap-2 ${inputMethod === 'file' && uploadedBlobs.length > 0 ? 'mt-4' : ''}`}
+            >
               <Label>{inputMethod === 'url' ? 'Mirrored from URL to...' : 'Mirrored to...'}</Label>
               <ul className="flex flex-col gap-1">
                 {mirroredBlobs.map(blob => (
                   <li key={blob.url} className="flex items-center gap-2">
                     <Badge variant="secondary">{formatBlobUrl(blob.url)}</Badge>
                     <Check className="w-5 h-5 text-green-500" />
-                    <a href={blob.url} target="_blank" rel="noopener noreferrer" title="Open mirrored file URL">
+                    <a
+                      href={blob.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open mirrored file URL"
+                    >
                       <ExternalLink className="w-5 h-5" />
                     </a>
                   </li>
@@ -98,5 +111,5 @@ export function UploadServer({
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -1,23 +1,28 @@
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useEventModel } from 'applesauce-react/hooks';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { ReactionsModel } from 'applesauce-core/models';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { HeartIcon } from 'lucide-react';
-import { cn, nowInSecs } from '@/lib/utils';
-import { NostrEvent } from 'nostr-tools';
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useEventModel } from 'applesauce-react/hooks'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { ReactionsModel } from 'applesauce-core/models'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { HeartIcon } from 'lucide-react'
+import { cn, nowInSecs } from '@/lib/utils'
+import { NostrEvent } from 'nostr-tools'
 
 interface ButtonWithReactionsProps {
-  eventId: string;
-  kind: number;
-  authorPubkey: string;
-  className?: string;
+  eventId: string
+  kind: number
+  authorPubkey: string
+  className?: string
 }
 
-export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: ButtonWithReactionsProps) {
-  const { user } = useCurrentUser();
-  const { mutate: publish } = useNostrPublish();
+export function ButtonWithReactions({
+  eventId,
+  kind,
+  authorPubkey,
+  className,
+}: ButtonWithReactionsProps) {
+  const { user } = useCurrentUser()
+  const { mutate: publish } = useNostrPublish()
 
   // Create a dummy event object for ReactionsModel
   // ReactionsModel expects a NostrEvent, so we create a minimal one
@@ -29,19 +34,20 @@ export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: 
     tags: [],
     content: '',
     sig: '',
-  };
+  }
 
   // Use ReactionsModel to get reactions for this event
-  const reactions = useEventModel(ReactionsModel, [dummyEvent]) || [];
+  const reactions = useEventModel(ReactionsModel, [dummyEvent]) || []
 
   // Check if current user has liked
-  const hasLiked = user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+');
+  const hasLiked =
+    user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+')
 
   // Count likes
-  const likeCount = reactions.filter(event => event.content === '+').length;
+  const likeCount = reactions.filter(event => event.content === '+').length
 
   const handleLike = () => {
-    if (!user) return;
+    if (!user) return
 
     // If already liked, we'll unlike by doing nothing (as reactions are ephemeral)
     if (!hasLiked) {
@@ -56,9 +62,9 @@ export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: 
             ['k', `${kind}`],
           ],
         },
-      });
+      })
     }
-  };
+  }
 
   return (
     <Tooltip>
@@ -70,11 +76,13 @@ export function ButtonWithReactions({ eventId, kind, authorPubkey, className }: 
           onClick={handleLike}
           disabled={!user}
         >
-          <HeartIcon className={cn('h-5 w-5', hasLiked ? 'fill-red-500 stroke-red-500' : 'fill-none')} />
+          <HeartIcon
+            className={cn('h-5 w-5', hasLiked ? 'fill-red-500 stroke-red-500' : 'fill-none')}
+          />
           <span>{likeCount}</span>
         </Button>
       </TooltipTrigger>
       <TooltipContent>{user ? (hasLiked ? 'Unlike' : 'Like') : 'Login to like'}</TooltipContent>
     </Tooltip>
-  );
+  )
 }

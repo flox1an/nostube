@@ -1,13 +1,13 @@
-import { LoginArea } from '@/components/auth/LoginArea';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { MenuIcon, Upload } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { SearchBar } from './SearchBar';
-import { useAppContext } from '@/hooks/useAppContext';
+import { LoginArea } from '@/components/auth/LoginArea'
+import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { MenuIcon, Upload } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { SearchBar } from './SearchBar'
+import { useAppContext } from '@/hooks/useAppContext'
 
 export function Header() {
-  const { toggleSidebar } = useAppContext();
+  const { toggleSidebar } = useAppContext()
 
   return (
     <header className="border-b sticky top-0 bg-background z-50">
@@ -21,7 +21,7 @@ export function Header() {
             nostube
           </Link>
         </div>
-{/*
+        {/*
         <SearchBar
           className="flex-1 max-w-2xl px-4"
           allTags={allTags}
@@ -43,5 +43,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  );
+  )
 }

@@ -1,21 +1,21 @@
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { X } from 'lucide-react'
 
 interface FormFieldsProps {
-  title: string;
-  onTitleChange: (title: string) => void;
-  description: string;
-  onDescriptionChange: (description: string) => void;
-  tags: string[];
-  tagInput: string;
-  onTagInputChange: (input: string) => void;
-  onAddTag: (e: React.KeyboardEvent) => void;
-  onPaste: (e: React.ClipboardEvent) => void;
-  onRemoveTag: (tag: string) => void;
-  onTagInputBlur: () => void;
+  title: string
+  onTitleChange: (title: string) => void
+  description: string
+  onDescriptionChange: (description: string) => void
+  tags: string[]
+  tagInput: string
+  onTagInputChange: (input: string) => void
+  onAddTag: (e: React.KeyboardEvent) => void
+  onPaste: (e: React.ClipboardEvent) => void
+  onRemoveTag: (tag: string) => void
+  onTagInputBlur: () => void
 }
 
 export function FormFields({
@@ -29,18 +29,13 @@ export function FormFields({
   onAddTag,
   onPaste,
   onRemoveTag,
-  onTagInputBlur
+  onTagInputBlur,
 }: FormFieldsProps) {
   return (
     <>
       <div className="flex flex-col gap-2">
         <Label htmlFor="title">Title</Label>
-        <Input 
-          id="title" 
-          value={title} 
-          onChange={e => onTitleChange(e.target.value)} 
-          required 
-        />
+        <Input id="title" value={title} onChange={e => onTitleChange(e.target.value)} required />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -81,5 +76,5 @@ export function FormFields({
         )}
       </div>
     </>
-  );
+  )
 }

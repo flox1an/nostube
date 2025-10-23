@@ -1,19 +1,19 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Scissors, Cog } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Separator } from '@/components/ui/separator';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useAppContext } from '@/hooks/useAppContext';
-import { nip19 } from 'nostr-tools';
-import { cn } from '@/lib/utils';
+import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Scissors, Cog } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Separator } from '@/components/ui/separator'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useAppContext } from '@/hooks/useAppContext'
+import { nip19 } from 'nostr-tools'
+import { cn } from '@/lib/utils'
 
 export function Sidebar() {
-  const { user } = useCurrentUser();
-  const { config: _config, toggleSidebar } = useAppContext();
+  const { user } = useCurrentUser()
+  const { config: _config, toggleSidebar } = useAppContext()
 
   const navigationItems = [
     { name: 'Home', icon: Home, href: '/' },
     { name: 'Shorts', icon: Play, href: '/shorts' },
-  ];
+  ]
 
   const libraryItems = [
     { name: 'Subscriptions', icon: Users, href: '/subscriptions' },
@@ -27,9 +27,9 @@ export function Sidebar() {
     { name: 'Watch later', icon: Clock, href: '/watch-later', disabled: true },
     { name: 'Liked videos', icon: ThumbsUp, href: '/liked-videos' },
     { name: 'Your clips', icon: Scissors, href: '/clips', disabled: true },
-  ];
+  ]
 
-  const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }];
+  const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }]
 
   return (
     <div className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg pt-4">
@@ -51,7 +51,9 @@ export function Sidebar() {
         {user && (
           <>
             <Separator className="my-4" />
-            <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">Library</h2>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">
+              Library
+            </h2>
             <nav className="px-2">
               {libraryItems.map(item => (
                 <Link
@@ -60,7 +62,9 @@ export function Sidebar() {
                   onClick={item.disabled ? undefined : toggleSidebar}
                   className={cn(
                     'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
-                    item.disabled ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'hover:bg-accent'
+                    item.disabled
+                      ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                      : 'hover:bg-accent'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -70,7 +74,9 @@ export function Sidebar() {
             </nav>
 
             <Separator className="my-4" />
-            <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">Configuration</h2>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">
+              Configuration
+            </h2>
             <nav className="px-2">
               {configItems.map(item => (
                 <Link
@@ -79,7 +85,9 @@ export function Sidebar() {
                   onClick={item.disabled ? undefined : toggleSidebar}
                   className={cn(
                     'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
-                    item.disabled ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'hover:bg-accent'
+                    item.disabled
+                      ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                      : 'hover:bg-accent'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -91,5 +99,5 @@ export function Sidebar() {
         )}
       </div>
     </div>
-  );
+  )
 }

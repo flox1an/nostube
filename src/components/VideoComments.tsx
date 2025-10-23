@@ -1,32 +1,32 @@
-import { useEventStore } from 'applesauce-react/hooks';
-import { useObservableState } from 'observable-hooks';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useMemo, useState } from 'react';
-import { formatDistance } from 'date-fns';
-import { NostrEvent } from 'nostr-tools';
-import { imageProxy, nowInSecs } from '@/lib/utils';
-import { Link } from 'react-router-dom';
-import { useProfile } from '@/hooks/useProfile';
-import { of } from 'rxjs';
-import { switchMap, catchError, map } from 'rxjs/operators';
-import { createTimelineLoader } from 'applesauce-loaders/loaders';
-import { useAppContext } from '@/hooks/useAppContext';
+import { useEventStore } from 'applesauce-react/hooks'
+import { useObservableState } from 'observable-hooks'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { useMemo, useState } from 'react'
+import { formatDistance } from 'date-fns'
+import { NostrEvent } from 'nostr-tools'
+import { imageProxy, nowInSecs } from '@/lib/utils'
+import { Link } from 'react-router-dom'
+import { useProfile } from '@/hooks/useProfile'
+import { of } from 'rxjs'
+import { switchMap, catchError, map } from 'rxjs/operators'
+import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface Comment {
-  id: string;
-  content: string;
-  pubkey: string;
-  created_at: number;
+  id: string
+  content: string
+  pubkey: string
+  created_at: number
 }
 
 interface VideoCommentsProps {
-  videoId: string;
-  authorPubkey: string;
-  link: string;
+  videoId: string
+  authorPubkey: string
+  link: string
 }
 
 function mapEventToComment(event: NostrEvent): Comment {
@@ -35,30 +35,30 @@ function mapEventToComment(event: NostrEvent): Comment {
     content: event.content,
     pubkey: event.pubkey,
     created_at: event.created_at,
-  };
+  }
 }
 
 function renderCommentContent(content: string, link: string) {
   // Regex to match mm:ss timestamps (optionally h:mm:ss)
-  const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g;
-  const baseUrl = `/video/${link}`;
-  const parts: (string | JSX.Element)[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g
+  const baseUrl = `/video/${link}`
+  const parts: (string | JSX.Element)[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
 
   while ((match = timestampRegex.exec(content)) !== null) {
-    const [full, h, m, s] = match;
-    const start = match.index;
-    const end = start + full.length;
+    const [full, h, m, s] = match
+    const start = match.index
+    const end = start + full.length
     // Push preceding text
     if (start > lastIndex) {
-      parts.push(content.slice(lastIndex, start));
+      parts.push(content.slice(lastIndex, start))
     }
     // Calculate seconds
-    const hours = h ? parseInt(h, 10) : 0;
-    const minutes = parseInt(m, 10);
-    const seconds = parseInt(s, 10);
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    const hours = h ? parseInt(h, 10) : 0
+    const minutes = parseInt(m, 10)
+    const seconds = parseInt(s, 10)
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds
     // Push link
     parts.push(
       <Link
@@ -68,19 +68,19 @@ function renderCommentContent(content: string, link: string) {
       >
         {full}
       </Link>
-    );
-    lastIndex = end;
+    )
+    lastIndex = end
   }
   // Push any remaining text
   if (lastIndex < content.length) {
-    parts.push(content.slice(lastIndex));
+    parts.push(content.slice(lastIndex))
   }
-  return parts;
+  return parts
 }
 
 function CommentItem({ comment, link }: { comment: Comment; link: string }) {
-  const metadata = useProfile({ pubkey: comment.pubkey });
-  const name = metadata?.name || comment.pubkey.slice(0, 8);
+  const metadata = useProfile({ pubkey: comment.pubkey })
+  const name = metadata?.name || comment.pubkey.slice(0, 8)
 
   return (
     <div className="flex gap-4 mb-6">
@@ -100,60 +100,66 @@ function CommentItem({ comment, link }: { comment: Comment; link: string }) {
         <div className="mt-1 break-all">{renderCommentContent(comment.content, link)}</div>
       </div>
     </div>
-  );
+  )
 }
 
 export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProps) {
-  const [newComment, setNewComment] = useState('');
-  const eventStore = useEventStore();
-  const { user } = useCurrentUser();
-  const { publish } = useNostrPublish();
-  const { pool, config } = useAppContext();
-  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+  const [newComment, setNewComment] = useState('')
+  const eventStore = useEventStore()
+  const { user } = useCurrentUser()
+  const { publish } = useNostrPublish()
+  const { pool, config } = useAppContext()
+  const readRelays = useMemo(
+    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
+    [config.relays]
+  )
 
-  const filters = useMemo(() => [
-    {
-      kinds: [1],
-      '#e': [videoId],
-      limit: 100,
-    },
-    {
-      kinds: [1111],
-      '#E': [videoId],
-      limit: 100,
-    },
-  ], [videoId]);
+  const filters = useMemo(
+    () => [
+      {
+        kinds: [1],
+        '#e': [videoId],
+        limit: 100,
+      },
+      {
+        kinds: [1111],
+        '#E': [videoId],
+        limit: 100,
+      },
+    ],
+    [videoId]
+  )
 
   const loader = useMemo(
     () => createTimelineLoader(pool, readRelays, filters, { limit: 50, eventStore }),
     [pool, readRelays, filters]
-  );
+  )
 
   // Use EventStore timeline to get comments for this video with fallback to loader
   const comments$ = useMemo(() => {
     return eventStore.timeline(filters).pipe(
       switchMap(events => {
         if (events && events.length > 0) {
-          return of(events);
+          return of(events)
         }
         // If no events in store, subscribe to loader and add events to store
-        loader().subscribe(e => eventStore.add(e));
-        return of([]); // Return empty array initially, timeline will update when events are added
+        loader().subscribe(e => eventStore.add(e))
+        return of([]) // Return empty array initially, timeline will update when events are added
       }),
       catchError(() => {
         // If eventStore fails, subscribe to loader and add events to store
-        loader().subscribe(e => eventStore.add(e));
-        return of([]); // Return empty array initially, timeline will update when events are added
+        loader().subscribe(e => eventStore.add(e))
+        return of([]) // Return empty array initially, timeline will update when events are added
       }),
       map(events => events.map(mapEventToComment))
-    );
-  }, [eventStore, filters, loader]);
+    )
+  }, [eventStore, filters, loader])
 
-  const comments = useObservableState(comments$, []);
+  const comments = useObservableState(comments$, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newComment.trim()) return;
+    e.preventDefault()
+    if (!user || !newComment.trim()) return
 
     const draftEvent = {
       kind: 1111,
@@ -166,22 +172,22 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
         ['p', authorPubkey],
         ['client', 'nostube'],
       ],
-    };
+    }
 
     try {
       const signedEvent = await publish({
         event: draftEvent,
         relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-      });
-      
+      })
+
       // Add the comment to the event store immediately for instant feedback
-      eventStore.add(signedEvent);
-      
-      setNewComment('');
+      eventStore.add(signedEvent)
+
+      setNewComment('')
     } catch (error) {
-      console.error('Failed to publish comment:', error);
+      console.error('Failed to publish comment:', error)
     }
-  };
+  }
 
   return (
     <>
@@ -206,5 +212,5 @@ export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProp
         ))}
       </div>
     </>
-  );
+  )
 }

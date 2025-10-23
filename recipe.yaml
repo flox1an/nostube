@@ -14,7 +14,7 @@ extensions:
     args:
       - -y
       - xjsr
-      - "@nostrbook/mcp"
+      - '@nostrbook/mcp'
     envs: {}
     timeout: 20
     description: null

@@ -1,4 +1,4 @@
-import { PlaylistManager } from '@/components/PlaylistManager';
+import { PlaylistManager } from '@/components/PlaylistManager'
 
 export default function PlaylistPage() {
   return (
@@ -6,5 +6,5 @@ export default function PlaylistPage() {
       <h1 className="text-3xl font-bold mb-6">My Playlists</h1>
       <PlaylistManager />
     </div>
-  );
+  )
 }

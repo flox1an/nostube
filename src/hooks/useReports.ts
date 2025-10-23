@@ -1,80 +1,80 @@
-import { useEventStore } from 'applesauce-react/hooks';
-import { useObservableState } from 'observable-hooks';
-import { useMemo } from 'react';
-import type { Filter } from 'nostr-tools';
+import { useEventStore } from 'applesauce-react/hooks'
+import { useObservableState } from 'observable-hooks'
+import { useMemo } from 'react'
+import type { Filter } from 'nostr-tools'
 
 export interface ProcessedReportEvent {
-  justification: string;
-  pubkey?: string;
-  pubkeyReason?: string;
-  eventId?: string;
-  eventReason?: string;
-  hash?: string;
-  hashReason?: string;
+  justification: string
+  pubkey?: string
+  pubkeyReason?: string
+  eventId?: string
+  eventReason?: string
+  hash?: string
+  hashReason?: string
 }
 
 interface UseReportsParams {
-  p?: string; // pubkey
-  e?: string; // eventId
-  x?: string; // blob hash
+  p?: string // pubkey
+  e?: string // eventId
+  x?: string // blob hash
 }
 
 export const useReports = ({ p, e, x }: UseReportsParams = {}) => {
-  const eventStore = useEventStore();
+  const eventStore = useEventStore()
 
   // Build filter for reports (kind 1984)
   const filter = useMemo(() => {
     const baseFilter: Filter = {
       kinds: [1984],
-    };
+    }
 
     if (p) {
-      baseFilter['#p'] = [p];
+      baseFilter['#p'] = [p]
     }
     if (e) {
-      baseFilter['#e'] = [e];
+      baseFilter['#e'] = [e]
     }
     if (x) {
-      baseFilter['#x'] = [x];
+      baseFilter['#x'] = [x]
     }
 
-    return baseFilter;
-  }, [p, e, x]);
+    return baseFilter
+  }, [p, e, x])
 
   // Use EventStore timeline to get reports
-  const reportsObservable = eventStore.timeline([filter]);
-  const reportEvents = useObservableState(reportsObservable, []);
+  const reportsObservable = eventStore.timeline([filter])
+  const reportEvents = useObservableState(reportsObservable, [])
 
   const processedReports = useMemo(() => {
     return reportEvents.map(event => {
       const processed: ProcessedReportEvent = {
         justification: event.content,
-      };
+      }
 
-      const pTag = event.tags.find(tag => tag[0] === 'p' && tag[1]);
+      const pTag = event.tags.find(tag => tag[0] === 'p' && tag[1])
       if (pTag) {
-        processed.pubkey = pTag[1];
-        processed.pubkeyReason = pTag[2];
+        processed.pubkey = pTag[1]
+        processed.pubkeyReason = pTag[2]
       }
 
-      const eTag = event.tags.find(tag => tag[0] === 'e' && tag[1]);
+      const eTag = event.tags.find(tag => tag[0] === 'e' && tag[1])
       if (eTag) {
-        processed.eventId = eTag[1];
-        processed.eventReason = eTag[2];
+        processed.eventId = eTag[1]
+        processed.eventReason = eTag[2]
       }
 
-      const xTag = event.tags.find(tag => tag[0] === 'x' && tag[1]);
+      const xTag = event.tags.find(tag => tag[0] === 'x' && tag[1])
       if (xTag) {
-        processed.hash = xTag[1];
-        processed.hashReason = xTag[2];
+        processed.hash = xTag[1]
+        processed.hashReason = xTag[2]
       }
 
-      return processed;
-    });
-  }, [reportEvents]);
+      return processed
+    })
+  }, [reportEvents])
 
   return {
     data: processedReports,
     isLoading: reportEvents.length === 0,
-  };
-};
+  }
+}

@@ -9,37 +9,41 @@ This rule detects and flags comments that start with "// In a real" (case-insens
 ### Examples
 
 ❌ **Bad** - These will trigger the rule:
+
 ```javascript
 // In a real application, this would connect to a database
-const data = [];
+const data = []
 
 // in a real world scenario, this would be different
-const config = {};
+const config = {}
 
 /* In a real implementation, we would handle errors */
-const handleError = () => {};
+const handleError = () => {}
 ```
 
 ✅ **Good** - These are fine:
+
 ```javascript
 // This is a regular comment
-const data = [];
+const data = []
 
 // TODO: Implement database connection
-const config = {};
+const config = {}
 
 // Note: In a real application, consider using a database
-const handleError = () => {};
+const handleError = () => {}
 ```
 
 ### Configuration
 
 The rule is configured in `eslint.config.js` as:
+
 ```javascript
 "custom/no-placeholder-comments": "error"
 ```
 
 You can change the severity level to:
+
 - `"off"` - Disable the rule
 - `"warn"` - Show as warning
 - `"error"` - Show as error (current setting)

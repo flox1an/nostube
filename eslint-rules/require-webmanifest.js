@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'fs'
+import path from 'path'
 
 export default {
   meta: {
@@ -18,56 +18,56 @@ export default {
   },
 
   create(context) {
-    const filename = context.getFilename();
-    
+    const filename = context.getFilename()
+
     // Only run this rule on HTML files
     if (!filename.endsWith('.html')) {
-      return {};
+      return {}
     }
 
     return {
       Program(node) {
-        const sourceCode = context.getSourceCode();
-        const htmlContent = sourceCode.getText();
-        
+        const sourceCode = context.getSourceCode()
+        const htmlContent = sourceCode.getText()
+
         // Check for manifest link tag in HTML
-        const manifestLinkRegex = /<link[^>]*rel=["']manifest["'][^>]*>/i;
-        const manifestMatch = htmlContent.match(manifestLinkRegex);
-        
+        const manifestLinkRegex = /<link[^>]*rel=["']manifest["'][^>]*>/i
+        const manifestMatch = htmlContent.match(manifestLinkRegex)
+
         if (!manifestMatch) {
           context.report({
             node,
             messageId: 'missingManifestLink',
-          });
-          return;
+          })
+          return
         }
 
         // Extract href from the manifest link
-        const hrefMatch = manifestMatch[0].match(/href=["']([^"']+)["']/i);
+        const hrefMatch = manifestMatch[0].match(/href=["']([^"']+)["']/i)
         if (!hrefMatch) {
           context.report({
             node,
             messageId: 'invalidManifestLink',
-          });
-          return;
+          })
+          return
         }
 
-        const manifestPath = hrefMatch[1];
-        
+        const manifestPath = hrefMatch[1]
+
         // Resolve the manifest file path relative to the project root
-        const htmlDir = path.dirname(filename);
-        let resolvedManifestPath;
-        
+        const htmlDir = path.dirname(filename)
+        let resolvedManifestPath
+
         if (manifestPath.startsWith('/')) {
           // Absolute path - check in public directory first, then project root
-          const publicPath = path.resolve(htmlDir, 'public' + manifestPath);
-          const rootPath = path.resolve(htmlDir, '.' + manifestPath);
-          resolvedManifestPath = fs.existsSync(publicPath) ? publicPath : rootPath;
+          const publicPath = path.resolve(htmlDir, 'public' + manifestPath)
+          const rootPath = path.resolve(htmlDir, '.' + manifestPath)
+          resolvedManifestPath = fs.existsSync(publicPath) ? publicPath : rootPath
         } else {
           // Relative path
-          resolvedManifestPath = path.resolve(htmlDir, manifestPath);
+          resolvedManifestPath = path.resolve(htmlDir, manifestPath)
         }
-        
+
         // Check if the manifest file exists
         if (!fs.existsSync(resolvedManifestPath)) {
           context.report({
@@ -76,9 +76,9 @@ export default {
             data: {
               expectedPath: manifestPath,
             },
-          });
+          })
         }
       },
-    };
+    }
   },
-};
+}

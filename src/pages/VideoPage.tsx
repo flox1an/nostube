@@ -1,30 +1,30 @@
-import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEventStore } from 'applesauce-react/hooks';
-import { useObservableState } from 'observable-hooks';
-import { of } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
-import { VideoPlayer } from '@/components/VideoPlayer';
-import { VideoComments } from '@/components/VideoComments';
-import { VideoSuggestions } from '@/components/VideoSuggestions';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useEventStore } from 'applesauce-react/hooks'
+import { useObservableState } from 'observable-hooks'
+import { of } from 'rxjs'
+import { switchMap, catchError } from 'rxjs/operators'
+import { VideoPlayer } from '@/components/VideoPlayer'
+import { VideoComments } from '@/components/VideoComments'
+import { VideoSuggestions } from '@/components/VideoSuggestions'
 
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { formatDistance } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { processEvent } from '@/utils/video-event';
-import { nip19 } from 'nostr-tools';
-import { EventPointer } from 'nostr-tools/nip19';
-import { Skeleton } from '@/components/ui/skeleton';
-import { CollapsibleText } from '@/components/ui/collapsible-text';
-import { useAppContext } from '@/hooks/useAppContext';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { formatDistance } from 'date-fns'
+import { Separator } from '@/components/ui/separator'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { processEvent } from '@/utils/video-event'
+import { nip19 } from 'nostr-tools'
+import { EventPointer } from 'nostr-tools/nip19'
+import { Skeleton } from '@/components/ui/skeleton'
+import { CollapsibleText } from '@/components/ui/collapsible-text'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -34,17 +34,17 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { MoreVertical, TrashIcon } from 'lucide-react';
-import { imageProxy, imageProxyVideoPreview, nowInSecs } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useProfile } from '@/hooks/useProfile';
-import { createEventLoader } from 'applesauce-loaders/loaders';
-import { AddToPlaylistButton } from '@/components/AddToPlaylistButton';
-import { ButtonWithReactions } from '@/components/ButtonWithReactions';
-import { FollowButton } from '@/components/FollowButton';
-import ShareButton from '@/components/ShareButton';
+} from '@/components/ui/alert-dialog'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { MoreVertical, TrashIcon } from 'lucide-react'
+import { imageProxy, imageProxyVideoPreview, nowInSecs } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { useProfile } from '@/hooks/useProfile'
+import { createEventLoader } from 'applesauce-loaders/loaders'
+import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
+import { ButtonWithReactions } from '@/components/ButtonWithReactions'
+import { FollowButton } from '@/components/FollowButton'
+import ShareButton from '@/components/ShareButton'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -52,187 +52,192 @@ function useDebouncedPlayPositionStorage(
   user: { pubkey: string } | undefined,
   videoId: string | undefined
 ) {
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastWriteRef = useRef<number>(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastWriteRef = useRef<number>(0)
   useEffect(() => {
-    if (!user || !videoId) return;
-    if (playPos < 5) return;
-    const key = `playpos:${user.pubkey}:${videoId}`;
-    const now = Date.now();
+    if (!user || !videoId) return
+    if (playPos < 5) return
+    const key = `playpos:${user.pubkey}:${videoId}`
+    const now = Date.now()
     // If last write was more than 3s ago, write immediately
     if (now - lastWriteRef.current > 3000) {
-      localStorage.setItem(key, String(playPos));
-      lastWriteRef.current = now;
+      localStorage.setItem(key, String(playPos))
+      lastWriteRef.current = now
       if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
       }
     } else {
       if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+        clearTimeout(debounceRef.current)
       }
       debounceRef.current = setTimeout(() => {
-        localStorage.setItem(key, String(playPos));
-        lastWriteRef.current = Date.now();
-        debounceRef.current = null;
-      }, 2000);
+        localStorage.setItem(key, String(playPos))
+        lastWriteRef.current = Date.now()
+        debounceRef.current = null
+      }, 2000)
     }
     return () => {
       if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
       }
-    };
-  }, [playPos, user, videoId]);
+    }
+  }, [playPos, user, videoId])
 }
 
 // Utility to parse t= parameter (supports seconds, mm:ss, h:mm:ss)
 function parseTimeParam(t: string | null): number {
-  if (!t) return 0;
+  if (!t) return 0
   if (/^\d+$/.test(t)) {
     // Simple seconds
-    return parseInt(t, 10);
+    return parseInt(t, 10)
   }
   // mm:ss or h:mm:ss
-  const parts = t.split(':').map(Number);
-  if (parts.some(isNaN)) return 0;
+  const parts = t.split(':').map(Number)
+  if (parts.some(isNaN)) return 0
   if (parts.length === 2) {
     // mm:ss
-    return parts[0] * 60 + parts[1];
+    return parts[0] * 60 + parts[1]
   }
   if (parts.length === 3) {
     // h:mm:ss
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
   }
-  return 0;
+  return 0
 }
 
 export function VideoPage() {
-  const { config } = useAppContext();
-  const { nevent } = useParams<{ nevent: string }>();
-  const eventStore = useEventStore();
-  const { pool } = useAppContext();
-  const navigate = useNavigate();
-  const eventPointer = useMemo(() => nip19.decode(nevent ?? '').data as EventPointer, [nevent]);
+  const { config } = useAppContext()
+  const { nevent } = useParams<{ nevent: string }>()
+  const eventStore = useEventStore()
+  const { pool } = useAppContext()
+  const navigate = useNavigate()
+  const eventPointer = useMemo(() => nip19.decode(nevent ?? '').data as EventPointer, [nevent])
 
-  const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore]);
+  const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
 
   // Use EventStore to get the video event with fallback to loader
   const videoObservable = useMemo(() => {
     return eventStore.event(eventPointer.id).pipe(
       switchMap(event => {
         if (event) {
-          return of(event);
+          return of(event)
         }
         // If no event in store, fallback to loader
-        return loader(eventPointer);
+        return loader(eventPointer)
       }),
       catchError(() => {
         // If eventStore fails, fallback to loader
-        return loader(eventPointer);
+        return loader(eventPointer)
       })
-    );
-  }, [eventStore, loader, eventPointer]);
+    )
+  }, [eventStore, loader, eventPointer])
 
-  const videoEvent = useObservableState(videoObservable);
+  const videoEvent = useObservableState(videoObservable)
 
   // Process the video event or get from cache
   const video = useMemo(() => {
-    if (!nevent) return null;
+    if (!nevent) return null
 
     // If we have the event from EventStore, process it
     if (videoEvent) {
-      const processedEvent = processEvent(videoEvent, []); // TODO use currect relays from eventstore
-      return processedEvent;
+      const processedEvent = processEvent(videoEvent, []) // TODO use currect relays from eventstore
+      return processedEvent
     }
 
-    return null;
-  }, [nevent, videoEvent]);
+    return null
+  }, [nevent, videoEvent])
 
-  const isLoading = !video && videoEvent === undefined;
+  const isLoading = !video && videoEvent === undefined
 
-  const metadata = useProfile({ pubkey: video?.pubkey || '' });
-  const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || '';
+  const metadata = useProfile({ pubkey: video?.pubkey || '' })
+  const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
 
   useEffect(() => {
-    console.log(video);
-  }, [video]);
+    console.log(video)
+  }, [video])
 
   useEffect(() => {
     if (video?.title) {
-      document.title = `${video.title} - nostube`;
+      document.title = `${video.title} - nostube`
     } else {
-      document.title = 'nostube';
+      document.title = 'nostube'
     }
     return () => {
-      document.title = 'nostube';
-    };
-  }, [video?.title]);
+      document.title = 'nostube'
+    }
+  }, [video?.title])
 
-  const [shareOpen, setShareOpen] = useState(false);
-  const [includeTimestamp, setIncludeTimestamp] = useState(false);
-  const [currentPlayPos, setCurrentPlayPos] = useState(0);
-  const location = useLocation();
+  const [shareOpen, setShareOpen] = useState(false)
+  const [includeTimestamp, setIncludeTimestamp] = useState(false)
+  const [currentPlayPos, setCurrentPlayPos] = useState(0)
+  const location = useLocation()
 
   // Compute initial play position from ?t=... param or localStorage
-  const { user } = useCurrentUser();
-  const { publish, isPending: isDeleting } = useNostrPublish();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { user } = useCurrentUser()
+  const { publish, isPending: isDeleting } = useNostrPublish()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const initialPlayPos = useMemo(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(location.search);
-      const tRaw = params.get('t');
-      const t = parseTimeParam(tRaw);
-      if (t > 0) return t;
+      const params = new URLSearchParams(location.search)
+      const tRaw = params.get('t')
+      const t = parseTimeParam(tRaw)
+      if (t > 0) return t
     }
     if (user && video) {
-      const key = `playpos:${user.pubkey}:${video.id}`;
-      const saved = localStorage.getItem(key);
+      const key = `playpos:${user.pubkey}:${video.id}`
+      const saved = localStorage.getItem(key)
       if (saved) {
-        const time = parseFloat(saved);
-        if (!isNaN(time) && video.duration && video.duration - time > 5 && time < video.duration - 1) {
+        const time = parseFloat(saved)
+        if (
+          !isNaN(time) &&
+          video.duration &&
+          video.duration - time > 5 &&
+          time < video.duration - 1
+        ) {
           // Only restore if more than 5 seconds left and not at the end
-          return time;
+          return time
         }
       }
     }
-    return 0;
-  }, [user, video, location.search]);
+    return 0
+  }, [user, video, location.search])
 
   // Scroll to top when video is loaded
   useEffect(() => {
     if (video) {
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      window.scrollTo({ top: 0, behavior: 'instant' })
     }
-  }, [video, initialPlayPos]);
+  }, [video, initialPlayPos])
 
   // Use the custom hook for debounced play position storage
-  useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id);
+  useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id)
 
   // Helper to encode URI components
   function encode(val: string): string {
-    return encodeURIComponent(val);
+    return encodeURIComponent(val)
   }
 
   // Get current video time in seconds
   function getCurrentTime() {
-    return Math.floor(currentPlayPos);
+    return Math.floor(currentPlayPos)
   }
 
   // Build share URL
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const videoUrl = `${baseUrl}/video/${nevent || ''}`;
-  const timestamp = includeTimestamp ? getCurrentTime() : 0;
-  const shareUrl = timestamp > 0 ? `${videoUrl}?t=${timestamp}` : videoUrl;
-  const fullUrl = shareUrl;
-  const title = video?.title || 'Watch this video';
-  const thumbnailUrl = video?.images[0] || '';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const videoUrl = `${baseUrl}/video/${nevent || ''}`
+  const timestamp = includeTimestamp ? getCurrentTime() : 0
+  const shareUrl = timestamp > 0 ? `${videoUrl}?t=${timestamp}` : videoUrl
+  const fullUrl = shareUrl
+  const title = video?.title || 'Watch this video'
+  const thumbnailUrl = video?.images[0] || ''
 
   const shareLinks = useMemo(() => {
-    const eUrl = encode(shareUrl);
-    const eFull = encode(fullUrl);
-    const eTitle = encode(title);
-    const eThumb = encode(thumbnailUrl);
+    const eUrl = encode(shareUrl)
+    const eFull = encode(fullUrl)
+    const eTitle = encode(title)
+    const eThumb = encode(thumbnailUrl)
     return {
       mailto: `mailto:?body=${eUrl}`,
       whatsapp: `https://api.whatsapp.com/send/?text=${eTitle}%20${eUrl}`,
@@ -240,11 +245,11 @@ export function VideoPage() {
       reddit: `https://www.reddit.com/submit?url=${eFull}&title=${eTitle}`,
       facebook: `https://www.facebook.com/share_channel/?type=reshare&link=${eFull}&display=popup`,
       pinterest: `https://www.pinterest.com/pin/create/button/?url=${eFull}&description=${eTitle}&is_video=true&media=${eThumb}`,
-    };
-  }, [shareUrl, fullUrl, title, thumbnailUrl]);
+    }
+  }, [shareUrl, fullUrl, title, thumbnailUrl])
 
   if (!isLoading && !video) {
-    return <div>Video not found</div>;
+    return <div>Video not found</div>
   }
 
   return (
@@ -314,7 +319,10 @@ export function VideoPage() {
                   {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
                   <div className="flex items-start justify-between">
-                    <Link to={`/author/${nip19.npubEncode(video?.pubkey || '')}`} className="flex items-center gap-4">
+                    <Link
+                      to={`/author/${nip19.npubEncode(video?.pubkey || '')}`}
+                      className="flex items-center gap-4"
+                    >
                       <Avatar>
                         <AvatarImage src={imageProxy(metadata?.picture)} />
                         <AvatarFallback>{authorName[0]}</AvatarFallback>
@@ -323,15 +331,24 @@ export function VideoPage() {
                         <div className="font-semibold">{authorName}</div>
                         <div className="text-sm text-muted-foreground">
                           {video?.created_at &&
-                            formatDistance(new Date(video.created_at * 1000), new Date(), { addSuffix: true })}
+                            formatDistance(new Date(video.created_at * 1000), new Date(), {
+                              addSuffix: true,
+                            })}
                         </div>
                       </div>
                     </Link>
 
                     <div className="flex items-center gap-2">
-                      
-                      <AddToPlaylistButton videoId={video.id} videoKind={video.kind} videoTitle={video.title} />
-                      <ButtonWithReactions eventId={video.id} authorPubkey={video.pubkey} kind={video.kind} /> 
+                      <AddToPlaylistButton
+                        videoId={video.id}
+                        videoKind={video.kind}
+                        videoTitle={video.title}
+                      />
+                      <ButtonWithReactions
+                        eventId={video.id}
+                        authorPubkey={video.pubkey}
+                        kind={video.kind}
+                      />
                       {/*
                       <FollowButton pubkey={video.pubkey} />*/}
                       <ShareButton
@@ -383,7 +400,9 @@ export function VideoPage() {
                     </div>
                   )}
 
-                  {video?.description && <CollapsibleText text={video.description} className="text-muted-foreground" />}
+                  {video?.description && (
+                    <CollapsibleText text={video.description} className="text-muted-foreground" />
+                  )}
                 </div>
                 {/* Delete confirmation dialog */}
                 <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -391,8 +410,8 @@ export function VideoPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Video?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to delete this video? This action cannot be undone. A deletion event will
-                        be published to all relays.
+                        Are you sure you want to delete this video? This action cannot be undone. A
+                        deletion event will be published to all relays.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -401,7 +420,7 @@ export function VideoPage() {
                         className="bg-red-600 hover:bg-red-700"
                         disabled={isDeleting}
                         onClick={async () => {
-                          if (!video) return;
+                          if (!video) return
                           await publish({
                             event: {
                               kind: 5, // NIP-9 deletion event
@@ -410,9 +429,9 @@ export function VideoPage() {
                               created_at: nowInSecs(),
                             },
                             relays: config.relays.map(r => r.url),
-                          });
-                          setShowDeleteDialog(false);
-                          navigate('/');
+                          })
+                          setShowDeleteDialog(false)
+                          navigate('/')
                         }}
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -432,9 +451,13 @@ export function VideoPage() {
         </div>
 
         <div className="w-full lg:w-96">
-          <VideoSuggestions currentVideoId={video?.id} authorPubkey={video?.pubkey} currentVideoType={video?.type} />
+          <VideoSuggestions
+            currentVideoId={video?.id}
+            authorPubkey={video?.pubkey}
+            currentVideoType={video?.type}
+          />
         </div>
       </div>
     </div>
-  );
+  )
 }

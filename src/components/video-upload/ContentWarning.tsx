@@ -1,19 +1,19 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 
 interface ContentWarningProps {
-  enabled: boolean;
-  reason: string;
-  onEnabledChange: (enabled: boolean) => void;
-  onReasonChange: (reason: string) => void;
+  enabled: boolean
+  reason: string
+  onEnabledChange: (enabled: boolean) => void
+  onReasonChange: (reason: string) => void
 }
 
 export function ContentWarning({
   enabled,
   reason,
   onEnabledChange,
-  onReasonChange
+  onReasonChange,
 }: ContentWarningProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -39,5 +39,5 @@ export function ContentWarning({
         </div>
       )}
     </div>
-  );
+  )
 }

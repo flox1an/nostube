@@ -1,32 +1,32 @@
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks';
-import { useObservableState } from 'observable-hooks';
-import { Link } from 'react-router-dom';
-import { processEvent, VideoEvent } from '@/utils/video-event';
-import { getKindsForType, VideoType } from '@/lib/video-types';
-import { formatDistance } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys';
-import { PlayProgressBar } from './PlayProgressBar';
-import { useEffect, useMemo } from 'react';
-import { imageProxyVideoPreview } from '@/lib/utils';
-import { useProfile } from '@/hooks/useProfile';
-import { useAppContext } from '@/hooks/useAppContext';
-import { createTimelineLoader } from 'applesauce-loaders/loaders';
+import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
+import { useObservableState } from 'observable-hooks'
+import { Link } from 'react-router-dom'
+import { processEvent, VideoEvent } from '@/utils/video-event'
+import { getKindsForType, VideoType } from '@/lib/video-types'
+import { formatDistance } from 'date-fns'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
+import { PlayProgressBar } from './PlayProgressBar'
+import { useEffect, useMemo } from 'react'
+import { imageProxyVideoPreview } from '@/lib/utils'
+import { useProfile } from '@/hooks/useProfile'
+import { useAppContext } from '@/hooks/useAppContext'
+import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const remainingSeconds = seconds % 60
 
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 function VideoSuggestionItem({ video }: { video: VideoEvent }) {
-  const metadata = useProfile({ pubkey: video.pubkey });
-  const name = metadata?.name || video.pubkey.slice(0, 8);
+  const metadata = useProfile({ pubkey: video.pubkey })
+  const name = metadata?.name || video.pubkey.slice(0, 8)
 
   return (
     <Link to={`/video/${video.link}`}>
@@ -56,7 +56,7 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
         </div>
       </div>
     </Link>
-  );
+  )
 }
 
 function VideoSuggestionItemSkeleton() {
@@ -71,38 +71,47 @@ function VideoSuggestionItemSkeleton() {
         <Skeleton className="h-3 w-1/2" />
       </div>
     </div>
-  );
+  )
 }
 
 interface VideoSuggestionsProps {
-  currentVideoId?: string;
-  authorPubkey?: string;
-  currentVideoType?: VideoType;
+  currentVideoId?: string
+  authorPubkey?: string
+  currentVideoType?: VideoType
 }
 
-export function VideoSuggestions({ currentVideoId, currentVideoType, authorPubkey }: VideoSuggestionsProps) {
-  const eventStore = useEventStore();
-  const { pool, config } = useAppContext();
-  const blockedPubkeys = useReportedPubkeys();
-  const readRelays = useMemo(() => config.relays.filter(r => r.tags.includes('read')).map(r => r.url), [config.relays]);
+export function VideoSuggestions({
+  currentVideoId,
+  currentVideoType,
+  authorPubkey,
+}: VideoSuggestionsProps) {
+  const eventStore = useEventStore()
+  const { pool, config } = useAppContext()
+  const blockedPubkeys = useReportedPubkeys()
+  const readRelays = useMemo(
+    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
+    [config.relays]
+  )
   // Load the shared event from the pointer
   useEffect(() => {
-    if (!authorPubkey) return;
+    if (!authorPubkey) return
     const playlistLoader = createTimelineLoader(
       pool,
       config.relays.map(r => r.url),
-      [{
-        kinds: getKindsForType('all'),
-        authors: authorPubkey ? [authorPubkey] : [],
-      },{
-        kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
-        limit: 30,
-      }]
-    );
-    const sub = playlistLoader().subscribe();
-    return () => sub.unsubscribe();
-  }, [authorPubkey, currentVideoType]);
-
+      [
+        {
+          kinds: getKindsForType('all'),
+          authors: authorPubkey ? [authorPubkey] : [],
+        },
+        {
+          kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
+          limit: 30,
+        },
+      ]
+    )
+    const sub = playlistLoader().subscribe()
+    return () => sub.unsubscribe()
+  }, [authorPubkey, currentVideoType])
 
   // Use EventStore timeline for author-specific suggestions
   const authorSuggestionsObservable = eventStore.timeline([
@@ -111,10 +120,10 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, authorPubke
       authors: authorPubkey ? [authorPubkey] : [],
       limit: 30,
     },
-  ]);
+  ])
 
-  const authorSuggestions = useObservableState(authorSuggestionsObservable, []);
-  const authorIsLoading = authorPubkey && authorSuggestions.length === 0;
+  const authorSuggestions = useObservableState(authorSuggestionsObservable, [])
+  const authorIsLoading = authorPubkey && authorSuggestions.length === 0
 
   // Use EventStore timeline for global suggestions
   const globalSuggestionsObservable = eventStore.timeline([
@@ -122,29 +131,29 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, authorPubke
       kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
       limit: 30,
     },
-  ]);
+  ])
 
-  const globalSuggestions = useObservableState(globalSuggestionsObservable, []);
-  const globalIsLoading = globalSuggestions.length === 0;
+  const globalSuggestions = useObservableState(globalSuggestionsObservable, [])
+  const globalIsLoading = globalSuggestions.length === 0
 
   const suggestions = useMemo(() => {
-    const events = [...authorSuggestions, ...globalSuggestions];
+    const events = [...authorSuggestions, ...globalSuggestions]
 
     // Process and filter unique videos, excluding the current video
-    const processedVideos: VideoEvent[] = [];
-    const seenIds = new Set<string>();
+    const processedVideos: VideoEvent[] = []
+    const seenIds = new Set<string>()
 
     for (const event of events) {
-      if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue;
-      const processed = processEvent(event, readRelays); // TODO use currect relays from eventstore
+      if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue
+      const processed = processEvent(event, readRelays) // TODO use currect relays from eventstore
       if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
-        processedVideos.push(processed);
-        seenIds.add(processed.id);
+        processedVideos.push(processed)
+        seenIds.add(processed.id)
       }
     }
 
-    return processedVideos.slice(0, 30); // Return up to 30 unique suggestions
-  }, [authorSuggestions, globalSuggestions, blockedPubkeys, currentVideoId, readRelays]);
+    return processedVideos.slice(0, 30) // Return up to 30 unique suggestions
+  }, [authorSuggestions, globalSuggestions, blockedPubkeys, currentVideoId, readRelays])
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
@@ -153,6 +162,5 @@ export function VideoSuggestions({ currentVideoId, currentVideoType, authorPubke
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
         : suggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)}
     </div>
-  );
+  )
 }
- 

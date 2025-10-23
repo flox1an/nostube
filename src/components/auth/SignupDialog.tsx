@@ -1,81 +1,87 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import React, { useState } from 'react';
-import { Download, Key } from 'lucide-react';
-import { Button } from '@/components/ui/button.tsx';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { toast } from '@/hooks/useToast.ts';
-import { useLoginActions } from '@/hooks/useLoginActions';
-import { generateSecretKey, nip19 } from 'nostr-tools';
+import React, { useState } from 'react'
+import { Download, Key } from 'lucide-react'
+import { Button } from '@/components/ui/button.tsx'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog.tsx'
+import { toast } from '@/hooks/useToast.ts'
+import { useLoginActions } from '@/hooks/useLoginActions'
+import { generateSecretKey, nip19 } from 'nostr-tools'
 
 interface SignupDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState<'generate' | 'download' | 'done'>('generate');
-  const [isLoading, setIsLoading] = useState(false);
-  const [nsec, setNsec] = useState('');
-  const login = useLoginActions();
+  const [step, setStep] = useState<'generate' | 'download' | 'done'>('generate')
+  const [isLoading, setIsLoading] = useState(false)
+  const [nsec, setNsec] = useState('')
+  const login = useLoginActions()
 
   // Generate a proper nsec key using nostr-tools
   const generateKey = () => {
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
       // Generate a new secret key
-      const sk = generateSecretKey();
+      const sk = generateSecretKey()
 
       // Convert to nsec format
-      setNsec(nip19.nsecEncode(sk));
-      setStep('download');
+      setNsec(nip19.nsecEncode(sk))
+      setStep('download')
     } catch (error) {
-      console.error('Failed to generate key:', error);
+      console.error('Failed to generate key:', error)
       toast({
         title: 'Error',
         description: 'Failed to generate key. Please try again.',
         variant: 'destructive',
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const downloadKey = () => {
     // Create a blob with the key text
-    const blob = new Blob([nsec], { type: 'text/plain' });
-    const url = globalThis.URL.createObjectURL(blob);
+    const blob = new Blob([nsec], { type: 'text/plain' })
+    const url = globalThis.URL.createObjectURL(blob)
 
     // Create a temporary link element and trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'nsec.txt';
-    document.body.appendChild(a);
-    a.click();
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'nsec.txt'
+    document.body.appendChild(a)
+    a.click()
 
     // Clean up
-    globalThis.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    globalThis.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
 
     toast({
       title: 'Key downloaded',
       description: 'Your key has been downloaded. Keep it safe!',
-    });
-  };
+    })
+  }
 
   const finishSignup = () => {
-    login.nsec(nsec);
+    login.nsec(nsec)
 
-    setStep('done');
-    onClose();
+    setStep('done')
+    onClose()
 
     toast({
       title: 'Account created',
       description: 'You are now logged in.',
-    });
-  };
+    })
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -102,7 +108,11 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 We'll generate a secure key for your account. You'll need this key to log in later.
               </p>
-              <Button className="w-full rounded-full py-6" onClick={generateKey} disabled={isLoading}>
+              <Button
+                className="w-full rounded-full py-6"
+                onClick={generateKey}
+                disabled={isLoading}
+              >
                 {isLoading ? 'Generating key...' : 'Generate my key'}
               </Button>
             </div>
@@ -144,7 +154,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
 
-export default SignupDialog;
+export default SignupDialog

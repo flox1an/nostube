@@ -1,25 +1,25 @@
-import * as React from 'react';
-import { useRef, useEffect, useCallback, useState } from 'react';
-import 'media-chrome';
-import 'hls-video-element';
-import { TextTrack } from '@/utils/video-event';
-import { getLanguageLabel, imageProxyVideoPreview } from '@/lib/utils';
-import 'media-chrome/menu';
-import '@/types/media-chrome.d.ts';
-import { Loader2 } from 'lucide-react';
+import * as React from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
+import 'media-chrome'
+import 'hls-video-element'
+import { TextTrack } from '@/utils/video-event'
+import { getLanguageLabel, imageProxyVideoPreview } from '@/lib/utils'
+import 'media-chrome/menu'
+import '@/types/media-chrome.d.ts'
+import { Loader2 } from 'lucide-react'
 
 interface VideoPlayerProps {
-  urls: string[];
-  loop?: boolean;
-  textTracks: TextTrack[];
-  mime: string;
-  poster?: string;
-  onTimeUpdate?: (time: number) => void;
-  className?: string;
+  urls: string[]
+  loop?: boolean
+  textTracks: TextTrack[]
+  mime: string
+  poster?: string
+  onTimeUpdate?: (time: number) => void
+  className?: string
   /**
    * Initial play position in seconds
    */
-  initialPlayPos?: number;
+  initialPlayPos?: number
 }
 
 export function VideoPlayer({
@@ -32,103 +32,103 @@ export function VideoPlayer({
   className,
   initialPlayPos = 0,
 }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null);
-  const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
-  const [allFailed, setAllFailed] = useState(false);
-  const [triedHead, setTriedHead] = useState(false);
-  const [showSpinner, setShowSpinner] = useState(false);
-  const spinnerTimeoutRef = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
+  const [currentUrlIndex, setCurrentUrlIndex] = useState(0)
+  const [allFailed, setAllFailed] = useState(false)
+  const [triedHead, setTriedHead] = useState(false)
+  const [showSpinner, setShowSpinner] = useState(false)
+  const spinnerTimeoutRef = useRef<number | null>(null)
 
   const isHls = React.useMemo(
     () => mime === 'application/vnd.apple.mpegurl' || urls[currentUrlIndex]?.endsWith('.m3u8'),
     [mime, urls, currentUrlIndex]
-  );
+  )
 
   useEffect(() => {
-    setAllFailed(false);
-    setCurrentUrlIndex(0);
-    setTriedHead(false);
-  }, [urls]);
+    setAllFailed(false)
+    setCurrentUrlIndex(0)
+    setTriedHead(false)
+  }, [urls])
 
   // Set initial play position on mount or when initialPlayPos changes
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current;
-    if (!el) return;
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
     if (initialPlayPos > 0) {
       // Only seek if the difference is significant (e.g., >1s)
       if (Math.abs(el.currentTime - initialPlayPos) > 1) {
-        el.currentTime = initialPlayPos;
+        el.currentTime = initialPlayPos
       }
     }
-  }, [initialPlayPos, isHls, hlsEl]);
+  }, [initialPlayPos, isHls, hlsEl])
 
   // Handle video loading state and spinner display
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current;
-    if (!el) return;
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
 
     const handleLoadStart = () => {
       // Start timer to show spinner after 200ms
       if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current);
+        clearTimeout(spinnerTimeoutRef.current)
       }
       spinnerTimeoutRef.current = window.setTimeout(() => {
-        setShowSpinner(true);
-      }, 200);
-    };
+        setShowSpinner(true)
+      }, 200)
+    }
 
     const handleWaiting = () => {
       if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current);
+        clearTimeout(spinnerTimeoutRef.current)
       }
       spinnerTimeoutRef.current = window.setTimeout(() => {
-        setShowSpinner(true);
-      }, 200);
-    };
+        setShowSpinner(true)
+      }, 200)
+    }
 
     const handleCanPlay = () => {
-      setShowSpinner(false);
+      setShowSpinner(false)
       if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current);
-        spinnerTimeoutRef.current = null;
+        clearTimeout(spinnerTimeoutRef.current)
+        spinnerTimeoutRef.current = null
       }
-    };
+    }
 
     const handlePlaying = () => {
-      setShowSpinner(false);
+      setShowSpinner(false)
       if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current);
-        spinnerTimeoutRef.current = null;
+        clearTimeout(spinnerTimeoutRef.current)
+        spinnerTimeoutRef.current = null
       }
-    };
+    }
 
-    el.addEventListener('loadstart', handleLoadStart);
-    el.addEventListener('waiting', handleWaiting);
-    el.addEventListener('canplay', handleCanPlay);
-    el.addEventListener('playing', handlePlaying);
+    el.addEventListener('loadstart', handleLoadStart)
+    el.addEventListener('waiting', handleWaiting)
+    el.addEventListener('canplay', handleCanPlay)
+    el.addEventListener('playing', handlePlaying)
 
     return () => {
-      el.removeEventListener('loadstart', handleLoadStart);
-      el.removeEventListener('waiting', handleWaiting);
-      el.removeEventListener('canplay', handleCanPlay);
-      el.removeEventListener('playing', handlePlaying);
+      el.removeEventListener('loadstart', handleLoadStart)
+      el.removeEventListener('waiting', handleWaiting)
+      el.removeEventListener('canplay', handleCanPlay)
+      el.removeEventListener('playing', handlePlaying)
       if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current);
+        clearTimeout(spinnerTimeoutRef.current)
       }
-    };
-  }, [isHls, hlsEl]);
+    }
+  }, [isHls, hlsEl])
 
   // Frame-by-frame navigation with . and , keys (global listener)
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current;
-    if (!el) return;
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (!el) return;
+      if (!el) return
 
       // Don't capture keys if user is typing in an input field
-      const activeElement = document.activeElement;
+      const activeElement = document.activeElement
       if (
         activeElement &&
         (activeElement.tagName === 'INPUT' ||
@@ -136,83 +136,83 @@ export function VideoPlayer({
           activeElement.tagName === 'SELECT' ||
           activeElement.isContentEditable)
       ) {
-        return;
+        return
       }
 
       // Only step if video is paused and present
-      if (!el.paused) return;
+      if (!el.paused) return
       // Assume 30fps for frame step
-      const frameStep = 1 / 30;
+      const frameStep = 1 / 30
       if (e.key === '.') {
-        el.currentTime = Math.min(el.duration, el.currentTime + frameStep);
-        e.preventDefault();
+        el.currentTime = Math.min(el.duration, el.currentTime + frameStep)
+        e.preventDefault()
       } else if (e.key === ',') {
-        el.currentTime = Math.max(0, el.currentTime - frameStep);
-        e.preventDefault();
+        el.currentTime = Math.max(0, el.currentTime - frameStep)
+        e.preventDefault()
       }
     }
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isHls, hlsEl]);
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isHls, hlsEl])
 
   // Ref callback for hls-video custom element
   const hlsRef = useCallback((node: Element | null) => {
-    setHlsEl(node && 'currentTime' in node ? (node as HTMLVideoElement) : null);
-  }, []);
+    setHlsEl(node && 'currentTime' in node ? (node as HTMLVideoElement) : null)
+  }, [])
 
   const handleTimeUpdate = useCallback(() => {
-    const el = isHls ? hlsEl : videoRef.current;
+    const el = isHls ? hlsEl : videoRef.current
     if (onTimeUpdate && el) {
-      onTimeUpdate(el.currentTime);
+      onTimeUpdate(el.currentTime)
     }
-  }, [onTimeUpdate, isHls, hlsEl]);
+  }, [onTimeUpdate, isHls, hlsEl])
 
   // Handle error: on first error, do HEAD requests for all remaining URLs to find a working one
   const handleVideoError = useCallback(async () => {
     if (!triedHead && urls.length > 1 && currentUrlIndex < urls.length - 1) {
-      setTriedHead(true);
+      setTriedHead(true)
       // Try HEAD requests for all remaining URLs in parallel
-      const remaining = urls.slice(currentUrlIndex + 1);
+      const remaining = urls.slice(currentUrlIndex + 1)
       const checks = await Promise.all(
         remaining.map(async url => {
           try {
-            const res = await fetch(url, { method: 'HEAD', mode: 'cors' });
-            return res.ok;
+            const res = await fetch(url, { method: 'HEAD', mode: 'cors' })
+            return res.ok
           } catch {
-            return false;
+            return false
           }
         })
-      );
-      const foundIdx = checks.findIndex(ok => ok);
+      )
+      const foundIdx = checks.findIndex(ok => ok)
       if (foundIdx !== -1) {
-        setCurrentUrlIndex(currentUrlIndex + 1 + foundIdx);
-        setAllFailed(false);
-        return;
+        setCurrentUrlIndex(currentUrlIndex + 1 + foundIdx)
+        setAllFailed(false)
+        return
       } else {
-        setAllFailed(true);
-        return;
+        setAllFailed(true)
+        return
       }
     }
     if (currentUrlIndex < urls.length - 1) {
-      setCurrentUrlIndex(i => i + 1);
+      setCurrentUrlIndex(i => i + 1)
     } else {
-      setAllFailed(true);
+      setAllFailed(true)
     }
-  }, [currentUrlIndex, urls, triedHead]);
+  }, [currentUrlIndex, urls, triedHead])
 
   // Reset triedHead if currentUrlIndex changes (new error sequence)
   useEffect(() => {
-    setTriedHead(false);
-  }, [currentUrlIndex]);
+    setTriedHead(false)
+  }, [currentUrlIndex])
 
-  const hasCaptions = textTracks.length > 0;
+  const hasCaptions = textTracks.length > 0
 
   const posterUrl = React.useMemo(
     () => (poster !== undefined ? imageProxyVideoPreview(poster) : undefined),
     [poster]
-  );
+  )
 
   return (
     <media-controller className={className}>
@@ -262,7 +262,7 @@ export function VideoPlayer({
       )}
 
       {/* Loading spinner overlay */}
-      { showSpinner && !allFailed && (
+      {showSpinner && !allFailed && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none z-10">
           <Loader2 className="h-32 w-32 animate-spin text-white text-8xl" />
         </div>
@@ -282,5 +282,5 @@ export function VideoPlayer({
         <media-fullscreen-button />
       </media-control-bar>
     </media-controller>
-  );
+  )
 }

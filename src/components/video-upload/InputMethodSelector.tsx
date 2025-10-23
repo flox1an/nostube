@@ -1,11 +1,11 @@
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Upload, Link } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
+import { Upload, Link } from 'lucide-react'
 
 interface InputMethodSelectorProps {
-  value: 'file' | 'url';
-  onChange: (value: 'file' | 'url') => void;
-  disabled?: boolean;
+  value: 'file' | 'url'
+  onChange: (value: 'file' | 'url') => void
+  disabled?: boolean
 }
 
 export function InputMethodSelector({ value, onChange, disabled }: InputMethodSelectorProps) {
@@ -35,5 +35,5 @@ export function InputMethodSelector({ value, onChange, disabled }: InputMethodSe
         </div>
       </RadioGroup>
     </div>
-  );
+  )
 }

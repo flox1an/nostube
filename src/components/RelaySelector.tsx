@@ -1,72 +1,87 @@
-import { Check, ChevronsUpDown, Wifi, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useState } from 'react';
-import { useAppContext } from '@/hooks/useAppContext';
+import { Check, ChevronsUpDown, Wifi, Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useState } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface RelaySelectorProps {
-  className?: string;
+  className?: string
 }
 
 export function RelaySelector(props: RelaySelectorProps) {
-  const { className } = props;
-  const { config, updateConfig, presetRelays = [] } = useAppContext();
+  const { className } = props
+  const { config, updateConfig, presetRelays = [] } = useAppContext()
 
-  const selectedRelay = config.relays[0];
+  const selectedRelay = config.relays[0]
   const setSelectedRelay = (relay: string) => {
     updateConfig(current => ({
       ...current,
-      relays: [config.relays.find(r => r.url == relay)!, ...current.relays.filter(r => r.url !== relay)],
-    }));
-  };
+      relays: [
+        config.relays.find(r => r.url == relay)!,
+        ...current.relays.filter(r => r.url !== relay),
+      ],
+    }))
+  }
 
-  const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [open, setOpen] = useState(false)
+  const [inputValue, setInputValue] = useState('')
 
-  const selectedOption = presetRelays.find(option => option.url === selectedRelay.url);
+  const selectedOption = presetRelays.find(option => option.url === selectedRelay.url)
 
   // Function to normalize relay URL by adding wss:// if no protocol is present
   const normalizeRelayUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return trimmed;
+    const trimmed = url.trim()
+    if (!trimmed) return trimmed
 
     // Check if it already has a protocol
     if (trimmed.includes('://')) {
-      return trimmed;
+      return trimmed
     }
 
     // Add wss:// prefix
-    return `wss://${trimmed}`;
-  };
+    return `wss://${trimmed}`
+  }
 
   // Handle adding a custom relay
   const handleAddCustomRelay = (url: string) => {
-    setSelectedRelay(normalizeRelayUrl(url));
-    setOpen(false);
-    setInputValue('');
-  };
+    setSelectedRelay(normalizeRelayUrl(url))
+    setOpen(false)
+    setInputValue('')
+  }
 
   // Check if input value looks like a valid relay URL
   const isValidRelayInput = (value: string): boolean => {
-    const trimmed = value.trim();
-    if (!trimmed) return false;
+    const trimmed = value.trim()
+    if (!trimmed) return false
 
     // Basic validation - should contain at least a domain-like structure
-    const normalized = normalizeRelayUrl(trimmed);
+    const normalized = normalizeRelayUrl(trimmed)
     try {
-      new URL(normalized);
-      return true;
+      new URL(normalized)
+      return true
     } catch {
-      return false;
+      return false
     }
-  };
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className={cn('justify-between', className)}>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn('justify-between', className)}
+        >
           <div className="flex items-center gap-2">
             <Wifi className="h-4 w-4" />
             <span className="truncate">
@@ -82,15 +97,24 @@ export function RelaySelector(props: RelaySelectorProps) {
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0">
         <Command>
-          <CommandInput placeholder="Search relays or type URL..." value={inputValue} onValueChange={setInputValue} />
+          <CommandInput
+            placeholder="Search relays or type URL..."
+            value={inputValue}
+            onValueChange={setInputValue}
+          />
           <CommandList>
             <CommandEmpty>
               {inputValue && isValidRelayInput(inputValue) ? (
-                <CommandItem onSelect={() => handleAddCustomRelay(inputValue)} className="cursor-pointer">
+                <CommandItem
+                  onSelect={() => handleAddCustomRelay(inputValue)}
+                  className="cursor-pointer"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   <div className="flex flex-col">
                     <span className="font-medium">Add custom relay</span>
-                    <span className="text-xs text-muted-foreground">{normalizeRelayUrl(inputValue)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {normalizeRelayUrl(inputValue)}
+                    </span>
                   </div>
                 </CommandItem>
               ) : (
@@ -112,13 +136,16 @@ export function RelaySelector(props: RelaySelectorProps) {
                     key={option.url}
                     value={option.url}
                     onSelect={currentValue => {
-                      setSelectedRelay(normalizeRelayUrl(currentValue));
-                      setOpen(false);
-                      setInputValue('');
+                      setSelectedRelay(normalizeRelayUrl(currentValue))
+                      setOpen(false)
+                      setInputValue('')
                     }}
                   >
                     <Check
-                      className={cn('mr-2 h-4 w-4', selectedRelay.url === option.url ? 'opacity-100' : 'opacity-0')}
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        selectedRelay.url === option.url ? 'opacity-100' : 'opacity-0'
+                      )}
                     />
                     <div className="flex flex-col">
                       <span className="font-medium">{option.name}</span>
@@ -127,11 +154,16 @@ export function RelaySelector(props: RelaySelectorProps) {
                   </CommandItem>
                 ))}
               {inputValue && isValidRelayInput(inputValue) && (
-                <CommandItem onSelect={() => handleAddCustomRelay(inputValue)} className="cursor-pointer border-t">
+                <CommandItem
+                  onSelect={() => handleAddCustomRelay(inputValue)}
+                  className="cursor-pointer border-t"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   <div className="flex flex-col">
                     <span className="font-medium">Add custom relay</span>
-                    <span className="text-xs text-muted-foreground">{normalizeRelayUrl(inputValue)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {normalizeRelayUrl(inputValue)}
+                    </span>
                   </div>
                 </CommandItem>
               )}
@@ -140,5 +172,5 @@ export function RelaySelector(props: RelaySelectorProps) {
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }

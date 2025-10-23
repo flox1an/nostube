@@ -1,4 +1,4 @@
-import { VideoUpload } from '@/components/VideoUpload';
+import { VideoUpload } from '@/components/VideoUpload'
 
 export function UploadPage() {
   return (
@@ -6,5 +6,5 @@ export function UploadPage() {
       <h1 className="text-3xl font-bold mb-6 pl-4 md:pl-0">Upload Video</h1>
       <VideoUpload />
     </div>
-  );
+  )
 }

@@ -1,32 +1,31 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserPlus } from 'lucide-react';
+import { ChevronDown, LogOut, UserPlus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
-import { useNavigate } from 'react-router-dom';
-import { imageProxy } from '@/lib/utils';
-import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks';
-import { useProfile } from '@/hooks/useProfile';
-import { getDisplayName } from 'applesauce-core/helpers';
+} from '@/components/ui/dropdown-menu.tsx'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx'
+import { useNavigate } from 'react-router-dom'
+import { imageProxy } from '@/lib/utils'
+import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
+import { useProfile } from '@/hooks/useProfile'
+import { getDisplayName } from 'applesauce-core/helpers'
 
 interface AccountSwitcherProps {
-  onAddAccountClick: () => void;
+  onAddAccountClick: () => void
 }
 
 export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
-  const activeAccount = useActiveAccount();
-  const accountManager = useAccountManager();
-  const profile = useProfile(activeAccount ? {pubkey: activeAccount?.pubkey}: undefined)
-  const navigate = useNavigate();
-  if (!activeAccount) return null;
-
+  const activeAccount = useActiveAccount()
+  const accountManager = useAccountManager()
+  const profile = useProfile(activeAccount ? { pubkey: activeAccount?.pubkey } : undefined)
+  const navigate = useNavigate()
+  if (!activeAccount) return null
 
   return (
     <DropdownMenu>
@@ -82,7 +81,10 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         ))}
           */}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onAddAccountClick} className="flex items-center gap-2 cursor-pointer p-2 rounded-md">
+        <DropdownMenuItem
+          onClick={onAddAccountClick}
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+        >
           <UserPlus className="w-4 h-4" />
           <span>Add another account</span>
         </DropdownMenuItem>
@@ -95,5 +97,5 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

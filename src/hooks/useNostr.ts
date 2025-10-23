@@ -4,4 +4,4 @@
 
 // This file SHOULD NOT be edited or removed until migration is complete.
 
-console.warn('useNostr hook is deprecated after applesauce migration');
+console.warn('useNostr hook is deprecated after applesauce migration')

@@ -1,82 +1,86 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import langs from 'langs';
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import langs from 'langs'
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
  * Takes a string[][] of relays sets and normalizes the url and return a unique list of relays
  */
 export function mergeRelays(relaySets: string[][]): string[] {
-  const normalizedRelays = new Set<string>();
+  const normalizedRelays = new Set<string>()
 
   const normalizeRelayUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return trimmed;
+    const trimmed = url.trim()
+    if (!trimmed) return trimmed
 
     if (trimmed.includes('://')) {
-      return trimmed;
+      return trimmed
     }
 
-    return `wss://${trimmed}`;
-  };
+    return `wss://${trimmed}`
+  }
 
   for (const set of relaySets) {
     for (const relayUrl of set) {
-      normalizedRelays.add(normalizeRelayUrl(relayUrl));
+      normalizedRelays.add(normalizeRelayUrl(relayUrl))
     }
   }
 
-  return Array.from(normalizedRelays);
+  return Array.from(normalizedRelays)
 }
 
 export function formatFileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = bytes
+  let unitIndex = 0
 
   while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
+    size /= 1024
+    unitIndex++
   }
 
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
+  return `${size.toFixed(1)} ${units[unitIndex]}`
 }
 
 export function nowInSecs() {
-  return Math.floor(Date.now() / 1000);
+  return Math.floor(Date.now() / 1000)
 }
 
 export const formatBlobUrl = (url: string) => {
-  return url.replace('https://', '').replace('http://', '').replace(/\/.*$/, '');
-};
+  return url.replace('https://', '').replace('http://', '').replace(/\/.*$/, '')
+}
 
-export function buildAdvancedMimeType(baseMimetype: string, videoCodec?: string, audioCodec?: string): string {
+export function buildAdvancedMimeType(
+  baseMimetype: string,
+  videoCodec?: string,
+  audioCodec?: string
+): string {
   // If baseMimetype already contains a codecs parameter, return as is
   if (/codecs\s*=/.test(baseMimetype)) {
-    return baseMimetype;
+    return baseMimetype
   }
 
-  const codecs: string[] = [];
+  const codecs: string[] = []
 
   if (videoCodec) {
-    codecs.push(videoCodec);
+    codecs.push(videoCodec)
   }
   if (audioCodec) {
-    codecs.push(audioCodec);
+    codecs.push(audioCodec)
   }
 
   if (codecs.length === 0) {
     // Remove any trailing semicolons or whitespace
-    return baseMimetype.replace(/;\s*$/, '').trim();
+    return baseMimetype.replace(/;\s*$/, '').trim()
   }
 
-  const codecParam = `codecs="${codecs.join(',')}"`;
+  const codecParam = `codecs="${codecs.join(',')}"`
   // Ensure no trailing semicolon before appending
-  const cleanBase = baseMimetype.replace(/;\s*$/, '').trim();
-  return `${cleanBase}; ${codecParam}`;
+  const cleanBase = baseMimetype.replace(/;\s*$/, '').trim()
+  return `${cleanBase}; ${codecParam}`
 }
 
 /**
@@ -89,64 +93,66 @@ export function buildAdvancedMimeType(baseMimetype: string, videoCodec?: string,
  *   'de-DE' => 'German (Germany)'
  */
 export function getLanguageLabel(lang: string): string {
-  if (!lang) return '';
+  if (!lang) return ''
   // Split language and region
-  const [language, region] = lang.split(/[-_]/);
+  const [language, region] = lang.split(/[-_]/)
   const entry =
     langs.where('1', language) ||
     langs.where('2', language) ||
     langs.where('2T', language) ||
     langs.where('2B', language) ||
-    langs.where('3', language);
-  if (!entry) return lang;
-  let label = entry.name;
+    langs.where('3', language)
+  if (!entry) return lang
+  let label = entry.name
   if (region) {
     // Try to get region name (e.g. 'US' => 'United States')
     // Use Intl.DisplayNames if available
     try {
       if (typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
-        const regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(region.toUpperCase());
+        const regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(
+          region.toUpperCase()
+        )
         if (regionName && regionName !== region.toUpperCase()) {
-          label += ` (${regionName})`;
+          label += ` (${regionName})`
         } else {
-          label += ` (${region.toUpperCase()})`;
+          label += ` (${region.toUpperCase()})`
         }
       } else {
-        label += ` (${region.toUpperCase()})`;
+        label += ` (${region.toUpperCase()})`
       }
     } catch {
-      label += ` (${region.toUpperCase()})`;
+      label += ` (${region.toUpperCase()})`
     }
   }
-  return label;
+  return label
 }
 
 export const imageProxy = (url?: string) => {
-  if (!url) return '';
+  if (!url) return ''
   // Check for data URLs and return them immediately
-  if (url.startsWith('data:')) return url;
-  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`;
-};
+  if (url.startsWith('data:')) return url
+  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
+}
 
 export const imageProxyVideoPreview = (url?: string) => {
-  if (!url) return '';
+  if (!url) return ''
   // Check for data URLs and return them immediately
-  if (url.startsWith('data:')) return url;
-  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`;
-};
+  if (url.startsWith('data:')) return url
+  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
+}
 
 function bigIntHash(str: string): string {
-  let hash = BigInt(0);
+  let hash = BigInt(0)
   for (let i = 0; i < str.length; i++) {
-    hash = (hash << BigInt(5)) - hash + BigInt(str.charCodeAt(i));
-    hash &= BigInt('0xFFFFFFFFFFFFFFFF'); // simulate 64-bit unsigned
+    hash = (hash << BigInt(5)) - hash + BigInt(str.charCodeAt(i))
+    hash &= BigInt('0xFFFFFFFFFFFFFFFF') // simulate 64-bit unsigned
   }
-  return hash.toString(16); // hex string
+  return hash.toString(16) // hex string
 }
 
 export function hashObjectBigInt(obj: object): string {
-  const json = JSON.stringify(obj, Object.keys(obj).sort());
-  return bigIntHash(json);
+  const json = JSON.stringify(obj, Object.keys(obj).sort())
+  return bigIntHash(json)
 }
 
 export function isVideoUrl(url: string) {
@@ -170,5 +176,5 @@ export function isVideoUrl(url: string) {
     url.endsWith('.m4a') ||
     url.endsWith('.m4b') ||
     url.endsWith('.m4p')
-  );
+  )
 }

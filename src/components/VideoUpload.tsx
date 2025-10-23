@@ -1,16 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Trash } from 'lucide-react';
-import { useAppContext } from '@/hooks/useAppContext';
-import { mirrorBlobsToServers, uploadFileToMultipleServers } from '@/lib/blossom-upload';
-import { BlobDescriptor } from 'blossom-client-sdk';
-import { useNavigate } from 'react-router-dom';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils';
-import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection';
-import { UploadServer } from './UploadServer';
+import { useState, useEffect, useMemo } from 'react'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Trash } from 'lucide-react'
+import { useAppContext } from '@/hooks/useAppContext'
+import { mirrorBlobsToServers, uploadFileToMultipleServers } from '@/lib/blossom-upload'
+import { BlobDescriptor } from 'blossom-client-sdk'
+import { useNavigate } from 'react-router-dom'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
+import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection'
+import { UploadServer } from './UploadServer'
 import {
   InputMethodSelector,
   UrlInputSection,
@@ -18,134 +18,139 @@ import {
   VideoPreview,
   FormFields,
   ContentWarning,
-  ThumbnailSection
-} from './video-upload';
+  ThumbnailSection,
+} from './video-upload'
 
 export function VideoUpload() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [inputMethod, setInputMethod] = useState<'file' | 'url'>('file');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [inputMethod, setInputMethod] = useState<'file' | 'url'>('file')
+  const [videoUrl, setVideoUrl] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [thumbnail, setThumbnail] = useState<File | null>(null)
   const [uploadInfo, setUploadInfo] = useState<{
-    dimension?: string;
-    sizeMB?: number;
-    duration?: number;
-    uploadedBlobs: BlobDescriptor[];
-    mirroredBlobs: BlobDescriptor[];
-    videoCodec?: string;
-    audioCodec?: string;
-    videoUrl?: string; // For URL-based videos
-  }>({ uploadedBlobs: [], mirroredBlobs: [] });
-  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial');
-  const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
-  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated');
+    dimension?: string
+    sizeMB?: number
+    duration?: number
+    uploadedBlobs: BlobDescriptor[]
+    mirroredBlobs: BlobDescriptor[]
+    videoCodec?: string
+    audioCodec?: string
+    videoUrl?: string // For URL-based videos
+  }>({ uploadedBlobs: [], mirroredBlobs: [] })
+  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
+  const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
+  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated')
   const [thumbnailUploadInfo, setThumbnailUploadInfo] = useState<{
-    uploadedBlobs: BlobDescriptor[];
-    mirroredBlobs: BlobDescriptor[];
-    uploading: boolean;
-    error?: string;
-  }>({ uploadedBlobs: [], mirroredBlobs: [], uploading: false });
-  const [contentWarningEnabled, setContentWarningEnabled] = useState(false);
-  const [contentWarningReason, setContentWarningReason] = useState('');
+    uploadedBlobs: BlobDescriptor[]
+    mirroredBlobs: BlobDescriptor[]
+    uploading: boolean
+    error?: string
+  }>({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
+  const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
+  const [contentWarningReason, setContentWarningReason] = useState('')
 
-  const { user } = useCurrentUser();
-  const { config } = useAppContext();
-  const { publish } = useNostrPublish();
-  const blossomInitalUploadServers = config.blossomServers?.filter(server => server.tags.includes('initial upload'));
-  const blossomMirrorServers = config.blossomServers?.filter(server => server.tags.includes('mirror'));
-  const navigate = useNavigate();
+  const { user } = useCurrentUser()
+  const { config } = useAppContext()
+  const { publish } = useNostrPublish()
+  const blossomInitalUploadServers = config.blossomServers?.filter(server =>
+    server.tags.includes('initial upload')
+  )
+  const blossomMirrorServers = config.blossomServers?.filter(server =>
+    server.tags.includes('mirror')
+  )
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    
+    e.preventDefault()
+    if (!user) return
+
     // Check if we have either a file or URL
-    if (inputMethod === 'file' && (!file || !blossomInitalUploadServers)) return;
-    if (inputMethod === 'url' && !videoUrl) return;
+    if (inputMethod === 'file' && (!file || !blossomInitalUploadServers)) return
+    if (inputMethod === 'url' && !videoUrl) return
 
     // Determine which thumbnail to use and upload if needed
-    let thumbnailFile: File | null = null;
-    let thumbnailUploadedBlobs: BlobDescriptor[] = [];
-    let thumbnailMirroredBlobs: BlobDescriptor[] = [];
+    let thumbnailFile: File | null = null
+    let thumbnailUploadedBlobs: BlobDescriptor[] = []
+    let thumbnailMirroredBlobs: BlobDescriptor[] = []
 
     if (thumbnailSource === 'generated') {
-      if (!thumbnailBlob) return;
+      if (!thumbnailBlob) return
       // Convert Blob to File for upload
       thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', {
         type: thumbnailBlob.type || 'image/jpeg',
         lastModified: Date.now(),
-      });
-      
+      })
+
       // Upload generated thumbnail to Blossom servers
       try {
         thumbnailUploadedBlobs = await uploadFileToMultipleServers({
           file: thumbnailFile,
           servers: blossomInitalUploadServers!.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
-        });
-        
+        })
+
         // Mirror to mirror servers
         if (blossomMirrorServers && blossomMirrorServers.length > 0 && thumbnailUploadedBlobs[0]) {
           thumbnailMirroredBlobs = await mirrorBlobsToServers({
             mirrorServers: blossomMirrorServers.map(s => s.url),
             blob: thumbnailUploadedBlobs[0],
             signer: async draft => await user.signer.signEvent(draft),
-          });
+          })
         }
       } catch (error) {
-        console.error('Failed to upload generated thumbnail:', error);
-        throw new Error('Failed to upload generated thumbnail');
+        console.error('Failed to upload generated thumbnail:', error)
+        throw new Error('Failed to upload generated thumbnail')
       }
     } else {
-      if (!thumbnail) return;
-      thumbnailFile = thumbnail;
+      if (!thumbnail) return
+      thumbnailFile = thumbnail
       // Use already uploaded thumbnail blobs
-      thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs;
-      thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs;
+      thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
+      thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
     }
 
-    if (inputMethod === 'file' && (!file || !(file instanceof File))) throw new Error('No valid video file selected');
-    if (inputMethod === 'url' && !uploadInfo.videoUrl) throw new Error('No valid video URL provided');
-    if (!thumbnailFile) throw new Error('No valid thumbnail file selected');
+    if (inputMethod === 'file' && (!file || !(file instanceof File)))
+      throw new Error('No valid video file selected')
+    if (inputMethod === 'url' && !uploadInfo.videoUrl)
+      throw new Error('No valid video URL provided')
+    if (!thumbnailFile) throw new Error('No valid thumbnail file selected')
 
     try {
-      const [width, height] = uploadInfo.dimension?.split('x').map(Number) || [0, 0];
-      const kind = height > width ? 22 : 21;
+      const [width, height] = uploadInfo.dimension?.split('x').map(Number) || [0, 0]
+      const kind = height > width ? 22 : 21
 
       // Publish Nostr event (NIP-71)
-      const videoUrl = inputMethod === 'url' ? uploadInfo.videoUrl : uploadInfo.uploadedBlobs?.[0].url;
-      const imetaTag = [
-        'imeta',
-        `dim ${uploadInfo.dimension}`,
-        `url ${videoUrl}`,
-      ];
+      const videoUrl =
+        inputMethod === 'url' ? uploadInfo.videoUrl : uploadInfo.uploadedBlobs?.[0].url
+      const imetaTag = ['imeta', `dim ${uploadInfo.dimension}`, `url ${videoUrl}`]
 
       // Add hash and mime type for uploaded files
       if (inputMethod === 'file' && uploadInfo.uploadedBlobs?.[0]) {
-        imetaTag.push(`x ${uploadInfo.uploadedBlobs[0].sha256}`);
-        imetaTag.push(`m ${buildAdvancedMimeType(file!.type, uploadInfo.videoCodec, uploadInfo.audioCodec)}`);
+        imetaTag.push(`x ${uploadInfo.uploadedBlobs[0].sha256}`)
+        imetaTag.push(
+          `m ${buildAdvancedMimeType(file!.type, uploadInfo.videoCodec, uploadInfo.audioCodec)}`
+        )
       } else if (inputMethod === 'url') {
         // For URL videos, we can't determine exact mime type without the file
-        imetaTag.push(`m video/mp4`);
+        imetaTag.push(`m video/mp4`)
       }
 
-      thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`));
-      thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`));
+      thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+      thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
 
       // Only add fallback URLs for uploaded files
       if (inputMethod === 'file') {
         if (uploadInfo.uploadedBlobs.length > 1) {
           for (const blob of uploadInfo.uploadedBlobs.slice(1)) {
-            imetaTag.push(`fallback ${blob.url}`);
+            imetaTag.push(`fallback ${blob.url}`)
           }
         }
         if (uploadInfo.mirroredBlobs.length > 0) {
           for (const blob of uploadInfo.mirroredBlobs) {
-            imetaTag.push(`fallback ${blob.url}`);
+            imetaTag.push(`fallback ${blob.url}`)
           }
         }
       }
@@ -168,7 +173,7 @@ export function VideoUpload() {
           ...tags.map(tag => ['t', tag]),
           ['client', 'nostube'],
         ],
-      };
+      }
 
       /*
           ["text-track", "<encoded `kind 6000` event>", "<recommended relay urls>"],
@@ -190,127 +195,134 @@ export function VideoUpload() {
       await publish({
         event,
         relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-      });
+      })
 
       // Navigate to home or videos page since we don't have the event ID yet
-      navigate('/');
-      console.log(event);
+      navigate('/')
+      console.log(event)
 
       // Reset form
-      setTitle('');
-      setDescription('');
-      setFile(null);
-      setThumbnail(null);
-      setTags([]);
-      setTagInput('');
+      setTitle('')
+      setDescription('')
+      setFile(null)
+      setThumbnail(null)
+      setTags([])
+      setTagInput('')
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('Upload failed:', error)
     }
-  };
+  }
 
   const addTagsFromInput = (input: string) => {
     // Split by spaces and filter out empty strings
-    const newTags = input.split(/\s+/).filter(tag => tag.trim().length > 0);
-    const uniqueNewTags = newTags.filter(tag => !tags.includes(tag.trim()));
-    
+    const newTags = input.split(/\s+/).filter(tag => tag.trim().length > 0)
+    const uniqueNewTags = newTags.filter(tag => !tags.includes(tag.trim()))
+
     if (uniqueNewTags.length > 0) {
-      setTags([...tags, ...uniqueNewTags.map(tag => tag.trim())]);
+      setTags([...tags, ...uniqueNewTags.map(tag => tag.trim())])
     }
-  };
+  }
 
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      addTagsFromInput(tagInput);
-      setTagInput('');
+      e.preventDefault()
+      addTagsFromInput(tagInput)
+      setTagInput('')
     }
-  };
+  }
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    const pastedText = e.clipboardData.getData('text');
-    
+    const pastedText = e.clipboardData.getData('text')
+
     // Check if the pasted text contains spaces (likely multiple tags)
     if (pastedText.includes(' ')) {
-      e.preventDefault();
-      
+      e.preventDefault()
+
       // Add any existing input as a tag first
       if (tagInput.trim()) {
-        addTagsFromInput(tagInput);
+        addTagsFromInput(tagInput)
       }
-      
+
       // Add the pasted tags
-      addTagsFromInput(pastedText);
-      setTagInput('');
+      addTagsFromInput(pastedText)
+      setTagInput('')
     }
     // If no spaces, let the default paste behavior handle it
-  };
+  }
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
+    setTags(tags.filter(tag => tag !== tagToRemove))
+  }
 
   // Check if URL is a Blossom URL and extract SHA256 hash
-  const parseBlossomUrl = (url: string): { isBlossomUrl: boolean; sha256?: string; blossomServer?: string } => {
+  const parseBlossomUrl = (
+    url: string
+  ): { isBlossomUrl: boolean; sha256?: string; blossomServer?: string } => {
     try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+
       // Blossom URLs typically have the format: https://server.com/{sha256}.{extension}
       // SHA256 hashes are 64 characters long (hex)
-      const match = pathname.match(/\/([a-f0-9]{64})(?:\.[^/]*)?$/i);
-      
+      const match = pathname.match(/\/([a-f0-9]{64})(?:\.[^/]*)?$/i)
+
       if (match) {
-        const sha256 = match[1];
-        const blossomServer = `${urlObj.protocol}//${urlObj.host}`;
+        const sha256 = match[1]
+        const blossomServer = `${urlObj.protocol}//${urlObj.host}`
         return {
           isBlossomUrl: true,
           sha256,
-          blossomServer
-        };
+          blossomServer,
+        }
       }
-      
-      return { isBlossomUrl: false };
-    } catch {
-      return { isBlossomUrl: false };
-    }
-  };
 
+      return { isBlossomUrl: false }
+    } catch {
+      return { isBlossomUrl: false }
+    }
+  }
 
   // Handle URL video processing
   const handleUrlVideoProcessing = async (url: string) => {
-    if (!url) return;
-    
-    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
-    setUploadState('uploading');
-    
+    if (!url) return
+
+    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+    setUploadState('uploading')
+
     try {
       // Create a video element to extract metadata
-      const video = document.createElement('video');
-      video.src = url;
-      video.crossOrigin = 'anonymous';
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      
+      const video = document.createElement('video')
+      video.src = url
+      video.crossOrigin = 'anonymous'
+      video.muted = true
+      video.playsInline = true
+      video.preload = 'metadata'
+
       await new Promise((resolve, reject) => {
-        video.onloadedmetadata = resolve;
-        video.onerror = () => reject(new Error('Failed to load video from URL'));
-        
+        video.onloadedmetadata = resolve
+        video.onerror = () => reject(new Error('Failed to load video from URL'))
+
         // Set a timeout in case the video doesn't load
-        setTimeout(() => reject(new Error('Video loading timeout')), 10000);
-      });
-      
-      const duration = Math.round(video.duration);
-      const dimensions = `${video.videoWidth}x${video.videoHeight}`;
-      
+        setTimeout(() => reject(new Error('Video loading timeout')), 10000)
+      })
+
+      const duration = Math.round(video.duration)
+      const dimensions = `${video.videoWidth}x${video.videoHeight}`
+
       // Try to extract codec information
-      const codecs = await getCodecsFromUrl(url);
-      
+      const codecs = await getCodecsFromUrl(url)
+
       // Check if this is a Blossom URL and handle mirroring
-      const blossomInfo = parseBlossomUrl(url);
-      let mirroredBlobs: BlobDescriptor[] = [];
-      
-      if (blossomInfo.isBlossomUrl && blossomInfo.sha256 && user && blossomMirrorServers && blossomMirrorServers.length > 0) {
+      const blossomInfo = parseBlossomUrl(url)
+      let mirroredBlobs: BlobDescriptor[] = []
+
+      if (
+        blossomInfo.isBlossomUrl &&
+        blossomInfo.sha256 &&
+        user &&
+        blossomMirrorServers &&
+        blossomMirrorServers.length > 0
+      ) {
         try {
           // Create a BlobDescriptor for the Blossom URL
           const originalBlob: BlobDescriptor = {
@@ -318,23 +330,23 @@ export function VideoUpload() {
             sha256: blossomInfo.sha256,
             size: 0, // Size unknown for URL-based videos
             type: 'video/mp4', // Assume MP4 for now
-            uploaded: Date.now()
-          };
-          
+            uploaded: Date.now(),
+          }
+
           // Mirror to configured mirror servers
           mirroredBlobs = await mirrorBlobsToServers({
             mirrorServers: blossomMirrorServers.map(s => s.url),
             blob: originalBlob,
             signer: async draft => await user.signer.signEvent(draft),
-          });
-          
-          console.log(`Mirrored Blossom URL to ${mirroredBlobs.length} servers`);
+          })
+
+          console.log(`Mirrored Blossom URL to ${mirroredBlobs.length} servers`)
         } catch (error) {
-          console.error('Failed to mirror Blossom URL:', error);
+          console.error('Failed to mirror Blossom URL:', error)
           // Continue without mirroring - not a critical failure
         }
       }
-      
+
       setUploadInfo({
         dimension: dimensions,
         duration,
@@ -343,55 +355,55 @@ export function VideoUpload() {
         videoUrl: url,
         videoCodec: codecs.videoCodec,
         audioCodec: codecs.audioCodec,
-      });
-      
-      setUploadState('finished');
+      })
+
+      setUploadState('finished')
     } catch (error) {
-      console.error('Failed to process video URL:', error);
-      setUploadState('initial');
-      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
+      console.error('Failed to process video URL:', error)
+      setUploadState('initial')
+      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
       // Could show error toast here
     }
-  };
+  }
 
   // Thumbnail dropzone logic
   const handleThumbnailDrop = async (acceptedFiles: File[]) => {
-    if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return;
-    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true });
+    if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return
+    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true })
     try {
       // Upload to initial servers
       const uploadedBlobs = await uploadFileToMultipleServers({
         file: acceptedFiles[0],
         servers: blossomInitalUploadServers.map(server => server.url),
         signer: async draft => await user.signer.signEvent(draft),
-      });
+      })
       // Mirror to mirror servers
-      let mirroredBlobs: BlobDescriptor[] = [];
+      let mirroredBlobs: BlobDescriptor[] = []
       if (blossomMirrorServers && blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
         mirroredBlobs = await mirrorBlobsToServers({
           mirrorServers: blossomMirrorServers.map(s => s.url),
           blob: uploadedBlobs[0],
           signer: async draft => await user.signer.signEvent(draft),
-        });
+        })
       }
-      setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false });
-      setThumbnail(acceptedFiles[0]);
+      setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false })
+      setThumbnail(acceptedFiles[0])
     } catch {
       setThumbnailUploadInfo({
         uploadedBlobs: [],
         mirroredBlobs: [],
         uploading: false,
         error: 'Failed to upload thumbnail.',
-      });
+      })
     }
-  };
+  }
 
   const handleThumbnailSourceChange = (value: string) => {
-    setThumbnailSource(value as 'generated' | 'upload');
+    setThumbnailSource(value as 'generated' | 'upload')
     if (value === 'generated') {
-      setThumbnail(null); // clear uploaded file if switching to generated
+      setThumbnail(null) // clear uploaded file if switching to generated
     }
-  };
+  }
 
   // Dropzone for video file
   const onDrop = async (acceptedFiles: File[]) => {
@@ -402,33 +414,33 @@ export function VideoUpload() {
       blossomInitalUploadServers.length > 0 &&
       user
     ) {
-      const file = acceptedFiles[0] ?? null;
-      setFile(file);
-      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
-      setUploadState('uploading');
+      const file = acceptedFiles[0] ?? null
+      setFile(file)
+      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+      setUploadState('uploading')
       // Start upload automatically
       try {
         const uploadedBlobs = await uploadFileToMultipleServers({
           file: acceptedFiles[0],
           servers: blossomInitalUploadServers.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
-        });
+        })
         // Calculate video duration and dimensions
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(acceptedFiles[0]);
+        const video = document.createElement('video')
+        video.src = URL.createObjectURL(acceptedFiles[0])
         await new Promise(resolve => {
-          video.onloadedmetadata = resolve;
-        });
-        const duration = Math.round(video.duration);
-        const dimensions = `${video.videoWidth}x${video.videoHeight}`;
-        const sizeMB = acceptedFiles[0].size / 1024 / 1024;
+          video.onloadedmetadata = resolve
+        })
+        const duration = Math.round(video.duration)
+        const dimensions = `${video.videoWidth}x${video.videoHeight}`
+        const sizeMB = acceptedFiles[0].size / 1024 / 1024
 
         // Extract codec info using MP4Box.js
-        let codecs: CodecInfo = {};
+        let codecs: CodecInfo = {}
         try {
-          codecs = await getCodecsFromFile(acceptedFiles[0]);
+          codecs = await getCodecsFromFile(acceptedFiles[0])
         } catch {
-          codecs = {};
+          codecs = {}
         }
 
         setUploadInfo({
@@ -439,134 +451,133 @@ export function VideoUpload() {
           mirroredBlobs: [],
           videoCodec: codecs.videoCodec,
           audioCodec: codecs.audioCodec,
-        });
+        })
 
         if (blossomMirrorServers && blossomMirrorServers.length > 0) {
           const mirroredBlobs = await mirrorBlobsToServers({
             mirrorServers: blossomMirrorServers.map(s => s.url),
             blob: uploadedBlobs[0], // TODO which blob to mirror?
             signer: async draft => await user.signer.signEvent(draft),
-          });
+          })
           setUploadInfo(ui => ({
             ...ui,
             mirroredBlobs,
-          }));
+          }))
         }
       } catch {
-        setUploadState('initial');
-        setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
+        setUploadState('initial')
+        setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
         // Optionally show error toast
       }
     }
-    setUploadState('finished');
-  };
-
+    setUploadState('finished')
+  }
 
   // Memoize the video URL for thumbnail generation (works for both uploaded files and URLs)
   const currentVideoUrl = useMemo(() => {
     if (inputMethod === 'url' && uploadInfo.videoUrl) {
-      return uploadInfo.videoUrl;
+      return uploadInfo.videoUrl
     }
     return uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
       ? uploadInfo.uploadedBlobs[0].url
-      : undefined;
-  }, [inputMethod, uploadInfo.videoUrl, uploadInfo.uploadedBlobs]);
+      : undefined
+  }, [inputMethod, uploadInfo.videoUrl, uploadInfo.uploadedBlobs])
 
   // Generate thumbnail from video after upload using a headless video element
   useEffect(() => {
     async function createThumbnailFromUrl(videoUrl: string, seekTime = 1): Promise<Blob | null> {
       return new Promise<Blob | null>((resolve, reject) => {
-        const video = document.createElement('video');
-        video.src = videoUrl;
-        video.crossOrigin = 'anonymous';
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = 'auto';
+        const video = document.createElement('video')
+        video.src = videoUrl
+        video.crossOrigin = 'anonymous'
+        video.muted = true
+        video.playsInline = true
+        video.preload = 'auto'
 
         video.addEventListener(
           'loadedmetadata',
           () => {
             // Clamp seekTime to video duration
-            const time = Math.min(seekTime, video.duration - 0.1);
-            video.currentTime = time > 0 ? time : 0;
+            const time = Math.min(seekTime, video.duration - 0.1)
+            video.currentTime = time > 0 ? time : 0
           },
           { once: true }
-        );
+        )
 
         video.addEventListener(
           'seeked',
           () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+            const canvas = document.createElement('canvas')
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            const ctx = canvas.getContext('2d')
+            ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
+            canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8)
           },
           { once: true }
-        );
+        )
 
         video.addEventListener(
           'error',
           () => {
-            reject(new Error('Failed to load video for thumbnail'));
+            reject(new Error('Failed to load video for thumbnail'))
           },
           { once: true }
-        );
-      });
+        )
+      })
     }
 
     if (currentVideoUrl) {
       createThumbnailFromUrl(currentVideoUrl, 1)
         .then(blob => {
           if (blob) {
-            setThumbnailBlob(blob);
+            setThumbnailBlob(blob)
           }
-          return undefined;
+          return undefined
         })
-        .catch(() => {});
+        .catch(() => {})
     } else {
       // Clear thumbnail when no video URL
-      setTimeout(() => setThumbnailBlob(null), 0);
+      setTimeout(() => setThumbnailBlob(null), 0)
     }
     // No cleanup needed, so return void
-    return undefined;
-  }, [currentVideoUrl]);
+    return undefined
+  }, [currentVideoUrl])
 
   // Memoize the thumbnail URL and clean up when thumbnailBlob changes
   const thumbnailUrl = useMemo(() => {
-    if (!thumbnailBlob) return undefined;
+    if (!thumbnailBlob) return undefined
     // TypeScript: thumbnailBlob is Blob, not null
-    return URL.createObjectURL(thumbnailBlob as Blob);
-  }, [thumbnailBlob]);
+    return URL.createObjectURL(thumbnailBlob as Blob)
+  }, [thumbnailBlob])
 
   useEffect(() => {
     return () => {
       if (thumbnailUrl) {
-        URL.revokeObjectURL(thumbnailUrl);
+        URL.revokeObjectURL(thumbnailUrl)
       }
-    };
-  }, [thumbnailUrl]);
+    }
+  }, [thumbnailUrl])
 
   // Reset all form fields and state
   const handleReset = () => {
-    setTitle('');
-    setDescription('');
-    setTags([]);
-    setTagInput('');
-    setInputMethod('file');
-    setVideoUrl('');
-    setFile(null);
-    setThumbnail(null);
-    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] });
-    setUploadState('initial');
-    setThumbnailBlob(null);
-    setThumbnailSource('generated');
-    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false });
-  };
+    setTitle('')
+    setDescription('')
+    setTags([])
+    setTagInput('')
+    setInputMethod('file')
+    setVideoUrl('')
+    setFile(null)
+    setThumbnail(null)
+    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+    setUploadState('initial')
+    setThumbnailBlob(null)
+    setThumbnailSource('generated')
+    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
+  }
 
   if (!user) {
-    return <div>Please log in to upload videos</div>;
+    return <div>Please log in to upload videos</div>
   }
 
   return (
@@ -574,12 +585,17 @@ export function VideoUpload() {
       {/* Info bar above drop zone */}
       <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
         <div className="text-sm text-muted-foreground">
-          Uploading directly to <b className="text-foreground">{blossomInitalUploadServers?.length ?? 0}</b> server
+          Uploading directly to{' '}
+          <b className="text-foreground">{blossomInitalUploadServers?.length ?? 0}</b> server
           {(blossomInitalUploadServers?.length ?? 0) === 1 ? '' : 's'}. Mirroring to{' '}
           <b className="text-foreground">{blossomMirrorServers?.length ?? 0}</b> server
           {(blossomMirrorServers?.length ?? 0) === 1 ? '' : 's'}.
         </div>
-        <Button onClick={() => navigate('/settings')} variant={'outline'} className=" cursor-pointer">
+        <Button
+          onClick={() => navigate('/settings')}
+          variant={'outline'}
+          className=" cursor-pointer"
+        >
           Configure servers
         </Button>
       </div>
@@ -587,10 +603,7 @@ export function VideoUpload() {
         <CardContent className="flex flex-col gap-4">
           {/* Input method selection - hide after processing */}
           {uploadState === 'initial' && (
-            <InputMethodSelector
-              value={inputMethod}
-              onChange={setInputMethod}
-            />
+            <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
           )}
 
           {/* URL input field - hide after processing */}
@@ -604,7 +617,8 @@ export function VideoUpload() {
           )}
 
           {/* Video preview or dropzone */}
-          {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) || (inputMethod === 'url' && uploadInfo.videoUrl) ? (
+          {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) ||
+          (inputMethod === 'url' && uploadInfo.videoUrl) ? (
             <VideoPreview
               inputMethod={inputMethod}
               uploadedBlobs={uploadInfo.uploadedBlobs}
@@ -615,14 +629,19 @@ export function VideoUpload() {
               videoCodec={uploadInfo.videoCodec}
               audioCodec={uploadInfo.audioCodec}
             />
-          ) : inputMethod === 'file' && blossomInitalUploadServers && blossomInitalUploadServers.length > 0 ? (
+          ) : inputMethod === 'file' &&
+            blossomInitalUploadServers &&
+            blossomInitalUploadServers.length > 0 ? (
             <FileDropzone
               onDrop={onDrop}
               accept={{ 'video/*': [] }}
               selectedFile={file}
               className="mb-4"
               style={{
-                display: uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0 ? 'none' : undefined,
+                display:
+                  uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
+                    ? 'none'
+                    : undefined,
               }}
             />
           ) : inputMethod === 'file' ? (
@@ -644,7 +663,9 @@ export function VideoUpload() {
             uploadState={uploadState}
             uploadedBlobs={uploadInfo.uploadedBlobs}
             mirroredBlobs={uploadInfo.mirroredBlobs}
-            hasInitialUploadServers={!!(blossomInitalUploadServers && blossomInitalUploadServers.length > 0)}
+            hasInitialUploadServers={
+              !!(blossomInitalUploadServers && blossomInitalUploadServers.length > 0)
+            }
           />
 
           {/* Show form fields only after upload has started */}
@@ -663,8 +684,8 @@ export function VideoUpload() {
                 onRemoveTag={removeTag}
                 onTagInputBlur={() => {
                   if (tagInput.trim()) {
-                    addTagsFromInput(tagInput);
-                    setTagInput('');
+                    addTagsFromInput(tagInput)
+                    setTagInput('')
                   }
                 }}
               />
@@ -689,18 +710,27 @@ export function VideoUpload() {
           )}
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleReset} title="Reset form" aria-label="Reset form">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleReset}
+            title="Reset form"
+            aria-label="Reset form"
+          >
             <Trash className="w-5 h-5" />
           </Button>
           <Button
             type="submit"
             disabled={
-              (inputMethod === 'file' && (!uploadInfo.uploadedBlobs || uploadInfo.uploadedBlobs.length === 0)) ||
+              (inputMethod === 'file' &&
+                (!uploadInfo.uploadedBlobs || uploadInfo.uploadedBlobs.length === 0)) ||
               (inputMethod === 'url' && !uploadInfo.videoUrl) ||
               !title ||
               !thumbnailSource ||
               (thumbnailSource === 'generated' && !thumbnailBlob) ||
-              (thumbnailSource === 'upload' && (!thumbnailUploadInfo.uploadedBlobs || thumbnailUploadInfo.uploadedBlobs.length === 0))
+              (thumbnailSource === 'upload' &&
+                (!thumbnailUploadInfo.uploadedBlobs ||
+                  thumbnailUploadInfo.uploadedBlobs.length === 0))
             }
           >
             Publish video
@@ -708,5 +738,5 @@ export function VideoUpload() {
         </CardFooter>
       </form>
     </Card>
-  );
+  )
 }

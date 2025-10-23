@@ -51,7 +51,7 @@ The project uses shadcn/ui components located in `@/components/ui`. These are un
 - **Badge**: Small status descriptors for UI elements
 - **Breadcrumb**: Navigation aid showing current location in hierarchy
 - **Button**: Customizable button with multiple variants and sizes
-- **Calendar**: Date picker component 
+- **Calendar**: Date picker component
 - **Card**: Container with header, content, and footer sections
 - **Carousel**: Slideshow for cycling through elements
 - **Chart**: Data visualization component
@@ -116,10 +116,10 @@ For more detailed information about event structure and behavior, read the `even
 The `useNostr` hook returns an object containing a `nostr` property, with `.query()` and `.event()` methods for querying and publishing Nostr events respectively.
 
 ```typescript
-import { useNostr } from '@nostrify/react';
+import { useNostr } from '@nostrify/react'
 
 function useCustomHook() {
-  const { nostr } = useNostr();
+  const { nostr } = useNostr()
 
   // ...
 }
@@ -130,20 +130,20 @@ function useCustomHook() {
 When querying Nostr, the best practice is to create custom hooks that combine `useNostr` and `useQuery` to get the required data.
 
 ```typescript
-import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/query';
+import { useNostr } from '@nostrify/react'
+import { useQuery } from '@tanstack/query'
 
 function usePosts() {
-  const { nostr } = useNostr();
+  const { nostr } = useNostr()
 
   return useQuery({
     queryKey: ['posts'],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-      const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal });
-      return events; // these events could be transformed into another format
+    queryFn: async c => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)])
+      const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal })
+      return events // these events could be transformed into another format
     },
-  });
+  })
 }
 ```
 
@@ -154,16 +154,16 @@ The data may be transformed into a more appropriate format if needed, and multip
 To display profile data for a user by their Nostr pubkey (such as an event author), use the `useAuthor` hook.
 
 ```tsx
-import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
-import { useAuthor } from '@/hooks/useAuthor';
-import { genUserName } from '@/lib/genUserName';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify'
+import { useAuthor } from '@/hooks/useAuthor'
+import { genUserName } from '@/lib/genUserName'
 
 function Post({ event }: { event: NostrEvent }) {
-  const author = useAuthor(event.pubkey);
-  const metadata: NostrMetadata | undefined = author.data?.metadata;
+  const author = useAuthor(event.pubkey)
+  const metadata: NostrMetadata | undefined = author.data?.metadata
 
-  const displayName = metadata?.display_name ?? metadata?.name ?? genUserName(event.pubkey);
-  const profileImage = metadata?.picture;
+  const displayName = metadata?.display_name ?? metadata?.name ?? genUserName(event.pubkey)
+  const profileImage = metadata?.picture
 
   // ...render elements with this data
 }
@@ -175,25 +175,25 @@ function Post({ event }: { event: NostrEvent }) {
 /** Kind 0 metadata. */
 interface NostrMetadata {
   /** A short description of the user. */
-  about?: string;
+  about?: string
   /** A URL to a wide (~1024x768) picture to be optionally displayed in the background of a profile screen. */
-  banner?: string;
+  banner?: string
   /** A boolean to clarify that the content is entirely or partially the result of automation, such as with chatbots or newsfeeds. */
-  bot?: boolean;
+  bot?: boolean
   /** An alternative, bigger name with richer characters than `name`. `name` should always be set regardless of the presence of `display_name` in the metadata. */
-  display_name?: string;
+  display_name?: string
   /** A bech32 lightning address according to NIP-57 and LNURL specifications. */
-  lud06?: string;
+  lud06?: string
   /** An email-like lightning address according to NIP-57 and LNURL specifications. */
-  lud16?: string;
+  lud16?: string
   /** A short name to be displayed for the user. */
-  name?: string;
+  name?: string
   /** An email-like Nostr address according to NIP-05. */
-  nip05?: string;
+  nip05?: string
   /** A URL to the user's avatar. */
-  picture?: string;
+  picture?: string
   /** A web URL related in any way to the event author. */
-  website?: string;
+  website?: string
 }
 ```
 
@@ -202,30 +202,30 @@ interface NostrMetadata {
 To publish events, use the `useNostrPublish` hook in this project. This hook automatically adds a "client" tag to published events.
 
 ```tsx
-import { useState } from 'react';
+import { useState } from 'react'
 
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
 
 export function MyComponent() {
-  const [ data, setData] = useState<Record<string, string>>({});
+  const [data, setData] = useState<Record<string, string>>({})
 
-  const { user } = useCurrentUser();
-  const { mutate: createEvent } = useNostrPublish();
+  const { user } = useCurrentUser()
+  const { mutate: createEvent } = useNostrPublish()
 
   const handleSubmit = () => {
-    createEvent({ kind: 1, content: data.content });
-  };
+    createEvent({ kind: 1, content: data.content })
+  }
 
   if (!user) {
-    return <span>You must be logged in to use this form.</span>;
+    return <span>You must be logged in to use this form.</span>
   }
 
   return (
     <form onSubmit={handleSubmit} disabled={!user}>
       {/* ...some input fields */}
     </form>
-  );
+  )
 }
 ```
 
@@ -236,7 +236,7 @@ The `useCurrentUser` hook should be used to ensure that the user is logged in be
 To enable login with Nostr, simply use the `LoginArea` component already included in this project.
 
 ```tsx
-import { LoginArea } from "@/components/auth/LoginArea";
+import { LoginArea } from '@/components/auth/LoginArea'
 
 function MyComponent() {
   return (
@@ -245,7 +245,7 @@ function MyComponent() {
 
       <LoginArea className="max-w-60" />
     </div>
-  );
+  )
 }
 ```
 
@@ -273,38 +273,37 @@ The base Nostr protocol uses hex string identifiers when filtering by event IDs 
 
 ```ts
 // ❌ Wrong: naddr is not decoded
-const events = await nostr.query(
-  [{ ids: [naddr] }],
-  { signal }
-);
+const events = await nostr.query([{ ids: [naddr] }], { signal })
 ```
 
 Corrected example:
 
 ```ts
 // Import nip19 from nostr-tools
-import { nip19 } from 'nostr-tools';
+import { nip19 } from 'nostr-tools'
 
 // Decode a NIP-19 identifier
-const decoded = nip19.decode(value);
+const decoded = nip19.decode(value)
 
 // Optional: guard certain types (depending on the use-case)
 if (decoded.type !== 'naddr') {
-  throw new Error('Unsupported Nostr identifier');
+  throw new Error('Unsupported Nostr identifier')
 }
 
 // Get the addr object
-const naddr = decoded.data;
+const naddr = decoded.data
 
 // ✅ Correct: naddr is expanded into the correct filter
 const events = await nostr.query(
-  [{
-    kinds: [naddr.kind],
-    authors: [naddr.pubkey],
-    '#d': [naddr.identifier],
-  }],
+  [
+    {
+      kinds: [naddr.kind],
+      authors: [naddr.pubkey],
+      '#d': [naddr.identifier],
+    },
+  ],
   { signal }
-);
+)
 ```
 
 #### Use in URL Paths
@@ -318,7 +317,7 @@ Always use `naddr` identifiers for addressable events instead of just the `d` ta
 
 ```ts
 // Secure routing with naddr
-const decoded = nip19.decode(params.nip19);
+const decoded = nip19.decode(params.nip19)
 if (decoded.type === 'naddr' && decoded.data.kind === 30024) {
   // Render ArticlePage component
 }
@@ -329,7 +328,7 @@ if (decoded.type === 'naddr' && decoded.data.kind === 30024) {
 To include an Edit Profile form, place the `EditProfileForm` component in the project:
 
 ```tsx
-import { EditProfileForm } from "@/components/EditProfileForm";
+import { EditProfileForm } from '@/components/EditProfileForm'
 
 function EditProfilePage() {
   return (
@@ -338,7 +337,7 @@ function EditProfilePage() {
 
       <EditProfileForm />
     </div>
-  );
+  )
 }
 ```
 
@@ -349,7 +348,7 @@ The `EditProfileForm` component displays just the form. It requires no props, an
 Use the `useUploadFile` hook to upload files. This hook uses Blossom servers for file storage and returns NIP-94 compatible tags.
 
 ```tsx
-import { useUploadFile } from "@/hooks/useUploadFile";
+import { useUploadFile } from '@/hooks/useUploadFile'
 
 function MyComponent() {
   //const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
@@ -363,7 +362,7 @@ function MyComponent() {
     } catch (error) {
       // ...handle errors
     }
-  };
+  }
 
   // ...rest of component
 }
@@ -377,15 +376,17 @@ The logged-in user has a `signer` object (matching the NIP-07 signer interface) 
 
 ```ts
 // Get the current user
-const { user } = useCurrentUser();
+const { user } = useCurrentUser()
 
 // Optional guard to check that nip44 is available
 if (!user.signer.nip44) {
-  throw new Error("Please upgrade your signer extension to a version that supports NIP-44 encryption");
+  throw new Error(
+    'Please upgrade your signer extension to a version that supports NIP-44 encryption'
+  )
 }
 
 // Encrypt message to self
-const encrypted = await user.signer.nip44.encrypt(user.pubkey, "hello world");
+const encrypted = await user.signer.nip44.encrypt(user.pubkey, 'hello world')
 // Decrypt message to self
 const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "hello world"
 ```
@@ -395,7 +396,7 @@ const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "he
 Nostr text notes (kind 1, 11, and 1111) have a plaintext `content` field that may contain URLs, hashtags, and Nostr URIs. These events should render their content using the `NoteContent` component:
 
 ```tsx
-import { NoteContent } from "@/components/NoteContent";
+import { NoteContent } from '@/components/NoteContent'
 
 export function Post(/* ...props */) {
   // ...
@@ -406,7 +407,7 @@ export function Post(/* ...props */) {
         <NoteContent event={post} className="text-sm" />
       </div>
     </CardContent>
-  );
+  )
 }
 ```
 
@@ -416,9 +417,9 @@ The project includes an `AppProvider` that manages global application state incl
 
 ```typescript
 const defaultConfig: AppConfig = {
-  theme: "light",
-  relayUrl: "wss://haven.slidestr.net",
-};
+  theme: 'light',
+  relayUrl: 'wss://haven.slidestr.net',
+}
 ```
 
 Preset relays are available including Ditto, Nostr.Band, Damus, and Primal. The app uses local storage to persist user preferences.
@@ -477,17 +478,15 @@ The router includes automatic scroll-to-top functionality and a 404 NotFound pag
 When no content is found (empty search results, no data available, etc.), display a minimalist empty state with the `RelaySelector` component. This allows users to easily switch relays to discover content from different sources.
 
 ```tsx
-import { RelaySelector } from '@/components/RelaySelector';
-import { Card, CardContent } from '@/components/ui/card';
+import { RelaySelector } from '@/components/RelaySelector'
+import { Card, CardContent } from '@/components/ui/card'
 
 // Empty state example
-<div className="col-span-full">
+;<div className="col-span-full">
   <Card className="border-dashed">
     <CardContent className="py-12 px-8 text-center">
       <div className="max-w-sm mx-auto space-y-6">
-        <p className="text-muted-foreground">
-          No results found. Try another relay?
-        </p>
+        <p className="text-muted-foreground">No results found. Try another relay?</p>
         <RelaySelector className="w-full" />
       </div>
     </CardContent>
@@ -510,19 +509,20 @@ import { Card, CardContent } from '@/components/ui/card';
 To add custom fonts, follow these steps:
 
 1. **Install a font package** using the npm_add_package tool:
-   
+
    **Any Google Font can be installed** using the @fontsource packages. Examples:
    - For Inter Variable: `npm_add_package({ name: "@fontsource-variable/inter" })`
    - For Roboto: `npm_add_package({ name: "@fontsource/roboto" })`
    - For Outfit Variable: `npm_add_package({ name: "@fontsource-variable/outfit" })`
    - For Poppins: `npm_add_package({ name: "@fontsource/poppins" })`
    - For Open Sans: `npm_add_package({ name: "@fontsource/open-sans" })`
-   
+
    **Format**: `@fontsource/[font-name]` or `@fontsource-variable/[font-name]` (for variable fonts)
 
 2. **Import the font** in `src/main.tsx`:
+
    ```typescript
-   import '@fontsource-variable/inter';
+   import '@fontsource-variable/inter'
    ```
 
 3. **Update Tailwind configuration** in `tailwind.config.ts`:
@@ -541,7 +541,7 @@ To add custom fonts, follow these steps:
 ### Recommended Font Choices by Use Case
 
 - **Modern/Clean**: Inter Variable, Outfit Variable, or Manrope
-- **Professional/Corporate**: Roboto, Open Sans, or Source Sans Pro  
+- **Professional/Corporate**: Roboto, Open Sans, or Source Sans Pro
 - **Creative/Artistic**: Poppins, Nunito, or Comfortaa
 - **Technical/Code**: JetBrains Mono, Fira Code, or Source Code Pro (for monospace)
 
@@ -556,6 +556,7 @@ The project includes a complete light/dark theme system using CSS custom propert
 ### Color Scheme Implementation
 
 When users specify color schemes:
+
 - Update CSS custom properties in `src/index.css` (both `:root` and `.dark` selectors)
 - Use Tailwind's color palette or define custom colors
 - Ensure proper contrast ratios for accessibility
@@ -584,10 +585,10 @@ The project uses Vitest with jsdom environment and includes comprehensive test s
 The project includes a `TestApp` component that provides all necessary context providers for testing. Wrap components with this component to provide required context providers:
 
 ```tsx
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { TestApp } from '@/test/TestApp';
-import { MyComponent } from './MyComponent';
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { TestApp } from '@/test/TestApp'
+import { MyComponent } from './MyComponent'
 
 describe('MyComponent', () => {
   it('renders correctly', () => {
@@ -595,11 +596,11 @@ describe('MyComponent', () => {
       <TestApp>
         <MyComponent />
       </TestApp>
-    );
+    )
 
-    expect(screen.getByText('Expected text')).toBeInTheDocument();
-  });
-});
+    expect(screen.getByText('Expected text')).toBeInTheDocument()
+  })
+})
 ```
 
 ## Testing Your Changes

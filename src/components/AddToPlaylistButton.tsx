@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Check, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react'
+import { Check, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,51 +8,60 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { usePlaylists } from '@/hooks/usePlaylist';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/useToast';
+} from '@/components/ui/dialog'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { usePlaylists } from '@/hooks/usePlaylist'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/hooks/useToast'
 
 interface AddToPlaylistButtonProps {
-  videoId: string;
-  videoKind: number;
-  videoTitle?: string;
+  videoId: string
+  videoKind: number
+  videoTitle?: string
 }
 
 export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPlaylistButtonProps) {
-  const { user } = useCurrentUser();
-  const { playlists, isLoading, addVideo } = usePlaylists();
-  const { toast } = useToast();
-  const [isAdding, setIsAdding] = useState(false);
-  const [open, setOpen] = useState(false);
+  const { user } = useCurrentUser()
+  const { playlists, isLoading, addVideo } = usePlaylists()
+  const { toast } = useToast()
+  const [isAdding, setIsAdding] = useState(false)
+  const [open, setOpen] = useState(false)
 
-  if (!user) return null;
+  if (!user) return null
 
   if (isLoading) {
-    return <Skeleton className="h-9 w-[140px]" />;
+    return <Skeleton className="h-9 w-[140px]" />
   }
 
   const handleAddToPlaylist = async (playlistId: string, playlistName: string) => {
     try {
-      setIsAdding(true);
-      await addVideo(playlistId, videoId, videoKind, videoTitle);
+      setIsAdding(true)
+      await addVideo(playlistId, videoId, videoKind, videoTitle)
       toast({
         title: 'Video added to playlist',
         description: `Successfully added to "${playlistName}"`,
-      });
-      setOpen(false);
+      })
+      setOpen(false)
     } catch (error) {
       toast({
         title: 'Error adding to playlist',
-        description: error instanceof Error ? error.message : 'Failed to add video to playlist. Please try again.',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to add video to playlist. Please try again.',
         variant: 'destructive',
-      });
+      })
     } finally {
-      setIsAdding(false);
+      setIsAdding(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -74,7 +83,7 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
             ) : (
               <CommandGroup>
                 {playlists.map(playlist => {
-                  const hasVideo = playlist.videos.some(v => v.id === videoId);
+                  const hasVideo = playlist.videos.some(v => v.id === videoId)
                   return (
                     <CommandItem
                       key={playlist.identifier}
@@ -84,7 +93,7 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
                       {playlist.name}
                       {hasVideo && <Check className="ml-2 h-4 w-4" />}
                     </CommandItem>
-                  );
+                  )
                 })}
               </CommandGroup>
             )}
@@ -92,5 +101,5 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
         </Command>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -1,5 +1,5 @@
-import { RelaySettingsSection } from '@/components/settings/RelaySettingsSection';
-import { BlossomServersSection } from '@/components/settings/BlossomServersSection';
+import { RelaySettingsSection } from '@/components/settings/RelaySettingsSection'
+import { BlossomServersSection } from '@/components/settings/BlossomServersSection'
 
 export default function SettingsPage() {
   return (
@@ -8,5 +8,5 @@ export default function SettingsPage() {
       <RelaySettingsSection />
       <BlossomServersSection />
     </div>
-  );
+  )
 }

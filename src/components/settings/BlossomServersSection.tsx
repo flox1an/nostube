@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { useAppContext } from '@/hooks/useAppContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Cog, XIcon } from 'lucide-react';
-import { BlossomServer, BlossomServerTag } from '@/contexts/AppContext';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Cog, XIcon } from 'lucide-react'
+import { BlossomServer, BlossomServerTag } from '@/contexts/AppContext'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { useUserBlossomServers } from '@/hooks/useUserBlossomServers';
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
+import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 
 const presetBlossomServers: BlossomServer[] = [
   {
@@ -22,14 +22,14 @@ const presetBlossomServers: BlossomServer[] = [
     name: 'temp-st.apps2.slidestr.net',
     tags: ['initial upload'],
   },
-];
+]
 
-const availableTags: BlossomServerTag[] = ['mirror', 'initial upload'];
+const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 
 export function BlossomServersSection() {
-  const { config, updateConfig } = useAppContext();
-  const [newServerUrl, setNewServerUrl] = useState('');
-  const userBlossomServers = useUserBlossomServers();
+  const { config, updateConfig } = useAppContext()
+  const [newServerUrl, setNewServerUrl] = useState('')
+  const userBlossomServers = useUserBlossomServers()
 
   /*
   Would be good for initial load of the app, but not for the dialog
@@ -45,26 +45,26 @@ export function BlossomServersSection() {
 
   const handleAddServer = () => {
     if (newServerUrl.trim()) {
-      const normalizedUrl = normalizeServerUrl(newServerUrl.trim());
+      const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
       updateConfig(currentConfig => {
-        const servers = currentConfig.blossomServers || [];
-        if (servers.some(s => s.url === normalizedUrl)) return currentConfig;
-        const name = deriveServerName(normalizedUrl);
+        const servers = currentConfig.blossomServers || []
+        if (servers.some(s => s.url === normalizedUrl)) return currentConfig
+        const name = deriveServerName(normalizedUrl)
         return {
           ...currentConfig,
           blossomServers: [...servers, { url: normalizedUrl, name, tags: [] }],
-        };
-      });
-      setNewServerUrl('');
+        }
+      })
+      setNewServerUrl('')
     }
-  };
+  }
 
   const handleRemoveServer = (urlToRemove: string) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
       blossomServers: (currentConfig.blossomServers || []).filter(s => s.url !== urlToRemove),
-    }));
-  };
+    }))
+  }
 
   const handleResetServers = () => {
     if (userBlossomServers.data && userBlossomServers.data?.length > 0) {
@@ -75,14 +75,14 @@ export function BlossomServersSection() {
           name: s.replace(/^https?:\/\//, ''),
           tags: [],
         })),
-      }));
+      }))
     } else {
       updateConfig(currentConfig => ({
         ...currentConfig,
         blossomServers: [...presetBlossomServers],
-      }));
+      }))
     }
-  };
+  }
 
   const handleToggleTag = (serverUrl: string, tag: BlossomServerTag) => {
     updateConfig(currentConfig => ({
@@ -95,21 +95,21 @@ export function BlossomServersSection() {
             }
           : s
       ),
-    }));
-  };
+    }))
+  }
 
   const normalizeServerUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return trimmed;
+    const trimmed = url.trim()
+    if (!trimmed) return trimmed
     if (trimmed.startsWith('http')) {
-      return trimmed;
+      return trimmed
     }
-    return `https://${trimmed}`;
-  };
+    return `https://${trimmed}`
+  }
 
   const deriveServerName = (url: string): string => {
-    return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  };
+    return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  }
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -168,7 +168,11 @@ export function BlossomServersSection() {
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveServer(server.url)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveServer(server.url)}
+                        >
                           <XIcon className="h-6 w-6" />
                         </Button>
                       </div>
@@ -186,7 +190,7 @@ export function BlossomServersSection() {
               onChange={e => setNewServerUrl(e.target.value)}
               onKeyPress={e => {
                 if (e.key === 'Enter') {
-                  handleAddServer();
+                  handleAddServer()
                 }
               }}
             />
@@ -199,5 +203,5 @@ export function BlossomServersSection() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

@@ -26,7 +26,7 @@ export function genUserName(seed: string): string {
     'Proud',
     'Silent',
     'Wild',
-  ];
+  ]
 
   const nouns = [
     'Fox',
@@ -53,19 +53,19 @@ export function genUserName(seed: string): string {
     'Leopard',
     'Puma',
     'Cobra',
-  ];
+  ]
 
   // Create a simple hash from the pubkey
-  let hash = 0;
+  let hash = 0
   for (let i = 0; i < seed.length; i++) {
-    const char = seed.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    const char = seed.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32-bit integer
   }
 
   // Use absolute value to ensure positive index
-  const adjIndex = Math.abs(hash) % adjectives.length;
-  const nounIndex = Math.abs(hash >> 8) % nouns.length;
+  const adjIndex = Math.abs(hash) % adjectives.length
+  const nounIndex = Math.abs(hash >> 8) % nouns.length
 
-  return [adjectives[adjIndex], nouns[nounIndex]].join(' ');
+  return [adjectives[adjIndex], nouns[nounIndex]].join(' ')
 }

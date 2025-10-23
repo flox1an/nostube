@@ -1,56 +1,57 @@
-import { Link } from 'react-router-dom';
-import { formatDistance } from 'date-fns';
-import { VideoEvent } from '@/utils/video-event';
-import { nip19 } from 'nostr-tools';
-import { formatDuration } from '../lib/formatDuration';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, imageProxy, imageProxyVideoPreview } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import React, { useRef, useState } from 'react';
-import { PlayProgressBar } from './PlayProgressBar';
-import { useProfile } from '@/hooks/useProfile';
+import { Link } from 'react-router-dom'
+import { formatDistance } from 'date-fns'
+import { VideoEvent } from '@/utils/video-event'
+import { nip19 } from 'nostr-tools'
+import { formatDuration } from '../lib/formatDuration'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { cn, imageProxy, imageProxyVideoPreview } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
+import React, { useRef, useState } from 'react'
+import { PlayProgressBar } from './PlayProgressBar'
+import { useProfile } from '@/hooks/useProfile'
 
 interface VideoCardProps {
-  video: VideoEvent;
-  hideAuthor?: boolean;
-  format: 'vertical' | 'horizontal' | 'square';
+  video: VideoEvent
+  hideAuthor?: boolean
+  format: 'vertical' | 'horizontal' | 'square'
 }
 
 export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardProps) {
-  const metadata = useProfile({ pubkey: video.pubkey });
-  const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8);
+  const metadata = useProfile({ pubkey: video.pubkey })
+  const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
 
-  const aspectRatio = format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
-  const maxWidth = format == 'vertical' && 'sm:max-w-[280px] mx-auto';
+  const aspectRatio =
+    format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
+  const maxWidth = format == 'vertical' && 'sm:max-w-[280px] mx-auto'
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isHovered, setIsHovered] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
 
-  const hoverPreviewEnabled = false;
+  const hoverPreviewEnabled = false
 
   const handleMouseEnter = () => {
     // don't show hover preview for video with content warning
-    if (video.contentWarning) return;
+    if (video.contentWarning) return
 
     if (video) {
-      setIsHovered(true);
+      setIsHovered(true)
     }
-  };
+  }
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
-    setVideoLoaded(false);
+    setIsHovered(false)
+    setVideoLoaded(false)
     if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
     }
-  };
+  }
 
   const handleVideoLoadedData = () => {
-    setVideoLoaded(true);
-    videoRef.current?.play().catch(error => console.error('Video autoplay blocked:', error));
-  };
+    setVideoLoaded(true)
+    videoRef.current?.play().catch(error => console.error('Video autoplay blocked:', error))
+  }
 
   return (
     <div
@@ -141,15 +142,16 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 interface VideoCardSkeletonProps {
-  format: 'vertical' | 'horizontal' | 'square';
+  format: 'vertical' | 'horizontal' | 'square'
 }
 
 export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
-  const aspectRatio = format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video';
+  const aspectRatio =
+    format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
     <div className="p-0">
       <Skeleton className={cn('w-full', aspectRatio)} />
@@ -164,5 +166,5 @@ export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

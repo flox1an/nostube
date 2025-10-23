@@ -1,43 +1,43 @@
-import { ReactNode, useState, useCallback } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { AppContext, Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext';
-import { RelayPool } from 'applesauce-relay';
+import { ReactNode, useState, useCallback } from 'react'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+import { AppContext, Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
+import { RelayPool } from 'applesauce-relay'
 
 interface AppProviderProps {
-  children: ReactNode;
+  children: ReactNode
   /** Application storage key */
-  storageKey: string;
+  storageKey: string
   /** Default app configuration */
-  defaultConfig: AppConfig;
+  defaultConfig: AppConfig
   /** Optional list of preset relays to display in the RelaySelector */
-  presetRelays?: Relay[];
+  presetRelays?: Relay[]
 }
 
 export function AppProvider(props: AppProviderProps) {
-  const { children, storageKey, defaultConfig, presetRelays } = props;
+  const { children, storageKey, defaultConfig, presetRelays } = props
 
   // App configuration state with localStorage persistence
-  const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const pool = new RelayPool();
-  pool.group(config.relays.map(r => r.url));
+  const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const pool = new RelayPool()
+  pool.group(config.relays.map(r => r.url))
   //const { user } = useCurrentUser();
- // const userRelays = useUserRelays(user?.pubkey);
+  // const userRelays = useUserRelays(user?.pubkey);
 
   // Generic config updater with callback pattern
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
-    setConfig(updater);
-  };
+    setConfig(updater)
+  }
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => {
-      const newState = !prev;
+      const newState = !prev
       if (newState) {
-        window.scrollTo(0, 0);
+        window.scrollTo(0, 0)
       }
-      return newState;
-    });
-  }, []);
+      return newState
+    })
+  }, [])
 
   /*
   useEffect(() => {
@@ -88,8 +88,8 @@ export function AppProvider(props: AppProviderProps) {
     presetRelays,
     isSidebarOpen,
     toggleSidebar,
-    pool
-  };
+    pool,
+  }
 
-  return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
 }

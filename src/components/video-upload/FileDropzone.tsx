@@ -1,13 +1,13 @@
-import { useDropzone } from 'react-dropzone';
-import { File } from 'lucide-react';
+import { useDropzone } from 'react-dropzone'
+import { File } from 'lucide-react'
 
 interface FileDropzoneProps {
-  onDrop: (acceptedFiles: File[]) => void;
-  accept: Record<string, string[]>;
-  disabled?: boolean;
-  selectedFile?: File | null;
-  className?: string;
-  style?: React.CSSProperties;
+  onDrop: (acceptedFiles: File[]) => void
+  accept: Record<string, string[]>
+  disabled?: boolean
+  selectedFile?: File | null
+  className?: string
+  style?: React.CSSProperties
 }
 
 export function FileDropzone({
@@ -16,14 +16,14 @@ export function FileDropzone({
   disabled,
   selectedFile,
   className = '',
-  style
+  style,
 }: FileDropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept,
     multiple: false,
-    disabled
-  });
+    disabled,
+  })
 
   return (
     <div
@@ -31,7 +31,9 @@ export function FileDropzone({
       style={style}
       className={
         `flex flex-col items-center h-32 justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ` +
-        (isDragActive ? 'border-primary bg-muted' : 'border-gray-300 bg-background hover:bg-muted') +
+        (isDragActive
+          ? 'border-primary bg-muted'
+          : 'border-gray-300 bg-background hover:bg-muted') +
         (disabled ? ' opacity-50 cursor-not-allowed' : '') +
         ` ${className}`
       }
@@ -47,5 +49,5 @@ export function FileDropzone({
         </div>
       )}
     </div>
-  );
+  )
 }

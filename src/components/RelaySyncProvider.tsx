@@ -1,7 +1,7 @@
-import { useRelaySync } from '@/hooks/useRelaySync';
+import { useRelaySync } from '@/hooks/useRelaySync'
 
 export function RelaySyncProvider({ children }: { children: React.ReactNode }) {
-  useRelaySync();
-  
-  return <>{children}</>;
+  useRelaySync()
+
+  return <>{children}</>
 }

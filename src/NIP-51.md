@@ -108,9 +108,18 @@ Some clients have used these lists in the past, but they should work on transiti
       "description",
       "The domestic yak, also known as the Tartary ox, grunting ox, or hairy cattle, is a species of long-haired domesticated cattle found throughout the Himalayan region of the Indian subcontinent, the Tibetan Plateau, Gilgit-Baltistan, Tajikistan and as far north as Mongolia and Siberia."
     ],
-    ["a", "30023:26dc95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:95ODQzw3ajNoZ8SyMDOzQ"],
-    ["a", "30023:54af95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:1-MYP8dAhramH9J5gJWKx"],
-    ["a", "30023:f8fe95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:D2Tbd38bGrFvU0bIbvSMt"],
+    [
+      "a",
+      "30023:26dc95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:95ODQzw3ajNoZ8SyMDOzQ"
+    ],
+    [
+      "a",
+      "30023:54af95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:1-MYP8dAhramH9J5gJWKx"
+    ],
+    [
+      "a",
+      "30023:f8fe95542e18b8b7aec2f14610f55c335abebec76f3db9e58c254661d0593a0c:D2Tbd38bGrFvU0bIbvSMt"
+    ],
     ["e", "d78ba0d5dce22bfff9db0a9e996c9ef27e2c91051de0c4e1da340e0326b4941e"]
   ],
   "content": "",
@@ -152,8 +161,14 @@ Some clients have used these lists in the past, but they should work on transiti
   "content": "My nostr app selection",
   "tags": [
     ["d", "nostr"],
-    ["a", "32267:7579076d9aff0a4cfdefa7e2045f2486c7e5d8bc63bfc6b45397233e1bbfcb19:com.example.app1"],
-    ["a", "32267:045f2486c7e5d8bc63bfc6b45397233e1bbfcb197579076d9aff0a4cfdefa7e2:net.example.app2"],
+    [
+      "a",
+      "32267:7579076d9aff0a4cfdefa7e2045f2486c7e5d8bc63bfc6b45397233e1bbfcb19:com.example.app1",
+    ],
+    [
+      "a",
+      "32267:045f2486c7e5d8bc63bfc6b45397233e1bbfcb197579076d9aff0a4cfdefa7e2:net.example.app2",
+    ],
     ["a", "32267:264387284e647ba6938995735ec8c7d5c5a6f026307d78ce6faa725737e55130:pl.code.app3"],
   ],
 }

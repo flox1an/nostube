@@ -1,5 +1,5 @@
-import { useProfile } from './useProfile';
+import { useProfile } from './useProfile'
 
 export function useAuthor(pubkey: string) {
-  return useProfile({ pubkey });
+  return useProfile({ pubkey })
 }

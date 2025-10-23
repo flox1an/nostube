@@ -1,10 +1,10 @@
 interface VideoMetadataProps {
-  dimension?: string;
-  sizeMB?: number;
-  duration?: number;
-  videoCodec?: string;
-  audioCodec?: string;
-  inputMethod: 'file' | 'url';
+  dimension?: string
+  sizeMB?: number
+  duration?: number
+  videoCodec?: string
+  audioCodec?: string
+  inputMethod: 'file' | 'url'
 }
 
 export function VideoMetadata({
@@ -13,7 +13,7 @@ export function VideoMetadata({
   duration,
   videoCodec,
   audioCodec,
-  inputMethod
+  inputMethod,
 }: VideoMetadataProps) {
   return (
     <div className="mt-0 p-3 bg-muted rounded border text-sm">
@@ -42,32 +42,32 @@ export function VideoMetadata({
             </div>
             {videoCodec.startsWith('av01') && (
               <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                <b>Warning:</b> AV1 videos (<code>av01</code>) cannot be played on iOS or Safari browsers.
-                Please use H.264/AVC for maximum compatibility.
+                <b>Warning:</b> AV1 videos (<code>av01</code>) cannot be played on iOS or Safari
+                browsers. Please use H.264/AVC for maximum compatibility.
               </div>
             )}
             {videoCodec.startsWith('vp09') && (
               <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                <b>Warning:</b> VP9 videos (<code>vp09</code>) are not supported on iOS or Safari browsers.
-                For maximum compatibility, use H.264/AVC.
+                <b>Warning:</b> VP9 videos (<code>vp09</code>) are not supported on iOS or Safari
+                browsers. For maximum compatibility, use H.264/AVC.
               </div>
             )}
             {videoCodec.startsWith('hev1') && (
               <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                <b>Warning:</b> While H.265 (<code>hev1</code>) is widely supported, this video will not play on iOS/Apple devices.
-                A <code>hvc1</code> codec identifier is needed.
+                <b>Warning:</b> While H.265 (<code>hev1</code>) is widely supported, this video will
+                not play on iOS/Apple devices. A <code>hvc1</code> codec identifier is needed.
               </div>
             )}
             {videoCodec.startsWith('hvc1') && (
               <div className="col-span-2 mt-2 text-sm text-blue-800 bg-blue-100 border border-blue-300 rounded p-2">
-                <b>Info:</b> H.265/HEVC (<code>hvc1</code>) is widely supported. Only some de-googled Linux
-                browsers may have issues.
+                <b>Info:</b> H.265/HEVC (<code>hvc1</code>) is widely supported. Only some
+                de-googled Linux browsers may have issues.
               </div>
             )}
             {videoCodec.startsWith('avc1') && (
               <div className="col-span-2 mt-2 text-sm text-green-800 bg-green-100 border border-green-300 rounded p-2">
-                <b>Great:</b> H. поддержку.264/AVC (<code>avc1</code>) is the most widely supported video codec and
-                will play on all browsers and devices.
+                <b>Great:</b> H. поддержку.264/AVC (<code>avc1</code>) is the most widely supported
+                video codec and will play on all browsers and devices.
               </div>
             )}
           </>
@@ -83,5 +83,5 @@ export function VideoMetadata({
         )}
       </div>
     </div>
-  );
+  )
 }

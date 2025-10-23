@@ -1,17 +1,25 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Upload } from 'lucide-react';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useToast } from '@/hooks/useToast';
-import { z } from 'zod';
-import { nowInSecs } from '@/lib/utils';
+import React, { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Switch } from '@/components/ui/switch'
+import { Loader2, Upload } from 'lucide-react'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { useToast } from '@/hooks/useToast'
+import { z } from 'zod'
+import { nowInSecs } from '@/lib/utils'
 
 // Define metadata schema using zod instead of nostrify
 const metadataSchema = z.object({
@@ -22,15 +30,15 @@ const metadataSchema = z.object({
   website: z.string().optional(),
   nip05: z.string().optional(),
   bot: z.boolean().optional(),
-});
+})
 
-type NostrMetadata = z.infer<typeof metadataSchema>;
+type NostrMetadata = z.infer<typeof metadataSchema>
 
 export const EditProfileForm: React.FC = () => {
-  const { user } = useCurrentUser();
-  const { mutateAsync: publishEvent, isPending } = useNostrPublish();
-  const { toast } = useToast();
-  const isUploading = false;
+  const { user } = useCurrentUser()
+  const { mutateAsync: publishEvent, isPending } = useNostrPublish()
+  const { toast } = useToast()
+  const isUploading = false
 
   // Initialize the form with default values
   const form = useForm<NostrMetadata>({
@@ -44,13 +52,13 @@ export const EditProfileForm: React.FC = () => {
       nip05: '',
       bot: false,
     },
-  });
+  })
 
   // Update form values when user data is loaded
   useEffect(() => {
     // For now, we'll just use empty defaults
     // Profile data can be loaded later when the structure is clear
-  }, [form]);
+  }, [form])
 
   // Handle file uploads for profile picture and banner
   const uploadPicture = async (file: File, field: 'picture' | 'banner') => {
@@ -61,16 +69,16 @@ export const EditProfileForm: React.FC = () => {
       toast({
         title: 'Success',
         description: `${field === 'picture' ? 'Profile picture' : 'Banner'} uploaded successfully`,
-      });
+      })
     } catch (error) {
-      console.error(`Failed to upload ${field}:`, error);
+      console.error(`Failed to upload ${field}:`, error)
       toast({
         title: 'Error',
         description: `Failed to upload ${field === 'picture' ? 'profile picture' : 'banner'}. Please try again.`,
         variant: 'destructive',
-      });
+      })
     }
-  };
+  }
 
   const onSubmit = async (values: NostrMetadata) => {
     if (!user) {
@@ -78,18 +86,18 @@ export const EditProfileForm: React.FC = () => {
         title: 'Error',
         description: 'You must be logged in to update your profile',
         variant: 'destructive',
-      });
-      return;
+      })
+      return
     }
 
     try {
       // Combine existing metadata with new values
-      const data = { ...values };
+      const data = { ...values }
 
       // Clean up empty values
       for (const key in data) {
         if (data[key] === '') {
-          delete data[key];
+          delete data[key]
         }
       }
 
@@ -101,7 +109,7 @@ export const EditProfileForm: React.FC = () => {
           content: JSON.stringify(data),
           tags: [],
         },
-      });
+      })
 
       // Note: With applesauce EventStore, cache invalidation is handled automatically
       // No need to manually invalidate queries like with react-query
@@ -109,16 +117,16 @@ export const EditProfileForm: React.FC = () => {
       toast({
         title: 'Success',
         description: 'Your profile has been updated',
-      });
+      })
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      console.error('Failed to update profile:', error)
       toast({
         title: 'Error',
         description: 'Failed to update profile. Please try again.',
         variant: 'destructive',
-      });
+      })
     }
-  };
+  }
 
   return (
     <Form {...form}>
@@ -132,7 +140,9 @@ export const EditProfileForm: React.FC = () => {
               <FormControl>
                 <Input placeholder="Your name" {...field} />
               </FormControl>
-              <FormDescription>This is your display name that will be displayed to others.</FormDescription>
+              <FormDescription>
+                This is your display name that will be displayed to others.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -145,7 +155,11 @@ export const EditProfileForm: React.FC = () => {
             <FormItem>
               <FormLabel>Bio</FormLabel>
               <FormControl>
-                <Textarea placeholder="Tell others about yourself" className="resize-none" {...field} />
+                <Textarea
+                  placeholder="Tell others about yourself"
+                  className="resize-none"
+                  {...field}
+                />
               </FormControl>
               <FormDescription>A short description about yourself.</FormDescription>
               <FormMessage />
@@ -239,22 +253,22 @@ export const EditProfileForm: React.FC = () => {
         </Button>
       </form>
     </Form>
-  );
-};
+  )
+}
 
 // Reusable component for image upload fields
 interface ImageUploadFieldProps {
   field: {
-    value: string | undefined;
-    onChange: (value: string) => void;
-    name: string;
-    onBlur: () => void;
-  };
-  label: string;
-  placeholder: string;
-  description: string;
-  previewType: 'square' | 'wide';
-  onUpload: (file: File) => void;
+    value: string | undefined
+    onChange: (value: string) => void
+    name: string
+    onBlur: () => void
+  }
+  label: string
+  placeholder: string
+  description: string
+  previewType: 'square' | 'wide'
+  onUpload: (file: File) => void
 }
 
 const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
@@ -265,7 +279,7 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   previewType,
   onUpload,
 }) => {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   return (
     <FormItem>
@@ -287,19 +301,30 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             accept="image/*"
             className="hidden"
             onChange={e => {
-              const file = e.target.files?.[0];
+              const file = e.target.files?.[0]
               if (file) {
-                onUpload(file);
+                onUpload(file)
               }
             }}
           />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="h-4 w-4 mr-2" />
             Upload Image
           </Button>
           {field.value && (
-            <div className={`h-10 ${previewType === 'square' ? 'w-10' : 'w-24'} rounded overflow-hidden`}>
-              <img src={field.value} alt={`${label} preview`} className="h-full w-full object-cover" />
+            <div
+              className={`h-10 ${previewType === 'square' ? 'w-10' : 'w-24'} rounded overflow-hidden`}
+            >
+              <img
+                src={field.value}
+                alt={`${label} preview`}
+                className="h-full w-full object-cover"
+              />
             </div>
           )}
         </div>
@@ -307,5 +332,5 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       <FormDescription>{description}</FormDescription>
       <FormMessage />
     </FormItem>
-  );
-};
+  )
+}

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
-import { type Playlist, type Video, usePlaylists } from '@/hooks/usePlaylist';
-import { CreatePlaylistDialog } from './CreatePlaylistDialog';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react'
+import { type Playlist, type Video, usePlaylists } from '@/hooks/usePlaylist'
+import { CreatePlaylistDialog } from './CreatePlaylistDialog'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,17 +13,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
-import { nip19 } from 'nostr-tools';
-import { Pencil } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+} from '@/components/ui/alert-dialog'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Loader2 } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { nip19 } from 'nostr-tools'
+import { Pencil } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -31,97 +36,111 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 
 function formatDate(timestamp: number) {
   return new Date(timestamp * 1000).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  });
+  })
 }
 
 interface VideoListProps {
-  videos: Video[];
-  onRemove: (videoId: string) => Promise<void>;
+  videos: Video[]
+  onRemove: (videoId: string) => Promise<void>
 }
 
 function VideoList({ videos, onRemove }: VideoListProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   if (videos.length === 0) {
-    return <p className="text-sm text-muted-foreground py-2">No videos in this playlist yet.</p>;
+    return <p className="text-sm text-muted-foreground py-2">No videos in this playlist yet.</p>
   }
 
   return (
     <div className="space-y-2">
       {videos.map(video => (
-        <div key={video.id} className="flex items-center justify-between py-2 border-b last:border-0">
+        <div
+          key={video.id}
+          className="flex items-center justify-between py-2 border-b last:border-0"
+        >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              <a href="#" onClick={() => navigate(`/video/${nip19.neventEncode({ id: video.id, kind: video.kind })}`)}>
+              <a
+                href="#"
+                onClick={() =>
+                  navigate(`/video/${nip19.neventEncode({ id: video.id, kind: video.kind })}`)
+                }
+              >
                 {video.title || 'Untitled Video'}
               </a>
             </p>
             <p className="text-xs text-muted-foreground">Added {formatDate(video.added_at)}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => onRemove(video.id)} className="ml-2 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(video.id)}
+            className="ml-2 flex-shrink-0"
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 export function PlaylistManager() {
-  const { user } = useCurrentUser();
-  const { playlists, isLoading, createPlaylist, deletePlaylist, removeVideo, updatePlaylist } = usePlaylists();
-  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const { user } = useCurrentUser()
+  const { playlists, isLoading, createPlaylist, deletePlaylist, removeVideo, updatePlaylist } =
+    usePlaylists()
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
 
   const handleDelete = async () => {
     if (playlistToDelete?.eventId) {
-      setIsDeleting(true);
-      await deletePlaylist(playlistToDelete.eventId);
-      setPlaylistToDelete(null);
-      setIsDeleting(false);
+      setIsDeleting(true)
+      await deletePlaylist(playlistToDelete.eventId)
+      setPlaylistToDelete(null)
+      setIsDeleting(false)
     }
-  };
+  }
 
   const handleEdit = (playlist: Playlist) => {
-    setPlaylistToEdit(playlist);
-    setEditName(playlist.name);
-    setEditDescription(playlist.description || '');
-    setEditDialogOpen(true);
-  };
+    setPlaylistToEdit(playlist)
+    setEditName(playlist.name)
+    setEditDescription(playlist.description || '')
+    setEditDialogOpen(true)
+  }
 
   const handleEditSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!playlistToEdit) return;
-    setIsEditing(true);
+    e.preventDefault()
+    if (!playlistToEdit) return
+    setIsEditing(true)
     try {
       // Save changes using update logic
       await updatePlaylist({
         ...playlistToEdit,
         name: editName,
         description: editDescription,
-      });
-      setEditDialogOpen(false);
-      setPlaylistToEdit(null);
+      })
+      setEditDialogOpen(false)
+      setPlaylistToEdit(null)
     } finally {
-      setIsEditing(false);
+      setIsEditing(false)
     }
-  };
+  }
 
   const sortedPlaylists = useMemo(() => {
-    return [...playlists].sort((a, b) => b.videos.length - a.videos.length);
-  }, [playlists]);
+    return [...playlists].sort((a, b) => b.videos.length - a.videos.length)
+  }, [playlists])
 
   if (!user) {
     return (
@@ -132,7 +151,7 @@ export function PlaylistManager() {
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   if (isLoading) {
@@ -154,7 +173,7 @@ export function PlaylistManager() {
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
   if (sortedPlaylists.length === 0) {
@@ -167,13 +186,14 @@ export function PlaylistManager() {
           <CardContent className="py-12 px-8 text-center">
             <div className="max-w-sm mx-auto space-y-6">
               <p className="text-muted-foreground">
-                No playlists yet. Create your first playlist to start organizing your favorite videos!
+                No playlists yet. Create your first playlist to start organizing your favorite
+                videos!
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -201,8 +221,8 @@ export function PlaylistManager() {
                         variant="ghost"
                         size="icon"
                         onClick={e => {
-                          e.stopPropagation();
-                          handleEdit(playlist);
+                          e.stopPropagation()
+                          handleEdit(playlist)
                         }}
                         aria-label="Edit Playlist"
                       >
@@ -210,7 +230,9 @@ export function PlaylistManager() {
                       </Button>
                     )}
                   </h3>
-                  {playlist.description && <p className="text-sm text-muted-foreground">{playlist.description}</p>}
+                  {playlist.description && (
+                    <p className="text-sm text-muted-foreground">{playlist.description}</p>
+                  )}
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-muted-foreground">
@@ -220,8 +242,8 @@ export function PlaylistManager() {
                     variant="ghost"
                     size="icon"
                     onClick={e => {
-                      e.stopPropagation();
-                      setPlaylistToDelete(playlist);
+                      e.stopPropagation()
+                      setPlaylistToDelete(playlist)
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -230,7 +252,10 @@ export function PlaylistManager() {
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <VideoList videos={playlist.videos} onRemove={videoId => removeVideo(playlist.identifier, videoId)} />
+              <VideoList
+                videos={playlist.videos}
+                onRemove={videoId => removeVideo(playlist.identifier, videoId)}
+              />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -241,13 +266,18 @@ export function PlaylistManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{playlistToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{playlistToDelete?.name}"? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
               Delete Playlist
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -265,7 +295,12 @@ export function PlaylistManager() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Name</Label>
-                <Input id="edit-name" value={editName} onChange={e => setEditName(e.target.value)} required />
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Description (optional)</Label>
@@ -279,7 +314,11 @@ export function PlaylistManager() {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={!editName.trim() || isEditing}>
-                {isEditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Pencil className="mr-2 h-4 w-4" />}
+                {isEditing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Pencil className="mr-2 h-4 w-4" />
+                )}
                 Save Changes
               </Button>
             </DialogFooter>
@@ -287,5 +326,5 @@ export function PlaylistManager() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

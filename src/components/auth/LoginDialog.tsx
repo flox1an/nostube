@@ -1,92 +1,98 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import React, { useRef, useState } from 'react';
-import { Shield, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button.tsx';
-import { Input } from '@/components/ui/input.tsx';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
-import { useLoginActions } from '@/hooks/useLoginActions';
+import React, { useRef, useState } from 'react'
+import { Shield, Upload } from 'lucide-react'
+import { Button } from '@/components/ui/button.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog.tsx'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
+import { useLoginActions } from '@/hooks/useLoginActions'
 
 interface LoginDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onLogin: () => void;
-  onSignup?: () => void;
+  isOpen: boolean
+  onClose: () => void
+  onLogin: () => void
+  onSignup?: () => void
 }
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onSignup }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [nsec, setNsec] = useState('');
-  const [bunkerUri, setBunkerUri] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const login = useLoginActions();
+  const [isLoading, setIsLoading] = useState(false)
+  const [nsec, setNsec] = useState('')
+  const [bunkerUri, setBunkerUri] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const login = useLoginActions()
 
   const handleExtensionLogin = () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       if (!('nostr' in window)) {
-        throw new Error('Nostr extension not found. Please install a NIP-07 extension.');
+        throw new Error('Nostr extension not found. Please install a NIP-07 extension.')
       }
-      login.extension();
-      onLogin();
-      onClose();
+      login.extension()
+      onLogin()
+      onClose()
     } catch (error) {
-      console.error('Extension login failed:', error);
+      console.error('Extension login failed:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleKeyLogin = () => {
-    if (!nsec.trim()) return;
-    setIsLoading(true);
+    if (!nsec.trim()) return
+    setIsLoading(true)
 
     try {
-      login.nsec(nsec);
-      onLogin();
-      onClose();
+      login.nsec(nsec)
+      onLogin()
+      onClose()
     } catch (error) {
-      console.error('Nsec login failed:', error);
+      console.error('Nsec login failed:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleBunkerLogin = () => {
-    if (!bunkerUri.trim() || !bunkerUri.startsWith('bunker://')) return;
-    setIsLoading(true);
+    if (!bunkerUri.trim() || !bunkerUri.startsWith('bunker://')) return
+    setIsLoading(true)
 
     try {
-      login.bunker(bunkerUri);
-      onLogin();
-      onClose();
+      login.bunker(bunkerUri)
+      onLogin()
+      onClose()
     } catch (error) {
-      console.error('Bunker login failed:', error);
+      console.error('Bunker login failed:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = event => {
-      const content = event.target?.result as string;
-      setNsec(content.trim());
-    };
-    reader.readAsText(file);
-  };
+      const content = event.target?.result as string
+      setNsec(content.trim())
+    }
+    reader.readAsText(file)
+  }
 
   const handleSignupClick = () => {
-    onClose();
+    onClose()
     if (onSignup) {
-      onSignup();
+      onSignup()
     }
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,7 +116,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               <div className="text-center p-4 rounded-lg bg-card">
                 <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
                 <p className="text-sm mb-4">Login with one click using the browser extension</p>
-                <Button className="w-full rounded-full py-6" onClick={handleExtensionLogin} disabled={isLoading}>
+                <Button
+                  className="w-full rounded-full py-6"
+                  onClick={handleExtensionLogin}
+                  disabled={isLoading}
+                >
                   {isLoading ? 'Logging in...' : 'Login with Extension'}
                 </Button>
               </div>
@@ -119,7 +129,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             <TabsContent value="key" className="space-y-4">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="nsec" className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                  <label
+                    htmlFor="nsec"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-400"
+                  >
                     Enter your nsec
                   </label>
                   <Input
@@ -133,8 +146,18 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
                 <div className="text-center">
                   <p className="text-sm mb-2">Or upload a key file</p>
-                  <input type="file" accept=".txt" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                  <Button variant="secondary" className="w-full" onClick={() => fileInputRef.current?.click()}>
+                  <input
+                    type="file"
+                    accept=".txt"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                  />
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Nsec File
                   </Button>
@@ -152,7 +175,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
             <TabsContent value="bunker" className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="bunkerUri" className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                <label
+                  htmlFor="bunkerUri"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-400"
+                >
                   Bunker URI
                 </label>
                 <Input
@@ -180,7 +206,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           <div className="text-center text-sm">
             <p className="text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
-              <button onClick={handleSignupClick} className="text-primary hover:underline font-medium">
+              <button
+                onClick={handleSignupClick}
+                className="text-primary hover:underline font-medium"
+              >
                 Sign up
               </button>
             </p>
@@ -188,7 +217,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
 
-export default LoginDialog;
+export default LoginDialog

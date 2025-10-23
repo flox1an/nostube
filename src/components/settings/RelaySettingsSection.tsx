@@ -1,35 +1,35 @@
-import { useState } from 'react';
-import { useAppContext } from '@/hooks/useAppContext';
-import { RelayTag } from '@/contexts/AppContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { XIcon, Cog } from 'lucide-react';
-import { presetRelays } from '@/App';
-import { useUserRelays } from '@/hooks/useUserRelays';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useState } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
+import { RelayTag } from '@/contexts/AppContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { XIcon, Cog } from 'lucide-react'
+import { presetRelays } from '@/App'
+import { useUserRelays } from '@/hooks/useUserRelays'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '../ui/badge';
+} from '@/components/ui/dropdown-menu'
+import { Badge } from '../ui/badge'
 
 export function RelaySettingsSection() {
-  const { config, updateConfig } = useAppContext();
-  const [newRelayUrl, setNewRelayUrl] = useState('');
+  const { config, updateConfig } = useAppContext()
+  const [newRelayUrl, setNewRelayUrl] = useState('')
 
-  const { user } = useCurrentUser();
-  const userRelays = useUserRelays(user?.pubkey);
+  const { user } = useCurrentUser()
+  const userRelays = useUserRelays(user?.pubkey)
 
   const handleAddRelay = () => {
     if (newRelayUrl.trim()) {
-      const normalizedUrl = normalizeRelayUrl(newRelayUrl.trim());
+      const normalizedUrl = normalizeRelayUrl(newRelayUrl.trim())
       updateConfig(currentConfig => {
-        const relays = currentConfig.relays || [];
-        if (relays.some(r => r.url === normalizedUrl)) return currentConfig;
+        const relays = currentConfig.relays || []
+        if (relays.some(r => r.url === normalizedUrl)) return currentConfig
         return {
           ...currentConfig,
           relays: [
@@ -40,18 +40,18 @@ export function RelaySettingsSection() {
               tags: ['read', 'write'] as RelayTag[],
             },
           ],
-        };
-      });
-      setNewRelayUrl('');
+        }
+      })
+      setNewRelayUrl('')
     }
-  };
+  }
 
   const handleRemoveRelay = (urlToRemove: string) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
       relays: currentConfig.relays.filter(r => r.url !== urlToRemove),
-    }));
-  };
+    }))
+  }
 
   const handleResetRelays = () => {
     updateConfig(currentConfig => ({
@@ -67,28 +67,30 @@ export function RelaySettingsSection() {
             name: r.name || r.url.replace(/^wss:\/\//, ''),
             tags: ['read', 'write'] as RelayTag[],
           })),
-    }));
-  };
+    }))
+  }
 
   const handleToggleTag = (relayUrl: string, tag: RelayTag) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
       relays: currentConfig.relays.map(r =>
-        r.url === relayUrl ? { ...r, tags: r.tags.includes(tag) ? r.tags.filter(t => t !== tag) : [...r.tags, tag] } : r
+        r.url === relayUrl
+          ? { ...r, tags: r.tags.includes(tag) ? r.tags.filter(t => t !== tag) : [...r.tags, tag] }
+          : r
       ),
-    }));
-  };
+    }))
+  }
 
   const normalizeRelayUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return trimmed;
+    const trimmed = url.trim()
+    if (!trimmed) return trimmed
     if (trimmed.includes('://')) {
-      return trimmed;
+      return trimmed
     }
-    return `wss://${trimmed}`;
-  };
+    return `wss://${trimmed}`
+  }
 
-  const availableTags: RelayTag[] = ['read', 'write'];
+  const availableTags: RelayTag[] = ['read', 'write']
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -100,7 +102,9 @@ export function RelaySettingsSection() {
         <div className="space-y-4">
           <div>
             {config.relays.length === 0 ? (
-              <p className="text-muted-foreground">No relays configured. Add some below or reset to defaults.</p>
+              <p className="text-muted-foreground">
+                No relays configured. Add some below or reset to defaults.
+              </p>
             ) : (
               <ScrollArea className="w-full rounded-md border p-4">
                 <ul className="space-y-2">
@@ -137,7 +141,11 @@ export function RelaySettingsSection() {
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveRelay(relay.url)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveRelay(relay.url)}
+                        >
                           <XIcon className="h-4 w-4" />
                         </Button>
                       </div>
@@ -155,7 +163,7 @@ export function RelaySettingsSection() {
               onChange={e => setNewRelayUrl(e.target.value)}
               onKeyPress={e => {
                 if (e.key === 'Enter') {
-                  handleAddRelay();
+                  handleAddRelay()
                 }
               }}
             />
@@ -168,5 +176,5 @@ export function RelaySettingsSection() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

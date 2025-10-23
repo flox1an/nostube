@@ -2,14 +2,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Trash } from 'lucide-react'
+import { Loader2, Trash } from 'lucide-react'
 import { useAppContext } from '@/hooks/useAppContext'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServers,
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
-  type ChunkedUploadCallbacks,
 } from '@/lib/blossom-upload'
 import { BlobDescriptor } from 'blossom-client-sdk'
 import { useNavigate } from 'react-router-dom'
@@ -429,13 +428,20 @@ export function VideoUpload() {
 
       // Start upload automatically
       try {
+        setUploadProgress({
+          uploadedBytes: 0,
+          totalBytes: acceptedFiles[0].size,
+          percentage: 0,
+          currentChunk: 0,
+          totalChunks: 1,
+        })
         // Use chunked upload for better performance with large files
         const uploadedBlobs = await uploadFileToMultipleServersChunked({
           file: acceptedFiles[0],
           servers: blossomInitalUploadServers.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
           options: {
-            chunkSize: 30 * 1024 * 1024, // 30MB chunks
+            chunkSize: 10 * 1024 * 1024, // 10MB chunks
             maxConcurrentChunks: 2, // Upload 2 chunks concurrently
           },
           callbacks: {
@@ -699,17 +705,21 @@ export function VideoUpload() {
           {uploadProgress && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Uploading video...</span>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="animate-spin h-5 w-5 text-primary" />
+                  <span>Uploading video...</span>
+                </div>
                 <span>{uploadProgress.percentage}%</span>
               </div>
+
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress.percentage}%` }}
                 />
               </div>
               <div className="text-xs text-gray-500">
-                Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks} •
+                Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}&nbsp;•&nbsp;
                 {Math.round(uploadProgress.uploadedBytes / 1024 / 1024)}MB /{' '}
                 {Math.round(uploadProgress.totalBytes / 1024 / 1024)}MB
               </div>

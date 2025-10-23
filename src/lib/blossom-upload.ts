@@ -15,8 +15,19 @@ export async function uploadFileToMultipleServers({
   servers: string[]
   signer: Signer
 }): Promise<BlobDescriptor[]> {
+  // Calculate file hash once for all servers
+  const fileHash = await calculateSHA256(file)
+
   const results = await Promise.allSettled(
     servers.map(async server => {
+      // Check if file already exists on this server
+      const fileExists = await checkFileExists(server, fileHash)
+      if (fileExists) {
+        console.debug(`File already exists on ${server}, skipping upload`)
+        return createMockBlobDescriptor(server, fileHash, file.size, file.type)
+      }
+
+      console.debug(`File does not exist on ${server}, proceeding with upload`)
       const uploadAuth = await BlossomClient.createUploadAuth(signer, file)
       const blob = await BlossomClient.uploadBlob(server, file, {
         auth: uploadAuth,
@@ -39,9 +50,23 @@ export async function mirrorBlobsToServers({
   signer: Signer
 }): Promise<BlobDescriptor[]> {
   console.log('Mirroring blobs to servers', mirrorServers, blob)
-  const auth = await BlossomClient.createUploadAuth(signer, blob.sha256)
+
   const results = await Promise.allSettled(
     mirrorServers.map(async server => {
+      // Check if file already exists on this server
+      const fileExists = await checkFileExists(server, blob.sha256)
+      if (fileExists) {
+        console.debug(`File already exists on ${server}, skipping mirror`)
+        return createMockBlobDescriptor(
+          server,
+          blob.sha256,
+          blob.size,
+          blob.type || 'application/octet-stream'
+        )
+      }
+
+      console.debug(`File does not exist on ${server}, proceeding with mirror`)
+      const auth = await BlossomClient.createUploadAuth(signer, blob.sha256)
       return await BlossomClient.mirrorBlob(server, blob, { auth })
     })
   )
@@ -68,6 +93,45 @@ export interface ChunkedUploadProgress {
 export interface ChunkedUploadCallbacks {
   onProgress?: (progress: ChunkedUploadProgress) => void
   onChunkComplete?: (chunkIndex: number, totalChunks: number) => void
+}
+
+/**
+ * Create a mock BlobDescriptor for existing files
+ */
+function createMockBlobDescriptor(
+  server: string,
+  fileHash: string,
+  size: number,
+  type: string
+): BlobDescriptor {
+  return {
+    sha256: fileHash,
+    size: size,
+    type: type,
+    url: `${server}/${fileHash}`,
+    uploaded: Date.now(),
+  } as BlobDescriptor
+}
+
+/**
+ * Check if a file already exists on a server by making a HEAD request
+ * with the SHA256 hash in the URL or as a query parameter
+ */
+export async function checkFileExists(server: string, fileHash: string): Promise<boolean> {
+  try {
+    // Try HEAD request with hash as path parameter
+    const response = await fetch(`${server}/${fileHash}`, {
+      method: 'HEAD',
+    })
+
+    console.debug(`File existence check for ${server}:`, response.status)
+
+    // 200 means file exists, 404 means it doesn't exist
+    return response.status === 200
+  } catch (error) {
+    console.debug(`Failed to check file existence for ${server}:`, error)
+    return false
+  }
 }
 
 /**
@@ -338,8 +402,19 @@ export async function uploadFileToMultipleServersChunked({
   options?: ChunkedUploadOptions
   callbacks?: ChunkedUploadCallbacks
 }): Promise<BlobDescriptor[]> {
+  // Calculate file hash once for all servers
+  const fileHash = await calculateSHA256(file)
+
   const results = await Promise.allSettled(
     servers.map(async server => {
+      // Check if file already exists on this server
+      const fileExists = await checkFileExists(server, fileHash)
+      if (fileExists) {
+        console.debug(`File already exists on ${server}, skipping chunked upload`)
+        return createMockBlobDescriptor(server, fileHash, file.size, file.type)
+      }
+
+      console.debug(`File does not exist on ${server}, proceeding with chunked upload`)
       return await uploadFileChunked(file, server, signer, options, callbacks)
     })
   )

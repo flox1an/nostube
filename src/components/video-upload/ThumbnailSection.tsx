@@ -25,7 +25,6 @@ export function ThumbnailSection({
   thumbnailBlob,
   thumbnailUrl,
   onThumbnailDrop,
-  isThumbDragActive,
   thumbnailUploadInfo,
 }: ThumbnailSectionProps) {
   return (
@@ -48,7 +47,7 @@ export function ThumbnailSection({
       </RadioGroup>
 
       {thumbnailSource === 'generated' && thumbnailBlob && (
-        <div className="mt-4">
+        <div className="">
           <img
             src={thumbnailUrl}
             alt="Generated thumbnail"

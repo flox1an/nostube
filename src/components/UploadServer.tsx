@@ -101,7 +101,8 @@ export function UploadServer({
         </>
       )}
 
-      {/* Progress spinner while processing */}
+      {/* Progress spinner while processing 
+      maybe not needed anymore due to chunked upload progress indicator
       {uploadState === 'uploading' && (
         <div className="flex items-center gap-2 mt-4">
           <Loader2 className="animate-spin h-5 w-5 text-primary" />
@@ -110,6 +111,7 @@ export function UploadServer({
           </span>
         </div>
       )}
+        */}
     </div>
   )
 }

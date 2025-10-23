@@ -1,23 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { X, Loader2, Trash, Upload, Link } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import { useAppContext } from '@/hooks/useAppContext';
 import { mirrorBlobsToServers, uploadFileToMultipleServers } from '@/lib/blossom-upload';
-import { useDropzone } from 'react-dropzone';
 import { BlobDescriptor } from 'blossom-client-sdk';
 import { useNavigate } from 'react-router-dom';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils';
 import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection';
-import { Checkbox } from './ui/checkbox';
 import { UploadServer } from './UploadServer';
+import {
+  InputMethodSelector,
+  UrlInputSection,
+  FileDropzone,
+  VideoPreview,
+  FormFields,
+  ContentWarning,
+  ThumbnailSection
+} from './video-upload';
 
 export function VideoUpload() {
   const [title, setTitle] = useState('');
@@ -383,15 +385,6 @@ export function VideoUpload() {
       });
     }
   };
-  const {
-    getRootProps: getThumbRootProps,
-    getInputProps: getThumbInputProps,
-    isDragActive: isThumbDragActive,
-  } = useDropzone({
-    onDrop: handleThumbnailDrop,
-    accept: { 'image/*': [] },
-    multiple: false,
-  });
 
   const handleThumbnailSourceChange = (value: string) => {
     setThumbnailSource(value as 'generated' | 'upload');
@@ -468,11 +461,6 @@ export function VideoUpload() {
     setUploadState('finished');
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'video/*': [] },
-    multiple: false,
-  });
 
   // Memoize the video URL for thumbnail generation (works for both uploaded files and URLs)
   const currentVideoUrl = useMemo(() => {
@@ -538,7 +526,8 @@ export function VideoUpload() {
         })
         .catch(() => {});
     } else {
-      setThumbnailBlob(null);
+      // Clear thumbnail when no video URL
+      setTimeout(() => setThumbnailBlob(null), 0);
     }
     // No cleanup needed, so return void
     return undefined;
@@ -598,170 +587,44 @@ export function VideoUpload() {
         <CardContent className="flex flex-col gap-4">
           {/* Input method selection - hide after processing */}
           {uploadState === 'initial' && (
-            <div className="flex flex-col gap-2">
-              <Label>Video Source</Label>
-              <RadioGroup
-                value={inputMethod}
-                onValueChange={(value: 'file' | 'url') => setInputMethod(value)}
-                className="flex gap-6"
-                aria-label="Video source method"
-              >
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="file" id="file-upload" />
-                  <Label htmlFor="file-upload" className="flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Upload File
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="url" id="url-input" />
-                  <Label htmlFor="url-input" className="flex items-center gap-2">
-                    <Link className="w-4 h-4" />
-                    From URL
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <InputMethodSelector
+              value={inputMethod}
+              onChange={setInputMethod}
+            />
           )}
 
           {/* URL input field - hide after processing */}
           {inputMethod === 'url' && uploadState !== 'finished' && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="video-url">Video URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="video-url"
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://example.com/video.mp4"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={() => handleUrlVideoProcessing(videoUrl)}
-                  disabled={!videoUrl || uploadState === 'uploading'}
-                >
-                  {uploadState === 'uploading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Process'}
-                </Button>
-              </div>
-            </div>
+            <UrlInputSection
+              videoUrl={videoUrl}
+              onVideoUrlChange={setVideoUrl}
+              onProcess={() => handleUrlVideoProcessing(videoUrl)}
+              isProcessing={uploadState === 'uploading'}
+            />
           )}
 
-          {/* Dropzone or video preview + info */}
+          {/* Video preview or dropzone */}
           {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) || (inputMethod === 'url' && uploadInfo.videoUrl) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <div className="w-full">
-                <video
-                  controls
-                  className="w-full rounded-lg border shadow max-h-[320px]"
-                  poster={undefined}
-                  crossOrigin="anonymous"
-                >
-                  {/* Main video source - either from URL or uploaded file */}
-                  <source src={inputMethod === 'url' ? uploadInfo.videoUrl : uploadInfo.uploadedBlobs[0]?.url} />
-                  {/* Fallback sources if more than one blob exists (only for uploaded files) */}
-                  {inputMethod === 'file' && uploadInfo.uploadedBlobs.slice(1).map((blob, idx) => (
-                    <source key={blob.url || idx} src={blob.url} />
-                  ))}
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-              <div>
-                <div className="mt-0 p-3 bg-muted rounded border text-sm">
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 items-center">
-                    <div className="text-muted-foreground">Dimension:</div>
-                    <div>
-                      <span className="font-mono">{uploadInfo.dimension}</span>
-                    </div>
-                    {inputMethod === 'file' && uploadInfo.sizeMB && (
-                      <>
-                        <div className="text-muted-foreground">Size:</div>
-                        <div>
-                          <span className="font-mono">{uploadInfo.sizeMB} MB</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="text-muted-foreground">Duration:</div>
-                    <div>
-                      <span className="font-mono">{uploadInfo.duration} seconds</span>
-                    </div>
-                    {uploadInfo.videoCodec && (
-                      <>
-                        <div className="text-muted-foreground">Video Codec:</div>
-                        <div>
-                          <span className="font-mono">{uploadInfo.videoCodec}</span>
-                        </div>
-                        {uploadInfo.videoCodec.startsWith('av01') && (
-                          <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                            <b>Warning:</b> AV1 videos (<code>av01</code>) cannot be played on iOS or Safari browsers.
-                            Please use H.264/AVC for maximum compatibility.
-                          </div>
-                        )}
-                        {uploadInfo.videoCodec.startsWith('vp09') && (
-                          <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                            <b>Warning:</b> VP9 videos (<code>vp09</code>) are not supported on iOS or Safari browsers.
-                            For maximum compatibility, use H.264/AVC.
-                          </div>
-                        )}
-                        {uploadInfo.videoCodec.startsWith('hev1') && (
-                          <div className="col-span-2 mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded p-2">
-                            <b>Warning:</b> While H.265 (<code>hev1</code>) is widely supported, this video will not play on iOS/Apple devices.
-                            A <code>hvc1</code> codec identifier is needed.
-                          </div>
-                        )}
-                        {uploadInfo.videoCodec.startsWith('hvc1') && (
-                          <div className="col-span-2 mt-2 text-sm text-blue-800 bg-blue-100 border border-blue-300 rounded p-2">
-                            <b>Info:</b> H.265/HEVC (<code>hvc1</code>) is widely supported. Only some de-googled Linux
-                            browsers may have issues.
-                          </div>
-                        )}
-                        {uploadInfo.videoCodec.startsWith('avc1') && (
-                          <div className="col-span-2 mt-2 text-sm text-green-800 bg-green-100 border border-green-300 rounded p-2">
-                            <b>Great:</b> H.264/AVC (<code>avc1</code>) is the most widely supported video codec and
-                            will play on all browsers and devices.
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {uploadInfo.audioCodec && (
-                      <>
-                        <div className="text-muted-foreground">Audio Codec:</div>
-                        <div>
-                          <span className="font-mono">{uploadInfo.audioCodec}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <VideoPreview
+              inputMethod={inputMethod}
+              uploadedBlobs={uploadInfo.uploadedBlobs}
+              videoUrl={uploadInfo.videoUrl}
+              dimension={uploadInfo.dimension}
+              sizeMB={uploadInfo.sizeMB}
+              duration={uploadInfo.duration}
+              videoCodec={uploadInfo.videoCodec}
+              audioCodec={uploadInfo.audioCodec}
+            />
           ) : inputMethod === 'file' && blossomInitalUploadServers && blossomInitalUploadServers.length > 0 ? (
-            <div
+            <FileDropzone
+              onDrop={onDrop}
+              accept={{ 'video/*': [] }}
+              selectedFile={file}
               className="mb-4"
               style={{
                 display: uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0 ? 'none' : undefined,
               }}
-            >
-              <div
-                {...getRootProps()}
-                className={
-                  `flex flex-col items-center h-32 justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ` +
-                  (isDragActive ? 'border-primary bg-muted' : 'border-gray-300 bg-background hover:bg-muted')
-                }
-              >
-                <input {...getInputProps()} />
-                <span className="text-base text-muted-foreground">
-                  {isDragActive ? 'Drop the video here...' : 'Drag & drop a video file here, or click to select'}
-                </span>
-                {file && (
-                  <div className="mt-2 text-sm text-foreground">
-                    <b>Selected:</b> {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                  </div>
-                )}
-              </div>
-            </div>
+            />
           ) : inputMethod === 'file' ? (
             <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
               <span>
@@ -787,129 +650,41 @@ export function VideoUpload() {
           {/* Show form fields only after upload has started */}
           {uploadState !== 'initial' && (
             <>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
-              </div>
+              <FormFields
+                title={title}
+                onTitleChange={setTitle}
+                description={description}
+                onDescriptionChange={setDescription}
+                tags={tags}
+                tagInput={tagInput}
+                onTagInputChange={setTagInput}
+                onAddTag={handleAddTag}
+                onPaste={handlePaste}
+                onRemoveTag={removeTag}
+                onTagInputBlur={() => {
+                  if (tagInput.trim()) {
+                    addTagsFromInput(tagInput);
+                    setTagInput('');
+                  }
+                }}
+              />
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                />
-              </div>
+              <ThumbnailSection
+                thumbnailSource={thumbnailSource}
+                onThumbnailSourceChange={handleThumbnailSourceChange}
+                thumbnailBlob={thumbnailBlob}
+                thumbnailUrl={thumbnailUrl}
+                onThumbnailDrop={handleThumbnailDrop}
+                isThumbDragActive={false}
+                thumbnailUploadInfo={thumbnailUploadInfo}
+              />
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="tags">Tags</Label>
-                <Input
-                  id="tags"
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  onPaste={handlePaste}
-                  onBlur={() => {
-                    if (tagInput.trim()) {
-                      addTagsFromInput(tagInput);
-                      setTagInput('');
-                    }
-                  }}
-                  placeholder="Press Enter to add tags, or paste space-separated tags"
-                />
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="thumbnail">Thumbnail</Label>
-                <RadioGroup
-                  value={thumbnailSource}
-                  onValueChange={handleThumbnailSourceChange}
-                  className="flex gap-4 mb-2"
-                  aria-label="Thumbnail source"
-                >
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="generated" id="generated-thumb" />
-                    <Label htmlFor="generated-thumb">Use generated thumbnail</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="upload" id="upload-thumb" />
-                    <Label htmlFor="upload-thumb">Upload custom thumbnail</Label>
-                  </div>
-                </RadioGroup>
-                {thumbnailSource === 'generated' && thumbnailBlob && (
-                  <div className="mt-4">
-                    <img src={thumbnailUrl} alt="Generated thumbnail" className="rounded border mt-2 max-h-[320px]" />
-                  </div>
-                )}
-                {thumbnailSource === 'upload' && (
-                  <div className="mb-2">
-                    <div
-                      {...getThumbRootProps()}
-                      className={
-                        `flex flex-col items-center h-24 justify-center mb-4 border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ` +
-                        (isThumbDragActive ? 'border-primary bg-muted' : 'border-gray-300 bg-background hover:bg-muted')
-                      }
-                    >
-                      <input {...getThumbInputProps()} />
-                      <span className="text-base text-muted-foreground">
-                        {isThumbDragActive
-                          ? 'Drop the thumbnail here...'
-                          : 'Drag & drop a thumbnail image, or click to select'}
-                      </span>
-                    </div>
-
-                    {thumbnailUploadInfo.error && (
-                      <div className="text-red-600 text-sm mt-2">{thumbnailUploadInfo.error}</div>
-                    )}
-                    <UploadServer
-                      inputMethod="file"
-                      uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
-                      uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
-                      mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
-                      hasInitialUploadServers={true}
-                      forceShow={thumbnailUploadInfo.uploadedBlobs.length > 0 || thumbnailUploadInfo.mirroredBlobs.length > 0}
-                    />
-                  </div>
-                )}
-                {/* Content warning option */}
-                <div className="flex items-center gap-2 mt-4">
-                  <Checkbox
-                    id="content-warning"
-                    defaultChecked={false}
-                    required={false}
-                    checked={contentWarningEnabled}
-                    onCheckedChange={e => setContentWarningEnabled(e as boolean)}
-                  />
-                  <Label htmlFor="content-warning">Mark as NSFW / add content warning</Label>
-                </div>
-                {contentWarningEnabled && (
-                  <div className="flex flex-col gap-1 mt-2">
-                    <Label htmlFor="content-warning-reason">Reason (optional)</Label>
-                    <Input
-                      id="content-warning-reason"
-                      value={contentWarningReason}
-                      onChange={e => setContentWarningReason(e.target.value)}
-                      placeholder="e.g. nudity, violence, etc."
-                    />
-                  </div>
-                )}
-              </div>
+              <ContentWarning
+                enabled={contentWarningEnabled}
+                reason={contentWarningReason}
+                onEnabledChange={setContentWarningEnabled}
+                onReasonChange={setContentWarningReason}
+              />
             </>
           )}
         </CardContent>

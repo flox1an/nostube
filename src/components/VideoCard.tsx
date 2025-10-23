@@ -76,10 +76,11 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
               onError={err => console.error('error loading', video.images[0], err)}
             />
             {video.contentWarning && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-sm">
-                <b>Content warning</b>
-                <br />
-                {video.contentWarning}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                <div className="text-2xl font-bold text-white drop-shadow-lg">Content warning</div>
+                <div className="text-base font-semibold text-white drop-shadow-lg mt-4">
+                  {video.contentWarning}
+                </div>
               </div>
             )}
             {/* Progress bar at bottom of thumbnail */}

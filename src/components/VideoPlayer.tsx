@@ -16,6 +16,7 @@ interface VideoPlayerProps {
   poster?: string
   onTimeUpdate?: (time: number) => void
   className?: string
+  contentWarning?: string
   /**
    * Initial play position in seconds
    */
@@ -30,6 +31,7 @@ export function VideoPlayer({
   loop = false,
   onTimeUpdate,
   className,
+  contentWarning,
   initialPlayPos = 0,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -224,7 +226,7 @@ export function VideoPlayer({
         <hls-video
           src={urls[currentUrlIndex]}
           slot="media"
-          autoPlay
+          autoPlay={!contentWarning}
           loop={loop}
           poster={posterUrl}
           crossOrigin="anonymous"
@@ -239,7 +241,7 @@ export function VideoPlayer({
           src={urls[currentUrlIndex]}
           ref={videoRef}
           slot="media"
-          autoPlay
+          autoPlay={!contentWarning}
           loop={loop}
           poster={posterUrl}
           onTimeUpdate={handleTimeUpdate}

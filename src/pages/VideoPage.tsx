@@ -314,6 +314,7 @@ export function VideoPage() {
                   className="w-full max-h-[80dvh] aspect-video rounded-lg"
                   onTimeUpdate={setCurrentPlayPos}
                   initialPlayPos={initialPlayPos}
+                  contentWarning={video.contentWarning}
                 />
                 <div className="flex flex-col gap-4 p-4">
                   {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}

@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Trash } from 'lucide-react'
 import { useAppContext } from '@/hooks/useAppContext'
-import { mirrorBlobsToServers, uploadFileToMultipleServers } from '@/lib/blossom-upload'
+import {
+  mirrorBlobsToServers,
+  uploadFileToMultipleServers,
+  uploadFileToMultipleServersChunked,
+  type ChunkedUploadProgress,
+  type ChunkedUploadCallbacks,
+} from '@/lib/blossom-upload'
 import { BlobDescriptor } from 'blossom-client-sdk'
 import { useNavigate } from 'react-router-dom'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
@@ -51,6 +57,7 @@ export function VideoUpload() {
   }>({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
   const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
   const [contentWarningReason, setContentWarningReason] = useState('')
+  const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
 
   const { user } = useCurrentUser()
   const { config } = useAppContext()
@@ -418,13 +425,29 @@ export function VideoUpload() {
       setFile(file)
       setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
       setUploadState('uploading')
+      setUploadProgress(null)
+
       // Start upload automatically
       try {
-        const uploadedBlobs = await uploadFileToMultipleServers({
+        // Use chunked upload for better performance with large files
+        const uploadedBlobs = await uploadFileToMultipleServersChunked({
           file: acceptedFiles[0],
           servers: blossomInitalUploadServers.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
+          options: {
+            chunkSize: 30 * 1024 * 1024, // 30MB chunks
+            maxConcurrentChunks: 2, // Upload 2 chunks concurrently
+          },
+          callbacks: {
+            onProgress: progress => {
+              setUploadProgress(progress)
+            },
+            onChunkComplete: (chunkIndex, totalChunks) => {
+              console.log(`Chunk ${chunkIndex + 1}/${totalChunks} completed`)
+            },
+          },
         })
+
         // Calculate video duration and dimensions
         const video = document.createElement('video')
         video.src = URL.createObjectURL(acceptedFiles[0])
@@ -464,13 +487,16 @@ export function VideoUpload() {
             mirroredBlobs,
           }))
         }
-      } catch {
+      } catch (error) {
+        console.error('Upload failed:', error)
         setUploadState('initial')
         setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+        setUploadProgress(null)
         // Optionally show error toast
       }
     }
     setUploadState('finished')
+    setUploadProgress(null)
   }
 
   // Memoize the video URL for thumbnail generation (works for both uploaded files and URLs)
@@ -574,6 +600,7 @@ export function VideoUpload() {
     setThumbnailBlob(null)
     setThumbnailSource('generated')
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
+    setUploadProgress(null)
   }
 
   if (!user) {
@@ -667,6 +694,27 @@ export function VideoUpload() {
               !!(blossomInitalUploadServers && blossomInitalUploadServers.length > 0)
             }
           />
+
+          {/* Upload progress indicator */}
+          {uploadProgress && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Uploading video...</span>
+                <span>{uploadProgress.percentage}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress.percentage}%` }}
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks} •
+                {Math.round(uploadProgress.uploadedBytes / 1024 / 1024)}MB /{' '}
+                {Math.round(uploadProgress.totalBytes / 1024 / 1024)}MB
+              </div>
+            </div>
+          )}
 
           {/* Show form fields only after upload has started */}
           {uploadState !== 'initial' && (

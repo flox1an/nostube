@@ -66,8 +66,8 @@ export function VideoMetadata({
             )}
             {videoCodec.startsWith('avc1') && (
               <div className="col-span-2 mt-2 text-sm text-green-800 bg-green-100 border border-green-300 rounded p-2">
-                <b>Great:</b> H. поддержку.264/AVC (<code>avc1</code>) is the most widely supported
-                video codec and will play on all browsers and devices.
+                <b>Great:</b> H.264/AVC (<code>avc1</code>) is the most widely supported video codec
+                and will play on all browsers and devices.
               </div>
             )}
           </>

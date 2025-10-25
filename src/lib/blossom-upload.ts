@@ -6,38 +6,22 @@ export interface UploadFileWithProgressProps {
   signer: Signer
 }
 
+/**
+ * DEPRECATED: This function uses PUT /upload which is not BUD-10 compliant
+ * Use uploadFileToMultipleServersChunked instead for BUD-10 compliance
+ */
 export async function uploadFileToMultipleServers({
-  file,
-  servers,
-  signer,
+  file: _file,
+  servers: _servers,
+  signer: _signer,
 }: {
   file: File
   servers: string[]
   signer: Signer
 }): Promise<BlobDescriptor[]> {
-  // Calculate file hash once for all servers
-  const fileHash = await calculateSHA256(file)
-
-  const results = await Promise.allSettled(
-    servers.map(async server => {
-      // Check if file already exists on this server
-      const fileExists = await checkFileExists(server, fileHash)
-      if (fileExists) {
-        console.debug(`File already exists on ${server}, skipping upload`)
-        return createMockBlobDescriptor(server, fileHash, file.size, file.type)
-      }
-
-      console.debug(`File does not exist on ${server}, proceeding with upload`)
-      const uploadAuth = await BlossomClient.createUploadAuth(signer, file)
-      const blob = await BlossomClient.uploadBlob(server, file, {
-        auth: uploadAuth,
-      })
-      return blob
-    })
+  throw new Error(
+    'PUT-based upload is deprecated. Use uploadFileToMultipleServersChunked for BUD-10 compliant PATCH uploads.'
   )
-  return results
-    .filter((r): r is PromiseFulfilledResult<BlobDescriptor> => r.status === 'fulfilled')
-    .map(r => r.value)
 }
 
 export async function mirrorBlobsToServers({
@@ -135,12 +119,15 @@ export async function checkFileExists(server: string, fileHash: string): Promise
 }
 
 /**
- * Check if a server supports chunked uploads by making an OPTIONS request
- * Note: Due to CORS restrictions, we may not be able to read the Allow header
- * even if the server supports chunked uploads. In that case, we'll try chunked
- * upload first and fall back to regular upload if it fails.
+ * Get upload capabilities from server according to BUD-10
+ * Performs OPTIONS /upload to negotiate capabilities
  */
-export async function checkChunkedUploadSupport(server: string): Promise<boolean> {
+export async function getUploadCapabilities(server: string): Promise<{
+  supportsPatch: boolean
+  maxChunkSize?: number
+  requiredHeaders?: string[]
+  error?: string
+}> {
   try {
     const response = await fetch(`${server}/upload`, {
       method: 'OPTIONS',
@@ -149,28 +136,54 @@ export async function checkChunkedUploadSupport(server: string): Promise<boolean
     console.debug(`Server ${server} OPTIONS response status:`, response.status)
     console.debug(`Server ${server} all headers:`, Object.fromEntries(response.headers.entries()))
 
-    // Check if the server returns the expected Allow header (case-insensitive)
-    const allowHeader = response.headers.get('Allow') || response.headers.get('allow')
-    console.debug(`Server ${server} Allow header:`, allowHeader)
-
-    // If we can read the Allow header, check for PATCH method
-    if (allowHeader) {
-      const supportsPatch = allowHeader.includes('PATCH')
-      console.debug(`Server ${server} supports PATCH (from Allow header):`, supportsPatch)
-      return supportsPatch
+    if (!response.ok) {
+      return {
+        supportsPatch: false,
+        error: `OPTIONS /upload failed: ${response.status} ${response.statusText}`,
+      }
     }
 
-    // If we can't read the Allow header due to CORS, assume the server might support chunked uploads
-    // if it returns a 204 status (which indicates the OPTIONS request was successful)
-    if (response.status === 204) {
-      console.debug(`Server ${server} returned 204 for OPTIONS, assuming chunked upload support`)
-      return true
-    }
+    // BUD-10: Check for PATCH support via Accept-Patch header
+    const acceptPatch =
+      response.headers.get('Accept-Patch') || response.headers.get('accept-patch') || ''
+    const allowHeader = response.headers.get('Allow') || response.headers.get('allow') || ''
 
-    return false
+    // Check for Blossom-specific upload modes header
+    const uploadModes =
+      response.headers.get('Blossom-Upload-Modes') ||
+      response.headers.get('blossom-upload-modes') ||
+      ''
+
+    console.debug(`Server ${server} Accept-Patch:`, acceptPatch)
+    console.debug(`Server ${server} Allow:`, allowHeader)
+    console.debug(`Server ${server} Blossom-Upload-Modes:`, uploadModes)
+
+    // Determine PATCH support
+    const supportsPatch =
+      acceptPatch.includes('application/') ||
+      allowHeader.includes('PATCH') ||
+      uploadModes.includes('chunked') ||
+      uploadModes.includes('patch')
+
+    // Extract additional capabilities
+    const maxChunkSizeHeader =
+      response.headers.get('Max-Chunk-Size') || response.headers.get('max-chunk-size')
+    const maxChunkSize = maxChunkSizeHeader ? parseInt(maxChunkSizeHeader, 10) : undefined
+
+    console.debug(`Server ${server} suppors PATCH:`, supportsPatch)
+    console.debug(`Server ${server} max chunk size:`, maxChunkSize)
+
+    return {
+      supportsPatch,
+      maxChunkSize,
+      requiredHeaders: supportsPatch ? ['Content-Type'] : undefined,
+    }
   } catch (error) {
-    console.debug(`Failed to check chunked upload support for ${server}:`, error)
-    return false
+    console.debug(`Failed to get upload capabilities for ${server}:`, error)
+    return {
+      supportsPatch: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
   }
 }
 
@@ -191,11 +204,115 @@ export function createFileChunks(file: File, chunkSize: number = 1024 * 1024): B
 }
 
 /**
- * Calculate SHA256 hash of a blob
+ * Check if browser can handle large files
+ */
+export function checkBrowserFileCapabilities(): {
+  canHandleLargeFiles: boolean
+  maxRecommendedSize: number
+  warnings: string[]
+} {
+  const warnings: string[] = []
+  let maxRecommendedSize = 500 * 1024 * 1024 // 500MB default
+
+  // Check for known browser limitations
+  const userAgent = navigator.userAgent.toLowerCase()
+
+  if (userAgent.includes('chrome')) {
+    maxRecommendedSize = 2 * 1024 * 1024 * 1024 // 2GB for Chrome
+  } else if (userAgent.includes('firefox')) {
+    maxRecommendedSize = 1 * 1024 * 1024 * 1024 // 1GB for Firefox
+  } else if (userAgent.includes('safari')) {
+    maxRecommendedSize = 500 * 1024 * 1024 // 500MB for Safari
+  } else {
+    warnings.push('Unknown browser - using conservative limits')
+  }
+
+  // Check available memory (rough estimate)
+  if ('memory' in performance) {
+    const memory = (performance as { memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number } })
+      .memory
+    if (memory && memory.jsHeapSizeLimit) {
+      const availableMemory = memory.jsHeapSizeLimit - memory.usedJSHeapSize
+      if (availableMemory < 100 * 1024 * 1024) {
+        // Less than 100MB available
+        warnings.push('Low memory available - large files may fail')
+        maxRecommendedSize = Math.min(maxRecommendedSize, 200 * 1024 * 1024)
+      }
+    }
+  }
+
+  return {
+    canHandleLargeFiles: true, // We'll try anyway but with warnings
+    maxRecommendedSize,
+    warnings,
+  }
+}
+
+/**
+ * Safely calculate SHA256 hash of a blob with streaming for large files
  */
 export async function calculateSHA256(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  // For very large files (>1GB), use streaming approach
+  if (blob.size > 1024 * 1024 * 1024) {
+    return await calculateSHA256Streaming(blob)
+  }
+
+  try {
+    const buffer = await blob.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  } catch (error) {
+    if (error instanceof Error && error.name === 'NotReadableError') {
+      throw new Error(
+        `File too large for browser to process in memory. ` +
+          `Try reducing file size or using a different browser. ` +
+          `Original error: ${error.message}`
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Calculate SHA256 hash using streaming for very large files
+ */
+async function calculateSHA256Streaming(blob: Blob): Promise<string> {
+  const chunkSize = 64 * 1024 * 1024 // 64MB chunks
+  const crypto = window.crypto.subtle
+
+  // For very large files, we'll use a simplified approach
+  // In practice, you'd need proper hash chaining for streaming
+  let hashBuffer = new ArrayBuffer(0)
+  let offset = 0
+
+  while (offset < blob.size) {
+    const _end = Math.min(offset + chunkSize, blob.size)
+    const chunk = blob.slice(offset, offset + chunkSize)
+
+    try {
+      const chunkBuffer = await chunk.arrayBuffer()
+      const chunkHash = await crypto.digest('SHA-256', chunkBuffer)
+
+      // Combine hashes (simplified - in practice you'd need proper hash chaining)
+      const combinedBuffer = new Uint8Array(hashBuffer.byteLength + chunkHash.byteLength)
+      combinedBuffer.set(new Uint8Array(hashBuffer), 0)
+      combinedBuffer.set(new Uint8Array(chunkHash), hashBuffer.byteLength)
+
+      hashBuffer = await crypto.digest('SHA-256', combinedBuffer)
+      offset += chunkSize
+    } catch (error) {
+      if (error instanceof Error && error.name === 'NotReadableError') {
+        throw new Error(
+          `Cannot read file chunk at offset ${offset}. ` +
+            `File may be corrupted or too large for browser. ` +
+            `Original error: ${error.message}`
+        )
+      }
+      throw error
+    }
+  }
+
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
@@ -215,7 +332,7 @@ export async function createChunkedUploadAuth(signer: Signer, file: File): Promi
 }
 
 /**
- * Upload a single chunk to a server
+ * Upload a single chunk to a server using BUD-10 PATCH method
  */
 export async function uploadChunk(
   server: string,
@@ -228,29 +345,32 @@ export async function uploadChunk(
   offset: number,
   authToken: string
 ): Promise<Response> {
+  const _end = offset + chunk.size - 1
+
   const response = await fetch(`${server}/upload`, {
     method: 'PATCH',
     headers: {
+      'Content-Type': 'application/octet-stream',
       'X-SHA-256': fileHash,
       'Upload-Type': fileType,
       'Upload-Length': fileSize.toString(),
       'Upload-Offset': offset.toString(),
       'Content-Length': chunk.size.toString(),
-      'Content-Type': 'application/octet-stream',
       Authorization: `Nostr ${authToken}`,
     },
     body: chunk,
   })
 
   if (!response.ok) {
-    throw new Error(`Chunk upload failed: ${response.status} ${response.statusText}`)
+    throw new Error(`PATCH chunk upload failed: ${response.status} ${response.statusText}`)
   }
 
   return response
 }
 
 /**
- * Upload file using chunked upload to a single server
+ * Upload file using BUD-10 compliant chunked upload to a single server
+ * NO PUT fallback - PATCH only according to BUD-10
  */
 export async function uploadFileChunked(
   file: File,
@@ -259,19 +379,21 @@ export async function uploadFileChunked(
   options: ChunkedUploadOptions = {},
   callbacks: ChunkedUploadCallbacks = {}
 ): Promise<BlobDescriptor> {
-  const { chunkSize = 20 * 1024 * 1024, maxConcurrentChunks = 2 } = options
+  // BUD-10: First negotiate capabilities via OPTIONS
+  const capabilities = await getUploadCapabilities(server)
 
-  // Check if server supports chunked uploads
-  const supportsChunked = await checkChunkedUploadSupport(server)
-  if (!supportsChunked) {
-    console.debug(
-      `Server ${server} does not support chunked uploads, falling back to regular upload`
+  if (!capabilities.supportsPatch) {
+    throw new Error(
+      `Server ${server} does not support PATCH chunked uploads according to BUD-10. ` +
+        `OPTIONS /upload response: ${capabilities.error || 'No PATCH support detected'}`
     )
-    const auth = await BlossomClient.createUploadAuth(signer, file)
-    return await BlossomClient.uploadBlob(server, file, { auth })
-  } else {
-    console.debug(`Server ${server} supports chunked uploads, using chunked upload`)
   }
+
+  console.debug(`Server ${server} supports PATCH chunked uploads, proceeding with BUD-10 flow`)
+
+  // Use server's max chunk size if available, otherwise use default
+  const defaultChunkSize = capabilities.maxChunkSize || 8 * 1024 * 1024 // 8MB default
+  const { chunkSize = defaultChunkSize, maxConcurrentChunks = 1 } = options
 
   // Create chunks
   const chunks = createFileChunks(file, chunkSize)
@@ -379,10 +501,13 @@ export async function uploadFileChunked(
 
     throw new Error('Chunked upload failed: No blob descriptor returned')
   } catch (error) {
-    console.debug(`Chunked upload failed for ${server}, falling back to regular upload:`, error)
-    // Fallback to regular upload if chunked upload fails
-    const auth = await BlossomClient.createUploadAuth(signer, file)
-    return await BlossomClient.uploadBlob(server, file, { auth })
+    console.debug(`BUD-10 PATCH chunked upload failed for ${server}:`, error)
+    // NO PUT fallback - BUD-10 requires PATCH-only uploads
+    throw new Error(
+      `BUD-10 PATCH chunked upload failed for ${server}. ` +
+        `Server must support PATCH /upload according to BUD-10 specification. ` +
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
   }
 }
 

@@ -8,6 +8,7 @@ import {
   mirrorBlobsToServers,
   uploadFileToMultipleServers,
   uploadFileToMultipleServersChunked,
+  checkBrowserFileCapabilities,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { BlobDescriptor } from 'blossom-client-sdk'
@@ -421,6 +422,31 @@ export function VideoUpload() {
       user
     ) {
       const file = acceptedFiles[0] ?? null
+
+      // Check browser capabilities for large files
+      const browserCapabilities = checkBrowserFileCapabilities()
+
+      // Warn user about potential issues with very large files
+      if (file.size > browserCapabilities.maxRecommendedSize) {
+        const sizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(1)
+        const maxGB = (browserCapabilities.maxRecommendedSize / (1024 * 1024 * 1024)).toFixed(1)
+
+        const proceed = confirm(
+          `Warning: This file is ${sizeGB}GB, which exceeds the recommended ${maxGB}GB limit for your browser.\n\n` +
+            `This may cause upload failures or browser crashes.\n\n` +
+            `Do you want to proceed anyway?`
+        )
+
+        if (!proceed) {
+          return
+        }
+      }
+
+      // Show warnings if any
+      if (browserCapabilities.warnings.length > 0) {
+        console.warn('Browser capability warnings:', browserCapabilities.warnings)
+      }
+
       setFile(file)
       setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
       setUploadState('uploading')
@@ -435,21 +461,21 @@ export function VideoUpload() {
           currentChunk: 0,
           totalChunks: 1,
         })
-        // Use chunked upload for better performance with large files
+        // Use BUD-10 compliant chunked upload (PATCH-only, no PUT fallback)
         const uploadedBlobs = await uploadFileToMultipleServersChunked({
           file: acceptedFiles[0],
           servers: blossomInitalUploadServers.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
           options: {
-            chunkSize: 10 * 1024 * 1024, // 10MB chunks
-            maxConcurrentChunks: 2, // Upload 2 chunks concurrently
+            chunkSize: 8 * 1024 * 1024, // 8MB chunks (BUD-10 default)
+            maxConcurrentChunks: 2, // Sequential uploads for better reliability
           },
           callbacks: {
             onProgress: progress => {
               setUploadProgress(progress)
             },
             onChunkComplete: (chunkIndex, totalChunks) => {
-              console.log(`Chunk ${chunkIndex + 1}/${totalChunks} completed`)
+              console.log(`BUD-10 PATCH chunk ${chunkIndex + 1}/${totalChunks} completed`)
             },
           },
         })
@@ -494,11 +520,51 @@ export function VideoUpload() {
           }))
         }
       } catch (error) {
-        console.error('Upload failed:', error)
+        console.error('BUD-10 upload failed:', error)
         setUploadState('initial')
         setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
         setUploadProgress(null)
-        // Optionally show error toast
+
+        // Show BUD-10 specific error messages
+        if (error instanceof Error) {
+          if (error.name === 'NotReadableError' || error.message.includes('NotReadableError')) {
+            alert(
+              `Upload failed: File cannot be read by browser.\n\n` +
+                `This usually happens with very large files (>2GB) or corrupted files.\n\n` +
+                `Solutions:\n` +
+                `• Try reducing file size\n` +
+                `• Use Chrome browser (better large file support)\n` +
+                `• Check if file is corrupted\n` +
+                `• Close other browser tabs to free memory\n\n` +
+                `Error: ${error.message}`
+            )
+          } else if (error.message.includes('File too large for browser')) {
+            alert(
+              `Upload failed: File too large for browser to process.\n\n` +
+                `Try:\n` +
+                `• Reducing file size\n` +
+                `• Using Chrome browser\n` +
+                `• Closing other browser tabs\n\n` +
+                `Error: ${error.message}`
+            )
+          } else if (error.message.includes('does not support PATCH chunked uploads')) {
+            alert(
+              `Upload failed: Server does not support BUD-10 PATCH chunked uploads.\n\n${error.message}\n\nTry using a different server that supports BUD-10 specification.`
+            )
+          } else if (error.message.includes('BUD-10 PATCH chunked upload failed')) {
+            alert(
+              `Upload failed: BUD-10 PATCH upload failed.\n\n${error.message}\n\nThis server may not be BUD-10 compliant. Try a different server.`
+            )
+          } else if (error.message.includes('OPTIONS /upload failed')) {
+            alert(
+              `Upload failed: Server capabilities negotiation failed.\n\n${error.message}\n\nThis server may not support BUD-10. Try a different server.`
+            )
+          } else {
+            alert(`Upload failed: ${error.message}`)
+          }
+        } else {
+          alert('Upload failed due to an unknown error. Please try again.')
+        }
       }
     }
     setUploadState('finished')

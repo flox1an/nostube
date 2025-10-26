@@ -58,6 +58,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "hash-wasm": "^4.12.0",
     "hls-video-element": "^1.5.8",
     "hls.js": "^1.6.13",
     "input-otp": "^1.4.2",

@@ -8,7 +8,6 @@ import {
   mirrorBlobsToServers,
   uploadFileToMultipleServers,
   uploadFileToMultipleServersChunked,
-  checkBrowserFileCapabilities,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { BlobDescriptor } from 'blossom-client-sdk'
@@ -423,30 +422,6 @@ export function VideoUpload() {
     ) {
       const file = acceptedFiles[0] ?? null
 
-      // Check browser capabilities for large files
-      const browserCapabilities = checkBrowserFileCapabilities()
-
-      // Warn user about potential issues with very large files
-      if (file.size > browserCapabilities.maxRecommendedSize) {
-        const sizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(1)
-        const maxGB = (browserCapabilities.maxRecommendedSize / (1024 * 1024 * 1024)).toFixed(1)
-
-        const proceed = confirm(
-          `Warning: This file is ${sizeGB}GB, which exceeds the recommended ${maxGB}GB limit for your browser.\n\n` +
-            `This may cause upload failures or browser crashes.\n\n` +
-            `Do you want to proceed anyway?`
-        )
-
-        if (!proceed) {
-          return
-        }
-      }
-
-      // Show warnings if any
-      if (browserCapabilities.warnings.length > 0) {
-        console.warn('Browser capability warnings:', browserCapabilities.warnings)
-      }
-
       setFile(file)
       setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
       setUploadState('uploading')
@@ -467,8 +442,8 @@ export function VideoUpload() {
           servers: blossomInitalUploadServers.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),
           options: {
-            chunkSize: 8 * 1024 * 1024, // 8MB chunks (BUD-10 default)
-            maxConcurrentChunks: 2, // Sequential uploads for better reliability
+            chunkSize: 20 * 1024 * 1024, // 8MB chunks (BUD-10 default)
+            maxConcurrentChunks: 3, // Sequential uploads for better reliability
           },
           callbacks: {
             onProgress: progress => {
@@ -788,6 +763,9 @@ export function VideoUpload() {
                 Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}&nbsp;•&nbsp;
                 {Math.round(uploadProgress.uploadedBytes / 1024 / 1024)}MB /{' '}
                 {Math.round(uploadProgress.totalBytes / 1024 / 1024)}MB
+                {uploadProgress.speedMBps !== undefined && (
+                  <> • {uploadProgress.speedMBps.toFixed(1)} MB/s</>
+                )}
               </div>
             </div>
           )}

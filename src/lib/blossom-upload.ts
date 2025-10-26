@@ -1,4 +1,5 @@
 import { BlobDescriptor, BlossomClient, Signer } from 'blossom-client-sdk'
+import { createSHA256 } from 'hash-wasm'
 
 export interface UploadFileWithProgressProps {
   file: File
@@ -72,6 +73,7 @@ export interface ChunkedUploadProgress {
   percentage: number
   currentChunk: number
   totalChunks: number
+  speedMBps?: number
 }
 
 export interface ChunkedUploadCallbacks {
@@ -180,6 +182,18 @@ export async function getUploadCapabilities(server: string): Promise<{
     }
   } catch (error) {
     console.debug(`Failed to get upload capabilities for ${server}:`, error)
+
+    // Check if this is a CORS error - indicates chunked upload not supported
+    if (error instanceof TypeError) {
+      const errorMessage = error.message.toLowerCase()
+      if (errorMessage.includes('cors') || errorMessage.includes('failed to fetch')) {
+        return {
+          supportsPatch: false,
+          error: 'CORS error: Chunked upload not supported by server',
+        }
+      }
+    }
+
     return {
       supportsPatch: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -188,85 +202,99 @@ export async function getUploadCapabilities(server: string): Promise<{
 }
 
 /**
- * Create chunks from a file
+ * Create chunks from a file using Blob.slice() only
+ * NEVER loads entire file into memory
  */
-export function createFileChunks(file: File, chunkSize: number = 1024 * 1024): Blob[] {
+export function createFileChunks(file: File, chunkSize: number = 8 * 1024 * 1024): Blob[] {
+  console.log(
+    `[CHUNKS] Creating chunks for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB with chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`
+  )
+
   const chunks: Blob[] = []
   let offset = 0
+  let chunkCount = 0
 
   while (offset < file.size) {
     const end = Math.min(offset + chunkSize, file.size)
-    chunks.push(file.slice(offset, end))
+    const chunk = file.slice(offset, end) // Use Blob.slice() only - never loads entire file
+    chunks.push(chunk)
+    chunkCount++
+
+    console.log(
+      `[CHUNKS] Created chunk ${chunkCount}: bytes ${offset}-${end} (${(chunk.size / (1024 * 1024)).toFixed(1)}MB)`
+    )
     offset = end
   }
 
+  console.log(`[CHUNKS] Total chunks created: ${chunkCount}`)
   return chunks
 }
 
 /**
- * Check if browser can handle large files
+ * Safely calculate SHA256 hash of a blob using streaming approach
+ * NEVER loads entire file into memory - uses Blob.slice() only
  */
-export function checkBrowserFileCapabilities(): {
-  canHandleLargeFiles: boolean
-  maxRecommendedSize: number
-  warnings: string[]
-} {
-  const warnings: string[] = []
-  let maxRecommendedSize = 500 * 1024 * 1024 // 500MB default
+export async function calculateSHA256(blob: Blob): Promise<string> {
+  console.log(
+    `[SHA256] Starting hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
+  )
+  const startTime = Date.now()
 
-  // Check for known browser limitations
-  const userAgent = navigator.userAgent.toLowerCase()
+  // Always use streaming approach to avoid memory issues
+  const hash = await calculateSHA256Streaming(blob)
 
-  if (userAgent.includes('chrome')) {
-    maxRecommendedSize = 2 * 1024 * 1024 * 1024 // 2GB for Chrome
-  } else if (userAgent.includes('firefox')) {
-    maxRecommendedSize = 1 * 1024 * 1024 * 1024 // 1GB for Firefox
-  } else if (userAgent.includes('safari')) {
-    maxRecommendedSize = 500 * 1024 * 1024 // 500MB for Safari
-  } else {
-    warnings.push('Unknown browser - using conservative limits')
-  }
+  const duration = Date.now() - startTime
+  console.log(`[SHA256] Hash calculation completed in ${duration}ms: ${hash.substring(0, 16)}...`)
 
-  // Check available memory (rough estimate)
-  if ('memory' in performance) {
-    const memory = (performance as { memory?: { jsHeapSizeLimit: number; usedJSHeapSize: number } })
-      .memory
-    if (memory && memory.jsHeapSizeLimit) {
-      const availableMemory = memory.jsHeapSizeLimit - memory.usedJSHeapSize
-      if (availableMemory < 100 * 1024 * 1024) {
-        // Less than 100MB available
-        warnings.push('Low memory available - large files may fail')
-        maxRecommendedSize = Math.min(maxRecommendedSize, 200 * 1024 * 1024)
-      }
-    }
-  }
-
-  return {
-    canHandleLargeFiles: true, // We'll try anyway but with warnings
-    maxRecommendedSize,
-    warnings,
-  }
+  return hash
 }
 
 /**
- * Safely calculate SHA256 hash of a blob with streaming for large files
+ * Calculate SHA256 hash using streaming approach with hash-wasm
+ * Streams file in chunks to avoid loading entire file into memory
  */
-export async function calculateSHA256(blob: Blob): Promise<string> {
-  // For very large files (>1GB), use streaming approach
-  if (blob.size > 1024 * 1024 * 1024) {
-    return await calculateSHA256Streaming(blob)
-  }
+async function calculateSHA256Streaming(blob: Blob): Promise<string> {
+  const chunkSize = 20 * 1024 * 1024 // 20MB chunks
+  console.log(
+    `[SHA256] Streaming hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
+  )
 
   try {
-    const buffer = await blob.arrayBuffer()
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    // Create SHA256 hasher instance
+    const hasher = await createSHA256()
+
+    // Stream file in chunks and update hash incrementally
+    let offset = 0
+    let chunkCount = 0
+
+    while (offset < blob.size) {
+      const end = Math.min(offset + chunkSize, blob.size)
+      const chunk = blob.slice(offset, end)
+
+      // Read chunk into memory
+      const chunkBuffer = await chunk.arrayBuffer()
+
+      // Update hash with chunk data
+      hasher.update(new Uint8Array(chunkBuffer))
+
+      offset = end
+      chunkCount++
+
+      console.log(
+        `[SHA256] Processed chunk ${chunkCount}: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB`
+      )
+    }
+
+    // Get final hash
+    const hashHex = hasher.digest('hex')
+    console.log(`[SHA256] Hash calculation completed: ${hashHex.substring(0, 16)}...`)
+    return hashHex
   } catch (error) {
+    console.error(`[SHA256] Error calculating hash:`, error)
     if (error instanceof Error && error.name === 'NotReadableError') {
       throw new Error(
-        `File too large for browser to process in memory. ` +
-          `Try reducing file size or using a different browser. ` +
+        `Cannot read file for hash calculation. ` +
+          `File may be corrupted or too large. ` +
           `Original error: ${error.message}`
       )
     }
@@ -275,60 +303,30 @@ export async function calculateSHA256(blob: Blob): Promise<string> {
 }
 
 /**
- * Calculate SHA256 hash using streaming for very large files
+ * Create Nostr authorization event for chunked upload using file hash
+ * This avoids re-reading the file for large files
  */
-async function calculateSHA256Streaming(blob: Blob): Promise<string> {
-  const chunkSize = 64 * 1024 * 1024 // 64MB chunks
-  const crypto = window.crypto.subtle
+export async function createChunkedUploadAuthWithHash(
+  signer: Signer,
+  fileHash: string
+): Promise<string> {
+  try {
+    console.log(`[AUTH] Creating upload auth with hash: ${fileHash.substring(0, 16)}...`)
 
-  // For very large files, we'll use a simplified approach
-  // In practice, you'd need proper hash chaining for streaming
-  let hashBuffer = new ArrayBuffer(0)
-  let offset = 0
+    // Use BlossomClient's createUploadAuth method with hash to avoid re-reading file
+    const authEvent = await BlossomClient.createUploadAuth(signer, fileHash)
+    console.log(`[AUTH] BlossomClient.createUploadAuth completed successfully`)
 
-  while (offset < blob.size) {
-    const _end = Math.min(offset + chunkSize, blob.size)
-    const chunk = blob.slice(offset, offset + chunkSize)
+    // Convert the signed event to base64 encoded string
+    const authString = JSON.stringify(authEvent)
+    const authBase64 = btoa(authString)
+    console.log(`[AUTH] Authorization token encoded successfully`)
 
-    try {
-      const chunkBuffer = await chunk.arrayBuffer()
-      const chunkHash = await crypto.digest('SHA-256', chunkBuffer)
-
-      // Combine hashes (simplified - in practice you'd need proper hash chaining)
-      const combinedBuffer = new Uint8Array(hashBuffer.byteLength + chunkHash.byteLength)
-      combinedBuffer.set(new Uint8Array(hashBuffer), 0)
-      combinedBuffer.set(new Uint8Array(chunkHash), hashBuffer.byteLength)
-
-      hashBuffer = await crypto.digest('SHA-256', combinedBuffer)
-      offset += chunkSize
-    } catch (error) {
-      if (error instanceof Error && error.name === 'NotReadableError') {
-        throw new Error(
-          `Cannot read file chunk at offset ${offset}. ` +
-            `File may be corrupted or too large for browser. ` +
-            `Original error: ${error.message}`
-        )
-      }
-      throw error
-    }
+    return authBase64
+  } catch (error) {
+    console.error(`[AUTH] Error creating authorization:`, error)
+    throw error
   }
-
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-/**
- * Create Nostr authorization event for chunked upload
- */
-export async function createChunkedUploadAuth(signer: Signer, file: File): Promise<string> {
-  // Use BlossomClient's createUploadAuth method for consistency
-  const authEvent = await BlossomClient.createUploadAuth(signer, file)
-
-  // Convert the signed event to base64 encoded string
-  const authString = JSON.stringify(authEvent)
-  const authBase64 = btoa(authString)
-
-  return authBase64
 }
 
 /**
@@ -347,6 +345,9 @@ export async function uploadChunk(
 ): Promise<Response> {
   const _end = offset + chunk.size - 1
 
+  console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${server}`)
+  console.log(`[CHUNK] Chunk size: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB, offset: ${offset}`)
+
   const response = await fetch(`${server}/upload`, {
     method: 'PATCH',
     headers: {
@@ -361,10 +362,18 @@ export async function uploadChunk(
     body: chunk,
   })
 
+  console.log(
+    `[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} response: ${response.status} ${response.statusText}`
+  )
+
   if (!response.ok) {
+    console.error(
+      `[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} failed: ${response.status} ${response.statusText}`
+    )
     throw new Error(`PATCH chunk upload failed: ${response.status} ${response.statusText}`)
   }
 
+  console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`)
   return response
 }
 
@@ -377,7 +386,8 @@ export async function uploadFileChunked(
   server: string,
   signer: Signer,
   options: ChunkedUploadOptions = {},
-  callbacks: ChunkedUploadCallbacks = {}
+  callbacks: ChunkedUploadCallbacks = {},
+  providedFileHash?: string
 ): Promise<BlobDescriptor> {
   // BUD-10: First negotiate capabilities via OPTIONS
   const capabilities = await getUploadCapabilities(server)
@@ -395,28 +405,74 @@ export async function uploadFileChunked(
   const defaultChunkSize = capabilities.maxChunkSize || 8 * 1024 * 1024 // 8MB default
   const { chunkSize = defaultChunkSize, maxConcurrentChunks = 1 } = options
 
-  // Create chunks
-  const chunks = createFileChunks(file, chunkSize)
-  const fileHash = await calculateSHA256(file)
+  console.log(
+    `[UPLOAD] Starting BUD-10 chunked upload for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
+  )
+  console.log(`[UPLOAD] Server: ${server}`)
+  console.log(`[UPLOAD] Chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`)
 
-  // Create authorization
-  const authToken = await createChunkedUploadAuth(signer, file)
+  // Use provided hash or calculate it if not provided
+  let fileHash: string
+  if (providedFileHash) {
+    console.log(`[UPLOAD] Using provided file hash: ${providedFileHash.substring(0, 16)}...`)
+    fileHash = providedFileHash
+  } else {
+    // For large files, calculate SHA256 first to avoid reading file twice
+    if (file.size > 500 * 1024 * 1024) {
+      console.log(
+        `[UPLOAD] Calculating SHA256 for large file (${(file.size / (1024 * 1024)).toFixed(2)}MB) before chunked upload`
+      )
+      fileHash = await calculateSHA256(file)
+      console.log(`[UPLOAD] SHA256 calculation completed: ${fileHash.substring(0, 16)}...`)
+    } else {
+      console.log(`[UPLOAD] Starting SHA256 calculation...`)
+      fileHash = await calculateSHA256(file)
+      console.log(`[UPLOAD] SHA256 calculation completed: ${fileHash.substring(0, 16)}...`)
+    }
+  }
+
+  // Create chunks using Blob.slice() only - never loads entire file
+  const chunks = createFileChunks(file, chunkSize)
+  console.log(`[UPLOAD] Chunks created successfully: ${chunks.length} chunks`)
+
+  // Create authorization using the hash instead of reading the file again
+  console.log(`[UPLOAD] Creating authorization token...`)
+  const authToken = await createChunkedUploadAuthWithHash(signer, fileHash)
+  console.log(`[UPLOAD] Authorization token created successfully`)
 
   try {
+    console.log(
+      `[UPLOAD] Starting upload of ${chunks.length} chunks with max concurrency: ${maxConcurrentChunks}`
+    )
+
     // Upload chunks with concurrency control, but ensure last chunk is uploaded last
     const responses: Response[] = []
     let uploadedBytes = 0
     let currentChunk = 0
+    const startTime = Date.now()
 
     // Upload all chunks except the last one with concurrency control
     const chunksToUpload = chunks.slice(0, -1)
     const lastChunk = chunks[chunks.length - 1]
 
+    console.log(`[UPLOAD] Uploading ${chunksToUpload.length} chunks (excluding last chunk)`)
+    console.log(
+      `[UPLOAD] Starting upload loop with ${Math.ceil(chunksToUpload.length / maxConcurrentChunks)} batches`
+    )
+
     for (let i = 0; i < chunksToUpload.length; i += maxConcurrentChunks) {
       const batch = chunksToUpload.slice(i, i + maxConcurrentChunks)
+      console.log(
+        `[UPLOAD] Processing batch ${Math.floor(i / maxConcurrentChunks) + 1}: chunks ${i + 1}-${Math.min(i + maxConcurrentChunks, chunksToUpload.length)}`
+      )
+
       const batchPromises = batch.map(async (chunk, batchIndex) => {
         const chunkIndex = i + batchIndex
         const offset = chunkIndex * chunkSize
+
+        console.log(
+          `[UPLOAD] Starting upload of chunk ${chunkIndex + 1}/${chunks.length} (${(chunk.size / (1024 * 1024)).toFixed(1)}MB) at offset ${offset}`
+        )
 
         const response = await uploadChunk(
           server,
@@ -433,6 +489,12 @@ export async function uploadFileChunked(
         uploadedBytes += chunk.size
         currentChunk = chunkIndex + 1
 
+        console.log(`[UPLOAD] Chunk ${chunkIndex + 1}/${chunks.length} completed successfully`)
+
+        // Calculate upload speed
+        const elapsedSeconds = (Date.now() - startTime) / 1000
+        const speedMBps = uploadedBytes / (1024 * 1024) / elapsedSeconds
+
         // Call progress callback
         callbacks.onProgress?.({
           uploadedBytes,
@@ -440,6 +502,7 @@ export async function uploadFileChunked(
           percentage: Math.round((uploadedBytes / file.size) * 100),
           currentChunk,
           totalChunks: chunks.length,
+          speedMBps,
         })
 
         // Call chunk complete callback
@@ -450,8 +513,14 @@ export async function uploadFileChunked(
       })
 
       // Wait for current batch to complete before starting next batch
+      console.log(
+        `[UPLOAD] Waiting for batch ${Math.floor(i / maxConcurrentChunks) + 1} to complete...`
+      )
       const batchResponses = await Promise.all(batchPromises)
       responses.push(...batchResponses)
+      console.log(
+        `[UPLOAD] Batch ${Math.floor(i / maxConcurrentChunks) + 1} completed successfully`
+      )
     }
 
     // Upload the last chunk after all previous chunks are complete
@@ -459,7 +528,9 @@ export async function uploadFileChunked(
       const lastChunkIndex = chunks.length - 1
       const lastOffset = lastChunkIndex * chunkSize
 
-      console.debug(`Uploading final chunk ${lastChunkIndex} of ${chunks.length}`)
+      console.log(
+        `[UPLOAD] Uploading final chunk ${lastChunkIndex + 1}/${chunks.length} (${(lastChunk.size / (1024 * 1024)).toFixed(1)}MB) at offset ${lastOffset}`
+      )
 
       const lastResponse = await uploadChunk(
         server,
@@ -476,6 +547,14 @@ export async function uploadFileChunked(
       uploadedBytes += lastChunk.size
       currentChunk = chunks.length
 
+      console.log(
+        `[UPLOAD] Final chunk ${lastChunkIndex + 1}/${chunks.length} completed successfully`
+      )
+
+      // Calculate final upload speed
+      const elapsedSeconds = (Date.now() - startTime) / 1000
+      const speedMBps = uploadedBytes / (1024 * 1024) / elapsedSeconds
+
       // Call progress callback for final chunk
       callbacks.onProgress?.({
         uploadedBytes,
@@ -483,6 +562,7 @@ export async function uploadFileChunked(
         percentage: 100,
         currentChunk,
         totalChunks: chunks.length,
+        speedMBps,
       })
 
       // Call chunk complete callback for final chunk
@@ -494,11 +574,15 @@ export async function uploadFileChunked(
 
     // The last response should contain the blob descriptor
     const finalResponse = responses[responses.length - 1]
+    console.log(`[UPLOAD] Final response status: ${finalResponse.status}`)
+
     if (finalResponse.status === 200) {
       const blobData = await finalResponse.json()
+      console.log(`[UPLOAD] Upload completed successfully! Blob descriptor:`, blobData)
       return blobData as BlobDescriptor
     }
 
+    console.error(`[UPLOAD] Upload failed: Final response status ${finalResponse.status}`)
     throw new Error('Chunked upload failed: No blob descriptor returned')
   } catch (error) {
     console.debug(`BUD-10 PATCH chunked upload failed for ${server}:`, error)
@@ -535,16 +619,78 @@ export async function uploadFileToMultipleServersChunked({
       // Check if file already exists on this server
       const fileExists = await checkFileExists(server, fileHash)
       if (fileExists) {
-        console.debug(`File already exists on ${server}, skipping chunked upload`)
+        console.debug(`File already exists on ${server}, skipping upload`)
         return createMockBlobDescriptor(server, fileHash, file.size, file.type)
       }
 
-      console.debug(`File does not exist on ${server}, proceeding with chunked upload`)
-      return await uploadFileChunked(file, server, signer, options, callbacks)
+      // Try chunked upload first
+      try {
+        console.debug(`File does not exist on ${server}, attempting chunked upload`)
+        return await uploadFileChunked(file, server, signer, options, callbacks, fileHash)
+      } catch (chunkedError) {
+        // If chunked upload fails, check if it's because chunked upload is not supported
+        const errorMessage =
+          chunkedError instanceof Error ? chunkedError.message : String(chunkedError)
+
+        if (
+          errorMessage.includes('does not support PATCH chunked uploads') ||
+          errorMessage.includes('CORS error')
+        ) {
+          console.debug(`Chunked upload not supported on ${server}, falling back to regular upload`)
+
+          // Fall back to regular upload
+          try {
+            return await uploadFileToSingleServer(file, server, signer, fileHash)
+          } catch (regularError) {
+            console.error(`Both chunked and regular upload failed for ${server}:`, regularError)
+            throw regularError
+          }
+        }
+
+        // If it's another error, rethrow it
+        throw chunkedError
+      }
     })
   )
 
   return results
     .filter((r): r is PromiseFulfilledResult<BlobDescriptor> => r.status === 'fulfilled')
     .map(r => r.value)
+}
+
+/**
+ * Upload file to a single server (regular upload, not chunked)
+ * This is used as a fallback when chunked upload is not supported
+ */
+async function uploadFileToSingleServer(
+  file: File,
+  server: string,
+  signer: Signer,
+  fileHash: string
+): Promise<BlobDescriptor> {
+  console.log(`[UPLOAD] Starting regular upload to ${server}`)
+
+  // Create auth
+  const authEvent = await BlossomClient.createUploadAuth(signer, fileHash)
+  const authString = JSON.stringify(authEvent)
+  const authBase64 = btoa(authString)
+
+  // Upload file
+  const response = await fetch(`${server}/upload`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+      'X-SHA-256': fileHash,
+      Authorization: `Nostr ${authBase64}`,
+    },
+    body: file,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Regular upload failed: ${response.status} ${response.statusText}`)
+  }
+
+  const blobData = await response.json()
+  console.log(`[UPLOAD] Regular upload completed successfully to ${server}`)
+  return blobData as BlobDescriptor
 }

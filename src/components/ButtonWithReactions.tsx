@@ -1,5 +1,5 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useEventModel } from 'applesauce-react/hooks'
+import { useEventModel, useEventStore } from 'applesauce-react/hooks'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { ReactionsModel } from 'applesauce-core/models'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { HeartIcon } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { NostrEvent } from 'nostr-tools'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface ButtonWithReactionsProps {
   eventId: string
@@ -22,7 +23,9 @@ export function ButtonWithReactions({
   className,
 }: ButtonWithReactionsProps) {
   const { user } = useCurrentUser()
-  const { mutate: publish } = useNostrPublish()
+  const eventStore = useEventStore()
+  const { config } = useAppContext()
+  const { publish, isPending } = useNostrPublish()
 
   // Create a dummy event object for ReactionsModel
   // ReactionsModel expects a NostrEvent, so we create a minimal one
@@ -46,23 +49,31 @@ export function ButtonWithReactions({
   // Count likes
   const likeCount = reactions.filter(event => event.content === '+').length
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!user) return
 
     // If already liked, we'll unlike by doing nothing (as reactions are ephemeral)
     if (!hasLiked) {
-      publish({
-        event: {
-          kind: 7,
-          created_at: nowInSecs(),
-          content: '+',
-          tags: [
-            ['e', eventId],
-            ['p', authorPubkey],
-            ['k', `${kind}`],
-          ],
-        },
-      })
+      try {
+        const signedEvent = await publish({
+          event: {
+            kind: 7,
+            created_at: nowInSecs(),
+            content: '+',
+            tags: [
+              ['e', eventId],
+              ['p', authorPubkey],
+              ['k', `${kind}`],
+            ],
+          },
+          relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+        })
+
+        // Add the reaction to the event store immediately for instant feedback
+        eventStore.add(signedEvent)
+      } catch (error) {
+        console.error('Failed to publish like:', error)
+      }
     }
   }
 
@@ -74,7 +85,7 @@ export function ButtonWithReactions({
           size="sm"
           className={cn('space-x-2', className)}
           onClick={handleLike}
-          disabled={!user}
+          disabled={!user || isPending}
         >
           <HeartIcon
             className={cn('h-5 w-5', hasLiked ? 'fill-red-500 stroke-red-500' : 'fill-none')}

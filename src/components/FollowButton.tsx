@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { UserPlusIcon, UserCheckIcon } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface FollowButtonProps {
   pubkey: string
@@ -15,7 +16,8 @@ interface FollowButtonProps {
 export function FollowButton({ pubkey, className }: FollowButtonProps) {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
-  const { mutate: publish } = useNostrPublish()
+  const { config } = useAppContext()
+  const { publish, isPending } = useNostrPublish()
 
   // Use ContactsModel to get user's contact list
   const contacts = useEventModel(ContactsModel, user?.pubkey ? [user.pubkey] : null) || []
@@ -42,15 +44,23 @@ export function FollowButton({ pubkey, className }: FollowButtonProps) {
       tags.push(['p', pubkey])
     }
 
-    // Publish the new contact list
-    publish({
-      event: {
-        kind: 3,
-        created_at: nowInSecs(),
-        content: currentContactEvent?.content || '', // Preserve existing content
-        tags,
-      },
-    })
+    try {
+      // Publish the new contact list
+      const signedEvent = await publish({
+        event: {
+          kind: 3,
+          created_at: nowInSecs(),
+          content: currentContactEvent?.content || '', // Preserve existing content
+          tags,
+        },
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+      })
+
+      // Add the contact list to the event store immediately for instant feedback
+      eventStore.add(signedEvent)
+    } catch (error) {
+      console.error('Failed to publish follow/unfollow:', error)
+    }
   }
 
   if (!user || user.pubkey === pubkey) {
@@ -65,6 +75,7 @@ export function FollowButton({ pubkey, className }: FollowButtonProps) {
           size="sm"
           className={cn('space-x-2', className)}
           onClick={handleFollow}
+          disabled={isPending}
         >
           {isFollowing ? (
             <>

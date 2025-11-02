@@ -18,6 +18,8 @@ import { Loader2, Upload } from 'lucide-react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { useToast } from '@/hooks/useToast'
+import { useEventStore } from 'applesauce-react/hooks'
+import { useAppContext } from '@/hooks/useAppContext'
 import { z } from 'zod'
 import { nowInSecs } from '@/lib/utils'
 
@@ -36,7 +38,9 @@ type NostrMetadata = z.infer<typeof metadataSchema>
 
 export const EditProfileForm: React.FC = () => {
   const { user } = useCurrentUser()
-  const { mutateAsync: publishEvent, isPending } = useNostrPublish()
+  const eventStore = useEventStore()
+  const { config } = useAppContext()
+  const { publish, isPending } = useNostrPublish()
   const { toast } = useToast()
   const isUploading = false
 
@@ -102,14 +106,18 @@ export const EditProfileForm: React.FC = () => {
       }
 
       // Publish the metadata event (kind 0)
-      await publishEvent({
+      const signedEvent = await publish({
         event: {
           created_at: nowInSecs(),
           kind: 0,
           content: JSON.stringify(data),
           tags: [],
         },
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
       })
+
+      // Add the profile to the event store immediately for instant feedback
+      eventStore.add(signedEvent)
 
       // Note: With applesauce EventStore, cache invalidation is handled automatically
       // No need to manually invalidate queries like with react-query

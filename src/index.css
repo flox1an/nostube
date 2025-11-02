@@ -162,4 +162,25 @@
   media-control-bar * {
     padding: 6px;
   }
+
+  media-control-bar media-play-button {
+    padding-left: 10px;
+  }
+
+  media-control-bar media-fullscreen-button {
+    padding-right: 10px;
+  }
+
+  media-control-bar button.media-button {
+    cursor: pointer;
+    background: var(--media-control-background, var(--media-secondary-color, rgb(20 20 30 / 0.7)));
+  }
+
+  media-control-bar button.media-button svg {
+    padding: 0px;
+  }
+
+  media-control-bar button.media-button:hover {
+    background: var(--media-control-hover-background, rgba(50 50 70 / 0.7));
+  }
 }

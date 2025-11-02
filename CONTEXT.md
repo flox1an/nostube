@@ -13,6 +13,40 @@ This project is a Nostr client application built with React 18.x, TailwindCSS 3.
 - **TanStack Query**: For data fetching, caching, and state management
 - **TypeScript**: For type-safe JavaScript development
 
+## Context7 MCP Integration
+
+This project can use **Context7 MCP Server** to provide up-to-date documentation for libraries and frameworks directly to AI assistants. Context7 pulls version-specific documentation and code examples from official sources.
+
+### Setting Up Context7
+
+For Claude Code, install the Context7 MCP server:
+
+**Remote Server (Recommended):**
+```bash
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
+```
+
+**Local Server with API Key (for higher rate limits):**
+```bash
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+Get an API key at: https://context7.com/dashboard
+
+### Applesauce Documentation
+
+**Applesauce is fully indexed in Context7** with 111k+ tokens, 459 code snippets, and 72 pages of documentation!
+
+- Context7 URL: https://context7.com/hzrd149/applesauce
+- GitHub: https://github.com/hzrd149/applesauce
+- Official Docs: https://hzrd149.github.io/applesauce/
+
+Once Context7 is configured, AI assistants can access up-to-date applesauce documentation directly. This complements the comprehensive Applesauce guide in this file.
+
+### Using Context7
+
+Once configured, AI assistants can query Context7 for documentation on supported libraries (6000+ frameworks). Context7 supports React, TailwindCSS, Vite, and many other libraries used in this project.
+
 ## Project Structure
 
 - `/src/components/`: UI components including NostrProvider for Nostr integration
@@ -97,17 +131,38 @@ These components follow a consistent pattern using React's `forwardRef` and use 
 
 This project uses **applesauce**, a comprehensive Nostr protocol framework, for event storage, relay management, and React integration. Applesauce provides a reactive EventStore, RelayPool management, timeline loaders, and React hooks for building Nostr applications.
 
+**Quick Reference:**
+- 📦 **Packages**: Core, Relay, Loaders, React, Accounts, Signers, Factory, Actions, Content, Wallet, SQLite
+- 🪝 **React Hooks**: `useEventStore`, `useObservableMemo`, `useEventModel`, `useActiveAccount`, `useAccountManager`
+- 🔄 **Loaders**: `createTimelineLoader`, `createAddressLoader`, `createEventLoader`
+- 📊 **Models**: `ContactsModel`, `ReactionsModel`, `UserBlossomServersModel`, custom `Model` base class
+- 🛠️ **Helpers**: `ProfileContent`, `getDisplayName`, `getSeenRelays`, `presistEventsToCache`
+- 🔌 **Operators**: `onlyEvents`, `mapEventsToStore`
+- 📚 **Documentation**: Available at https://hzrd149.github.io/applesauce/ and via Context7
+
 ### Applesauce Overview
 
-Applesauce is a modular Nostr framework that provides:
+Applesauce is a modular Nostr SDK for building reactive user interfaces with minimal code. Built on RxJS observables, it provides a comprehensive toolkit for Nostr application development.
 
-- **EventStore** (`applesauce-core`): Reactive in-memory event store with Observable-based subscriptions
-- **RelayPool** (`applesauce-relay`): Efficient relay connection management and subscription pooling
-- **Loaders** (`applesauce-loaders`): Timeline and address loaders for paginated content with cursor management
-- **React Integration** (`applesauce-react`): React hooks and providers for seamless integration
-- **Accounts** (`applesauce-accounts`): Account management with multiple signer types
-- **Signers** (`applesauce-signers`): Signer implementations for NIP-07, NIP-46, and simple accounts
-- **Factory** (`applesauce-factory`): Event creation and publishing utilities
+**Core Packages:**
+
+- **`applesauce-core`**: Reactive in-memory EventStore, Models, Event Memory, Helper Methods, and Database utilities
+- **`applesauce-relay`**: RelayPool management, liveness checking, Negentropy sync, and RxJS operators
+- **`applesauce-loaders`**: Event, Address, Timeline, Tag Value, Zaps, and Reactions loaders with pagination
+- **`applesauce-react`**: React hooks, providers, and context for seamless React integration
+- **`applesauce-accounts`**: Account manager and multi-account handling
+- **`applesauce-signers`**: Native signers, Nostr Connect (NIP-46), and Extension (NIP-07) support
+- **`applesauce-factory`**: Event creation, signing, publishing, and tag operations
+- **`applesauce-actions`**: Action Hub for complex operations like following users
+- **`applesauce-content`**: Text and Markdown content processing
+- **`applesauce-wallet`**: Payment integration and wallet connectivity
+- **`applesauce-sqlite`**: SQLite backend support (Better SQLite3, Native, Bun, LibSQL, Turso)
+
+**Key Design Principles:**
+
+1. **Reactive Foundation**: Built on RxJS observables for efficient event subscription
+2. **Modular Composition**: Each package works independently while maintaining cohesion
+3. **Flexible Integration**: Works with any relay setup, compatible with other Nostr libraries
 
 ### Core Setup
 
@@ -159,6 +214,8 @@ const factory = new EventFactory({
 
 ### React Hooks
 
+Applesauce provides a comprehensive set of React hooks for reactive Nostr integration.
+
 #### `useEventStore()`
 
 Access the EventStore instance:
@@ -169,52 +226,92 @@ import { useEventStore } from 'applesauce-react/hooks'
 function MyComponent() {
   const eventStore = useEventStore()
 
-  // Access events, subscribe to changes, etc.
+  // Query events
+  const events = eventStore.getEvents([{ kinds: [1], limit: 20 }])
+
+  // Subscribe to changes
+  useEffect(() => {
+    const sub = eventStore.subscribe({ kinds: [1] }).subscribe(events => {
+      console.log('New events:', events)
+    })
+    return () => sub.unsubscribe()
+  }, [])
 }
 ```
 
 #### `useObservableMemo()`
 
-Memoize Observable-based computations:
+Memoize Observable-based computations and automatically subscribe/unsubscribe:
 
 ```tsx
 import { useObservableMemo } from 'applesauce-react/hooks'
-import { useMemo } from 'react'
 
 function useProfile(pubkey: string) {
   const eventStore = useEventStore()
 
+  // Automatically subscribes and updates when profile changes
   return useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
 }
 ```
 
+**Important**: `useObservableMemo` handles subscriptions automatically and re-runs when dependencies change. Perfect for reactive data that updates over time.
+
 #### `useEventModel()`
 
-Use applesauce Models for structured data access:
+Use applesauce Models for structured, reactive data access:
 
 ```tsx
 import { useEventModel } from 'applesauce-react/hooks'
 import { ContactsModel } from 'applesauce-core/models'
 
 function useContacts(pubkey: string) {
+  // Returns array of followed pubkeys, updates automatically
   return useEventModel(ContactsModel, pubkey)
 }
 ```
 
 #### `useActiveAccount()` and `useAccountManager()`
 
-Access account information:
+Access account information and manage multiple accounts:
 
 ```tsx
 import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
 
 function MyComponent() {
-  const account = useActiveAccount()
-  const accountManager = useAccountManager()
+  const account = useActiveAccount() // Currently active account
+  const accountManager = useAccountManager() // Account manager instance
 
-  // Access account.pubkey, account.signer, etc.
+  // Access account details
+  if (account) {
+    console.log('Logged in as:', account.pubkey)
+    console.log('Signer:', account.signer)
+  }
+
+  // Manage accounts
+  const allAccounts = accountManager.accounts
+  const switchAccount = (pubkey: string) => {
+    accountManager.setActiveAccount(pubkey)
+  }
 }
 ```
+
+### React Context
+
+Applesauce also provides direct context access:
+
+```tsx
+import { AccountsContext } from 'applesauce-react'
+import { useContext } from 'react'
+
+function MyComponent() {
+  const accountManager = useContext(AccountsContext)
+
+  // Access accounts directly
+  const accounts = accountManager.accounts
+}
+```
+
+**Note**: Prefer using hooks (`useAccountManager`) over direct context access for better type safety and convenience.
 
 ### Timeline Loaders
 
@@ -301,11 +398,39 @@ function useProfile(user: ProfilePointer) {
 }
 ```
 
+### Event Loaders
+
+Event loaders fetch specific events by their IDs:
+
+```tsx
+import { createEventLoader } from 'applesauce-loaders/loaders'
+
+function useEvent(eventId: string) {
+  const { pool } = useAppContext()
+  const eventStore = useEventStore()
+
+  useEffect(() => {
+    if (!eventId) return
+
+    const loader = createEventLoader(pool, relays, {
+      eventStore,
+      cache: cacheRequest, // Optional cache-first loading
+    })
+
+    loader(eventId).subscribe(event => {
+      if (event) eventStore.add(event)
+    })
+  }, [eventId])
+}
+```
+
 ### Models
 
-Applesauce provides Models for structured data access:
+Applesauce provides Models for structured data access. Models are reactive subscriptions that combine EventStore queries with helper functions to extract and transform data.
 
-#### ContactsModel
+#### Built-in Models
+
+**ContactsModel** - User's contact/follow list:
 
 ```tsx
 import { useEventModel } from 'applesauce-react/hooks'
@@ -316,7 +441,7 @@ function useFollowedAuthors(pubkey: string) {
 }
 ```
 
-#### ReactionsModel
+**ReactionsModel** - Event reactions:
 
 ```tsx
 import { useEventModel } from 'applesauce-react/hooks'
@@ -324,6 +449,54 @@ import { ReactionsModel } from 'applesauce-core/models'
 
 function useReactions(eventId: string) {
   return useEventModel(ReactionsModel, eventId)
+}
+```
+
+**UserBlossomServersModel** - User's Blossom server configuration (NIP-96):
+
+```tsx
+import { useEventModel } from 'applesauce-react/hooks'
+import { UserBlossomServersModel } from 'applesauce-core/models'
+
+function useUserBlossomServers(pubkey: string) {
+  return useEventModel(UserBlossomServersModel, pubkey)
+}
+```
+
+#### Creating Custom Models
+
+Use the `Model` base class to create custom reactive data queries:
+
+```tsx
+import { Model } from 'applesauce-core'
+import { ProfileContent } from 'applesauce-core/helpers/profile'
+import { merge, defer, EMPTY, of } from 'rxjs'
+import { useObservableMemo } from 'applesauce-react/hooks'
+
+function ProfileQuery(pubkey?: string): Model<ProfileContent | undefined> {
+  if (!pubkey) return () => of(undefined)
+
+  return events =>
+    merge(
+      // Trigger side effects (like loading)
+      defer(() => {
+        if (!events.hasReplaceable(kinds.Metadata, pubkey)) {
+          // Request profile loading
+          requestProfile(pubkey)
+        }
+        return EMPTY
+      }),
+      // Subscribe to profile changes
+      events.profile(pubkey)
+    )
+}
+
+// Use in component
+function MyComponent({ pubkey }: { pubkey: string }) {
+  const eventStore = useEventStore()
+  const profile = useObservableMemo(() => eventStore.model(ProfileQuery, pubkey), [pubkey])
+
+  return <div>{profile?.name}</div>
 }
 ```
 
@@ -391,17 +564,47 @@ await factory.publish(event, relays)
 
 ### Helper Functions
 
-Applesauce provides various helpers:
+Applesauce provides various helper functions to extract and format data from Nostr events:
+
+#### Profile Helpers
 
 ```tsx
 import { ProfileContent } from 'applesauce-core/helpers/profile'
 import { getDisplayName } from 'applesauce-core/helpers'
 
-// Get profile content from event
+// Parse profile content from Kind 0 event
 const profile = ProfileContent.fromEvent(event)
 
-// Get display name with fallback
+// Get display name with fallback (display_name → name → shortened pubkey)
 const displayName = getDisplayName(profile)
+
+// Access profile fields
+console.log(profile.name, profile.about, profile.picture, profile.banner)
+```
+
+#### Relay Helpers
+
+```tsx
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+
+// Extract relay URLs from event tags and seen_on extension
+const relays = getSeenRelays(event)
+// Returns: ['wss://relay1.com', 'wss://relay2.com', ...]
+```
+
+### RxJS Operators
+
+Applesauce provides RxJS operators for working with relay messages:
+
+```tsx
+import { onlyEvents } from 'applesauce-relay'
+import { mapEventsToStore } from 'applesauce-core'
+
+// Filter relay messages to only events
+relayPool.subscribe(filters).pipe(
+  onlyEvents(), // Only emit NostrEvent objects
+  mapEventsToStore(eventStore) // Automatically add to EventStore
+)
 ```
 
 ### Caching with nostr-idb
@@ -425,11 +628,84 @@ presistEventsToCache(eventStore, events => addEvents(cache, events))
 
 ### Best Practices
 
-1. **Singleton Pattern**: Use one EventStore and one RelayPool per application to avoid duplicate connections
-2. **Cache-First Loading**: Use cache functions in loaders to reduce relay load
+1. **Singleton Pattern**: Use one EventStore and one RelayPool per application to avoid duplicate connections and maintain consistent state
+   ```tsx
+   // ✅ Good: Create once in src/nostr/core.ts
+   export const eventStore = new EventStore()
+   export const relayPool = new RelayPool()
+
+   // ❌ Bad: Creating multiple instances
+   function MyComponent() {
+     const store = new EventStore() // Creates duplicate!
+   }
+   ```
+
+2. **Cache-First Loading**: Use cache functions in loaders to reduce relay load and improve performance
+   ```tsx
+   createTimelineLoader(relayPool, relays, filters, {
+     eventStore,
+     cache: cacheRequest, // Check IndexedDB first
+   })
+   ```
+
 3. **Observable Subscriptions**: Always unsubscribe from Observables to prevent memory leaks
-4. **Model Usage**: Use Models for structured data access (ContactsModel, ReactionsModel, etc.)
-5. **Provider Order**: Wrap providers in the correct order: AccountsProvider → EventStoreProvider → FactoryProvider
+   ```tsx
+   // ✅ Good: Cleanup subscription
+   useEffect(() => {
+     const sub = eventStore.subscribe(filters).subscribe(handleEvents)
+     return () => sub.unsubscribe()
+   }, [])
+
+   // ✅ Better: Use useObservableMemo hook (handles cleanup automatically)
+   const data = useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
+   ```
+
+4. **Model Usage**: Prefer Models over raw EventStore queries for common patterns
+   ```tsx
+   // ✅ Good: Use ContactsModel
+   const contacts = useEventModel(ContactsModel, pubkey)
+
+   // ❌ Less ideal: Manual subscription
+   const [contacts, setContacts] = useState([])
+   useEffect(() => {
+     // ... manual subscription logic
+   }, [])
+   ```
+
+5. **Provider Order**: Wrap providers in the correct order for dependency resolution
+   ```tsx
+   // ✅ Correct order
+   <AccountsProvider manager={accountManager}>
+     <EventStoreProvider eventStore={eventStore}>
+       <FactoryProvider factory={factory}>
+         {children}
+       </FactoryProvider>
+     </EventStoreProvider>
+   </AccountsProvider>
+   ```
+
+6. **Loader Patterns**: Create loaders outside components when possible, reuse them
+   ```tsx
+   // ✅ Good: Create once, reuse
+   const loader = useMemo(
+     () => createTimelineLoader(pool, relays, filters, { eventStore }),
+     [relays]
+   )
+
+   // Call load() when needed
+   loader.load().subscribe(events => setEvents(prev => [...prev, ...events]))
+   ```
+
+7. **Event Store Queries**: Check before loading to avoid unnecessary relay requests
+   ```tsx
+   // ✅ Good: Check before requesting
+   if (!eventStore.hasReplaceable(kinds.Metadata, pubkey)) {
+     // Load profile from relays
+   }
+
+   // ❌ Bad: Always requesting
+   loader().subscribe() // May request duplicates
+   ```
 
 ### Migration from Nostrify
 

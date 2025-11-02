@@ -53,7 +53,7 @@ export function useBatchedProfileLoader() {
       )
 
       loader().subscribe({
-        next: event => {
+        next: _event => {
           // Events are automatically added to eventStore by the loader
         },
         error: err => {

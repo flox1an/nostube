@@ -29,18 +29,18 @@ const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undef
 export function VideoCacheProvider({ children }: { children: React.ReactNode }) {
   const [videos, setVideos] = useState<VideoEvent[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [totalVideos, setTotalVideos] = useState(0)
+  const [isLoading, _setIsLoading] = useState(false)
+  const [hasMore, _setHasMore] = useState(true)
+  const [totalVideos, _setTotalVideos] = useState(0)
   const [followedPubkeys, setFollowedPubkeysState] = useState<string[]>([])
   const [likedVideoIds, setLikedVideoIdsState] = useState<string[]>([])
-  const [isWorkerReady, setIsWorkerReady] = useState(true)
+  const [isWorkerReady, _setIsWorkerReady] = useState(true)
 
-  const searchVideos = useCallback((query: string) => {
+  const searchVideos = useCallback((_query: string) => {
     // Implementation would go here
   }, [])
 
-  const filterByTags = useCallback((tags: string[]) => {
+  const filterByTags = useCallback((_tags: string[]) => {
     // Implementation would go here
   }, [])
 
@@ -49,7 +49,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     setAllTags([])
   }, [])
 
-  const setVideoType = useCallback((type: 'all' | 'shorts' | 'videos') => {
+  const setVideoType = useCallback((_type: 'all' | 'shorts' | 'videos') => {
     // Implementation would go here
   }, [])
 
@@ -61,15 +61,15 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
     setLikedVideoIdsState(ids)
   }, [])
 
-  const initSearch = useCallback((relays: string[]) => {
-    console.log('initSearch', relays)
+  const initSearch = useCallback((_relays: string[]) => {
+    console.log('initSearch', _relays)
   }, [])
 
-  const loadMoreRef = useCallback((node?: Element | null) => {
+  const loadMoreRef = useCallback((_node?: Element | null) => {
     // Implementation would go here
   }, [])
 
-  const getVideoObservable = useCallback((id: string) => {
+  const getVideoObservable = useCallback((_id: string) => {
     // Implementation would go here
     return null
   }, [])

@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { nip19 } from 'nostr-tools'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { combineRelays } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'

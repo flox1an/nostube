@@ -82,7 +82,7 @@ declare global {
       >
     }
 
-    interface HTMLAttributes<T> {
+    interface HTMLAttributes<_T> {
       part?: string
     }
   }

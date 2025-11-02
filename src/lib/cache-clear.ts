@@ -38,7 +38,7 @@ export async function checkAndClearCache(): Promise<boolean> {
     const deletePromises = databases
       .filter(db => db.name)
       .map(db => {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve, _reject) => {
           console.log(`[Cache Clear] Deleting database: ${db.name}`)
           const request = window.indexedDB.deleteDatabase(db.name!)
 

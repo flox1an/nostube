@@ -50,10 +50,8 @@ import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { ButtonWithReactions } from '@/components/ButtonWithReactions'
 import ShareButton from '@/components/ShareButton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircle, Loader2 } from 'lucide-react'
-import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
-import { BlobDescriptor } from 'blossom-client-sdk'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -251,7 +249,7 @@ export function VideoPage() {
   const [shareOpen, setShareOpen] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
   const [currentPlayPos, setCurrentPlayPos] = useState(0)
-  const [isMirroring, setIsMirroring] = useState(false)
+  const [_isMirroring, _setIsMirroring] = useState(false)
   const location = useLocation()
 
   // Compute initial play position from ?t=... param or localStorage

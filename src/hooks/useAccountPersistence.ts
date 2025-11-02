@@ -1,8 +1,7 @@
 import type { IAccount } from 'applesauce-accounts'
 import { AccountManager } from 'applesauce-accounts'
-import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers'
-import { nip19 } from 'nostr-tools'
+import { ExtensionAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
+import { ExtensionSigner, NostrConnectSigner } from 'applesauce-signers'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'

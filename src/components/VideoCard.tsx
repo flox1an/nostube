@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns'
 import { VideoEvent } from '@/utils/video-event'
-import { nip19 } from 'nostr-tools'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, imageProxy, imageProxyVideoPreview } from '@/lib/utils'

@@ -1,4 +1,4 @@
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
+import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { Link } from 'react-router-dom'
 import { processEvent, VideoEvent } from '@/utils/video-event'

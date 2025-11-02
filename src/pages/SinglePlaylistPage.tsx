@@ -1,7 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { nip19 } from 'nostr-tools'
 import { decodeAddressPointer } from '@/lib/nip19'
 import { of } from 'rxjs'
 import { Skeleton } from '@/components/ui/skeleton'

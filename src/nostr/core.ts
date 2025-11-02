@@ -57,7 +57,7 @@ NostrConnectSigner.publishMethod = publishMethod
 export const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band']
 
 // Function to update relays from user config
-export function updateRelayPool(relayUrls: string[]) {
+export function updateRelayPool(_relayUrls: string[]) {
   // The RelayPool will automatically connect to the relays specified in the loader
   // No action needed - loaders use the relay URLs directly
 }

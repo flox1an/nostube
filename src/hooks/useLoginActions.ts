@@ -30,7 +30,7 @@ export function useLoginActions() {
             throw new Error('Invalid nsec format')
           }
           decodedKey = decoded.data as string
-        } catch (error) {
+        } catch {
           throw new Error('Failed to decode nsec. Please check the format.')
         }
 

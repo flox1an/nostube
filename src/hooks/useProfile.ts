@@ -3,7 +3,7 @@ import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
 import { ProfileContent } from 'applesauce-core/helpers/profile'
 import { ProfilePointer } from 'nostr-tools/nip19'
 import { Model } from 'applesauce-core'
-import { defer, EMPTY, ignoreElements, merge, of } from 'rxjs'
+import { defer, EMPTY, merge, of } from 'rxjs'
 import { requestProfile } from './useBatchedProfiles'
 
 export function useProfile(user?: ProfilePointer): ProfileContent | undefined {

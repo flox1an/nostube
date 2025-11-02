@@ -9,6 +9,7 @@ import { processEvents } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
 import { VideoType } from '@/contexts/AppContext'
 import { hashObjectBigInt } from '@/lib/utils'
+import { useMissingVideos } from './useMissingVideos'
 
 const lastLoadedTimestamp = new Map<string, number>()
 let logSeq = 0
@@ -18,11 +19,17 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
   console.log(`[${seq}] useVideoTimeline called with type:`, type, 'authors:', authors)
 
   const blockedPubkeys = useReportedPubkeys()
+  const { getAllMissingVideos } = useMissingVideos()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
   const [videosLoading, setVideosLoading] = useState(false)
 
   const readRelays = useReadRelays()
+  
+  const missingVideoIds = useMemo(() => {
+    const missingMap = getAllMissingVideos()
+    return new Set(Object.keys(missingMap))
+  }, [getAllMissingVideos])
 
   const filters = useMemo(() => {
     const seq = ++logSeq
@@ -80,12 +87,12 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
 */
       map(events => {
         console.log(`[${seq}] processing events:`, events.length)
-        return processEvents(events, readRelays, blockedPubkeys, config.blossomServers)
+        return processEvents(events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds)
       })
     )
     console.log(`[${seq}] videos$ observable created`)
     return result
-  }, [eventStore, readRelays, blockedPubkeys, type, filters, config.blossomServers])
+  }, [eventStore, readRelays, blockedPubkeys, type, filters, config.blossomServers, missingVideoIds])
 
   const videos =
     useObservableMemo(() => {

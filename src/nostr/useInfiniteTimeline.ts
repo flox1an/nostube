@@ -5,13 +5,20 @@ import { NostrEvent } from 'nostr-tools'
 import { useCallback, useMemo, useState } from 'react'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
 import { useAppContext } from '@/hooks/useAppContext'
+import { useMissingVideos } from '@/hooks/useMissingVideos'
 
 export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[] = []) {
   const blockedPubkeys = useReportedPubkeys()
   const { config } = useAppContext()
+  const { getAllMissingVideos } = useMissingVideos()
 
   const [events, setEvents] = useState<NostrEvent[]>([])
   const [loading, setLoading] = useState(false)
+  
+  const missingVideoIds = useMemo(() => {
+    const missingMap = getAllMissingVideos()
+    return new Set(Object.keys(missingMap))
+  }, [getAllMissingVideos])
   const next = useCallback(() => {
     if (!loader) return
     setLoading(true)
@@ -25,8 +32,8 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
 
   // Process events to VideoEvent format
   const videos = useMemo(() => {
-    return processEvents(events, readRelays, blockedPubkeys, config.blossomServers)
-  }, [events, readRelays, blockedPubkeys, config.blossomServers])
+    return processEvents(events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds)
+  }, [events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds])
   /*
   const videos = useObservableMemo(
     () =>

@@ -1,9 +1,12 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import type { Filter } from 'nostr-tools'
+import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents, NostrIDB } from 'nostr-idb'
 import { presistEventsToCache } from 'applesauce-core/helpers'
+import { NostrConnectSigner } from 'applesauce-signers'
+import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
+import { filter } from 'rxjs'
 
 // Setup a local event
 
@@ -31,6 +34,23 @@ export const relayPool = new RelayPool()
 
 // Save all new events to the cache
 presistEventsToCache(eventStore, events => addEvents(cache!, events))
+
+// Configure NostrConnectSigner with relay pool methods
+// This is required for NIP-46 bunker:// URI login to work
+const subscriptionMethod: NostrSubscriptionMethod = (relays: string[], filters: Filter[]) => {
+  return relayPool.subscription(relays, filters).pipe(
+    filter((response): response is NostrEvent => typeof response !== 'string' && 'kind' in response)
+  )
+}
+
+const publishMethod: NostrPublishMethod = async (relays: string[], event: NostrEvent) => {
+  const results = await relayPool.publish(relays, event)
+  return results
+}
+
+// Set global methods for NostrConnectSigner
+NostrConnectSigner.subscriptionMethod = subscriptionMethod
+NostrConnectSigner.publishMethod = publishMethod
 
 // Default relays for video content - these will be overridden by user config
 export const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band']

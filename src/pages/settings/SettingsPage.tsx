@@ -1,5 +1,6 @@
 import { RelaySettingsSection } from '@/components/settings/RelaySettingsSection'
 import { BlossomServersSection } from '@/components/settings/BlossomServersSection'
+import { MissingVideosSection } from '@/components/settings/MissingVideosSection'
 
 export default function SettingsPage() {
   return (
@@ -7,6 +8,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       <RelaySettingsSection />
       <BlossomServersSection />
+      <MissingVideosSection />
     </div>
   )
 }

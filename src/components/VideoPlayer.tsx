@@ -21,6 +21,10 @@ interface VideoPlayerProps {
    * Initial play position in seconds
    */
   initialPlayPos?: number
+  /**
+   * Callback when all video sources fail to load
+   */
+  onAllSourcesFailed?: (urls: string[]) => void
 }
 
 export function VideoPlayer({
@@ -33,6 +37,7 @@ export function VideoPlayer({
   className,
   contentWarning,
   initialPlayPos = 0,
+  onAllSourcesFailed,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
@@ -194,6 +199,10 @@ export function VideoPlayer({
         return
       } else {
         setAllFailed(true)
+        // Notify parent that all sources failed
+        if (onAllSourcesFailed) {
+          onAllSourcesFailed(urls)
+        }
         return
       }
     }
@@ -201,8 +210,12 @@ export function VideoPlayer({
       setCurrentUrlIndex(i => i + 1)
     } else {
       setAllFailed(true)
+      // Notify parent that all sources failed
+      if (onAllSourcesFailed) {
+        onAllSourcesFailed(urls)
+      }
     }
-  }, [currentUrlIndex, urls, triedHead])
+  }, [currentUrlIndex, urls, triedHead, onAllSourcesFailed])
 
   // Reset triedHead if currentUrlIndex changes (new error sequence)
   useEffect(() => {

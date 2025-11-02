@@ -86,12 +86,12 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
 */
       map(events => {
         console.log(`[${seq}] processing events:`, events.length)
-        return processEvents(events, readRelays, blockedPubkeys)
+        return processEvents(events, readRelays, blockedPubkeys, config.blossomServers)
       })
     )
     console.log(`[${seq}] videos$ observable created`)
     return result
-  }, [eventStore, readRelays, blockedPubkeys, type, filters])
+  }, [eventStore, readRelays, blockedPubkeys, type, filters, config.blossomServers])
 
   const videos =
     useObservableMemo(() => {

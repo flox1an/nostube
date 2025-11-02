@@ -2,6 +2,7 @@ import { ReportedPubkeys } from '@/hooks/useReportedPubkeys'
 import { getTypeForKind, VideoType } from '@/lib/video-types'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { nip19 } from 'nostr-tools'
+import type { BlossomServer } from '@/contexts/AppContext'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -46,15 +47,73 @@ export interface VideoEvent {
 function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(' ')}`.toLowerCase()
 }
+
+/**
+ * Extract SHA256 hash and file extension from a Blossom URL
+ * Blossom URLs have format: https://server.com/{sha256}.{ext}
+ */
+function extractBlossomHash(url: string): { sha256?: string; ext?: string } {
+  try {
+    const urlObj = new URL(url)
+    const pathname = urlObj.pathname
+    
+    // Extract filename from path
+    const filename = pathname.split('/').pop() || ''
+    
+    // Check if it looks like a Blossom URL (64 char hex hash + extension)
+    const match = filename.match(/^([a-f0-9]{64})\.([^.]+)$/i)
+    if (match) {
+      return {
+        sha256: match[1],
+        ext: match[2],
+      }
+    }
+    
+    return {}
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Generate proxy URLs for video URLs when proxy servers are configured
+ * Format: https://proxyserver.com/{sha256}.{ext}?origin={originalUrl}
+ */
+function generateProxyUrls(
+  originalUrls: string[],
+  proxyServers: BlossomServer[]
+): string[] {
+  if (proxyServers.length === 0) return []
+  
+  const proxyUrls: string[] = []
+  
+  for (const originalUrl of originalUrls) {
+    // Try to extract SHA256 from the URL
+    const { sha256, ext } = extractBlossomHash(originalUrl)
+    
+    if (sha256 && ext) {
+      // Generate proxy URLs for each proxy server
+      for (const proxyServer of proxyServers) {
+        // Ensure proxy server URL doesn't end with /
+        const baseUrl = proxyServer.url.replace(/\/$/, '')
+        const proxyUrl = `${baseUrl}/${sha256}.${ext}?origin=${encodeURIComponent(originalUrl)}`
+        proxyUrls.push(proxyUrl)
+      }
+    }
+  }
+  
+  return proxyUrls
+}
 // Process Nostr events into cache entries
 export function processEvents(
   events: (Event | undefined)[],
   relays: string[],
-  blockPubkeys?: ReportedPubkeys
+  blockPubkeys?: ReportedPubkeys,
+  blossomServers?: BlossomServer[]
 ): VideoEvent[] {
   return events
     .filter((event): event is Event => event !== undefined)
-    .map(event => processEvent(event, relays))
+    .map(event => processEvent(event, relays, blossomServers))
     .filter(
       (video): video is VideoEvent =>
         video !== undefined &&
@@ -66,7 +125,11 @@ export function processEvents(
     )
 }
 
-export function processEvent(event: Event, relays: string[]): VideoEvent | undefined {
+export function processEvent(
+  event: Event,
+  relays: string[],
+  blossomServers?: BlossomServer[]
+): VideoEvent | undefined {
   // First check for imeta tag
   const imetaTag = event.tags.find(t => t[0] === 'imeta')
   const contentWarning = event.tags.find(t => t[0] == 'content-warning')?.[1]
@@ -133,6 +196,17 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       return url
     })
 
+    // Generate proxy URLs if proxy servers are configured
+    let finalUrls = videoUrls2
+    if (blossomServers && blossomServers.length > 0) {
+      const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
+      if (proxyServers.length > 0) {
+        const proxyUrls = generateProxyUrls(videoUrls2, proxyServers)
+        // Prepend proxy URLs before original URLs
+        finalUrls = [...proxyUrls, ...videoUrls2]
+      }
+    }
+
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
@@ -145,7 +219,7 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       x,
       tags,
       searchText: '',
-      urls: videoUrls2,
+      urls: finalUrls,
       mimeType,
       textTracks,
       link: nip19.neventEncode({
@@ -178,6 +252,17 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       url = url.split(' ')[0]
     }
 
+    // Generate proxy URLs if proxy servers are configured
+    let finalUrls = [url]
+    if (blossomServers && blossomServers.length > 0) {
+      const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
+      if (proxyServers.length > 0) {
+        const proxyUrls = generateProxyUrls([url], proxyServers)
+        // Prepend proxy URLs before original URLs
+        finalUrls = [...proxyUrls, url]
+      }
+    }
+
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
@@ -190,7 +275,7 @@ export function processEvent(event: Event, relays: string[]): VideoEvent | undef
       duration,
       tags,
       searchText: '',
-      urls: [url],
+      urls: finalUrls,
       textTracks: [],
       mimeType,
       dimensions: event.tags.find(t => t[0] === 'dim')?.[1],

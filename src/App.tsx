@@ -10,6 +10,7 @@ import { EventFactory } from 'applesauce-factory'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 import { eventStore } from '@/nostr/core'
 import { RelaySyncProvider } from '@/components/RelaySyncProvider'
+import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 
 export const presetRelays: Relay[] = [
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },
@@ -33,6 +34,13 @@ const accountManager = new AccountManager()
 
 registerCommonAccountTypes(accountManager)
 
+// Restore accounts from localStorage on initialization
+restoreAccountsToManager(accountManager).catch(error => {
+  console.error('Failed to restore accounts on initialization:', error)
+})
+
+// Account persistence will be handled in login actions and account switcher
+
 const factory = new EventFactory({
   // use the active signer from the account manager
   signer: accountManager.signer,
@@ -43,6 +51,9 @@ console.log(
   'Initializing relay pool with relays:',
   presetRelays.map(r => r.url)
 )
+
+// Account persistence is handled directly in login actions and account switcher
+// No need for a separate listener component
 
 export function App() {
   return (

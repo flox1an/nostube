@@ -71,16 +71,25 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     })
   }
 
-  const finishSignup = () => {
-    login.nsec(nsec)
+  const finishSignup = async () => {
+    setIsLoading(true)
+    try {
+      await login.nsec(nsec)
+      setStep('done')
+      onClose()
 
-    setStep('done')
-    onClose()
-
-    toast({
-      title: 'Account created',
-      description: 'You are now logged in.',
-    })
+      toast({
+        title: 'Account created',
+        description: 'You are now logged in.',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create account. Please try again.',
+        variant: 'destructive',
+      })
+      setIsLoading(false)
+    }
   }
 
   return (

@@ -15,9 +15,34 @@ import { imageProxy } from '@/lib/utils'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
 import { useProfile } from '@/hooks/useProfile'
 import { getDisplayName } from 'applesauce-core/helpers'
+import { removeAccountFromStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
+import type { IAccount } from 'applesauce-accounts'
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void
+}
+
+function AccountSwitchItem({ account, onClick }: { account: IAccount; onClick: () => void }) {
+  const accountProfile = useProfile({ pubkey: account.pubkey })
+  const displayName = getDisplayName(accountProfile)
+
+  return (
+    <DropdownMenuItem
+      onClick={onClick}
+      className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+    >
+      <Avatar className="w-8 h-8">
+        <AvatarImage
+          src={imageProxy(accountProfile?.picture as string)}
+          alt={displayName || ''}
+        />
+        <AvatarFallback>{displayName?.charAt(0) || '?'}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 truncate">
+        <p className="text-sm font-medium">{displayName || account.pubkey.slice(0, 8)}</p>
+      </div>
+    </DropdownMenuItem>
+  )
 }
 
 export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
@@ -25,7 +50,26 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   const accountManager = useAccountManager()
   const profile = useProfile(activeAccount ? { pubkey: activeAccount?.pubkey } : undefined)
   const navigate = useNavigate()
-  if (!activeAccount) return null
+  
+  if (!activeAccount || !accountManager) return null
+
+  // Get all accounts for switching
+  const allAccounts = accountManager.accounts || []
+  const otherAccounts = allAccounts.filter(acc => acc.pubkey !== activeAccount.pubkey)
+
+  const handleSwitchAccount = (account: typeof activeAccount) => {
+    if (account && accountManager) {
+      accountManager.setActive(account)
+      saveActiveAccount(account.pubkey)
+    }
+  }
+
+  const handleRemoveAccount = (account: typeof activeAccount) => {
+    if (account && accountManager) {
+      accountManager.removeAccount(account)
+      removeAccountFromStorage(account.pubkey)
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -57,29 +101,19 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         <RelaySelector className="w-full" />
         */}
 
-        {/* 
-        <DropdownMenuSeparator />
-        <div className="font-medium text-sm px-2 py-1.5">Switch Account</div>
-        {otherUsers.map(user => (
-          <DropdownMenuItem
-            key={user.id}
-            onClick={() => setLogin(user as unknown as Record<string, unknown>)}
-            className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
-          >
-            <Avatar className="w-8 h-8">
-              <AvatarImage
-                src={imageProxy((user.metadata as Record<string, unknown>).picture as string)}
-                alt={getDisplayName(user)}
+        {otherAccounts.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="font-medium text-sm px-2 py-1.5">Switch Account</div>
+            {otherAccounts.map(account => (
+              <AccountSwitchItem
+                key={account.pubkey}
+                account={account}
+                onClick={() => handleSwitchAccount(account)}
               />
-              <AvatarFallback>{getDisplayName(user)?.charAt(0) || <UserIcon />}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 truncate">
-              <p className="text-sm font-medium">{getDisplayName(user)}</p>
-            </div>
-            {user.id === currentUser.id && <div className="w-2 h-2 rounded-full bg-primary"></div>}
-          </DropdownMenuItem>
-        ))}
-          */}
+            ))}
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onAddAccountClick}
@@ -89,7 +123,16 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <span>Add another account</span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => accountManager.removeAccount(activeAccount)}
+          onClick={() => {
+            handleRemoveAccount(activeAccount)
+            // If there are other accounts, switch to the first one
+            if (otherAccounts.length > 0 && accountManager) {
+              accountManager.setActive(otherAccounts[0])
+              saveActiveAccount(otherAccounts[0].pubkey)
+            } else {
+              saveActiveAccount(null)
+            }
+          }}
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500"
         >
           <LogOut className="w-4 h-4" />

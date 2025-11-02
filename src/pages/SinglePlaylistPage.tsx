@@ -86,8 +86,8 @@ export default function SinglePlaylistPage() {
 
     const events = videoRefs.map(ref => eventStore.getEvent(ref.id)).filter(Boolean)
 
-    return processEvents(events, readRelays)
-  }, [videoRefs, eventStore, readRelays])
+    return processEvents(events, readRelays, undefined, config.blossomServers)
+  }, [videoRefs, eventStore, readRelays, config.blossomServers])
 
   const isLoadingVideos = playlistEvent && videoRefs.length > 0 && videoEvents.length === 0
 

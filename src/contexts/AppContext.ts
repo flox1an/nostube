@@ -3,7 +3,7 @@ import { createContext } from 'react'
 
 export type Theme = 'dark' | 'light' | 'system'
 export type VideoType = 'all' | 'shorts' | 'videos'
-export type BlossomServerTag = 'mirror' | 'initial upload'
+export type BlossomServerTag = 'mirror' | 'initial upload' | 'proxy'
 export type RelayTag = 'read' | 'write'
 
 export interface Relay {

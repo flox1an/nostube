@@ -4,9 +4,11 @@ import { TimelineLoader } from 'applesauce-loaders/loaders'
 import { NostrEvent } from 'nostr-tools'
 import { useCallback, useMemo, useState } from 'react'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
+import { useAppContext } from '@/hooks/useAppContext'
 
 export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[] = []) {
   const blockedPubkeys = useReportedPubkeys()
+  const { config } = useAppContext()
 
   const [events, setEvents] = useState<NostrEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -23,8 +25,8 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
 
   // Process events to VideoEvent format
   const videos = useMemo(() => {
-    return processEvents(events, readRelays, blockedPubkeys)
-  }, [events, readRelays, blockedPubkeys])
+    return processEvents(events, readRelays, blockedPubkeys, config.blossomServers)
+  }, [events, readRelays, blockedPubkeys, config.blossomServers])
   /*
   const videos = useObservableMemo(
     () =>

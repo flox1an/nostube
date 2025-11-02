@@ -145,7 +145,7 @@ export function VideoSuggestions({
 
     for (const event of events) {
       if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue
-      const processed = processEvent(event, readRelays) // TODO use currect relays from eventstore
+      const processed = processEvent(event, readRelays, config.blossomServers) // TODO use currect relays from eventstore
       if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
         processedVideos.push(processed)
         seenIds.add(processed.id)
@@ -153,7 +153,7 @@ export function VideoSuggestions({
     }
 
     return processedVideos.slice(0, 30) // Return up to 30 unique suggestions
-  }, [authorSuggestions, globalSuggestions, blockedPubkeys, currentVideoId, readRelays])
+  }, [authorSuggestions, globalSuggestions, blockedPubkeys, currentVideoId, readRelays, config.blossomServers])
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */

@@ -58,10 +58,10 @@ declare global {
 interface BlossomServer {
   url: string
   name: string
-  tags: ('mirror' | 'initial upload')[]
+  tags: ('mirror' | 'initial upload' | 'proxy')[]
 }
 
-type BlossomServerTag = 'mirror' | 'initial upload'
+type BlossomServerTag = 'mirror' | 'initial upload' | 'proxy'
 
 interface AppConfig {
   blossomServers?: BlossomServer[]

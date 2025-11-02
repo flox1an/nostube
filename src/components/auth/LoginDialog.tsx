@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState } from 'react'
-import { Shield, Upload } from 'lucide-react'
+import { Shield, Upload, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import {
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.tsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
+import { Alert, AlertDescription } from '@/components/ui/alert.tsx'
 import { useLoginActions } from '@/hooks/useLoginActions'
 
 interface LoginDialogProps {
@@ -24,51 +25,74 @@ interface LoginDialogProps {
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onSignup }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
   const [bunkerUri, setBunkerUri] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
 
-  const handleExtensionLogin = () => {
+  const handleExtensionLogin = async () => {
     setIsLoading(true)
+    setError(null)
+    
     try {
-      if (!('nostr' in window)) {
-        throw new Error('Nostr extension not found. Please install a NIP-07 extension.')
-      }
-      login.extension()
+      await login.extension()
       onLogin()
       onClose()
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Extension login failed. Please try again.'
+      setError(errorMessage)
       console.error('Extension login failed:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleKeyLogin = () => {
-    if (!nsec.trim()) return
+  const handleKeyLogin = async () => {
+    if (!nsec.trim()) {
+      setError('Please enter your nsec key')
+      return
+    }
+    
     setIsLoading(true)
+    setError(null)
 
     try {
-      login.nsec(nsec)
+      await login.nsec(nsec)
+      setNsec('') // Clear nsec after successful login
       onLogin()
       onClose()
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Nsec login failed. Please check your key and try again.'
+      setError(errorMessage)
       console.error('Nsec login failed:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleBunkerLogin = () => {
-    if (!bunkerUri.trim() || !bunkerUri.startsWith('bunker://')) return
+  const handleBunkerLogin = async () => {
+    if (!bunkerUri.trim()) {
+      setError('Please enter a bunker URI')
+      return
+    }
+    
+    if (!bunkerUri.startsWith('bunker://')) {
+      setError('Bunker URI must start with bunker://')
+      return
+    }
+    
     setIsLoading(true)
+    setError(null)
 
     try {
-      login.bunker(bunkerUri)
+      await login.bunker(bunkerUri)
+      setBunkerUri('') // Clear bunker URI after successful login
       onLogin()
       onClose()
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Bunker login failed. Please check your URI and try again.'
+      setError(errorMessage)
       console.error('Bunker login failed:', error)
     } finally {
       setIsLoading(false)
@@ -105,7 +129,18 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         </DialogHeader>
 
         <div className="px-6 py-8 space-y-6">
-          <Tabs defaultValue={'nostr' in window ? 'extension' : 'key'} className="w-full">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <Tabs 
+            defaultValue={'nostr' in window ? 'extension' : 'key'} 
+            className="w-full"
+            onValueChange={() => setError(null)}
+          >
             <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="extension">Extension</TabsTrigger>
               <TabsTrigger value="key">Nsec</TabsTrigger>

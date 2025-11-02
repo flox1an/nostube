@@ -142,7 +142,7 @@ export function VideoPage() {
 
     // If we have the event from EventStore, process it
     if (videoEvent) {
-      const processedEvent = processEvent(videoEvent, []) // TODO use currect relays from eventstore
+      const processedEvent = processEvent(videoEvent, [], config.blossomServers) // TODO use currect relays from eventstore
       return processedEvent
     }
 

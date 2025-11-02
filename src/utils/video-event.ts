@@ -77,7 +77,7 @@ function extractBlossomHash(url: string): { sha256?: string; ext?: string } {
 
 /**
  * Generate proxy URLs for video URLs when proxy servers are configured
- * Format: https://proxyserver.com/{sha256}.{ext}?origin={originalUrl}
+ * Format: https://proxyserver.com/{sha256}.{ext}?origin={protocol+hostname}
  */
 function generateProxyUrls(
   originalUrls: string[],
@@ -92,11 +92,21 @@ function generateProxyUrls(
     const { sha256, ext } = extractBlossomHash(originalUrl)
     
     if (sha256 && ext) {
+      // Extract protocol + hostname from original URL (no path or extension)
+      let originBase = ''
+      try {
+        const urlObj = new URL(originalUrl)
+        originBase = `${urlObj.protocol}//${urlObj.hostname}`
+      } catch {
+        // If URL parsing fails, skip this URL
+        continue
+      }
+      
       // Generate proxy URLs for each proxy server
       for (const proxyServer of proxyServers) {
         // Ensure proxy server URL doesn't end with /
         const baseUrl = proxyServer.url.replace(/\/$/, '')
-        const proxyUrl = `${baseUrl}/${sha256}.${ext}?origin=${encodeURIComponent(originalUrl)}`
+        const proxyUrl = `${baseUrl}/${sha256}.${ext}?origin=${encodeURIComponent(originBase)}`
         proxyUrls.push(proxyUrl)
       }
     }

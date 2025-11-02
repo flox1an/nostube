@@ -250,7 +250,7 @@ export function AuthorPage() {
             </TabsList>
 
             <TabsContent value="videos" className="mt-6">
-              {loading ? (
+              {loading && videos.length === 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
@@ -264,20 +264,20 @@ export function AuthorPage() {
                 <>
                   <VideoGrid
                     videos={videos}
-                    isLoading={false}
+                    isLoading={loading && videos.length === 0}
                     showSkeletons={false}
                     layoutMode="auto"
                   />
 
                   {/* Infinite scroll trigger */}
                   <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
-                    {!exhausted && videos.length > 0 && (
+                    {loading && videos.length > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading more videos...
                       </div>
                     )}
-                    {exhausted && videos.length > 0 && (
+                    {!loading && exhausted && videos.length > 0 && (
                       <div className="text-muted-foreground">No more videos to load.</div>
                     )}
                     {videos.length === 0 && !loading && (
@@ -289,7 +289,7 @@ export function AuthorPage() {
             </TabsContent>
 
             <TabsContent value="shorts" className="mt-6">
-              {loading ? (
+              {loading && shorts.length === 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="space-y-2">
@@ -303,23 +303,23 @@ export function AuthorPage() {
                 <>
                   <VideoGrid
                     videos={shorts}
-                    isLoading={false}
+                    isLoading={loading && shorts.length === 0}
                     showSkeletons={false}
                     layoutMode="vertical"
                   />
 
                   {/* Infinite scroll trigger */}
                   <div ref={loadMoreRef} className="w-full py-8 flex items-center justify-center">
-                    {!exhausted && videos.length > 0 && (
+                    {loading && shorts.length > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading more videos...
                       </div>
                     )}
-                    {exhausted && videos.length > 0 && (
+                    {!loading && exhausted && shorts.length > 0 && (
                       <div className="text-muted-foreground">No more videos to load.</div>
                     )}
-                    {videos.length === 0 && !loading && (
+                    {shorts.length === 0 && !loading && (
                       <div className="text-muted-foreground">No videos found.</div>
                     )}
                   </div>

@@ -1,9 +1,8 @@
 {
-  "servers": {
-    "nostr": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "xjsr", "@nostrbook/mcp"]
+  "servers": [
+    {
+      "name": "context7",
+      "url": "https://context7.com/mcp"
     }
-  }
+  ]
 }

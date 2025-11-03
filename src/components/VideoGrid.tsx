@@ -3,7 +3,8 @@ import { VideoEvent } from '@/utils/video-event'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useAppContext } from '@/hooks'
 
 interface VideoGridProps {
   videos: VideoEvent[]
@@ -19,6 +20,15 @@ export function VideoGrid({
   layoutMode = 'auto',
 }: VideoGridProps) {
   const width = useWindowWidth()
+  const { config } = useAppContext()
+
+  // Filter out NSFW videos if nsfwFilter is 'hide'
+  const filteredVideos = useMemo(() => {
+    if (config.nsfwFilter === 'hide') {
+      return videos.filter(video => !video.contentWarning)
+    }
+    return videos
+  }, [videos, config.nsfwFilter])
 
   // Determine number of columns for each type based on width
   const getCols = useCallback(
@@ -45,8 +55,8 @@ export function VideoGrid({
   let wideVideos: VideoEvent[] = []
   let portraitVideos: VideoEvent[] = []
   if (layoutMode === 'auto') {
-    wideVideos = videos.filter(v => v.type === 'videos')
-    portraitVideos = videos.filter(v => v.type === 'shorts')
+    wideVideos = filteredVideos.filter(v => v.type === 'videos')
+    portraitVideos = filteredVideos.filter(v => v.type === 'shorts')
   }
 
   // Helper to chunk array into rows
@@ -78,7 +88,7 @@ export function VideoGrid({
     }
   }
 
-  if (isLoading && showSkeletons && videos.length == 0) {
+  if (isLoading && showSkeletons && filteredVideos.length == 0) {
     // Show skeletons for both types if auto, else just one
     if (layoutMode === 'auto') {
       const wideCols = getCols('horizontal')
@@ -124,7 +134,7 @@ export function VideoGrid({
     )
   }
 
-  if (videos.length === 0 && !isLoading) {
+  if (filteredVideos.length === 0 && !isLoading) {
     return (
       <div className="col-span-full">
         <Card className="border-dashed">
@@ -182,7 +192,7 @@ export function VideoGrid({
             : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
       )}
     >
-      {videos.map(video => (
+      {filteredVideos.map(video => (
         <VideoCard key={video.id} video={video} format={cardFormat} />
       ))}
     </div>

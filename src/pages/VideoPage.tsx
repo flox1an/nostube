@@ -452,7 +452,7 @@ export function VideoPage() {
 
     return (
       <>
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4">
           {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
           <div className="flex items-start justify-between">
@@ -525,7 +525,10 @@ export function VideoPage() {
           )}
 
           {video?.description && (
-            <CollapsibleText text={video.description} className="text-muted-foreground" />
+            <CollapsibleText
+              text={video.description}
+              className="bg-muted p-2 rounded text-muted-foreground"
+            />
           )}
         </div>
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

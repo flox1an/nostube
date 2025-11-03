@@ -5,6 +5,7 @@ export type Theme = 'dark' | 'light' | 'system'
 export type VideoType = 'all' | 'shorts' | 'videos'
 export type BlossomServerTag = 'mirror' | 'initial upload' | 'proxy'
 export type RelayTag = 'read' | 'write'
+export type NsfwFilter = 'hide' | 'warning' | 'show'
 
 export interface Relay {
   url: string
@@ -27,6 +28,10 @@ export interface AppConfig {
   videoType: VideoType
   /** Blossom servers for file uploads */
   blossomServers?: BlossomServer[]
+  /** Thumbnail resize server URL (optional) */
+  thumbResizeServerUrl?: string
+  /** NSFW content filter setting */
+  nsfwFilter: NsfwFilter
 }
 
 export interface AppContextType {

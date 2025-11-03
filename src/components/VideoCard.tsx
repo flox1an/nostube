@@ -10,6 +10,7 @@ import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useEventStore } from 'applesauce-react/hooks'
 import { nprofileFromEvent } from '@/lib/nprofile'
+import { useAppContext } from '@/hooks'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -21,6 +22,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
+  const { config } = useAppContext()
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -28,6 +30,9 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
     () => nprofileFromEvent(video.pubkey, event),
     [video.pubkey, event]
   )
+
+  // Determine if we should show NSFW warning based on filter setting
+  const showNsfwWarning = video.contentWarning && config.nsfwFilter === 'warning'
 
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
@@ -43,8 +48,8 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
 
   const handleMouseEnter = () => {
-    // don't show hover preview for video with content warning
-    if (video.contentWarning) return
+    // don't show hover preview for video with content warning (when warning mode is active)
+    if (showNsfwWarning) return
 
     if (video) {
       setIsHovered(true)
@@ -75,19 +80,19 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
         <Link to={videoPath}>
           <div className="w-full overflow-hidden rounded-lg relative">
             <img
-              src={imageProxyVideoPreview(video.images[0])}
+              src={imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)}
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
               className={cn(
-                video.contentWarning ? 'blur-lg' : '',
+                showNsfwWarning ? 'blur-lg' : '',
                 'w-full object-cover transition-opacity duration-300',
                 aspectRatio,
                 isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
               )}
               onError={err => console.error('error loading', video.images[0], err)}
             />
-            {video.contentWarning && (
+            {showNsfwWarning && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
                 <div className="text-2xl font-bold text-white drop-shadow-lg">Content warning</div>
                 <div className="text-base font-semibold text-white drop-shadow-lg mt-4">
@@ -126,7 +131,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
             {!hideAuthor && (
               <Link to={`/author/${authorNprofile}`} className="shrink-0">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={imageProxy(metadata?.picture)} alt={name} />
+                  <AvatarImage src={imageProxy(metadata?.picture, config.thumbResizeServerUrl)} alt={name} />
                   <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Link>

@@ -22,7 +22,7 @@ function formatDuration(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
-function VideoSuggestionItem({ video }: { video: VideoEvent }) {
+function VideoSuggestionItem({ video, thumbResizeServerUrl }: { video: VideoEvent; thumbResizeServerUrl?: string }) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
 
@@ -31,7 +31,7 @@ function VideoSuggestionItem({ video }: { video: VideoEvent }) {
       <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
         <div className="relative w-40 h-24 flex-shrink-0">
           <img
-            src={imageProxyVideoPreview(video.images[0])}
+            src={imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)}
             loading="lazy"
             alt={video.title}
             className="w-full h-full object-cover rounded-md"
@@ -198,7 +198,7 @@ export function VideoSuggestions({
     <div className="sm:grid grid-cols-2 gap-4 lg:block">
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
-        : suggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)}
+        : suggestions.map(video => <VideoSuggestionItem key={video.id} video={video} thumbResizeServerUrl={config.thumbResizeServerUrl} />)}
     </div>
   )
 }

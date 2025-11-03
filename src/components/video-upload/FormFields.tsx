@@ -3,6 +3,28 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const LANGUAGES = [
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+  { code: 'de', name: 'German', flag: '🇩🇪' },
+  { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+  { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+  { code: 'fr', name: 'French', flag: '🇫🇷' },
+  { code: 'zh', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+  { code: 'pt', name: 'Portuguese', flag: '🇧🇷' },
+  { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+  { code: 'it', name: 'Italian', flag: '🇮🇹' },
+  { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+  { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
+]
 
 interface FormFieldsProps {
   title: string
@@ -16,6 +38,8 @@ interface FormFieldsProps {
   onPaste: (e: React.ClipboardEvent) => void
   onRemoveTag: (tag: string) => void
   onTagInputBlur: () => void
+  language: string
+  onLanguageChange: (language: string) => void
 }
 
 export function FormFields({
@@ -30,6 +54,8 @@ export function FormFields({
   onPaste,
   onRemoveTag,
   onTagInputBlur,
+  language,
+  onLanguageChange,
 }: FormFieldsProps) {
   return (
     <>
@@ -45,6 +71,22 @@ export function FormFields({
           value={description}
           onChange={e => onDescriptionChange(e.target.value)}
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="language">Language</Label>
+        <Select value={language} onValueChange={onLanguageChange}>
+          <SelectTrigger id="language">
+            <SelectValue placeholder="Select language" />
+          </SelectTrigger>
+          <SelectContent>
+            {LANGUAGES.map(lang => (
+              <SelectItem key={lang.code} value={lang.code}>
+                {lang.flag} {lang.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-2">

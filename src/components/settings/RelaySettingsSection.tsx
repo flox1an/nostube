@@ -83,7 +83,7 @@ export function RelaySettingsSection() {
   const availableTags: RelayTag[] = ['read', 'write']
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card>
       <CardHeader>
         <CardTitle>Relays</CardTitle>
         <CardDescription>Manage the Nostr relays your client connects to.</CardDescription>

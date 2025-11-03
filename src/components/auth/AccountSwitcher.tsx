@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx'
 import { useNavigate } from 'react-router-dom'
 import { imageProxy } from '@/lib/utils'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
-import { useProfile, removeAccountFromStorage, saveActiveAccount } from '@/hooks'
+import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext } from '@/hooks'
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 
@@ -21,7 +21,7 @@ interface AccountSwitcherProps {
   onAddAccountClick: () => void
 }
 
-function AccountSwitchItem({ account, onClick }: { account: IAccount; onClick: () => void }) {
+function AccountSwitchItem({ account, onClick, thumbResizeServerUrl }: { account: IAccount; onClick: () => void; thumbResizeServerUrl?: string }) {
   const accountProfile = useProfile({ pubkey: account.pubkey })
   const displayName = getDisplayName(accountProfile)
 
@@ -31,7 +31,7 @@ function AccountSwitchItem({ account, onClick }: { account: IAccount; onClick: (
       className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
     >
       <Avatar className="w-8 h-8">
-        <AvatarImage src={imageProxy(accountProfile?.picture as string)} alt={displayName || ''} />
+        <AvatarImage src={imageProxy(accountProfile?.picture as string, thumbResizeServerUrl)} alt={displayName || ''} />
         <AvatarFallback>{displayName?.charAt(0) || '?'}</AvatarFallback>
       </Avatar>
       <div className="flex-1 truncate">
@@ -46,6 +46,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   const accountManager = useAccountManager()
   const profile = useProfile(activeAccount ? { pubkey: activeAccount?.pubkey } : undefined)
   const navigate = useNavigate()
+  const { config } = useAppContext()
 
   if (!activeAccount || !accountManager) return null
 
@@ -73,7 +74,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         <button className="flex items-center gap-2 py-1 px-3 rounded-full hover:bg-accent transition-all w-full text-foreground">
           <Avatar className="w-10 h-10">
             <AvatarImage
-              src={imageProxy(profile?.picture as string)}
+              src={imageProxy(profile?.picture as string, config.thumbResizeServerUrl)}
               alt={getDisplayName(profile)}
             />
             <AvatarFallback>{getDisplayName(profile)?.charAt(0)}</AvatarFallback>
@@ -106,6 +107,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
                 key={account.pubkey}
                 account={account}
                 onClick={() => handleSwitchAccount(account)}
+                thumbResizeServerUrl={config.thumbResizeServerUrl}
               />
             ))}
           </>

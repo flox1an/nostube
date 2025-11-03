@@ -55,7 +55,7 @@ export function MissingVideosSection() {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Missing Videos</span>

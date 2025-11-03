@@ -18,6 +18,9 @@ import { imageProxy } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { getKindsForType } from '@/lib/video-types'
 import { nprofileFromEvent } from '@/lib/nprofile'
+import { useValidUrl } from '@/hooks/useValidUrl'
+import { UserBlossomServersModel } from 'applesauce-core/models'
+import { useEventModel } from 'applesauce-react/hooks'
 
 function ShortVideoItem({
   video,
@@ -34,9 +37,36 @@ function ShortVideoItem({
   const videoRef = useRef<HTMLDivElement>(null)
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const eventStore = useEventStore()
+  const { config } = useAppContext()
 
-  // Always use first URL for each video
-  const currentUrlIndex = 0
+  // Get video owner's Blossom servers
+  const rawOwnerServers =
+    useEventModel(UserBlossomServersModel, video.pubkey ? [video.pubkey] : null) || []
+
+  // Combine config Blossom servers with video owner's servers
+  const allBlossomServers = useMemo(() => {
+    // Move conversion inside useMemo to avoid dependency warning
+    const ownerServers = (rawOwnerServers || []).map(url => url.toString())
+    const configServers = config.blossomServers?.map(s => s.url) || []
+    // Owner servers first (more likely to have the file), then config servers
+    return [...ownerServers, ...configServers]
+  }, [rawOwnerServers, config.blossomServers])
+
+  // Validate video URLs with Blossom server fallbacks
+  const { validUrl: videoUrl } = useValidUrl({
+    urls: video.urls,
+    blossomServers: allBlossomServers,
+    resourceType: 'video',
+    enabled: shouldPreload || isActive,
+  })
+
+  // Validate thumbnail URLs with Blossom server fallbacks
+  const { validUrl: thumbnailUrl } = useValidUrl({
+    urls: video.images,
+    blossomServers: allBlossomServers,
+    resourceType: 'image',
+    enabled: true,
+  })
 
   // Get the event from store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -76,11 +106,11 @@ function ShortVideoItem({
 
   // Handle video error
   const handleVideoError = useCallback(() => {
-    console.error('Error loading video:', video.urls[currentUrlIndex])
-  }, [currentUrlIndex, video.urls])
+    console.error('Error loading video:', videoUrl)
+  }, [videoUrl])
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const videoUrl = `${baseUrl}/short/${video.link}`
+  const shareUrl = `${baseUrl}/short/${video.link}`
 
   return (
     <div
@@ -107,22 +137,22 @@ function ShortVideoItem({
             <div className="relative w-full h-full">
               <video
                 ref={videoElementRef}
-                src={video.urls[currentUrlIndex]}
+                src={videoUrl || undefined}
                 className="w-full h-full object-contain rounded-lg"
                 loop
                 muted={false}
                 playsInline
-                poster={video.images[0] ? imageProxy(video.images[0]) : undefined}
+                poster={thumbnailUrl ? imageProxy(thumbnailUrl) : undefined}
                 preload={shouldPreload || isActive ? 'auto' : 'metadata'}
                 onCanPlay={handleCanPlay}
                 onError={handleVideoError}
                 style={{ opacity: isActive ? 1 : 0.5 }}
               />
               {/* Show thumbnail overlay when not active for better visibility */}
-              {!isActive && video.images[0] && (
+              {!isActive && thumbnailUrl && (
                 <div className="absolute inset-0 rounded-lg overflow-hidden bg-black">
                   <img
-                    src={imageProxy(video.images[0])}
+                    src={imageProxy(thumbnailUrl)}
                     alt={video.title}
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -170,7 +200,7 @@ function ShortVideoItem({
               size="icon"
               className="bg-black/50 hover:bg-black/70 rounded-full border border-white/20"
               onClick={() => {
-                navigator.clipboard.writeText(videoUrl)
+                navigator.clipboard.writeText(shareUrl)
               }}
             >
               <Share2 className="h-6 w-6 text-white" />

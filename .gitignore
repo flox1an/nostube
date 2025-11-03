@@ -21,3 +21,6 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# ChatGPT exports that may contain personal info
+*ChatGPT*.md

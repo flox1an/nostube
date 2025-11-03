@@ -152,6 +152,10 @@
     border-radius: 0;
   }
 
+  media-controller video:focus-visible {
+    outline: none;
+  }
+
   media-controller hls-video {
     height: 80dvh;
   }
@@ -163,6 +167,10 @@
   media-controller:fullscreen hls-video {
     height: 100dvh;
     border-radius: 0;
+  }
+
+  media-controller hls-video:focus-visible {
+    outline: none;
   }
 
   media-control-bar * {

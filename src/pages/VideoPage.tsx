@@ -306,6 +306,11 @@ export function VideoPage() {
         return
       }
 
+      // Ignore if the video element itself is focused (let native controls handle it)
+      if (target.tagName === 'VIDEO' || target.tagName === 'HLS-VIDEO') {
+        return
+      }
+
       const videoElement = videoElementRef.current
 
       // Toggle cinema mode on "T" key press

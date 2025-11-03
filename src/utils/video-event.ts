@@ -131,6 +131,34 @@ function generateProxyUrls(originalUrls: string[], proxyServers: BlossomServer[]
 
   return proxyUrls
 }
+
+/**
+ * Generate mirror URLs for video URLs when mirror servers are configured
+ * Format: https://mirrorserver.com/{sha256}.{ext}
+ * Mirror URLs are direct replacements without origin parameters
+ */
+function generateMirrorUrls(originalUrls: string[], mirrorServers: BlossomServer[]): string[] {
+  if (mirrorServers.length === 0) return []
+
+  const mirrorUrls: string[] = []
+
+  for (const originalUrl of originalUrls) {
+    // Try to extract SHA256 from the URL
+    const { sha256, ext } = extractBlossomHash(originalUrl)
+
+    if (sha256 && ext) {
+      // Generate mirror URLs for each mirror server
+      for (const mirrorServer of mirrorServers) {
+        // Ensure mirror server URL doesn't end with /
+        const baseUrl = mirrorServer.url.replace(/\/$/, '')
+        const mirrorUrl = `${baseUrl}/${sha256}.${ext}`
+        mirrorUrls.push(mirrorUrl)
+      }
+    }
+  }
+
+  return mirrorUrls
+}
 // Process Nostr events into cache entries
 export function processEvents(
   events: (Event | undefined)[],
@@ -211,7 +239,18 @@ export function processEvent(
     const textTracks: TextTrack[] = []
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track')
     textTrackTags.forEach(vtt => {
-      const [_, url, lang] = vtt
+      let [_, url, lang] = vtt
+      // Generate mirror URLs if the URL is a Blossom URL and mirror servers are configured
+      if (url && blossomServers && blossomServers.length > 0) {
+        const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
+        if (mirrorServers.length > 0) {
+          const mirrorUrls = generateMirrorUrls([url], mirrorServers)
+          // Use first mirror URL if available, otherwise use original
+          if (mirrorUrls.length > 0) {
+            url = mirrorUrls[0]
+          }
+        }
+      }
       textTracks.push({ url, lang })
     })
 
@@ -221,22 +260,17 @@ export function processEvent(
       url = url.split(' ')[0]
     }
 
-    const videoUrls2 = videoUrls.map(url => {
-      if (url.includes('https://temp-st.apps2.slidestr.net/')) {
-        return url.replace('https://temp-st.apps2.slidestr.net/', 'https://almond.slidestr.net/')
-      }
-      return url
-    })
-
-    // Generate proxy URLs if proxy servers are configured
-    let finalUrls = videoUrls2
+    // Generate mirror and proxy URLs if servers are configured
+    let finalUrls = videoUrls
     if (blossomServers && blossomServers.length > 0) {
+      const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
       const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
-      if (proxyServers.length > 0) {
-        const proxyUrls = generateProxyUrls(videoUrls2, proxyServers)
-        // Prepend proxy URLs before original URLs
-        finalUrls = [...proxyUrls, ...videoUrls2]
-      }
+
+      const mirrorUrls = mirrorServers.length > 0 ? generateMirrorUrls(videoUrls, mirrorServers) : []
+      const proxyUrls = proxyServers.length > 0 ? generateProxyUrls(videoUrls, proxyServers) : []
+
+      // Prepend mirror URLs and proxy URLs before original URLs
+      finalUrls = [...mirrorUrls, ...proxyUrls, ...videoUrls]
     }
 
     const videoEvent: VideoEvent = {

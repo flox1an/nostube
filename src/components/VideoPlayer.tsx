@@ -7,6 +7,53 @@ import { getLanguageLabel, imageProxyVideoPreview } from '@/lib/utils'
 import 'media-chrome/menu'
 import '@/types/media-chrome.d.ts'
 import { Loader2 } from 'lucide-react'
+import { extractBlossomHash } from '@/utils/video-event'
+import { useAppContext } from '@/hooks/useAppContext'
+import type { BlossomServer } from '@/contexts/AppContext'
+
+/**
+ * Generate alternative URLs for VTT tracks using Blossom proxy servers
+ */
+function generateVttProxyUrls(originalUrl: string, proxyServers: BlossomServer[]): string[] {
+  if (proxyServers.length === 0) return []
+
+  const { sha256, ext } = extractBlossomHash(originalUrl)
+
+  if (!sha256 || !ext) return []
+
+  const proxyUrls: string[] = []
+
+  // Extract protocol + hostname from original URL
+  let originBase = ''
+  try {
+    const urlObj = new URL(originalUrl)
+    originBase = `${urlObj.protocol}//${urlObj.hostname}`
+  } catch {
+    return []
+  }
+
+  // Generate proxy URLs for each proxy server
+  for (const proxyServer of proxyServers) {
+    const baseUrl = proxyServer.url.replace(/\/$/, '')
+
+    try {
+      const proxyUrlObj = new URL(baseUrl)
+      const proxyOrigin = `${proxyUrlObj.protocol}//${proxyUrlObj.hostname}`
+
+      // If origin matches proxy, use direct URL
+      if (originBase === proxyOrigin) {
+        proxyUrls.push(`${baseUrl}/${sha256}.${ext}`)
+      } else {
+        // Otherwise use proxy URL with origin parameter
+        proxyUrls.push(`${baseUrl}/${sha256}.${ext}?origin=${encodeURIComponent(originBase)}`)
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return proxyUrls
+}
 
 interface VideoPlayerProps {
   urls: string[]
@@ -68,6 +115,20 @@ export function VideoPlayer({
   const [triedHead, setTriedHead] = useState(false)
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
+
+  // Get blossom servers from context for VTT failover
+  const { config } = useAppContext()
+  const blossomProxyServers = React.useMemo(
+    () => (config.blossomServers || []).filter(server => server.tags.includes('proxy')),
+    [config.blossomServers]
+  )
+
+  // Track VTT URLs with their alternatives (original URL -> list of alternative URLs to try)
+  const [vttUrlMap, setVttUrlMap] = useState<Map<string, string[]>>(new Map())
+  const trackRefs = useRef<Map<string, HTMLTrackElement>>(new Map())
+
+  // Track validated VTT URLs (lang -> validated URL to use)
+  const [validatedVttUrls, setValidatedVttUrls] = useState<Map<string, string>>(new Map())
 
   const isHls = React.useMemo(
     () => mime === 'application/vnd.apple.mpegurl' || urls[currentUrlIndex]?.endsWith('.m3u8'),
@@ -251,6 +312,134 @@ export function VideoPlayer({
     setTriedHead(false)
   }, [currentUrlIndex])
 
+  // Initialize VTT URL map with failover alternatives when textTracks or proxy servers change
+  useEffect(() => {
+    const newMap = new Map<string, string[]>()
+
+    textTracks.forEach(track => {
+      // Generate alternative URLs using Blossom proxy servers
+      const alternatives = generateVttProxyUrls(track.url, blossomProxyServers)
+      newMap.set(track.url, alternatives)
+    })
+
+    setVttUrlMap(newMap)
+  }, [textTracks, blossomProxyServers])
+
+  // Proactively validate VTT URLs on mount to avoid 90-second hangs
+  useEffect(() => {
+    if (textTracks.length === 0) return
+
+    const validateUrls = async () => {
+      const timeout = 5000 // 5 second timeout
+      const validated = new Map<string, string>()
+
+      await Promise.all(
+        textTracks.map(async track => {
+          // Test original URL first
+          const urlsToTest = [track.url, ...generateVttProxyUrls(track.url, blossomProxyServers)]
+
+          for (const url of urlsToTest) {
+            try {
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+              const res = await fetch(url, {
+                method: 'HEAD',
+                mode: 'cors',
+                signal: controller.signal,
+              })
+
+              clearTimeout(timeoutId)
+
+              if (res.ok) {
+                validated.set(track.lang, url)
+                console.log(`VTT track validated for ${track.lang}: ${url}`)
+                break // Found working URL
+              }
+            } catch {
+              // Try next URL
+              continue
+            }
+          }
+
+          // If no URL worked, still use original (might work later or has CORS issues with HEAD)
+          if (!validated.has(track.lang)) {
+            validated.set(track.lang, track.url)
+            console.warn(`VTT track validation failed for ${track.lang}, using original: ${track.url}`)
+          }
+        })
+      )
+
+      setValidatedVttUrls(validated)
+    }
+
+    validateUrls()
+  }, [textTracks, blossomProxyServers])
+
+  // Handle VTT track load error and try failover URLs
+  const handleTrackError = useCallback(
+    async (originalUrl: string, lang: string) => {
+      const alternatives = vttUrlMap.get(originalUrl)
+
+      if (!alternatives || alternatives.length === 0) {
+        console.warn(`VTT track failed to load and no alternatives available: ${originalUrl}`)
+        return
+      }
+
+      // Get the track element
+      const trackElement = trackRefs.current.get(lang)
+      if (!trackElement) return
+
+      console.log(`VTT track failed for ${lang}, testing ${alternatives.length} alternatives...`)
+
+      // Test all alternatives in parallel with timeout
+      const timeout = 5000 // 5 second timeout
+      const checks = await Promise.all(
+        alternatives.map(async url => {
+          try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+            const res = await fetch(url, {
+              method: 'HEAD',
+              mode: 'cors',
+              signal: controller.signal,
+            })
+
+            clearTimeout(timeoutId)
+            return { url, ok: res.ok }
+          } catch (err) {
+            // Timeout or network error
+            return { url, ok: false }
+          }
+        })
+      )
+
+      // Find first working URL
+      const working = checks.find(check => check.ok)
+
+      if (working) {
+        console.log(`VTT track using alternative for ${lang}: ${working.url}`)
+        trackElement.src = working.url
+        // Clear alternatives since we found one that works
+        setVttUrlMap(prev => {
+          const newMap = new Map(prev)
+          newMap.set(originalUrl, [])
+          return newMap
+        })
+      } else {
+        console.warn(`All VTT track alternatives failed for ${lang}`)
+        // Clear alternatives since none work
+        setVttUrlMap(prev => {
+          const newMap = new Map(prev)
+          newMap.set(originalUrl, [])
+          return newMap
+        })
+      }
+    },
+    [vttUrlMap]
+  )
+
   const hasCaptions = textTracks.length > 0
 
   const posterUrl = React.useMemo(
@@ -303,15 +492,25 @@ export function VideoPlayer({
           onError={handleVideoError}
         >
           {/* TODO translate label */}
-          {textTracks.map(vtt => (
-            <track
-              key={vtt.lang}
-              label={getLanguageLabel(vtt.lang)}
-              kind="captions"
-              srcLang={vtt.lang}
-              src={vtt.url}
-            ></track>
-          ))}
+          {textTracks.map(vtt => {
+            // Use validated URL if available, otherwise use original
+            const trackUrl = validatedVttUrls.get(vtt.lang) || vtt.url
+            return (
+              <track
+                key={vtt.lang}
+                label={getLanguageLabel(vtt.lang)}
+                kind="captions"
+                srcLang={vtt.lang}
+                src={trackUrl}
+                ref={el => {
+                  if (el) {
+                    trackRefs.current.set(vtt.lang, el)
+                  }
+                }}
+                onError={() => handleTrackError(vtt.url, vtt.lang)}
+              ></track>
+            )
+          })}
           {/* TODO: add captions <track kind="captions" /> */}
           {/* TODO: add fallback sources <source src={url} type={mime} /> */}
         </video>

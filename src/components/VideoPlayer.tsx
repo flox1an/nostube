@@ -38,6 +38,10 @@ interface VideoPlayerProps {
    * Callback when playback finishes
    */
   onEnded?: () => void
+  /**
+   * Callback when video element is ready
+   */
+  onVideoElementReady?: (element: HTMLVideoElement | null) => void
 }
 
 export function VideoPlayer({
@@ -55,6 +59,7 @@ export function VideoPlayer({
   onToggleCinemaMode,
   onVideoDimensionsLoaded,
   onEnded,
+  onVideoElementReady,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
@@ -74,6 +79,14 @@ export function VideoPlayer({
     setCurrentUrlIndex(0)
     setTriedHead(false)
   }, [urls])
+
+  // Notify parent when video element is ready
+  useEffect(() => {
+    const el = isHls ? hlsEl : videoRef.current
+    if (onVideoElementReady) {
+      onVideoElementReady(el)
+    }
+  }, [isHls, hlsEl, onVideoElementReady])
 
   // Track if we've already set the initial position
   const hasSetInitialPos = useRef(false)
@@ -172,44 +185,6 @@ export function VideoPlayer({
       if (spinnerTimeoutRef.current !== null) {
         clearTimeout(spinnerTimeoutRef.current)
       }
-    }
-  }, [isHls, hlsEl])
-
-  // Frame-by-frame navigation with . and , keys (global listener)
-  useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
-    if (!el) return
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (!el) return
-
-      // Don't capture keys if user is typing in an input field
-      const activeElement = document.activeElement
-      if (
-        activeElement &&
-        (activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.tagName === 'SELECT' ||
-          activeElement.isContentEditable)
-      ) {
-        return
-      }
-
-      // Only step if video is paused and present
-      if (!el.paused) return
-      // Assume 30fps for frame step
-      const frameStep = 1 / 30
-      if (e.key === '.') {
-        el.currentTime = Math.min(el.duration, el.currentTime + frameStep)
-        e.preventDefault()
-      } else if (e.key === ',') {
-        el.currentTime = Math.max(0, el.currentTime - frameStep)
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
     }
   }, [isHls, hlsEl])
 

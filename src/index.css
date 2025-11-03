@@ -139,8 +139,11 @@
     background-color: #000;
   }
 
-  media-controller video.normal {
+  media-controller video {
     max-height: 80dvh;
+  }
+
+  media-controller video.normal {
     border-radius: var(--radius);
   }
 
@@ -151,10 +154,13 @@
 
   media-controller hls-video {
     height: 80dvh;
+  }
+
+  media-controller hls-video.normal {
     border-radius: var(--radius);
   }
 
-  media-controller:fullscreen hls-video.normal {
+  media-controller:fullscreen hls-video {
     height: 100dvh;
     border-radius: 0;
   }

@@ -512,7 +512,14 @@ export function VideoPage() {
             </div>
           </div>
 
-          <Separator />
+          {video?.description ? (
+            <CollapsibleText
+              text={video.description}
+              className="bg-muted p-4 rounded-lg text-muted-foreground"
+            />
+          ) : (
+            <Separator />
+          )}
 
           {video && video.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -522,13 +529,6 @@ export function VideoPage() {
                 </Badge>
               ))}
             </div>
-          )}
-
-          {video?.description && (
-            <CollapsibleText
-              text={video.description}
-              className="bg-muted p-2 rounded text-muted-foreground"
-            />
           )}
         </div>
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -566,7 +566,7 @@ export function VideoPage() {
           </AlertDialogContent>
         </AlertDialog>
         {video && (
-          <div className="p-4">
+          <div className="py-4">
             <VideoComments videoId={video.id} authorPubkey={video.pubkey} link={video.link} />
           </div>
         )}

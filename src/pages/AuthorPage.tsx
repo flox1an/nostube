@@ -24,7 +24,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { presetRelays } from '../App'
+import { presetRelays } from '@/constants/relays'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 

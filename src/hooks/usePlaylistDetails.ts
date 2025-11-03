@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { of } from 'rxjs'
+import { of, combineLatest } from 'rxjs'
+import { switchMap } from 'rxjs/operators'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { createAddressLoader, createEventLoader } from 'applesauce-loaders/loaders'
+import { createAddressLoader, createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event as NostrEvent } from 'nostr-tools'
 
@@ -49,7 +50,10 @@ function isNaddrPointer(ptr: unknown): ptr is NaddrPointer {
   )
 }
 
-export function usePlaylistDetails(nip19param?: string | null): PlaylistDetailsResult {
+export function usePlaylistDetails(
+  nip19param?: string | null,
+  videoEventRelays?: string[]
+): PlaylistDetailsResult {
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
 
@@ -93,8 +97,9 @@ export function usePlaylistDetails(nip19param?: string | null): PlaylistDetailsR
 
   const relaysToUse = useMemo(() => {
     const pointerRelays = (playlistPointer as { relays?: string[] } | null)?.relays || []
-    return combineRelays([pointerRelays, allConfigRelays, videoRelayFallbacks])
-  }, [playlistPointer, allConfigRelays])
+    const videoRelays = videoEventRelays || []
+    return combineRelays([videoRelays, pointerRelays, allConfigRelays, videoRelayFallbacks])
+  }, [playlistPointer, allConfigRelays, videoEventRelays])
 
   const eventLoader = useMemo(
     () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),
@@ -206,7 +211,20 @@ export function usePlaylistDetails(nip19param?: string | null): PlaylistDetailsR
     const playlistSeenRelaysSet = getSeenRelays(playlistEvent)
     const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
 
+    // Collect all relay hints from all missing refs
+    const allRelayHints = missingRefs.flatMap(ref => ref.relayHints || [])
+
+    // Combine all relays for the batch request
+    const batchRelays = combineRelays([
+      allRelayHints,
+      playlistSeenRelays,
+      relaysToUse,
+    ])
+
+    // Create a single batch request for all missing video IDs
+    const missingIds = missingRefs.map(r => r.id)
     const completedIds = new Set<string>()
+
     const timeoutId = setTimeout(() => {
       missingRefs.forEach(ref => {
         if (!eventStore.hasEvent(ref.id)) {
@@ -216,40 +234,36 @@ export function usePlaylistDetails(nip19param?: string | null): PlaylistDetailsR
       setLoadingVideoIds(new Set())
     }, 10000)
 
-    const subscriptions = missingRefs.map(ref => {
-      const tagRelayHints = ref.relayHints || []
-      const referencedEvent = eventStore.getEvent(ref.id)
-      const seenRelaysSet = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-      const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
+    // Use timeline loader with ids filter for batch fetching
+    const batchLoader = createTimelineLoader(
+      pool,
+      batchRelays,
+      { ids: missingIds },
+      { eventStore }
+    )
 
-      const videoRelays = combineRelays([
-        tagRelayHints,
-        seenRelays,
-        playlistSeenRelays,
-        relaysToUse,
-      ])
-
-      const videoLoader = createEventLoader(pool, { eventStore, extraRelays: videoRelays })
-      const observable = videoLoader({ id: ref.id })
-
-      return observable.subscribe({
-        next: event => {
-          if (event) {
+    const subscription = batchLoader().subscribe({
+      next: events => {
+        events.forEach(event => {
+          if (event && missingIds.includes(event.id)) {
             eventStore.add(event)
-            completedIds.add(ref.id)
+            completedIds.add(event.id)
             setLoadingVideoIds(prev => {
               const next = new Set(prev)
-              next.delete(ref.id)
+              next.delete(event.id)
               return next
             })
             setFailedVideoIds(prev => {
               const next = new Set(prev)
-              next.delete(ref.id)
+              next.delete(event.id)
               return next
             })
           }
-        },
-        complete: () => {
+        })
+      },
+      complete: () => {
+        // Mark any events that didn't load as failed
+        missingRefs.forEach(ref => {
           if (!completedIds.has(ref.id) && !eventStore.hasEvent(ref.id)) {
             setFailedVideoIds(prev => new Set([...prev, ref.id]))
             setLoadingVideoIds(prev => {
@@ -258,36 +272,46 @@ export function usePlaylistDetails(nip19param?: string | null): PlaylistDetailsR
               return next
             })
           }
-        },
-        error: err => {
-          console.error(`[usePlaylistDetails] Failed to load video event ${ref.id}:`, err)
+        })
+      },
+      error: err => {
+        console.error('[usePlaylistDetails] Failed to load playlist videos:', err)
+        // Mark all as failed on error
+        missingRefs.forEach(ref => {
           setFailedVideoIds(prev => new Set([...prev, ref.id]))
-          setLoadingVideoIds(prev => {
-            const next = new Set(prev)
-            next.delete(ref.id)
-            return next
-          })
-        },
-      })
+        })
+        setLoadingVideoIds(new Set())
+      },
     })
 
     return () => {
       clearTimeout(timeoutId)
-      subscriptions.forEach(sub => sub.unsubscribe())
+      subscription.unsubscribe()
     }
   }, [videoRefs, eventStore, pool, relaysToUse, playlistEvent])
 
-  const videoEvents = useMemo(() => {
+  // Observe each video event reactively
+  const videoEventsObservable = useMemo(() => {
     if (videoRefs.length === 0) {
-      return []
+      return of([])
     }
 
-    const events = videoRefs
-      .map(ref => eventStore.getEvent(ref.id))
-      .filter((event): event is NostrEvent => Boolean(event))
+    // Use combineLatest to observe all video events
+    const observables = videoRefs.map(ref =>
+      eventStore.event(ref.id).pipe(
+        switchMap(event => of(event))
+      )
+    )
 
-    return processEvents(events, readRelays, undefined, config.blossomServers)
+    return combineLatest(observables).pipe(
+      switchMap(events => {
+        const filteredEvents = events.filter((event): event is NostrEvent => Boolean(event))
+        return of(processEvents(filteredEvents, readRelays, undefined, config.blossomServers))
+      })
+    )
   }, [videoRefs, eventStore, readRelays, config.blossomServers])
+
+  const videoEvents = useObservableState(videoEventsObservable, [])
 
   const isLoadingVideos = Boolean(playlistEvent) && videoRefs.length > 0 && videoEvents.length === 0
 

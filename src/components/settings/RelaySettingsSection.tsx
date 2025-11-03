@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon, Cog } from 'lucide-react'
-import { presetRelays } from '@/App'
+import { presetRelays } from '@/constants/relays'
 import {
   DropdownMenu,
   DropdownMenuTrigger,

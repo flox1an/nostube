@@ -2,7 +2,7 @@ import { SimplePool, Filter } from 'nostr-tools'
 import { VideoEvent, processEvents } from '../utils/video-event'
 import { getKindsForType, type VideoType } from '../lib/video-types'
 import type { ReportedPubkeys } from '@/hooks'
-import { presetRelays } from '../App'
+import { presetRelays } from '@/constants/relays'
 
 type VideoCache = VideoEvent
 

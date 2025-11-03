@@ -7,7 +7,7 @@ import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
 import { filter } from 'rxjs'
-import { presetRelays } from '../App'
+import { presetRelays } from '@/constants/relays'
 
 // Setup a local event
 

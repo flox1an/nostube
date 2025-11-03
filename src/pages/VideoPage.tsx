@@ -54,6 +54,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -127,16 +128,6 @@ export function VideoPage() {
   const playlistParam = searchParams.get('playlist')
   const eventStore = useEventStore()
   const { pool } = useAppContext()
-  const {
-    playlistEvent,
-    playlistTitle,
-    playlistDescription,
-    videoEvents: playlistVideos,
-    isLoadingPlaylist,
-    isLoadingVideos,
-    failedVideoIds,
-    loadingVideoIds,
-  } = usePlaylistDetails(playlistParam)
   const navigate = useNavigate()
   const eventPointer = useMemo(() => decodeEventPointer(nevent ?? ''), [nevent])
   const { markVideoAsMissing, clearMissingVideo, isVideoMissing } = useMissingVideos()
@@ -186,6 +177,30 @@ export function VideoPage() {
   }, [eventStore, loader, eventPointer])
 
   const videoEvent = useObservableState(videoObservable)
+
+  // Get relays from the video event for playlist loading
+  const videoEventRelays = useMemo(() => {
+    if (!videoEvent) return []
+    const seenRelaysSet = getSeenRelays(videoEvent)
+    return seenRelaysSet ? Array.from(seenRelaysSet) : []
+  }, [videoEvent])
+
+  // Combine video event relays with nevent relays for playlist fetching
+  const playlistRelays = useMemo(() => {
+    const neventRelays = eventPointer?.relays || []
+    return combineRelays([videoEventRelays, neventRelays])
+  }, [videoEventRelays, eventPointer])
+
+  const {
+    playlistEvent,
+    playlistTitle,
+    playlistDescription,
+    videoEvents: playlistVideos,
+    isLoadingPlaylist,
+    isLoadingVideos,
+    failedVideoIds,
+    loadingVideoIds,
+  } = usePlaylistDetails(playlistParam, playlistRelays)
 
   // Process the video event or get from cache
   const video = useMemo(() => {

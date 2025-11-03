@@ -134,6 +134,8 @@ export function VideoPage() {
   const { cinemaMode: persistedCinemaMode, setCinemaMode } = useCinemaMode()
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
   const [tempCinemaModeForWideVideo, setTempCinemaModeForWideVideo] = useState(false)
+  const videoElementRef = useRef<HTMLVideoElement | null>(null)
+  const [activeVideoElement, setActiveVideoElement] = useState<HTMLVideoElement | null>(null)
 
   // Effective cinema mode: temp override for ultra-wide, or persisted preference
   const cinemaMode = tempCinemaModeForWideVideo || persistedCinemaMode
@@ -275,6 +277,93 @@ export function VideoPage() {
     }
   }, [video?.title])
 
+  // Playlist navigation helpers (must be before keyboard shortcuts that use them)
+  const currentPlaylistIndex = useMemo(() => {
+    if (!playlistParam || !video) return -1
+    return playlistVideos.findIndex(item => item.id === video.id)
+  }, [playlistParam, video?.id, playlistVideos])
+
+  const nextPlaylistVideo = useMemo(() => {
+    if (currentPlaylistIndex === -1) return undefined
+    return playlistVideos[currentPlaylistIndex + 1]
+  }, [currentPlaylistIndex, playlistVideos])
+
+  const prevPlaylistVideo = useMemo(() => {
+    if (currentPlaylistIndex === -1 || currentPlaylistIndex === 0) return undefined
+    return playlistVideos[currentPlaylistIndex - 1]
+  }, [currentPlaylistIndex, playlistVideos])
+
+  // Keyboard shortcuts for video control
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input, textarea, or contenteditable element
+      const target = event.target as HTMLElement
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return
+      }
+
+      const videoElement = videoElementRef.current
+
+      // Toggle cinema mode on "T" key press
+      if (event.key === 't' || event.key === 'T') {
+        event.preventDefault()
+        toggleCinemaMode()
+        return
+      }
+
+      // Mute/unmute on "M" key press
+      if (event.key === 'm' || event.key === 'M') {
+        event.preventDefault()
+        if (videoElement) {
+          videoElement.muted = !videoElement.muted
+        }
+        return
+      }
+
+      // Play/pause on Space key press
+      if (event.key === ' ') {
+        event.preventDefault()
+        if (videoElement) {
+          if (videoElement.paused) {
+            videoElement.play()
+          } else {
+            videoElement.pause()
+          }
+        }
+        return
+      }
+
+      // Previous video on comma key press (only in playlist mode)
+      if (event.key === ',' && playlistParam) {
+        event.preventDefault()
+        if (prevPlaylistVideo) {
+          setCurrentPlayPos(0)
+          navigate(`/video/${prevPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}`)
+        }
+        return
+      }
+
+      // Next video on period key press (only in playlist mode)
+      if (event.key === '.' && playlistParam) {
+        event.preventDefault()
+        if (nextPlaylistVideo) {
+          setCurrentPlayPos(0)
+          navigate(`/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}`)
+        }
+        return
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [toggleCinemaMode, prevPlaylistVideo, nextPlaylistVideo, playlistParam, navigate])
+
   const [shareOpen, setShareOpen] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
   const [currentPlayPos, setCurrentPlayPos] = useState(0)
@@ -323,6 +412,72 @@ export function VideoPage() {
 
   // Use the custom hook for debounced play position storage
   useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id)
+
+  // Register keyboard shortcuts for playback control
+  useEffect(() => {
+    const el = activeVideoElement
+    if (!el) return
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const activeElement = document.activeElement
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT' ||
+          activeElement.isContentEditable)
+      ) {
+        return
+      }
+
+      const key = event.key
+
+      if (key === '.' || key === ',') {
+        if (!el.paused) return
+        const frameStep = 1 / 30
+        if (key === '.') {
+          const nextTime = el.currentTime + frameStep
+          el.currentTime = Number.isFinite(el.duration) ? Math.min(el.duration, nextTime) : nextTime
+        } else {
+          el.currentTime = Math.max(0, el.currentTime - frameStep)
+        }
+        event.preventDefault()
+        return
+      }
+
+      if (key === 'ArrowRight' || key === 'ArrowLeft') {
+        const delta = key === 'ArrowRight' ? 5 : -5
+        const targetTime = el.currentTime + delta
+        const clampedTime =
+          delta > 0 && Number.isFinite(el.duration)
+            ? Math.min(el.duration, targetTime)
+            : Math.max(0, targetTime)
+        el.currentTime = clampedTime
+        event.preventDefault()
+        return
+      }
+
+      if (key === 'f' || key === 'F') {
+        const fullscreenTarget =
+          (el.closest('media-controller') as HTMLElement | null) ?? (el as HTMLElement)
+        if (!document.fullscreenElement) {
+          fullscreenTarget?.requestFullscreen?.().catch(() => {
+            // Ignore fullscreen errors (e.g., user gesture requirements)
+          })
+        } else {
+          document.exitFullscreen?.().catch(() => {
+            // Ignore exit failures
+          })
+        }
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [activeVideoElement])
 
   // Helper to encode URI components
   function encode(val: string): string {
@@ -694,21 +849,16 @@ export function VideoPage() {
   // Render video player (shared between both modes to preserve play position)
   const shouldLoop = useMemo(() => [34236, 22].includes(video?.kind ?? 0), [video?.kind])
 
-  const currentPlaylistIndex = useMemo(() => {
-    if (!playlistParam || !video) return -1
-    return playlistVideos.findIndex(item => item.id === video.id)
-  }, [playlistParam, video?.id, playlistVideos])
-
-  const nextPlaylistVideo = useMemo(() => {
-    if (currentPlaylistIndex === -1) return undefined
-    return playlistVideos[currentPlaylistIndex + 1]
-  }, [currentPlaylistIndex, playlistVideos])
-
   const handlePlaylistVideoEnd = useCallback(() => {
     if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
     setCurrentPlayPos(0)
     navigate(`/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}&autoplay=true`)
   }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate])
+
+  const handleVideoElementReady = useCallback((element: HTMLVideoElement | null) => {
+    videoElementRef.current = element
+    setActiveVideoElement(element)
+  }, [])
 
   const renderVideoPlayer = () => {
     if (isLoading) {
@@ -742,6 +892,7 @@ export function VideoPage() {
         onToggleCinemaMode={toggleCinemaMode}
         onVideoDimensionsLoaded={handleVideoDimensionsLoaded}
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
+        onVideoElementReady={handleVideoElementReady}
       />
     )
   }

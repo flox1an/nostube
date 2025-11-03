@@ -10,7 +10,6 @@ import { formatDistance } from 'date-fns'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, VideoEvent, processEvents } from '@/utils/video-event'
 import { decodeEventPointer } from '@/lib/nip19'
-import { combineRelays } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useProfile, useReportedPubkeys } from '@/hooks'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -23,19 +22,21 @@ import { nprofileFromEvent } from '@/lib/nprofile'
 function ShortVideoItem({
   video,
   isActive,
-  onIntersect,
+  shouldPreload,
 }: {
   video: VideoEvent
   isActive: boolean
-  onIntersect: () => void
+  shouldPreload: boolean
 }) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
   const authorPicture = metadata?.picture
   const videoRef = useRef<HTMLDivElement>(null)
   const videoElementRef = useRef<HTMLVideoElement>(null)
-  const [currentUrlIndex, setCurrentUrlIndex] = useState(0)
   const eventStore = useEventStore()
+
+  // Always use first URL for each video
+  const currentUrlIndex = 0
 
   // Get the event from store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -44,51 +45,39 @@ function ShortVideoItem({
     [video.pubkey, event]
   )
 
-  useEffect(() => {
-    if (!videoRef.current) return
-
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            onIntersect()
-          }
-        })
-      },
-      { threshold: 0.5 }
-    )
-
-    observer.observe(videoRef.current)
-    return () => observer.disconnect()
-  }, [onIntersect])
-
   // Auto-play/pause based on isActive
   useEffect(() => {
     const videoEl = videoElementRef.current
     if (!videoEl) return
 
     if (isActive) {
-      videoEl.play().catch(error => {
-        console.error('Error playing video:', error)
-      })
+      // Reset to beginning and play immediately
+      console.log('Activating video:', video.id.substring(0, 8))
+      videoEl.currentTime = 0
+      videoEl.muted = false
+
+      const playPromise = videoEl.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error playing video:', video.id.substring(0, 8), error)
+        })
+      }
     } else {
+      // Pause and mute inactive videos
       videoEl.pause()
+      videoEl.muted = true
     }
-  }, [isActive])
+  }, [isActive, video.id])
 
-  // Reset URL index when video changes
-  useEffect(() => {
-    setTimeout(() => {
-      setCurrentUrlIndex(0)
-    }, 0)
-  }, [video.id])
+  // Handle video ready to play
+  const handleCanPlay = useCallback(() => {
+    // Video is ready, can start playing
+  }, [])
 
-  // Handle video error - try next URL
+  // Handle video error
   const handleVideoError = useCallback(() => {
-    if (currentUrlIndex < video.urls.length - 1) {
-      setCurrentUrlIndex(prev => prev + 1)
-    }
-  }, [currentUrlIndex, video.urls.length])
+    console.error('Error loading video:', video.urls[currentUrlIndex])
+  }, [currentUrlIndex, video.urls])
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const videoUrl = `${baseUrl}/short/${video.link}`
@@ -96,7 +85,8 @@ function ShortVideoItem({
   return (
     <div
       ref={videoRef}
-      className="snap-start min-h-screen w-full flex items-center justify-center bg-black"
+      className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
+      style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
     >
       <div className="relative w-full h-screen flex flex-col items-center justify-center">
         {/* Video player - fullscreen vertical */}
@@ -114,7 +104,7 @@ function ShortVideoItem({
                 </div>
               </div>
             )}
-            {isActive ? (
+            <div className="relative w-full h-full">
               <video
                 ref={videoElementRef}
                 src={video.urls[currentUrlIndex]}
@@ -122,18 +112,24 @@ function ShortVideoItem({
                 loop
                 muted={false}
                 playsInline
-                poster={video.images[0]}
+                poster={video.images[0] ? imageProxy(video.images[0]) : undefined}
+                preload={shouldPreload || isActive ? 'auto' : 'metadata'}
+                onCanPlay={handleCanPlay}
                 onError={handleVideoError}
+                style={{ opacity: isActive ? 1 : 0.5 }}
               />
-            ) : (
-              video.images[0] && (
-                <img
-                  src={video.images[0]}
-                  alt={video.title}
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              )
-            )}
+              {/* Show thumbnail overlay when not active for better visibility */}
+              {!isActive && video.images[0] && (
+                <div className="absolute inset-0 rounded-lg overflow-hidden bg-black">
+                  <img
+                    src={imageProxy(video.images[0])}
+                    alt={video.title}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -242,6 +238,8 @@ export function ShortsVideoPage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const blockedPubkeys = useReportedPubkeys()
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
+  const currentVideoIndexRef = useRef(0)
+  const isUpdatingIndexRef = useRef(false)
   const [allVideos, setAllVideos] = useState<VideoEvent[]>([])
 
   const readRelays = useMemo(
@@ -255,15 +253,15 @@ export function ShortsVideoPage() {
   }, [nevent])
 
   // Get relays from nevent if available, otherwise use config relays
-  const relaysToUse = useMemo(() => {
-    const neventRelays = eventPointer?.relays || []
-    // Combine nevent relays (prioritized) with user read relays
-    return combineRelays([neventRelays, readRelays])
-  }, [eventPointer, readRelays])
+  // Currently not used but kept for potential future use with relay hints
+  // const relaysToUse = useMemo(() => {
+  //   const neventRelays = eventPointer?.relays || []
+  //   return combineRelays([neventRelays, readRelays])
+  // }, [eventPointer, readRelays])
 
   const loader = useMemo(
-    () => createEventLoader(pool, { eventStore, relays: relaysToUse }),
-    [pool, eventStore, relaysToUse]
+    () => createEventLoader(pool, { eventStore }),
+    [pool, eventStore]
   )
 
   // Use EventStore to get the initial video event
@@ -346,25 +344,22 @@ export function ShortsVideoPage() {
     }
   }, [initialVideo, pool, readRelays, eventStore, blockedPubkeys, config.blossomServers])
 
-  // Find initial video index
+  // Find initial video index and scroll to it
   useEffect(() => {
-    if (initialVideo && allVideos.length > 0) {
+    if (initialVideo && allVideos.length > 0 && containerRef.current) {
       const index = allVideos.findIndex(v => v.id === initialVideo.id)
-      if (index !== -1 && index !== currentVideoIndex) {
-        // Use setTimeout to avoid synchronous setState in effect
-        setTimeout(() => {
-          setCurrentVideoIndex(index)
-          // Scroll to the initial video
-          if (containerRef.current) {
-            containerRef.current.scrollTo({
-              top: index * window.innerHeight,
-              behavior: 'instant',
-            })
-          }
-        }, 0)
+      if (index !== -1 && index !== 0) {
+        console.log('Scrolling to initial video at index:', index)
+        // Scroll to the initial video immediately - this will trigger scroll handler to update state
+        containerRef.current.scrollTo({
+          top: index * window.innerHeight,
+          behavior: 'instant',
+        })
       }
     }
-  }, [initialVideo, allVideos, currentVideoIndex])
+    // Only run once when videos are loaded
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialVideo, allVideos.length])
 
   const scrollToVideo = useCallback(
     (index: number) => {
@@ -374,32 +369,77 @@ export function ShortsVideoPage() {
       }
       if (index >= allVideos.length) return
 
+      isUpdatingIndexRef.current = true
+      currentVideoIndexRef.current = index
       setCurrentVideoIndex(index)
+
       if (containerRef.current) {
         containerRef.current.scrollTo({
           top: index * window.innerHeight,
           behavior: 'smooth',
         })
       }
+
+      // Reset flag after scroll completes
+      setTimeout(() => {
+        isUpdatingIndexRef.current = false
+      }, 500)
     },
     [allVideos.length, navigate]
   )
 
-  // Handle scroll to update current index
+  // Handle scroll to update current index - detect which video we've snapped to
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
+    let scrollTimeout: NodeJS.Timeout
+    let lastScrollTop = container.scrollTop
+
     const handleScroll = () => {
-      const scrollIndex = Math.round(container.scrollTop / window.innerHeight)
-      if (scrollIndex !== currentVideoIndex && scrollIndex < allVideos.length) {
-        setCurrentVideoIndex(scrollIndex)
+      // Don't process scroll events if we're programmatically updating
+      if (isUpdatingIndexRef.current) {
+        return
       }
+
+      clearTimeout(scrollTimeout)
+      const currentScrollTop = container.scrollTop
+      lastScrollTop = currentScrollTop
+
+      // Shorter timeout since snap-mandatory will stop scroll quickly
+      scrollTimeout = setTimeout(() => {
+        const scrollTop = container.scrollTop
+
+        // With snap-mandatory, scroll should stop very quickly
+        // Use a smaller threshold (5px) since snap is precise
+        if (Math.abs(scrollTop - lastScrollTop) < 5) {
+          const scrollIndex = Math.round(scrollTop / window.innerHeight)
+
+          if (scrollIndex >= 0 && scrollIndex < allVideos.length) {
+            console.log('Snapped to index:', scrollIndex, 'current ref:', currentVideoIndexRef.current)
+
+            // Only update if index has actually changed
+            if (scrollIndex !== currentVideoIndexRef.current) {
+              isUpdatingIndexRef.current = true
+              currentVideoIndexRef.current = scrollIndex
+              setCurrentVideoIndex(scrollIndex)
+
+              // Reset flag after a short delay
+              setTimeout(() => {
+                isUpdatingIndexRef.current = false
+              }, 100)
+            }
+          }
+        }
+      }, 150)
     }
 
-    container.addEventListener('scroll', handleScroll)
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [currentVideoIndex, allVideos.length])
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      clearTimeout(scrollTimeout)
+    }
+  }, [allVideos.length])
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -441,9 +481,10 @@ export function ShortsVideoPage() {
     }
   }, [currentVideo?.title])
 
-  // Update URL when video changes
+  // Update URL when video changes (but not during programmatic updates)
   useEffect(() => {
-    if (currentVideo && currentVideo.link !== nevent) {
+    if (currentVideo && currentVideo.link !== nevent && !isUpdatingIndexRef.current) {
+      console.log('Updating URL to:', currentVideo.link)
       navigate(`/short/${currentVideo.link}`, { replace: true })
     }
   }, [currentVideo, nevent, navigate])
@@ -467,23 +508,30 @@ export function ShortsVideoPage() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-black overflow-y-scroll snap-y snap-mandatory"
-      style={{ scrollBehavior: 'smooth' }}
+      className="fixed inset-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+      style={{
+        scrollSnapType: 'y mandatory',
+        WebkitOverflowScrolling: 'touch',
+      }}
     >
-      {allVideos.map((video, index) => (
-        <ShortVideoItem
-          key={video.id}
-          video={video}
-          isActive={index === currentVideoIndex}
-          onIntersect={() => setCurrentVideoIndex(index)}
-        />
-      ))}
+      {allVideos.map((video, index) => {
+        // Preload current video and adjacent videos (prev and next)
+        const shouldPreload = Math.abs(index - currentVideoIndex) <= 1
+        return (
+          <ShortVideoItem
+            key={video.id}
+            video={video}
+            isActive={index === currentVideoIndex}
+            shouldPreload={shouldPreload}
+          />
+        )
+      })}
       {allVideos.length === 0 && initialVideo && (
         <ShortVideoItem
           key={initialVideo.id}
           video={initialVideo}
           isActive={true}
-          onIntersect={() => {}}
+          shouldPreload={true}
         />
       )}
     </div>

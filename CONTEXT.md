@@ -1,1244 +1,255 @@
 # Project Overview
 
-This project is a Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui, and Applesauce.
+Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui, and Applesauce.
 
 ## Technology Stack
 
-- **React 18.x**: Stable version of React with hooks, concurrent rendering, and improved performance
-- **TailwindCSS 3.x**: Utility-first CSS framework for styling
-- **Vite**: Fast build tool and development server
-- **shadcn/ui**: Unstyled, accessible UI components built with Radix UI and Tailwind
-- **Applesauce**: Comprehensive Nostr protocol framework for event storage, relay management, and React integration
-- **React Router**: For client-side routing with BrowserRouter and ScrollToTop functionality
-- **TanStack Query**: For data fetching, caching, and state management
-- **TypeScript**: For type-safe JavaScript development
+- **React 18.x**, **TailwindCSS 3.x**, **Vite**, **TypeScript**
+- **shadcn/ui**: Accessible UI components (48+ available in `/src/components/ui/`)
+- **Applesauce**: Nostr protocol framework (EventStore, RelayPool, Loaders, React integration)
+- **React Router**, **TanStack Query**: Routing and state management
 
 ## Context7 MCP Integration
 
-This project can use **Context7 MCP Server** to provide up-to-date documentation for libraries and frameworks directly to AI assistants. Context7 pulls version-specific documentation and code examples from official sources.
+Context7 provides up-to-date library documentation. Applesauce is fully indexed with 111k+ tokens, 459 code snippets, and 72 pages.
 
-### Setting Up Context7
-
-For Claude Code, install the Context7 MCP server:
-
-**Remote Server (Recommended):**
+**Setup:**
 ```bash
+# Remote (Recommended)
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 
-**Local Server with API Key (for higher rate limits):**
-```bash
+# Local with API key (higher rate limits)
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
-Get an API key at: https://context7.com/dashboard
-
-### Applesauce Documentation
-
-**Applesauce is fully indexed in Context7** with 111k+ tokens, 459 code snippets, and 72 pages of documentation!
-
-- Context7 URL: https://context7.com/hzrd149/applesauce
-- GitHub: https://github.com/hzrd149/applesauce
-- Official Docs: https://hzrd149.github.io/applesauce/
-
-Once Context7 is configured, AI assistants can access up-to-date applesauce documentation directly. This complements the comprehensive Applesauce guide in this file.
-
-### Using Context7
-
-Once configured, AI assistants can query Context7 for documentation on supported libraries (6000+ frameworks). Context7 supports React, TailwindCSS, Vite, and many other libraries used in this project.
+**Links:**
+- Applesauce: https://context7.com/hzrd149/applesauce
+- Docs: https://hzrd149.github.io/applesauce/
 
 ## Project Structure
 
-- `/src/components/`: UI components including NostrProvider for Nostr integration
-  - `/src/components/ui/`: shadcn/ui components (48+ components available)
-  - `/src/components/auth/`: Authentication-related components (LoginArea, LoginDialog, etc.)
-- `/src/hooks/`: Custom hooks including:
-  - `useNostr`: Core Nostr protocol integration
-  - `useAuthor`: Fetch user profile data by pubkey
-  - `useCurrentUser`: Get currently logged-in user
-  - `useNostrPublish`: Publish events to Nostr
-  - `useUploadFile`: Upload files via Blossom servers
-  - `useAppContext`: Access global app configuration
-  - `useTheme`: Theme management
-  - `useToast`: Toast notifications
-  - `useLocalStorage`: Persistent local storage
-  - `useLoggedInAccounts`: Manage multiple accounts
-  - `useLoginActions`: Authentication actions
-  - `useIsMobile`: Responsive design helper
-- `/src/pages/`: Page components used by React Router (Index, NotFound)
-- `/src/lib/`: Utility functions and shared logic
-- `/src/contexts/`: React context providers (AppContext)
-- `/src/test/`: Testing utilities including TestApp component
-- `/public/`: Static assets
-- `App.tsx`: Main app component with provider setup
-- `AppRouter.tsx`: React Router configuration
+- `/src/components/`: UI components
+  - `/ui/`: shadcn/ui components
+  - `/auth/`: LoginArea, LoginDialog
+- `/src/hooks/`: useAuthor, useCurrentUser, useNostrPublish, useUploadFile, useAppContext, useTheme, etc.
+- `/src/pages/`: Page components
+- `/src/lib/`: Utilities
+- `/src/contexts/`: AppContext
+- `App.tsx`, `AppRouter.tsx`: Main app and routing
 
-## UI Components
+## Applesauce (Nostr Integration)
 
-The project uses shadcn/ui components located in `@/components/ui`. These are unstyled, accessible components built with Radix UI and styled with Tailwind CSS. Available components include:
+**Core packages:** Core, Relay, Loaders, React, Accounts, Signers, Factory, Actions, Content, Wallet, SQLite
 
-- **Accordion**: Vertically collapsing content panels
-- **Alert**: Displays important messages to users
-- **AlertDialog**: Modal dialog for critical actions requiring confirmation
-- **AspectRatio**: Maintains consistent width-to-height ratio
-- **Avatar**: User profile pictures with fallback support
-- **Badge**: Small status descriptors for UI elements
-- **Breadcrumb**: Navigation aid showing current location in hierarchy
-- **Button**: Customizable button with multiple variants and sizes
-- **Calendar**: Date picker component
-- **Card**: Container with header, content, and footer sections
-- **Carousel**: Slideshow for cycling through elements
-- **Chart**: Data visualization component
-- **Checkbox**: Selectable input element
-- **Collapsible**: Toggle for showing/hiding content
-- **Command**: Command palette for keyboard-first interfaces
-- **ContextMenu**: Right-click menu component
-- **Dialog**: Modal window overlay
-- **Drawer**: Side-sliding panel (using vaul)
-- **DropdownMenu**: Menu that appears from a trigger element
-- **Form**: Form validation and submission handling
-- **HoverCard**: Card that appears when hovering over an element
-- **InputOTP**: One-time password input field
-- **Input**: Text input field
-- **Label**: Accessible form labels
-- **Menubar**: Horizontal menu with dropdowns
-- **NavigationMenu**: Accessible navigation component
-- **Pagination**: Controls for navigating between pages
-- **Popover**: Floating content triggered by a button
-- **Progress**: Progress indicator
-- **RadioGroup**: Group of radio inputs
-- **Resizable**: Resizable panels and interfaces
-- **ScrollArea**: Scrollable container with custom scrollbars
-- **Select**: Dropdown selection component
-- **Separator**: Visual divider between content
-- **Sheet**: Side-anchored dialog component
-- **Sidebar**: Navigation sidebar component
-- **Skeleton**: Loading placeholder
-- **Slider**: Input for selecting a value from a range
-- **Sonner**: Toast notification manager
-- **Switch**: Toggle switch control
-- **Table**: Data table with headers and rows
-- **Tabs**: Tabbed interface component
-- **Textarea**: Multi-line text input
-- **Toast**: Toast notification component
-- **ToggleGroup**: Group of toggle buttons
-- **Toggle**: Two-state button
-- **Tooltip**: Informational text that appears on hover
+**Key hooks:** `useEventStore`, `useObservableMemo`, `useEventModel`, `useActiveAccount`, `useAccountManager`
 
-These components follow a consistent pattern using React's `forwardRef` and use the `cn()` utility for class name merging. Many are built on Radix UI primitives for accessibility and customized with Tailwind CSS.
+**Loaders:** `createTimelineLoader`, `createAddressLoader`, `createEventLoader`
 
-## Nostr Protocol Integration
+**Models:** `ContactsModel`, `ReactionsModel`, `UserBlossomServersModel`
 
-This project uses **applesauce**, a comprehensive Nostr protocol framework, for event storage, relay management, and React integration. Applesauce provides a reactive EventStore, RelayPool management, timeline loaders, and React hooks for building Nostr applications.
-
-**Quick Reference:**
-- 📦 **Packages**: Core, Relay, Loaders, React, Accounts, Signers, Factory, Actions, Content, Wallet, SQLite
-- 🪝 **React Hooks**: `useEventStore`, `useObservableMemo`, `useEventModel`, `useActiveAccount`, `useAccountManager`
-- 🔄 **Loaders**: `createTimelineLoader`, `createAddressLoader`, `createEventLoader`
-- 📊 **Models**: `ContactsModel`, `ReactionsModel`, `UserBlossomServersModel`, custom `Model` base class
-- 🛠️ **Helpers**: `ProfileContent`, `getDisplayName`, `getSeenRelays`, `presistEventsToCache`
-- 🔌 **Operators**: `onlyEvents`, `mapEventsToStore`
-- 📚 **Documentation**: Available at https://hzrd149.github.io/applesauce/ and via Context7
-
-### Applesauce Overview
-
-Applesauce is a modular Nostr SDK for building reactive user interfaces with minimal code. Built on RxJS observables, it provides a comprehensive toolkit for Nostr application development.
-
-**Core Packages:**
-
-- **`applesauce-core`**: Reactive in-memory EventStore, Models, Event Memory, Helper Methods, and Database utilities
-- **`applesauce-relay`**: RelayPool management, liveness checking, Negentropy sync, and RxJS operators
-- **`applesauce-loaders`**: Event, Address, Timeline, Tag Value, Zaps, and Reactions loaders with pagination
-- **`applesauce-react`**: React hooks, providers, and context for seamless React integration
-- **`applesauce-accounts`**: Account manager and multi-account handling
-- **`applesauce-signers`**: Native signers, Nostr Connect (NIP-46), and Extension (NIP-07) support
-- **`applesauce-factory`**: Event creation, signing, publishing, and tag operations
-- **`applesauce-actions`**: Action Hub for complex operations like following users
-- **`applesauce-content`**: Text and Markdown content processing
-- **`applesauce-wallet`**: Payment integration and wallet connectivity
-- **`applesauce-sqlite`**: SQLite backend support (Better SQLite3, Native, Bun, LibSQL, Turso)
-
-**Key Design Principles:**
-
-1. **Reactive Foundation**: Built on RxJS observables for efficient event subscription
-2. **Modular Composition**: Each package works independently while maintaining cohesion
-3. **Flexible Integration**: Works with any relay setup, compatible with other Nostr libraries
-
-### Core Setup
-
-The project initializes applesauce in `src/nostr/core.ts`:
+### Core Setup (src/nostr/core.ts)
 
 ```typescript
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { presistEventsToCache } from 'applesauce-core/helpers'
 
-// Initialize singleton EventStore and RelayPool
-export const eventStore = new EventStore()
-export const relayPool = new RelayPool()
-
-// Optional: Persist events to IndexedDB cache
-presistEventsToCache(eventStore, events => addEvents(cache!, events))
+export const eventStore = new EventStore()  // Singleton
+export const relayPool = new RelayPool()    // Singleton
 ```
 
-### Provider Setup
-
-Applesauce providers are configured in `src/App.tsx`:
+### Provider Setup (App.tsx)
 
 ```tsx
 import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
 import { EventFactory } from 'applesauce-factory'
-import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
-import { eventStore } from '@/nostr/core'
 
-// Create account manager
 const accountManager = new AccountManager()
-registerCommonAccountTypes(accountManager)
+const factory = new EventFactory({ signer: accountManager.signer })
 
-// Create event factory
-const factory = new EventFactory({
-  signer: accountManager.signer,
-})
-
-// Wrap app with providers
 <AccountsProvider manager={accountManager}>
   <EventStoreProvider eventStore={eventStore}>
     <FactoryProvider factory={factory}>
-      {/* ... app content */}
+      {children}
     </FactoryProvider>
   </EventStoreProvider>
 </AccountsProvider>
 ```
 
-### React Hooks
+### Key Patterns
 
-Applesauce provides a comprehensive set of React hooks for reactive Nostr integration.
-
-#### `useEventStore()`
-
-Access the EventStore instance:
-
-```tsx
-import { useEventStore } from 'applesauce-react/hooks'
-
-function MyComponent() {
-  const eventStore = useEventStore()
-
-  // Query events
-  const events = eventStore.getEvents([{ kinds: [1], limit: 20 }])
-
-  // Subscribe to changes
-  useEffect(() => {
-    const sub = eventStore.subscribe({ kinds: [1] }).subscribe(events => {
-      console.log('New events:', events)
-    })
-    return () => sub.unsubscribe()
-  }, [])
-}
-```
-
-#### `useObservableMemo()`
-
-Memoize Observable-based computations and automatically subscribe/unsubscribe:
-
+**Profile data:**
 ```tsx
 import { useObservableMemo } from 'applesauce-react/hooks'
-
-function useProfile(pubkey: string) {
-  const eventStore = useEventStore()
-
-  // Automatically subscribes and updates when profile changes
-  return useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
-}
+const profile = useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
 ```
 
-**Important**: `useObservableMemo` handles subscriptions automatically and re-runs when dependencies change. Perfect for reactive data that updates over time.
-
-#### `useEventModel()`
-
-Use applesauce Models for structured, reactive data access:
-
-```tsx
-import { useEventModel } from 'applesauce-react/hooks'
-import { ContactsModel } from 'applesauce-core/models'
-
-function useContacts(pubkey: string) {
-  // Returns array of followed pubkeys, updates automatically
-  return useEventModel(ContactsModel, pubkey)
-}
-```
-
-#### `useActiveAccount()` and `useAccountManager()`
-
-Access account information and manage multiple accounts:
-
-```tsx
-import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
-
-function MyComponent() {
-  const account = useActiveAccount() // Currently active account
-  const accountManager = useAccountManager() // Account manager instance
-
-  // Access account details
-  if (account) {
-    console.log('Logged in as:', account.pubkey)
-    console.log('Signer:', account.signer)
-  }
-
-  // Manage accounts
-  const allAccounts = accountManager.accounts
-  const switchAccount = (pubkey: string) => {
-    accountManager.setActiveAccount(pubkey)
-  }
-}
-```
-
-### React Context
-
-Applesauce also provides direct context access:
-
-```tsx
-import { AccountsContext } from 'applesauce-react'
-import { useContext } from 'react'
-
-function MyComponent() {
-  const accountManager = useContext(AccountsContext)
-
-  // Access accounts directly
-  const accounts = accountManager.accounts
-}
-```
-
-**Note**: Prefer using hooks (`useAccountManager`) over direct context access for better type safety and convenience.
-
-### Timeline Loaders
-
-Timeline loaders provide paginated content with cursor management. They automatically handle loading more content and maintaining pagination state.
-
-#### Creating a Timeline Loader
-
+**Timeline loading:**
 ```tsx
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { RelayPool } from 'applesauce-relay'
-import { EventStore } from 'applesauce-core'
-
-function createVideoLoader(relayPool: RelayPool, relays: string[], eventStore: EventStore) {
-  return createTimelineLoader(
-    relayPool,
-    relays,
-    { kinds: [21] }, // Video events
-    {
-      eventStore,
-      limit: 50,
-      cache: cacheRequest, // Optional cache-first loading
-    }
-  )
-}
+const loader = createTimelineLoader(relayPool, relays, { kinds: [1] }, { eventStore })
+loader.load().subscribe(events => setEvents(prev => [...prev, ...events]))
 ```
 
-#### Using Timeline Loader for Infinite Scroll
-
-```tsx
-import { TimelineLoader } from 'applesauce-loaders/loaders'
-import { useEffect, useState } from 'react'
-
-function VideoFeed() {
-  const [loader, setLoader] = useState<TimelineLoader>()
-  const [events, setEvents] = useState<NostrEvent[]>([])
-
-  useEffect(() => {
-    const newLoader = createVideoLoader(relayPool, relays, eventStore)
-    setLoader(newLoader)
-
-    // Load initial events
-    newLoader.load().subscribe(newEvents => {
-      setEvents(prev => [...prev, ...newEvents])
-    })
-  }, [relays])
-
-  const loadMore = () => {
-    loader?.load().subscribe(newEvents => {
-      setEvents(prev => [...prev, ...newEvents])
-    })
-  }
-
-  // ... render events
-}
-```
-
-### Address Loaders
-
-Address loaders fetch replaceable or parameterized replaceable events (like profiles):
-
-```tsx
-import { createAddressLoader } from 'applesauce-loaders/loaders'
-
-function useProfile(user: ProfilePointer) {
-  const eventStore = useEventStore()
-  const { pool } = useAppContext()
-
-  const addressLoader = createAddressLoader(pool, {
-    eventStore,
-    lookupRelays: ['wss://purplepag.es', 'wss://index.hzrd149.com'],
-  })
-
-  useEffect(() => {
-    if (!user) return
-
-    addressLoader({
-      kind: kinds.Metadata,
-      ...user,
-      relays: readRelays,
-    }).subscribe(event => {
-      eventStore.add(event)
-    })
-  }, [user])
-}
-```
-
-### Event Loaders
-
-Event loaders fetch specific events by their IDs:
-
-```tsx
-import { createEventLoader } from 'applesauce-loaders/loaders'
-
-function useEvent(eventId: string) {
-  const { pool } = useAppContext()
-  const eventStore = useEventStore()
-
-  useEffect(() => {
-    if (!eventId) return
-
-    const loader = createEventLoader(pool, relays, {
-      eventStore,
-      cache: cacheRequest, // Optional cache-first loading
-    })
-
-    loader(eventId).subscribe(event => {
-      if (event) eventStore.add(event)
-    })
-  }, [eventId])
-}
-```
-
-### Models
-
-Applesauce provides Models for structured data access. Models are reactive subscriptions that combine EventStore queries with helper functions to extract and transform data.
-
-#### Built-in Models
-
-**ContactsModel** - User's contact/follow list:
-
+**Models:**
 ```tsx
 import { useEventModel } from 'applesauce-react/hooks'
 import { ContactsModel } from 'applesauce-core/models'
-
-function useFollowedAuthors(pubkey: string) {
-  return useEventModel(ContactsModel, pubkey)
-}
-```
-
-**ReactionsModel** - Event reactions:
-
-```tsx
-import { useEventModel } from 'applesauce-react/hooks'
-import { ReactionsModel } from 'applesauce-core/models'
-
-function useReactions(eventId: string) {
-  return useEventModel(ReactionsModel, eventId)
-}
-```
-
-**UserBlossomServersModel** - User's Blossom server configuration (NIP-96):
-
-```tsx
-import { useEventModel } from 'applesauce-react/hooks'
-import { UserBlossomServersModel } from 'applesauce-core/models'
-
-function useUserBlossomServers(pubkey: string) {
-  return useEventModel(UserBlossomServersModel, pubkey)
-}
-```
-
-#### Creating Custom Models
-
-Use the `Model` base class to create custom reactive data queries:
-
-```tsx
-import { Model } from 'applesauce-core'
-import { ProfileContent } from 'applesauce-core/helpers/profile'
-import { merge, defer, EMPTY, of } from 'rxjs'
-import { useObservableMemo } from 'applesauce-react/hooks'
-
-function ProfileQuery(pubkey?: string): Model<ProfileContent | undefined> {
-  if (!pubkey) return () => of(undefined)
-
-  return events =>
-    merge(
-      // Trigger side effects (like loading)
-      defer(() => {
-        if (!events.hasReplaceable(kinds.Metadata, pubkey)) {
-          // Request profile loading
-          requestProfile(pubkey)
-        }
-        return EMPTY
-      }),
-      // Subscribe to profile changes
-      events.profile(pubkey)
-    )
-}
-
-// Use in component
-function MyComponent({ pubkey }: { pubkey: string }) {
-  const eventStore = useEventStore()
-  const profile = useObservableMemo(() => eventStore.model(ProfileQuery, pubkey), [pubkey])
-
-  return <div>{profile?.name}</div>
-}
-```
-
-### EventStore Methods
-
-The EventStore provides reactive access to events:
-
-```tsx
-const eventStore = useEventStore()
-
-// Get events by kind
-eventStore.getEvents([{ kinds: [1] }])
-
-// Subscribe to replaceable events
-eventStore.profile(pubkey).subscribe(metadata => {
-  // Handle profile updates
-})
-
-// Check if replaceable event exists
-if (eventStore.hasReplaceable(kinds.Metadata, pubkey)) {
-  // Profile already loaded
-}
-
-// Subscribe to all events matching filters
-eventStore.subscribe({ kinds: [21] }).subscribe(events => {
-  // Handle new video events
-})
-```
-
-### Account Management
-
-Applesauce supports multiple account types:
-
-```tsx
-import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers'
-
-// Create account from extension
-const account = new ExtensionAccount()
-
-// Create account from private key
-const account = new SimpleAccount(privateKey)
-
-// Create account from Nostr Connect
-const account = new NostrConnectAccount(relay, secret)
-```
-
-### Event Publishing
-
-Use the EventFactory for creating and publishing events:
-
-```tsx
-import { EventFactory } from 'applesauce-factory'
-
-const factory = new EventFactory({ signer: accountManager.signer })
-
-// Create and publish an event
-const event = await factory.create({
-  kind: 1,
-  content: 'Hello, Nostr!',
-})
-
-await factory.publish(event, relays)
-```
-
-### Helper Functions
-
-Applesauce provides various helper functions to extract and format data from Nostr events:
-
-#### Profile Helpers
-
-```tsx
-import { ProfileContent } from 'applesauce-core/helpers/profile'
-import { getDisplayName } from 'applesauce-core/helpers'
-
-// Parse profile content from Kind 0 event
-const profile = ProfileContent.fromEvent(event)
-
-// Get display name with fallback (display_name → name → shortened pubkey)
-const displayName = getDisplayName(profile)
-
-// Access profile fields
-console.log(profile.name, profile.about, profile.picture, profile.banner)
-```
-
-#### Relay Helpers
-
-```tsx
-import { getSeenRelays } from 'applesauce-core/helpers/relays'
-
-// Extract relay URLs from event tags and seen_on extension
-const relays = getSeenRelays(event)
-// Returns: ['wss://relay1.com', 'wss://relay2.com', ...]
-```
-
-### RxJS Operators
-
-Applesauce provides RxJS operators for working with relay messages:
-
-```tsx
-import { onlyEvents } from 'applesauce-relay'
-import { mapEventsToStore } from 'applesauce-core'
-
-// Filter relay messages to only events
-relayPool.subscribe(filters).pipe(
-  onlyEvents(), // Only emit NostrEvent objects
-  mapEventsToStore(eventStore) // Automatically add to EventStore
-)
-```
-
-### Caching with nostr-idb
-
-The project uses `nostr-idb` for IndexedDB caching:
-
-```tsx
-import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
-import { presistEventsToCache } from 'applesauce-core/helpers'
-
-const cache = await openDB()
-
-// Cache-first loading
-const cacheRequest = async (filters: Filter[]) => {
-  return getEventsForFilters(cache, filters)
-}
-
-// Persist all events to cache
-presistEventsToCache(eventStore, events => addEvents(cache, events))
+const contacts = useEventModel(ContactsModel, pubkey)
 ```
 
 ### Best Practices
 
-1. **Singleton Pattern**: Use one EventStore and one RelayPool per application to avoid duplicate connections and maintain consistent state
-   ```tsx
-   // ✅ Good: Create once in src/nostr/core.ts
-   export const eventStore = new EventStore()
-   export const relayPool = new RelayPool()
+1. **Singleton Pattern**: One EventStore and RelayPool per app (avoid duplicates)
+2. **Cache-First Loading**: Use cache functions in loaders
+3. **Observable Cleanup**: Use `useObservableMemo` (auto-cleanup) or manually unsubscribe
+4. **Provider Order**: AccountsProvider → EventStoreProvider → FactoryProvider
 
-   // ❌ Bad: Creating multiple instances
-   function MyComponent() {
-     const store = new EventStore() // Creates duplicate!
-   }
-   ```
+### Migration Note
 
-2. **Cache-First Loading**: Use cache functions in loaders to reduce relay load and improve performance
-   ```tsx
-   createTimelineLoader(relayPool, relays, filters, {
-     eventStore,
-     cache: cacheRequest, // Check IndexedDB first
-   })
-   ```
+This project migrated from Nostrify to Applesauce. The old `useNostr` hook is deprecated. Use applesauce hooks instead.
 
-3. **Observable Subscriptions**: Always unsubscribe from Observables to prevent memory leaks
-   ```tsx
-   // ✅ Good: Cleanup subscription
-   useEffect(() => {
-     const sub = eventStore.subscribe(filters).subscribe(handleEvents)
-     return () => sub.unsubscribe()
-   }, [])
+## Custom Hooks
 
-   // ✅ Better: Use useObservableMemo hook (handles cleanup automatically)
-   const data = useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
-   ```
-
-4. **Model Usage**: Prefer Models over raw EventStore queries for common patterns
-   ```tsx
-   // ✅ Good: Use ContactsModel
-   const contacts = useEventModel(ContactsModel, pubkey)
-
-   // ❌ Less ideal: Manual subscription
-   const [contacts, setContacts] = useState([])
-   useEffect(() => {
-     // ... manual subscription logic
-   }, [])
-   ```
-
-5. **Provider Order**: Wrap providers in the correct order for dependency resolution
-   ```tsx
-   // ✅ Correct order
-   <AccountsProvider manager={accountManager}>
-     <EventStoreProvider eventStore={eventStore}>
-       <FactoryProvider factory={factory}>
-         {children}
-       </FactoryProvider>
-     </EventStoreProvider>
-   </AccountsProvider>
-   ```
-
-6. **Loader Patterns**: Create loaders outside components when possible, reuse them
-   ```tsx
-   // ✅ Good: Create once, reuse
-   const loader = useMemo(
-     () => createTimelineLoader(pool, relays, filters, { eventStore }),
-     [relays]
-   )
-
-   // Call load() when needed
-   loader.load().subscribe(events => setEvents(prev => [...prev, ...events]))
-   ```
-
-7. **Event Store Queries**: Check before loading to avoid unnecessary relay requests
-   ```tsx
-   // ✅ Good: Check before requesting
-   if (!eventStore.hasReplaceable(kinds.Metadata, pubkey)) {
-     // Load profile from relays
-   }
-
-   // ❌ Bad: Always requesting
-   loader().subscribe() // May request duplicates
-   ```
-
-### Migration from Nostrify
-
-This project migrated from Nostrify to applesauce. The old `useNostr` hook is deprecated:
+### useAuthor
 
 ```tsx
-// ❌ Deprecated
-import { useNostr } from '@nostrify/react'
-
-// ✅ Use applesauce hooks instead
-import { useEventStore } from 'applesauce-react/hooks'
-```
-
-### Documentation Links
-
-- [Applesauce Documentation](https://hzrd149.github.io/applesauce/)
-- [Getting Started Guide](https://hzrd149.github.io/applesauce/introduction/getting-started.html)
-- [React Hooks](https://hzrd149.github.io/applesauce/react/hooks.html)
-- [Timeline Loader](https://hzrd149.github.io/applesauce/loaders/timeline-loader.html)
-- [Relay Management](https://hzrd149.github.io/applesauce/tutorial/04-relays.html)
-
----
-
-This project comes with custom hooks for querying and publishing events on the Nostr network using applesauce.
-
-### Custom NIP Definition
-
-The file `NIP.md` is used by this project to define a custom Nostr protocol document. If the file doesn't exist, it means this project doesn't have any custom Nostr events associated with it yet. Typically NIPs define custom event kinds.
-
-Before deciding upon a kind number for a custom event, use `nostr__read_nips_index` to see what kinds are currently in use across all NIPs. The kind number determines the event's behavior and storage characteristics:
-
-- **Regular Events** (1 ≤ kind < 10000): Expected to be stored by relays permanently. Used for persistent content like notes, articles, etc.
-- **Replaceable Events** (10000 ≤ kind < 20000): Only the latest event per pubkey+kind combination is stored. Used for profile metadata, contact lists, etc.
-- **Addressable Events** (30000 ≤ kind < 40000): Identified by pubkey+kind+d-tag combination, only latest per combination is stored. Used for articles, long-form content, etc.
-
-For more detailed information about event structure and behavior, read the `event` protocol page using `nostr__read_protocol`.
-
-**Important**: Whenever new Nostr event kinds are created, if they are not already defined by an existing NIP, the `NIP.md` file in the project must be created or updated to document the custom event structure. Whenever the structure of one of these custom events changes, `NIP.md` must be updated accordingly.
-
-### The `useNostr` Hook
-
-The `useNostr` hook returns an object containing a `nostr` property, with `.query()` and `.event()` methods for querying and publishing Nostr events respectively.
-
-```typescript
-import { useNostr } from '@nostrify/react'
-
-function useCustomHook() {
-  const { nostr } = useNostr()
-
-  // ...
-}
-```
-
-### Query Nostr Data with `useNostr` and Tanstack Query
-
-When querying Nostr, the best practice is to create custom hooks that combine `useNostr` and `useQuery` to get the required data.
-
-```typescript
-import { useNostr } from '@nostrify/react'
-import { useQuery } from '@tanstack/query'
-
-function usePosts() {
-  const { nostr } = useNostr()
-
-  return useQuery({
-    queryKey: ['posts'],
-    queryFn: async c => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)])
-      const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal })
-      return events // these events could be transformed into another format
-    },
-  })
-}
-```
-
-The data may be transformed into a more appropriate format if needed, and multiple calls to `nostr.query()` may be made in a single queryFn.
-
-### The `useAuthor` Hook
-
-To display profile data for a user by their Nostr pubkey (such as an event author), use the `useAuthor` hook.
-
-```tsx
-import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify'
 import { useAuthor } from '@/hooks/useAuthor'
-import { genUserName } from '@/lib/genUserName'
-
-function Post({ event }: { event: NostrEvent }) {
-  const author = useAuthor(event.pubkey)
-  const metadata: NostrMetadata | undefined = author.data?.metadata
-
-  const displayName = metadata?.display_name ?? metadata?.name ?? genUserName(event.pubkey)
-  const profileImage = metadata?.picture
-
-  // ...render elements with this data
-}
+const author = useAuthor(pubkey)
+const displayName = author.data?.metadata?.display_name ?? author.data?.metadata?.name ?? genUserName(pubkey)
 ```
 
-#### `NostrMetadata` type
-
-```ts
-/** Kind 0 metadata. */
-interface NostrMetadata {
-  /** A short description of the user. */
-  about?: string
-  /** A URL to a wide (~1024x768) picture to be optionally displayed in the background of a profile screen. */
-  banner?: string
-  /** A boolean to clarify that the content is entirely or partially the result of automation, such as with chatbots or newsfeeds. */
-  bot?: boolean
-  /** An alternative, bigger name with richer characters than `name`. `name` should always be set regardless of the presence of `display_name` in the metadata. */
-  display_name?: string
-  /** A bech32 lightning address according to NIP-57 and LNURL specifications. */
-  lud06?: string
-  /** An email-like lightning address according to NIP-57 and LNURL specifications. */
-  lud16?: string
-  /** A short name to be displayed for the user. */
-  name?: string
-  /** An email-like Nostr address according to NIP-05. */
-  nip05?: string
-  /** A URL to the user's avatar. */
-  picture?: string
-  /** A web URL related in any way to the event author. */
-  website?: string
-}
-```
-
-### The `useNostrPublish` Hook
-
-To publish events, use the `useNostrPublish` hook in this project. This hook automatically adds a "client" tag to published events.
+### useCurrentUser & useNostrPublish
 
 ```tsx
-import { useState } from 'react'
-
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 
-export function MyComponent() {
-  const [data, setData] = useState<Record<string, string>>({})
+const { user } = useCurrentUser()
+const { mutate: createEvent } = useNostrPublish()
 
-  const { user } = useCurrentUser()
-  const { mutate: createEvent } = useNostrPublish()
-
-  const handleSubmit = () => {
-    createEvent({ kind: 1, content: data.content })
-  }
-
-  if (!user) {
-    return <span>You must be logged in to use this form.</span>
-  }
-
-  return (
-    <form onSubmit={handleSubmit} disabled={!user}>
-      {/* ...some input fields */}
-    </form>
-  )
+if (user) {
+  createEvent({ kind: 1, content: 'Hello' })
 }
 ```
 
-The `useCurrentUser` hook should be used to ensure that the user is logged in before they are able to publish Nostr events.
-
-### Nostr Login
-
-To enable login with Nostr, simply use the `LoginArea` component already included in this project.
-
-```tsx
-import { LoginArea } from '@/components/auth/LoginArea'
-
-function MyComponent() {
-  return (
-    <div>
-      {/* other components ... */}
-
-      <LoginArea className="max-w-60" />
-    </div>
-  )
-}
-```
-
-The `LoginArea` component handles all the login-related UI and interactions, including displaying login dialogs and switching between accounts. It should not be wrapped in any conditional logic.
-
-`LoginArea` displays a "Log in" button when the user is logged out, and changes to an account switcher once the user is logged in. It is an inline-flex element by default. To make it expand to the width of its container, you can pass a className like `flex` (to make it a block element) or `w-full`. If it is left as inline-flex, it's recommended to set a max width.
-
-### `npub`, `naddr`, and other Nostr addresses
-
-Nostr defines a set identifiers in NIP-19. Their prefixes:
-
-- `npub`: public keys
-- `nsec`: private keys
-- `note`: note ids
-- `nprofile`: a nostr profile
-- `nevent`: a nostr event
-- `naddr`: a nostr replaceable event coordinate
-- `nrelay`: a nostr relay (deprecated)
-
-NIP-19 identifiers include a prefix, the number "1", then a base32-encoded data string.
-
-#### Use in Filters
-
-The base Nostr protocol uses hex string identifiers when filtering by event IDs and pubkeys. Nostr filters only accept hex strings.
-
-```ts
-// ❌ Wrong: naddr is not decoded
-const events = await nostr.query([{ ids: [naddr] }], { signal })
-```
-
-Corrected example:
-
-```ts
-// Import nip19 from nostr-tools
-import { nip19 } from 'nostr-tools'
-
-// Decode a NIP-19 identifier
-const decoded = nip19.decode(value)
-
-// Optional: guard certain types (depending on the use-case)
-if (decoded.type !== 'naddr') {
-  throw new Error('Unsupported Nostr identifier')
-}
-
-// Get the addr object
-const naddr = decoded.data
-
-// ✅ Correct: naddr is expanded into the correct filter
-const events = await nostr.query(
-  [
-    {
-      kinds: [naddr.kind],
-      authors: [naddr.pubkey],
-      '#d': [naddr.identifier],
-    },
-  ],
-  { signal }
-)
-```
-
-#### Use in URL Paths
-
-For URL routing, use NIP-19 identifiers as path parameters (e.g., `/:nip19`) to create secure, universal links to Nostr events. Decode the identifier and render the appropriate component based on the type:
-
-- Regular events: Use `/nevent1...` paths
-- Replaceable/addressable events: Use `/naddr1...` paths
-
-Always use `naddr` identifiers for addressable events instead of just the `d` tag value, as `naddr` contains the author pubkey needed to create secure filters. This prevents security issues where malicious actors could publish events with the same `d` tag to override content.
-
-```ts
-// Secure routing with naddr
-const decoded = nip19.decode(params.nip19)
-if (decoded.type === 'naddr' && decoded.data.kind === 30024) {
-  // Render ArticlePage component
-}
-```
-
-### Nostr Edit Profile
-
-To include an Edit Profile form, place the `EditProfileForm` component in the project:
-
-```tsx
-import { EditProfileForm } from '@/components/EditProfileForm'
-
-function EditProfilePage() {
-  return (
-    <div>
-      {/* you may want to wrap this in a layout or include other components depending on the project ... */}
-
-      <EditProfileForm />
-    </div>
-  )
-}
-```
-
-The `EditProfileForm` component displays just the form. It requires no props, and will "just work" automatically.
-
-### Uploading Files on Nostr
-
-Use the `useUploadFile` hook to upload files. This hook uses Blossom servers for file storage and returns NIP-94 compatible tags.
+### useUploadFile
 
 ```tsx
 import { useUploadFile } from '@/hooks/useUploadFile'
-
-function MyComponent() {
-  //const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
-
-  const handleUpload = async (file: File) => {
-    try {
-      // Provides an array of NIP-94 compatible tags
-      // The first tag in the array contains the URL
-      //const [[_, url]] = await uploadFile(file);
-      // ...use the url
-    } catch (error) {
-      // ...handle errors
-    }
-  }
-
-  // ...rest of component
-}
+const { mutateAsync: uploadFile, isPending } = useUploadFile()
+const [[_, url]] = await uploadFile(file) // Returns NIP-94 tags
 ```
 
-To attach files to kind 1 events, each file's URL should be appended to the event's `content`, and an `imeta` tag should be added for each file. For kind 0 events, the URL by itself can be used in relevant fields of the JSON content.
+## Nostr Components
 
-### Nostr Encryption and Decryption
+### Login
 
-The logged-in user has a `signer` object (matching the NIP-07 signer interface) that can be used for encryption and decryption. The signer's nip44 methods handle all cryptographic operations internally, including key derivation and conversation key management, so you never need direct access to private keys. Always use the signer interface for encryption rather than requesting private keys from users, as this maintains security and follows best practices.
-
-```ts
-// Get the current user
-const { user } = useCurrentUser()
-
-// Optional guard to check that nip44 is available
-if (!user.signer.nip44) {
-  throw new Error(
-    'Please upgrade your signer extension to a version that supports NIP-44 encryption'
-  )
-}
-
-// Encrypt message to self
-const encrypted = await user.signer.nip44.encrypt(user.pubkey, 'hello world')
-// Decrypt message to self
-const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "hello world"
+```tsx
+import { LoginArea } from '@/components/auth/LoginArea'
+<LoginArea className="max-w-60" />
 ```
 
-### Rendering Rich Text Content
+Shows "Log in" when logged out, account switcher when logged in.
 
-Nostr text notes (kind 1, 11, and 1111) have a plaintext `content` field that may contain URLs, hashtags, and Nostr URIs. These events should render their content using the `NoteContent` component:
+### Rich Text Content
 
 ```tsx
 import { NoteContent } from '@/components/NoteContent'
+<NoteContent event={post} className="text-sm" />
+```
 
-export function Post(/* ...props */) {
-  // ...
+Renders plaintext content with URLs, hashtags, and Nostr URIs.
 
-  return (
-    <CardContent className="pb-2">
-      <div className="whitespace-pre-wrap break-words">
-        <NoteContent event={post} className="text-sm" />
-      </div>
-    </CardContent>
-  )
+## NIP-19 Identifiers
+
+Prefixes: `npub` (pubkey), `nsec` (private key), `note` (event), `nprofile`, `nevent`, `naddr`, `nrelay`
+
+**Decoding for filters:**
+```ts
+import { nip19 } from 'nostr-tools'
+const decoded = nip19.decode(value)
+if (decoded.type === 'naddr') {
+  const { kind, pubkey, identifier } = decoded.data
+  // Use in filter: { kinds: [kind], authors: [pubkey], '#d': [identifier] }
 }
 ```
 
-## App Configuration
+**URL routing:** Use `/naddr1...` or `/nevent1...` paths. Always decode and validate.
 
-The project includes an `AppProvider` that manages global application state including theme and relay configuration. The default configuration includes:
+## Custom NIP Definition
 
-```typescript
-const defaultConfig: AppConfig = {
-  theme: 'light',
-  relayUrl: 'wss://haven.slidestr.net',
-}
+`NIP.md` defines custom Nostr event kinds for this project. Update when adding/changing custom events.
+
+**Kind ranges:**
+- Regular (1-9999): Stored permanently
+- Replaceable (10000-19999): Latest per pubkey+kind
+- Addressable (30000-39999): Latest per pubkey+kind+d-tag
+
+Use `nostr__read_nips_index` to check existing kinds.
+
+## Encryption/Decryption
+
+```ts
+const { user } = useCurrentUser()
+if (!user.signer.nip44) throw new Error('NIP-44 not supported')
+const encrypted = await user.signer.nip44.encrypt(pubkey, 'message')
+const decrypted = await user.signer.nip44.decrypt(pubkey, encrypted)
 ```
-
-Preset relays are available including Ditto, Nostr.Band, Damus, and Primal. The app uses local storage to persist user preferences.
 
 ## Routing
 
-The project uses React Router with a centralized routing configuration in `AppRouter.tsx`. To add new routes:
-
-1. Create your page component in `/src/pages/`
-2. Import it in `AppRouter.tsx`
-3. Add the route above the catch-all `*` route:
-
-```tsx
-<Route path="/your-path" element={<YourComponent />} />
-```
-
-The router includes automatic scroll-to-top functionality and a 404 NotFound page for unmatched routes.
-
-## Development Practices
-
-- Uses React Query for data fetching and caching
-- Follows shadcn/ui component patterns
-- Implements Path Aliases with `@/` prefix for cleaner imports
-- Uses Vite for fast development and production builds
-- Component-based architecture with React hooks
-- Default connection to one Nostr relay for best performance
-- Comprehensive provider setup with NostrLoginProvider, QueryClientProvider, and custom AppProvider
+React Router with centralized config in `AppRouter.tsx`. Add routes above the catch-all `*` route.
 
 ## Loading States
 
-**Use skeleton loading** for structured content (feeds, profiles, forms). **Use spinners** only for buttons or short operations.
+**Use skeleton loading** for structured content. **Use spinners** only for buttons.
 
 ```tsx
-// Skeleton example matching component structure
-<Card>
-  <CardHeader>
-    <div className="flex items-center space-x-3">
-      <Skeleton className="h-10 w-10 rounded-full" />
-      <div className="space-y-1">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-3 w-16" />
-      </div>
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="space-y-2">
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-4/5" />
-    </div>
+<Skeleton className="h-10 w-10 rounded-full" />
+```
+
+### Empty States
+
+```tsx
+import { RelaySelector } from '@/components/RelaySelector'
+<Card className="border-dashed">
+  <CardContent className="py-12 text-center">
+    <p className="text-muted-foreground">No results found. Try another relay?</p>
+    <RelaySelector className="w-full" />
   </CardContent>
 </Card>
 ```
 
-### Empty States and No Content Found
-
-When no content is found (empty search results, no data available, etc.), display a minimalist empty state with the `RelaySelector` component. This allows users to easily switch relays to discover content from different sources.
-
-```tsx
-import { RelaySelector } from '@/components/RelaySelector'
-import { Card, CardContent } from '@/components/ui/card'
-
-// Empty state example
-;<div className="col-span-full">
-  <Card className="border-dashed">
-    <CardContent className="py-12 px-8 text-center">
-      <div className="max-w-sm mx-auto space-y-6">
-        <p className="text-muted-foreground">No results found. Try another relay?</p>
-        <RelaySelector className="w-full" />
-      </div>
-    </CardContent>
-  </Card>
-</div>
-```
-
 ## Design Customization
 
-**Tailor the site's look and feel based on the user's specific request.** This includes:
-
-- **Color schemes**: Incorporate the user's color preferences when specified, and choose an appropriate scheme that matches the application's purpose and aesthetic
-- **Typography**: Choose fonts that match the requested aesthetic (modern, elegant, playful, etc.)
-- **Layout**: Follow the requested structure (3-column, sidebar, grid, etc.)
-- **Component styling**: Use appropriate border radius, shadows, and spacing for the desired feel
-- **Interactive elements**: Style buttons, forms, and hover states to match the theme
+Tailor color schemes, typography, layout, and component styling based on user requests.
 
 ### Adding Fonts
 
-To add custom fonts, follow these steps:
+1. Install: `@fontsource/[font-name]` or `@fontsource-variable/[font-name]`
+2. Import in `src/main.tsx`
+3. Update `tailwind.config.ts` fontFamily
 
-1. **Install a font package** using the npm_add_package tool:
-
-   **Any Google Font can be installed** using the @fontsource packages. Examples:
-   - For Inter Variable: `npm_add_package({ name: "@fontsource-variable/inter" })`
-   - For Roboto: `npm_add_package({ name: "@fontsource/roboto" })`
-   - For Outfit Variable: `npm_add_package({ name: "@fontsource-variable/outfit" })`
-   - For Poppins: `npm_add_package({ name: "@fontsource/poppins" })`
-   - For Open Sans: `npm_add_package({ name: "@fontsource/open-sans" })`
-
-   **Format**: `@fontsource/[font-name]` or `@fontsource-variable/[font-name]` (for variable fonts)
-
-2. **Import the font** in `src/main.tsx`:
-
-   ```typescript
-   import '@fontsource-variable/inter'
-   ```
-
-3. **Update Tailwind configuration** in `tailwind.config.ts`:
-   ```typescript
-   export default {
-     theme: {
-       extend: {
-         fontFamily: {
-           sans: ['Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
-         },
-       },
-     },
-   }
-   ```
-
-### Recommended Font Choices by Use Case
-
-- **Modern/Clean**: Inter Variable, Outfit Variable, or Manrope
-- **Professional/Corporate**: Roboto, Open Sans, or Source Sans Pro
-- **Creative/Artistic**: Poppins, Nunito, or Comfortaa
-- **Technical/Code**: JetBrains Mono, Fira Code, or Source Code Pro (for monospace)
+**Recommendations:**
+- Modern/Clean: Inter Variable, Outfit Variable
+- Professional: Roboto, Open Sans
+- Creative: Poppins, Nunito
+- Technical: JetBrains Mono, Fira Code
 
 ### Theme System
 
-The project includes a complete light/dark theme system using CSS custom properties. The theme can be controlled via:
+Use `useTheme` hook. CSS custom properties in `src/index.css`. Supports light/dark mode with `.dark` class.
 
-- `useTheme` hook for programmatic theme switching
-- CSS custom properties defined in `src/index.css`
-- Automatic dark mode support with `.dark` class
+## Testing
 
-### Color Scheme Implementation
+**Only create tests when user experiences problems or explicitly requests them.**
 
-When users specify color schemes:
-
-- Update CSS custom properties in `src/index.css` (both `:root` and `.dark` selectors)
-- Use Tailwind's color palette or define custom colors
-- Ensure proper contrast ratios for accessibility
-- Apply colors consistently across components (buttons, links, accents)
-- Test both light and dark mode variants
-
-### Component Styling Patterns
-
-- Use `cn()` utility for conditional class merging
-- Follow shadcn/ui patterns for component variants
-- Implement responsive design with Tailwind breakpoints
-- Add hover and focus states for interactive elements
-
-## Writing Tests
-
-**Important for AI Assistants**: Only create tests when the user is experiencing a specific problem or explicitly requests tests. Do not proactively write tests for new features or components unless the user is having issues that require testing to diagnose or resolve.
-
-### Test Setup
-
-The project uses Vitest with jsdom environment and includes comprehensive test setup:
-
-- **Testing Library**: React Testing Library with jest-dom matchers
-- **Test Environment**: jsdom with mocked browser APIs (matchMedia, scrollTo, IntersectionObserver, ResizeObserver)
-- **Test App**: `TestApp` component provides all necessary context providers for testing
-
-The project includes a `TestApp` component that provides all necessary context providers for testing. Wrap components with this component to provide required context providers:
+Use `TestApp` component for context providers:
 
 ```tsx
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
 import { TestApp } from '@/test/TestApp'
-import { MyComponent } from './MyComponent'
-
-describe('MyComponent', () => {
-  it('renders correctly', () => {
-    render(
-      <TestApp>
-        <MyComponent />
-      </TestApp>
-    )
-
-    expect(screen.getByText('Expected text')).toBeInTheDocument()
-  })
-})
+render(<TestApp><MyComponent /></TestApp>)
 ```
 
-## Testing Your Changes
-
-Whenever you modify code, you must run the **test** script using the **run_script** tool.
-
-**Your task is not considered finished until this test passes without errors.**
+**Run tests after changes:** Use the test script. Task not finished until tests pass.

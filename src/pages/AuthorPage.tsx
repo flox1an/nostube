@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
+import { nip19 } from 'nostr-tools'
 import { combineRelays } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -22,6 +23,8 @@ import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { presetRelays } from '../App'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 
@@ -120,14 +123,22 @@ export function AuthorPage() {
     { inboxes: [], outboxes: [] }
   )
 
-  // Combine all relay sources (prioritize in order: nprofile relays, author's outbox, user's read relays)
+  // Well-known video relays as fallbacks
+  const videoRelayFallbacks = presetRelays.map(r => r.url)
+
+  // Combine all relay sources (prioritize in order: nprofile relays, author's outbox, user's read relays, video fallbacks)
   const relays = useMemo(() => {
     const authorOutboxes = authorMailboxes?.outboxes || []
     console.log(`[AuthorPage] nprofile relays:`, nprofileRelays)
     console.log(`[AuthorPage] Author outbox relays for ${pubkey.slice(0, 8)}:`, authorOutboxes)
     console.log(`[AuthorPage] User read relays:`, readRelays)
     // Combine and deduplicate (order matters - first ones are tried first)
-    const combined = combineRelays([nprofileRelays, authorOutboxes, readRelays])
+    const combined = combineRelays([
+      nprofileRelays,
+      authorOutboxes,
+      readRelays,
+      videoRelayFallbacks,
+    ])
     console.log(`[AuthorPage] Combined relays (${combined.length}):`, combined)
     return combined
   }, [nprofileRelays, authorMailboxes, readRelays, pubkey])
@@ -140,11 +151,8 @@ export function AuthorPage() {
       const ids = playlist.videos.map(v => v.id)
 
       try {
-        // First try to get events from EventStore
-        let events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[]
-
-        // If we don't have all events, fetch missing ones from relays
-        const missingIds = ids.filter(id => !eventStore.getEvent(id))
+        // Check which events are missing from store
+        const missingIds = ids.filter(id => !eventStoreInstance.getEvent(id))
 
         if (missingIds.length > 0) {
           console.log(
@@ -152,35 +160,67 @@ export function AuthorPage() {
             playlist.name
           )
 
-          // Create a simple loader to fetch the missing events
+          // Create a loader to fetch the missing events with proper relays
           const { createEventLoader } = await import('applesauce-loaders/loaders')
           const { pool } = config
-          const loader = createEventLoader(pool, { eventStore })
 
-          // Fetch missing events
-          const fetchPromises = missingIds.map(id =>
-            loader({ ids: [id] })
+          // Get relay hints from where the playlist itself was seen
+          const playlistEvent = playlist.eventId
+            ? eventStoreInstance.getEvent(playlist.eventId)
+            : undefined
+          const playlistSeenRelaysSet = playlistEvent ? getSeenRelays(playlistEvent) : undefined
+          const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
+          console.log('[AuthorPage] Playlist seen relays:', playlistSeenRelays)
+
+          // Fetch missing events with relay hints
+          const fetchPromises = missingIds.map(id => {
+            // Get relay hints from where this event has been seen before
+            const referencedEvent = eventStoreInstance.getEvent(id)
+            const seenRelaysSet = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+            const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
+
+            // Combine seen relays with playlist relays and general relays (prioritize seen relays)
+            const videoRelays = combineRelays([seenRelays, playlistSeenRelays, relays])
+
+            console.log(`[AuthorPage] Loading video ${id} from ${videoRelays.length} relays`)
+            console.log(`[AuthorPage] - Seen relays: ${seenRelays.length}`, seenRelays)
+            console.log(
+              `[AuthorPage] - Playlist relays: ${playlistSeenRelays.length}`,
+              playlistSeenRelays
+            )
+
+            // Create loader with specific relay hints for this video
+            const loader = createEventLoader(pool, {
+              eventStore: eventStoreInstance,
+              extraRelays: videoRelays,
+            })
+
+            return loader({ id })
               .toPromise()
               .catch(err => {
                 console.warn(`Failed to fetch event ${id}:`, err)
                 return null
               })
-          )
+          })
 
           const fetchedEvents = (await Promise.all(fetchPromises)).filter(Boolean)
 
           // Add fetched events to the store
           fetchedEvents.forEach(event => {
-            if (event) eventStore.add(event)
+            if (event) eventStoreInstance.add(event)
           })
-
-          // Get all events again (now including fetched ones)
-          events = ids.map(id => eventStore.getEvent(id)).filter(Boolean) as any[]
         }
 
-        setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: events }))
+        // Get all events from store (both existing and newly fetched)
+        const events = ids.map(id => eventStoreInstance.getEvent(id)).filter(Boolean) as any[]
+
+        // Process events to VideoEvent format
+        const { processEvents } = await import('@/utils/video-event')
+        const processedVideos = processEvents(events, relays, undefined, config.blossomServers)
+
+        setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
         loadedPlaylistsRef.current.add(playlist.identifier)
-        return events
+        return processedVideos
       } catch (error) {
         console.error('Failed to fetch playlist videos:', error)
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: [] }))
@@ -190,7 +230,7 @@ export function AuthorPage() {
         setLoadingPlaylist(null)
       }
     },
-    [config]
+    [config, eventStoreInstance, relays]
   )
 
   // Auto-fetch video events for all playlists when playlists are loaded
@@ -367,6 +407,12 @@ export function AuthorPage() {
                     isLoading={false}
                     showSkeletons={false}
                     layoutMode="auto"
+                    playlistParam={nip19.naddrEncode({
+                      kind: 30005,
+                      pubkey,
+                      identifier: playlist.identifier,
+                      relays: loadRelays.slice(0, 3),
+                    })}
                   />
                 )}
               </TabsContent>

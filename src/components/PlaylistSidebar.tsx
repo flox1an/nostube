@@ -1,0 +1,182 @@
+import { Link } from 'react-router-dom'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
+import { imageProxy, imageProxyVideoPreview, cn } from '@/lib/utils'
+import { useProfile, useAppContext } from '@/hooks'
+
+interface PlaylistVideoItem {
+  id: string
+  pubkey?: string
+  title?: string
+  images?: string[]
+  link: string
+}
+
+interface PlaylistVideoItemProps {
+  item: PlaylistVideoItem
+  isActive: boolean
+  href: string
+}
+
+// Component for rendering individual playlist video item with author info
+const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => {
+  const { config } = useAppContext()
+  const metadata = useProfile(item.pubkey ? { pubkey: item.pubkey } : undefined)
+  const authorName =
+    metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
+  const authorPicture = metadata?.picture
+
+  const thumbnail = item.images?.[0]
+  const thumbSrc = thumbnail ? imageProxyVideoPreview(thumbnail, config.thumbResizeServerUrl) : null
+
+  return (
+    <Link
+      to={href}
+      className={cn(
+        'flex gap-3 rounded-lg border border-transparent p-2 transition hover:border-border hover:bg-muted',
+        isActive && 'border-primary'
+      )}
+    >
+      {thumbSrc ? (
+        <img
+          src={thumbSrc}
+          alt={item.title || 'Playlist video'}
+          className="w-40 h-24 shrink-0 rounded-md object-cover"
+        />
+      ) : (
+        <div className="w-40 h-24 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">
+          No image
+        </div>
+      )}
+      <div className="flex-1 min-w-0 space-y-1">
+        <p className="text-sm font-medium line-clamp-2">{item.title || 'Untitled Video'}</p>
+        <div className="flex items-center gap-1.5">
+          <Avatar className="h-4 w-4">
+            <AvatarImage src={imageProxy(authorPicture)} />
+            <AvatarFallback className="text-[8px]">{authorName[0]}</AvatarFallback>
+          </Avatar>
+          <p className="text-xs text-muted-foreground truncate">{authorName}</p>
+        </div>
+        {isActive && <Badge variant="default">Now playing</Badge>}
+      </div>
+    </Link>
+  )
+}
+
+interface PlaylistSidebarProps {
+  playlistParam: string | null
+  currentVideoId?: string
+  playlistEvent: unknown
+  playlistTitle: string
+  playlistDescription: string
+  videoEvents: PlaylistVideoItem[]
+  isLoadingPlaylist: boolean
+  isLoadingVideos: boolean
+  failedVideoIds: Set<string>
+  loadingVideoIds: Set<string>
+}
+
+export function PlaylistSidebar({
+  playlistParam,
+  currentVideoId,
+  playlistEvent,
+  playlistTitle,
+  playlistDescription,
+  videoEvents,
+  isLoadingPlaylist,
+  isLoadingVideos,
+  failedVideoIds,
+  loadingVideoIds,
+}: PlaylistSidebarProps) {
+  if (isLoadingPlaylist) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-40" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex gap-3">
+            <Skeleton className="h-16 w-28 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!playlistEvent) {
+    return (
+      <Alert variant="default">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Playlist unavailable</AlertTitle>
+        <AlertDescription>
+          We couldn't load this playlist. It may have been deleted or is unreachable.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  const videoCountText = `${videoEvents.length} video${videoEvents.length === 1 ? '' : 's'}`
+
+  if (!playlistParam) return null
+
+  const encodedPlaylistParam = encodeURIComponent(playlistParam)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0 space-y-1">
+          <h2 className="text-lg font-semibold truncate">{playlistTitle || 'Playlist'}</h2>
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            Playlist | {playlistDescription || videoCountText}
+          </p>
+        </div>
+        <Link
+          to={`/playlist/${playlistParam}`}
+          className="text-xs text-primary hover:underline shrink-0 self-center"
+        >
+          View all
+        </Link>
+      </div>
+
+      <div className="">
+        {videoEvents.length === 0 && !isLoadingVideos ? (
+          <div className="text-sm text-muted-foreground">No videos in this playlist yet.</div>
+        ) : (
+          videoEvents.map(item => {
+            const isActive = currentVideoId === item.id
+            const pointer = item.link
+            const href = `/video/${pointer}?playlist=${encodedPlaylistParam}`
+
+            return <PlaylistVideoItem key={item.id} item={item} isActive={isActive} href={href} />
+          })
+        )}
+
+        {(isLoadingVideos || loadingVideoIds.size > 0) &&
+          Array.from({ length: Math.max(1, loadingVideoIds.size) }).map((_, idx) => (
+            <div key={`playlist-loading-${idx}`} className="flex gap-3">
+              <Skeleton className="h-16 w-28 rounded-md" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {failedVideoIds.size > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            {failedVideoIds.size} playlist video
+            {failedVideoIds.size === 1 ? '' : 's'} could not be loaded.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  )
+}

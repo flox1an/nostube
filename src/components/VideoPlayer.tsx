@@ -34,6 +34,10 @@ interface VideoPlayerProps {
    * Callback when video dimensions are loaded
    */
   onVideoDimensionsLoaded?: (width: number, height: number) => void
+  /**
+   * Callback when playback finishes
+   */
+  onEnded?: () => void
 }
 
 export function VideoPlayer({
@@ -50,6 +54,7 @@ export function VideoPlayer({
   cinemaMode = false,
   onToggleCinemaMode,
   onVideoDimensionsLoaded,
+  onEnded,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
@@ -219,6 +224,11 @@ export function VideoPlayer({
       onTimeUpdate(el.currentTime)
     }
   }, [onTimeUpdate, isHls, hlsEl])
+  const handleEndedEvent = useCallback(() => {
+    if (onEnded) {
+      onEnded()
+    }
+  }, [onEnded])
 
   // Handle error: on first error, do HEAD requests for all remaining URLs to find a working one
   const handleVideoError = useCallback(async () => {
@@ -272,6 +282,16 @@ export function VideoPlayer({
     () => (poster !== undefined ? imageProxyVideoPreview(poster) : undefined),
     [poster]
   )
+
+  useEffect(() => {
+    if (!onEnded) return
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
+    el.addEventListener('ended', handleEndedEvent)
+    return () => {
+      el.removeEventListener('ended', handleEndedEvent)
+    }
+  }, [onEnded, isHls, hlsEl, handleEndedEvent])
 
   return (
     <media-controller className={className}>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { usePlaylists, type Playlist, type Video } from '@/hooks'
+import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -49,9 +49,10 @@ function formatDate(timestamp: number) {
 interface VideoListProps {
   videos: Video[]
   onRemove: (videoId: string) => Promise<void>
+  playlistParam: string
 }
 
-function VideoList({ videos, onRemove }: VideoListProps) {
+function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
   const navigate = useNavigate()
 
   if (videos.length === 0) {
@@ -67,14 +68,20 @@ function VideoList({ videos, onRemove }: VideoListProps) {
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              <a
-                href="#"
+              <button
+                type="button"
+                className="text-left w-full hover:underline"
                 onClick={() =>
-                  navigate(`/video/${nip19.neventEncode({ id: video.id, kind: video.kind })}`)
+                  navigate(
+                    `/video/${nip19.neventEncode({
+                      id: video.id,
+                      kind: video.kind,
+                    })}?playlist=${encodeURIComponent(playlistParam)}`
+                  )
                 }
               >
                 {video.title || 'Untitled Video'}
-              </a>
+              </button>
             </p>
             <p className="text-xs text-muted-foreground">Added {formatDate(video.added_at)}</p>
           </div>
@@ -94,6 +101,7 @@ function VideoList({ videos, onRemove }: VideoListProps) {
 
 export function PlaylistManager() {
   const { user } = useCurrentUser()
+  const { config } = useAppContext()
   const { playlists, isLoading, createPlaylist, deletePlaylist, removeVideo, updatePlaylist } =
     usePlaylists()
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null)
@@ -103,6 +111,12 @@ export function PlaylistManager() {
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+
+  // Get write relays for relay hints
+  const writeRelays = useMemo(
+    () => config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+    [config.relays]
+  )
 
   const handleDelete = async () => {
     if (playlistToDelete?.eventId) {
@@ -203,62 +217,63 @@ export function PlaylistManager() {
       </div>
 
       <Accordion type="multiple" className="w-full">
-        {sortedPlaylists.map(playlist => (
-          <AccordionItem key={playlist.identifier} value={playlist.identifier}>
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex-1 flex items-center justify-between mr-4">
-                <div>
-                  <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Button asChild variant="link" className="px-0 text-base font-semibold">
-                      <Link
-                        to={`/playlist/${nip19.neventEncode({ id: playlist.eventId, kind: 30005, author: user.pubkey })}`}
-                      >
-                        {playlist.name}
-                      </Link>
-                    </Button>
-                    {user?.pubkey && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={e => {
-                          e.stopPropagation()
-                          handleEdit(playlist)
-                        }}
-                        aria-label="Edit Playlist"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </h3>
+        {sortedPlaylists.map(playlist => {
+          const playlistParam = nip19.naddrEncode({
+            kind: 30005,
+            pubkey: user.pubkey,
+            identifier: playlist.identifier,
+            relays: writeRelays.slice(0, 3),
+          })
+
+          return (
+            <AccordionItem key={playlist.identifier} value={playlist.identifier}>
+              <div className="flex items-start justify-between gap-4">
+                <AccordionTrigger className="flex-1 text-left hover:no-underline">
+                  <div className="flex w-full flex-col gap-1 text-left">
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-semibold">{playlist.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {playlist.videos.length} video{playlist.videos.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                   {playlist.description && (
                     <p className="text-sm text-muted-foreground">{playlist.description}</p>
                   )}
                 </div>
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-muted-foreground">
-                    {playlist.videos.length} video{playlist.videos.length !== 1 ? 's' : ''}
-                  </span>
+              </AccordionTrigger>
+              <div className="flex shrink-0 items-center gap-2 pt-4">
+                <Button asChild variant="link" className="px-0 text-base font-semibold">
+                  <Link
+                    to={`/playlist/${playlistParam}`}
+                  >
+                    Open
+                  </Link>
+                </Button>
+                {user?.pubkey && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setPlaylistToDelete(playlist)
-                    }}
+                    onClick={() => handleEdit(playlist)}
+                    aria-label="Edit Playlist"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" />
                   </Button>
-                </div>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => setPlaylistToDelete(playlist)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <VideoList
-                videos={playlist.videos}
-                onRemove={videoId => removeVideo(playlist.identifier, videoId)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+              </div>
+              <AccordionContent>
+                <VideoList
+                  videos={playlist.videos}
+                  playlistParam={playlistParam}
+                  onRemove={videoId => removeVideo(playlist.identifier, videoId)}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          )
+        })}
       </Accordion>
 
       <AlertDialog open={!!playlistToDelete} onOpenChange={() => setPlaylistToDelete(null)}>

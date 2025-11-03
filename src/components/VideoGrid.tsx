@@ -11,6 +11,7 @@ interface VideoGridProps {
   isLoading?: boolean
   showSkeletons?: boolean
   layoutMode?: 'auto' | 'horizontal' | 'vertical' // new prop, default to auto
+  playlistParam?: string
 }
 
 export function VideoGrid({
@@ -18,6 +19,7 @@ export function VideoGrid({
   isLoading,
   showSkeletons,
   layoutMode = 'auto',
+  playlistParam,
 }: VideoGridProps) {
   const width = useWindowWidth()
   const { config } = useAppContext()
@@ -159,7 +161,12 @@ export function VideoGrid({
         rows.push(
           <div key={'wide-' + i} className={`grid gap-4 ${gridColsClass(getCols('horizontal'))}`}>
             {wideRows[i].map(video => (
-              <VideoCard key={video.id} video={video} format="horizontal" />
+              <VideoCard
+                key={video.id}
+                video={video}
+                format="horizontal"
+                playlistParam={playlistParam}
+              />
             ))}
           </div>
         )
@@ -168,7 +175,12 @@ export function VideoGrid({
         rows.push(
           <div key={'portrait-' + i} className={`grid gap-4 ${gridColsClass(getCols('vertical'))}`}>
             {portraitRows[i].map(video => (
-              <VideoCard key={video.id} video={video} format="vertical" />
+              <VideoCard
+                key={video.id}
+                video={video}
+                format="vertical"
+                playlistParam={playlistParam}
+              />
             ))}
           </div>
         )
@@ -193,7 +205,7 @@ export function VideoGrid({
       )}
     >
       {filteredVideos.map(video => (
-        <VideoCard key={video.id} video={video} format={cardFormat} />
+        <VideoCard key={video.id} video={video} format={cardFormat} playlistParam={playlistParam} />
       ))}
     </div>
   )

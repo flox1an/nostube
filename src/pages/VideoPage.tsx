@@ -1,4 +1,4 @@
-import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
@@ -25,6 +25,7 @@ import {
   useProfile,
   useMissingVideos,
   useCinemaMode,
+  usePlaylistDetails,
 } from '@/hooks'
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ import ShareButton from '@/components/ShareButton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
+import { PlaylistSidebar } from '@/components/PlaylistSidebar'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -121,8 +123,20 @@ const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.05
 export function VideoPage() {
   const { config } = useAppContext()
   const { nevent } = useParams<{ nevent: string }>()
+  const [searchParams] = useSearchParams()
+  const playlistParam = searchParams.get('playlist')
   const eventStore = useEventStore()
   const { pool } = useAppContext()
+  const {
+    playlistEvent,
+    playlistTitle,
+    playlistDescription,
+    videoEvents: playlistVideos,
+    isLoadingPlaylist,
+    isLoadingVideos,
+    failedVideoIds,
+    loadingVideoIds,
+  } = usePlaylistDetails(playlistParam)
   const navigate = useNavigate()
   const eventPointer = useMemo(() => decodeEventPointer(nevent ?? ''), [nevent])
   const { markVideoAsMissing, clearMissingVideo, isVideoMissing } = useMissingVideos()
@@ -149,7 +163,7 @@ export function VideoPage() {
   }, [eventPointer, config.relays])
 
   const loader = useMemo(
-    () => createEventLoader(pool, { eventStore, relays: relaysToUse }),
+    () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),
     [pool, eventStore, relaysToUse]
   )
 
@@ -249,7 +263,6 @@ export function VideoPage() {
   const [shareOpen, setShareOpen] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
   const [currentPlayPos, setCurrentPlayPos] = useState(0)
-  const [_isMirroring, _setIsMirroring] = useState(false)
   const location = useLocation()
 
   // Compute initial play position from ?t=... param or localStorage
@@ -262,6 +275,10 @@ export function VideoPage() {
       const tRaw = params.get('t')
       const t = parseTimeParam(tRaw)
       if (t > 0) return t
+
+      // If autoplay parameter is present (from playlist auto-advance), start from 0
+      const autoplay = params.get('autoplay')
+      if (autoplay === 'true') return 0
     }
     if (user && video) {
       const key = `playpos:${user.pubkey}:${video.id}`
@@ -419,7 +436,7 @@ export function VideoPage() {
   const renderVideoInfo = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pt-^4">
           <Skeleton className="mt-4 h-8 w-3/4" />
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -452,7 +469,7 @@ export function VideoPage() {
 
     return (
       <>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pt-4">
           {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
           <div className="flex items-start justify-between">
@@ -523,7 +540,7 @@ export function VideoPage() {
 
           {video && video.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {video.tags.slice(20).map(tag => (
+              {video.tags.slice(0, 20).map(tag => (
                 <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
@@ -574,8 +591,37 @@ export function VideoPage() {
     )
   }
 
+
+  const renderSidebarContent = () => {
+    if (playlistParam) {
+      return (
+        <PlaylistSidebar
+          playlistParam={playlistParam}
+          currentVideoId={video?.id}
+          playlistEvent={playlistEvent}
+          playlistTitle={playlistTitle}
+          playlistDescription={playlistDescription}
+          videoEvents={playlistVideos}
+          isLoadingPlaylist={isLoadingPlaylist}
+          isLoadingVideos={isLoadingVideos}
+          failedVideoIds={failedVideoIds}
+          loadingVideoIds={loadingVideoIds}
+        />
+      )
+    }
+
+    return (
+      <VideoSuggestions
+        currentVideoId={video?.id}
+        authorPubkey={video?.pubkey}
+        currentVideoType={video?.type}
+        relays={relaysToUse}
+      />
+    )
+  }
+
   // Helper to render suggestions alert
-  const renderSuggestionsAlert = () => {
+  function renderSuggestionsAlert() {
     if (!video || blossomServerCount !== 1) return null
 
     return (
@@ -631,6 +677,24 @@ export function VideoPage() {
   }
 
   // Render video player (shared between both modes to preserve play position)
+  const shouldLoop = useMemo(() => [34236, 22].includes(video?.kind ?? 0), [video?.kind])
+
+  const currentPlaylistIndex = useMemo(() => {
+    if (!playlistParam || !video) return -1
+    return playlistVideos.findIndex(item => item.id === video.id)
+  }, [playlistParam, video?.id, playlistVideos])
+
+  const nextPlaylistVideo = useMemo(() => {
+    if (currentPlaylistIndex === -1) return undefined
+    return playlistVideos[currentPlaylistIndex + 1]
+  }, [currentPlaylistIndex, playlistVideos])
+
+  const handlePlaylistVideoEnd = useCallback(() => {
+    if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
+    setCurrentPlayPos(0)
+    navigate(`/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}&autoplay=true`)
+  }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate])
+
   const renderVideoPlayer = () => {
     if (isLoading) {
       return <Skeleton className="w-full aspect-video" />
@@ -640,14 +704,18 @@ export function VideoPage() {
       return null
     }
 
+    // Use playlist ID as key when in playlist mode to prevent remounting between videos
+    // This keeps fullscreen mode active when auto-advancing to the next video
+    const playerKey = playlistParam ? `playlist-${playlistParam}` : video.id
+
     return (
       <VideoPlayer
-        key={video.id}
+        key={playerKey}
         urls={video.urls}
         textTracks={video.textTracks}
         mime={video.mimeType || ''}
         poster={video.images[0] || ''}
-        loop={[34236, 22].includes(video?.kind || 0)}
+        loop={shouldLoop}
         className={
           cinemaMode ? 'w-full aspect-video' : 'w-full max-h-[80dvh] aspect-video rounded-lg'
         }
@@ -658,6 +726,7 @@ export function VideoPage() {
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}
         onVideoDimensionsLoaded={handleVideoDimensionsLoaded}
+        onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
       />
     )
   }
@@ -674,28 +743,18 @@ export function VideoPage() {
         {/* Sidebar/Bottom content */}
         {cinemaMode ? (
           <div className="w-full max-w-[140rem] mx-auto">
-            <div className="flex gap-6 md:px-6 flex-col lg:flex-row mt-4">
+            <div className="flex gap-6 md:px-6 flex-col lg:flex-row">
               <div className="flex-1">{renderVideoInfo()}</div>
-              <div className="w-full lg:w-96 p-2 md:p-0 space-y-4">
+              <div className="w-full lg:w-96 p-2 md:p-0 space-y-4 mt-4">
                 {renderSuggestionsAlert()}
-                <VideoSuggestions
-                  currentVideoId={video?.id}
-                  authorPubkey={video?.pubkey}
-                  currentVideoType={video?.type}
-                  relays={relaysToUse}
-                />
+                {renderSidebarContent()}
               </div>
             </div>
           </div>
         ) : (
           <div className="w-full lg:w-96 p-2 md:p-0 space-y-4">
             {renderSuggestionsAlert()}
-            <VideoSuggestions
-              currentVideoId={video?.id}
-              authorPubkey={video?.pubkey}
-              currentVideoType={video?.type}
-              relays={relaysToUse}
-            />
+            {renderSidebarContent()}
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ import { SimplePool, Filter } from 'nostr-tools'
 import { VideoEvent, processEvents } from '../utils/video-event'
 import { getKindsForType, type VideoType } from '../lib/video-types'
 import type { ReportedPubkeys } from '@/hooks'
+import { presetRelays } from '../App'
 
 type VideoCache = VideoEvent
 
@@ -19,7 +20,7 @@ let blockedPubkeys: ReportedPubkeys = {}
 const relayTimestamps = new Map<string, number>()
 
 // Relay URLs - can be configured via message
-let relayUrls = ['wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.damus.io']
+let relayUrls = presetRelays.map(r => r.url)
 
 async function loadVideoBatch(): Promise<boolean> {
   try {

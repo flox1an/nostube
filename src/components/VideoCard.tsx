@@ -16,9 +16,10 @@ interface VideoCardProps {
   video: VideoEvent
   hideAuthor?: boolean
   format: 'vertical' | 'horizontal' | 'square'
+  playlistParam?: string
 }
 
-export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardProps) {
+export function VideoCard({ video, hideAuthor, format = 'square', playlistParam }: VideoCardProps) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
@@ -46,6 +47,13 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
 
   // Determine navigation path based on video type
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
+  const to =
+    playlistParam && videoPath.startsWith('/video/')
+      ? {
+          pathname: videoPath,
+          search: `?playlist=${encodeURIComponent(playlistParam)}`,
+        }
+      : videoPath
 
   const handleMouseEnter = () => {
     // don't show hover preview for video with content warning (when warning mode is active)
@@ -77,7 +85,7 @@ export function VideoCard({ video, hideAuthor, format = 'square' }: VideoCardPro
       onMouseLeave={handleMouseLeave}
     >
       <div className="p-0">
-        <Link to={videoPath}>
+        <Link to={to}>
           <div className="w-full overflow-hidden rounded-lg relative">
             <img
               src={imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)}

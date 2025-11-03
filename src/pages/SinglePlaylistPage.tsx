@@ -1,95 +1,55 @@
 import { Link, useParams } from 'react-router-dom'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
-import { decodeAddressPointer } from '@/lib/nip19'
-import { of } from 'rxjs'
+
 import { Skeleton } from '@/components/ui/skeleton'
-import { processEvents } from '@/utils/video-event'
-import { useAppContext, useProfile } from '@/hooks'
 import { VideoGrid } from '@/components/VideoGrid'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { imageProxy } from '@/lib/utils'
-import { useMemo } from 'react'
-import { nprofileFromPubkey } from '@/lib/nprofile'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
 
-function isNeventPointer(ptr: unknown): ptr is { id: string } {
-  return typeof ptr === 'object' && ptr !== null && 'id' in ptr
-}
-function isNaddrPointer(ptr: unknown): ptr is { identifier: string; pubkey: string; kind: number } {
-  return (
-    typeof ptr === 'object' &&
-    ptr !== null &&
-    'identifier' in ptr &&
-    'pubkey' in ptr &&
-    'kind' in ptr
-  )
-}
+import { imageProxy } from '@/lib/utils'
+import { nprofileFromPubkey } from '@/lib/nprofile'
+import { usePlaylistDetails, useProfile } from '@/hooks'
 
 export default function SinglePlaylistPage() {
   const { nip19: nip19param } = useParams<{ nip19: string }>()
-  const eventStore = useEventStore()
-  const { config } = useAppContext()
-  const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
-  // Decode nip19 (naddr)
-  const playlistPointer = useMemo(() => {
-    if (!nip19param) return null
-    return decodeAddressPointer(nip19param)
-  }, [nip19param])
-
-  // Get playlist event from EventStore
-  const playlistObservable = useMemo(() => {
-    if (!playlistPointer) return of(undefined)
-
-    if (isNeventPointer(playlistPointer)) {
-      // nevent - get by ID
-      return eventStore.event(playlistPointer.id)
-    } else if (isNaddrPointer(playlistPointer)) {
-      // naddr - get replaceable event
-      return eventStore.replaceable(
-        playlistPointer.kind,
-        playlistPointer.pubkey,
-        playlistPointer.identifier
-      )
-    }
-    return of(undefined)
-  }, [playlistPointer, eventStore])
-
-  const playlistEvent = useObservableState(playlistObservable)
-  const isLoadingPlaylist = playlistObservable && !playlistEvent
+  const {
+    playlistEvent,
+    playlistTitle,
+    playlistDescription,
+    videoEvents,
+    readRelays,
+    isLoadingPlaylist,
+    isLoadingVideos,
+    failedVideoIds,
+    loadingVideoIds,
+  } = usePlaylistDetails(nip19param)
 
   const metadata = useProfile(playlistEvent?.pubkey ? { pubkey: playlistEvent.pubkey } : undefined)
-  const name = metadata?.display_name || metadata?.name || playlistEvent?.pubkey.slice(0, 8)
+  const name =
+    metadata?.display_name || metadata?.name || playlistEvent?.pubkey?.slice(0, 8) || 'Unknown'
 
-  // Parse playlist info and video references
-  let playlistTitle = ''
-  let playlistDescription = ''
-  let videoRefs: { kind: number; id: string }[] = []
-  if (playlistEvent) {
-    playlistTitle =
-      playlistEvent.tags.find((t: string[]) => t[0] === 'title')?.[1] || 'Untitled Playlist'
-    playlistDescription =
-      playlistEvent.tags.find((t: string[]) => t[0] === 'description')?.[1] || ''
-    videoRefs = playlistEvent.tags
-      .filter((t: string[]) => t[0] === 'a')
-      .map((t: string[]) => {
-        const [kind, id] = t[1].split(':')
-        return { kind: parseInt(kind, 10), id }
-      })
+  if (isLoadingPlaylist) {
+    return (
+      <div className="p-8 flex flex-col gap-8">
+        <Skeleton className="h-8 w-64 mb-4" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-48 w-full" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
-  // Get video events from EventStore
-  const videoEvents = useMemo(() => {
-    if (!videoRefs.length) return []
-
-    const events = videoRefs.map(ref => eventStore.getEvent(ref.id)).filter(Boolean)
-
-    return processEvents(events, readRelays, undefined, config.blossomServers)
-  }, [videoRefs, eventStore, readRelays, config.blossomServers])
-
-  const isLoadingVideos = playlistEvent && videoRefs.length > 0 && videoEvents.length === 0
-
-  if (!playlistEvent) return <></>
+  if (!playlistEvent) {
+    return (
+      <div className="p-8">
+        <div className="text-center py-12 text-muted-foreground">
+          Playlist not found or failed to load
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 flex flex-col gap-8">
@@ -112,13 +72,22 @@ export default function SinglePlaylistPage() {
         <div className="text-muted-foreground mt-2">{playlistDescription}</div>
       )}
 
-      {isLoadingPlaylist ? (
-        <Skeleton className="h-8 w-48 mb-4" />
-      ) : !playlistEvent ? (
-        <div className="text-center py-12 text-muted-foreground">Playlist not found</div>
-      ) : (
-        <VideoGrid videos={videoEvents} isLoading={isLoadingVideos} />
+      {failedVideoIds.size > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {failedVideoIds.size} video{failedVideoIds.size > 1 ? 's' : ''} could not be loaded from
+            any relay. {failedVideoIds.size > 1 ? 'They' : 'It'} may have been deleted or{' '}
+            {failedVideoIds.size > 1 ? 'are' : 'is'} no longer available.
+          </AlertDescription>
+        </Alert>
       )}
+
+      <VideoGrid
+        videos={videoEvents}
+        isLoading={isLoadingVideos || loadingVideoIds.size > 0}
+        playlistParam={nip19param}
+      />
     </div>
   )
 }

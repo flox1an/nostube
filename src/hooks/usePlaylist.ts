@@ -6,12 +6,15 @@ import { nowInSecs } from '@/lib/utils'
 import { useAppContext } from './useAppContext'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { filterDeletedEvents } from '@/lib/deletions'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 export interface Video {
   id: string
   kind: number
   title?: string
   added_at: number
+  relayHint?: string
 }
 
 export interface Playlist {
@@ -38,18 +41,32 @@ export function usePlaylists() {
     [config.relays]
   )
   const filters = useMemo(() => [playlistFilter(user?.pubkey)], [user?.pubkey])
+
+  // Also load deletion events (kind 5) for filtering
+  const deletionFilters = useMemo(
+    () => [{ kinds: [5], authors: user?.pubkey ? [user.pubkey] : [] }],
+    [user?.pubkey]
+  )
+
   const loader = useMemo(
-    () => createTimelineLoader(pool, readRelays, filters),
-    [pool, readRelays, filters]
+    () => createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters]),
+    [pool, readRelays, filters, deletionFilters]
   )
 
   // Use EventStore timeline to get playlists for current user
   const playlistsObservable = eventStore.timeline(filters)
-  const playlistEvents = useObservableState(playlistsObservable, [])
+  const allPlaylistEvents = useObservableState(playlistsObservable, [])
+
+  // Filter out deleted playlists
+  const playlistEvents = useMemo(
+    () => filterDeletedEvents(eventStore, allPlaylistEvents),
+    [eventStore, allPlaylistEvents]
+  )
 
   // Load playlists on page load if not already loaded
   useEffect(() => {
-    const needLoad = playlistEvents.length === 0 && !!user?.pubkey && !hasLoadedOnce
+    // Check allPlaylistEvents (before filtering) to avoid re-loading if events were just deleted
+    const needLoad = allPlaylistEvents.length === 0 && !!user?.pubkey && !hasLoadedOnce
 
     if (needLoad) {
       setIsLoading(true)
@@ -67,7 +84,7 @@ export function usePlaylists() {
         },
       })
     }
-  }, [playlistEvents.length, user?.pubkey, hasLoadedOnce, loader, eventStore])
+  }, [allPlaylistEvents.length, user?.pubkey, hasLoadedOnce, loader, eventStore])
 
   const playlists = playlistEvents.map(event => {
     // Find the title from tags
@@ -76,14 +93,20 @@ export function usePlaylists() {
     const name = titleTag ? titleTag[1] : 'Untitled Playlist'
     const description = descTag ? descTag[1] : undefined
 
-    // Get video references from 'a' tags (NIP-51 format)
+    // Get video references from 'e' tags (event IDs)
     const videos: Video[] = event.tags
-      .filter(t => t[0] === 'a')
+      .filter(t => t[0] === 'e')
       .map(t => ({
-        kind: parseInt(t[1].split(':')[0], 10),
-        id: t[1].split(':')[1], // Extract note ID from "1:<note-id>"
-        title: t[2], // Optional title specified in tag
-        added_at: parseInt(t[3] || '0', 10) || event.created_at,
+        id: t[1], // Event ID
+        kind: 0, // Kind will be determined when event is loaded
+        title: undefined, // Title will be fetched from the actual event
+        added_at: event.created_at,
+        relayHint: (() => {
+          if (t[2]) return t[2]
+          const referencedEvent = eventStore.getEvent(t[1])
+          const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+          return seenRelays ? Array.from(seenRelays)[0] : undefined
+        })(),
       }))
 
     return {
@@ -106,13 +129,19 @@ export function usePlaylists() {
           ['d', playlist.identifier],
           ['title', playlist.name],
           ['description', playlist.description || ''],
-          // Add video references as 'a' tags
-          ...playlist.videos.map(video => [
-            'a',
-            `${video.kind}:${video.id}`, // Reference format for notes
-            video.title || '',
-            video.added_at.toString(),
-          ]),
+          // Add video references as 'e' tags (event IDs) with relay hints
+          ...playlist.videos.map(video => {
+            // Get relay hint from where this event has been seen
+            const referencedEvent = eventStore.getEvent(video.id)
+            const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+            const relayHint = video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
+
+            const tag: string[] = ['e', video.id]
+            if (relayHint) {
+              tag.push(relayHint)
+            }
+            return tag
+          }),
           ['client', 'nostube'],
         ]
 
@@ -155,7 +184,7 @@ export function usePlaylists() {
   )
 
   const addVideo = useCallback(
-    async (playlistId: string, videoId: string, videoKind: number, videoTitle?: string) => {
+    async (playlistId: string, videoId: string, videoKind?: number, videoTitle?: string) => {
       const playlist = playlists.find(p => p.identifier === playlistId)
       if (!playlist) throw new Error('Playlist not found')
 
@@ -170,16 +199,21 @@ export function usePlaylists() {
           ...playlist.videos,
           {
             id: videoId,
-            kind: videoKind,
+            kind: videoKind || 0, // Kind is optional, will be determined when event is loaded
             title: videoTitle,
             added_at: nowInSecs(),
+            relayHint: (() => {
+              const referencedEvent = eventStore.getEvent(videoId)
+              const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+              return seenRelays ? Array.from(seenRelays)[0] : undefined
+            })(),
           },
         ],
       }
 
       await updatePlaylist(updatedPlaylist)
     },
-    [playlists, updatePlaylist]
+    [playlists, updatePlaylist, eventStore]
   )
 
   const removeVideo = useCallback(
@@ -249,23 +283,44 @@ export function useUserPlaylists(pubkey?: string) {
     [config.relays]
   )
 
-  const playlistEvents = useObservableState(eventStore.timeline([playlistFilter(pubkey)]), [])
+  const filters = useMemo(() => [playlistFilter(pubkey)], [pubkey])
+
+  // Also load deletion events (kind 5) for filtering
+  const deletionFilters = useMemo(
+    () => [{ kinds: [5], authors: pubkey ? [pubkey] : [] }],
+    [pubkey]
+  )
+
+  const allPlaylistEvents = useObservableState(eventStore.timeline(filters), [])
+
+  // Filter out deleted playlists
+  const playlistEvents = useMemo(
+    () => filterDeletedEvents(eventStore, allPlaylistEvents),
+    [eventStore, allPlaylistEvents]
+  )
+
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const loader = useMemo(
-    () => createTimelineLoader(pool, readRelays, [playlistFilter(pubkey)]),
-    [pool, readRelays]
+    () => createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters]),
+    [pool, readRelays, filters, deletionFilters]
   )
 
   useEffect(() => {
-    const needLoad = playlistEvents.length === 0 && !!pubkey && !hasLoadedOnce
+    // Check allPlaylistEvents (before filtering) to avoid re-loading if events were just deleted
+    const needLoad = allPlaylistEvents.length === 0 && !!pubkey && !hasLoadedOnce
 
     if (needLoad) {
       const load$ = loader()
 
-      load$.subscribe(e => eventStore.add(e))
-      setHasLoadedOnce(true)
+      const subscription = load$.subscribe({
+        next: event => eventStore.add(event),
+        complete: () => setHasLoadedOnce(true),
+        error: () => setHasLoadedOnce(true),
+      })
+
+      return () => subscription.unsubscribe()
     }
-  }, [playlistEvents, pubkey, hasLoadedOnce, loader])
+  }, [allPlaylistEvents.length, pubkey, hasLoadedOnce, loader, eventStore])
 
   const playlists = playlistEvents?.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')
@@ -273,12 +328,12 @@ export function useUserPlaylists(pubkey?: string) {
     const name = titleTag ? titleTag[1] : 'Untitled Playlist'
     const description = descTag ? descTag[1] : undefined
     const videos: Video[] = event.tags
-      .filter(t => t[0] === 'a')
+      .filter(t => t[0] === 'e')
       .map(t => ({
-        kind: parseInt(t[1].split(':')[0], 10),
-        id: t[1].split(':')[1],
-        title: t[2],
-        added_at: parseInt(t[3] || '0', 10) || event.created_at,
+        id: t[1], // Event ID
+        kind: 0, // Kind will be determined when event is loaded
+        title: undefined, // Title will be fetched from the actual event
+        added_at: event.created_at,
       }))
     return {
       identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',

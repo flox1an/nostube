@@ -7,6 +7,7 @@ import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
 import { filter } from 'rxjs'
+import { presetRelays } from '../App'
 
 // Setup a local event
 
@@ -54,7 +55,7 @@ NostrConnectSigner.subscriptionMethod = subscriptionMethod
 NostrConnectSigner.publishMethod = publishMethod
 
 // Default relays for video content - these will be overridden by user config
-export const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band']
+export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
 
 // ---- loader factory ----
 //

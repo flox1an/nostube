@@ -138,18 +138,22 @@ export function getLanguageLabel(lang: string): string {
   return label
 }
 
-export const imageProxy = (url?: string) => {
+export const imageProxy = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
+  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
 }
 
-export const imageProxyVideoPreview = (url?: string) => {
+export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  return `https://nostube-imgproxy.apps3.slidestr.net/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
+  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
 
 function bigIntHash(str: string): string {

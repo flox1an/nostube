@@ -283,6 +283,7 @@ export function VideoPlayer({
         <hls-video
           src={urls[currentUrlIndex]}
           slot="media"
+          className={cinemaMode ? 'cinema' : 'normal'}
           autoPlay={!contentWarning}
           loop={loop}
           poster={posterUrl}
@@ -297,6 +298,7 @@ export function VideoPlayer({
           crossOrigin="anonymous"
           src={urls[currentUrlIndex]}
           ref={videoRef}
+          className={cinemaMode ? 'cinema' : 'normal'}
           slot="media"
           autoPlay={!contentWarning}
           loop={loop}

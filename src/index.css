@@ -139,7 +139,7 @@
     background-color: #000;
   }
 
-  media-controller video {
+  media-controller video.normal {
     max-height: 80dvh;
     border-radius: var(--radius);
   }
@@ -154,7 +154,7 @@
     border-radius: var(--radius);
   }
 
-  media-controller:fullscreen hls-video {
+  media-controller:fullscreen hls-video.normal {
     height: 100dvh;
     border-radius: 0;
   }
@@ -191,7 +191,7 @@
 
   /* Hide scrollbar for IE, Edge and Firefox */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }

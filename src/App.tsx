@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
 import { Suspense } from 'react'
 import { AppProvider } from '@/components/AppProvider'
-import { AppConfig, Relay } from '@/contexts/AppContext'
+import { AppConfig, BlossomServer, Relay } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
@@ -26,6 +26,8 @@ const defaultConfig: AppConfig = {
   relays: presetRelays,
   videoType: 'videos',
   blossomServers: [...presetBlossomServers],
+  nsfwFilter: 'warning',
+  thumbResizeServerUrl: 'https://nostube-imgproxy.apps3.slidestr.net/',
 }
 
 // Create account manager for applesauce

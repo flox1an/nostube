@@ -111,7 +111,7 @@ export function BlossomServersSection() {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card>
       <CardHeader>
         <CardTitle>Blossom Servers</CardTitle>
         <CardDescription>Manage the Blossom servers used for file uploads.</CardDescription>

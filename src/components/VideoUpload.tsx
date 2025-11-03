@@ -28,6 +28,7 @@ export function VideoUpload() {
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [language, setLanguage] = useState('en')
   const [inputMethod, setInputMethod] = useState<'file' | 'url'>('file')
   const [videoUrl, setVideoUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -172,6 +173,8 @@ export function VideoUpload() {
             ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
             : []),
           ...tags.map(tag => ['t', tag]),
+          ['L', 'ISO-639-1'],
+          ['l', language, 'ISO-639-1'],
           ['client', 'nostube'],
         ],
       }
@@ -208,6 +211,7 @@ export function VideoUpload() {
       setThumbnail(null)
       setTags([])
       setTagInput('')
+      setLanguage('en')
     } catch {
       // Upload failed - error state is handled by uploadState
     }
@@ -784,6 +788,8 @@ export function VideoUpload() {
                     setTagInput('')
                   }
                 }}
+                language={language}
+                onLanguageChange={setLanguage}
               />
 
               <ThumbnailSection

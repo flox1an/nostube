@@ -12,11 +12,9 @@ export function HomePage() {
 
   useEffect(() => {
     const newLoader = videoTypeLoader('videos', relays)
-    console.log('Home.newLoader =', newLoader)
     setLoader(newLoader)
   }, [relays])
 
-  console.log('Home.loader =', loader)
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
   const { ref } = useInfiniteScroll({

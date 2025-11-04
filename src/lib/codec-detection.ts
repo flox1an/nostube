@@ -11,7 +11,9 @@ export interface CodecInfo {
  * Only reads the first MB of the file to avoid memory issues with large files
  */
 export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
-  console.log('[CODEC] Analyzing file:', file.name, `${(file.size / 1024 / 1024).toFixed(1)}MB`)
+  if (import.meta.env.DEV) {
+    console.log('[CODEC] Analyzing file:', file.name, `${(file.size / 1024 / 1024).toFixed(1)}MB`)
+  }
 
   return new Promise((resolve, reject) => {
     const mp4boxfile = MP4Box.createFile()
@@ -22,7 +24,7 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
     // Set a timeout to prevent hanging
     const timeout = setTimeout(() => {
       if (!resolved) {
-        console.log('[CODEC] File detection timeout after 5 seconds')
+        if (import.meta.env.DEV) console.log('[CODEC] File detection timeout after 5 seconds')
         resolved = true
         reject(new Error('Codec detection timeout'))
       }
@@ -39,15 +41,17 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
 
     mp4boxfile.onReady = (info: Movie) => {
       if (!resolved) {
-        console.log('[CODEC] File parsed successfully, tracks:', info.tracks.length)
+        if (import.meta.env.DEV) {
+          console.log('[CODEC] File parsed successfully, tracks:', info.tracks.length)
+        }
         resolved = true
         clearTimeout(timeout)
         for (const track of info.tracks) {
-          console.log('[CODEC] Track:', track.type, track.codec)
+          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
         }
-        console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
+        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
         resolve({ videoCodec, audioCodec })
       }
     }
@@ -93,7 +97,7 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
 export const getCodecsFromUrl = async (url: string): Promise<CodecInfo> => {
   const CHUNK_SIZE = 1024 * 1024 // 1MB chunks
 
-  console.log('[CODEC] Fetching codec info from URL:', url)
+  if (import.meta.env.DEV) console.log('[CODEC] Fetching codec info from URL:', url)
 
   try {
     // Try to get file size first via HEAD request
@@ -103,40 +107,40 @@ export const getCodecsFromUrl = async (url: string): Promise<CodecInfo> => {
       const contentLength = headResponse.headers.get('content-length')
       if (contentLength) {
         fileSize = parseInt(contentLength, 10)
-        console.log('[CODEC] File size:', fileSize, 'bytes')
+        if (import.meta.env.DEV) console.log('[CODEC] File size:', fileSize, 'bytes')
       }
     } catch (error) {
-      console.log('[CODEC] Could not get file size:', error)
+      if (import.meta.env.DEV) console.log('[CODEC] Could not get file size:', error)
     }
 
     // Try parsing from beginning (fast path for moov-at-start)
     try {
       const result = await tryParseFromRange(url, 0, CHUNK_SIZE)
       if (result.videoCodec || result.audioCodec) {
-        console.log('[CODEC] Successfully parsed from beginning')
+        if (import.meta.env.DEV) console.log('[CODEC] Successfully parsed from beginning')
         return result
       }
-      console.log('[CODEC] No codec found in first chunk')
+      if (import.meta.env.DEV) console.log('[CODEC] No codec found in first chunk')
     } catch (error) {
-      console.log('[CODEC] Failed to parse from beginning:', error)
+      if (import.meta.env.DEV) console.log('[CODEC] Failed to parse from beginning:', error)
     }
 
     // If no codec found and we know file size, try from end
     if (fileSize > CHUNK_SIZE) {
-      console.log('[CODEC] Trying to parse from end of file')
+      if (import.meta.env.DEV) console.log('[CODEC] Trying to parse from end of file')
       try {
         const startOffset = Math.max(0, fileSize - CHUNK_SIZE)
         const result = await tryParseFromRange(url, startOffset, fileSize - 1)
         if (result.videoCodec || result.audioCodec) {
-          console.log('[CODEC] Successfully parsed from end')
+          if (import.meta.env.DEV) console.log('[CODEC] Successfully parsed from end')
           return result
         }
       } catch (error) {
-        console.log('[CODEC] Failed to parse from end:', error)
+        if (import.meta.env.DEV) console.log('[CODEC] Failed to parse from end:', error)
       }
     }
 
-    console.log('[CODEC] Could not detect codec from any range')
+    if (import.meta.env.DEV) console.log('[CODEC] Could not detect codec from any range')
     return {}
   } catch (error) {
     console.error('[CODEC] Failed to detect codecs:', error)
@@ -166,7 +170,9 @@ async function tryParseFromRange(
   }
 
   const arrayBuffer = await rangeResponse.arrayBuffer()
-  console.log('[CODEC] Fetched', arrayBuffer.byteLength, 'bytes from offset', startByte)
+  if (import.meta.env.DEV) {
+    console.log('[CODEC] Fetched', arrayBuffer.byteLength, 'bytes from offset', startByte)
+  }
 
   return new Promise<CodecInfo>(resolve => {
     const mp4boxfile = MP4Box.createFile()
@@ -176,7 +182,7 @@ async function tryParseFromRange(
 
     const timeout = setTimeout(() => {
       if (!resolved) {
-        console.log('[CODEC] MP4Box timeout')
+        if (import.meta.env.DEV) console.log('[CODEC] MP4Box timeout')
         resolved = true
         resolve({})
       }
@@ -193,15 +199,15 @@ async function tryParseFromRange(
 
     mp4boxfile.onReady = (info: Movie) => {
       if (!resolved) {
-        console.log('[CODEC] MP4Box ready, tracks:', info.tracks.length)
+        if (import.meta.env.DEV) console.log('[CODEC] MP4Box ready, tracks:', info.tracks.length)
         resolved = true
         clearTimeout(timeout)
         for (const track of info.tracks) {
-          console.log('[CODEC] Track:', track.type, track.codec)
+          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
         }
-        console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
+        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
         resolve({ videoCodec, audioCodec })
       }
     }

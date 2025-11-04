@@ -82,7 +82,6 @@ function ShortVideoItem({
 
     if (isActive) {
       // Reset to beginning and play immediately
-      console.log('Activating video:', video.id.substring(0, 8))
       videoEl.currentTime = 0
       videoEl.muted = false
 
@@ -289,10 +288,7 @@ export function ShortsVideoPage() {
   //   return combineRelays([neventRelays, readRelays])
   // }, [eventPointer, readRelays])
 
-  const loader = useMemo(
-    () => createEventLoader(pool, { eventStore }),
-    [pool, eventStore]
-  )
+  const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
 
   // Use EventStore to get the initial video event
   const videoObservable = useMemo(() => {
@@ -379,7 +375,6 @@ export function ShortsVideoPage() {
     if (initialVideo && allVideos.length > 0 && containerRef.current) {
       const index = allVideos.findIndex(v => v.id === initialVideo.id)
       if (index !== -1 && index !== 0) {
-        console.log('Scrolling to initial video at index:', index)
         // Scroll to the initial video immediately - this will trigger scroll handler to update state
         containerRef.current.scrollTo({
           top: index * window.innerHeight,
@@ -446,8 +441,6 @@ export function ShortsVideoPage() {
           const scrollIndex = Math.round(scrollTop / window.innerHeight)
 
           if (scrollIndex >= 0 && scrollIndex < allVideos.length) {
-            console.log('Snapped to index:', scrollIndex, 'current ref:', currentVideoIndexRef.current)
-
             // Only update if index has actually changed
             if (scrollIndex !== currentVideoIndexRef.current) {
               isUpdatingIndexRef.current = true
@@ -514,7 +507,6 @@ export function ShortsVideoPage() {
   // Update URL when video changes (but not during programmatic updates)
   useEffect(() => {
     if (currentVideo && currentVideo.link !== nevent && !isUpdatingIndexRef.current) {
-      console.log('Updating URL to:', currentVideo.link)
       navigate(`/short/${currentVideo.link}`, { replace: true })
     }
   }, [currentVideo, nevent, navigate])

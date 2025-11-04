@@ -4,7 +4,7 @@ import { useCurrentUser, useNostrPublish, useProfile, useAppContext } from '@/ho
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { formatDistance } from 'date-fns'
 import { NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
@@ -74,7 +74,13 @@ function renderCommentContent(content: string, link: string) {
   return parts
 }
 
-function CommentItem({ comment, link }: { comment: Comment; link: string }) {
+const CommentItem = React.memo(function CommentItem({
+  comment,
+  link,
+}: {
+  comment: Comment
+  link: string
+}) {
   const metadata = useProfile({ pubkey: comment.pubkey })
   const name = metadata?.name || comment.pubkey.slice(0, 8)
 
@@ -97,7 +103,7 @@ function CommentItem({ comment, link }: { comment: Comment; link: string }) {
       </div>
     </div>
   )
-}
+})
 
 export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProps) {
   const [newComment, setNewComment] = useState('')

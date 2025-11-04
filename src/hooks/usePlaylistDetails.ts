@@ -3,7 +3,11 @@ import { of, combineLatest } from 'rxjs'
 import { switchMap } from 'rxjs/operators'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { createAddressLoader, createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
+import {
+  createAddressLoader,
+  createEventLoader,
+  createTimelineLoader,
+} from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event as NostrEvent } from 'nostr-tools'
 
@@ -215,11 +219,7 @@ export function usePlaylistDetails(
     const allRelayHints = missingRefs.flatMap(ref => ref.relayHints || [])
 
     // Combine all relays for the batch request
-    const batchRelays = combineRelays([
-      allRelayHints,
-      playlistSeenRelays,
-      relaysToUse,
-    ])
+    const batchRelays = combineRelays([allRelayHints, playlistSeenRelays, relaysToUse])
 
     // Create a single batch request for all missing video IDs
     const missingIds = missingRefs.map(r => r.id)
@@ -235,12 +235,7 @@ export function usePlaylistDetails(
     }, 10000)
 
     // Use timeline loader with ids filter for batch fetching
-    const batchLoader = createTimelineLoader(
-      pool,
-      batchRelays,
-      { ids: missingIds },
-      { eventStore }
-    )
+    const batchLoader = createTimelineLoader(pool, batchRelays, { ids: missingIds }, { eventStore })
 
     const subscription = batchLoader().subscribe({
       next: events => {
@@ -298,9 +293,7 @@ export function usePlaylistDetails(
 
     // Use combineLatest to observe all video events
     const observables = videoRefs.map(ref =>
-      eventStore.event(ref.id).pipe(
-        switchMap(event => of(event))
-      )
+      eventStore.event(ref.id).pipe(switchMap(event => of(event)))
     )
 
     return combineLatest(observables).pipe(

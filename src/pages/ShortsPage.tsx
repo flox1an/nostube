@@ -12,11 +12,9 @@ export function ShortsPage() {
 
   useEffect(() => {
     const newLoader = videoTypeLoader('shorts', relays)
-    console.log('Shorts.newLoader =', newLoader)
     setLoader(newLoader)
   }, [relays])
 
-  console.log('Shorts.loader =', loader)
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
   const { ref } = useInfiniteScroll({

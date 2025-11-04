@@ -353,7 +353,8 @@ export function VideoPlayer({
 
               if (res.ok) {
                 validated.set(track.lang, url)
-                console.log(`VTT track validated for ${track.lang}: ${url}`)
+                if (import.meta.env.DEV)
+                  console.log(`VTT track validated for ${track.lang}: ${url}`)
                 break // Found working URL
               }
             } catch {
@@ -365,7 +366,9 @@ export function VideoPlayer({
           // If no URL worked, still use original (might work later or has CORS issues with HEAD)
           if (!validated.has(track.lang)) {
             validated.set(track.lang, track.url)
-            console.warn(`VTT track validation failed for ${track.lang}, using original: ${track.url}`)
+            console.warn(
+              `VTT track validation failed for ${track.lang}, using original: ${track.url}`
+            )
           }
         })
       )
@@ -390,7 +393,9 @@ export function VideoPlayer({
       const trackElement = trackRefs.current.get(lang)
       if (!trackElement) return
 
-      console.log(`VTT track failed for ${lang}, testing ${alternatives.length} alternatives...`)
+      if (import.meta.env.DEV) {
+        console.log(`VTT track failed for ${lang}, testing ${alternatives.length} alternatives...`)
+      }
 
       // Test all alternatives in parallel with timeout
       const timeout = 5000 // 5 second timeout
@@ -419,7 +424,8 @@ export function VideoPlayer({
       const working = checks.find(check => check.ok)
 
       if (working) {
-        console.log(`VTT track using alternative for ${lang}: ${working.url}`)
+        if (import.meta.env.DEV)
+          console.log(`VTT track using alternative for ${lang}: ${working.url}`)
         trackElement.src = working.url
         // Clear alternatives since we found one that works
         setVttUrlMap(prev => {

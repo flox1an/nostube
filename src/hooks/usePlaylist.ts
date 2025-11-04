@@ -134,7 +134,8 @@ export function usePlaylists() {
             // Get relay hint from where this event has been seen
             const referencedEvent = eventStore.getEvent(video.id)
             const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-            const relayHint = video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
+            const relayHint =
+              video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
 
             const tag: string[] = ['e', video.id]
             if (relayHint) {
@@ -286,10 +287,7 @@ export function useUserPlaylists(pubkey?: string) {
   const filters = useMemo(() => [playlistFilter(pubkey)], [pubkey])
 
   // Also load deletion events (kind 5) for filtering
-  const deletionFilters = useMemo(
-    () => [{ kinds: [5], authors: pubkey ? [pubkey] : [] }],
-    [pubkey]
-  )
+  const deletionFilters = useMemo(() => [{ kinds: [5], authors: pubkey ? [pubkey] : [] }], [pubkey])
 
   const allPlaylistEvents = useObservableState(eventStore.timeline(filters), [])
 

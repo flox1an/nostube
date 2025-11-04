@@ -38,6 +38,14 @@ export default tseslint.config(
       ],
       'custom/no-placeholder-comments': 'error',
       'no-warning-comments': ['error', { terms: ['fixme'] }],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-const': 'warn',
+      'no-var': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'warn',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
   {

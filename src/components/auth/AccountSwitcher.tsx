@@ -21,7 +21,15 @@ interface AccountSwitcherProps {
   onAddAccountClick: () => void
 }
 
-function AccountSwitchItem({ account, onClick, thumbResizeServerUrl }: { account: IAccount; onClick: () => void; thumbResizeServerUrl?: string }) {
+function AccountSwitchItem({
+  account,
+  onClick,
+  thumbResizeServerUrl,
+}: {
+  account: IAccount
+  onClick: () => void
+  thumbResizeServerUrl?: string
+}) {
   const accountProfile = useProfile({ pubkey: account.pubkey })
   const displayName = getDisplayName(accountProfile)
 
@@ -31,7 +39,10 @@ function AccountSwitchItem({ account, onClick, thumbResizeServerUrl }: { account
       className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
     >
       <Avatar className="w-8 h-8">
-        <AvatarImage src={imageProxy(accountProfile?.picture as string, thumbResizeServerUrl)} alt={displayName || ''} />
+        <AvatarImage
+          src={imageProxy(accountProfile?.picture as string, thumbResizeServerUrl)}
+          alt={displayName || ''}
+        />
         <AvatarFallback>{displayName?.charAt(0) || '?'}</AvatarFallback>
       </Avatar>
       <div className="flex-1 truncate">

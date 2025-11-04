@@ -16,6 +16,7 @@ import { combineRelays } from '@/lib/utils'
 import { processEvents } from '@/utils/video-event'
 
 import { useAppContext } from './useAppContext'
+import { useReadRelays } from './useReadRelays'
 
 type NeventPointer = { id: string }
 type NaddrPointer = { identifier: string; pubkey: string; kind: number }
@@ -61,10 +62,8 @@ export function usePlaylistDetails(
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
 
-  const readRelays = useMemo(
-    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
-    [config.relays]
-  )
+  // Use centralized read relays hook
+  const readRelays = useReadRelays()
 
   const [failedVideoIds, setFailedVideoIds] = useState<Set<string>>(new Set())
   const [loadingVideoIds, setLoadingVideoIds] = useState<Set<string>>(new Set())

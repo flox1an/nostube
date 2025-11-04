@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
 function formatDuration(seconds: number): string {
@@ -115,13 +115,12 @@ export function VideoSuggestions({
   const readRelays = useReadRelays()
 
   // Combine provided relays with config relays (prioritize provided relays)
+  // Use combineRelays to normalize URLs and remove duplicates (e.g., 'nos.lol' vs 'nos.lol/')
   const relaysToUse = useMemo(() => {
     const configRelays = config.relays.map(r => r.url)
-    const combined = relays ? [...relays, ...configRelays] : configRelays
-    // Remove duplicates
-    const deduplicated = [...new Set(combined)]
-    if (import.meta.env.DEV) console.log('[VideoSuggestions] Relays to use:', deduplicated)
-    return deduplicated
+    const combined = relays ? combineRelays([relays, configRelays]) : configRelays
+    if (import.meta.env.DEV) console.log('[VideoSuggestions] Relays to use:', combined)
+    return combined
   }, [relays, config.relays])
 
   // Load events from the relays

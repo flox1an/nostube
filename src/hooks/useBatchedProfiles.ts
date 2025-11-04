@@ -4,6 +4,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { kinds } from 'nostr-tools'
 import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
+import { METADATA_RELAY } from '@/constants/relays'
 
 /**
  * Batched profile loader
@@ -39,7 +40,7 @@ export function useBatchedProfileLoader() {
       // Load all profiles in a single request
       const loader = createTimelineLoader(
         pool,
-        [...readRelays, 'wss://purplepag.es', 'wss://index.hzrd149.com'],
+        [...readRelays, METADATA_RELAY, 'wss://index.hzrd149.com'],
         {
           kinds: [kinds.Metadata],
           authors: pubkeysToLoad,

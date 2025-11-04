@@ -8,4 +8,10 @@ export const presetRelays: Relay[] = [
   { url: 'wss://nos.lol/', name: 'nos.lol', tags: ['read'] },
 ]
 
+/**
+ * Default relay for profile metadata, follow lists, and blossom servers.
+ * purplepag.es is a specialized relay that focuses on profile data.
+ */
+export const METADATA_RELAY = 'wss://purplepag.es'
+
 export const presetBlossomServers: BlossomServer[] = []

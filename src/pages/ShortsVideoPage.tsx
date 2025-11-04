@@ -11,7 +11,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
 import { decodeEventPointer } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAppContext, useProfile, useReportedPubkeys } from '@/hooks'
+import { useAppContext, useProfile, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { ImageIcon, MessageCircle, ChevronDown, Share2 } from 'lucide-react'
 import { imageProxy, imageProxyVideoPreview } from '@/lib/utils'
@@ -21,6 +21,7 @@ import { nprofileFromEvent } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-core/models'
 import { useEventModel } from 'applesauce-react/hooks'
+import { Header } from '@/components/Header'
 
 function ShortVideoItem({
   video,
@@ -38,6 +39,7 @@ function ShortVideoItem({
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const eventStore = useEventStore()
   const { config } = useAppContext()
+  const [isPaused, setIsPaused] = useState(false)
 
   // Get video owner's Blossom servers
   const rawOwnerServers =
@@ -85,6 +87,7 @@ function ShortVideoItem({
       // Reset to beginning and play immediately
       videoEl.currentTime = 0
       videoEl.muted = false
+      setIsPaused(false)
 
       const playPromise = videoEl.play()
       if (playPromise !== undefined) {
@@ -96,8 +99,23 @@ function ShortVideoItem({
       // Pause and mute inactive videos
       videoEl.pause()
       videoEl.muted = true
+      setIsPaused(false)
     }
   }, [isActive, video.id])
+
+  // Handle click/touch to pause/play
+  const handleVideoClick = useCallback(() => {
+    const videoEl = videoElementRef.current
+    if (!videoEl || !isActive) return
+
+    if (videoEl.paused) {
+      videoEl.play()
+      setIsPaused(false)
+    } else {
+      videoEl.pause()
+      setIsPaused(true)
+    }
+  }, [isActive])
 
   // Handle video ready to play
   const handleCanPlay = useCallback(() => {
@@ -111,6 +129,34 @@ function ShortVideoItem({
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = `${baseUrl}/short/${video.link}`
+
+  useEffect(() => {
+    if (!shouldPreload || isActive || !videoUrl || typeof document === 'undefined') {
+      return
+    }
+
+    const existing = document.head.querySelector(
+      `link[data-preload-video="${video.id}"][href="${videoUrl}"]`
+    ) as HTMLLinkElement | null
+
+    if (existing) {
+      return
+    }
+
+    const linkEl = document.createElement('link')
+    linkEl.rel = 'preload'
+    linkEl.as = 'video'
+    linkEl.href = videoUrl
+    linkEl.crossOrigin = 'anonymous'
+    linkEl.dataset.preloadVideo = video.id
+    document.head.appendChild(linkEl)
+
+    return () => {
+      if (linkEl.parentNode) {
+        linkEl.parentNode.removeChild(linkEl)
+      }
+    }
+  }, [shouldPreload, isActive, videoUrl, video.id])
 
   return (
     <div
@@ -134,11 +180,11 @@ function ShortVideoItem({
                 </div>
               </div>
             )}
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full" onClick={handleVideoClick}>
               <video
                 ref={videoElementRef}
                 src={videoUrl || undefined}
-                className="w-full h-full object-contain rounded-lg"
+                className="w-full h-full object-contain cursor-pointer"
                 loop
                 muted={false}
                 playsInline
@@ -148,13 +194,27 @@ function ShortVideoItem({
                 onError={handleVideoError}
                 style={{ opacity: isActive ? 1 : 0.5 }}
               />
+              {/* Pause indicator */}
+              {isPaused && isActive && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black/50 rounded-full p-4">
+                    <svg
+                      className="w-16 h-16 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                    </svg>
+                  </div>
+                </div>
+              )}
               {/* Show thumbnail overlay when not active for better visibility */}
               {!isActive && thumbnailUrl && (
-                <div className="absolute inset-0 rounded-lg overflow-hidden bg-black">
+                <div className="absolute inset-0 overflow-hidden bg-black">
                   <img
                     src={imageProxyVideoPreview(thumbnailUrl)}
                     alt={video.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     loading="lazy"
                   />
                 </div>
@@ -187,7 +247,7 @@ function ShortVideoItem({
 
           {/* Comments button */}
           <div className="flex flex-col items-center gap-1">
-            <button className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors">
+            <button className="bg-black/50 hover:bg-black/70 rounded-full p-2 border border-white/20 transition-colors">
               <MessageCircle className="h-6 w-6 text-white" />
             </button>
             <span className="text-white text-xs">Comments</span>
@@ -272,22 +332,13 @@ export function ShortsVideoPage() {
   const isUpdatingIndexRef = useRef(false)
   const [allVideos, setAllVideos] = useState<VideoEvent[]>([])
 
-  const readRelays = useMemo(
-    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
-    [config.relays]
-  )
+  // Use centralized read relays hook
+  const readRelays = useReadRelays()
 
   const eventPointer = useMemo(() => {
     if (!nevent) return null
     return decodeEventPointer(nevent)
   }, [nevent])
-
-  // Get relays from nevent if available, otherwise use config relays
-  // Currently not used but kept for potential future use with relay hints
-  // const relaysToUse = useMemo(() => {
-  //   const neventRelays = eventPointer?.relays || []
-  //   return combineRelays([neventRelays, readRelays])
-  // }, [eventPointer, readRelays])
 
   const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
 
@@ -529,34 +580,39 @@ export function ShortsVideoPage() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-      style={{
-        scrollSnapType: 'y mandatory',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
-      {allVideos.map((video, index) => {
-        // Preload current video and adjacent videos (prev and next)
-        const shouldPreload = Math.abs(index - currentVideoIndex) <= 1
-        return (
+    <>
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Header transparent />
+      </div>
+      <div
+        ref={containerRef}
+        className="fixed inset-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        style={{
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {allVideos.map((video, index) => {
+          // Preload current video and adjacent videos (prev and next)
+          const shouldPreload = Math.abs(index - currentVideoIndex) <= 1
+          return (
+            <ShortVideoItem
+              key={video.id}
+              video={video}
+              isActive={index === currentVideoIndex}
+              shouldPreload={shouldPreload}
+            />
+          )
+        })}
+        {allVideos.length === 0 && initialVideo && (
           <ShortVideoItem
-            key={video.id}
-            video={video}
-            isActive={index === currentVideoIndex}
-            shouldPreload={shouldPreload}
+            key={initialVideo.id}
+            video={initialVideo}
+            isActive={true}
+            shouldPreload={true}
           />
-        )
-      })}
-      {allVideos.length === 0 && initialVideo && (
-        <ShortVideoItem
-          key={initialVideo.id}
-          video={initialVideo}
-          isActive={true}
-          shouldPreload={true}
-        />
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
-import { combineRelays } from '@/lib/utils'
+import { cn, combineRelays } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VideoGrid } from '@/components/VideoGrid'
@@ -14,17 +14,14 @@ import {
   type Playlist,
   useAppContext,
   useInfiniteScroll,
-  useReadRelays,
+  useAuthorPageRelays,
 } from '@/hooks'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
-import { eventStore } from '@/nostr/core'
-import { TimelineLoader } from 'applesauce-loaders/loaders'
+import type { TimelineLoader } from 'applesauce-loaders/loaders'
 import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { presetRelays } from '@/constants/relays'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 
@@ -34,13 +31,21 @@ interface AuthorStats {
   joinedDate: Date
 }
 
-function AuthorProfile({ pubkey, joinedDate }: { pubkey: string; joinedDate: Date }) {
+function AuthorProfile({
+  pubkey,
+  joinedDate,
+  className = '',
+}: {
+  pubkey: string
+  joinedDate: Date
+  className: string
+}) {
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
 
   return (
-    <div className="flex items-center space-x-4">
+    <div className={cn(className, 'flex items-center space-x-4')}>
       <div className="flex-shrink-0">
         <img
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
@@ -79,18 +84,19 @@ export function AuthorPage() {
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null)
   const loadedPlaylistsRef = useRef<Set<string>>(new Set())
 
-  // Fetch playlists for this author
-  const { data: playlists = [] } = useUserPlaylists(pubkey)
   const { config } = useAppContext()
-  const readRelays = useReadRelays()
   const eventStoreInstance = useEventStore()
 
-  // Combine nprofile relays with user's read relays for loading NIP-65 event
-  const loadRelays = useMemo(() => {
-    return combineRelays([nprofileRelays, readRelays])
-  }, [nprofileRelays, readRelays])
+  // Get relays for this author page
+  // Initially: nprofile relays, user config, presets, purplepag.es
+  // After NIP-65 loads: also includes author's outbox relays (reactive update)
+  const relays = useAuthorPageRelays({
+    nprofileRelays,
+    authorPubkey: pubkey,
+  })
 
-  // Load author's NIP-65 mailboxes event (kind 10002) from relays
+  // Load author's NIP-65 relay list event (kind 10002)
+  // Uses the reactive relay set, which will include author's relays once loaded
   useEffect(() => {
     if (!pubkey) return
     const { pool } = config
@@ -103,41 +109,19 @@ export function AuthorPage() {
       kind: 10002,
       pubkey,
       identifier: '',
-      relays: loadRelays,
+      relays: relays,
     }).subscribe({
       next: (event: any) => {
         if (event) eventStoreInstance.add(event)
       },
-      error: (err: any) => console.warn('Failed to load author mailboxes:', err),
+      error: (err: any) => console.warn('Failed to load author NIP-65 relay list:', err),
     })
 
     return () => sub.unsubscribe()
-  }, [pubkey, loadRelays, config, eventStoreInstance])
+  }, [pubkey, relays, config, eventStoreInstance])
 
-  // Subscribe to author's NIP-65 mailboxes to get their outbox relays
-  const authorMailboxes = useObservableState(
-    useMemo(
-      () => (pubkey ? eventStoreInstance.mailboxes(pubkey) : undefined),
-      [eventStoreInstance, pubkey]
-    ),
-    { inboxes: [], outboxes: [] }
-  )
-
-  // Well-known video relays as fallbacks
-  const videoRelayFallbacks = presetRelays.map(r => r.url)
-
-  // Combine all relay sources (prioritize in order: nprofile relays, author's outbox, user's read relays, video fallbacks)
-  const relays = useMemo(() => {
-    const authorOutboxes = authorMailboxes?.outboxes || []
-    // Combine and deduplicate (order matters - first ones are tried first)
-    const combined = combineRelays([
-      nprofileRelays,
-      authorOutboxes,
-      readRelays,
-      videoRelayFallbacks,
-    ])
-    return combined
-  }, [nprofileRelays, authorMailboxes, readRelays, pubkey])
+  // Fetch playlists and videos for this author using the reactive relay set
+  const { data: playlists = [] } = useUserPlaylists(pubkey, relays)
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -292,129 +276,124 @@ export function AuthorPage() {
 
   return (
     <div className="sm:p-4">
-      <Card>
-        <CardHeader className="border-b">
-          <AuthorProfile pubkey={pubkey} joinedDate={stats.joinedDate} />
-        </CardHeader>
-        <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={v => setActiveTab(v as Tabs)}>
-            <TabsList>
-              {videos.length > 0 && (
-                <TabsTrigger value="videos" className="cursor-pointer">
-                  All videos ({videos.length})
-                </TabsTrigger>
-              )}
-              {shorts.length > 0 && (
-                <TabsTrigger value="shorts" className="cursor-pointer">
-                  All shorts ({shorts.length})
-                </TabsTrigger>
-              )}
+      <AuthorProfile className="p-2" pubkey={pubkey} joinedDate={stats.joinedDate} />
 
-              {playlists.map(playlist => (
-                <TabsTrigger
-                  key={playlist.identifier}
-                  value={playlist.identifier}
-                  className="cursor-pointer"
-                  onClick={async () => {
-                    if (!playlistVideos[playlist.identifier]) {
-                      await fetchPlaylistVideos(playlist)
-                    }
-                  }}
-                >
-                  {playlist.name}
-                </TabsTrigger>
-              ))}
-              <TabsTrigger value="tags" className="cursor-pointer">
-                Tags
-              </TabsTrigger>
-            </TabsList>
+      <Tabs className="p-2" value={activeTab} onValueChange={v => setActiveTab(v as Tabs)}>
+        <TabsList>
+          {videos.length > 0 && (
+            <TabsTrigger value="videos" className="cursor-pointer">
+              All videos ({videos.length})
+            </TabsTrigger>
+          )}
+          {shorts.length > 0 && (
+            <TabsTrigger value="shorts" className="cursor-pointer">
+              All shorts ({shorts.length})
+            </TabsTrigger>
+          )}
 
-            <TabsContent value="videos" className="mt-6">
-              {loading && videos.length === 0 ? (
-                <VideoGridSkeleton count={8} />
-              ) : (
-                <>
-                  <VideoGrid
-                    videos={videos}
-                    isLoading={loading && videos.length === 0}
-                    showSkeletons={false}
-                    layoutMode="auto"
-                  />
+          {playlists.map(playlist => (
+            <TabsTrigger
+              key={playlist.identifier}
+              value={playlist.identifier}
+              className="cursor-pointer"
+              onClick={async () => {
+                if (!playlistVideos[playlist.identifier]) {
+                  await fetchPlaylistVideos(playlist)
+                }
+              }}
+            >
+              {playlist.name}
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value="tags" className="cursor-pointer">
+            Tags
+          </TabsTrigger>
+        </TabsList>
 
-                  <InfiniteScrollTrigger
-                    triggerRef={ref}
-                    loading={loading && videos.length > 0}
-                    exhausted={exhausted}
-                    itemCount={videos.length}
-                    emptyMessage="No videos found."
-                    loadingMessage="Loading more videos..."
-                    exhaustedMessage="No more videos to load."
-                  />
-                </>
-              )}
-            </TabsContent>
+        <TabsContent value="videos" className="mt-6">
+          {loading && videos.length === 0 ? (
+            <VideoGridSkeleton count={8} />
+          ) : (
+            <>
+              <VideoGrid
+                videos={videos}
+                isLoading={loading && videos.length === 0}
+                showSkeletons={false}
+                layoutMode="auto"
+              />
 
-            <TabsContent value="shorts" className="mt-6">
-              {loading && shorts.length === 0 ? (
-                <VideoGridSkeleton count={8} />
-              ) : (
-                <>
-                  <VideoGrid
-                    videos={shorts}
-                    isLoading={loading && shorts.length === 0}
-                    showSkeletons={false}
-                    layoutMode="vertical"
-                  />
+              <InfiniteScrollTrigger
+                triggerRef={ref}
+                loading={loading && videos.length > 0}
+                exhausted={exhausted}
+                itemCount={videos.length}
+                emptyMessage="No videos found."
+                loadingMessage="Loading more videos..."
+                exhaustedMessage="No more videos to load."
+              />
+            </>
+          )}
+        </TabsContent>
 
-                  <InfiniteScrollTrigger
-                    triggerRef={ref}
-                    loading={loading && shorts.length > 0}
-                    exhausted={exhausted}
-                    itemCount={shorts.length}
-                    emptyMessage="No shorts found."
-                    loadingMessage="Loading more shorts..."
-                    exhaustedMessage="No more shorts to load."
-                  />
-                </>
-              )}
-            </TabsContent>
+        <TabsContent value="shorts" className="mt-6">
+          {loading && shorts.length === 0 ? (
+            <VideoGridSkeleton count={8} />
+          ) : (
+            <>
+              <VideoGrid
+                videos={shorts}
+                isLoading={loading && shorts.length === 0}
+                showSkeletons={false}
+                layoutMode="vertical"
+              />
 
-            {playlists.map(playlist => (
-              <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
-                {loadingPlaylist === playlist.identifier ? (
-                  <VideoGridSkeleton count={8} />
-                ) : (
-                  <VideoGrid
-                    videos={playlistVideos[playlist.identifier] || []}
-                    isLoading={false}
-                    showSkeletons={false}
-                    layoutMode="auto"
-                    playlistParam={nip19.naddrEncode({
-                      kind: 30005,
-                      pubkey,
-                      identifier: playlist.identifier,
-                      relays: loadRelays.slice(0, 3),
-                    })}
-                  />
-                )}
-              </TabsContent>
+              <InfiniteScrollTrigger
+                triggerRef={ref}
+                loading={loading && shorts.length > 0}
+                exhausted={exhausted}
+                itemCount={shorts.length}
+                emptyMessage="No shorts found."
+                loadingMessage="Loading more shorts..."
+                exhaustedMessage="No more shorts to load."
+              />
+            </>
+          )}
+        </TabsContent>
+
+        {playlists.map(playlist => (
+          <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
+            {loadingPlaylist === playlist.identifier ? (
+              <VideoGridSkeleton count={8} />
+            ) : (
+              <VideoGrid
+                videos={playlistVideos[playlist.identifier] || []}
+                isLoading={false}
+                showSkeletons={false}
+                layoutMode="auto"
+                playlistParam={nip19.naddrEncode({
+                  kind: 30005,
+                  pubkey,
+                  identifier: playlist.identifier,
+                  relays: relays.slice(0, 3),
+                })}
+              />
+            )}
+          </TabsContent>
+        ))}
+
+        <TabsContent value="tags" className="mt-6">
+          <div className="flex flex-wrap gap-2">
+            {uniqueTags.map(tag => (
+              <span
+                key={tag}
+                className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
+              >
+                #{tag}
+              </span>
             ))}
-
-            <TabsContent value="tags" className="mt-6">
-              <div className="flex flex-wrap gap-2">
-                {uniqueTags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

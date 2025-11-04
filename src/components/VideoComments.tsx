@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import React, { useMemo, useState, useEffect } from 'react'
 import { formatDistance } from 'date-fns'
-import { NostrEvent } from 'nostr-tools'
+import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 import { map } from 'rxjs/operators'
@@ -59,12 +59,23 @@ function renderCommentContent(content: string, link: string) {
     const minutes = parseInt(m, 10)
     const seconds = parseInt(s, 10)
     const totalSeconds = hours * 3600 + minutes * 60 + seconds
+    const targetUrl = `${baseUrl}?t=${totalSeconds}`
     // Push link
     parts.push(
       <Link
         key={`ts-${start}`}
-        to={`${baseUrl}?t=${totalSeconds}`}
+        to={targetUrl}
         className="text-primary hover:text-primary/80 cursor-pointer"
+        onClick={event => {
+          if (typeof window === 'undefined') return
+          const currentPath = `${window.location.pathname}${window.location.search}`
+          if (currentPath === targetUrl) {
+            event.preventDefault()
+          }
+          window.dispatchEvent(
+            new CustomEvent('nostube:seek-to', { detail: { time: totalSeconds } })
+          )
+        }}
       >
         {full}
       </Link>
@@ -190,7 +201,7 @@ export function VideoComments({ videoId, link, authorPubkey, relays }: VideoComm
 
   return (
     <>
-      <h2 className="mb-4">Comments</h2>
+      <h2 className="mb-4 px-2 sm:p-0">Comments</h2>
       {user && (
         <form onSubmit={handleSubmit} className="mb-8">
           <Textarea

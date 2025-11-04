@@ -13,7 +13,7 @@ export async function checkAndClearCache(): Promise<boolean> {
   // Remove the flag first
   sessionStorage.removeItem('clearCacheOnLoad')
 
-  console.log('[Cache Clear] Starting cache clear operation...')
+  if (import.meta.env.DEV) console.log('[Cache Clear] Starting cache clear operation...')
 
   try {
     // Get all databases
@@ -29,21 +29,23 @@ export async function checkAndClearCache(): Promise<boolean> {
       ] as IDBDatabaseInfo[]
     }
 
-    console.log(
-      '[Cache Clear] Found databases:',
-      databases.map(db => db.name)
-    )
+    if (import.meta.env.DEV) {
+      console.log(
+        '[Cache Clear] Found databases:',
+        databases.map(db => db.name)
+      )
+    }
 
     // Delete each database
     const deletePromises = databases
       .filter(db => db.name)
       .map(db => {
         return new Promise<void>((resolve, _reject) => {
-          console.log(`[Cache Clear] Deleting database: ${db.name}`)
+          if (import.meta.env.DEV) console.log(`[Cache Clear] Deleting database: ${db.name}`)
           const request = window.indexedDB.deleteDatabase(db.name!)
 
           request.onsuccess = () => {
-            console.log(`[Cache Clear] Successfully deleted: ${db.name}`)
+            if (import.meta.env.DEV) console.log(`[Cache Clear] Successfully deleted: ${db.name}`)
             resolve()
           }
 
@@ -67,7 +69,7 @@ export async function checkAndClearCache(): Promise<boolean> {
       new Promise(resolve => setTimeout(resolve, 5000)), // 5 second timeout
     ])
 
-    console.log('[Cache Clear] Cache clear completed')
+    if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
     return true
   } catch (error) {
     console.error('[Cache Clear] Error clearing cache:', error)

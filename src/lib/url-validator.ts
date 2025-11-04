@@ -56,10 +56,7 @@ function extractHash(url: string): string | null {
 /**
  * Generate fallback URLs using Blossom servers
  */
-function generateBlossomFallbackUrls(
-  originalUrl: string,
-  blossomServers: string[]
-): string[] {
+function generateBlossomFallbackUrls(originalUrl: string, blossomServers: string[]): string[] {
   const hash = extractHash(originalUrl)
   if (!hash || blossomServers.length === 0) {
     return []
@@ -77,10 +74,7 @@ function generateBlossomFallbackUrls(
 /**
  * Validate a single URL using HEAD request
  */
-async function validateUrl(
-  url: string,
-  timeout: number = 5000
-): Promise<UrlValidationResult> {
+async function validateUrl(url: string, timeout: number = 5000): Promise<UrlValidationResult> {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
@@ -118,9 +112,7 @@ async function validateUrl(
  * Find the first valid URL from a list of URLs
  * Tries URLs in order and returns the first one that responds successfully
  */
-export async function findValidUrl(
-  options: FindValidUrlOptions
-): Promise<string | null> {
+export async function findValidUrl(options: FindValidUrlOptions): Promise<string | null> {
   const {
     urls,
     blossomServers = [],
@@ -179,9 +171,7 @@ export async function findValidUrl(
  * Find valid URLs for multiple resources in parallel
  * Useful for preloading multiple videos/images
  */
-export async function findValidUrls(
-  resources: FindValidUrlOptions[]
-): Promise<(string | null)[]> {
+export async function findValidUrls(resources: FindValidUrlOptions[]): Promise<(string | null)[]> {
   return Promise.all(resources.map(options => findValidUrl(options)))
 }
 

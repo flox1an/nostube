@@ -16,7 +16,7 @@ export async function mirrorBlobsToServers({
   blob: BlobDescriptor
   signer: Signer
 }): Promise<BlobDescriptor[]> {
-  console.log('Mirroring blobs to servers', mirrorServers, blob)
+  if (import.meta.env.DEV) console.log('Mirroring blobs to servers', mirrorServers, blob)
 
   const results = await Promise.allSettled(
     mirrorServers.map(async server => {
@@ -188,9 +188,11 @@ export async function getUploadCapabilities(server: string): Promise<{
  * NEVER loads entire file into memory
  */
 export function createFileChunks(file: File, chunkSize: number = 8 * 1024 * 1024): Blob[] {
-  console.log(
-    `[CHUNKS] Creating chunks for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB with chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`
-  )
+  if (import.meta.env.DEV) {
+    console.log(
+      `[CHUNKS] Creating chunks for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB with chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`
+    )
+  }
 
   const chunks: Blob[] = []
   let offset = 0
@@ -202,13 +204,15 @@ export function createFileChunks(file: File, chunkSize: number = 8 * 1024 * 1024
     chunks.push(chunk)
     chunkCount++
 
-    console.log(
-      `[CHUNKS] Created chunk ${chunkCount}: bytes ${offset}-${end} (${(chunk.size / (1024 * 1024)).toFixed(1)}MB)`
-    )
+    if (import.meta.env.DEV) {
+      console.log(
+        `[CHUNKS] Created chunk ${chunkCount}: bytes ${offset}-${end} (${(chunk.size / (1024 * 1024)).toFixed(1)}MB)`
+      )
+    }
     offset = end
   }
 
-  console.log(`[CHUNKS] Total chunks created: ${chunkCount}`)
+  if (import.meta.env.DEV) console.log(`[CHUNKS] Total chunks created: ${chunkCount}`)
   return chunks
 }
 
@@ -217,16 +221,20 @@ export function createFileChunks(file: File, chunkSize: number = 8 * 1024 * 1024
  * NEVER loads entire file into memory - uses Blob.slice() only
  */
 export async function calculateSHA256(blob: Blob): Promise<string> {
-  console.log(
-    `[SHA256] Starting hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
-  )
+  if (import.meta.env.DEV) {
+    console.log(
+      `[SHA256] Starting hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
+    )
+  }
   const startTime = Date.now()
 
   // Always use streaming approach to avoid memory issues
   const hash = await calculateSHA256Streaming(blob)
 
   const duration = Date.now() - startTime
-  console.log(`[SHA256] Hash calculation completed in ${duration}ms: ${hash.substring(0, 16)}...`)
+  if (import.meta.env.DEV) {
+    console.log(`[SHA256] Hash calculation completed in ${duration}ms: ${hash.substring(0, 16)}...`)
+  }
 
   return hash
 }
@@ -237,9 +245,11 @@ export async function calculateSHA256(blob: Blob): Promise<string> {
  */
 async function calculateSHA256Streaming(blob: Blob): Promise<string> {
   const chunkSize = 20 * 1024 * 1024 // 20MB chunks
-  console.log(
-    `[SHA256] Streaming hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
-  )
+  if (import.meta.env.DEV) {
+    console.log(
+      `[SHA256] Streaming hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
+    )
+  }
 
   try {
     // Create SHA256 hasher instance
@@ -262,14 +272,17 @@ async function calculateSHA256Streaming(blob: Blob): Promise<string> {
       offset = end
       chunkCount++
 
-      console.log(
-        `[SHA256] Processed chunk ${chunkCount}: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB`
-      )
+      if (import.meta.env.DEV) {
+        console.log(
+          `[SHA256] Processed chunk ${chunkCount}: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB`
+        )
+      }
     }
 
     // Get final hash
     const hashHex = hasher.digest('hex')
-    console.log(`[SHA256] Hash calculation completed: ${hashHex.substring(0, 16)}...`)
+    if (import.meta.env.DEV)
+      console.log(`[SHA256] Hash calculation completed: ${hashHex.substring(0, 16)}...`)
     return hashHex
   } catch (error) {
     console.error(`[SHA256] Error calculating hash:`, error)
@@ -293,16 +306,18 @@ export async function createChunkedUploadAuthWithHash(
   fileHash: string
 ): Promise<string> {
   try {
-    console.log(`[AUTH] Creating upload auth with hash: ${fileHash.substring(0, 16)}...`)
+    if (import.meta.env.DEV)
+      console.log(`[AUTH] Creating upload auth with hash: ${fileHash.substring(0, 16)}...`)
 
     // Use BlossomClient's createUploadAuth method with hash to avoid re-reading file
     const authEvent = await BlossomClient.createUploadAuth(signer, fileHash)
-    console.log(`[AUTH] BlossomClient.createUploadAuth completed successfully`)
+    if (import.meta.env.DEV)
+      console.log(`[AUTH] BlossomClient.createUploadAuth completed successfully`)
 
     // Convert the signed event to base64 encoded string
     const authString = JSON.stringify(authEvent)
     const authBase64 = btoa(authString)
-    console.log(`[AUTH] Authorization token encoded successfully`)
+    if (import.meta.env.DEV) console.log(`[AUTH] Authorization token encoded successfully`)
 
     return authBase64
   } catch (error) {
@@ -327,8 +342,12 @@ export async function uploadChunk(
 ): Promise<Response> {
   const _end = offset + chunk.size - 1
 
-  console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${server}`)
-  console.log(`[CHUNK] Chunk size: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB, offset: ${offset}`)
+  if (import.meta.env.DEV) {
+    console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${server}`)
+    console.log(
+      `[CHUNK] Chunk size: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB, offset: ${offset}`
+    )
+  }
 
   const response = await fetch(`${server}/upload`, {
     method: 'PATCH',
@@ -344,9 +363,11 @@ export async function uploadChunk(
     body: chunk,
   })
 
-  console.log(
-    `[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} response: ${response.status} ${response.statusText}`
-  )
+  if (import.meta.env.DEV) {
+    console.log(
+      `[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} response: ${response.status} ${response.statusText}`
+    )
+  }
 
   if (!response.ok) {
     console.error(
@@ -355,7 +376,8 @@ export async function uploadChunk(
     throw new Error(`PATCH chunk upload failed: ${response.status} ${response.statusText}`)
   }
 
-  console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`)
+  if (import.meta.env.DEV)
+    console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`)
   return response
 }
 
@@ -387,16 +409,19 @@ export async function uploadFileChunked(
   const defaultChunkSize = capabilities.maxChunkSize || 8 * 1024 * 1024 // 8MB default
   const { chunkSize = defaultChunkSize, maxConcurrentChunks = 1 } = options
 
-  console.log(
-    `[UPLOAD] Starting BUD-10 chunked upload for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
-  )
-  console.log(`[UPLOAD] Server: ${server}`)
-  console.log(`[UPLOAD] Chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`)
+  if (import.meta.env.DEV) {
+    console.log(
+      `[UPLOAD] Starting BUD-10 chunked upload for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
+    )
+    console.log(`[UPLOAD] Server: ${server}`)
+    console.log(`[UPLOAD] Chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`)
+  }
 
   // Use provided hash or calculate it if not provided
   let fileHash: string
   if (providedFileHash) {
-    console.log(`[UPLOAD] Using provided file hash: ${providedFileHash.substring(0, 16)}...`)
+    if (import.meta.env.DEV)
+      console.log(`[UPLOAD] Using provided file hash: ${providedFileHash.substring(0, 16)}...`)
     fileHash = providedFileHash
   } else {
     // For large files, calculate SHA256 first to avoid reading file twice

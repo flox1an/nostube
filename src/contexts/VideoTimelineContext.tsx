@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react'
 import { VideoType } from '@/contexts/AppContext'
 import { VideoEvent } from '@/utils/video-event'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -98,7 +106,9 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       // Reload only if never loaded or if last load was more than 60s ago
       if (lastLoaded === undefined || Date.now() - lastLoaded > 60000) {
         setTimelineState(prev => ({ ...prev, videosLoading: true }))
-        loaderSubscriptionRef.current = createTimelineLoader(pool, readRelays, filter, { limit: 50 })()
+        loaderSubscriptionRef.current = createTimelineLoader(pool, readRelays, filter, {
+          limit: 50,
+        })()
           .pipe(
             finalize(() => {
               lastLoadedTimestamp.set(hash, Date.now())

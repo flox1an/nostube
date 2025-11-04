@@ -14,6 +14,7 @@ Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui
 Context7 provides up-to-date library documentation. Applesauce is fully indexed with 111k+ tokens, 459 code snippets, and 72 pages.
 
 **Setup:**
+
 ```bash
 # Remote (Recommended)
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
@@ -23,6 +24,7 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 **Links:**
+
 - Applesauce: https://context7.com/hzrd149/applesauce
 - Docs: https://hzrd149.github.io/applesauce/
 
@@ -53,8 +55,8 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
 
-export const eventStore = new EventStore()  // Singleton
-export const relayPool = new RelayPool()    // Singleton
+export const eventStore = new EventStore() // Singleton
+export const relayPool = new RelayPool() // Singleton
 ```
 
 ### Provider Setup (App.tsx)
@@ -79,12 +81,14 @@ const factory = new EventFactory({ signer: accountManager.signer })
 ### Key Patterns
 
 **Profile data:**
+
 ```tsx
 import { useObservableMemo } from 'applesauce-react/hooks'
 const profile = useObservableMemo(() => eventStore.profile(pubkey), [pubkey])
 ```
 
 **Timeline loading:**
+
 ```tsx
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 const loader = createTimelineLoader(relayPool, relays, { kinds: [1] }, { eventStore })
@@ -92,6 +96,7 @@ loader.load().subscribe(events => setEvents(prev => [...prev, ...events]))
 ```
 
 **Models:**
+
 ```tsx
 import { useEventModel } from 'applesauce-react/hooks'
 import { ContactsModel } from 'applesauce-core/models'
@@ -116,7 +121,8 @@ This project migrated from Nostrify to Applesauce. The old `useNostr` hook is de
 ```tsx
 import { useAuthor } from '@/hooks/useAuthor'
 const author = useAuthor(pubkey)
-const displayName = author.data?.metadata?.display_name ?? author.data?.metadata?.name ?? genUserName(pubkey)
+const displayName =
+  author.data?.metadata?.display_name ?? author.data?.metadata?.name ?? genUserName(pubkey)
 ```
 
 ### useCurrentUser & useNostrPublish
@@ -147,7 +153,7 @@ const [[_, url]] = await uploadFile(file) // Returns NIP-94 tags
 
 ```tsx
 import { LoginArea } from '@/components/auth/LoginArea'
-<LoginArea className="max-w-60" />
+;<LoginArea className="max-w-60" />
 ```
 
 Shows "Log in" when logged out, account switcher when logged in.
@@ -156,7 +162,7 @@ Shows "Log in" when logged out, account switcher when logged in.
 
 ```tsx
 import { NoteContent } from '@/components/NoteContent'
-<NoteContent event={post} className="text-sm" />
+;<NoteContent event={post} className="text-sm" />
 ```
 
 Renders plaintext content with URLs, hashtags, and Nostr URIs.
@@ -166,6 +172,7 @@ Renders plaintext content with URLs, hashtags, and Nostr URIs.
 Prefixes: `npub` (pubkey), `nsec` (private key), `note` (event), `nprofile`, `nevent`, `naddr`, `nrelay`
 
 **Decoding for filters:**
+
 ```ts
 import { nip19 } from 'nostr-tools'
 const decoded = nip19.decode(value)
@@ -182,6 +189,7 @@ if (decoded.type === 'naddr') {
 `NIP.md` defines custom Nostr event kinds for this project. Update when adding/changing custom events.
 
 **Kind ranges:**
+
 - Regular (1-9999): Stored permanently
 - Replaceable (10000-19999): Latest per pubkey+kind
 - Addressable (30000-39999): Latest per pubkey+kind+d-tag
@@ -213,7 +221,7 @@ React Router with centralized config in `AppRouter.tsx`. Add routes above the ca
 
 ```tsx
 import { RelaySelector } from '@/components/RelaySelector'
-<Card className="border-dashed">
+;<Card className="border-dashed">
   <CardContent className="py-12 text-center">
     <p className="text-muted-foreground">No results found. Try another relay?</p>
     <RelaySelector className="w-full" />
@@ -232,6 +240,7 @@ Tailor color schemes, typography, layout, and component styling based on user re
 3. Update `tailwind.config.ts` fontFamily
 
 **Recommendations:**
+
 - Modern/Clean: Inter Variable, Outfit Variable
 - Professional: Roboto, Open Sans
 - Creative: Poppins, Nunito
@@ -241,6 +250,64 @@ Tailor color schemes, typography, layout, and component styling based on user re
 
 Use `useTheme` hook. CSS custom properties in `src/index.css`. Supports light/dark mode with `.dark` class.
 
+## Error Handling
+
+### Error Boundary
+
+Wrap components with `ErrorBoundary` to catch and handle errors gracefully:
+
+```tsx
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+;<ErrorBoundary>
+  <YourComponent />
+</ErrorBoundary>
+```
+
+### Async Error Handling
+
+Use `useAsyncError` hook for consistent async error handling with retry logic:
+
+```tsx
+import { useAsyncError } from '@/hooks/useAsyncError'
+
+const [execute, { error, isError, retry }] = useAsyncError(async () => await someAsyncOperation(), {
+  maxRetries: 3,
+})
+```
+
+### Error Messages
+
+Display user-friendly error messages with `ErrorMessage` component:
+
+```tsx
+import { ErrorMessage } from '@/components/ErrorMessage'
+import { handleError } from '@/lib/error-utils'
+
+try {
+  // your code
+} catch (err) {
+  const appError = handleError(err, 'ComponentName')
+  return <ErrorMessage error={appError} onRetry={retry} />
+}
+```
+
+## Performance Best Practices
+
+### Component Optimization
+
+- **Use React.memo** for frequently rendered list items (VideoCard, CommentItem, etc.)
+- **Check EventStore before relay requests** using `eventStore.hasReplaceable(kind, pubkey)`
+- **Memoize expensive computations** with `useMemo` and `useCallback`
+- **Lazy load routes** (already implemented in `AppRouter.tsx`)
+
+### Bundle Optimization
+
+- Routes are lazy-loaded for optimal initial load time
+- Vendor chunks are split strategically (see `vite.config.ts`)
+- Console.log statements are removed in production builds
+- Source maps are disabled in production for smaller bundles
+
 ## Testing
 
 **Only create tests when user experiences problems or explicitly requests them.**
@@ -249,7 +316,11 @@ Use `TestApp` component for context providers:
 
 ```tsx
 import { TestApp } from '@/test/TestApp'
-render(<TestApp><MyComponent /></TestApp>)
+render(
+  <TestApp>
+    <MyComponent />
+  </TestApp>
+)
 ```
 
 **Run tests after changes:** Use the test script. Task not finished until tests pass.

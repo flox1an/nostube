@@ -232,37 +232,33 @@ export function PlaylistManager() {
                   <div className="flex w-full flex-col gap-1 text-left">
                     <div className="flex items-center gap-3">
                       <span className="text-base font-semibold">{playlist.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {playlist.videos.length} video{playlist.videos.length !== 1 ? 's' : ''}
-                    </span>
+                      <span className="text-sm text-muted-foreground">
+                        {playlist.videos.length} video{playlist.videos.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {playlist.description && (
+                      <p className="text-sm text-muted-foreground">{playlist.description}</p>
+                    )}
                   </div>
-                  {playlist.description && (
-                    <p className="text-sm text-muted-foreground">{playlist.description}</p>
-                  )}
-                </div>
-              </AccordionTrigger>
-              <div className="flex shrink-0 items-center gap-2 pt-4">
-                <Button asChild variant="link" className="px-0 text-base font-semibold">
-                  <Link
-                    to={`/playlist/${playlistParam}`}
-                  >
-                    Open
-                  </Link>
-                </Button>
-                {user?.pubkey && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(playlist)}
-                    aria-label="Edit Playlist"
-                  >
-                    <Pencil className="h-4 w-4" />
+                </AccordionTrigger>
+                <div className="flex shrink-0 items-center gap-2 pt-4">
+                  <Button asChild variant="link" className="px-0 text-base font-semibold">
+                    <Link to={`/playlist/${playlistParam}`}>Open</Link>
                   </Button>
-                )}
-                <Button variant="ghost" size="icon" onClick={() => setPlaylistToDelete(playlist)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+                  {user?.pubkey && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(playlist)}
+                      aria-label="Edit Playlist"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => setPlaylistToDelete(playlist)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <AccordionContent>
                 <VideoList

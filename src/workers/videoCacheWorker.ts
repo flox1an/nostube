@@ -143,15 +143,12 @@ self.onmessage = async (e: MessageEvent) => {
       if (data.relayUrls) {
         relayUrls = data.relayUrls
       }
-      console.log('startLoading')
 
       await startLoading()
       updateQuery()
       break
 
     case 'LOAD_MORE':
-      console.log('Loading more videos', isLoading, hasMoreVideos)
-
       if (!isLoading && hasMoreVideos) {
         await loadVideoBatch()
         updateQuery()

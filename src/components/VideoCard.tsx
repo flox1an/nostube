@@ -19,7 +19,12 @@ interface VideoCardProps {
   playlistParam?: string
 }
 
-export function VideoCard({ video, hideAuthor, format = 'square', playlistParam }: VideoCardProps) {
+export const VideoCard = React.memo(function VideoCard({
+  video,
+  hideAuthor,
+  format = 'square',
+  playlistParam,
+}: VideoCardProps) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
@@ -139,7 +144,10 @@ export function VideoCard({ video, hideAuthor, format = 'square', playlistParam 
             {!hideAuthor && (
               <Link to={`/author/${authorNprofile}`} className="shrink-0">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={imageProxy(metadata?.picture, config.thumbResizeServerUrl)} alt={name} />
+                  <AvatarImage
+                    src={imageProxy(metadata?.picture, config.thumbResizeServerUrl)}
+                    alt={name}
+                  />
                   <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Link>
@@ -169,13 +177,15 @@ export function VideoCard({ video, hideAuthor, format = 'square', playlistParam 
       </div>
     </div>
   )
-}
+})
 
 interface VideoCardSkeletonProps {
   format: 'vertical' | 'horizontal' | 'square'
 }
 
-export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
+export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
+  format,
+}: VideoCardSkeletonProps) {
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
@@ -193,4 +203,4 @@ export function VideoCardSkeleton({ format }: VideoCardSkeletonProps) {
       </div>
     </div>
   )
-}
+})

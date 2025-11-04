@@ -266,7 +266,8 @@ export function processEvent(
       const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
       const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
 
-      const mirrorUrls = mirrorServers.length > 0 ? generateMirrorUrls(videoUrls, mirrorServers) : []
+      const mirrorUrls =
+        mirrorServers.length > 0 ? generateMirrorUrls(videoUrls, mirrorServers) : []
       const proxyUrls = proxyServers.length > 0 ? generateProxyUrls(videoUrls, proxyServers) : []
 
       // Prepend mirror URLs and proxy URLs before original URLs

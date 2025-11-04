@@ -62,7 +62,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
   }, [])
 
   const initSearch = useCallback((_relays: string[]) => {
-    console.log('initSearch', _relays)
+    // Initialize search with relays
   }, [])
 
   const loadMoreRef = useCallback((_node?: Element | null) => {

@@ -129,9 +129,6 @@ export function AuthorPage() {
   // Combine all relay sources (prioritize in order: nprofile relays, author's outbox, user's read relays, video fallbacks)
   const relays = useMemo(() => {
     const authorOutboxes = authorMailboxes?.outboxes || []
-    console.log(`[AuthorPage] nprofile relays:`, nprofileRelays)
-    console.log(`[AuthorPage] Author outbox relays for ${pubkey.slice(0, 8)}:`, authorOutboxes)
-    console.log(`[AuthorPage] User read relays:`, readRelays)
     // Combine and deduplicate (order matters - first ones are tried first)
     const combined = combineRelays([
       nprofileRelays,
@@ -139,7 +136,6 @@ export function AuthorPage() {
       readRelays,
       videoRelayFallbacks,
     ])
-    console.log(`[AuthorPage] Combined relays (${combined.length}):`, combined)
     return combined
   }, [nprofileRelays, authorMailboxes, readRelays, pubkey])
 
@@ -155,11 +151,6 @@ export function AuthorPage() {
         const missingIds = ids.filter(id => !eventStoreInstance.getEvent(id))
 
         if (missingIds.length > 0) {
-          console.log(
-            `Fetching ${missingIds.length} missing video events for playlist:`,
-            playlist.name
-          )
-
           // Create a loader to fetch the missing events with proper relays
           const { createEventLoader } = await import('applesauce-loaders/loaders')
           const { pool } = config
@@ -170,7 +161,6 @@ export function AuthorPage() {
             : undefined
           const playlistSeenRelaysSet = playlistEvent ? getSeenRelays(playlistEvent) : undefined
           const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
-          console.log('[AuthorPage] Playlist seen relays:', playlistSeenRelays)
 
           // Fetch missing events with relay hints
           const fetchPromises = missingIds.map(id => {
@@ -181,13 +171,6 @@ export function AuthorPage() {
 
             // Combine seen relays with playlist relays and general relays (prioritize seen relays)
             const videoRelays = combineRelays([seenRelays, playlistSeenRelays, relays])
-
-            console.log(`[AuthorPage] Loading video ${id} from ${videoRelays.length} relays`)
-            console.log(`[AuthorPage] - Seen relays: ${seenRelays.length}`, seenRelays)
-            console.log(
-              `[AuthorPage] - Playlist relays: ${playlistSeenRelays.length}`,
-              playlistSeenRelays
-            )
 
             // Create loader with specific relay hints for this video
             const loader = createEventLoader(pool, {
@@ -249,7 +232,6 @@ export function AuthorPage() {
 
   useEffect(() => {
     const newLoader = authorVideoLoader(pubkey, relays)
-    console.log('newLoader =', newLoader)
     setLoader(newLoader)
   }, [relays, pubkey])
 

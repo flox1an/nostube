@@ -25,8 +25,7 @@ interface PlaylistVideoItemProps {
 const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => {
   const { config } = useAppContext()
   const metadata = useProfile(item.pubkey ? { pubkey: item.pubkey } : undefined)
-  const authorName =
-    metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
+  const authorName = metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
   const authorPicture = metadata?.picture
 
   const thumbnail = item.images?.[0]

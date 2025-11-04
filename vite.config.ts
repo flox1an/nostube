@@ -16,6 +16,14 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: false, // Disable sourcemaps in production for smaller bundle
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       // Disable native modules for Vercel deployment
       external: ['@rollup/rollup-linux-x64-gnu'],

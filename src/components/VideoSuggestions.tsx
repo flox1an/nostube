@@ -7,7 +7,7 @@ import { formatDistance } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
-import { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { imageProxyVideoPreview } from '@/lib/utils'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
@@ -22,7 +22,13 @@ function formatDuration(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
-function VideoSuggestionItem({ video, thumbResizeServerUrl }: { video: VideoEvent; thumbResizeServerUrl?: string }) {
+const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
+  video,
+  thumbResizeServerUrl,
+}: {
+  video: VideoEvent
+  thumbResizeServerUrl?: string
+}) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
 
@@ -55,7 +61,7 @@ function VideoSuggestionItem({ video, thumbResizeServerUrl }: { video: VideoEven
       </div>
     </Link>
   )
-}
+})
 
 function VideoSuggestionItemSkeleton() {
   return (
@@ -96,20 +102,22 @@ export function VideoSuggestions({
     const combined = relays ? [...relays, ...configRelays] : configRelays
     // Remove duplicates
     const deduplicated = [...new Set(combined)]
-    console.log('[VideoSuggestions] Relays to use:', deduplicated)
+    if (import.meta.env.DEV) console.log('[VideoSuggestions] Relays to use:', deduplicated)
     return deduplicated
   }, [relays, config.relays])
 
   // Load events from the relays
   useEffect(() => {
     if (relaysToUse.length === 0) {
-      console.log('[VideoSuggestions] No relays available, skipping load')
+      if (import.meta.env.DEV) console.log('[VideoSuggestions] No relays available, skipping load')
       return
     }
 
-    console.log('[VideoSuggestions] Loading suggestions from relays:', relaysToUse)
-    console.log('[VideoSuggestions] Author pubkey:', authorPubkey)
-    console.log('[VideoSuggestions] Video type:', currentVideoType)
+    if (import.meta.env.DEV) {
+      console.log('[VideoSuggestions] Loading suggestions from relays:', relaysToUse)
+      console.log('[VideoSuggestions] Author pubkey:', authorPubkey)
+      console.log('[VideoSuggestions] Video type:', currentVideoType)
+    }
 
     const filters = [
       {
@@ -127,7 +135,7 @@ export function VideoSuggestions({
       })
     }
 
-    console.log('[VideoSuggestions] Filters:', filters)
+    if (import.meta.env.DEV) console.log('[VideoSuggestions] Filters:', filters)
 
     const playlistLoader = createTimelineLoader(pool, relaysToUse, filters, {
       eventStore,
@@ -135,7 +143,7 @@ export function VideoSuggestions({
     })
     const sub = playlistLoader().subscribe({
       next: events => {
-        console.log('[VideoSuggestions] Loaded events:', events.length)
+        if (import.meta.env.DEV) console.log('[VideoSuggestions] Loaded events:', events.length)
       },
       error: err => {
         console.error('[VideoSuggestions] Error loading events:', err)
@@ -198,7 +206,13 @@ export function VideoSuggestions({
     <div className="sm:grid grid-cols-2 gap-4 lg:block">
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
-        : suggestions.map(video => <VideoSuggestionItem key={video.id} video={video} thumbResizeServerUrl={config.thumbResizeServerUrl} />)}
+        : suggestions.map(video => (
+            <VideoSuggestionItem
+              key={video.id}
+              video={video}
+              thumbResizeServerUrl={config.thumbResizeServerUrl}
+            />
+          ))}
     </div>
   )
 }

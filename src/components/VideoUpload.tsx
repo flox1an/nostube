@@ -344,7 +344,8 @@ export function VideoUpload() {
             signer: async draft => await user.signer.signEvent(draft),
           })
 
-          console.log(`Mirrored Blossom URL to ${mirroredBlobs.length} servers`)
+          if (import.meta.env.DEV)
+            console.log(`Mirrored Blossom URL to ${mirroredBlobs.length} servers`)
         } catch (error) {
           console.error('Failed to mirror Blossom URL:', error)
           // Continue without mirroring - not a critical failure
@@ -448,7 +449,9 @@ export function VideoUpload() {
               setUploadProgress(progress)
             },
             onChunkComplete: (chunkIndex, totalChunks) => {
-              console.log(`BUD-10 PATCH chunk ${chunkIndex + 1}/${totalChunks} completed`)
+              if (import.meta.env.DEV) {
+                console.log(`BUD-10 PATCH chunk ${chunkIndex + 1}/${totalChunks} completed`)
+              }
             },
           },
         })

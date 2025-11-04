@@ -298,11 +298,7 @@ export function VideoPage() {
     const handleKeyPress = (event: KeyboardEvent) => {
       // Ignore if user is typing in an input, textarea, or contenteditable element
       const target = event.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return
       }
 
@@ -766,7 +762,6 @@ export function VideoPage() {
     )
   }
 
-
   const renderSidebarContent = () => {
     if (playlistParam) {
       return (
@@ -857,7 +852,9 @@ export function VideoPage() {
   const handlePlaylistVideoEnd = useCallback(() => {
     if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
     setCurrentPlayPos(0)
-    navigate(`/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}&autoplay=true`)
+    navigate(
+      `/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}&autoplay=true`
+    )
   }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate])
 
   const handleVideoElementReady = useCallback((element: HTMLVideoElement | null) => {

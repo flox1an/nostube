@@ -23,6 +23,10 @@ interface VideoCommentsProps {
   videoId: string
   authorPubkey: string
   link: string
+  /**
+   * Relays to use for loading comments. If not provided, uses app config read relays.
+   */
+  relays?: string[]
 }
 
 function mapEventToComment(event: NostrEvent): Comment {
@@ -105,16 +109,20 @@ const CommentItem = React.memo(function CommentItem({
   )
 })
 
-export function VideoComments({ videoId, link, authorPubkey }: VideoCommentsProps) {
+export function VideoComments({ videoId, link, authorPubkey, relays }: VideoCommentsProps) {
   const [newComment, setNewComment] = useState('')
   const eventStore = useEventStore()
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
   const { pool, config } = useAppContext()
-  const readRelays = useMemo(
-    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
-    [config.relays]
-  )
+
+  // Use provided relays or fallback to app config read relays
+  const readRelays = useMemo(() => {
+    if (relays && relays.length > 0) {
+      return relays
+    }
+    return config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+  }, [relays, config.relays])
 
   const filters = useMemo(
     () => [

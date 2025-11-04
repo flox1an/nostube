@@ -2,8 +2,8 @@
   "name": "nostube",
   "title": "nostube",
   "description": "Nostr-based video sharing platform with support for videos and shorts",
-  "uri": "git+https://github.com/your-username/nostube.git",
-  "image": "https://gitlab.com/-/project/69048882/uploads/0a9e3a19f2901d5c772952c1de10ce4f/image.png",
+  "uri": "git+https://github.com/flox1an/nostube",
+  "image": "https://nostu.be/nostube.png",
   "commands": ["npm", "npx"],
   "tech": ["react", "typescript", "tailwind", "shadcn-ui", "applesauce", "vite", "nostr"]
 }

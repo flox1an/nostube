@@ -80,6 +80,8 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
  * Generate proxy URLs for video URLs when proxy servers are configured
  * Format: https://proxyserver.com/{sha256}.{ext}?origin={protocol+hostname}
  * If the proxy server origin matches the original URL origin, the origin parameter is omitted
+ *
+ * @deprecated Use generateMediaUrls from @/lib/media-url-generator instead
  */
 function generateProxyUrls(originalUrls: string[], proxyServers: BlossomServer[]): string[] {
   if (proxyServers.length === 0) return []
@@ -136,6 +138,8 @@ function generateProxyUrls(originalUrls: string[], proxyServers: BlossomServer[]
  * Generate mirror URLs for video URLs when mirror servers are configured
  * Format: https://mirrorserver.com/{sha256}.{ext}
  * Mirror URLs are direct replacements without origin parameters
+ *
+ * @deprecated Use generateMediaUrls from @/lib/media-url-generator instead
  */
 function generateMirrorUrls(originalUrls: string[], mirrorServers: BlossomServer[]): string[] {
   if (mirrorServers.length === 0) return []

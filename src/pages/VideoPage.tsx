@@ -204,6 +204,21 @@ export function VideoPage() {
     loadingVideoIds,
   } = usePlaylistDetails(playlistParam, playlistRelays)
 
+  // Get relays from playlist event for comment loading
+  const playlistEventRelays = useMemo(() => {
+    if (!playlistEvent) return []
+    const seenRelaysSet = getSeenRelays(playlistEvent)
+    return seenRelaysSet ? Array.from(seenRelaysSet) : []
+  }, [playlistEvent])
+
+  // Combine all available relays for comment loading
+  const commentRelays = useMemo(() => {
+    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+    const neventRelays = eventPointer?.relays || []
+    // Combine all relay sources: nevent relays, video event relays, playlist event relays, app config relays
+    return combineRelays([neventRelays, videoEventRelays, playlistEventRelays, readRelays])
+  }, [eventPointer, videoEventRelays, playlistEventRelays, config.relays])
+
   // Process the video event or get from cache
   const video = useMemo(() => {
     if (!nevent) return null
@@ -755,7 +770,12 @@ export function VideoPage() {
         </AlertDialog>
         {video && (
           <div className="py-4">
-            <VideoComments videoId={video.id} authorPubkey={video.pubkey} link={video.link} />
+            <VideoComments
+              videoId={video.id}
+              authorPubkey={video.pubkey}
+              link={video.link}
+              relays={commentRelays}
+            />
           </div>
         )}
       </>
@@ -889,6 +909,7 @@ export function VideoPage() {
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={currentPlayPos > 0 ? currentPlayPos : initialPlayPos}
         contentWarning={video.contentWarning}
+        sha256={video.x} // Pass SHA256 hash for URL discovery
         onAllSourcesFailed={urls => markVideoAsMissing(video.id, urls)}
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}

@@ -20,6 +20,30 @@ const defaultConfig: AppConfig = {
   blossomServers: [...presetBlossomServers],
   nsfwFilter: 'warning',
   thumbResizeServerUrl: 'https://nostube-imgproxy.apps3.slidestr.net/',
+  media: {
+    failover: {
+      enabled: true,
+      discovery: {
+        enabled: false, // Opt-in for now, can be enabled by default later
+        timeout: 10000, // 10 seconds
+        maxResults: 20,
+      },
+      validation: {
+        enabled: false, // Opt-in for now, validation is done on-demand
+        timeout: 5000, // 5 seconds
+        parallelRequests: 5,
+      },
+    },
+    proxy: {
+      enabled: true,
+      includeOrigin: true,
+      imageSizes: [
+        { width: 320, height: 180 },
+        { width: 640, height: 360 },
+        { width: 1280, height: 720 },
+      ],
+    },
+  },
 }
 
 // Create account manager for applesauce

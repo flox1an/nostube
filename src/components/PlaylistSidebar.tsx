@@ -4,14 +4,16 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { imageProxy, imageProxyVideoPreview, cn } from '@/lib/utils'
+import { imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail, cn } from '@/lib/utils'
 import { useProfile, useAppContext } from '@/hooks'
+import { useMemo, useState } from 'react'
 
 interface PlaylistVideoItem {
   id: string
   pubkey?: string
   title?: string
   images?: string[]
+  urls?: string[]
   link: string
 }
 
@@ -27,9 +29,26 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
   const metadata = useProfile(item.pubkey ? { pubkey: item.pubkey } : undefined)
   const authorName = metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
   const authorPicture = metadata?.picture
+  const [thumbnailError, setThumbnailError] = useState(false)
 
   const thumbnail = item.images?.[0]
-  const thumbSrc = thumbnail ? imageProxyVideoPreview(thumbnail, config.thumbResizeServerUrl) : null
+
+  const thumbnailUrl = useMemo(() => {
+    if (!thumbnail) return null
+    // If thumbnail failed and we have video URLs, try generating thumbnail from video
+    if (thumbnailError && item.urls && item.urls.length > 0) {
+      return imageProxyVideoThumbnail(item.urls[0], config.thumbResizeServerUrl)
+    }
+    // Otherwise use the original image thumbnail
+    return imageProxyVideoPreview(thumbnail, config.thumbResizeServerUrl)
+  }, [thumbnailError, thumbnail, item.urls, config.thumbResizeServerUrl])
+
+  const handleThumbnailError = () => {
+    console.warn('Thumbnail failed to load:', thumbnail)
+    if (!thumbnailError) {
+      setThumbnailError(true)
+    }
+  }
 
   return (
     <Link
@@ -39,11 +58,12 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
         isActive && 'border-primary'
       )}
     >
-      {thumbSrc ? (
+      {thumbnailUrl ? (
         <img
-          src={thumbSrc}
+          src={thumbnailUrl}
           alt={item.title || 'Playlist video'}
           className="w-40 h-24 shrink-0 rounded-md object-cover"
+          onError={handleThumbnailError}
         />
       ) : (
         <div className="w-40 h-24 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">

@@ -3,7 +3,7 @@ import { formatDistance } from 'date-fns'
 import { VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn, imageProxy, imageProxyVideoPreview } from '@/lib/utils'
+import { cn, imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import React, { useRef, useState, useMemo } from 'react'
 import { PlayProgressBar } from './PlayProgressBar'
@@ -47,8 +47,19 @@ export const VideoCard = React.memo(function VideoCard({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isHovered, setIsHovered] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
+  const [thumbnailError, setThumbnailError] = useState(false)
 
   const hoverPreviewEnabled = false
+
+  // Generate thumbnail URL with fallback to video URL if image fails
+  const thumbnailUrl = useMemo(() => {
+    // If thumbnail failed and we have video URLs, try generating thumbnail from video
+    if (thumbnailError && video.urls && video.urls.length > 0) {
+      return imageProxyVideoThumbnail(video.urls[0], config.thumbResizeServerUrl)
+    }
+    // Otherwise use the original image thumbnail
+    return imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)
+  }, [thumbnailError, video.images, video.urls, config.thumbResizeServerUrl])
 
   // Determine navigation path based on video type
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
@@ -83,6 +94,14 @@ export const VideoCard = React.memo(function VideoCard({
     videoRef.current?.play().catch(error => console.error('Video autoplay blocked:', error))
   }
 
+  const handleThumbnailError = () => {
+    console.warn('Thumbnail failed to load:', video.images[0])
+    // Only try video fallback once to avoid infinite loops
+    if (!thumbnailError) {
+      setThumbnailError(true)
+    }
+  }
+
   return (
     <div
       className={cn('transition-all duration-200', maxWidth)}
@@ -93,7 +112,7 @@ export const VideoCard = React.memo(function VideoCard({
         <Link to={to}>
           <div className="w-full overflow-hidden rounded-lg relative">
             <img
-              src={imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)}
+              src={thumbnailUrl}
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
@@ -103,7 +122,7 @@ export const VideoCard = React.memo(function VideoCard({
                 aspectRatio,
                 isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
               )}
-              onError={err => console.error('error loading', video.images[0], err)}
+              onError={handleThumbnailError}
             />
             {showNsfwWarning && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">

@@ -7,8 +7,8 @@ import { formatDistance } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
-import React, { useEffect, useMemo } from 'react'
-import { imageProxyVideoPreview } from '@/lib/utils'
+import React, { useEffect, useMemo, useState } from 'react'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
 function formatDuration(seconds: number): string {
@@ -31,16 +31,34 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 }) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
+  const [thumbnailError, setThumbnailError] = useState(false)
+
+  const thumbnailUrl = useMemo(() => {
+    // If thumbnail failed and we have video URLs, try generating thumbnail from video
+    if (thumbnailError && video.urls && video.urls.length > 0) {
+      return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
+    }
+    // Otherwise use the original image thumbnail
+    return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
+  }, [thumbnailError, video.images, video.urls, thumbResizeServerUrl])
+
+  const handleThumbnailError = () => {
+    console.warn('Thumbnail failed to load:', video.images[0])
+    if (!thumbnailError) {
+      setThumbnailError(true)
+    }
+  }
 
   return (
     <Link to={`/video/${video.link}`}>
       <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
         <div className="relative w-40 h-24 flex-shrink-0">
           <img
-            src={imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)}
+            src={thumbnailUrl}
             loading="lazy"
             alt={video.title}
             className="w-full h-full object-cover rounded-md"
+            onError={handleThumbnailError}
           />
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (

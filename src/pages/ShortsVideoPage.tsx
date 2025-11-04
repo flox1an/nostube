@@ -8,13 +8,13 @@ import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { formatDistance } from 'date-fns'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { processEvent, VideoEvent, processEvents } from '@/utils/video-event'
+import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
 import { decodeEventPointer } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useProfile, useReportedPubkeys } from '@/hooks'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { ImageIcon, MessageCircle, ChevronDown, Share2 } from 'lucide-react'
-import { imageProxy } from '@/lib/utils'
+import { imageProxy, imageProxyVideoPreview } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { getKindsForType } from '@/lib/video-types'
 import { nprofileFromEvent } from '@/lib/nprofile'
@@ -57,6 +57,7 @@ function ShortVideoItem({
     urls: video.urls,
     blossomServers: allBlossomServers,
     resourceType: 'video',
+    sha256: video.x, // Pass SHA256 hash for URL discovery
     enabled: shouldPreload || isActive,
   })
 
@@ -141,7 +142,7 @@ function ShortVideoItem({
                 loop
                 muted={false}
                 playsInline
-                poster={thumbnailUrl ? imageProxy(thumbnailUrl) : undefined}
+                poster={thumbnailUrl ? imageProxyVideoPreview(thumbnailUrl) : undefined}
                 preload={shouldPreload || isActive ? 'auto' : 'metadata'}
                 onCanPlay={handleCanPlay}
                 onError={handleVideoError}
@@ -151,7 +152,7 @@ function ShortVideoItem({
               {!isActive && thumbnailUrl && (
                 <div className="absolute inset-0 rounded-lg overflow-hidden bg-black">
                   <img
-                    src={imageProxy(thumbnailUrl)}
+                    src={imageProxyVideoPreview(thumbnailUrl)}
                     alt={video.title}
                     className="w-full h-full object-cover"
                     loading="lazy"

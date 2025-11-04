@@ -195,7 +195,7 @@ const renderTextWithLinks = (text: string) => {
 export function CollapsibleText({ text, maxLines = 5, className }: CollapsibleTextProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showButton, setShowButton] = useState(false)
-  const textRef = useRef<HTMLParagraphElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (textRef.current) {
@@ -208,12 +208,12 @@ export function CollapsibleText({ text, maxLines = 5, className }: CollapsibleTe
 
   return (
     <div className={className}>
-      <p
+      <div
         ref={textRef}
         className={cn('whitespace-pre-wrap break-words break-all', !isExpanded && 'line-clamp-5')}
       >
         {renderTextWithLinks(text)}
-      </p>
+      </div>
       {showButton && (
         <Button
           variant="ghost"

@@ -19,6 +19,27 @@ export interface BlossomServer {
   tags: BlossomServerTag[]
 }
 
+export interface MediaConfig {
+  failover: {
+    enabled: boolean
+    discovery: {
+      enabled: boolean // Search relays for alternatives
+      timeout: number // Discovery timeout (ms)
+      maxResults: number // Limit discovered URLs
+    }
+    validation: {
+      enabled: boolean // Pre-validate URLs
+      timeout: number // HEAD request timeout
+      parallelRequests: number // Max parallel validations
+    }
+  }
+  proxy: {
+    enabled: boolean
+    includeOrigin: boolean // Add origin param
+    imageSizes: { width: number; height: number }[] // Responsive sizes
+  }
+}
+
 export interface AppConfig {
   /** Current theme */
   theme: Theme
@@ -32,6 +53,8 @@ export interface AppConfig {
   thumbResizeServerUrl?: string
   /** NSFW content filter setting */
   nsfwFilter: NsfwFilter
+  /** Media failover configuration */
+  media?: MediaConfig
 }
 
 export interface AppContextType {

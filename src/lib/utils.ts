@@ -156,6 +156,20 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
 
+/**
+ * Generate thumbnail from video URL using imgproxy's video thumbnail feature
+ * This is used as a fallback when the image thumbnail fails to load
+ */
+export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string) => {
+  if (!videoUrl) return ''
+  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  // imgproxy can generate thumbnails from video URLs
+  // Format: /insecure/f:webp/rs:fit:480:480/plain/{video_url}
+  // The video URL itself will be used to extract a frame
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(videoUrl)}`
+}
+
 function bigIntHash(str: string): string {
   let hash = BigInt(0)
   for (let i = 0; i < str.length; i++) {

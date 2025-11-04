@@ -15,6 +15,7 @@ export type { AccountMethod, PersistedAccount } from './useAccountPersistence'
 // Hooks
 export { useAppContext } from './useAppContext'
 export { useCinemaMode } from './useCinemaMode'
+export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
 export { useCurrentUser } from './useCurrentUser'
 export { useDebounce } from './useDebounce'
 export { useFollowedAuthors } from './useFollowedAuthors'

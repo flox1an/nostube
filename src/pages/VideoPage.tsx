@@ -15,7 +15,6 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent } from '@/utils/video-event'
 import { nip19 } from 'nostr-tools'
 import { decodeEventPointer } from '@/lib/nip19'
-import { combineRelays } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import {
@@ -26,6 +25,7 @@ import {
   useMissingVideos,
   useCinemaMode,
   usePlaylistDetails,
+  useVideoPageRelays,
 } from '@/hooks'
 import {
   DropdownMenu,
@@ -54,7 +54,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
-import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -147,17 +146,17 @@ export function VideoPage() {
     setTempCinemaModeForWideVideo(false)
   }, [persistedCinemaMode, setCinemaMode])
 
-  // Get relays from nevent if available, otherwise use config relays
-  const relaysToUse = useMemo(() => {
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-    const neventRelays = eventPointer?.relays || []
-    // Combine nevent relays (prioritized) with user read relays
-    return combineRelays([neventRelays, readRelays])
-  }, [eventPointer, config.relays])
+  // Get initial relays for loading the video event
+  const initialRelays = useVideoPageRelays({
+    neventRelays: eventPointer?.relays,
+    videoEvent: undefined, // Not loaded yet
+    playlistEvent: undefined, // Not loaded yet
+    authorPubkey: undefined, // Don't know author yet
+  })
 
   const loader = useMemo(
-    () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),
-    [pool, eventStore, relaysToUse]
+    () => createEventLoader(pool, { eventStore, extraRelays: initialRelays }),
+    [pool, eventStore, initialRelays]
   )
 
   // Use EventStore to get the video event with fallback to loader
@@ -180,18 +179,13 @@ export function VideoPage() {
 
   const videoEvent = useObservableState(videoObservable)
 
-  // Get relays from the video event for playlist loading
-  const videoEventRelays = useMemo(() => {
-    if (!videoEvent) return []
-    const seenRelaysSet = getSeenRelays(videoEvent)
-    return seenRelaysSet ? Array.from(seenRelaysSet) : []
-  }, [videoEvent])
-
-  // Combine video event relays with nevent relays for playlist fetching
-  const playlistRelays = useMemo(() => {
-    const neventRelays = eventPointer?.relays || []
-    return combineRelays([videoEventRelays, neventRelays])
-  }, [videoEventRelays, eventPointer])
+  // Get relays for playlist loading (includes video event relays once available)
+  const playlistRelays = useVideoPageRelays({
+    neventRelays: eventPointer?.relays,
+    videoEvent: videoEvent,
+    playlistEvent: undefined, // Not loaded yet
+    authorPubkey: videoEvent?.pubkey,
+  })
 
   const {
     playlistEvent,
@@ -204,20 +198,16 @@ export function VideoPage() {
     loadingVideoIds,
   } = usePlaylistDetails(playlistParam, playlistRelays)
 
-  // Get relays from playlist event for comment loading
-  const playlistEventRelays = useMemo(() => {
-    if (!playlistEvent) return []
-    const seenRelaysSet = getSeenRelays(playlistEvent)
-    return seenRelaysSet ? Array.from(seenRelaysSet) : []
-  }, [playlistEvent])
+  // Get relays for comment loading (includes all available context)
+  const commentRelays = useVideoPageRelays({
+    neventRelays: eventPointer?.relays,
+    videoEvent: videoEvent,
+    playlistEvent: playlistEvent,
+    authorPubkey: videoEvent?.pubkey,
+  })
 
-  // Combine all available relays for comment loading
-  const commentRelays = useMemo(() => {
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-    const neventRelays = eventPointer?.relays || []
-    // Combine all relay sources: nevent relays, video event relays, playlist event relays, app config relays
-    return combineRelays([neventRelays, videoEventRelays, playlistEventRelays, readRelays])
-  }, [eventPointer, videoEventRelays, playlistEventRelays, config.relays])
+  // Full relays with all context (for nprofile encoding and suggestions)
+  const relaysToUse = commentRelays
 
   // Process the video event or get from cache
   const video = useMemo(() => {
@@ -425,6 +415,38 @@ export function VideoPage() {
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
   }, [video, initialPlayPos])
+
+  // When ?t= parameter changes while on the same video, seek to the new timestamp
+  useEffect(() => {
+    if (typeof window !== 'undefined' && videoElementRef.current) {
+      const params = new URLSearchParams(location.search)
+      const tRaw = params.get('t')
+      const t = parseTimeParam(tRaw)
+      if (t > 0 && Math.abs(videoElementRef.current.currentTime - t) > 1) {
+        videoElementRef.current.currentTime = t
+      }
+    }
+  }, [location.search])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleSeek = (event: Event) => {
+      const customEvent = event as CustomEvent<{ time?: number }>
+      const targetTime = customEvent.detail?.time
+      const videoEl = videoElementRef.current
+      if (typeof targetTime !== 'number' || !videoEl) {
+        return
+      }
+      videoEl.currentTime = targetTime
+      setCurrentPlayPos(targetTime)
+    }
+
+    window.addEventListener('nostube:seek-to', handleSeek)
+
+    return () => {
+      window.removeEventListener('nostube:seek-to', handleSeek)
+    }
+  }, [])
 
   // Use the custom hook for debounced play position storage
   useDebouncedPlayPositionStorage(currentPlayPos, user, video?.id)
@@ -655,7 +677,7 @@ export function VideoPage() {
 
     return (
       <>
-        <div className="flex flex-col gap-4 pt-4">
+        <div className="flex flex-col gap-4 pt-4 px-2 sm:p-0">
           {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
           <div className="flex items-start justify-between">

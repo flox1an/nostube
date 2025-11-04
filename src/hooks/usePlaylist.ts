@@ -275,14 +275,17 @@ const playlistFilter = (pubkey?: string) => ({
 })
 
 // Query playlists for any user by pubkey
-export function useUserPlaylists(pubkey?: string) {
+export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
 
-  const readRelays = useMemo(
+  const defaultReadRelays = useMemo(
     () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
     [config.relays]
   )
+
+  // Use custom relays if provided, otherwise fall back to user's read relays
+  const readRelays = customRelays || defaultReadRelays
 
   const filters = useMemo(() => [playlistFilter(pubkey)], [pubkey])
 
@@ -303,8 +306,13 @@ export function useUserPlaylists(pubkey?: string) {
     [pool, readRelays, filters, deletionFilters]
   )
 
+  // Reset hasLoadedOnce when relays change (e.g., when author's NIP-65 is loaded)
   useEffect(() => {
-    // Check allPlaylistEvents (before filtering) to avoid re-loading if events were just deleted
+    setHasLoadedOnce(false)
+  }, [readRelays])
+
+  useEffect(() => {
+    // Load if: no playlists in store AND (haven't loaded yet OR relays changed)
     const needLoad = allPlaylistEvents.length === 0 && !!pubkey && !hasLoadedOnce
 
     if (needLoad) {

@@ -68,14 +68,6 @@ export function AppRouter() {
             }
           />
           <Route
-            path="/short/:nevent"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <ShortsVideoPage />
-              </Suspense>
-            }
-          />
-          <Route
             path="/subscriptions"
             element={
               <Suspense fallback={<PageLoader />}>
@@ -140,6 +132,14 @@ export function AppRouter() {
             }
           />
         </Route>
+        <Route
+          path="/short/:nevent"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ShortsVideoPage />
+            </Suspense>
+          }
+        />
         <Route
           path="*"
           element={

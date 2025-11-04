@@ -5,12 +5,16 @@ import { MenuIcon, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
 
-export function Header() {
+interface HeaderProps {
+  transparent?: boolean
+}
+
+export function Header({ transparent = false }: HeaderProps) {
   const { toggleSidebar } = useAppContext()
 
   return (
     <header
-      className="sticky top-0 bg-background z-50"
+      className={`sticky top-0 z-50 ${transparent ? '' : 'bg-background'}`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
     >
       <div className={`w-full px-4 py-2 flex items-center justify-between`}>

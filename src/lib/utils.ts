@@ -7,17 +7,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Normalizes a relay URL by adding wss:// prefix if no protocol is present
+ * Normalizes a relay URL:
+ * - Removes trailing slashes
+ * - Ensures wss:// protocol (adds if missing)
+ * - Trims whitespace
  */
 export function normalizeRelayUrl(url: string): string {
   const trimmed = url.trim()
   if (!trimmed) return trimmed
 
-  if (trimmed.includes('://')) {
-    return trimmed
+  // Add protocol if missing
+  let normalized = trimmed
+  if (!normalized.includes('://')) {
+    normalized = `wss://${normalized}`
   }
 
-  return `wss://${trimmed}`
+  // Remove trailing slashes
+  normalized = normalized.replace(/\/+$/, '')
+
+  return normalized
 }
 
 /**
@@ -36,11 +44,25 @@ export function mergeRelays(relaySets: string[][]): string[] {
 }
 
 /**
- * Combines multiple relay arrays, removes duplicates, and returns prioritized list
- * First arrays have priority (will appear first in the result)
+ * Combines multiple relay arrays with normalization and deduplication.
+ * First arrays have priority (will appear first in the result).
+ * URLs are normalized (trailing slashes removed, wss:// ensured) before deduplication.
  */
 export function combineRelays(relayArrays: string[][]): string[] {
-  return [...new Set(relayArrays.flat())]
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const relayArray of relayArrays) {
+    for (const relay of relayArray) {
+      const normalized = normalizeRelayUrl(relay)
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized)
+        result.push(normalized)
+      }
+    }
+  }
+
+  return result
 }
 
 export function formatFileSize(bytes: number): string {

@@ -1,5 +1,5 @@
 import { VideoCard, VideoCardSkeleton } from '@/components/VideoCard'
-import { VideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '@/utils/video-event'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
@@ -40,8 +40,8 @@ export function VideoGrid({
         if (width >= 1400) return 6
         if (width >= 1024) return 4
         if (width >= 768) return 3
-        if (width >= 640) return 2
-        return 1
+        // Always show 2 columns for vertical videos on mobile
+        return 2
       } else {
         if (width >= 2200) return 6
         if (width >= 1400) return 4
@@ -198,7 +198,7 @@ export function VideoGrid({
       className={cn(
         'grid gap-4',
         isShort
-          ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
+          ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
           : isHorizontal
             ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'

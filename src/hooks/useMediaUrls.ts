@@ -14,7 +14,6 @@ import {
 import { discoverUrlsWithCache, type DiscoveryOptions } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
 import { useAppContext } from '@/hooks/useAppContext'
-import type { BlossomServer } from '@/contexts/AppContext'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
   enabled?: boolean // Enable auto-discovery (default: true)
@@ -23,6 +22,7 @@ export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServe
   discoveryTimeout?: number // Discovery timeout (default: 10s)
   preValidate?: boolean // Pre-validate URLs before returning (default: false)
   validationOptions?: ValidationOptions // Validation options
+  authorPubkey?: string // Author pubkey (npub or hex) for AS query parameter
   onError?: (error: Error) => void
 }
 
@@ -59,6 +59,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     sha256,
     kind,
     proxyConfig,
+    authorPubkey,
     enabled = true,
     discoveryEnabled,
     discoveryRelays,
@@ -78,10 +79,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   }, [onError])
 
   // Memoize blossomServers to prevent unnecessary re-renders
-  const blossomServers = useMemo(
-    () => config.blossomServers || [],
-    [config.blossomServers]
-  )
+  const blossomServers = useMemo(() => config.blossomServers || [], [config.blossomServers])
 
   // Use media config from context if not provided in options
   const mediaConfig = config.media
@@ -146,6 +144,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
         kind,
         mediaType,
         proxyConfig,
+        authorPubkey,
       })
 
       setGeneratedUrls(generated)
@@ -159,13 +158,19 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     }
     // Use serialized keys instead of array references
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalUrlsKey, mediaType, sha256, kind, proxyConfig, enabled, blossomServersKey])
+  }, [
+    originalUrlsKey,
+    mediaType,
+    sha256,
+    kind,
+    proxyConfig,
+    authorPubkey,
+    enabled,
+    blossomServersKey,
+  ])
 
   // Serialize discovery relays for stable comparison
-  const discoveryRelaysKey = useMemo(
-    () => finalDiscoveryRelays.join('|'),
-    [finalDiscoveryRelays]
-  )
+  const discoveryRelaysKey = useMemo(() => finalDiscoveryRelays.join('|'), [finalDiscoveryRelays])
 
   // Discover alternative URLs if enabled
   useEffect(() => {

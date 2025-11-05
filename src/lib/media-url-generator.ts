@@ -17,9 +17,9 @@ export interface MediaUrlOptions {
   sha256?: string // File hash for discovery
   kind?: number // Event kind for relay search
   mediaType: MediaType
+  authorPubkey?: string // Author pubkey (npub or hex) for AS query parameter
   proxyConfig?: {
     enabled: boolean
-    origin?: string
     maxSize?: { width: number; height: number }
   }
 }
@@ -59,18 +59,6 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
     return {}
   } catch {
     return {}
-  }
-}
-
-/**
- * Extract protocol + hostname from a URL
- */
-function extractOrigin(url: string): string | null {
-  try {
-    const urlObj = new URL(url)
-    return `${urlObj.protocol}//${urlObj.hostname}`
-  } catch {
-    return null
   }
 }
 
@@ -115,11 +103,13 @@ function generateMirrorUrls(
 /**
  * Generate proxy URLs for a given original URL
  * Proxy URLs are transcoded/resized versions from Blossom servers
+ * Uses XS query parameters for servers and AS for author
  */
 function generateProxyUrls(
   originalUrl: string,
   proxyServers: BlossomServer[],
-  proxyConfig?: MediaUrlOptions['proxyConfig']
+  proxyConfig?: MediaUrlOptions['proxyConfig'],
+  authorPubkey?: string
 ): { urls: string[]; metadata: UrlMetadata[] } {
   const urls: string[] = []
   const metadata: UrlMetadata[] = []
@@ -133,16 +123,9 @@ function generateProxyUrls(
     return { urls, metadata }
   }
 
-  const originBase = extractOrigin(originalUrl)
-  if (!originBase) {
-    return { urls, metadata }
-  }
-
+  // Generate proxy URLs for each proxy server
   for (const server of proxyServers) {
     const baseUrl = server.url.replace(/\/$/, '')
-    const proxyOrigin = extractOrigin(baseUrl)
-
-    if (!proxyOrigin) continue
 
     // Build proxy URL
     let proxyUrl = `${baseUrl}/${sha256}.${ext}`
@@ -150,9 +133,14 @@ function generateProxyUrls(
     // Add query parameters
     const params = new URLSearchParams()
 
-    // If origin doesn't match proxy server, add origin parameter
-    if (originBase !== proxyOrigin) {
-      params.set('origin', originBase)
+    // Add all proxy servers as XS query parameters
+    for (const proxyServer of proxyServers) {
+      params.append('xs', proxyServer.url.replace(/\/$/, ''))
+    }
+
+    // Add author parameter (AS) if provided (can be npub or hex)
+    if (authorPubkey) {
+      params.set('as', authorPubkey.toLowerCase())
     }
 
     // Add size parameters for images
@@ -190,7 +178,7 @@ function generateProxyUrls(
  * 4. Original URLs again (if not Blossom URLs)
  */
 export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
-  const { urls: originalUrls, blossomServers, proxyConfig } = options
+  const { urls: originalUrls, blossomServers, proxyConfig, authorPubkey } = options
 
   const allUrls: string[] = []
   const allMetadata: UrlMetadata[] = []
@@ -224,7 +212,8 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
       const { urls: proxyUrls, metadata: proxyMetadata } = generateProxyUrls(
         originalUrl,
         proxyServers,
-        proxyConfig
+        proxyConfig,
+        authorPubkey
       )
       allUrls.push(...proxyUrls)
       allMetadata.push(...proxyMetadata)

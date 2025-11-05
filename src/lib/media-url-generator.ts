@@ -172,9 +172,9 @@ function generateProxyUrls(
  * Generate all possible media URLs with fallbacks
  *
  * Priority Order:
- * 1. Original URLs (if valid Blossom URLs)
- * 2. Mirror URLs (exact copies from user's Blossom servers)
- * 3. Proxy URLs (transcoded/resized versions from Blossom servers)
+ * 1. Proxy URLs (if proxy servers configured - tried first with backend servers as fallbacks)
+ * 2. Original URLs (if valid Blossom URLs)
+ * 3. Mirror URLs (exact copies from user's Blossom servers)
  * 4. Original URLs again (if not Blossom URLs)
  */
 export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
@@ -191,23 +191,7 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
   for (const originalUrl of originalUrls) {
     const isBlossom = isBlossomUrl(originalUrl)
 
-    // 1. Add valid Blossom original URLs first
-    if (isBlossom) {
-      allUrls.push(originalUrl)
-      allMetadata.push({ source: 'original' })
-    }
-
-    // 2. Generate and add mirror URLs
-    if (mirrorServers.length > 0) {
-      const { urls: mirrorUrls, metadata: mirrorMetadata } = generateMirrorUrls(
-        originalUrl,
-        mirrorServers
-      )
-      allUrls.push(...mirrorUrls)
-      allMetadata.push(...mirrorMetadata)
-    }
-
-    // 3. Generate and add proxy URLs
+    // 1. Generate and add proxy URLs FIRST (if configured)
     if (proxyServers.length > 0) {
       const { urls: proxyUrls, metadata: proxyMetadata } = generateProxyUrls(
         originalUrl,
@@ -217,6 +201,22 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
       )
       allUrls.push(...proxyUrls)
       allMetadata.push(...proxyMetadata)
+    }
+
+    // 2. Add valid Blossom original URLs
+    if (isBlossom) {
+      allUrls.push(originalUrl)
+      allMetadata.push({ source: 'original' })
+    }
+
+    // 3. Generate and add mirror URLs
+    if (mirrorServers.length > 0) {
+      const { urls: mirrorUrls, metadata: mirrorMetadata } = generateMirrorUrls(
+        originalUrl,
+        mirrorServers
+      )
+      allUrls.push(...mirrorUrls)
+      allMetadata.push(...mirrorMetadata)
     }
 
     // 4. Add non-Blossom URLs at the end

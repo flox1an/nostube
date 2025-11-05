@@ -677,7 +677,7 @@ export function VideoPage() {
 
     return (
       <>
-        <div className="flex flex-col gap-4 pt-4 px-2 sm:p-0">
+        <div className="flex flex-col gap-4 p-2 sm:px-0">
           {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
           <div className="flex items-start justify-between">
@@ -932,6 +932,7 @@ export function VideoPage() {
         initialPlayPos={currentPlayPos > 0 ? currentPlayPos : initialPlayPos}
         contentWarning={video.contentWarning}
         sha256={video.x} // Pass SHA256 hash for URL discovery
+        authorPubkey={video.pubkey} // Pass author pubkey for AS query parameter
         onAllSourcesFailed={urls => markVideoAsMissing(video.id, urls)}
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns'
-import { VideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
@@ -110,7 +110,7 @@ export const VideoCard = React.memo(function VideoCard({
     >
       <div className="p-0">
         <Link to={to}>
-          <div className="w-full overflow-hidden rounded-lg relative">
+          <div className="w-full overflow-hidden sm:rounded-lg relative">
             <img
               src={thumbnailUrl}
               loading="lazy"
@@ -145,7 +145,7 @@ export const VideoCard = React.memo(function VideoCard({
                 preload="metadata"
                 onLoadedData={handleVideoLoadedData}
                 className={cn(
-                  'w-full object-cover rounded-lg transition-opacity duration-300',
+                  'w-full object-cover sm:rounded-lg transition-opacity duration-300',
                   aspectRatio,
                   videoLoaded ? 'opacity-100' : 'opacity-0 hidden'
                 )}

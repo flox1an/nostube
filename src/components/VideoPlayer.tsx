@@ -2,12 +2,13 @@ import * as React from 'react'
 import { useRef, useEffect, useCallback, useState } from 'react'
 import 'media-chrome'
 import 'hls-video-element'
-import { TextTrack } from '@/utils/video-event'
+import { type TextTrack } from '@/utils/video-event'
 import { getLanguageLabel, imageProxyVideoPreview } from '@/lib/utils'
 import 'media-chrome/menu'
 import '@/types/media-chrome.d.ts'
 import { Loader2 } from 'lucide-react'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
+import { useIsMobile } from '../hooks'
 
 interface VideoPlayerProps {
   urls: string[]
@@ -22,6 +23,10 @@ interface VideoPlayerProps {
    * SHA256 hash of the video file (for discovery)
    */
   sha256?: string
+  /**
+   * Author pubkey (npub or hex) for AS query parameter in proxy URLs
+   */
+  authorPubkey?: string
   /**
    * Initial play position in seconds
    */
@@ -59,6 +64,7 @@ export function VideoPlayer({
   className,
   contentWarning,
   sha256,
+  authorPubkey,
   initialPlayPos = 0,
   onAllSourcesFailed,
   cinemaMode = false,
@@ -71,7 +77,7 @@ export function VideoPlayer({
   const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
-
+  const isMobile = useIsMobile()
   // Use new media URL failover system for video
   const {
     currentUrl: videoUrl,
@@ -83,6 +89,7 @@ export function VideoPlayer({
     mediaType: 'video',
     sha256,
     kind: 34235, // NIP-71 video event kind
+    authorPubkey,
     onError: error => {
       console.error('Video URL failover error:', error)
       // Notify parent if all sources failed
@@ -268,7 +275,7 @@ export function VideoPlayer({
         <hls-video
           src={videoUrl}
           slot="media"
-          className={cinemaMode ? 'cinema' : 'normal'}
+          className={cinemaMode || isMobile ? 'cinema' : 'normal'}
           autoPlay={!contentWarning}
           loop={loop}
           poster={posterUrl}
@@ -288,7 +295,7 @@ export function VideoPlayer({
           crossOrigin="anonymous"
           src={videoUrl}
           ref={videoRef}
-          className={cinemaMode ? 'cinema' : 'normal'}
+          className={cinemaMode || isMobile ? 'cinema' : 'normal'}
           slot="media"
           autoPlay={!contentWarning}
           loop={loop}
@@ -341,10 +348,10 @@ export function VideoPlayer({
             >
               {cinemaMode ? (
                 // Exit cinema mode - smaller 16:9 rectangle (normal view)
-                <rect x="1" y="6" width="22" height="12" rx="1" />
+                <rect x="1" y="4.5" width="22" height="15" rx="1" />
               ) : (
                 // Enter cinema mode - full-width 16:9 rectangle (cinema view)
-                <rect x="1" y="4.5" width="22" height="15" rx="1" />
+                <rect x="1" y="6" width="22" height="12" rx="1" />
               )}
             </svg>
           </button>

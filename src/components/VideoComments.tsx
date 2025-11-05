@@ -200,8 +200,8 @@ export function VideoComments({ videoId, link, authorPubkey, relays }: VideoComm
   }
 
   return (
-    <>
-      <h2 className="mb-4 px-2 sm:p-0">Comments</h2>
+    <div className="px-2 sm:px-0">
+      <h2 className="mb-4">Comments</h2>
       {user && (
         <form onSubmit={handleSubmit} className="mb-8">
           <Textarea
@@ -221,6 +221,6 @@ export function VideoComments({ videoId, link, authorPubkey, relays }: VideoComm
           <CommentItem key={comment.id} comment={comment} link={link} />
         ))}
       </div>
-    </>
+    </div>
   )
 }

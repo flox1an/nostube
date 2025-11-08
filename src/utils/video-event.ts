@@ -264,19 +264,9 @@ export function processEvent(
       url = url.split(' ')[0]
     }
 
-    // Generate mirror and proxy URLs if servers are configured
-    let finalUrls = videoUrls
-    if (blossomServers && blossomServers.length > 0) {
-      const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
-      const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
-
-      const mirrorUrls =
-        mirrorServers.length > 0 ? generateMirrorUrls(videoUrls, mirrorServers) : []
-      const proxyUrls = proxyServers.length > 0 ? generateProxyUrls(videoUrls, proxyServers) : []
-
-      // Prepend mirror URLs and proxy URLs before original URLs
-      finalUrls = [...mirrorUrls, ...proxyUrls, ...videoUrls]
-    }
+    // NOTE: URL generation (mirrors, proxies) is now handled by useMediaUrls hook in VideoPlayer
+    // We just pass the raw video URLs here
+    const finalUrls = videoUrls
 
     const videoEvent: VideoEvent = {
       id: event.id,
@@ -323,16 +313,9 @@ export function processEvent(
       url = url.split(' ')[0]
     }
 
-    // Generate proxy URLs if proxy servers are configured
-    let finalUrls = [url]
-    if (blossomServers && blossomServers.length > 0) {
-      const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
-      if (proxyServers.length > 0) {
-        const proxyUrls = generateProxyUrls([url], proxyServers)
-        // Prepend proxy URLs before original URLs
-        finalUrls = [...proxyUrls, url]
-      }
-    }
+    // NOTE: URL generation (mirrors, proxies) is now handled by useMediaUrls hook in VideoPlayer
+    // We just pass the raw video URL here
+    const finalUrls = [url]
 
     const videoEvent: VideoEvent = {
       id: event.id,

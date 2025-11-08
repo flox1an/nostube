@@ -209,3 +209,33 @@
     scrollbar-width: none; /* Firefox */
   }
 }
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.animate-reveal {
+  animation: reveal 200ms ease-out;
+}
+
+.animate-fade-out {
+  animation: fade-out 100ms ease-in;
+}

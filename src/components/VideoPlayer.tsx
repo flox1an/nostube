@@ -78,6 +78,35 @@ export function VideoPlayer({
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
+  const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isFadingOut, setIsFadingOut] = useState(false)
+  const playPauseTimeoutRef = useRef<number | null>(null)
+  const fadeOutTimeoutRef = useRef<number | null>(null)
+
+  // Memoize proxyConfig to prevent infinite loops
+  const proxyConfig = React.useMemo(
+    () => ({
+      enabled: true, // Enable proxy for videos
+    }),
+    []
+  )
+
+  // Store onAllSourcesFailed in ref to avoid dependency issues
+  const onAllSourcesFailedRef = React.useRef(onAllSourcesFailed)
+  const urlsRef = React.useRef(urls)
+  React.useEffect(() => {
+    onAllSourcesFailedRef.current = onAllSourcesFailed
+    urlsRef.current = urls
+  }, [onAllSourcesFailed, urls])
+
+  // Memoize onError callback to prevent recreating it on every render
+  const handleVideoUrlError = React.useCallback((error: Error) => {
+    console.error('Video URL failover error:', error)
+    // Note: We can't check hasMoreVideoUrls here as it's from the hook result
+    // The hook will handle calling onAllSourcesFailed when appropriate
+  }, [])
+
   // Use new media URL failover system for video
   const {
     currentUrl: videoUrl,
@@ -90,27 +119,69 @@ export function VideoPlayer({
     sha256,
     kind: 34235, // NIP-71 video event kind
     authorPubkey,
-    onError: error => {
-      console.error('Video URL failover error:', error)
-      // Notify parent if all sources failed
-      if (!hasMoreVideoUrls) {
-        onAllSourcesFailed?.(urls)
-      }
-    },
+    proxyConfig,
+    onError: handleVideoUrlError,
   })
+
+  // Notify parent when all sources have failed
+  React.useEffect(() => {
+    if (!hasMoreVideoUrls && !isLoadingVideoUrls && videoUrl === null) {
+      onAllSourcesFailedRef.current?.(urlsRef.current)
+    }
+  }, [hasMoreVideoUrls, isLoadingVideoUrls, videoUrl])
 
   const isHls = React.useMemo(
     () => mime === 'application/vnd.apple.mpegurl' || videoUrl?.endsWith('.m3u8'),
     [mime, videoUrl]
   )
 
-  // Notify parent when video element is ready
+  // Notify parent when video element is ready (only when element actually changes)
+  const lastNotifiedElementRef = useRef<HTMLVideoElement | null>(null)
+  const onVideoElementReadyRef = useRef(onVideoElementReady)
+
+  // Keep ref in sync with callback
+  useEffect(() => {
+    onVideoElementReadyRef.current = onVideoElementReady
+  }, [onVideoElementReady])
+
+  // Reset when URLs change (new video)
+  useEffect(() => {
+    lastNotifiedElementRef.current = null
+    // Reset play/pause overlay state
+    setShowPlayPauseIcon(false)
+    setIsPaused(false)
+    setIsFadingOut(false)
+    if (playPauseTimeoutRef.current !== null) {
+      clearTimeout(playPauseTimeoutRef.current)
+      playPauseTimeoutRef.current = null
+    }
+    if (fadeOutTimeoutRef.current !== null) {
+      clearTimeout(fadeOutTimeoutRef.current)
+      fadeOutTimeoutRef.current = null
+    }
+  }, [urls])
+
+  // Notify parent when element is ready (only once per element)
   useEffect(() => {
     const el = isHls ? hlsEl : videoRef.current
-    if (onVideoElementReady) {
-      onVideoElementReady(el)
+
+    // Only notify if element changed and we haven't notified for this element yet
+    if (el && el !== lastNotifiedElementRef.current && onVideoElementReadyRef.current) {
+      lastNotifiedElementRef.current = el
+      // Use requestAnimationFrame to defer the callback to avoid triggering during render
+      requestAnimationFrame(() => {
+        // Double-check the element is still the same before calling
+        const currentEl = isHls ? hlsEl : videoRef.current
+        if (
+          currentEl === el &&
+          lastNotifiedElementRef.current === el &&
+          onVideoElementReadyRef.current
+        ) {
+          onVideoElementReadyRef.current(el)
+        }
+      })
     }
-  }, [isHls, hlsEl, onVideoElementReady])
+  }, [isHls, hlsEl])
 
   // Track if we've already set the initial position
   const hasSetInitialPos = useRef(false)
@@ -213,8 +284,14 @@ export function VideoPlayer({
   }, [isHls, hlsEl])
 
   // Ref callback for hls-video custom element
+  const hlsElRef = useRef<HTMLVideoElement | null>(null)
   const hlsRef = useCallback((node: Element | null) => {
-    setHlsEl(node && 'currentTime' in node ? (node as HTMLVideoElement) : null)
+    const newEl = node && 'currentTime' in node ? (node as HTMLVideoElement) : null
+    // Only update state if the element actually changed
+    if (newEl !== hlsElRef.current) {
+      hlsElRef.current = newEl
+      setHlsEl(newEl)
+    }
   }, [])
 
   const handleTimeUpdate = useCallback(() => {
@@ -259,6 +336,77 @@ export function VideoPlayer({
       el.removeEventListener('ended', handleEndedEvent)
     }
   }, [onEnded, isHls, hlsEl, handleEndedEvent])
+
+  // Handle play/pause events to show icon overlay
+  useEffect(() => {
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
+
+    const handlePlay = () => {
+      setIsPaused(false)
+      setIsFadingOut(false)
+      setShowPlayPauseIcon(true)
+      // Clear existing timeouts
+      if (playPauseTimeoutRef.current !== null) {
+        clearTimeout(playPauseTimeoutRef.current)
+      }
+      if (fadeOutTimeoutRef.current !== null) {
+        clearTimeout(fadeOutTimeoutRef.current)
+      }
+      // Start fade-out after 1 second
+      playPauseTimeoutRef.current = window.setTimeout(() => {
+        setIsFadingOut(true)
+        // Hide icon after fade-out completes (100ms)
+        fadeOutTimeoutRef.current = window.setTimeout(() => {
+          setShowPlayPauseIcon(false)
+          setIsFadingOut(false)
+          playPauseTimeoutRef.current = null
+          fadeOutTimeoutRef.current = null
+        }, 100)
+      }, 1000)
+    }
+
+    const handlePause = () => {
+      setIsPaused(true)
+      setIsFadingOut(false)
+      setShowPlayPauseIcon(true)
+      // Clear existing timeouts
+      if (playPauseTimeoutRef.current !== null) {
+        clearTimeout(playPauseTimeoutRef.current)
+      }
+      if (fadeOutTimeoutRef.current !== null) {
+        clearTimeout(fadeOutTimeoutRef.current)
+      }
+      // Start fade-out after 1 second
+      playPauseTimeoutRef.current = window.setTimeout(() => {
+        setIsFadingOut(true)
+        // Hide icon after fade-out completes (100ms)
+        fadeOutTimeoutRef.current = window.setTimeout(() => {
+          setShowPlayPauseIcon(false)
+          setIsFadingOut(false)
+          playPauseTimeoutRef.current = null
+          fadeOutTimeoutRef.current = null
+        }, 100)
+      }, 1000)
+    }
+
+    el.addEventListener('play', handlePlay)
+    el.addEventListener('pause', handlePause)
+
+    // Initialize paused state
+    setIsPaused(el.paused)
+
+    return () => {
+      el.removeEventListener('play', handlePlay)
+      el.removeEventListener('pause', handlePause)
+      if (playPauseTimeoutRef.current !== null) {
+        clearTimeout(playPauseTimeoutRef.current)
+      }
+      if (fadeOutTimeoutRef.current !== null) {
+        clearTimeout(fadeOutTimeoutRef.current)
+      }
+    }
+  }, [isHls, hlsEl])
 
   // Show loading state if video URLs are still loading
   if (isLoadingVideoUrls || !videoUrl) {
@@ -315,6 +463,29 @@ export function VideoPlayer({
       {showSpinner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none z-10">
           <Loader2 className="h-32 w-32 animate-spin text-white text-8xl" />
+        </div>
+      )}
+
+      {/* Play/Pause icon overlay */}
+      {showPlayPauseIcon && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div
+            className={`bg-black/50 rounded-full p-4 ${
+              isFadingOut ? 'animate-fade-out' : 'animate-reveal'
+            }`}
+          >
+            {isPaused ? (
+              // Pause icon (two rectangles)
+              <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              // Play icon (triangle pointing right)
+              <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </div>
         </div>
       )}
 

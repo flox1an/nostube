@@ -109,7 +109,8 @@ function generateProxyUrls(
   originalUrl: string,
   proxyServers: BlossomServer[],
   proxyConfig?: MediaUrlOptions['proxyConfig'],
-  authorPubkey?: string
+  authorPubkey?: string,
+  mirrorServers: BlossomServer[] = []
 ): { urls: string[]; metadata: UrlMetadata[] } {
   const urls: string[] = []
   const metadata: UrlMetadata[] = []
@@ -157,6 +158,7 @@ function generateProxyUrls(
 
     // Add query parameters
     const params = new URLSearchParams()
+    const addedHostnames = new Set<string>() // Track added hostnames to avoid duplicates
 
     // Add all proxy servers as XS query parameters (except the current proxy server)
     for (const proxyServer of proxyServers) {
@@ -168,17 +170,53 @@ function generateProxyUrls(
         if (proxyServerOrigin === proxyOrigin) {
           continue
         }
-      } catch {
-        continue
-      }
 
-      // Extract hostname only (without protocol)
-      try {
+        // Extract hostname only (without protocol)
         const hostname = new URL(proxyServerUrl).hostname
-        params.append('xs', hostname)
+        if (!addedHostnames.has(hostname)) {
+          params.append('xs', hostname)
+          addedHostnames.add(hostname)
+        }
       } catch {
         // If URL parsing fails, skip this proxy server
         continue
+      }
+    }
+
+    // Add mirror servers as XS query parameters (they can serve the content as fallbacks)
+    for (const mirrorServer of mirrorServers) {
+      const mirrorServerUrl = mirrorServer.url.replace(/\/$/, '')
+
+      // Skip if this mirror server is the same as the current proxy server
+      try {
+        const mirrorServerOrigin = new URL(mirrorServerUrl).origin
+        if (mirrorServerOrigin === proxyOrigin) {
+          continue
+        }
+
+        // Extract hostname only (without protocol)
+        const hostname = new URL(mirrorServerUrl).hostname
+        if (!addedHostnames.has(hostname)) {
+          params.append('xs', hostname)
+          addedHostnames.add(hostname)
+        }
+      } catch {
+        // If URL parsing fails, skip this mirror server
+        continue
+      }
+    }
+
+    // Add original URL's server as XS parameter if it's a Blossom server and different from proxy
+    // This allows the proxy server to fall back to the original source if needed
+    if (originalOrigin && originalOrigin !== proxyOrigin) {
+      try {
+        const originalHostname = new URL(originalUrl).hostname
+        if (!addedHostnames.has(originalHostname)) {
+          params.append('xs', originalHostname)
+          addedHostnames.add(originalHostname)
+        }
+      } catch {
+        // If URL parsing fails, skip
       }
     }
 
@@ -241,7 +279,8 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
         originalUrl,
         proxyServers,
         proxyConfig,
-        authorPubkey
+        authorPubkey,
+        mirrorServers
       )
       allUrls.push(...proxyUrls)
       allMetadata.push(...proxyMetadata)

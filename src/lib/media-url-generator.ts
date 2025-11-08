@@ -123,9 +123,34 @@ function generateProxyUrls(
     return { urls, metadata }
   }
 
+  // Extract origin from original URL to check for self-reference
+  let originalOrigin = ''
+  try {
+    const urlObj = new URL(originalUrl)
+    originalOrigin = urlObj.origin
+  } catch {
+    // If URL parsing fails, skip this URL
+    return { urls, metadata }
+  }
+
   // Generate proxy URLs for each proxy server
   for (const server of proxyServers) {
     const baseUrl = server.url.replace(/\/$/, '')
+
+    // Check if the original URL is already from this proxy server
+    let proxyOrigin = ''
+    try {
+      const proxyUrlObj = new URL(baseUrl)
+      proxyOrigin = proxyUrlObj.origin
+    } catch {
+      // If URL parsing fails, skip this proxy server
+      continue
+    }
+
+    // Skip if the original URL already points to this proxy server
+    if (originalOrigin === proxyOrigin) {
+      continue
+    }
 
     // Build proxy URL
     let proxyUrl = `${baseUrl}/${sha256}.${ext}`
@@ -133,9 +158,28 @@ function generateProxyUrls(
     // Add query parameters
     const params = new URLSearchParams()
 
-    // Add all proxy servers as XS query parameters
+    // Add all proxy servers as XS query parameters (except the current proxy server)
     for (const proxyServer of proxyServers) {
-      params.append('xs', proxyServer.url.replace(/\/$/, ''))
+      const proxyServerUrl = proxyServer.url.replace(/\/$/, '')
+
+      // Skip if this is the same server we're creating the proxy URL for
+      try {
+        const proxyServerOrigin = new URL(proxyServerUrl).origin
+        if (proxyServerOrigin === proxyOrigin) {
+          continue
+        }
+      } catch {
+        continue
+      }
+
+      // Extract hostname only (without protocol)
+      try {
+        const hostname = new URL(proxyServerUrl).hostname
+        params.append('xs', hostname)
+      } catch {
+        // If URL parsing fails, skip this proxy server
+        continue
+      }
     }
 
     // Add author parameter (AS) if provided (can be npub or hex)

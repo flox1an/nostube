@@ -285,7 +285,11 @@ export function VideoComments({
 
   // Load comments from relays when filters change
   useEffect(() => {
-    const loader = createTimelineLoader(pool, readRelays, filters, { limit: 50, eventStore })
+    const loader = createTimelineLoader(pool, readRelays, filters, {
+      limit: 50,
+      eventStore,
+      timeout: 5000, // 5 second timeout per relay to prevent blocking
+    })
     const subscription = loader().subscribe(e => eventStore.add(e))
 
     // Cleanup subscription on unmount or filters change
@@ -405,6 +409,11 @@ export function VideoComments({
   const cancelReply = () => {
     setReplyTo(null)
     setReplyContent('')
+  }
+
+  // Hide entire section when not logged in and no comments exist
+  if (!user && threadedComments.length === 0) {
+    return null
   }
 
   return (

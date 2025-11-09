@@ -323,3 +323,5 @@ render(
 ```
 
 **Run tests after changes:** Use the test script. Task not finished until tests pass.
+
+- when user is not logged in and no comments exist, then we can completely hide the comments section incl. "COmments" headline.

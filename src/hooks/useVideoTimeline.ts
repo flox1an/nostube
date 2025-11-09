@@ -72,7 +72,10 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
     // Load only if never loaded or if last load was more than 60 seconds ago
     if (lastLoaded === undefined || Date.now() - lastLoaded > 60000) {
       setVideosLoading(true)
-      const subscription = createTimelineLoader(pool, readRelays, filters, { limit: 50 })()
+      const subscription = createTimelineLoader(pool, readRelays, filters, {
+        limit: 50,
+        timeout: 5000, // 5 second timeout per relay to prevent blocking
+      })()
         .pipe(
           finalize(() => {
             lastLoadedTimestamp.set(hash, Date.now())

@@ -38,6 +38,7 @@ export function useLikedEvents() {
     const loader = createTimelineLoader(pool, readRelays, filters, {
       eventStore,
       limit: 500, // Load many reactions
+      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
 
     const subscription = loader().subscribe({

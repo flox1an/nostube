@@ -1,11 +1,18 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { Check, Circle } from 'lucide-react'
+import { Check, Circle, Loader2, X } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent } from '@/utils/video-event'
+import { useState, useEffect } from 'react'
 
 interface VideoDebugInfoProps {
   open: boolean
@@ -15,7 +22,114 @@ interface VideoDebugInfoProps {
   blossomServers?: BlossomServer[]
 }
 
-export function VideoDebugInfo({ open, onOpenChange, videoEvent, video, blossomServers }: VideoDebugInfoProps) {
+type ServerStatus = 'checking' | 'available' | 'unavailable' | 'error'
+
+interface ServerAvailability {
+  url: string
+  status: ServerStatus
+  statusCode?: number
+  contentLength?: number
+}
+
+/**
+ * Check if a file exists on a blossom server using HEAD request
+ */
+async function checkBlossomServer(
+  serverUrl: string,
+  sha256: string,
+  ext: string
+): Promise<ServerAvailability> {
+  const normalizedUrl = serverUrl.replace(/\/$/, '')
+  const fileUrl = `${normalizedUrl}/${sha256}.${ext}`
+
+  try {
+    const response = await fetch(fileUrl, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    })
+
+    const contentLength = response.headers.get('content-length')
+
+    return {
+      url: serverUrl,
+      status: response.ok ? 'available' : 'unavailable',
+      statusCode: response.status,
+      contentLength: contentLength ? parseInt(contentLength) : undefined,
+    }
+  } catch (error) {
+    return {
+      url: serverUrl,
+      status: 'error',
+    }
+  }
+}
+
+export function VideoDebugInfo({
+  open,
+  onOpenChange,
+  videoEvent,
+  video,
+  blossomServers,
+}: VideoDebugInfoProps) {
+  const [serverAvailability, setServerAvailability] = useState<Map<string, ServerAvailability>>(
+    new Map()
+  )
+
+  // Extract SHA256 and extension from first video URL
+  const videoHash = video?.urls[0]
+    ? extractBlossomHash(video.urls[0])
+    : { sha256: undefined, ext: undefined }
+
+  // Check all blossom servers when dialog opens
+  useEffect(() => {
+    if (!open || !videoHash.sha256 || !videoHash.ext) {
+      return
+    }
+
+    const serversToCheck: string[] = []
+
+    // Add configured blossom servers
+    if (blossomServers && blossomServers.length > 0) {
+      blossomServers.forEach(server => {
+        serversToCheck.push(server.url)
+      })
+    }
+
+    // Add origins from original URLs
+    if (video?.urls) {
+      video.urls.forEach(url => {
+        // Skip proxy URLs
+        if (url.includes('?origin=') || url.includes('?xs=')) return
+
+        try {
+          const urlObj = new URL(url)
+          const origin = urlObj.origin
+          if (!serversToCheck.includes(origin)) {
+            serversToCheck.push(origin)
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      })
+    }
+
+    if (serversToCheck.length === 0) {
+      return
+    }
+
+    // Reset all to checking state
+    const initialMap = new Map<string, ServerAvailability>()
+    serversToCheck.forEach(serverUrl => {
+      initialMap.set(serverUrl, { url: serverUrl, status: 'checking' })
+    })
+    setServerAvailability(initialMap)
+
+    // Check each server
+    serversToCheck.forEach(async serverUrl => {
+      const result = await checkBlossomServer(serverUrl, videoHash.sha256!, videoHash.ext!)
+      setServerAvailability(prev => new Map(prev).set(serverUrl, result))
+    })
+  }, [open, videoHash.sha256, videoHash.ext, blossomServers, video?.urls])
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
@@ -62,7 +176,9 @@ export function VideoDebugInfo({ open, onOpenChange, videoEvent, video, blossomS
               <div className="bg-muted p-4 rounded-lg space-y-4">
                 {/* Original URLs */}
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Original URLs ({video?.urls.length || 0})</h4>
+                  <h4 className="text-sm font-medium mb-2">
+                    Original URLs ({video?.urls.length || 0})
+                  </h4>
                   {video && video.urls.length > 0 ? (
                     <ul className="space-y-2 text-sm">
                       {video.urls.map((url, idx) => {
@@ -72,16 +188,63 @@ export function VideoDebugInfo({ open, onOpenChange, videoEvent, video, blossomS
                           const urlObj = new URL(url)
                           const origin = urlObj.origin
                           const isProxyUrl = url.includes('?origin=') || url.includes('?xs=')
+                          const availability = serverAvailability.get(origin)
+
+                          // Determine icon based on availability
+                          let statusIcon
+                          let statusColor
+                          let statusText
+
+                          if (availability && !isProxyUrl) {
+                            switch (availability.status) {
+                              case 'checking':
+                                statusIcon = (
+                                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+                                )
+                                statusColor = 'text-blue-500'
+                                statusText = 'Checking...'
+                                break
+                              case 'available':
+                                statusIcon = <Check className="w-4 h-4 text-green-500 shrink-0" />
+                                statusColor = 'text-green-500'
+                                statusText = availability.contentLength
+                                  ? `Available (${(availability.contentLength / 1024 / 1024).toFixed(2)} MB)`
+                                  : 'Available'
+                                break
+                              case 'unavailable':
+                                statusIcon = <X className="w-4 h-4 text-red-500 shrink-0" />
+                                statusColor = 'text-red-500'
+                                statusText = `Not found (${availability.statusCode})`
+                                break
+                              case 'error':
+                                statusIcon = <X className="w-4 h-4 text-orange-500 shrink-0" />
+                                statusColor = 'text-orange-500'
+                                statusText = 'Connection error'
+                                break
+                            }
+                          } else {
+                            statusIcon = (
+                              <Circle className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
+                            )
+                          }
+
                           return (
                             <li key={idx} className="break-all">
                               <div className="flex items-start gap-2">
-                                <Circle className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
+                                {statusIcon}
                                 <div className="flex-1">
                                   <code className="text-xs block mb-1">{origin}</code>
                                   {isBlossomUrl && (
                                     <div className="text-xs text-muted-foreground">
                                       SHA256: {sha256?.slice(0, 16)}...
-                                      {isProxyUrl && <span className="ml-2 text-purple-500">(proxy)</span>}
+                                      {isProxyUrl && (
+                                        <span className="ml-2 text-purple-500">(proxy)</span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {availability && statusText && !isProxyUrl && (
+                                    <div className={`text-xs ${statusColor} font-medium`}>
+                                      {statusText}
                                     </div>
                                   )}
                                 </div>
@@ -91,7 +254,7 @@ export function VideoDebugInfo({ open, onOpenChange, videoEvent, video, blossomS
                         } catch {
                           return (
                             <li key={idx} className="break-all text-red-500">
-                              <span className="text-red-500">✗</span> Invalid URL
+                              <X className="w-4 h-4 text-red-500 inline-block mr-1" /> Invalid URL
                             </li>
                           )
                         }
@@ -106,31 +269,68 @@ export function VideoDebugInfo({ open, onOpenChange, videoEvent, video, blossomS
                 <div>
                   <h4 className="text-sm font-medium mb-2">
                     Configured Blossom Servers ({blossomServers?.length || 0})
+                    {videoHash.sha256 && videoHash.ext && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        Checking for {videoHash.sha256.slice(0, 8)}...{videoHash.ext}
+                      </span>
+                    )}
                   </h4>
                   {blossomServers && blossomServers.length > 0 ? (
                     <ul className="space-y-2 text-sm">
                       {blossomServers.map((server, idx) => {
-                        // Check if this server has the video
-                        const hasVideo = video?.urls.some(url => {
-                          try {
-                            const urlObj = new URL(url)
-                            return urlObj.origin === new URL(server.url).origin
-                          } catch {
-                            return false
+                        const availability = serverAvailability.get(server.url)
+
+                        // Determine icon and color based on status
+                        let statusIcon
+                        let statusColor
+                        let statusText
+
+                        if (availability) {
+                          switch (availability.status) {
+                            case 'checking':
+                              statusIcon = (
+                                <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+                              )
+                              statusColor = 'text-blue-500'
+                              statusText = 'Checking...'
+                              break
+                            case 'available':
+                              statusIcon = <Check className="w-4 h-4 text-green-500 shrink-0" />
+                              statusColor = 'text-green-500'
+                              statusText = availability.contentLength
+                                ? `Available (${(availability.contentLength / 1024 / 1024).toFixed(2)} MB)`
+                                : 'Available'
+                              break
+                            case 'unavailable':
+                              statusIcon = <X className="w-4 h-4 text-red-500 shrink-0" />
+                              statusColor = 'text-red-500'
+                              statusText = `Not found (${availability.statusCode})`
+                              break
+                            case 'error':
+                              statusIcon = <X className="w-4 h-4 text-orange-500 shrink-0" />
+                              statusColor = 'text-orange-500'
+                              statusText = 'Connection error'
+                              break
                           }
-                        })
+                        } else {
+                          statusIcon = <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                          statusColor = 'text-muted-foreground'
+                          statusText = 'Not checked'
+                        }
+
                         return (
                           <li key={idx} className="flex items-center gap-2">
-                            {hasVideo ? (
-                              <Check className="w-4 h-4 text-green-500 shrink-0" />
-                            ) : (
-                              <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                            )}
+                            {statusIcon}
                             <div className="flex-1">
                               <code className="text-xs">{server.url}</code>
                               <div className="text-xs text-muted-foreground">
                                 {server.name} • Tags: {server.tags.join(', ')}
                               </div>
+                              {availability && statusText && (
+                                <div className={`text-xs ${statusColor} font-medium`}>
+                                  {statusText}
+                                </div>
+                              )}
                             </div>
                           </li>
                         )

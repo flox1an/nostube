@@ -126,7 +126,9 @@ export function useVideoKeyboardShortcuts({
         const frameStep = 1 / 30
         if (key === '.') {
           const nextTime = el!.currentTime + frameStep
-          el!.currentTime = Number.isFinite(el!.duration) ? Math.min(el!.duration, nextTime) : nextTime
+          el!.currentTime = Number.isFinite(el!.duration)
+            ? Math.min(el!.duration, nextTime)
+            : nextTime
         } else {
           el!.currentTime = Math.max(0, el!.currentTime - frameStep)
         }

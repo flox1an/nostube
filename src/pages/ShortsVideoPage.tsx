@@ -13,6 +13,7 @@ import { decodeEventPointer } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useProfile, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ImageIcon, MessageCircle, ChevronDown, Share2 } from 'lucide-react'
 import { imageProxy, imageProxyVideoPreview } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -77,6 +78,13 @@ function ShortVideoItem({
     () => nprofileFromEvent(video.pubkey, event),
     [video.pubkey, event]
   )
+
+  // Get relays from event's seenRelays
+  const eventRelays = useMemo(() => {
+    if (!event) return []
+    const seenRelays = getSeenRelays(event)
+    return seenRelays ? Array.from(seenRelays) : []
+  }, [event])
 
   // Auto-play/pause based on isActive
   useEffect(() => {
@@ -198,11 +206,7 @@ function ShortVideoItem({
               {isPaused && isActive && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="bg-black/50 rounded-full p-4">
-                    <svg
-                      className="w-16 h-16 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                     </svg>
                   </div>
@@ -241,6 +245,7 @@ function ShortVideoItem({
               eventId={video.id}
               kind={video.kind}
               authorPubkey={video.pubkey}
+              relays={eventRelays}
               className="bg-black/50 hover:bg-black/70 text-white border-white/20"
             />
           </div>

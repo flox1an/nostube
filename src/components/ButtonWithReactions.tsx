@@ -1,16 +1,16 @@
 import { useCurrentUser, useNostrPublish, useAppContext } from '@/hooks'
-import { useEventModel, useEventStore } from 'applesauce-react/hooks'
-import { ReactionsModel } from 'applesauce-core/models'
+import { useReactions } from '@/hooks/useReactions'
+import { useEventStore } from 'applesauce-react/hooks'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HeartIcon } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
-import { NostrEvent } from 'nostr-tools'
 
 interface ButtonWithReactionsProps {
   eventId: string
   kind: number
   authorPubkey: string
+  relays?: string[]
   className?: string
 }
 
@@ -18,6 +18,7 @@ export function ButtonWithReactions({
   eventId,
   kind,
   authorPubkey,
+  relays = [],
   className,
 }: ButtonWithReactionsProps) {
   const { user } = useCurrentUser()
@@ -25,20 +26,8 @@ export function ButtonWithReactions({
   const { config } = useAppContext()
   const { publish, isPending } = useNostrPublish()
 
-  // Create a dummy event object for ReactionsModel
-  // ReactionsModel expects a NostrEvent, so we create a minimal one
-  const dummyEvent: NostrEvent = {
-    id: eventId,
-    pubkey: authorPubkey,
-    created_at: 0,
-    kind: kind,
-    tags: [],
-    content: '',
-    sig: '',
-  }
-
-  // Use ReactionsModel to get reactions for this event
-  const reactions = useEventModel(ReactionsModel, [dummyEvent]) || []
+  // Use the new useReactions hook to load reactions from relays
+  const reactions = useReactions({ eventId, authorPubkey, kind, relays })
 
   // Check if current user has liked
   const hasLiked =

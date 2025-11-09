@@ -32,6 +32,7 @@ import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
 import { VideoPageLayout } from '@/components/VideoPageLayout'
 import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
 import { Button } from '@/components/ui/button'
+import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
 
 export function VideoPage() {
   const { config } = useAppContext()
@@ -129,15 +130,12 @@ export function VideoPage() {
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
 
   // Use ultra-wide video detection hook
-  const {
-    tempCinemaModeForWideVideo,
-    setTempCinemaModeForWideVideo,
-    handleVideoDimensionsLoaded,
-  } = useUltraWideVideo({
-    videoDimensions: video?.dimensions,
-    videoId: video?.id,
-    persistedCinemaMode,
-  })
+  const { tempCinemaModeForWideVideo, setTempCinemaModeForWideVideo, handleVideoDimensionsLoaded } =
+    useUltraWideVideo({
+      videoDimensions: video?.dimensions,
+      videoId: video?.id,
+      persistedCinemaMode,
+    })
 
   // Effective cinema mode: temp override for ultra-wide, or persisted preference
   const cinemaMode = tempCinemaModeForWideVideo || persistedCinemaMode
@@ -159,14 +157,19 @@ export function VideoPage() {
     })
 
   // Use playlist navigation hook
-  const { prevPlaylistVideo, nextPlaylistVideo, handlePlaylistVideoEnd, navigateToPrevious, navigateToNext } =
-    usePlaylistNavigation({
-      playlistParam,
-      currentVideoId: video?.id,
-      playlistVideos,
-      shouldLoop: shouldVideoLoop(video?.kind),
-      onPlayPosReset: () => setCurrentPlayPos(0),
-    })
+  const {
+    prevPlaylistVideo,
+    nextPlaylistVideo,
+    handlePlaylistVideoEnd,
+    navigateToPrevious,
+    navigateToNext,
+  } = usePlaylistNavigation({
+    playlistParam,
+    currentVideoId: video?.id,
+    playlistVideos,
+    shouldLoop: shouldVideoLoop(video?.kind),
+    onPlayPosReset: () => setCurrentPlayPos(0),
+  })
 
   // State for active video element
   const [activeVideoElement, setActiveVideoElement] = useState<HTMLVideoElement | null>(null)
@@ -183,6 +186,9 @@ export function VideoPage() {
   // Share state
   const [shareOpen, setShareOpen] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
+
+  // Mirror dialog state
+  const [mirrorDialogOpen, setMirrorDialogOpen] = useState(false)
 
   // Update document title
   useEffect(() => {
@@ -230,20 +236,13 @@ export function VideoPage() {
   }, [video])
 
   // Handle mirror action
-  const handleMirror = async () => {
-    alert(
-      'Mirror functionality is not implemented yet. This feature will allow you to copy the video to your configured blossom servers for better redundancy.'
-    )
+  const handleMirror = () => {
+    setMirrorDialogOpen(true)
   }
 
   // Build share URL and links
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const shareUrl = buildShareUrl(
-    baseUrl,
-    nevent || '',
-    includeTimestamp,
-    currentPlayPos
-  )
+  const shareUrl = buildShareUrl(baseUrl, nevent || '', includeTimestamp, currentPlayPos)
   const fullUrl = shareUrl
   const title = video?.title || 'Watch this video'
   const thumbnailUrl = video?.images[0] || ''
@@ -253,10 +252,13 @@ export function VideoPage() {
   }, [shareUrl, fullUrl, title, thumbnailUrl])
 
   // Handle video element ready callback
-  const handleVideoElementReady = useCallback((element: HTMLVideoElement | null) => {
-    videoElementRef.current = element
-    setActiveVideoElement(element)
-  }, [videoElementRef])
+  const handleVideoElementReady = useCallback(
+    (element: HTMLVideoElement | null) => {
+      videoElementRef.current = element
+      setActiveVideoElement(element)
+    },
+    [videoElementRef]
+  )
 
   // Render sidebar content (playlist or suggestions)
   const renderSidebarContent = () => {
@@ -360,35 +362,49 @@ export function VideoPage() {
   }
 
   return (
-    <VideoPageLayout
-      cinemaMode={cinemaMode}
-      videoPlayer={renderVideoPlayer()}
-      videoInfo={
-        <VideoInfoSection
-          video={video}
-          isLoading={isLoading}
-          metadata={metadata}
-          authorName={authorName}
-          relaysToUse={relaysToUse}
-          userPubkey={user?.pubkey}
-          configRelays={config.relays}
-          configBlossomServers={config.blossomServers}
-          videoEvent={videoEvent}
-          shareOpen={shareOpen}
-          setShareOpen={setShareOpen}
-          shareUrl={shareUrl}
-          includeTimestamp={includeTimestamp}
-          setIncludeTimestamp={setIncludeTimestamp}
-          shareLinks={shareLinks}
-          onDelete={() => navigate('/')}
+    <>
+      <VideoPageLayout
+        cinemaMode={cinemaMode}
+        videoPlayer={renderVideoPlayer()}
+        videoInfo={
+          <VideoInfoSection
+            video={video}
+            isLoading={isLoading}
+            metadata={metadata}
+            authorName={authorName}
+            relaysToUse={relaysToUse}
+            userPubkey={user?.pubkey}
+            configRelays={config.relays}
+            configBlossomServers={config.blossomServers}
+            videoEvent={videoEvent}
+            shareOpen={shareOpen}
+            setShareOpen={setShareOpen}
+            shareUrl={shareUrl}
+            includeTimestamp={includeTimestamp}
+            setIncludeTimestamp={setIncludeTimestamp}
+            shareLinks={shareLinks}
+            onDelete={() => navigate('/')}
+          />
+        }
+        sidebar={
+          <>
+            <VideoAvailabilityAlert
+              blossomServerCount={blossomServerCount}
+              onMirror={handleMirror}
+            />
+            {renderSidebarContent()}
+          </>
+        }
+      />
+
+      {/* Mirror Dialog */}
+      {video && (
+        <MirrorVideoDialog
+          open={mirrorDialogOpen}
+          onOpenChange={setMirrorDialogOpen}
+          videoUrls={video.urls}
         />
-      }
-      sidebar={
-        <>
-          <VideoAvailabilityAlert blossomServerCount={blossomServerCount} onMirror={handleMirror} />
-          {renderSidebarContent()}
-        </>
-      }
-    />
+      )}
+    </>
   )
 }

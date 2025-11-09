@@ -190,10 +190,7 @@ async function validateUrl(
 /**
  * Validate a media URL with enhanced validation options
  */
-export async function validateMediaUrl(
-  url: string,
-  options?: ValidationOptions
-): Promise<boolean> {
+export async function validateMediaUrl(url: string, options?: ValidationOptions): Promise<boolean> {
   const startTime = Date.now()
   const result = await validateUrl(url, options?.timeout || 5000, options)
   const validationTime = Date.now() - startTime
@@ -389,9 +386,7 @@ export function getValidationMetrics(mediaType?: MediaType) {
     }
   } else {
     // Return metrics for all media types
-    return Object.keys(metrics).map(type =>
-      getValidationMetrics(type as MediaType)
-    )
+    return Object.keys(metrics).map(type => getValidationMetrics(type as MediaType))
   }
 }
 

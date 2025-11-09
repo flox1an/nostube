@@ -145,10 +145,7 @@ export async function discoverUrlsBatch(options: DiscoveryOptions[]): Promise<Di
  * Cache for discovered URLs to avoid repeated relay queries
  * Key: sha256 hash, Value: { urls, timestamp }
  */
-const discoveryCache = new Map<
-  string,
-  { urls: DiscoveredUrl[]; timestamp: number }
->()
+const discoveryCache = new Map<string, { urls: DiscoveredUrl[]; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 
 /**

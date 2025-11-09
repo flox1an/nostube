@@ -48,6 +48,7 @@ export { useVideoPlayPosition } from './useVideoPlayPosition'
 export { useUltraWideVideo } from './useUltraWideVideo'
 export { usePlaylistNavigation } from './usePlaylistNavigation'
 export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
+export { useReactions } from './useReactions'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

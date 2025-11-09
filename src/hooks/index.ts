@@ -44,6 +44,10 @@ export { useUserBlossomServers } from './useUserBlossomServers'
 export { useUserRelays } from './useUserRelays'
 export { useWindowWidth } from './useWindowWidth'
 export { useWriteRelays } from './useWriteRelays'
+export { useVideoPlayPosition } from './useVideoPlayPosition'
+export { useUltraWideVideo } from './useUltraWideVideo'
+export { usePlaylistNavigation } from './usePlaylistNavigation'
+export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

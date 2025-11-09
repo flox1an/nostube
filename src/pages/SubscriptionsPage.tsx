@@ -63,6 +63,7 @@ export function SubscriptionsPage() {
     const loader = createTimelineLoader(pool, readRelays, filters, {
       eventStore,
       limit: 50,
+      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
 
     const subscription = loader().subscribe({
@@ -103,6 +104,7 @@ export function SubscriptionsPage() {
     const loader = createTimelineLoader(pool, readRelays, paginatedFilters, {
       eventStore,
       limit: 50,
+      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
 
     const subscription = loader().subscribe({

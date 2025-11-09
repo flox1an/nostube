@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
+import { RichTextContent } from '@/components/RichTextContent'
 import {
   useProfile,
   useUserPlaylists,
@@ -60,7 +61,12 @@ function AuthorProfile({
       <div className="flex-1 min-w-0">
         <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
         <p className="text-sm text-muted-foreground">Joined {joinedDate.toLocaleDateString()}</p>
-        {metadata?.about && <p className="text-sm text-muted-foreground mt-1">{metadata.about}</p>}
+        {metadata?.about && (
+          <RichTextContent
+            content={metadata.about}
+            className="text-sm text-muted-foreground mt-1"
+          />
+        )}
       </div>
     </div>
   )

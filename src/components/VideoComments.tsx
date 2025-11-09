@@ -4,6 +4,7 @@ import { useCurrentUser, useNostrPublish, useProfile, useAppContext } from '@/ho
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { RichTextContent } from '@/components/RichTextContent'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { formatDistance } from 'date-fns'
 import { type NostrEvent } from 'nostr-tools'
@@ -105,57 +106,6 @@ function buildCommentTree(comments: Comment[]): Comment[] {
   return rootComments
 }
 
-function renderCommentContent(content: string, link: string) {
-  // Regex to match mm:ss timestamps (optionally h:mm:ss)
-  const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g
-  const baseUrl = `/video/${link}`
-  const parts: (string | JSX.Element)[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-
-  while ((match = timestampRegex.exec(content)) !== null) {
-    const [full, h, m, s] = match
-    const start = match.index
-    const end = start + full.length
-    // Push preceding text
-    if (start > lastIndex) {
-      parts.push(content.slice(lastIndex, start))
-    }
-    // Calculate seconds
-    const hours = h ? parseInt(h, 10) : 0
-    const minutes = parseInt(m, 10)
-    const seconds = parseInt(s, 10)
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds
-    const targetUrl = `${baseUrl}?t=${totalSeconds}`
-    // Push link
-    parts.push(
-      <Link
-        key={`ts-${start}`}
-        to={targetUrl}
-        className="text-primary hover:text-primary/80 cursor-pointer"
-        onClick={event => {
-          if (typeof window === 'undefined') return
-          const currentPath = `${window.location.pathname}${window.location.search}`
-          if (currentPath === targetUrl) {
-            event.preventDefault()
-          }
-          window.dispatchEvent(
-            new CustomEvent('nostube:seek-to', { detail: { time: totalSeconds } })
-          )
-        }}
-      >
-        {full}
-      </Link>
-    )
-    lastIndex = end
-  }
-  // Push any remaining text
-  if (lastIndex < content.length) {
-    parts.push(content.slice(lastIndex))
-  }
-  return parts
-}
-
 const CommentItem = React.memo(function CommentItem({
   comment,
   link,
@@ -206,7 +156,11 @@ const CommentItem = React.memo(function CommentItem({
               })}
             </div>
           </div>
-          <div className="mt-1 break-words text-sm">{renderCommentContent(comment.content, link)}</div>
+          <RichTextContent
+            content={comment.content}
+            videoLink={link}
+            className="mt-1 break-words text-sm"
+          />
           {onReply && !isReplying && (
             <Button
               variant="ghost"

@@ -43,7 +43,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { createEventLoader } from 'applesauce-loaders/loaders'
@@ -54,6 +54,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
+import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 
 // Custom hook for debounced play position storage
 function useDebouncedPlayPositionStorage(
@@ -379,6 +380,7 @@ export function VideoPage() {
   const { user } = useCurrentUser()
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDebugDialog, setShowDebugDialog] = useState(false)
   const initialPlayPos = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(location.search)
@@ -719,21 +721,25 @@ export function VideoPage() {
                 setIncludeTimestamp={setIncludeTimestamp}
                 shareLinks={shareLinks}
               />
-              {user?.pubkey === video.pubkey && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" aria-label="More actions">
-                      <MoreVertical className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" side="top">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" aria-label="More actions">
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top">
+                  <DropdownMenuItem onSelect={() => setShowDebugDialog(true)}>
+                    <Bug className="w-5 h-5" />
+                    &nbsp; Debug Info
+                  </DropdownMenuItem>
+                  {user?.pubkey === video.pubkey && (
                     <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
                       <TrashIcon className="w-5 h-5" />
                       &nbsp; Delete Video
                     </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -790,6 +796,13 @@ export function VideoPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <VideoDebugInfo
+          open={showDebugDialog}
+          onOpenChange={setShowDebugDialog}
+          videoEvent={videoEvent}
+          video={video}
+          blossomServers={config.blossomServers}
+        />
         {video && (
           <div className="py-4">
             <VideoComments
@@ -797,6 +810,7 @@ export function VideoPage() {
               authorPubkey={video.pubkey}
               link={video.link}
               relays={commentRelays}
+              videoKind={video.kind}
             />
           </div>
         )}

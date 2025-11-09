@@ -258,7 +258,6 @@ Wrap components with `ErrorBoundary` to catch and handle errors gracefully:
 
 ```tsx
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-
 ;<ErrorBoundary>
   <YourComponent />
 </ErrorBoundary>

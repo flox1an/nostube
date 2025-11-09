@@ -11,7 +11,10 @@ interface VideoAvailabilityAlertProps {
  * Alert shown when a video is only available on 1 blossom server
  * Suggests mirroring for better redundancy
  */
-export function VideoAvailabilityAlert({ blossomServerCount, onMirror }: VideoAvailabilityAlertProps) {
+export function VideoAvailabilityAlert({
+  blossomServerCount,
+  onMirror,
+}: VideoAvailabilityAlertProps) {
   if (blossomServerCount !== 1) return null
 
   return (

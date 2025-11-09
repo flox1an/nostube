@@ -205,7 +205,9 @@ const CommentItem = React.memo(function CommentItem({
                 <Button type="button" variant="ghost" size="sm" onClick={onCancelReply}>
                   Cancel
                 </Button>
-                <span className="text-xs text-muted-foreground">Ctrl+Enter to submit, Esc to cancel</span>
+                <span className="text-xs text-muted-foreground">
+                  Ctrl+Enter to submit, Esc to cancel
+                </span>
               </div>
             </form>
           )}
@@ -241,7 +243,13 @@ const CommentItem = React.memo(function CommentItem({
   )
 })
 
-export function VideoComments({ videoId, link, authorPubkey, relays, videoKind }: VideoCommentsProps) {
+export function VideoComments({
+  videoId,
+  link,
+  authorPubkey,
+  relays,
+  videoKind,
+}: VideoCommentsProps) {
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
@@ -286,7 +294,9 @@ export function VideoComments({ videoId, link, authorPubkey, relays, videoKind }
 
   // Use EventStore timeline to get comments for this video
   const comments$ = useMemo(() => {
-    return eventStore.timeline(filters).pipe(map(events => events.map(e => mapEventToComment(e, videoId))))
+    return eventStore
+      .timeline(filters)
+      .pipe(map(events => events.map(e => mapEventToComment(e, videoId))))
   }, [eventStore, filters, videoId])
 
   const flatComments = useObservableState(comments$, [])

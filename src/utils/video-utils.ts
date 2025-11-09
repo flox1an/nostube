@@ -61,7 +61,12 @@ export function buildShareUrl(
 /**
  * Build social media share links
  */
-export function buildShareLinks(shareUrl: string, fullUrl: string, title: string, thumbnailUrl: string) {
+export function buildShareLinks(
+  shareUrl: string,
+  fullUrl: string,
+  title: string,
+  thumbnailUrl: string
+) {
   const encode = encodeURIComponent
   const eUrl = encode(shareUrl)
   const eFull = encode(fullUrl)

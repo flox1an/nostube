@@ -167,6 +167,7 @@ export function VideoInfoSection({
               eventId={video.id}
               authorPubkey={video.pubkey}
               kind={video.kind}
+              relays={relaysToUse}
             />
             <ShareButton
               shareOpen={shareOpen}

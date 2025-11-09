@@ -408,6 +408,57 @@ export function VideoPlayer({
     }
   }, [isHls, hlsEl])
 
+  // Handle automatic fullscreen on orientation change for mobile devices
+  useEffect(() => {
+    if (!isMobile) return
+
+    const el = isHls ? hlsEl : videoRef.current
+    if (!el) return
+
+    const handleOrientationChange = async () => {
+      try {
+        // Check if we're in landscape orientation
+        const isLandscape =
+          window.screen.orientation.type === 'landscape-primary' ||
+          window.screen.orientation.type === 'landscape-secondary'
+
+        if (isLandscape) {
+          // Enter fullscreen when in landscape
+          if (!document.fullscreenElement) {
+            if (el.requestFullscreen) {
+              await el.requestFullscreen()
+            } else if ((el as any).webkitRequestFullscreen) {
+              // Safari support
+              await (el as any).webkitRequestFullscreen()
+            }
+          }
+        } else {
+          // Exit fullscreen when in portrait
+          if (document.fullscreenElement) {
+            if (document.exitFullscreen) {
+              await document.exitFullscreen()
+            } else if ((document as any).webkitExitFullscreen) {
+              // Safari support
+              await (document as any).webkitExitFullscreen()
+            }
+          }
+        }
+      } catch (err) {
+        // Silently handle fullscreen errors (e.g., user denied permission)
+        if (import.meta.env.DEV) {
+          console.log('Fullscreen orientation change error:', err)
+        }
+      }
+    }
+
+    // Listen for orientation changes
+    window.screen.orientation?.addEventListener('change', handleOrientationChange)
+
+    return () => {
+      window.screen.orientation?.removeEventListener('change', handleOrientationChange)
+    }
+  }, [isMobile, isHls, hlsEl])
+
   // Show loading state if video URLs are still loading
   if (isLoadingVideoUrls || !videoUrl) {
     return (
@@ -476,12 +527,12 @@ export function VideoPlayer({
           >
             {isPaused ? (
               // Pause icon (two rectangles)
-              <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
               </svg>
             ) : (
               // Play icon (triangle pointing right)
-              <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             )}

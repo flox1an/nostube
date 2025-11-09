@@ -158,11 +158,13 @@ export function VideoInfoSection({
           </Link>
 
           <div className="flex items-center gap-2">
-            <AddToPlaylistButton
-              videoId={video.id}
-              videoKind={video.kind}
-              videoTitle={video.title}
-            />
+            {userPubkey && (
+              <AddToPlaylistButton
+                videoId={video.id}
+                videoKind={video.kind}
+                videoTitle={video.title}
+              />
+            )}
             <ButtonWithReactions
               eventId={video.id}
               authorPubkey={video.pubkey}

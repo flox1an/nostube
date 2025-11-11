@@ -10,6 +10,7 @@ import { finalize, map } from 'rxjs'
 import { VideoType } from '@/contexts/AppContext'
 import { hashObjectBigInt } from '@/lib/utils'
 import { useMissingVideos } from './useMissingVideos'
+import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 
 const lastLoadedTimestamp = new Map<string, number>()
 
@@ -72,6 +73,8 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
     // Load only if never loaded or if last load was more than 60 seconds ago
     if (lastLoaded === undefined || Date.now() - lastLoaded > 60000) {
       setVideosLoading(true)
+      const subId = logSubscriptionCreated('useVideoTimeline', readRelays, filters)
+
       const subscription = createTimelineLoader(pool, readRelays, filters, {
         limit: 50,
         timeout: 5000, // 5 second timeout per relay to prevent blocking
@@ -80,6 +83,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
           finalize(() => {
             lastLoadedTimestamp.set(hash, Date.now())
             setVideosLoading(false)
+            logSubscriptionClosed(subId)
           })
         )
         .subscribe(e => {
@@ -87,7 +91,10 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
         })
 
       // Cleanup subscription on unmount or dependency change
-      return () => subscription.unsubscribe()
+      return () => {
+        subscription.unsubscribe()
+        logSubscriptionClosed(subId)
+      }
     }
   }, [eventStore, hash, filters, pool, readRelays])
 

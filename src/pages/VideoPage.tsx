@@ -2,7 +2,8 @@ import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'reac
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
-import { switchMap, catchError } from 'rxjs/operators'
+import { switchMap, catchError, finalize } from 'rxjs/operators'
+import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback } from 'react'
@@ -64,6 +65,11 @@ export function VideoPage() {
   // Use EventStore to get the video event with fallback to loader
   const videoObservable = useMemo(() => {
     if (!eventPointer) return of(null)
+
+    const subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
+      ids: [eventPointer.id],
+    })
+
     return eventStore.event(eventPointer.id).pipe(
       switchMap(event => {
         if (event) {
@@ -75,9 +81,12 @@ export function VideoPage() {
       catchError(() => {
         // If eventStore fails, fallback to loader
         return loader(eventPointer)
+      }),
+      finalize(() => {
+        logSubscriptionClosed(subId)
       })
     )
-  }, [eventStore, loader, eventPointer])
+  }, [eventStore, loader, eventPointer, initialRelays])
 
   const videoEvent = useObservableState(videoObservable)
 
@@ -251,13 +260,31 @@ export function VideoPage() {
     return buildShareLinks(shareUrl, fullUrl, title, thumbnailUrl)
   }, [shareUrl, fullUrl, title, thumbnailUrl])
 
-  // Handle video element ready callback
+  // Handle video element ready callback (stable reference)
   const handleVideoElementReady = useCallback(
     (element: HTMLVideoElement | null) => {
       videoElementRef.current = element
       setActiveVideoElement(element)
     },
     [videoElementRef]
+  )
+
+  // Stable callback for video failed (memoized)
+  const handleAllSourcesFailed = useCallback(
+    (urls: string[]) => {
+      if (video?.id) {
+        markVideoAsMissing(video.id, urls)
+      }
+    },
+    [video?.id, markVideoAsMissing]
+  )
+
+  // Stable callback for video dimensions loaded (memoized)
+  const handleVideoDimensionsLoadedStable = useCallback(
+    (width: number, height: number) => {
+      handleVideoDimensionsLoaded(width, height)
+    },
+    [handleVideoDimensionsLoaded]
   )
 
   // Render sidebar content (playlist or suggestions)
@@ -351,10 +378,10 @@ export function VideoPage() {
         contentWarning={video.contentWarning}
         sha256={video.x} // Pass SHA256 hash for URL discovery
         authorPubkey={video.pubkey} // Pass author pubkey for AS query parameter
-        onAllSourcesFailed={urls => markVideoAsMissing(video.id, urls)}
+        onAllSourcesFailed={handleAllSourcesFailed}
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}
-        onVideoDimensionsLoaded={handleVideoDimensionsLoaded}
+        onVideoDimensionsLoaded={handleVideoDimensionsLoadedStable}
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
       />

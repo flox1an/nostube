@@ -1,15 +1,17 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { Link } from 'react-router-dom'
-import { processEvent, VideoEvent } from '@/utils/video-event'
-import { getKindsForType, VideoType } from '@/lib/video-types'
+import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
+import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -52,7 +54,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   return (
     <Link to={`/video/${video.link}`}>
       <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
-        <div className="relative w-40 h-24 flex-shrink-0">
+        <div className="relative w-40 h-24 shrink-0">
           <img
             src={thumbnailUrl}
             loading="lazy"
@@ -84,7 +86,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 function VideoSuggestionItemSkeleton() {
   return (
     <div className="flex mb-4">
-      <div className="relative w-40 h-24 flex-shrink-0">
+      <div className="relative w-40 h-24 shrink-0">
         <Skeleton className="w-full h-full rounded-md" />
       </div>
       <div className="p-1 pl-3 space-y-2 flex-1">
@@ -103,7 +105,7 @@ interface VideoSuggestionsProps {
   relays?: string[] // Relays from nevent or other sources
 }
 
-export function VideoSuggestions({
+export const VideoSuggestions = React.memo(function VideoSuggestions({
   currentVideoId,
   currentVideoType,
   authorPubkey,
@@ -136,7 +138,7 @@ export function VideoSuggestions({
       console.log('[VideoSuggestions] Video type:', currentVideoType)
     }
 
-    const filters = [
+    const filters: TimelessFilter[] = [
       {
         kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
         limit: 30,
@@ -154,19 +156,27 @@ export function VideoSuggestions({
 
     if (import.meta.env.DEV) console.log('[VideoSuggestions] Filters:', filters)
 
+    const subId = logSubscriptionCreated('VideoSuggestions', relaysToUse, filters)
+
     const playlistLoader = createTimelineLoader(pool, relaysToUse, filters, {
       eventStore,
       limit: 30,
     })
     const sub = playlistLoader().subscribe({
-      next: events => {
-        if (import.meta.env.DEV) console.log('[VideoSuggestions] Loaded events:', events.length)
+      next: event => {
+        if (import.meta.env.DEV) console.log('[VideoSuggestions] Loaded event:', event)
       },
       error: err => {
         console.error('[VideoSuggestions] Error loading events:', err)
       },
+      complete: () => {
+        logSubscriptionClosed(subId)
+      },
     })
-    return () => sub.unsubscribe()
+    return () => {
+      sub.unsubscribe()
+      logSubscriptionClosed(subId)
+    }
   }, [authorPubkey, currentVideoType, relaysToUse, pool, eventStore])
 
   // Use EventStore timeline for author-specific suggestions
@@ -232,4 +242,4 @@ export function VideoSuggestions({
           ))}
     </div>
   )
-}
+})

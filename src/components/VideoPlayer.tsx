@@ -54,7 +54,7 @@ interface VideoPlayerProps {
   onVideoElementReady?: (element: HTMLVideoElement | null) => void
 }
 
-export function VideoPlayer({
+export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
   mime,
   poster,
@@ -294,10 +294,17 @@ export function VideoPlayer({
     }
   }, [])
 
+  // Throttle time updates to reduce re-renders (from ~4Hz to ~1Hz)
+  const lastTimeUpdateRef = useRef<number>(0)
   const handleTimeUpdate = useCallback(() => {
     const el = isHls ? hlsEl : videoRef.current
     if (onTimeUpdate && el) {
-      onTimeUpdate(el.currentTime)
+      const now = Date.now()
+      // Only update once per second (1000ms) instead of every 250ms
+      if (now - lastTimeUpdateRef.current >= 1000) {
+        lastTimeUpdateRef.current = now
+        onTimeUpdate(el.currentTime)
+      }
     }
   }, [onTimeUpdate, isHls, hlsEl])
 
@@ -582,7 +589,7 @@ export function VideoPlayer({
       </media-control-bar>
     </media-controller>
   )
-}
+})
 
 /**
  * Caption Track component with automatic failover using useMediaUrls

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import langs from 'langs'
+import { defaultResizeServer } from '../App'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -164,7 +165,7 @@ export const imageProxy = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   return `${cleanBaseUrl}/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
 }
@@ -173,7 +174,7 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
@@ -184,7 +185,7 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
  */
 export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string) => {
   if (!videoUrl) return ''
-  const baseUrl = proxyBaseUrl || 'https://nostube-imgproxy.apps3.slidestr.net/'
+  const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   // imgproxy can generate thumbnails from video URLs
   // Format: /insecure/f:webp/rs:fit:480:480/plain/{video_url}

@@ -3,7 +3,8 @@ import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
 import { AccountManager } from 'applesauce-accounts'
 import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
-import { AppConfig } from '@/contexts/AppContext'
+import { type AppConfig } from '@/contexts/AppContext'
+import { defaultResizeServer } from '../App'
 
 interface TestAppProps {
   children: React.ReactNode
@@ -17,7 +18,7 @@ export function TestApp({ children }: TestAppProps) {
     relays: [{ url: 'wss://relay.nostr.band', name: 'relay.nostr.band', tags: ['read', 'write'] }],
     videoType: 'videos',
     nsfwFilter: 'warning',
-    thumbResizeServerUrl: 'https://nostube-imgproxy.apps3.slidestr.net/',
+    thumbResizeServerUrl: defaultResizeServer,
   }
 
   return (

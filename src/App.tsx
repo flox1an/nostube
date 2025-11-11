@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
 import { Suspense } from 'react'
 import { AppProvider } from '@/components/AppProvider'
-import { AppConfig } from '@/contexts/AppContext'
+import { type AppConfig } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
@@ -13,13 +13,15 @@ import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { presetRelays, presetBlossomServers } from '@/constants/relays'
 
+export const defaultResizeServer = 'https://imgproxy.nostu.be/'
+
 const defaultConfig: AppConfig = {
   theme: 'dark',
   relays: presetRelays,
   videoType: 'videos',
   blossomServers: [...presetBlossomServers],
   nsfwFilter: 'warning',
-  thumbResizeServerUrl: 'https://nostube-imgproxy.apps3.slidestr.net/',
+  thumbResizeServerUrl: defaultResizeServer,
   media: {
     failover: {
       enabled: true,

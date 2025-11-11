@@ -68,6 +68,7 @@ export default defineConfig({
           // Group small UI components together
           if (id.includes('/src/components/ui/') && !id.includes('node_modules')) {
             // Group by related components to avoid circular deps
+            // Include variant files with their respective component groups
             if (
               id.includes('button') ||
               id.includes('badge') ||

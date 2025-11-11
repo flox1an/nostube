@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   build: {
     sourcemap: false, // Disable sourcemaps in production for smaller bundle
@@ -29,76 +30,10 @@ export default defineConfig({
       external: ['@rollup/rollup-linux-x64-gnu'],
       output: {
         inlineDynamicImports: false,
-        // Increase minimum chunk size to reduce number of small files
         chunkFileNames: 'assets/[name]-[hash].js',
-        manualChunks: id => {
-          // Vendor chunks for node_modules
-          if (id.includes('node_modules')) {
-            // Separate only the largest video libraries
-            if (id.includes('hls.js')) return 'vendor-hls'
-            if (id.includes('video.js') || id.includes('media-chrome')) return 'vendor-video'
-
-            // Everything else stays together in vendor to ensure proper initialization
-            return 'vendor'
-          }
-
-          // Combine small hooks into one chunk
-          if (id.includes('/src/hooks/') && !id.includes('node_modules')) {
-            return 'hooks'
-          }
-
-          // Combine utility files and lib
-          if (
-            (id.includes('/src/lib/') || id.includes('/src/utils/')) &&
-            !id.includes('node_modules')
-          ) {
-            return 'utils'
-          }
-
-          // Combine nostr utilities
-          if (id.includes('/src/nostr/') && !id.includes('node_modules')) {
-            return 'nostr'
-          }
-
-          // Combine contexts
-          if (id.includes('/src/contexts/') && !id.includes('node_modules')) {
-            return 'contexts'
-          }
-
-          // Group small UI components together
-          if (id.includes('/src/components/ui/') && !id.includes('node_modules')) {
-            // Group by related components to avoid circular deps
-            // Include variant files with their respective component groups
-            if (
-              id.includes('button') ||
-              id.includes('badge') ||
-              id.includes('card') ||
-              id.includes('label') ||
-              id.includes('separator')
-            ) {
-              return 'ui-basic'
-            }
-            if (
-              id.includes('dialog') ||
-              id.includes('alert') ||
-              id.includes('sheet') ||
-              id.includes('dropdown') ||
-              id.includes('popover')
-            ) {
-              return 'ui-overlays'
-            }
-            if (
-              id.includes('form') ||
-              id.includes('input') ||
-              id.includes('textarea') ||
-              id.includes('checkbox') ||
-              id.includes('select')
-            ) {
-              return 'ui-forms'
-            }
-            return 'ui-misc'
-          }
-        },
+        // Use experimental min chunk size instead of manual chunking
+        // This allows Vite to automatically optimize chunk sizes
+        experimentalMinChunkSize: 20000, // 20kb minimum
       },
     },
     chunkSizeWarningLimit: 1100,

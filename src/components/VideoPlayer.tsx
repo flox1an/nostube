@@ -363,7 +363,7 @@ export function VideoPlayer({
           playPauseTimeoutRef.current = null
           fadeOutTimeoutRef.current = null
         }, 100)
-      }, 1000)
+      }, 700)
     }
 
     const handlePause = () => {
@@ -387,7 +387,7 @@ export function VideoPlayer({
           playPauseTimeoutRef.current = null
           fadeOutTimeoutRef.current = null
         }, 100)
-      }, 1000)
+      }, 700)
     }
 
     el.addEventListener('play', handlePlay)

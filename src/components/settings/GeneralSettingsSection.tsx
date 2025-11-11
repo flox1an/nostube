@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { NsfwFilter } from '@/contexts/AppContext'
+import { type NsfwFilter } from '@/contexts/AppContext'
+import { defaultResizeServer } from '../../App'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
@@ -35,7 +36,7 @@ export function GeneralSettingsSection() {
           <Input
             id="thumb-server"
             type="url"
-            placeholder="https://nostube-imgproxy.apps3.slidestr.net/"
+            placeholder={defaultResizeServer}
             value={config.thumbResizeServerUrl || ''}
             onChange={e => handleThumbServerChange(e.target.value)}
           />

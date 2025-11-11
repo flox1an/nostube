@@ -33,8 +33,17 @@ export function ButtonWithReactions({
   const hasLiked =
     user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+')
 
-  // Count likes
-  const likeCount = reactions.filter(event => event.content === '+').length
+  // Count likes - filter duplicates by keeping only one like per user
+  const likeCount = reactions
+    .filter(event => event.content === '+')
+    .reduce((acc, event) => {
+      // Use a Set to track unique pubkeys that liked
+      if (!acc.seen.has(event.pubkey)) {
+        acc.seen.add(event.pubkey)
+        acc.count++
+      }
+      return acc
+    }, { seen: new Set<string>(), count: 0 }).count
 
   const handleLike = async () => {
     if (!user) return

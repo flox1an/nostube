@@ -1,9 +1,10 @@
 import type { ReportedPubkeys } from '@/hooks'
-import { getTypeForKind, VideoType } from '@/lib/video-types'
+import { getTypeForKind, type VideoType } from '@/lib/video-types'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { nip19 } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { generateMediaUrls } from '@/lib/media-url-generator'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -76,93 +77,7 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
   }
 }
 
-/**
- * Generate proxy URLs for video URLs when proxy servers are configured
- * Format: https://proxyserver.com/{sha256}.{ext}?origin={protocol+hostname}
- * If the proxy server origin matches the original URL origin, the origin parameter is omitted
- *
- * @deprecated Use generateMediaUrls from @/lib/media-url-generator instead
- */
-function generateProxyUrls(originalUrls: string[], proxyServers: BlossomServer[]): string[] {
-  if (proxyServers.length === 0) return []
-
-  const proxyUrls: string[] = []
-
-  for (const originalUrl of originalUrls) {
-    // Try to extract SHA256 from the URL
-    const { sha256, ext } = extractBlossomHash(originalUrl)
-
-    if (sha256 && ext) {
-      // Extract protocol + hostname from original URL (no path or extension)
-      let originBase = ''
-      try {
-        const urlObj = new URL(originalUrl)
-        originBase = `${urlObj.protocol}//${urlObj.hostname}`
-      } catch {
-        // If URL parsing fails, skip this URL
-        continue
-      }
-
-      // Generate proxy URLs for each proxy server
-      for (const proxyServer of proxyServers) {
-        // Ensure proxy server URL doesn't end with /
-        const baseUrl = proxyServer.url.replace(/\/$/, '')
-
-        // Extract proxy server origin
-        let proxyOrigin = ''
-        try {
-          const proxyUrlObj = new URL(baseUrl)
-          proxyOrigin = `${proxyUrlObj.protocol}//${proxyUrlObj.hostname}`
-        } catch {
-          // If URL parsing fails, skip this proxy server
-          continue
-        }
-
-        // If the origin matches the proxy server, use direct URL without origin parameter
-        if (originBase === proxyOrigin) {
-          const directUrl = `${baseUrl}/${sha256}.${ext}`
-          proxyUrls.push(directUrl)
-        } else {
-          // Otherwise, generate proxy URL with origin parameter
-          const proxyUrl = `${baseUrl}/${sha256}.${ext}?origin=${encodeURIComponent(originBase)}`
-          proxyUrls.push(proxyUrl)
-        }
-      }
-    }
-  }
-
-  return proxyUrls
-}
-
-/**
- * Generate mirror URLs for video URLs when mirror servers are configured
- * Format: https://mirrorserver.com/{sha256}.{ext}
- * Mirror URLs are direct replacements without origin parameters
- *
- * @deprecated Use generateMediaUrls from @/lib/media-url-generator instead
- */
-function generateMirrorUrls(originalUrls: string[], mirrorServers: BlossomServer[]): string[] {
-  if (mirrorServers.length === 0) return []
-
-  const mirrorUrls: string[] = []
-
-  for (const originalUrl of originalUrls) {
-    // Try to extract SHA256 from the URL
-    const { sha256, ext } = extractBlossomHash(originalUrl)
-
-    if (sha256 && ext) {
-      // Generate mirror URLs for each mirror server
-      for (const mirrorServer of mirrorServers) {
-        // Ensure mirror server URL doesn't end with /
-        const baseUrl = mirrorServer.url.replace(/\/$/, '')
-        const mirrorUrl = `${baseUrl}/${sha256}.${ext}`
-        mirrorUrls.push(mirrorUrl)
-      }
-    }
-  }
-
-  return mirrorUrls
-}
+// Deprecated functions removed - use generateMediaUrls from @/lib/media-url-generator instead
 // Process Nostr events into cache entries
 export function processEvents(
   events: (Event | undefined)[],
@@ -248,10 +163,14 @@ export function processEvent(
       if (url && blossomServers && blossomServers.length > 0) {
         const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
         if (mirrorServers.length > 0) {
-          const mirrorUrls = generateMirrorUrls([url], mirrorServers)
+          const { urls: generatedUrls } = generateMediaUrls({
+            urls: [url],
+            mediaType: 'vtt',
+            blossomServers: mirrorServers,
+          })
           // Use first mirror URL if available, otherwise use original
-          if (mirrorUrls.length > 0) {
-            url = mirrorUrls[0]
+          if (generatedUrls.length > 0) {
+            url = generatedUrls[0]
           }
         }
       }

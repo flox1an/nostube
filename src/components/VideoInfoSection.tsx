@@ -1,10 +1,10 @@
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { nip19, type NostrEvent } from 'nostr-tools'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
-import { useState } from 'react'
-import { nip19, NostrEvent } from 'nostr-tools'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { useNostrPublish } from '@/hooks'
@@ -32,10 +32,10 @@ import { ButtonWithReactions } from '@/components/ButtonWithReactions'
 import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
-import type { ProcessedVideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '../utils/video-event'
 
 interface VideoInfoSectionProps {
-  video: ProcessedVideoEvent | null
+  video: VideoEvent | null
   isLoading: boolean
   metadata: any
   authorName: string
@@ -60,7 +60,7 @@ interface VideoInfoSectionProps {
   onDelete?: () => void
 }
 
-export function VideoInfoSection({
+export const VideoInfoSection = React.memo(function VideoInfoSection({
   video,
   isLoading,
   metadata,
@@ -262,4 +262,4 @@ export function VideoInfoSection({
       )}
     </>
   )
-}
+})

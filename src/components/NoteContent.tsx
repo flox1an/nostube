@@ -4,6 +4,8 @@ import { nip19 } from 'nostr-tools'
 import { useProfile } from '@/hooks/useProfile'
 import { genUserName } from '@/lib/genUserName'
 import { cn } from '@/lib/utils'
+import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -134,17 +136,27 @@ export function NoteContent({ event, className }: NoteContentProps) {
 // Helper component to display user mentions
 function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; relays?: string[] } }) {
   const author = useProfile(profilePointer)
-  const npub = nip19.npubEncode(profilePointer.pubkey)
-  const hasRealName = !!author?.name
+  const eventStore = useEventStore()
   const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
+
+  // Get seen relays for this pubkey and generate nprofile
+  const nprofileLink = useMemo(() => {
+    const seenRelays = getSeenRelays(eventStore, profilePointer.pubkey)
+    const relays = profilePointer.relays || seenRelays
+
+    if (relays && relays.length > 0) {
+      const nprofile = nip19.nprofileEncode({ pubkey: profilePointer.pubkey, relays })
+      return `/${nprofile}`
+    } else {
+      const npub = nip19.npubEncode(profilePointer.pubkey)
+      return `/${npub}`
+    }
+  }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 
   return (
     <Link
-      to={`/${npub}`}
-      className={cn(
-        'font-medium hover:underline',
-        hasRealName ? 'text-blue-500' : 'text-gray-500 hover:text-gray-700'
-      )}
+      to={nprofileLink}
+      className="font-medium hover:underline text-primary"
     >
       @{displayName}
     </Link>

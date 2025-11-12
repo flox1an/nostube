@@ -146,10 +146,10 @@ function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; re
 
     if (relays && relays.length > 0) {
       const nprofile = nip19.nprofileEncode({ pubkey: profilePointer.pubkey, relays })
-      return `/${nprofile}`
+      return `/author/${nprofile}`
     } else {
       const npub = nip19.npubEncode(profilePointer.pubkey)
-      return `/${npub}`
+      return `/author/${npub}`
     }
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 

@@ -392,7 +392,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkey])
+  }, [pubkey, loader])
 
   const playlists = playlistEvents?.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')

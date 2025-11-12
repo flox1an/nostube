@@ -72,6 +72,7 @@ export function getTimelineLoader(
     eventStore,
     cache: cacheRequest, // cache-first
     limit: 50,
+    timeout: 5000, // 5 second timeout per relay
   })
   return loader
 }

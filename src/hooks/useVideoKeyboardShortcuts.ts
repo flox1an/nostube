@@ -93,6 +93,28 @@ export function useVideoKeyboardShortcuts({
         }
         return
       }
+
+      // Fullscreen on "F" key press
+      if (event.key === 'f' || event.key === 'F') {
+        event.preventDefault()
+        const videoEl = activeVideoElement.current
+        if (videoEl) {
+          // Try to find the media-controller parent for fullscreen
+          const fullscreenTarget =
+            (videoEl.closest('media-controller') as HTMLElement | null) ?? (videoEl as HTMLElement)
+
+          if (!document.fullscreenElement) {
+            fullscreenTarget?.requestFullscreen?.().catch(() => {
+              // Ignore fullscreen errors (e.g., user gesture requirements)
+            })
+          } else {
+            document.exitFullscreen?.().catch(() => {
+              // Ignore exit failures
+            })
+          }
+        }
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyPress)
@@ -107,7 +129,7 @@ export function useVideoKeyboardShortcuts({
     if (!el) return
 
     function handleKeyDown(event: KeyboardEvent) {
-      const activeElement = document.activeElement
+      const activeElement = document.activeElement as HTMLElement | null
       if (
         activeElement &&
         (activeElement.tagName === 'INPUT' ||
@@ -147,22 +169,6 @@ export function useVideoKeyboardShortcuts({
         el!.currentTime = clampedTime
         event.preventDefault()
         return
-      }
-
-      // F key: Toggle fullscreen
-      if (key === 'f' || key === 'F') {
-        const fullscreenTarget =
-          (el!.closest('media-controller') as HTMLElement | null) ?? (el! as HTMLElement)
-        if (!document.fullscreenElement) {
-          fullscreenTarget?.requestFullscreen?.().catch(() => {
-            // Ignore fullscreen errors (e.g., user gesture requirements)
-          })
-        } else {
-          document.exitFullscreen?.().catch(() => {
-            // Ignore exit failures
-          })
-        }
-        event.preventDefault()
       }
     }
 

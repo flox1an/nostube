@@ -19,8 +19,9 @@ export function LikedVideosPage() {
   const readRelays = useReadRelays()
 
   // Convert likedEventIds to string for stable comparison
+  // Note: Don't sort here - the order is already sorted by date from useLikedEvents
   const likedIdsString = useMemo(() => {
-    return likedEventIds.sort().join(',')
+    return likedEventIds.join(',')
   }, [likedEventIds])
 
   // Get video events directly from EventStore by IDs

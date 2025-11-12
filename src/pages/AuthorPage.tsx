@@ -127,7 +127,7 @@ export function AuthorPage() {
   }, [pubkey, relays, config, eventStoreInstance])
 
   // Fetch playlists and videos for this author using the reactive relay set
-  const { data: playlists = [] } = useUserPlaylists(pubkey, relays)
+  const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -208,15 +208,19 @@ export function AuthorPage() {
 
   // Auto-fetch video events for all playlists when playlists are loaded
   useEffect(() => {
-    if (playlists.length > 0) {
-      playlists.forEach(async playlist => {
+    // Only start fetching videos after playlists have finished loading
+    if (!isLoadingPlaylists && playlists.length > 0) {
+      playlists.forEach(playlist => {
         // Only fetch if we haven't already loaded this playlist's videos
         if (!loadedPlaylistsRef.current.has(playlist.identifier) && playlist.videos.length > 0) {
-          await fetchPlaylistVideos(playlist)
+          // Fire off fetch without awaiting (parallel loading)
+          fetchPlaylistVideos(playlist).catch(err =>
+            console.error('Failed to fetch playlist videos:', err)
+          )
         }
       })
     }
-  }, [playlists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
+  }, [playlists, isLoadingPlaylists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
 
   const [loader, setLoader] = useState<TimelineLoader | undefined>()
 
@@ -297,6 +301,11 @@ export function AuthorPage() {
             </TabsTrigger>
           )}
 
+          {isLoadingPlaylists && (
+            <TabsTrigger value="playlists-loading" disabled>
+              Loading playlists...
+            </TabsTrigger>
+          )}
           {playlists.map(playlist => (
             <TabsTrigger
               key={playlist.identifier}

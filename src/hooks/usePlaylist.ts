@@ -75,17 +75,30 @@ export function usePlaylists() {
       setIsLoading(true)
       const load$ = loader()
 
-      load$.subscribe({
+      // Safety timeout to prevent infinite loading (10 seconds max)
+      const safetyTimeout = setTimeout(() => {
+        setIsLoading(false)
+        setHasLoadedOnce(true)
+      }, 10000)
+
+      const subscription = load$.subscribe({
         next: event => eventStore.add(event),
         complete: () => {
+          clearTimeout(safetyTimeout)
           setIsLoading(false)
           setHasLoadedOnce(true)
         },
         error: () => {
+          clearTimeout(safetyTimeout)
           setIsLoading(false)
           setHasLoadedOnce(true)
         },
       })
+
+      return () => {
+        clearTimeout(safetyTimeout)
+        subscription.unsubscribe()
+      }
     }
   }, [allPlaylistEvents.length, user?.pubkey, hasLoadedOnce, loader, eventStore])
 
@@ -304,6 +317,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   )
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const loader = useMemo(
     () =>
       createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
@@ -318,21 +332,43 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   }, [readRelays])
 
   useEffect(() => {
-    // Load if: no playlists in store AND (haven't loaded yet OR relays changed)
-    const needLoad = allPlaylistEvents.length === 0 && !!pubkey && !hasLoadedOnce
+    // Load if we have a pubkey and haven't loaded yet
+    // Note: When relays change, hasLoadedOnce is reset to false (see effect above)
+    const needLoad = !!pubkey && !hasLoadedOnce
 
     if (needLoad) {
+      setIsLoading(true)
       const load$ = loader()
+
+      // Safety timeout to prevent infinite loading (10 seconds max)
+      const safetyTimeout = setTimeout(() => {
+        setHasLoadedOnce(true)
+        setIsLoading(false)
+      }, 10000)
 
       const subscription = load$.subscribe({
         next: event => eventStore.add(event),
-        complete: () => setHasLoadedOnce(true),
-        error: () => setHasLoadedOnce(true),
+        complete: () => {
+          clearTimeout(safetyTimeout)
+          setHasLoadedOnce(true)
+          setIsLoading(false)
+        },
+        error: () => {
+          clearTimeout(safetyTimeout)
+          setHasLoadedOnce(true)
+          setIsLoading(false)
+        },
       })
 
-      return () => subscription.unsubscribe()
+      return () => {
+        clearTimeout(safetyTimeout)
+        subscription.unsubscribe()
+      }
+    } else if (!pubkey) {
+      // Reset loading state if no pubkey
+      setIsLoading(false)
     }
-  }, [allPlaylistEvents.length, pubkey, hasLoadedOnce, loader, eventStore])
+  }, [pubkey, hasLoadedOnce, loader, eventStore])
 
   const playlists = playlistEvents?.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')
@@ -358,7 +394,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
 
   return {
     data: playlists,
-    isLoading: false, // applesauce handles loading states internally
+    isLoading,
     enabled: !!pubkey,
   }
 }

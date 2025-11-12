@@ -1,7 +1,13 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Youtube, Instagram, Twitter, Facebook } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { nip19 } from 'nostr-tools'
+import { useProfile } from '@/hooks/useProfile'
+import { genUserName } from '@/lib/genUserName'
+import { cn } from '@/lib/utils'
+import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 interface SocialMediaPlatform {
   name: string
@@ -121,6 +127,36 @@ const detectSocialMedia = (url: string): SocialMediaPlatform | null => {
   return null
 }
 
+// Helper component to display user mentions
+function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; relays?: string[] } }) {
+  const author = useProfile(profilePointer)
+  const eventStore = useEventStore()
+  const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
+
+  // Get seen relays for this pubkey and generate nprofile
+  const nprofileLink = useMemo(() => {
+    const seenRelays = getSeenRelays(eventStore, profilePointer.pubkey)
+    const relays = profilePointer.relays || seenRelays
+
+    if (relays && relays.length > 0) {
+      const nprofile = nip19.nprofileEncode({ pubkey: profilePointer.pubkey, relays })
+      return `/author/${nprofile}`
+    } else {
+      const npub = nip19.npubEncode(profilePointer.pubkey)
+      return `/author/${npub}`
+    }
+  }, [eventStore, profilePointer.pubkey, profilePointer.relays])
+
+  return (
+    <Link
+      to={nprofileLink}
+      className="font-medium hover:underline text-primary"
+    >
+      @{displayName}
+    </Link>
+  )
+}
+
 interface RichTextContentProps {
   /**
    * The text content to render with rich formatting
@@ -146,30 +182,59 @@ interface RichTextContentProps {
 export function RichTextContent({ content, className, videoLink }: RichTextContentProps) {
   const renderContent = () => {
     const parts: React.ReactNode[] = []
-    let currentText = content
-    let globalOffset = 0
 
-    // First, handle URLs
-    const urlRegex = /(\()?(https?:\/\/[^\s)]+)(\))?/g
-    let lastUrlIndex = 0
+    // Combined regex to match URLs and nostr profile references
+    const combinedRegex =
+      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1)([023456789acdefghjklmnpqrstuvwxyz]+)/g
 
-    const urlMatches: Array<{ start: number; end: number; url: string }> = []
-    let urlMatch: RegExpExecArray | null
+    const matches: Array<{
+      start: number
+      end: number
+      type: 'url' | 'npub' | 'nprofile'
+      data: any
+    }> = []
+    let match: RegExpExecArray | null
 
-    while ((urlMatch = urlRegex.exec(content)) !== null) {
-      const [_full, _openParen, url, _closeParen] = urlMatch
-      urlMatches.push({
-        start: urlMatch.index,
-        end: urlMatch.index + urlMatch[0].length,
-        url,
-      })
+    while ((match = combinedRegex.exec(content)) !== null) {
+      const [fullMatch, _openParen, url, _closeParen, nostrPrefix, nostrData] = match
+
+      if (url) {
+        matches.push({
+          start: match.index,
+          end: match.index + fullMatch.length,
+          type: 'url',
+          data: url,
+        })
+      } else if (nostrPrefix && nostrData) {
+        const nostrId = `${nostrPrefix}${nostrData}`
+        try {
+          const decoded = nip19.decode(nostrId)
+          if (decoded.type === 'npub') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'npub',
+              data: { pubkey: decoded.data },
+            })
+          } else if (decoded.type === 'nprofile') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'nprofile',
+              data: { pubkey: decoded.data.pubkey, relays: decoded.data.relays },
+            })
+          }
+        } catch {
+          // If decoding fails, skip this match
+        }
+      }
     }
 
-    // Process text segments between URLs
-    for (let i = 0; i <= urlMatches.length; i++) {
-      const isLastSegment = i === urlMatches.length
-      const segmentStart = i === 0 ? 0 : urlMatches[i - 1].end
-      const segmentEnd = isLastSegment ? content.length : urlMatches[i].start
+    // Process text segments between matches
+    for (let i = 0; i <= matches.length; i++) {
+      const isLastSegment = i === matches.length
+      const segmentStart = i === 0 ? 0 : matches[i - 1].end
+      const segmentEnd = isLastSegment ? content.length : matches[i].start
 
       if (segmentEnd > segmentStart) {
         const segment = content.substring(segmentStart, segmentEnd)
@@ -183,44 +248,52 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
         }
       }
 
-      // Add the URL if not the last segment
+      // Add the matched item if not the last segment
       if (!isLastSegment) {
-        const { url } = urlMatches[i]
-        const platform = detectSocialMedia(url)
+        const item = matches[i]
 
-        if (platform) {
-          const Icon = platform.icon
-          const title = platform.extractTitle(url)
+        if (item.type === 'url') {
+          const url = item.data
+          const platform = detectSocialMedia(url)
 
-          parts.push(
-            <a
-              key={`url-${urlMatches[i].start}`}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center"
-            >
-              <Badge
-                variant="outline"
-                className="inline-flex items-center gap-2 py-1 px-2 hover:bg-primary/80"
+          if (platform) {
+            const Icon = platform.icon
+            const title = platform.extractTitle(url)
+
+            parts.push(
+              <a
+                key={`url-${item.start}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center"
               >
-                <Icon className="h-4 w-4" />
-                <span className="font-medium">{platform.name}</span>
-                <span className="text-muted-foreground">/ {title}</span>
-              </Badge>
-            </a>
-          )
-        } else {
+                <Badge
+                  variant="outline"
+                  className="inline-flex items-center gap-2 py-1 px-2 hover:bg-primary/80"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="font-medium">{platform.name}</span>
+                  <span className="text-muted-foreground">/ {title}</span>
+                </Badge>
+              </a>
+            )
+          } else {
+            parts.push(
+              <a
+                key={`url-${item.start}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-foreground hover:underline"
+              >
+                {url}
+              </a>
+            )
+          }
+        } else if (item.type === 'npub' || item.type === 'nprofile') {
           parts.push(
-            <a
-              key={`url-${urlMatches[i].start}`}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent-foreground hover:underline"
-            >
-              {url}
-            </a>
+            <NostrMention key={`mention-${item.start}`} profilePointer={item.data} />
           )
         }
       }

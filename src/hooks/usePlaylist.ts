@@ -72,30 +72,23 @@ export function usePlaylists() {
     const needLoad = allPlaylistEvents.length === 0 && !!user?.pubkey && !hasLoadedOnce
 
     if (needLoad) {
-      console.log('[usePlaylists] Starting to load playlists for', user?.pubkey)
       setIsLoading(true)
       const load$ = loader()
 
       // Safety timeout to prevent infinite loading (10 seconds max)
       const safetyTimeout = setTimeout(() => {
-        console.warn('[usePlaylists] Safety timeout reached after 10s - forcing loading to complete')
         setIsLoading(false)
         setHasLoadedOnce(true)
       }, 10000)
 
       const subscription = load$.subscribe({
-        next: event => {
-          console.log('[usePlaylists] Received event:', event.kind, event.id)
-          eventStore.add(event)
-        },
+        next: event => eventStore.add(event),
         complete: () => {
-          console.log('[usePlaylists] Loading completed successfully')
           clearTimeout(safetyTimeout)
           setIsLoading(false)
           setHasLoadedOnce(true)
         },
-        error: err => {
-          console.error('[usePlaylists] Loading failed:', err)
+        error: () => {
           clearTimeout(safetyTimeout)
           setIsLoading(false)
           setHasLoadedOnce(true)
@@ -103,7 +96,6 @@ export function usePlaylists() {
       })
 
       return () => {
-        console.log('[usePlaylists] Cleaning up subscription')
         clearTimeout(safetyTimeout)
         subscription.unsubscribe()
       }
@@ -345,30 +337,23 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     const needLoad = !!pubkey && !hasLoadedOnce
 
     if (needLoad) {
-      console.log('[useUserPlaylists] Starting to load playlists for', pubkey)
       setIsLoading(true)
       const load$ = loader()
 
       // Safety timeout to prevent infinite loading (10 seconds max)
       const safetyTimeout = setTimeout(() => {
-        console.warn('[useUserPlaylists] Safety timeout reached after 10s - forcing loading to complete')
         setHasLoadedOnce(true)
         setIsLoading(false)
       }, 10000)
 
       const subscription = load$.subscribe({
-        next: event => {
-          console.log('[useUserPlaylists] Received event:', event.kind, event.id)
-          eventStore.add(event)
-        },
+        next: event => eventStore.add(event),
         complete: () => {
-          console.log('[useUserPlaylists] Loading completed successfully')
           clearTimeout(safetyTimeout)
           setHasLoadedOnce(true)
           setIsLoading(false)
         },
-        error: err => {
-          console.error('[useUserPlaylists] Loading failed:', err)
+        error: () => {
           clearTimeout(safetyTimeout)
           setHasLoadedOnce(true)
           setIsLoading(false)
@@ -376,7 +361,6 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
       })
 
       return () => {
-        console.log('[useUserPlaylists] Cleaning up subscription')
         clearTimeout(safetyTimeout)
         subscription.unsubscribe()
       }

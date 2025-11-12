@@ -138,33 +138,18 @@ function ShortVideoItem({
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = `${baseUrl}/short/${video.link}`
 
+  // Preload video in background when shouldPreload is true
   useEffect(() => {
-    if (!shouldPreload || isActive || !videoUrl || typeof document === 'undefined') {
+    if (!shouldPreload || isActive || !videoUrl) {
       return
     }
 
-    const existing = document.head.querySelector(
-      `link[data-preload-video="${video.id}"][href="${videoUrl}"]`
-    ) as HTMLLinkElement | null
+    const videoEl = videoElementRef.current
+    if (!videoEl) return
 
-    if (existing) {
-      return
-    }
-
-    const linkEl = document.createElement('link')
-    linkEl.rel = 'preload'
-    linkEl.as = 'video'
-    linkEl.href = videoUrl
-    linkEl.crossOrigin = 'anonymous'
-    linkEl.dataset.preloadVideo = video.id
-    document.head.appendChild(linkEl)
-
-    return () => {
-      if (linkEl.parentNode) {
-        linkEl.parentNode.removeChild(linkEl)
-      }
-    }
-  }, [shouldPreload, isActive, videoUrl, video.id])
+    // Start loading the video in the background
+    videoEl.load()
+  }, [shouldPreload, isActive, videoUrl])
 
   return (
     <div
@@ -599,8 +584,12 @@ export function ShortsVideoPage() {
         }}
       >
         {allVideos.map((video, index) => {
-          // Preload current video and adjacent videos (prev and next)
-          const shouldPreload = Math.abs(index - currentVideoIndex) <= 1
+          // Preload current video, previous video, and next 2 videos for smoother scrolling
+          const shouldPreload =
+            index === currentVideoIndex || // Current
+            index === currentVideoIndex - 1 || // Previous
+            index === currentVideoIndex + 1 || // Next
+            index === currentVideoIndex + 2 // Next + 1
           return (
             <ShortVideoItem
               key={video.id}

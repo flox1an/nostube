@@ -16,12 +16,12 @@ import {
   useAppContext,
   useInfiniteScroll,
   useAuthorPageRelays,
+  useLoadAuthorRelayList,
 } from '@/hooks'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import type { TimelineLoader } from 'applesauce-loaders/loaders'
 import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
@@ -90,7 +90,7 @@ export function AuthorPage() {
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null)
   const loadedPlaylistsRef = useRef<Set<string>>(new Set())
 
-  const { config } = useAppContext()
+  const { config, pool } = useAppContext()
   const eventStoreInstance = useEventStore()
 
   // Get relays for this author page
@@ -101,30 +101,19 @@ export function AuthorPage() {
     authorPubkey: pubkey,
   })
 
-  // Load author's NIP-65 relay list event (kind 10002)
-  // Uses the reactive relay set, which will include author's relays once loaded
-  useEffect(() => {
-    if (!pubkey) return
-    const { pool } = config
+  // Load author's NIP-65 relay list from network
+  // Uses a broad set of discovery relays to ensure we find the relay list
+  const discoveryRelays = useMemo(
+    () => [
+      ...relays,
+      'wss://index.hzrd149.com', // Relay indexer
+      'wss://relay.noswhere.com', // Another popular relay
+      'wss://relay.snort.social', // Snort relay
+    ],
+    [relays]
+  )
 
-    const addressLoader = createAddressLoader(pool, {
-      eventStore: eventStoreInstance,
-    })
-
-    const sub = addressLoader({
-      kind: 10002,
-      pubkey,
-      identifier: '',
-      relays: relays,
-    }).subscribe({
-      next: (event: any) => {
-        if (event) eventStoreInstance.add(event)
-      },
-      error: (err: any) => console.warn('Failed to load author NIP-65 relay list:', err),
-    })
-
-    return () => sub.unsubscribe()
-  }, [pubkey, relays, config, eventStoreInstance])
+  useLoadAuthorRelayList(pubkey, discoveryRelays)
 
   // Fetch playlists and videos for this author using the reactive relay set
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)
@@ -143,7 +132,6 @@ export function AuthorPage() {
         if (missingIds.length > 0) {
           // Create a loader to fetch the missing events with proper relays
           const { createEventLoader } = await import('applesauce-loaders/loaders')
-          const { pool } = config
 
           // Get relay hints from where the playlist itself was seen
           const playlistEvent = playlist.eventId
@@ -203,7 +191,7 @@ export function AuthorPage() {
         setLoadingPlaylist(null)
       }
     },
-    [config, eventStoreInstance, relays]
+    [config, pool, eventStoreInstance, relays]
   )
 
   // Auto-fetch video events for all playlists when playlists are loaded

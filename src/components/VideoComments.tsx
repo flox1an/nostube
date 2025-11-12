@@ -9,10 +9,9 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { formatDistance } from 'date-fns'
 import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
-import { Link } from 'react-router-dom'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { Reply, X } from 'lucide-react'
+import { Reply } from 'lucide-react'
 
 interface Comment {
   id: string
@@ -141,7 +140,7 @@ const CommentItem = React.memo(function CommentItem({
   }, [isReplying])
 
   return (
-    <div className={`mb-4 ${depth > 0 ? 'ml-8' : ''}`}>
+    <div className={`mb-4 ${depth > 0 ? 'ml-4' : ''}`}>
       <div className="flex gap-3">
         <Avatar className={depth > 0 ? 'h-8 w-8' : 'h-10 w-10'}>
           <AvatarImage src={imageProxy(metadata?.picture)} />
@@ -159,7 +158,7 @@ const CommentItem = React.memo(function CommentItem({
           <RichTextContent
             content={comment.content}
             videoLink={link}
-            className="mt-1 break-words text-sm"
+            className="mt-1 wrap-break-word text-sm"
           />
           {onReply && !isReplying && (
             <Button
@@ -182,7 +181,7 @@ const CommentItem = React.memo(function CommentItem({
                   value={replyContent || ''}
                   onChange={e => onReplyContentChange(e.target.value)}
                   placeholder="Write a reply..."
-                  className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-[40px]"
+                  className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
                   rows={1}
                   onKeyDown={e => {
                     // Submit on Ctrl/Cmd + Enter
@@ -427,7 +426,7 @@ export function VideoComments({
               value={newComment}
               onChange={e => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-[40px]"
+              className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
               rows={1}
               onKeyDown={e => {
                 // Submit on Ctrl/Cmd + Enter

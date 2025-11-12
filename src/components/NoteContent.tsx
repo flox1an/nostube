@@ -68,17 +68,12 @@ export function NoteContent({ event, className }: NoteContentProps) {
 
           if (decoded.type === 'npub') {
             const pubkey = decoded.data
-            parts.push(
-              <NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey }} />
-            )
+            parts.push(<NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey }} />)
           } else if (decoded.type === 'nprofile') {
             // Handle nprofile with custom relays
             const { pubkey, relays } = decoded.data
             parts.push(
-              <NostrMention
-                key={`mention-${keyCounter++}`}
-                profilePointer={{ pubkey, relays }}
-              />
+              <NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey, relays }} />
             )
           } else {
             // For other types, just show as a link
@@ -134,7 +129,11 @@ export function NoteContent({ event, className }: NoteContentProps) {
 }
 
 // Helper component to display user mentions
-function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; relays?: string[] } }) {
+function NostrMention({
+  profilePointer,
+}: {
+  profilePointer: { pubkey: string; relays?: string[] }
+}) {
   const author = useProfile(profilePointer)
   const eventStore = useEventStore()
   const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
@@ -154,10 +153,7 @@ function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; re
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 
   return (
-    <Link
-      to={nprofileLink}
-      className="font-medium hover:underline text-primary"
-    >
+    <Link to={nprofileLink} className="font-medium hover:underline text-primary">
       @{displayName}
     </Link>
   )

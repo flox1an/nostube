@@ -96,10 +96,14 @@ export function AuthorPage() {
   // Get relays for this author page
   // Initially: nprofile relays, user config, presets, purplepag.es
   // After NIP-65 loads: also includes author's outbox relays (reactive update)
-  const relays = useAuthorPageRelays({
+  const relaysFromHook = useAuthorPageRelays({
     nprofileRelays,
     authorPubkey: pubkey,
   })
+
+  // Stabilize relays array to prevent unnecessary loader recreations
+  // Only update if the relay URLs actually changed (deep comparison)
+  const relays = useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
 
   // Load author's NIP-65 relay list from network
   // Uses a broad set of discovery relays to ensure we find the relay list

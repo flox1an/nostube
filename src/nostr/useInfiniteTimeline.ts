@@ -12,14 +12,24 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
 
   const [events, setEvents] = useState<NostrEvent[]>([])
   const [loading, setLoading] = useState(false)
+  const [exhausted, setExhausted] = useState(false)
 
   // Store subscription reference for cleanup
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  // Cleanup subscription on unmount
+  // Track event count before load to detect if new events were added
+  const eventCountBeforeLoadRef = useRef(0)
+
+  // Track safety timeout to clear it properly
+  const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup subscription and timeout on unmount
   useEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -29,19 +39,90 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
   }, [getAllMissingVideos])
 
   const next = useCallback(() => {
-    if (!loader) return
+    if (!loader || loading || exhausted) {
+      return
+    }
 
-    // Cleanup previous subscription before creating a new one
+    // Cleanup previous subscription and timeout before creating a new one
     subscriptionRef.current?.unsubscribe()
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current)
+    }
 
     setLoading(true)
+
+    // Store the current event count before loading
+    setEvents(prev => {
+      eventCountBeforeLoadRef.current = prev.length
+      return prev
+    })
+
+    let receivedAnyEvents = false
+
+    // Safety timeout: force complete after 5 seconds
+    // Note: applesauce loaders may not call complete() if relays are slow
+    safetyTimeoutRef.current = setTimeout(() => {
+      subscriptionRef.current?.unsubscribe()
+      safetyTimeoutRef.current = null
+
+      // Check if we actually added new events (not just received duplicates)
+      setEvents(currentEvents => {
+        const addedNewEvents = currentEvents.length > eventCountBeforeLoadRef.current
+
+        if (!addedNewEvents) {
+          setExhausted(true)
+        }
+
+        return currentEvents
+      })
+
+      setLoading(false)
+    }, 5000)
+
     subscriptionRef.current = loader().subscribe({
-      next: event => setEvents(prev => Array.from(insertEventIntoDescendingList(prev, event))),
+      next: event => {
+        receivedAnyEvents = true
+        setEvents(prev => {
+          const newList = Array.from(insertEventIntoDescendingList(prev, event))
+          return newList
+        })
+      },
       complete: () => {
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current)
+          safetyTimeoutRef.current = null
+        }
+
+        // Check immediately if we received any events from the loader
+        if (!receivedAnyEvents) {
+          setExhausted(true)
+          setLoading(false)
+          return
+        }
+
+        // If we received events, check if any were actually added (not duplicates)
+        setEvents(currentEvents => {
+          const addedNewEvents = currentEvents.length > eventCountBeforeLoadRef.current
+
+          if (!addedNewEvents) {
+            setExhausted(true)
+          }
+
+          setLoading(false)
+          return currentEvents
+        })
+      },
+      error: err => {
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current)
+          safetyTimeoutRef.current = null
+        }
+        console.error('[useInfiniteTimeline] Load error:', err)
         setLoading(false)
+        // Don't mark as exhausted on error, allow retry
       },
     })
-  }, [loader])
+  }, [loader, loading, exhausted])
 
   // Process events to VideoEvent format
   const videos = useMemo(() => {
@@ -108,11 +189,42 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
     return processEvents(events, readRelays, blockedPubkeys);
   }, [events, readRelays, blockedPubkeys]);
 */
+  const reset = useCallback(() => {
+    subscriptionRef.current?.unsubscribe()
+    subscriptionRef.current = null
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current)
+      safetyTimeoutRef.current = null
+    }
+    setEvents([])
+    setExhausted(false)
+    setLoading(false)
+  }, [])
+
+  // Reset when loader changes (e.g., when relays or filters change)
+  // Use a ref to track the loader and only reset if it actually changed
+  const loaderRef = useRef(loader)
+
+  useEffect(() => {
+    // Skip reset on initial mount (loader is undefined)
+    if (!loaderRef.current && !loader) {
+      loaderRef.current = loader
+      return
+    }
+
+    // If loader changed, always reset
+    // The loading guard in `next()` will prevent new loads while loading
+    if (loaderRef.current !== loader) {
+      loaderRef.current = loader
+      reset()
+    }
+  }, [loader, reset])
+
   return {
     videos,
     loading,
-    exhausted: false,
+    exhausted,
     loadMore: next,
-    reset: () => {},
+    reset,
   }
 }

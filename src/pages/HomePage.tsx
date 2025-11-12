@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
@@ -7,7 +7,11 @@ import { TimelineLoader } from 'applesauce-loaders/loaders'
 import { useInfiniteScroll, useReadRelays } from '@/hooks'
 
 export function HomePage() {
-  const relays = useReadRelays()
+  const relaysFromHook = useReadRelays()
+
+  // Stabilize relays array to prevent unnecessary loader recreations
+  const relays = useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
+
   const [loader, setLoader] = useState<TimelineLoader | undefined>()
 
   useEffect(() => {

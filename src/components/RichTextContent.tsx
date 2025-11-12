@@ -128,7 +128,11 @@ const detectSocialMedia = (url: string): SocialMediaPlatform | null => {
 }
 
 // Helper component to display user mentions
-function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; relays?: string[] } }) {
+function NostrMention({
+  profilePointer,
+}: {
+  profilePointer: { pubkey: string; relays?: string[] }
+}) {
   const author = useProfile(profilePointer)
   const eventStore = useEventStore()
   const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
@@ -148,10 +152,7 @@ function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; re
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 
   return (
-    <Link
-      to={nprofileLink}
-      className="font-medium hover:underline text-primary"
-    >
+    <Link to={nprofileLink} className="font-medium hover:underline text-primary">
       @{displayName}
     </Link>
   )
@@ -292,9 +293,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
             )
           }
         } else if (item.type === 'npub' || item.type === 'nprofile') {
-          parts.push(
-            <NostrMention key={`mention-${item.start}`} profilePointer={item.data} />
-          )
+          parts.push(<NostrMention key={`mention-${item.start}`} profilePointer={item.data} />)
         }
       }
     }

@@ -4,7 +4,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useNostrPublish } from './useNostrPublish'
 import { nowInSecs } from '@/lib/utils'
 import { useAppContext } from './useAppContext'
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -34,7 +34,7 @@ export function usePlaylists() {
   const { publish } = useNostrPublish()
   const { config, pool } = useAppContext()
   const [isLoading, setIsLoading] = useState(false)
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const hasLoadedOnceRef = useRef(false)
 
   const readRelays = useMemo(
     () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
@@ -68,39 +68,56 @@ export function usePlaylists() {
 
   // Load playlists on page load if not already loaded
   useEffect(() => {
-    // Check allPlaylistEvents (before filtering) to avoid re-loading if events were just deleted
-    const needLoad = allPlaylistEvents.length === 0 && !!user?.pubkey && !hasLoadedOnce
-
-    if (needLoad) {
-      setIsLoading(true)
-      const load$ = loader()
-
-      // Safety timeout to prevent infinite loading (10 seconds max)
-      const safetyTimeout = setTimeout(() => {
-        setIsLoading(false)
-        setHasLoadedOnce(true)
-      }, 10000)
-
-      const subscription = load$.subscribe({
-        next: event => eventStore.add(event),
-        complete: () => {
-          clearTimeout(safetyTimeout)
-          setIsLoading(false)
-          setHasLoadedOnce(true)
-        },
-        error: () => {
-          clearTimeout(safetyTimeout)
-          setIsLoading(false)
-          setHasLoadedOnce(true)
-        },
-      })
-
-      return () => {
-        clearTimeout(safetyTimeout)
-        subscription.unsubscribe()
-      }
+    // Only load once when user pubkey becomes available
+    if (!user?.pubkey || hasLoadedOnceRef.current) {
+      return
     }
-  }, [allPlaylistEvents.length, user?.pubkey, hasLoadedOnce, loader, eventStore])
+
+    hasLoadedOnceRef.current = true // Set immediately to prevent multiple loads
+    setIsLoading(true)
+    const load$ = loader()
+
+    let hasReceivedEvents = false
+
+    // Show results quickly after first events arrive
+    const quickDisplayTimeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    // Safety timeout to prevent infinite loading (10 seconds max)
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 10000)
+
+    const subscription = load$.subscribe({
+      next: event => {
+        eventStore.add(event)
+
+        // Mark that we've received events
+        if (!hasReceivedEvents) {
+          hasReceivedEvents = true
+        }
+      },
+      complete: () => {
+        clearTimeout(quickDisplayTimeout)
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+      },
+      error: err => {
+        console.warn('[usePlaylist] Failed to load playlists:', err)
+        clearTimeout(quickDisplayTimeout)
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+      },
+    })
+
+    return () => {
+      clearTimeout(quickDisplayTimeout)
+      clearTimeout(safetyTimeout)
+      subscription.unsubscribe()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.pubkey])
 
   const playlists = playlistEvents.map(event => {
     // Find the title from tags
@@ -316,7 +333,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     [eventStore, allPlaylistEvents]
   )
 
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const hasLoadedOnceRef = useRef(false)
   const [isLoading, setIsLoading] = useState(false)
   const loader = useMemo(
     () =>
@@ -328,47 +345,54 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
 
   // Reset hasLoadedOnce when relays change (e.g., when author's NIP-65 is loaded)
   useEffect(() => {
-    setHasLoadedOnce(false)
+    hasLoadedOnceRef.current = false
   }, [readRelays])
 
   useEffect(() => {
     // Load if we have a pubkey and haven't loaded yet
     // Note: When relays change, hasLoadedOnce is reset to false (see effect above)
-    const needLoad = !!pubkey && !hasLoadedOnce
-
-    if (needLoad) {
-      setIsLoading(true)
-      const load$ = loader()
-
-      // Safety timeout to prevent infinite loading (10 seconds max)
-      const safetyTimeout = setTimeout(() => {
-        setHasLoadedOnce(true)
-        setIsLoading(false)
-      }, 10000)
-
-      const subscription = load$.subscribe({
-        next: event => eventStore.add(event),
-        complete: () => {
-          clearTimeout(safetyTimeout)
-          setHasLoadedOnce(true)
-          setIsLoading(false)
-        },
-        error: () => {
-          clearTimeout(safetyTimeout)
-          setHasLoadedOnce(true)
-          setIsLoading(false)
-        },
-      })
-
-      return () => {
-        clearTimeout(safetyTimeout)
-        subscription.unsubscribe()
-      }
-    } else if (!pubkey) {
-      // Reset loading state if no pubkey
+    if (!pubkey) {
       setIsLoading(false)
+      return
     }
-  }, [pubkey, hasLoadedOnce, loader, eventStore])
+
+    if (hasLoadedOnceRef.current) return
+
+    hasLoadedOnceRef.current = true // Set immediately to prevent multiple loads
+    setIsLoading(true)
+    const load$ = loader()
+
+    // Show results quickly after first events arrive
+    const quickDisplayTimeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    // Safety timeout to prevent infinite loading (10 seconds max)
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 10000)
+
+    const subscription = load$.subscribe({
+      next: event => eventStore.add(event),
+      complete: () => {
+        clearTimeout(quickDisplayTimeout)
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+      },
+      error: () => {
+        clearTimeout(quickDisplayTimeout)
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+      },
+    })
+
+    return () => {
+      clearTimeout(quickDisplayTimeout)
+      clearTimeout(safetyTimeout)
+      subscription.unsubscribe()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkey])
 
   const playlists = playlistEvents?.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')

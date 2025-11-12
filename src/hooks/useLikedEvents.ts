@@ -66,15 +66,19 @@ export function useLikedEvents() {
   const likedEventIds = useMemo(() => {
     if (!user || reactionEvents.length === 0) return []
 
-    const eventIds = reactionEvents
+    // Sort reaction events by created_at in descending order (most recent first)
+    const sortedReactions = [...reactionEvents]
       .filter(event => event.content === '+')
+      .sort((a, b) => b.created_at - a.created_at)
+
+    const eventIds = sortedReactions
       .map(event => {
         const eTag = event.tags.find(tag => tag[0] === 'e')
         return eTag ? eTag[1] : undefined
       })
       .filter((id): id is string => id !== undefined)
 
-    // Filter out duplicate event IDs (user might have liked the same video multiple times)
+    // Filter out duplicate event IDs (keep first occurrence, which is the most recent like)
     const uniqueEventIds = Array.from(new Set(eventIds))
 
     return uniqueEventIds

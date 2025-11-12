@@ -66,7 +66,18 @@ export function NoteContent({ event, className }: NoteContentProps) {
 
           if (decoded.type === 'npub') {
             const pubkey = decoded.data
-            parts.push(<NostrMention key={`mention-${keyCounter++}`} pubkey={pubkey} />)
+            parts.push(
+              <NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey }} />
+            )
+          } else if (decoded.type === 'nprofile') {
+            // Handle nprofile with custom relays
+            const { pubkey, relays } = decoded.data
+            parts.push(
+              <NostrMention
+                key={`mention-${keyCounter++}`}
+                profilePointer={{ pubkey, relays }}
+              />
+            )
           } else {
             // For other types, just show as a link
             parts.push(
@@ -121,11 +132,11 @@ export function NoteContent({ event, className }: NoteContentProps) {
 }
 
 // Helper component to display user mentions
-function NostrMention({ pubkey }: { pubkey: string }) {
-  const author = useProfile({ pubkey })
-  const npub = nip19.npubEncode(pubkey)
+function NostrMention({ profilePointer }: { profilePointer: { pubkey: string; relays?: string[] } }) {
+  const author = useProfile(profilePointer)
+  const npub = nip19.npubEncode(profilePointer.pubkey)
   const hasRealName = !!author?.name
-  const displayName = author?.display_name || author?.name || genUserName(pubkey)
+  const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
 
   return (
     <Link

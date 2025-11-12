@@ -4,6 +4,8 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { MenuIcon, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
+import { useScrollDirection } from '@/hooks/useScrollDirection'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface HeaderProps {
   transparent?: boolean
@@ -11,10 +13,17 @@ interface HeaderProps {
 
 export function Header({ transparent = false }: HeaderProps) {
   const { toggleSidebar } = useAppContext()
+  const { scrollDirection, isAtTop } = useScrollDirection()
+  const isMobile = useIsMobile()
+
+  // On mobile: hide header when scrolling down (unless at top), show when scrolling up
+  const shouldHide = isMobile && scrollDirection === 'down' && !isAtTop
 
   return (
     <header
-      className={`sticky top-0 z-50 ${transparent ? '' : 'bg-background'}`}
+      className={`sticky top-0 z-50 transition-transform duration-300 ${transparent ? '' : 'bg-background'} ${
+        shouldHide ? '-translate-y-full' : 'translate-y-0'
+      }`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
     >
       <div className={`w-full px-4 py-2 flex items-center justify-between`}>

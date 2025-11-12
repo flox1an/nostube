@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background-color: #141111;">
   <head>
     <meta charset="UTF-8" />
     <title>nostube</title>
@@ -21,6 +21,19 @@
       http-equiv="content-security-policy"
       content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss: http://localhost:*; img-src 'self' data: blob: https: 127.0.0.1:8081; media-src 'self' https: blob: http://localhost:*"
     />
+    <style>
+      /* Prevent white flash on iOS PWA - loads before any CSS */
+      html, body {
+        background-color: #141111;
+        margin: 0;
+        padding: 0;
+      }
+      @media (prefers-color-scheme: light) {
+        html, body {
+          background-color: #ffffff;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

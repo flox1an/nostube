@@ -32,11 +32,23 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
   const [isAdding, setIsAdding] = useState(false)
   const [open, setOpen] = useState(false)
 
-  if (!user) return null
+  console.log('[AddToPlaylistButton] Rendered:', {
+    hasUser: !!user,
+    isLoading,
+    playlistCount: playlists.length
+  })
+
+  if (!user) {
+    console.log('[AddToPlaylistButton] No user, not rendering')
+    return null
+  }
 
   if (isLoading) {
+    console.log('[AddToPlaylistButton] Loading playlists, showing skeleton')
     return <Skeleton className="h-9 w-[140px]" />
   }
+
+  console.log('[AddToPlaylistButton] Rendering button with', playlists.length, 'playlists')
 
   const handleAddToPlaylist = async (playlistId: string, playlistName: string) => {
     try {

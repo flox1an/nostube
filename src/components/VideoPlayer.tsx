@@ -1,14 +1,19 @@
 import * as React from 'react'
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, lazy, Suspense } from 'react'
 import 'media-chrome'
-import 'hls-video-element'
 import { type TextTrack } from '@/utils/video-event'
-import { getLanguageLabel, imageProxyVideoPreview } from '@/lib/utils'
+import { imageProxyVideoPreview } from '@/lib/utils'
 import 'media-chrome/menu'
 import '@/types/media-chrome.d.ts'
 import { Loader2 } from 'lucide-react'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '../hooks'
+import { NativeVideoPlayer } from './video/NativeVideoPlayer'
+
+// Lazy load HLS video player only when needed
+const HLSVideoPlayer = lazy(() =>
+  import('./video/HLSVideoPlayer').then(module => ({ default: module.HLSVideoPlayer }))
+)
 
 interface VideoPlayerProps {
   urls: string[]
@@ -478,43 +483,41 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   return (
     <media-controller className={className}>
       {isHls ? (
-        <hls-video
-          src={videoUrl}
-          slot="media"
-          className={cinemaMode || isMobile ? 'cinema' : 'normal'}
-          autoPlay={!contentWarning}
-          loop={loop}
-          poster={posterUrl}
-          crossOrigin="anonymous"
-          onTimeUpdate={handleTimeUpdate}
-          ref={hlsRef}
-          tabIndex={0}
-          onError={handleVideoError}
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-32 w-32 animate-spin" />
+            </div>
+          }
         >
-          {/* Captions for HLS */}
-          {textTracks.map(vtt => (
-            <CaptionTrack key={vtt.lang} track={vtt} sha256={sha256} />
-          ))}
-        </hls-video>
+          <HLSVideoPlayer
+            videoUrl={videoUrl}
+            posterUrl={posterUrl}
+            loop={loop}
+            contentWarning={contentWarning}
+            cinemaMode={cinemaMode}
+            isMobile={isMobile}
+            textTracks={textTracks}
+            sha256={sha256}
+            onTimeUpdate={handleTimeUpdate}
+            onVideoError={handleVideoError}
+            hlsRef={hlsRef}
+          />
+        </Suspense>
       ) : (
-        <video
-          crossOrigin="anonymous"
-          src={videoUrl}
-          ref={videoRef}
-          className={cinemaMode || isMobile ? 'cinema' : 'normal'}
-          slot="media"
-          autoPlay={!contentWarning}
+        <NativeVideoPlayer
+          videoUrl={videoUrl}
+          posterUrl={posterUrl}
           loop={loop}
-          poster={posterUrl}
+          contentWarning={contentWarning}
+          cinemaMode={cinemaMode}
+          isMobile={isMobile}
+          textTracks={textTracks}
+          sha256={sha256}
+          videoRef={videoRef}
           onTimeUpdate={handleTimeUpdate}
-          tabIndex={0}
-          onError={handleVideoError}
-        >
-          {/* Captions for regular video */}
-          {textTracks.map(vtt => (
-            <CaptionTrack key={vtt.lang} track={vtt} sha256={sha256} />
-          ))}
-        </video>
+          onVideoError={handleVideoError}
+        />
       )}
 
       {/* Loading spinner overlay */}
@@ -590,40 +593,3 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     </media-controller>
   )
 })
-
-/**
- * Caption Track component with automatic failover using useMediaUrls
- */
-function CaptionTrack({ track, sha256 }: { track: TextTrack; sha256?: string }) {
-  // Use media URL failover for VTT captions
-  const { currentUrl, moveToNext, hasMore } = useMediaUrls({
-    urls: [track.url],
-    mediaType: 'vtt',
-    sha256, // Use video's sha256 to discover caption alternatives
-  })
-
-  const handleTrackError = useCallback(() => {
-    if (hasMore) {
-      if (import.meta.env.DEV) {
-        console.log(`VTT track error for ${track.lang}, trying next URL...`)
-      }
-      moveToNext()
-    } else {
-      console.warn(`All VTT track URLs failed for ${track.lang}`)
-    }
-  }, [hasMore, moveToNext, track.lang])
-
-  if (!currentUrl) {
-    return null
-  }
-
-  return (
-    <track
-      label={getLanguageLabel(track.lang)}
-      kind="captions"
-      srcLang={track.lang}
-      src={currentUrl}
-      onError={handleTrackError}
-    />
-  )
-}

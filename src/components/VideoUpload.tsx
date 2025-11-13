@@ -41,6 +41,7 @@ export function VideoUpload() {
     mirroredBlobs: BlobDescriptor[]
     videoCodec?: string
     audioCodec?: string
+    bitrate?: number // Total bitrate in bits per second (video + audio)
     videoUrl?: string // For URL-based videos
   }>({ uploadedBlobs: [], mirroredBlobs: [] })
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
@@ -140,6 +141,11 @@ export function VideoUpload() {
       } else if (inputMethod === 'url') {
         // For URL videos, we can't determine exact mime type without the file
         imetaTag.push(`m video/mp4`)
+      }
+
+      // Add bitrate if available (in bits per second)
+      if (uploadInfo.bitrate) {
+        imetaTag.push(`bitrate ${uploadInfo.bitrate}`)
       }
 
       thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
@@ -360,6 +366,7 @@ export function VideoUpload() {
         videoUrl: url,
         videoCodec: codecs.videoCodec,
         audioCodec: codecs.audioCodec,
+        bitrate: codecs.bitrate,
       })
 
       setUploadState('finished')
@@ -482,6 +489,7 @@ export function VideoUpload() {
           mirroredBlobs: [],
           videoCodec: codecs.videoCodec,
           audioCodec: codecs.audioCodec,
+          bitrate: codecs.bitrate,
         })
 
         if (blossomMirrorServers && blossomMirrorServers.length > 0) {

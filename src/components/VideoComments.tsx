@@ -1,6 +1,6 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { useCurrentUser, useNostrPublish, useProfile, useAppContext } from '@/hooks'
+import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -12,6 +12,7 @@ import { imageProxy, nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { Reply } from 'lucide-react'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 interface Comment {
   id: string
@@ -258,6 +259,20 @@ export function VideoComments({
   const { publish } = useNostrPublish()
   const { pool, config } = useAppContext()
 
+  // Get inbox relays for the video author (NIP-65)
+  const videoAuthorRelays = useUserRelays(authorPubkey)
+
+  // Get inbox relays for the comment author being replied to
+  const replyToAuthorRelays = useUserRelays(replyTo?.pubkey)
+
+  // Get relays where the video event is hosted (from seenRelays)
+  const videoEventRelays = useMemo(() => {
+    const videoEvent = eventStore.getEvent(videoId)
+    if (!videoEvent) return []
+    const seenRelays = getSeenRelays(videoEvent)
+    return seenRelays ? Array.from(seenRelays) : []
+  }, [eventStore, videoId])
+
   // Use provided relays or fallback to app config read relays
   const readRelays = useMemo(() => {
     if (relays && relays.length > 0) {
@@ -313,9 +328,24 @@ export function VideoComments({
     e.preventDefault()
     if (!user || !newComment.trim()) return
 
-    // Get a relay hint (use first write relay or first relay)
+    // Get user's write relays
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-    const relayHint = writeRelays[0] || readRelays[0] || ''
+
+    // Get video author's inbox relays (write relays from their NIP-65 relay list)
+    const videoAuthorInbox = videoAuthorRelays.data
+      ?.filter(r => r.write)
+      .map(r => r.url) || []
+
+    // Combine relays: video event relays + video author's inbox + user's write relays
+    // Use Set to remove duplicates
+    const targetRelays = Array.from(new Set([
+      ...videoEventRelays,
+      ...videoAuthorInbox,
+      ...writeRelays,
+    ]))
+
+    // Get a relay hint (use first video event relay or first write relay)
+    const relayHint = videoEventRelays[0] || writeRelays[0] || readRelays[0] || ''
 
     // NIP-22: Top-level comment on a video event
     const tags: string[][] = [
@@ -342,7 +372,7 @@ export function VideoComments({
     try {
       const signedEvent = await publish({
         event: draftEvent,
-        relays: writeRelays,
+        relays: targetRelays,
       })
 
       // Add the comment to the event store immediately for instant feedback
@@ -358,9 +388,30 @@ export function VideoComments({
     e.preventDefault()
     if (!user || !replyContent.trim() || !replyTo) return
 
-    // Get a relay hint (use first write relay or first relay)
+    // Get user's write relays
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-    const relayHint = writeRelays[0] || readRelays[0] || ''
+
+    // Get comment author's inbox relays (write relays from their NIP-65 relay list)
+    const replyToAuthorInbox = replyToAuthorRelays.data
+      ?.filter(r => r.write)
+      .map(r => r.url) || []
+
+    // Get relays where the parent comment is hosted
+    const parentCommentEvent = eventStore.getEvent(replyTo.id)
+    const parentCommentRelays = parentCommentEvent
+      ? Array.from(getSeenRelays(parentCommentEvent) || [])
+      : []
+
+    // Combine relays: parent comment relays + comment author's inbox + user's write relays
+    // Use Set to remove duplicates
+    const targetRelays = Array.from(new Set([
+      ...parentCommentRelays,
+      ...replyToAuthorInbox,
+      ...writeRelays,
+    ]))
+
+    // Get a relay hint (use first parent comment relay or first write relay)
+    const relayHint = parentCommentRelays[0] || writeRelays[0] || readRelays[0] || ''
 
     // NIP-22: Reply to a comment
     const tags: string[][] = [
@@ -387,7 +438,7 @@ export function VideoComments({
     try {
       const signedEvent = await publish({
         event: draftEvent,
-        relays: writeRelays,
+        relays: targetRelays,
       })
 
       // Add the comment to the event store immediately for instant feedback

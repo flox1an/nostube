@@ -4,6 +4,7 @@ import type { Movie } from 'mp4box'
 export interface CodecInfo {
   videoCodec?: string
   audioCodec?: string
+  bitrate?: number // Total bitrate in bits per second (video + audio)
 }
 
 /**
@@ -46,13 +47,22 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
         }
         resolved = true
         clearTimeout(timeout)
+
+        // Extract bitrate from all tracks
+        let totalBitrate = 0
         for (const track of info.tracks) {
-          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec)
+          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
+          // Sum up bitrates from video and audio tracks
+          if (track.bitrate && (track.type === 'video' || track.type === 'audio')) {
+            totalBitrate += track.bitrate
+          }
         }
-        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
-        resolve({ videoCodec, audioCodec })
+
+        const bitrate = totalBitrate > 0 ? totalBitrate : undefined
+        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
+        resolve({ videoCodec, audioCodec, bitrate })
       }
     }
 
@@ -202,13 +212,22 @@ async function tryParseFromRange(
         if (import.meta.env.DEV) console.log('[CODEC] MP4Box ready, tracks:', info.tracks.length)
         resolved = true
         clearTimeout(timeout)
+
+        // Extract bitrate from all tracks
+        let totalBitrate = 0
         for (const track of info.tracks) {
-          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec)
+          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
+          // Sum up bitrates from video and audio tracks
+          if (track.bitrate && (track.type === 'video' || track.type === 'audio')) {
+            totalBitrate += track.bitrate
+          }
         }
-        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec })
-        resolve({ videoCodec, audioCodec })
+
+        const bitrate = totalBitrate > 0 ? totalBitrate : undefined
+        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
+        resolve({ videoCodec, audioCodec, bitrate })
       }
     }
 

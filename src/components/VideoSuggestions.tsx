@@ -8,10 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays, imageProxy } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -33,6 +34,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 }) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
+  const authorPicture = metadata?.picture
   const [thumbnailError, setThumbnailError] = useState(false)
 
   const thumbnailUrl = useMemo(() => {
@@ -71,7 +73,13 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
         </div>
         <div className="p-1 pl-3">
           <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
-          <div className="text-xs text-muted-foreground mt-1">{name}</div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Avatar className="h-4 w-4">
+              <AvatarImage src={imageProxy(authorPicture)} />
+              <AvatarFallback className="text-[8px]">{name[0]}</AvatarFallback>
+            </Avatar>
+            <div className="text-xs text-muted-foreground">{name}</div>
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(video.created_at * 1000), new Date(), {
               addSuffix: true,

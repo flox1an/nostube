@@ -23,6 +23,8 @@ import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-core/models'
 import { useEventModel } from 'applesauce-react/hooks'
 import { Header } from '@/components/Header'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { VideoComments } from '@/components/VideoComments'
 
 function ShortVideoItem({
   video,
@@ -41,6 +43,8 @@ function ShortVideoItem({
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const [isPaused, setIsPaused] = useState(false)
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null)
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
   // Get video owner's Blossom servers
   const rawOwnerServers =
@@ -128,6 +132,10 @@ function ShortVideoItem({
   // Handle video ready to play
   const handleCanPlay = useCallback(() => {
     // Video is ready, can start playing
+    const videoEl = videoElementRef.current
+    if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
+      setAspectRatio(videoEl.videoWidth / videoEl.videoHeight)
+    }
   }, [])
 
   // Handle video error
@@ -137,6 +145,25 @@ function ShortVideoItem({
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = `${baseUrl}/short/${video.link}`
+
+  // Calculate max-width based on aspect ratio
+  // For vertical videos (9:16), use standard width
+  // For square videos (1:1), use larger width (85vh)
+  // For wider videos, use even larger width
+  const getMaxWidth = useCallback(() => {
+    if (!aspectRatio) return 'calc(100vh * 9 / 16)' // Default for vertical
+
+    if (aspectRatio >= 0.9 && aspectRatio <= 1.1) {
+      // Square video (1:1 ratio, with some tolerance)
+      return '85vh'
+    } else if (aspectRatio > 1.1) {
+      // Wider than square (landscape)
+      return '95vh'
+    } else {
+      // Vertical video
+      return 'calc(100vh * 9 / 16)'
+    }
+  }, [aspectRatio])
 
   // Preload video in background when shouldPreload is true
   useEffect(() => {
@@ -160,7 +187,7 @@ function ShortVideoItem({
       <div className="relative w-full h-screen flex flex-col items-center justify-center">
         {/* Video player - fullscreen vertical */}
         <div className="relative w-full h-full flex items-center justify-center bg-black">
-          <div className="relative w-full h-full" style={{ maxWidth: 'calc(100vh * 9 / 16)' }}>
+          <div className="relative w-full h-full" style={{ maxWidth: getMaxWidth() }}>
             {video.contentWarning && !isActive && (
               <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-lg">
                 <div className="text-center">
@@ -214,16 +241,6 @@ function ShortVideoItem({
 
         {/* Right sidebar with interactions */}
         <div className="absolute right-4 bottom-24 flex flex-col items-center gap-4 z-10">
-          {/* Profile picture */}
-          <Link to={`/author/${authorNprofile}`}>
-            <Avatar className="h-12 w-12 border-2 border-white cursor-pointer hover:scale-110 transition-transform">
-              <AvatarImage src={imageProxy(authorPicture)} alt={authorName} />
-              <AvatarFallback>
-                {authorPicture ? <ImageIcon className="h-6 w-6" /> : authorName?.charAt(0) || '?'}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-
           {/* Like button */}
           <div className="flex flex-col items-center gap-1">
             <ButtonWithReactions
@@ -237,7 +254,10 @@ function ShortVideoItem({
 
           {/* Comments button */}
           <div className="flex flex-col items-center gap-1">
-            <button className="bg-black/50 hover:bg-black/70 rounded-full p-2 border border-white/20 transition-colors">
+            <button
+              className="bg-black/50 hover:bg-black/70 rounded-full p-2 border border-white/20 transition-colors"
+              onClick={() => setCommentsOpen(true)}
+            >
               <MessageCircle className="h-6 w-6 text-white" />
             </button>
             <span className="text-white text-xs">Comments</span>
@@ -267,26 +287,28 @@ function ShortVideoItem({
 
         {/* Bottom info overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-          <div className="w-full" style={{ maxWidth: 'calc(100vh * 9 / 16)' }}>
-            {/* Author info */}
-            <div className="flex items-center gap-3 mb-3">
-              <Link to={`/author/${authorNprofile}`}>
-                <Avatar className="h-10 w-10 border-2 border-white">
-                  <AvatarImage src={imageProxy(authorPicture)} alt={authorName} />
-                  <AvatarFallback>{authorName?.charAt(0) || '?'}</AvatarFallback>
-                </Avatar>
-              </Link>
-              <div className="flex-1 min-w-0">
+          <div className="w-full" style={{ maxWidth: getMaxWidth() }}>
+            {/* Follow button and Author info */}
+            <div className="flex flex-col gap-2 mb-3">
+              <FollowButton pubkey={video.pubkey} className="text-white self-start" />
+              <div className="flex items-center gap-3">
                 <Link to={`/author/${authorNprofile}`}>
-                  <div className="text-white font-semibold truncate">{authorName}</div>
+                  <Avatar className="h-10 w-10 border-2 border-white">
+                    <AvatarImage src={imageProxy(authorPicture)} alt={authorName} />
+                    <AvatarFallback>{authorName?.charAt(0) || '?'}</AvatarFallback>
+                  </Avatar>
                 </Link>
-                <div className="text-white/70 text-sm">
-                  {formatDistance(new Date(video.created_at * 1000), new Date(), {
-                    addSuffix: true,
-                  })}
+                <div className="flex-1 min-w-0">
+                  <Link to={`/author/${authorNprofile}`}>
+                    <div className="text-white font-semibold truncate">{authorName}</div>
+                  </Link>
+                  <div className="text-white/70 text-sm">
+                    {formatDistance(new Date(video.created_at * 1000), new Date(), {
+                      addSuffix: true,
+                    })}
+                  </div>
                 </div>
               </div>
-              <FollowButton pubkey={video.pubkey} className="text-white" />
             </div>
 
             {/* Video title/description */}
@@ -305,6 +327,24 @@ function ShortVideoItem({
           </div>
         </div>
       </div>
+
+      {/* Comments Sheet */}
+      <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
+        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Comments</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <VideoComments
+              videoId={video.id}
+              authorPubkey={video.pubkey}
+              link={video.link}
+              relays={eventRelays}
+              videoKind={video.kind}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
@@ -321,6 +361,7 @@ export function ShortsVideoPage() {
   const currentVideoIndexRef = useRef(0)
   const isUpdatingIndexRef = useRef(false)
   const [allVideos, setAllVideos] = useState<VideoEvent[]>([])
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true)
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -360,6 +401,8 @@ export function ShortsVideoPage() {
   useEffect(() => {
     if (!initialVideo) return
 
+    setIsLoadingVideos(true)
+
     const filters = {
       kinds: getKindsForType('shorts'),
       limit: 50,
@@ -377,10 +420,12 @@ export function ShortsVideoPage() {
         eventStore.add(event)
       },
       complete: () => {
-        // Complete loading
+        // Mark loading as complete after initial load finishes
+        setIsLoadingVideos(false)
       },
       error: err => {
         console.error('Error loading suggestions:', err)
+        setIsLoadingVideos(false)
       },
     })
 
@@ -405,6 +450,10 @@ export function ShortsVideoPage() {
           return true
         })
         setAllVideos(unique)
+        // If we have at least the initial video, we can stop showing loading state
+        if (unique.length > 0) {
+          setIsLoadingVideos(false)
+        }
       })
 
     return () => {
@@ -534,7 +583,7 @@ export function ShortsVideoPage() {
   }, [])
 
   const currentVideo = allVideos[currentVideoIndex]
-  const isLoading = !initialVideo && initialVideoEvent === undefined
+  const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
   useEffect(() => {
     if (currentVideo?.title) {
@@ -554,18 +603,24 @@ export function ShortsVideoPage() {
     }
   }, [currentVideo, nevent, navigate])
 
-  if (isLoading) {
+  // Show loading state while fetching initial event OR while loading videos from relays
+  if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
         <Skeleton className="w-full h-full max-w-md aspect-[9/16]" />
+        <div className="text-white/70 text-sm">Looking for videos...</div>
       </div>
     )
   }
 
-  if (!currentVideo && allVideos.length === 0) {
+  // Only show "not found" after loading is complete and we have no videos
+  if (!isLoadingVideos && !currentVideo && allVideos.length === 0) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
-        <div>Video not found</div>
+        <div className="text-center">
+          <div className="text-xl mb-2">Video not found</div>
+          <div className="text-white/70 text-sm">The video may have been deleted or is unavailable</div>
+        </div>
       </div>
     )
   }

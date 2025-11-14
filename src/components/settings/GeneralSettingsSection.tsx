@@ -5,9 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { type NsfwFilter } from '@/contexts/AppContext'
 import { defaultResizeServer } from '../../App'
+import { useTheme } from '@/providers/theme-provider'
+import { availableThemes } from '@/lib/themes'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
+  const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
 
   const handleThumbServerChange = (value: string) => {
     updateConfig(currentConfig => ({
@@ -30,6 +34,54 @@ export function GeneralSettingsSection() {
         <CardDescription>Configure general application preferences</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Theme Mode */}
+        <div className="space-y-3">
+          <Label>Theme Mode</Label>
+          <RadioGroup value={theme} onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="light" id="theme-light" />
+              <Label htmlFor="theme-light" className="font-normal cursor-pointer">
+                Light
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="dark" id="theme-dark" />
+              <Label htmlFor="theme-dark" className="font-normal cursor-pointer">
+                Dark
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="system" id="theme-system" />
+              <Label htmlFor="theme-system" className="font-normal cursor-pointer">
+                System (Auto)
+              </Label>
+            </div>
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Choose between light and dark mode, or use your system preference.
+          </p>
+        </div>
+
+        {/* Color Theme */}
+        <div className="space-y-2">
+          <Label htmlFor="color-theme">Color Theme</Label>
+          <Select value={colorTheme} onValueChange={setColorTheme}>
+            <SelectTrigger id="color-theme">
+              <SelectValue placeholder="Select a color theme" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableThemes.map(t => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Choose a color scheme for the application interface.
+          </p>
+        </div>
+
         {/* Thumbnail Resize Server */}
         <div className="space-y-2">
           <Label htmlFor="thumb-server">Thumbnail Resize Server URL</Label>

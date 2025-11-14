@@ -34,11 +34,26 @@ export function CollapsibleText({
     }
   }, [text, maxLines])
 
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't toggle if clicking on a link
+    if ((e.target as HTMLElement).tagName === 'A') {
+      return
+    }
+    if (showButton) {
+      setIsExpanded(!isExpanded)
+    }
+  }
+
   return (
     <div className={className}>
       <div
         ref={textRef}
-        className={cn('whitespace-pre-wrap break-words break-all', !isExpanded && 'line-clamp-5')}
+        className={cn(
+          'whitespace-pre-wrap break-words break-all',
+          !isExpanded && 'line-clamp-5',
+          showButton && 'cursor-pointer'
+        )}
+        onClick={handleClick}
       >
         <RichTextContent content={text} videoLink={videoLink} />
       </div>

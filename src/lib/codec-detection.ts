@@ -60,7 +60,7 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
           }
         }
 
-        const bitrate = totalBitrate > 0 ? totalBitrate : undefined
+        const bitrate = totalBitrate > 0 ? Math.floor(totalBitrate) : undefined
         if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
         resolve({ videoCodec, audioCodec, bitrate })
       }
@@ -225,7 +225,7 @@ async function tryParseFromRange(
           }
         }
 
-        const bitrate = totalBitrate > 0 ? totalBitrate : undefined
+        const bitrate = totalBitrate > 0 ? Math.floor(totalBitrate) : undefined
         if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
         resolve({ videoCodec, audioCodec, bitrate })
       }

@@ -52,8 +52,9 @@ export function usePlaylists() {
     () =>
       createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
         timeout: 5000, // 5 second timeout per relay to prevent blocking
+        eventStore,
       }),
-    [pool, readRelays, filters, deletionFilters]
+    [pool, readRelays, filters, deletionFilters, eventStore]
   )
 
   // Use EventStore timeline to get playlists for current user
@@ -339,8 +340,9 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     () =>
       createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
         timeout: 5000, // 5 second timeout per relay to prevent blocking
+        eventStore,
       }),
-    [pool, readRelays, filters, deletionFilters]
+    [pool, readRelays, filters, deletionFilters, eventStore]
   )
 
   // Reset hasLoadedOnce when relays change (e.g., when author's NIP-65 is loaded)

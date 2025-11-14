@@ -59,7 +59,7 @@ export function VideoUpload() {
 
   const { user } = useCurrentUser()
   const { config } = useAppContext()
-  const { publish } = useNostrPublish()
+  const { publish, isPending: isPublishing } = useNostrPublish()
   const blossomInitalUploadServers = config.blossomServers?.filter(server =>
     server.tags.includes('initial upload')
   )
@@ -835,6 +835,7 @@ export function VideoUpload() {
           <Button
             type="submit"
             disabled={
+              isPublishing ||
               (inputMethod === 'file' &&
                 (!uploadInfo.uploadedBlobs || uploadInfo.uploadedBlobs.length === 0)) ||
               (inputMethod === 'url' && !uploadInfo.videoUrl) ||
@@ -846,7 +847,14 @@ export function VideoUpload() {
                   thumbnailUploadInfo.uploadedBlobs.length === 0))
             }
           >
-            Publish video
+            {isPublishing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              'Publish video'
+            )}
           </Button>
         </CardFooter>
       </form>

@@ -1,9 +1,11 @@
 import { useEffect, useMemo } from 'react'
 import { useEventModel, useEventStore } from 'applesauce-react/hooks'
 import { ReactionsModel } from 'applesauce-core/models'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useAppContext } from './useAppContext'
 import { createReactionsLoader } from 'applesauce-loaders/loaders'
 import type { NostrEvent } from 'nostr-tools'
+import { combineRelays } from '@/lib/utils'
 
 interface UseReactionsOptions {
   eventId: string
@@ -20,13 +22,21 @@ export function useReactions({ eventId, authorPubkey, kind, relays = [] }: UseRe
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
 
-  // Create a dummy event object for ReactionsModel
-  const dummyEvent: NostrEvent = useMemo(
+  const storedEvent = useMemo(() => eventStore.getEvent(eventId), [eventStore, eventId])
+
+  const seenRelayList = useMemo(() => {
+    if (!storedEvent) return []
+    const relaysSet = getSeenRelays(storedEvent)
+    return relaysSet ? Array.from(relaysSet) : []
+  }, [storedEvent])
+
+  // Create a dummy event object for ReactionsModel if we don't have the original event
+  const fallbackEvent: NostrEvent = useMemo(
     () => ({
       id: eventId,
       pubkey: authorPubkey,
       created_at: 0,
-      kind: kind,
+      kind,
       tags: [],
       content: '',
       sig: '',
@@ -34,15 +44,16 @@ export function useReactions({ eventId, authorPubkey, kind, relays = [] }: UseRe
     [eventId, authorPubkey, kind]
   )
 
+  const targetEvent = storedEvent ?? fallbackEvent
+
   // Use ReactionsModel to get reactions from EventStore
-  const reactions = useEventModel(ReactionsModel, [dummyEvent]) || []
+  const reactions = useEventModel(ReactionsModel, [targetEvent]) || []
 
   // Combine relays from nevent and app config
   const relaysToUse = useMemo(() => {
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-    const combinedRelays = [...new Set([...relays, ...readRelays])]
-    return combinedRelays
-  }, [relays, config.relays])
+    return combineRelays([relays, seenRelayList, readRelays])
+  }, [relays, seenRelayList, config.relays])
 
   // Load reactions from relays
   useEffect(() => {
@@ -53,7 +64,7 @@ export function useReactions({ eventId, authorPubkey, kind, relays = [] }: UseRe
       useSeenRelays: true, // Use relays where the original event was seen
     })
 
-    const subscription = loader(dummyEvent, relaysToUse).subscribe({
+    const subscription = loader(targetEvent, relaysToUse).subscribe({
       next: reactionEvent => {
         // Reactions are automatically added to EventStore by the loader
       },
@@ -65,7 +76,7 @@ export function useReactions({ eventId, authorPubkey, kind, relays = [] }: UseRe
     return () => {
       subscription.unsubscribe()
     }
-  }, [eventId, pool, eventStore, dummyEvent, relaysToUse])
+  }, [eventId, pool, eventStore, targetEvent, relaysToUse])
 
   return reactions
 }

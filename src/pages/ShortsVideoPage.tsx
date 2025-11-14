@@ -16,7 +16,7 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, ChevronDown, Share2 } from 'lucide-react'
-import { imageProxy, imageProxyVideoPreview } from '@/lib/utils'
+import { imageProxy, imageProxyVideoPreview, combineRelays } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { getKindsForType } from '@/lib/video-types'
 import { nprofileFromEvent } from '@/lib/nprofile'
@@ -27,6 +27,7 @@ import { Header } from '@/components/Header'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { VideoComments } from '@/components/VideoComments'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
+import { presetRelays } from '@/constants/relays'
 
 function ShortVideoItem({
   video,
@@ -45,6 +46,7 @@ function ShortVideoItem({
   const videoRef = useRef<HTMLDivElement>(null)
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const eventStore = useEventStore()
+  const userReadRelays = useReadRelays()
   const { config } = useAppContext()
   const [isPaused, setIsPaused] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<number | null>(null)
@@ -126,16 +128,26 @@ function ShortVideoItem({
     return seenRelays ? Array.from(seenRelays) : []
   }, [event])
 
+  const pointerRelays = useMemo(() => {
+    if (!video.link) return []
+    try {
+      const pointer = decodeEventPointer(video.link)
+      return pointer?.relays ? [...pointer.relays] : []
+    } catch {
+      return []
+    }
+  }, [video.link])
+
+  const presetRelayUrls = useMemo(() => presetRelays.map(relay => relay.url), [])
+  const reactionRelays = useMemo(
+    () => combineRelays([eventRelays, pointerRelays, userReadRelays, presetRelayUrls]),
+    [eventRelays, pointerRelays, userReadRelays, presetRelayUrls]
+  )
+
   // Auto-play/pause based on isActive
   useEffect(() => {
     const videoEl = videoElementRef.current
     if (!videoEl) return
-
-    console.log('[ShortVideoItem] isActive changed:', {
-      videoId: video.id.substring(0, 8),
-      isActive,
-      willPlay: isActive,
-    })
 
     if (isActive) {
       // Reset to beginning and play immediately
@@ -199,9 +211,6 @@ function ShortVideoItem({
   // Handle video error: try next URL in failover chain
   const handleVideoError = useCallback(() => {
     if (hasMoreVideoUrls) {
-      if (import.meta.env.DEV) {
-        console.log('Video error, trying next URL...')
-      }
       moveToNextVideo()
     } else {
       console.error('All video URLs failed for:', video.id)
@@ -285,7 +294,11 @@ function ShortVideoItem({
                   loop
                   muted={false}
                   playsInline
-                  poster={thumbnailUrl ? imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl) : undefined}
+                  poster={
+                    thumbnailUrl
+                      ? imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)
+                      : undefined
+                  }
                   preload={shouldPreload || isActive ? 'auto' : 'metadata'}
                   onCanPlay={handleCanPlay}
                   onError={handleVideoError}
@@ -304,7 +317,10 @@ function ShortVideoItem({
               </div>
               {/* Show thumbnail overlay when not active for better visibility */}
               {!isActive && thumbnailUrl && (
-                <div className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center" onClick={handleVideoClick}>
+                <div
+                  className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center"
+                  onClick={handleVideoClick}
+                >
                   <img
                     src={imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)}
                     alt={video.title}
@@ -325,7 +341,7 @@ function ShortVideoItem({
               eventId={video.id}
               kind={video.kind}
               authorPubkey={video.pubkey}
-              relays={eventRelays}
+              relays={reactionRelays}
               className="bg-black/50 hover:bg-black/70 text-white border-white/20"
             />
           </div>
@@ -364,7 +380,7 @@ function ShortVideoItem({
         </div>
 
         {/* Bottom info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 px-4 bg-linear-to-t from-black/80 via-black/40 to-transparent">
           <div className="w-full" style={{ maxWidth: getMaxWidth() }}>
             {/* Follow button and Author info */}
             <div className="flex flex-col gap-2 mb-3">
@@ -372,7 +388,10 @@ function ShortVideoItem({
               <div className="flex items-center gap-3">
                 <Link to={`/author/${authorNprofile}`}>
                   <Avatar className="h-10 w-10 border-2 border-white">
-                    <AvatarImage src={imageProxy(authorPicture, config.thumbResizeServerUrl)} alt={authorName} />
+                    <AvatarImage
+                      src={imageProxy(authorPicture, config.thumbResizeServerUrl)}
+                      alt={authorName}
+                    />
                     <AvatarFallback>{authorName?.charAt(0) || '?'}</AvatarFallback>
                   </Avatar>
                 </Link>
@@ -491,12 +510,12 @@ export function ShortsVideoPage() {
 
         const target = bestEntry.target as HTMLElement
         const indexAttr = target.dataset.index
+        const targetVideoId = target.dataset.videoId
         if (!indexAttr) return
         const nextIndex = Number(indexAttr)
         if (Number.isNaN(nextIndex)) return
 
         if (nextIndex !== currentVideoIndexRef.current) {
-          console.log('[ShortsVideoPage] Intersection detected, updating index:', nextIndex)
           currentVideoIndexRef.current = nextIndex
           setCurrentIndex(nextIndex)
         }
@@ -517,30 +536,8 @@ export function ShortsVideoPage() {
 
   // Sync ref with store's currentIndex
   useEffect(() => {
-    console.log('[ShortsVideoPage] Syncing ref with store index:', currentVideoIndex)
     currentVideoIndexRef.current = currentVideoIndex
   }, [currentVideoIndex])
-
-  // Debug: Log when videos array changes
-  useEffect(() => {
-    if (allVideos.length > 0) {
-      console.log('[ShortsVideoPage] Videos loaded:', {
-        count: allVideos.length,
-        titles: allVideos.slice(0, 3).map(v => v.title),
-      })
-    }
-  }, [allVideos.length])
-
-  // Debug: Log index changes
-  useEffect(() => {
-    if (allVideos.length > 0) {
-      console.log('[ShortsVideoPage] Index changed:', {
-        currentIndex: currentVideoIndex,
-        totalVideos: allVideos.length,
-        currentVideoTitle: allVideos[currentVideoIndex]?.title,
-      })
-    }
-  }, [currentVideoIndex, allVideos])
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -586,7 +583,6 @@ export function ShortsVideoPage() {
     if (!initialVideo) return
 
     if (authorParam) {
-      console.log('[ShortsVideoPage] Author mode detected, using store feed')
       loadSourceRef.current = 'store'
 
       if (allVideos.length === 0) {
@@ -597,10 +593,6 @@ export function ShortsVideoPage() {
 
     // Check if store already has videos (from navigation via VideoCard click)
     if (allVideos.length > 0 && loadSourceRef.current === null) {
-      console.log('[ShortsVideoPage] Using videos from store:', {
-        count: allVideos.length,
-        startIndex: currentVideoIndex,
-      })
       // Store already populated, don't load from relays
       loadSourceRef.current = 'store'
       return
@@ -612,7 +604,6 @@ export function ShortsVideoPage() {
     }
 
     // Otherwise, load from relays (original behavior)
-    console.log('[ShortsVideoPage] Loading from relays (no videos in store)')
     loadSourceRef.current = 'relays'
     setLoading(true)
 
@@ -678,6 +669,7 @@ export function ShortsVideoPage() {
 
   // Track if we've done the initial scroll
   const hasScrolledRef = useRef(false)
+  const pendingUrlUpdateRef = useRef<string | null>(null)
 
   // Find initial video index and scroll to it
   useEffect(() => {
@@ -685,7 +677,6 @@ export function ShortsVideoPage() {
 
     // Use currentIndex from store if available (set by VideoCard click)
     if (currentVideoIndex > 0) {
-      console.log('[ShortsVideoPage] Scrolling to initial index:', currentVideoIndex)
       containerRef.current.scrollTo({
         top: currentVideoIndex * window.innerHeight,
         behavior: 'instant',
@@ -698,7 +689,6 @@ export function ShortsVideoPage() {
     if (initialVideo) {
       const index = allVideos.findIndex(v => v.id === initialVideo.id)
       if (index !== -1 && index !== 0) {
-        console.log('[ShortsVideoPage] Scrolling to video by ID, index:', index)
         containerRef.current.scrollTo({
           top: index * window.innerHeight,
           behavior: 'instant',
@@ -708,12 +698,23 @@ export function ShortsVideoPage() {
     }
   }, [allVideos.length, currentVideoIndex, initialVideo])
 
-  // Reset flags when navigating away
+  // Reset flags when the component unmounts
   useEffect(() => {
     return () => {
       hasScrolledRef.current = false
       loadSourceRef.current = null
     }
+  }, [])
+
+  // Only reset scroll flags when navigation comes from outside this page
+  useEffect(() => {
+    if (!nevent) return
+    if (pendingUrlUpdateRef.current === nevent) {
+      pendingUrlUpdateRef.current = null
+      return
+    }
+    hasScrolledRef.current = false
+    loadSourceRef.current = null
   }, [nevent])
 
   const scrollToVideo = useCallback(
@@ -782,12 +783,7 @@ export function ShortsVideoPage() {
     if (currentVideo && currentVideo.link !== nevent) {
       const newPath = `/short/${currentVideo.link}`
 
-      console.log('[ShortsVideoPage] Updating URL:', {
-        newLink: currentVideo.link,
-        newIndex: currentVideoIndex,
-        currentVideoId: currentVideo.id?.slice(0, 16),
-      })
-
+      pendingUrlUpdateRef.current = currentVideo.link
       navigate(newPath, { replace: true })
     }
   }, [currentVideo, nevent, navigate, currentVideoIndex])

@@ -40,7 +40,7 @@ export function Header({ transparent = false }: HeaderProps) {
             <img className="w-8" src={appTitle.imageUrl} alt="logo" />
             <span className="relative">
               {appTitle.text}
-              <span className="absolute -top-1 -right-8 text-[0.5rem] font-semibold text-muted-foreground">
+              <span className="absolute -top-1 -right-6 text-[0.5rem] font-semibold text-muted-foreground">
                 BETA
               </span>
             </span>

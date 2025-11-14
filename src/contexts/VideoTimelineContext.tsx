@@ -109,6 +109,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
         loaderSubscriptionRef.current = createTimelineLoader(pool, readRelays, filter, {
           limit: 50,
           timeout: 5000, // 5 second timeout per relay to prevent blocking
+          eventStore,
         })()
           .pipe(
             finalize(() => {

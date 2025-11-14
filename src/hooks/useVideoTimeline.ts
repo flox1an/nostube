@@ -78,6 +78,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
       const subscription = createTimelineLoader(pool, readRelays, filters, {
         limit: 50,
         timeout: 5000, // 5 second timeout per relay to prevent blocking
+        eventStore,
       })()
         .pipe(
           finalize(() => {

@@ -172,7 +172,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     })
     const sub = playlistLoader().subscribe({
       next: event => {
-        if (import.meta.env.DEV) console.log('[VideoSuggestions] Loaded event:', event)
+        // Event loaded successfully
       },
       error: err => {
         console.error('[VideoSuggestions] Error loading events:', err)

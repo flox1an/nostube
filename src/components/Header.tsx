@@ -1,6 +1,5 @@
 import { LoginArea } from '@/components/auth/LoginArea'
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { MenuIcon, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
@@ -61,8 +60,6 @@ export function Header({ transparent = false }: HeaderProps) {
               Upload
             </Button>
           </Link>
-
-          <ThemeToggle />
 
           <LoginArea className="lg:w-48" />
         </div>

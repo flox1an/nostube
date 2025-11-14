@@ -11,12 +11,15 @@ import { useProfile } from '@/hooks/useProfile'
 import { useEventStore } from 'applesauce-react/hooks'
 import { nprofileFromEvent } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
+import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 
 interface VideoCardProps {
   video: VideoEvent
   hideAuthor?: boolean
   format: 'vertical' | 'horizontal' | 'square'
   playlistParam?: string
+  allVideos?: VideoEvent[] // Full list of videos for shorts navigation
+  videoIndex?: number // Index of this video in the allVideos array
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -24,11 +27,14 @@ export const VideoCard = React.memo(function VideoCard({
   hideAuthor,
   format = 'square',
   playlistParam,
+  allVideos,
+  videoIndex,
 }: VideoCardProps) {
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
   const { config } = useAppContext()
+  const { setVideos } = useShortsFeedStore()
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -63,13 +69,40 @@ export const VideoCard = React.memo(function VideoCard({
 
   // Determine navigation path based on video type
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
-  const to =
-    playlistParam && videoPath.startsWith('/video/')
-      ? {
-          pathname: videoPath,
-          search: `?playlist=${encodeURIComponent(playlistParam)}`,
-        }
-      : videoPath
+
+  // Build URL with author and video ID for shorts navigation
+  const to = useMemo(() => {
+    if (playlistParam && videoPath.startsWith('/video/')) {
+      return {
+        pathname: videoPath,
+        search: `?playlist=${encodeURIComponent(playlistParam)}`,
+      }
+    }
+
+    if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
+      // Pass author pubkey and video event ID (scalable approach)
+      return {
+        pathname: videoPath,
+        search: `?author=${video.pubkey}&video=${video.id}`,
+      }
+    }
+
+    return videoPath
+  }, [playlistParam, videoPath, video.type, video.pubkey, video.id, allVideos, videoIndex])
+
+  // Debug: Log navigation state for shorts
+  if (video.type === 'shorts') {
+    console.log('[VideoCard] Creating shorts link:', {
+      videoTitle: video.title,
+      videoType: video.type,
+      hasAllVideos: !!allVideos,
+      allVideosCount: allVideos?.length,
+      videoIndex,
+      willPassState: !!(allVideos && videoIndex !== undefined),
+      toValue: to,
+      toType: typeof to,
+    })
+  }
 
   const handleMouseEnter = () => {
     // don't show hover preview for video with content warning (when warning mode is active)
@@ -102,6 +135,20 @@ export const VideoCard = React.memo(function VideoCard({
     }
   }
 
+  // Handle shorts click - populate store with video list
+  const handleShortsClick = () => {
+    if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
+      console.log('[VideoCard] Populating store with shorts:', {
+        videoCount: allVideos.length,
+        startIndex: videoIndex,
+        clickedTitle: video.title,
+      })
+
+      // Populate the store with the shorts list and starting index
+      setVideos(allVideos, videoIndex)
+    }
+  }
+
   return (
     <div
       className={cn('transition-all duration-200', maxWidth)}
@@ -109,7 +156,7 @@ export const VideoCard = React.memo(function VideoCard({
       onMouseLeave={handleMouseLeave}
     >
       <div className="p-0">
-        <Link to={to}>
+        <Link to={to} onClick={handleShortsClick}>
           <div className="w-full overflow-hidden sm:rounded-lg relative">
             <img
               src={thumbnailUrl}
@@ -172,7 +219,7 @@ export const VideoCard = React.memo(function VideoCard({
               </Link>
             )}
             <div className="min-w-0 flex-1">
-              <Link to={videoPath}>
+              <Link to={to}>
                 <h3 className="font-medium line-clamp-2 break-all">{video.title}</h3>
               </Link>
 

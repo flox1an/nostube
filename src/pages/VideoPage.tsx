@@ -433,6 +433,7 @@ export function VideoPage() {
           onOpenChange={setMirrorDialogOpen}
           videoUrls={video.urls}
           videoSize={video.size}
+          videoEvent={videoEvent}
         />
       )}
     </>

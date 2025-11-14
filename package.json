@@ -62,6 +62,7 @@
     "hash-wasm": "^4.12.0",
     "hls-video-element": "^1.5.8",
     "hls.js": "^1.6.13",
+    "immer": "^10.2.0",
     "input-otp": "^1.4.2",
     "langs": "^2.0.0",
     "lucide-react": "^0.546.0",
@@ -84,7 +85,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",

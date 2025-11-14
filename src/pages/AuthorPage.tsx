@@ -23,6 +23,7 @@ import type { TimelineLoader } from 'applesauce-loaders/loaders'
 import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 
@@ -75,6 +76,7 @@ function AuthorProfile({
 export function AuthorPage() {
   const { nprofile } = useParams<{ nprofile: string }>()
   const [activeTab, setActiveTab] = useState<Tabs>('videos')
+  const setShortsFeedVideos = useShortsFeedStore(state => state.setVideos)
 
   // Decode nprofile to get pubkey and relays
   const profileData = useMemo(() => {
@@ -239,6 +241,12 @@ export function AuthorPage() {
   )
 
   const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos])
+
+  useEffect(() => {
+    if (shorts.length > 0) {
+      setShortsFeedVideos(shorts)
+    }
+  }, [shorts, setShortsFeedVideos])
 
   const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos])
 

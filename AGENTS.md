@@ -1,23 +1,52 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-Source lives in `src/`: UI parts in `components/`, feature hooks in `hooks/`, shared helpers in `lib/`, and nostr/worker logic under `nostr/` and `workers/`. Route-level views sit in `pages/`, while providers live in `providers/` and `contexts/`. Tests reside in `src/test` plus co-located `*.test.ts(x)`. Static assets are stored in `public/`, custom lint rules in `eslint-rules/`, and Vite writes bundles to `dist/`.
+## Project Overview & Stack
+nostube is a Nostr-based video platform built with React 18, TypeScript, TailwindCSS, Vite, and shadcn/ui. Applesauce (core, relay, loaders, accounts, factory, signers) provides Nostr storage, relay pools, and signing. React Router powers navigation and Observable hooks manage Applesauce streams. Keep a single `EventStore` and `RelayPool` instance (see `src/nostr`), and wrap the app with `AccountsProvider → EventStoreProvider → FactoryProvider` as shown below:
 
-## Build, Test, and Development Commands
-- `npm run dev` – optional install followed by the Vite dev server with hot reload.
-- `npm run build` – optimized bundle plus `dist/404.html` copy for static hosting.
-- `npm run test` – CI door: install, type-check (`tsc`), lint, run Vitest, and build.
-- `npm run typecheck`, `npm run format`, and `npm run format:check` keep types and formatting clean.
-- `npm run start` previews the built app locally on port 8080; `npm run deploy` publishes `dist/` via Surge.
+```tsx
+<AccountsProvider manager={accountManager}>
+  <EventStoreProvider eventStore={eventStore}>
+    <FactoryProvider factory={factory}>{children}</FactoryProvider>
+  </EventStoreProvider>
+</AccountsProvider>
+```
 
-## Coding Style & Naming Conventions
-This is a TypeScript-first React 18 app using functional components, hooks, and Tailwind utilities. Maintain two-space indentation, prefer `const` and arrow functions, and keep components declarative. Components/providers use `PascalCase`, hooks use `useCamelCase`, and helpers in `lib/*` or `utils/*` stay lower camel case. Run `eslint` and `prettier` before every PR; both configs enforce import order and Tailwind class sorting.
+## Project Structure & Modules
+`src/components/` hosts UI, with reusable primitives in `components/ui/`. Hooks live in `src/hooks/`, shared helpers in `src/lib/`, and nostr-specific logic in `src/nostr/` plus background work in `src/workers/`. Routing is in `AppRouter.tsx` and `src/pages/`, state providers in `src/providers/` and `src/contexts/`. Tests sit in `src/test/` and alongside modules as `*.test.ts(x)`. Static assets live under `public/`, custom ESLint rules under `eslint-rules/`, and production bundles go to `dist/`.
+
+## Applesauce Patterns & Custom Hooks
+Use `createTimelineLoader`, `createEventLoader`, or `createAddressLoader` for relay queries and always observe via `useObservableMemo` to auto-dispose subscriptions. Favor built hooks such as `useEventStore`, `useCurrentUser`, `useAuthor`, `useUploadFile`, `useNostrPublish`, and `useUserBlossomServers`. Cache-first loading and singleton access keep relay usage predictable; avoid spinning up redundant pools or stores. For profile data, rely on `eventStore.profile(pubkey)` plus a blurhash fallback, and for uploads call `useUploadFile` so Blossom auth, chunking, and mirroring stay centralized.
+
+## MCP & Reference Docs
+Context7 indexes Applesauce docs (111k+ tokens) and exposes them over MCP for in-editor lookup.
+
+```bash
+# Remote (recommended)
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
+
+# Local with API key (higher rate limit)
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+Key references:
+- Applesauce package browser: https://context7.com/hzrd149/applesauce
+- Project docs: https://hzrd149.github.io/applesauce/
+
+## Build, Test & Development Commands
+- `npm run dev` – installs if needed and launches Vite with HMR.
+- `npm run build` – optimized bundle plus `dist/404.html` copy for static hosts.
+- `npm run test` – installs, runs `tsc --noEmit`, ESLint, Vitest, and a production build.
+- `npm run typecheck`, `npm run format`, `npm run format:check` – targeted verifications.
+- `npm run start` previews the build on port 8080; `npm run deploy` publishes via Surge.
+
+## Coding Style & Naming
+Use two-space indentation, TypeScript + JSX, and Tailwind utilities. Components/providers are `PascalCase`, hooks follow `useCamelCase`, helpers in `lib/` or `utils/` stay in lower camel case. Prefer `const`, arrow functions, and pure render logic. Run ESLint (`eslint.config.js` + `eslint-rules/`) and Prettier before pushing to keep imports ordered and Tailwind classes normalized.
 
 ## Testing Guidelines
-Vitest with React Testing Library powers unit/UI tests; prioritize data transforms, upload logic, and relay interactions. Name files `*.test.ts` or `*.test.tsx` (e.g., `components/NoteContent.test.tsx`) and co-locate near the unit or add helpers under `src/test/`. Describe tests with user-focused language, mock network calls sparingly, and add coverage when touching uploads, caching, or rendering flows. Run `npm run test` locally before each PR.
+Vitest with React Testing Library backs unit and interaction tests. Place files next to the code under test (`*.test.tsx`) or in `src/test/` for shared helpers. Focus on upload flows, relay interactions, cache invalidation, and rendering edge cases. Use user-focused test names, mock network calls sparingly, and run `npm run test` before every PR; `vitest --watch` is ideal for local iteration.
 
 ## Commit & Pull Request Guidelines
-Git history favors Conventional Commits (`feat:`, `fix:`, `chore:`). Keep subjects under ~72 chars and describe scope (“feat: improve playlist paging”). Each PR should include motivation, references to issues or nostr events, screenshots for UI changes (desktop + mobile when possible), and the tests executed. Avoid bundling unrelated tweaks; smaller diffs review faster.
+Follow Conventional Commits (`feat:`, `fix:`, `chore:`) with ≤72 char subjects (“feat: improve playlist paging”). PRs should explain motivation, link relevant issues or nostr events, attach desktop/mobile screenshots for UI tweaks, and list the tests executed. Keep changes scoped—small, reviewable diffs merge faster.
 
 ## Security & Configuration Tips
-Never log sensitive keys; development logs are gated by `import.meta.env.DEV` already. Inject relay/storage URLs through Vite env variables or Applesauce configs—do not hardcode them in shared modules. When handling uploads, reuse helpers in `lib/blossom-upload.ts` for chunking/signing and update relay allowlists in `nostr/` when new infrastructure is added.
+Never log secrets; debug output is already gated by `import.meta.env.DEV`. Inject relay/storage endpoints via Vite env vars or Applesauce config rather than hardcoding them in shared modules. Use helpers such as `lib/blossom-upload.ts` for chunking and signing, update relay allowlists under `src/nostr/` when infra changes, and ensure mirroring honors existing hash + size metadata before uploading.

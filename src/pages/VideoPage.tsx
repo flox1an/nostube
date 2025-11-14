@@ -1,8 +1,8 @@
-import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
-import { switchMap, catchError, finalize } from 'rxjs/operators'
+import { switchMap, catchError, finalize, map } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
@@ -64,7 +64,7 @@ export function VideoPage() {
 
   // Use EventStore to get the video event with fallback to loader
   const videoObservable = useMemo(() => {
-    if (!eventPointer) return of(null)
+    if (!eventPointer) return of(undefined)
 
     const subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
       ids: [eventPointer.id],
@@ -82,6 +82,7 @@ export function VideoPage() {
         // If eventStore fails, fallback to loader
         return loader(eventPointer)
       }),
+      map(event => event ?? undefined), // Normalize null to undefined
       finalize(() => {
         logSubscriptionClosed(subId)
       })
@@ -411,6 +412,7 @@ export function VideoPage() {
             setIncludeTimestamp={setIncludeTimestamp}
             shareLinks={shareLinks}
             onDelete={() => navigate('/')}
+            onMirror={handleMirror}
           />
         }
         sidebar={
@@ -430,6 +432,7 @@ export function VideoPage() {
           open={mirrorDialogOpen}
           onOpenChange={setMirrorDialogOpen}
           videoUrls={video.urls}
+          videoSize={video.size}
         />
       )}
     </>

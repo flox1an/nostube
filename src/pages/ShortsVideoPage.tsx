@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { of, map } from 'rxjs'
-import { switchMap, catchError } from 'rxjs/operators'
+import { of } from 'rxjs'
+import { switchMap, catchError, map } from 'rxjs/operators'
 import { ButtonWithReactions } from '@/components/ButtonWithReactions'
 import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useProfile, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { ImageIcon, MessageCircle, ChevronDown, Share2 } from 'lucide-react'
+import { MessageCircle, ChevronDown, Share2 } from 'lucide-react'
 import { imageProxy, imageProxyVideoPreview } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { getKindsForType } from '@/lib/video-types'
@@ -286,7 +286,7 @@ function ShortVideoItem({
         </div>
 
         {/* Bottom info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
           <div className="w-full" style={{ maxWidth: getMaxWidth() }}>
             {/* Follow button and Author info */}
             <div className="flex flex-col gap-2 mb-3">
@@ -375,7 +375,7 @@ export function ShortsVideoPage() {
 
   // Use EventStore to get the initial video event
   const videoObservable = useMemo(() => {
-    if (!eventPointer) return of(null)
+    if (!eventPointer) return of(undefined)
     return eventStore.event(eventPointer.id).pipe(
       switchMap(event => {
         if (event) {
@@ -385,7 +385,8 @@ export function ShortsVideoPage() {
       }),
       catchError(() => {
         return loader(eventPointer)
-      })
+      }),
+      map(event => event ?? undefined) // Normalize null to undefined
     )
   }, [eventStore, loader, eventPointer])
 
@@ -607,7 +608,7 @@ export function ShortsVideoPage() {
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
     return (
       <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
-        <Skeleton className="w-full h-full max-w-md aspect-[9/16]" />
+        <Skeleton className="w-full h-full max-w-md aspect-9/16" />
         <div className="text-white/70 text-sm">Looking for videos...</div>
       </div>
     )
@@ -619,7 +620,9 @@ export function ShortsVideoPage() {
       <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
         <div className="text-center">
           <div className="text-xl mb-2">Video not found</div>
-          <div className="text-white/70 text-sm">The video may have been deleted or is unavailable</div>
+          <div className="text-white/70 text-sm">
+            The video may have been deleted or is unavailable
+          </div>
         </div>
       </div>
     )

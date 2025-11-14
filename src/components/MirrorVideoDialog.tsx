@@ -15,12 +15,12 @@ import { useToast } from '@/hooks/useToast'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { extractBlossomHash } from '@/utils/video-event'
-import type { BlossomServer } from '@/contexts/AppContext'
 
 interface MirrorVideoDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   videoUrls: string[]
+  videoSize?: number // Size in bytes
 }
 
 interface NormalizedServer {
@@ -28,6 +28,19 @@ interface NormalizedServer {
   name: string
   isCurrentHost: boolean
   source: 'user' | 'config'
+}
+
+/**
+ * Format bytes to human-readable size (MB or GB)
+ */
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes === 0) return 'size unknown'
+  const mb = bytes / (1024 * 1024)
+  if (mb < 1024) {
+    return `${mb.toFixed(1)} MB`
+  }
+  const gb = mb / 1024
+  return `${gb.toFixed(2)} GB`
 }
 
 /**
@@ -43,7 +56,12 @@ function normalizeServerUrl(url: string): string {
   }
 }
 
-export function MirrorVideoDialog({ open, onOpenChange, videoUrls }: MirrorVideoDialogProps) {
+export function MirrorVideoDialog({
+  open,
+  onOpenChange,
+  videoUrls,
+  videoSize,
+}: MirrorVideoDialogProps) {
   const { toast } = useToast()
   const { config } = useAppContext()
   const { data: userBlossomServers } = useUserBlossomServers()
@@ -52,6 +70,7 @@ export function MirrorVideoDialog({ open, onOpenChange, videoUrls }: MirrorVideo
 
   // Extract current hosting servers from video URLs
   const currentHosts = useMemo(() => {
+    if (!open) return new Set<string>()
     const hosts = new Set<string>()
     for (const url of videoUrls) {
       // Skip proxy URLs (they have ?origin= query parameter)
@@ -69,10 +88,11 @@ export function MirrorVideoDialog({ open, onOpenChange, videoUrls }: MirrorVideo
       }
     }
     return hosts
-  }, [videoUrls])
+  }, [videoUrls, open])
 
   // Combine and deduplicate servers from user's 10063 list and app config
   const availableServers = useMemo(() => {
+    if (!open) return []
     const serverMap = new Map<string, NormalizedServer>()
 
     // Add user's blossom servers from kind 10063
@@ -106,12 +126,13 @@ export function MirrorVideoDialog({ open, onOpenChange, videoUrls }: MirrorVideo
     }
 
     // Sort: current hosts first, then alphabetically by name
-    return Array.from(serverMap.values()).sort((a, b) => {
+    const sorted = Array.from(serverMap.values()).sort((a, b) => {
       if (a.isCurrentHost && !b.isCurrentHost) return -1
       if (!a.isCurrentHost && b.isCurrentHost) return 1
       return a.name.localeCompare(b.name)
     })
-  }, [userBlossomServers, config.blossomServers, currentHosts])
+    return sorted
+  }, [userBlossomServers, config.blossomServers, currentHosts, open])
 
   const handleToggleServer = (serverUrl: string) => {
     setSelectedServers(prev => {
@@ -161,7 +182,7 @@ export function MirrorVideoDialog({ open, onOpenChange, videoUrls }: MirrorVideo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Mirror Video</DialogTitle>
+          <DialogTitle>Mirror Video ({formatFileSize(videoSize)})</DialogTitle>
           <DialogDescription>
             Copy this video to additional blossom servers for better redundancy and availability.
           </DialogDescription>

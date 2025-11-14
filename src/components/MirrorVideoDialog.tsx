@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,14 @@ import { useToast } from '@/hooks/useToast'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { extractBlossomHash } from '@/utils/video-event'
+import type { NostrEvent } from 'nostr-tools'
 
 interface MirrorVideoDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   videoUrls: string[]
   videoSize?: number // Size in bytes
+  videoEvent?: NostrEvent | null
 }
 
 interface NormalizedServer {
@@ -56,17 +58,209 @@ function normalizeServerUrl(url: string): string {
   }
 }
 
+function parseNumericSize(value?: string | number | null): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    const parsed = parseInt(trimmed, 10)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed
+    }
+  }
+  return undefined
+}
+
+function getSizeFromVideoEvent(event?: NostrEvent | null): number | undefined {
+  if (!event) return undefined
+  const sizeTag = event.tags.find(tag => tag[0] === 'size')
+  const directSize = sizeTag ? parseNumericSize(sizeTag[1]) : undefined
+  if (directSize) return directSize
+
+  const imetaTag = event.tags.find(tag => tag[0] === 'imeta')
+  if (!imetaTag) return undefined
+
+  for (let i = 1; i < imetaTag.length; i++) {
+    const entry = imetaTag[i]
+    const separatorIndex = entry.indexOf(' ')
+    if (separatorIndex === -1) continue
+    const key = entry.slice(0, separatorIndex)
+    const value = entry.slice(separatorIndex + 1)
+    if (key === 'size') {
+      const parsed = parseNumericSize(value)
+      if (parsed) return parsed
+    }
+  }
+
+  return undefined
+}
+
+function decodeIfDifferent(value: string): string | undefined {
+  try {
+    const decoded = decodeURIComponent(value)
+    return decoded !== value ? decoded : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function parseDescriptorSize(headerValue?: string | null): number | undefined {
+  if (!headerValue) return undefined
+  const attempts = new Set<string>()
+  const trimmed = headerValue.trim()
+  if (trimmed) {
+    attempts.add(trimmed)
+    const decoded = decodeIfDifferent(trimmed)
+    if (decoded) attempts.add(decoded)
+  }
+
+  for (const candidate of attempts) {
+    try {
+      const parsedJson = JSON.parse(candidate)
+      if (parsedJson && typeof parsedJson === 'object') {
+        const possibleSizes = [
+          (parsedJson as Record<string, unknown>).size,
+          (parsedJson as Record<string, any>).blob?.size,
+          (parsedJson as Record<string, any>).meta?.size,
+        ]
+        for (const maybeSize of possibleSizes) {
+          const normalized = parseNumericSize(maybeSize)
+          if (normalized) return normalized
+        }
+      }
+    } catch {
+      // Not JSON, fall through to numeric extraction
+    }
+
+    const numericDirect = parseNumericSize(candidate)
+    if (numericDirect) return numericDirect
+
+    const match = candidate.match(/(\d+)/)
+    if (match) {
+      const parsed = parseInt(match[1], 10)
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed
+      }
+    }
+  }
+
+  return undefined
+}
+
+function buildBlossomHeadUrls(videoUrls: string[]): string[] {
+  const urls: string[] = []
+  const seen = new Set<string>()
+
+  for (const url of videoUrls) {
+    const { sha256, ext } = extractBlossomHash(url.split('?')[0])
+    if (!sha256) continue
+
+    try {
+      const urlObj = new URL(url)
+      const hostCandidates = new Set<string>()
+      const originParam = urlObj.searchParams.get('origin')
+      if (originParam) {
+        try {
+          const originUrl = new URL(originParam)
+          hostCandidates.add(originUrl.origin)
+        } catch {
+          // ignore invalid origin parameter
+        }
+      }
+      hostCandidates.add(urlObj.origin)
+
+      for (const host of hostCandidates) {
+        const normalizedHost = host.replace(/\/$/, '')
+        const candidateUrl = `${normalizedHost}/${sha256}${ext ? `.${ext}` : ''}`
+        if (!seen.has(candidateUrl)) {
+          seen.add(candidateUrl)
+          urls.push(candidateUrl)
+        }
+      }
+    } catch {
+      // Invalid URL, skip
+    }
+  }
+
+  return urls
+}
+
+async function fetchVideoSizeFromBlossom(videoUrls: string[]): Promise<number | undefined> {
+  const targets = buildBlossomHeadUrls(videoUrls)
+  if (targets.length === 0) return undefined
+
+  for (const target of targets) {
+    try {
+      const response = await fetch(target, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000),
+      })
+
+      if (!response.ok) {
+        continue
+      }
+
+      const descriptorHeader =
+        response.headers.get('Blossom-Descriptor') || response.headers.get('blossom-descriptor')
+      const descriptorSize = parseDescriptorSize(descriptorHeader)
+      if (descriptorSize) {
+        return descriptorSize
+      }
+
+      const contentLengthSize = parseNumericSize(response.headers.get('content-length'))
+      if (contentLengthSize) {
+        return contentLengthSize
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.debug('[MirrorVideoDialog] Failed to resolve blob size via HEAD', error)
+      }
+    }
+  }
+
+  return undefined
+}
+
 export function MirrorVideoDialog({
   open,
   onOpenChange,
   videoUrls,
   videoSize,
+  videoEvent,
 }: MirrorVideoDialogProps) {
   const { toast } = useToast()
   const { config } = useAppContext()
   const { data: userBlossomServers } = useUserBlossomServers()
+  const sizeFromEvent = useMemo(() => getSizeFromVideoEvent(videoEvent), [videoEvent])
+  const [resolvedVideoSize, setResolvedVideoSize] = useState<number | undefined>(
+    videoSize && videoSize > 0 ? videoSize : sizeFromEvent
+  )
   const [selectedServers, setSelectedServers] = useState<Set<string>>(new Set())
   const [isMirroring, setIsMirroring] = useState(false)
+
+  useEffect(() => {
+    const preferredSize = videoSize && videoSize > 0 ? videoSize : sizeFromEvent
+    setResolvedVideoSize(preferredSize)
+  }, [videoSize, sizeFromEvent])
+
+  useEffect(() => {
+    if (!open) return
+    if (resolvedVideoSize && resolvedVideoSize > 0) return
+
+    let isCancelled = false
+
+    fetchVideoSizeFromBlossom(videoUrls).then(size => {
+      if (!isCancelled && size && size > 0) {
+        setResolvedVideoSize(size)
+      }
+    })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [open, videoUrls, resolvedVideoSize])
 
   // Extract current hosting servers from video URLs
   const currentHosts = useMemo(() => {
@@ -182,7 +376,7 @@ export function MirrorVideoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Mirror Video ({formatFileSize(videoSize)})</DialogTitle>
+          <DialogTitle>Mirror Video ({formatFileSize(resolvedVideoSize)})</DialogTitle>
           <DialogDescription>
             Copy this video to additional blossom servers for better redundancy and availability.
           </DialogDescription>

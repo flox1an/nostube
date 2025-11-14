@@ -16,6 +16,7 @@ import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
 import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext } from '@/hooks'
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void
@@ -104,6 +105,8 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <UserPlus className="w-4 h-4" />
           <span>Playlists</span>
         </DropdownMenuItem>
+        <ThemeToggle />
+        <DropdownMenuSeparator />
         {/* 
         <div className="font-medium text-sm px-2 py-1.5">Switch Relay</div>
         <RelaySelector className="w-full" />
@@ -111,7 +114,6 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
 
         {otherAccounts.length > 0 && (
           <>
-            <DropdownMenuSeparator />
             <div className="font-medium text-sm px-2 py-1.5">Switch Account</div>
             {otherAccounts.map(account => (
               <AccountSwitchItem

@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useTheme } from '@/providers/theme-provider'
+import { getThemeById } from '@/lib/themes'
 
 interface HeaderProps {
   transparent?: boolean
@@ -15,6 +17,9 @@ export function Header({ transparent = false }: HeaderProps) {
   const { toggleSidebar } = useAppContext()
   const { scrollDirection, isAtTop } = useScrollDirection()
   const isMobile = useIsMobile()
+  const { colorTheme } = useTheme()
+  const currentTheme = getThemeById(colorTheme)
+  const appTitle = currentTheme.appTitle || { text: 'nostube', imageUrl: '/nostube.svg' }
 
   // On mobile: hide header when scrolling down (unless at top), show when scrolling up
   const shouldHide = isMobile && scrollDirection === 'down' && !isAtTop
@@ -32,8 +37,13 @@ export function Header({ transparent = false }: HeaderProps) {
             <MenuIcon />
           </Button>
           <Link to="/" className="text-xl font-bold flex flex-row gap-2 items-center">
-            <img className="w-8" src="/nostube.svg"></img>
-            nostube
+            <img className="w-8" src={appTitle.imageUrl} alt="logo" />
+            <span className="relative">
+              {appTitle.text}
+              <span className="absolute -top-1 -right-8 text-[0.5rem] font-semibold text-muted-foreground">
+                BETA
+              </span>
+            </span>
           </Link>
         </div>
         {/*

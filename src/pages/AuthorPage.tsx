@@ -367,26 +367,38 @@ export function AuthorPage() {
           )}
         </TabsContent>
 
-        {playlists.map(playlist => (
-          <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
-            {loadingPlaylist === playlist.identifier ? (
-              <VideoGridSkeleton count={8} />
-            ) : (
-              <VideoGrid
-                videos={playlistVideos[playlist.identifier] || []}
-                isLoading={false}
-                showSkeletons={false}
-                layoutMode="auto"
-                playlistParam={nip19.naddrEncode({
-                  kind: 30005,
-                  pubkey,
-                  identifier: playlist.identifier,
-                  relays: relays.slice(0, 3),
-                })}
-              />
-            )}
-          </TabsContent>
-        ))}
+        {playlists.map(playlist => {
+          const isLoading = loadingPlaylist === playlist.identifier
+          const hasLoadedVideos = playlistVideos[playlist.identifier] !== undefined
+          const hasAttemptedLoad = loadedPlaylistsRef.current.has(playlist.identifier)
+          const playlistHasVideoIds = playlist.videos && playlist.videos.length > 0
+
+          // Show skeleton only if:
+          // 1. Currently loading, OR
+          // 2. Has video IDs in playlist AND hasn't loaded yet AND not currently loading
+          const showSkeleton = isLoading || (playlistHasVideoIds && !hasLoadedVideos && !hasAttemptedLoad)
+
+          return (
+            <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
+              {showSkeleton ? (
+                <VideoGridSkeleton count={8} />
+              ) : (
+                <VideoGrid
+                  videos={playlistVideos[playlist.identifier] || []}
+                  isLoading={false}
+                  showSkeletons={false}
+                  layoutMode="auto"
+                  playlistParam={nip19.naddrEncode({
+                    kind: 30005,
+                    pubkey,
+                    identifier: playlist.identifier,
+                    relays: relays.slice(0, 3),
+                  })}
+                />
+              )}
+            </TabsContent>
+          )
+        })}
 
         <TabsContent value="tags" className="mt-6">
           <div className="flex flex-wrap gap-2">

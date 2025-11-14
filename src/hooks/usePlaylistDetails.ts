@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { of, combineLatest } from 'rxjs'
-import { switchMap } from 'rxjs/operators'
+import { switchMap, map } from 'rxjs/operators'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import {
@@ -118,13 +118,11 @@ export function usePlaylistDetails(
     if (!playlistPointer) return of(undefined)
 
     if (isNeventPointer(playlistPointer)) {
-      return eventStore.event(playlistPointer.id)
+      return eventStore.event(playlistPointer.id).pipe(map(event => event ?? undefined))
     } else if (isNaddrPointer(playlistPointer)) {
-      return eventStore.replaceable(
-        playlistPointer.kind,
-        playlistPointer.pubkey,
-        playlistPointer.identifier
-      )
+      return eventStore
+        .replaceable(playlistPointer.kind, playlistPointer.pubkey, playlistPointer.identifier)
+        .pipe(map(event => event ?? undefined))
     }
     return of(undefined)
   }, [playlistPointer, eventStore])

@@ -24,7 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -58,6 +58,7 @@ interface VideoInfoSectionProps {
     pinterest: string
   }
   onDelete?: () => void
+  onMirror?: () => void
 }
 
 export const VideoInfoSection = React.memo(function VideoInfoSection({
@@ -77,6 +78,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   setIncludeTimestamp,
   shareLinks,
   onDelete,
+  onMirror,
 }: VideoInfoSectionProps) {
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -186,6 +188,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
+                {onMirror && (
+                  <DropdownMenuItem onSelect={onMirror}>
+                    <Copy className="w-5 h-5" />
+                    &nbsp; Mirror Video
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => setShowDebugDialog(true)}>
                   <Bug className="w-5 h-5" />
                   &nbsp; Debug Info

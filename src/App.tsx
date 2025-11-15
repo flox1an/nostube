@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -13,6 +13,9 @@ import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { presetRelays, presetBlossomServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
+import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
+import { useAppContext } from '@/hooks'
+import { UserRelaySync } from '@/components/UserRelaySync'
 
 export const defaultResizeServer = 'https://imgproxy.nostu.be/'
 
@@ -74,6 +77,26 @@ function BatchedProfileLoaderInit() {
   return null
 }
 
+function RelayPoolSync() {
+  const { config, pool } = useAppContext()
+  const { readRelays, writeRelays } = useUserRelaysContext()
+
+  useEffect(() => {
+    const userRelaySet = new Set<string>([
+      ...(readRelays ?? []),
+      ...(writeRelays ?? []),
+    ])
+
+    const configRelays = config.relays.map(relay => relay.url)
+    const effectiveRelays =
+      userRelaySet.size > 0 ? Array.from(userRelaySet) : configRelays
+
+    pool.group(effectiveRelays)
+  }, [config.relays, pool, readRelays, writeRelays])
+
+  return null
+}
+
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
@@ -85,13 +108,17 @@ export function App() {
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
             <FactoryProvider factory={factory}>
-              <TooltipProvider>
-                <BatchedProfileLoaderInit />
-                <BlossomServerSync />
-                <Suspense>
-                  <AppRouter />
-                </Suspense>
-              </TooltipProvider>
+              <UserRelaysProvider>
+                <TooltipProvider>
+                  <UserRelaySync />
+                  <RelayPoolSync />
+                  <BatchedProfileLoaderInit />
+                  <BlossomServerSync />
+                  <Suspense>
+                    <AppRouter />
+                  </Suspense>
+                </TooltipProvider>
+              </UserRelaysProvider>
             </FactoryProvider>
           </EventStoreProvider>
         </AccountsProvider>

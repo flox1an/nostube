@@ -10,6 +10,9 @@ import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-sig
 import { filter } from 'rxjs'
 import { presetRelays } from '@/constants/relays'
 
+// Default relays for video content - these will be overridden by user config
+export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
+
 // Setup a local event
 
 let cache: IDBPDatabase<any> | undefined
@@ -68,9 +71,6 @@ const publishMethod: NostrPublishMethod = async (relays: string[], event: NostrE
 // Set global methods for NostrConnectSigner
 NostrConnectSigner.subscriptionMethod = subscriptionMethod
 NostrConnectSigner.publishMethod = publishMethod
-
-// Default relays for video content - these will be overridden by user config
-export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
 
 // ---- loader factory ----
 //

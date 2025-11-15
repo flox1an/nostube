@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Phase 3 Refactoring - Extract Utility Functions**:
+  - Created `lib/blossom-utils.ts` with Blossom-specific utilities
+    - `formatFileSize`: Format bytes to human-readable size (MB/GB)
+    - `normalizeServerUrl`: Normalize server URLs consistently
+    - `parseNumericSize`: Parse values to numeric sizes
+    - `getSizeFromVideoEvent`: Extract video size from Nostr events
+    - `parseDescriptorSize`: Parse Blossom-Descriptor headers
+    - `buildBlossomHeadUrls`: Build HEAD request URLs
+    - `fetchVideoSizeFromBlossom`: Fetch video size from servers
+    - Extracted ~180 lines from MirrorVideoDialog to reusable utilities
 - **Phase 2 Refactoring - Timeline & Form Hooks**:
   - `useTimelineLoader`: Encapsulates timeline loading pattern with EventStore and relay queries
     - Eliminates ~100 lines of duplicate code from HashtagPage and SubscriptionsPage

@@ -24,24 +24,8 @@ export function BlossomServerSync() {
       console.log('🔎 Querying relays for kind 10063 events')
       console.log('  User pubkey:', user.pubkey)
 
-      // Check EventStore first
-      const eventsInStore = eventStore.getEventsForFilters([
-        {
-          kinds: [10063],
-          authors: [user.pubkey],
-        },
-      ])
-      console.log('  Events already in EventStore:', eventsInStore)
-      if (eventsInStore.length > 0) {
-        console.log('  Event found in store:')
-        console.log('    ID:', eventsInStore[0].id)
-        console.log('    Created:', new Date(eventsInStore[0].created_at * 1000).toISOString())
-        console.log('    Tags:', eventsInStore[0].tags)
-        console.log('    Content:', eventsInStore[0].content)
-      }
-
       // Query relays for the event
-      console.log('  Querying relays...')
+      console.log('  Sending query to relays...')
       const sub = pool.subscribe(
         [
           {
@@ -53,10 +37,17 @@ export function BlossomServerSync() {
         readRelays,
         {
           onEvent: event => {
-            console.log('  📥 Received kind 10063 event from relay:', event)
+            console.log('  📥 Received kind 10063 event from relay!')
             console.log('    Event ID:', event.id)
+            console.log('    Created:', new Date(event.created_at * 1000).toISOString())
             console.log('    Tags:', event.tags)
-            console.log('    Server tags:', event.tags.filter(t => t[0] === 'server'))
+            const serverTags = event.tags.filter(t => t[0] === 'server')
+            console.log('    Server tags:', serverTags)
+            console.log('    Server URLs:', serverTags.map(t => t[1]))
+
+            // Add to EventStore
+            eventStore.add(event)
+            console.log('    ✅ Added to EventStore')
           },
           onComplete: () => {
             console.log('  ✅ Query complete')

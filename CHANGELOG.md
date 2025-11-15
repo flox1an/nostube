@@ -93,6 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Apply `processEvents` transformation in separate `useMemo` that depends on processing parameters
   - Ensures videos remain visible when blocked users list or other config changes
 
+- **Infinite Loop in HomePage and ShortsPage**: Fixed skeleton flashing endlessly
+  - Root cause: Loader function was being recreated on every render
+  - Each new loader triggered reset in `useInfiniteTimeline`, causing infinite loop
+  - Solution: Wrap `videoTypeLoader()` call in `useMemo` with `relays` dependency
+  - HomePage, ShortsPage, and AuthorPage now properly memoize their loaders
+
 ### Technical Details
 
 - Created `HashtagPage.tsx` component using similar pattern as `SubscriptionsPage`

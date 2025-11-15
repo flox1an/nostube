@@ -87,6 +87,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adjusted skeleton heights: title (h-5), author (h-4), date (h-3) to better match text sizes
   - Fixed visual width flash: changed title width from `w-3/4` to `w-full` to eliminate perception of narrower grid
   - Updated skeleton text widths to more natural proportions: author (w-2/3), date (w-1/3)
+- **Default Relay & Blossom Server Configuration**: New users now start with optimized defaults
+  - Added `wss://relay.divine.video` as the primary relay for new users (positioned first in preset list)
+  - Added `https://almond.slidestr.net` as default Blossom server with 'proxy' and 'initial upload' tags enabled
+  - Applies to first-time visitors, anonymous users, and users logging in for the first time
+  - Existing users retain their saved configurations unchanged
 
 ### Fixed
 

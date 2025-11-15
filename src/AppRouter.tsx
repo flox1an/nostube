@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { MainLayout } from '@/components/MainLayout'
-import { Skeleton } from '@/components/ui/skeleton'
+import { VideoCardSkeleton } from '@/components/VideoCard'
+import { cn } from '@/lib/utils'
 
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const ShortsPage = lazy(() => import('./pages/ShortsPage').then(m => ({ default: m.ShortsPage })))
@@ -28,22 +29,15 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
   return (
-    <div className="container py-12 space-y-8">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-48" />
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="aspect-video w-full rounded-lg" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-3 w-3/4" />
-            </div>
-          </div>
-        ))}
-      </div>
+    <div
+      className={cn(
+        'w-full grid gap-4 sm:px-4 sm:py-4',
+        'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+      )}
+    >
+      {Array.from({ length: 24 }).map((_, i) => (
+        <VideoCardSkeleton key={i} format="horizontal" />
+      ))}
     </div>
   )
 }

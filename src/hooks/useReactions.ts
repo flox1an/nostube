@@ -65,7 +65,7 @@ export function useReactions({ eventId, authorPubkey, kind, relays = [] }: UseRe
     })
 
     const subscription = loader(targetEvent, relaysToUse).subscribe({
-      next: reactionEvent => {
+      next: _reactionEvent => {
         // Reactions are automatically added to EventStore by the loader
       },
       error: err => {

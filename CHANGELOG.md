@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Test Infrastructure Setup**:
   - Configured Vitest with jsdom environment for DOM testing
-  - Added comprehensive test setup with browser API mocks (localStorage, indexedDB, IntersectionObserver, ResizeObserver, matchMedia)
+  - Added comprehensive test setup with browser API mocks (localStorage, IntersectionObserver, ResizeObserver, matchMedia)
+  - Mocked `nostr-idb` module to prevent IndexedDB initialization errors in tests (IDB is only used as a cache)
   - Created complete unit test suite for CollapsibleText component
     - 16 test cases covering basic rendering, collapsible behavior, line clamping, edge cases, and accessibility
     - Mocked RichTextContent and nostr core dependencies for isolated testing
@@ -21,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Tests validate auto/horizontal/vertical layout modes, skeleton rendering, video type separation
     - Tests handle 100+ videos, empty arrays, missing fields, and NSFW content filtering
     - Mocked VideoCard, useWindowWidth, and useAppContext for isolated testing
+  - Created unit test suite for NoteContent component
+    - 5 test cases covering URL linkification, nostr references, hashtags, and user mentions
+    - Tests validate deterministic name generation and correct styling for profile mentions
   - Tests run automatically in GitHub Actions on push to main and pull requests
 
 - **Phase 3 Refactoring - Extract Utility Functions**:
@@ -61,6 +65,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **ESLint Build Integration**: ESLint now runs during `npm run build` and will fail the build if errors are detected
+  - Ensures code quality standards are enforced before production builds
+  - Matches the same validation used in `npm run test`
+  - Build pipeline order: TypeScript type checking → ESLint validation → Vite build
+- **TypeScript Configuration Alignment**: Build and test now use consistent TypeScript settings
+  - Both `build` and `typecheck` scripts now use `tsconfig.app.json` for type checking
+  - Ensures unused variables and parameters are caught before production builds
+  - Previously, tests caught errors that builds didn't due to different TypeScript configurations
+  - `noUnusedLocals` and `noUnusedParameters` now enforced consistently across all checks
 - **Tag Normalization**: All hashtags are now normalized to lowercase
   - Tag URLs always use lowercase format (e.g., `/tag/bitcoin` not `/tag/Bitcoin`)
   - Tag input in upload form automatically converts to lowercase and removes `#` prefix

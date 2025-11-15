@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
@@ -216,7 +215,7 @@ export function AuthorPage() {
     }
   }, [playlists, isLoadingPlaylists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
 
-  const [loader, setLoader] = useState<TimelineLoader | undefined>()
+  const [loader, setLoader] = useState<(() => TimelineLoader) | undefined>()
 
   useEffect(() => {
     const newLoader = authorVideoLoader(pubkey, relays)

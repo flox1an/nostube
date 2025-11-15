@@ -1,5 +1,5 @@
 import { useAccountManager } from 'applesauce-react/hooks'
-import { IAccount } from 'applesauce-accounts'
+import { type IAccount } from 'applesauce-accounts'
 
 export interface Account {
   id: string

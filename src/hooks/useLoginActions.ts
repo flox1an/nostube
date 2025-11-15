@@ -23,18 +23,18 @@ export function useLoginActions() {
           throw new Error('Nsec cannot be empty')
         }
 
-        let decodedKey: string
+        let decodedKey: Uint8Array
         try {
           const decoded = nip19.decode(_nsec)
           if (decoded.type !== 'nsec') {
             throw new Error('Invalid nsec format')
           }
-          decodedKey = decoded.data as string
+          decodedKey = decoded.data
         } catch {
           throw new Error('Failed to decode nsec. Please check the format.')
         }
 
-        const signer = SimpleSigner.fromKey(decodedKey)
+        const signer = new SimpleSigner(decodedKey)
         const pubkey = await signer.getPublicKey()
         const account = new SimpleAccount(pubkey, signer)
 

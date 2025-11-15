@@ -1,11 +1,11 @@
 import { processEvents } from '@/utils/video-event'
 import { useReportedPubkeys, useAppContext, useMissingVideos } from '@/hooks'
-import { TimelineLoader } from 'applesauce-loaders/loaders'
-import { NostrEvent } from 'nostr-tools'
+import { type TimelineLoader } from 'applesauce-loaders/loaders'
+import { type NostrEvent } from 'nostr-tools'
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
 
-export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[] = []) {
+export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: string[] = []) {
   const blockedPubkeys = useReportedPubkeys()
   const { config } = useAppContext()
   const { getAllMissingVideos } = useMissingVideos()
@@ -79,7 +79,7 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
       setLoading(false)
     }, 5000)
 
-    subscriptionRef.current = loader().subscribe({
+    subscriptionRef.current = loader()().subscribe({
       next: event => {
         receivedAnyEvents = true
         setEvents(prev => {
@@ -216,7 +216,16 @@ export function useInfiniteTimeline(loader?: TimelineLoader, readRelays: string[
     // The loading guard in `next()` will prevent new loads while loading
     if (loaderRef.current !== loader) {
       loaderRef.current = loader
-      reset()
+      let cancelled = false
+      ;(async () => {
+        await Promise.resolve()
+        if (!cancelled) {
+          reset()
+        }
+      })()
+      return () => {
+        cancelled = true
+      }
     }
   }, [loader, reset])
 

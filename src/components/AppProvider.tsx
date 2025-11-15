@@ -1,6 +1,6 @@
-import { ReactNode, useState, useCallback, useEffect } from 'react'
+import { type ReactNode, useState, useCallback, useEffect } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { AppContext, Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
+import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 
 interface AppProviderProps {

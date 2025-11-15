@@ -56,7 +56,7 @@ async function checkBlossomServer(
       statusCode: response.status,
       contentLength: contentLength ? parseInt(contentLength) : undefined,
     }
-  } catch (error) {
+  } catch {
     return {
       url: serverUrl,
       status: 'error',
@@ -117,18 +117,35 @@ export function VideoDebugInfo({
       return
     }
 
-    // Reset all to checking state
-    const initialMap = new Map<string, ServerAvailability>()
-    serversToCheck.forEach(serverUrl => {
-      initialMap.set(serverUrl, { url: serverUrl, status: 'checking' })
-    })
-    setServerAvailability(initialMap)
+    let cancelled = false
+
+    // Reset all to checking state after yielding to avoid React Compiler warning
+    ;(async () => {
+      await Promise.resolve()
+      if (cancelled) {
+        return
+      }
+      const initialMap = new Map<string, ServerAvailability>()
+      serversToCheck.forEach(serverUrl => {
+        initialMap.set(serverUrl, { url: serverUrl, status: 'checking' })
+      })
+      setServerAvailability(initialMap)
+    })()
 
     // Check each server
-    serversToCheck.forEach(async serverUrl => {
-      const result = await checkBlossomServer(serverUrl, videoHash.sha256!, videoHash.ext!)
-      setServerAvailability(prev => new Map(prev).set(serverUrl, result))
+    serversToCheck.forEach(serverUrl => {
+      ;(async () => {
+        const result = await checkBlossomServer(serverUrl, videoHash.sha256!, videoHash.ext!)
+        if (cancelled) {
+          return
+        }
+        setServerAvailability(prev => new Map(prev).set(serverUrl, result))
+      })()
     })
+
+    return () => {
+      cancelled = true
+    }
   }, [open, videoHash.sha256, videoHash.ext, blossomServers, video?.urls])
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

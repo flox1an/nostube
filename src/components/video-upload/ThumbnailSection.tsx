@@ -2,7 +2,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
-import { BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from 'blossom-client-sdk'
 
 interface ThumbnailSectionProps {
   thumbnailSource: 'generated' | 'upload'

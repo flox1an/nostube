@@ -2,7 +2,8 @@ import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
-import { openDB, getEventsForFilters, addEvents, NostrIDB } from 'nostr-idb'
+import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
+import type { IDBPDatabase } from 'idb'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
@@ -11,7 +12,7 @@ import { presetRelays } from '@/constants/relays'
 
 // Setup a local event
 
-let cache: NostrIDB | undefined
+let cache: IDBPDatabase<any> | undefined
 
 async function ensureCache() {
   if (!cache) {
@@ -64,7 +65,7 @@ export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
 type FilterKey = string
 
 export function getTimelineLoader(
-  key: FilterKey,
+  _key: FilterKey,
   baseFilters: Filter,
   relays: string[] = DEFAULT_RELAYS
 ) {
@@ -72,7 +73,6 @@ export function getTimelineLoader(
     eventStore,
     cache: cacheRequest, // cache-first
     limit: 50,
-    timeout: 5000, // 5 second timeout per relay
   })
   return loader
 }

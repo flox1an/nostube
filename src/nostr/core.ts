@@ -7,7 +7,7 @@ import type { IDBPDatabase } from 'idb'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
-import { filter } from 'rxjs'
+import { filter, mergeMap, race, throwError, timer } from 'rxjs'
 import { presetRelays } from '@/constants/relays'
 
 // Default relays for video content - these will be overridden by user config
@@ -33,6 +33,16 @@ export async function cacheRequest(filters: Filter[]) {
 // Initialize EventStore
 export const eventStore = new EventStore()
 export const relayPool = new RelayPool()
+
+const REQUEST_TIMEOUT_MS = 5000
+const originalRequest = relayPool.request.bind(relayPool)
+
+relayPool.request = ((relays, filters, opts) => {
+  const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
+    mergeMap(() => throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`)))
+  )
+  return race(originalRequest(relays, filters, opts), timeout$)
+}) as typeof relayPool.request
 
 // Configure loaders for replaceable events (kind 10000-19999)
 // This includes kind 10063 (blossom servers), kind 10002 (relay lists), etc.

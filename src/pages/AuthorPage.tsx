@@ -215,12 +215,8 @@ export function AuthorPage() {
     }
   }, [playlists, isLoadingPlaylists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
 
-  const [loader, setLoader] = useState<(() => TimelineLoader) | undefined>()
-
-  useEffect(() => {
-    const newLoader = authorVideoLoader(pubkey, relays)
-    setLoader(newLoader)
-  }, [relays, pubkey])
+  // Memoize the loader to prevent recreation on every render
+  const loader = useMemo(() => authorVideoLoader(pubkey, relays), [pubkey, relays])
 
   const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 

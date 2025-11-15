@@ -1,0 +1,47 @@
+import { useEffect } from 'react'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
+import { useAppContext } from '@/hooks/useAppContext'
+import { type BlossomServerTag } from '@/contexts/AppContext'
+
+/**
+ * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
+ * This component must be rendered inside AccountsProvider hierarchy.
+ */
+export function BlossomServerSync() {
+  const { user } = useCurrentUser()
+  const userBlossomServers = useUserBlossomServers()
+  const { config, updateConfig } = useAppContext()
+
+  // Auto-load user's NIP-63 (kind 10063) blossom servers
+  useEffect(() => {
+    // Only proceed if user is logged in and has blossom servers
+    if (!user?.pubkey || !userBlossomServers.data?.length) {
+      return
+    }
+
+    // Get current servers from config
+    const currentServers = config.blossomServers || []
+    const currentUrls = new Set(currentServers.map(s => s.url))
+
+    // Find new servers (not already in config)
+    const newServers = userBlossomServers.data
+      .filter(url => !currentUrls.has(url))
+      .map(url => ({
+        url,
+        name: url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+        tags: [] as BlossomServerTag[], // Empty tags for user's 10063 servers
+      }))
+
+    // Only update if there are new servers to add
+    if (newServers.length > 0) {
+      updateConfig(currentConfig => ({
+        ...currentConfig,
+        blossomServers: [...(currentConfig.blossomServers || []), ...newServers],
+      }))
+    }
+  }, [user?.pubkey, userBlossomServers.data, config.blossomServers, updateConfig])
+
+  // This component doesn't render anything
+  return null
+}

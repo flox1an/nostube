@@ -12,6 +12,7 @@ import { eventStore } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { presetRelays, presetBlossomServers } from '@/constants/relays'
+import { BlossomServerSync } from '@/components/BlossomServerSync'
 
 export const defaultResizeServer = 'https://imgproxy.nostu.be/'
 
@@ -86,6 +87,7 @@ export function App() {
             <FactoryProvider factory={factory}>
               <TooltipProvider>
                 <BatchedProfileLoaderInit />
+                <BlossomServerSync />
                 <Suspense>
                   <AppRouter />
                 </Suspense>

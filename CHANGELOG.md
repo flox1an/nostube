@@ -85,6 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `shrink-0` wrapper around avatar skeleton to prevent shrinking
   - Changed spacing from uniform `space-y-2` to explicit `mt-1` margins matching real card layout
   - Adjusted skeleton heights: title (h-5), author (h-4), date (h-3) to better match text sizes
+  - Fixed visual width flash: changed title width from `w-3/4` to `w-full` to eliminate perception of narrower grid
+  - Updated skeleton text widths to more natural proportions: author (w-2/3), date (w-1/3)
 
 ### Fixed
 

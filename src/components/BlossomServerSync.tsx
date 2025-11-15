@@ -3,6 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { type BlossomServerTag } from '@/contexts/AppContext'
+import { useEventStore } from 'applesauce-react/hooks'
 
 /**
  * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
@@ -12,6 +13,25 @@ export function BlossomServerSync() {
   const { user } = useCurrentUser()
   const userBlossomServers = useUserBlossomServers()
   const { config, updateConfig } = useAppContext()
+  const eventStore = useEventStore()
+
+  // Debug: Check EventStore directly for kind 10063 events
+  useEffect(() => {
+    if (user?.pubkey) {
+      console.log('🔎 Checking EventStore for kind 10063 events')
+      const events = eventStore.getEventsForFilters([
+        {
+          kinds: [10063],
+          authors: [user.pubkey],
+        },
+      ])
+      console.log('  Found kind 10063 events in EventStore:', events)
+      if (events.length > 0) {
+        console.log('  Event content:', events[0])
+        console.log('  Event tags:', events[0].tags)
+      }
+    }
+  }, [user?.pubkey, eventStore])
 
   // Auto-load user's NIP-63 (kind 10063) blossom servers
   useEffect(() => {

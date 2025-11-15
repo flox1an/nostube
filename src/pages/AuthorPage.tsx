@@ -384,7 +384,8 @@ export function AuthorPage() {
           // Show skeleton only if:
           // 1. Currently loading, OR
           // 2. Has video IDs in playlist AND hasn't loaded yet AND not currently loading
-          const showSkeleton = isLoading || (playlistHasVideoIds && !hasLoadedVideos && !hasAttemptedLoad)
+          const showSkeleton =
+            isLoading || (playlistHasVideoIds && !hasLoadedVideos && !hasAttemptedLoad)
 
           return (
             <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">

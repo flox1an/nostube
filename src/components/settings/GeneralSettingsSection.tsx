@@ -7,7 +7,13 @@ import { type NsfwFilter } from '@/contexts/AppContext'
 import { defaultResizeServer } from '../../App'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
@@ -37,7 +43,10 @@ export function GeneralSettingsSection() {
         {/* Theme Mode */}
         <div className="space-y-3">
           <Label>Theme Mode</Label>
-          <RadioGroup value={theme} onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}>
+          <RadioGroup
+            value={theme}
+            onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}
+          >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="light" id="theme-light" />
               <Label htmlFor="theme-light" className="font-normal cursor-pointer">

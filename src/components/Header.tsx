@@ -7,6 +7,7 @@ import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 interface HeaderProps {
   transparent?: boolean
@@ -19,6 +20,7 @@ export function Header({ transparent = false }: HeaderProps) {
   const { colorTheme } = useTheme()
   const currentTheme = getThemeById(colorTheme)
   const appTitle = currentTheme.appTitle || { text: 'nostube', imageUrl: '/nostube.svg' }
+  const { user } = useCurrentUser()
 
   // On mobile: hide header when scrolling down (unless at top), show when scrolling up
   const shouldHide = isMobile && scrollDirection === 'down' && !isAtTop
@@ -54,12 +56,14 @@ export function Header({ transparent = false }: HeaderProps) {
         />
 */}
         <div className="flex items-center gap-4">
-          <Link to="/upload" className="hidden md:block">
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload
-            </Button>
-          </Link>
+          {user && (
+            <Link to="/upload" className="hidden md:block">
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </Button>
+            </Link>
+          )}
 
           <LoginArea className="lg:w-48" />
         </div>

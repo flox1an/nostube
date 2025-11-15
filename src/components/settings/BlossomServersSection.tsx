@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Cog, XIcon } from 'lucide-react'
-import { BlossomServerTag } from '@/contexts/AppContext'
+import { type BlossomServerTag } from '@/contexts/AppContext'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu'
+import { presetBlossomServers } from '@/constants/relays'
 import { cn } from '@/lib/utils'
 
 const availableTags: BlossomServerTag[] = ['mirror', 'initial upload', 'proxy']

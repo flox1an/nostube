@@ -1,6 +1,6 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
-import { NostrEvent } from 'nostr-tools'
+import { type NostrEvent } from 'nostr-tools'
 import { useMemo } from 'react'
 
 interface RelayInfo {

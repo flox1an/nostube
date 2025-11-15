@@ -9,7 +9,7 @@ export function useLikedEvents() {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
-  const [hasLoadedReactions, setHasLoadedReactions] = useState(false)
+  const [loadedPubkey, setLoadedPubkey] = useState<string | null>(null)
 
   const readRelays = useMemo(() => {
     return config.relays.filter(relay => relay.tags.includes('read')).map(relay => relay.url)
@@ -27,18 +27,16 @@ export function useLikedEvents() {
 
   // Load reactions from relays if not in EventStore
   useEffect(() => {
-    if (!user?.pubkey || hasLoadedReactions) return
+    if (!user?.pubkey || loadedPubkey === user.pubkey) return
 
     const filters = {
       kinds: [7],
       authors: [user.pubkey],
     }
 
-    setHasLoadedReactions(true)
     const loader = createTimelineLoader(pool, readRelays, filters, {
       eventStore,
       limit: 500, // Load many reactions
-      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
 
     const subscription = loader().subscribe({
@@ -46,22 +44,18 @@ export function useLikedEvents() {
         eventStore.add(event)
       },
       complete: () => {
-        // Reactions loaded
+        setLoadedPubkey(user.pubkey)
       },
       error: err => {
         console.error('Error loading reactions:', err)
+        setLoadedPubkey(user.pubkey)
       },
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [user?.pubkey, pool, readRelays, eventStore, hasLoadedReactions])
-
-  // Reset hasLoadedReactions when user changes
-  useEffect(() => {
-    setHasLoadedReactions(false)
-  }, [user?.pubkey])
+  }, [user?.pubkey, pool, readRelays, eventStore, loadedPubkey])
 
   const likedEventIds = useMemo(() => {
     if (!user || reactionEvents.length === 0) return []
@@ -84,9 +78,11 @@ export function useLikedEvents() {
     return uniqueEventIds
   }, [user, reactionEvents])
 
+  const hasLoadedReactions = Boolean(user?.pubkey && loadedPubkey === user.pubkey)
+
   return {
     data: likedEventIds,
-    isLoading: user && reactionEvents.length === 0 && !hasLoadedReactions,
+    isLoading: Boolean(user && reactionEvents.length === 0 && !hasLoadedReactions),
     enabled: !!user,
   }
 }

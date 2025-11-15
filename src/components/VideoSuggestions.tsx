@@ -176,7 +176,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       limit: 30,
     })
     const sub = playlistLoader().subscribe({
-      next: event => {
+      next: () => {
         // Event loaded successfully
       },
       error: err => {

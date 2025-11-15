@@ -13,7 +13,7 @@ interface NativeVideoPlayerProps {
   isMobile: boolean
   textTracks: TextTrack[]
   sha256?: string
-  videoRef: React.RefObject<HTMLVideoElement>
+  videoRef: React.RefObject<HTMLVideoElement | null>
   onTimeUpdate: () => void
   onVideoError: () => void
 }

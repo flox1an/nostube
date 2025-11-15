@@ -7,7 +7,7 @@ import { getKindsForType } from '@/lib/video-types'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
-import { VideoType } from '@/contexts/AppContext'
+import { type VideoType } from '@/contexts/AppContext'
 import { hashObjectBigInt } from '@/lib/utils'
 import { useMissingVideos } from './useMissingVideos'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
@@ -72,18 +72,25 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
 
     // Load only if never loaded or if last load was more than 60 seconds ago
     if (lastLoaded === undefined || Date.now() - lastLoaded > 60000) {
-      setVideosLoading(true)
+      let cancelled = false
+      ;(async () => {
+        await Promise.resolve()
+        if (!cancelled) {
+          setVideosLoading(true)
+        }
+      })()
       const subId = logSubscriptionCreated('useVideoTimeline', readRelays, filters)
 
       const subscription = createTimelineLoader(pool, readRelays, filters, {
         limit: 50,
-        timeout: 5000, // 5 second timeout per relay to prevent blocking
         eventStore,
       })()
         .pipe(
           finalize(() => {
             lastLoadedTimestamp.set(hash, Date.now())
-            setVideosLoading(false)
+            if (!cancelled) {
+              setVideosLoading(false)
+            }
             logSubscriptionClosed(subId)
           })
         )
@@ -93,6 +100,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
 
       // Cleanup subscription on unmount or dependency change
       return () => {
+        cancelled = true
         subscription.unsubscribe()
         logSubscriptionClosed(subId)
       }

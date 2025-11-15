@@ -85,8 +85,18 @@ export function usePlaylistDetails(
   }, [playlistPointer])
 
   useEffect(() => {
-    setFailedVideoIds(new Set())
-    setLoadingVideoIds(new Set())
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (cancelled) {
+        return
+      }
+      setFailedVideoIds(new Set())
+      setLoadingVideoIds(new Set())
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [pointerKey])
 
   const allConfigRelays = useMemo(() => config.relays.map(r => r.url), [config.relays])
@@ -207,7 +217,15 @@ export function usePlaylistDetails(
       return
     }
 
-    setLoadingVideoIds(new Set(missingRefs.map(r => r.id)))
+    let cancelled = false
+
+    ;(async () => {
+      await Promise.resolve()
+      if (cancelled) {
+        return
+      }
+      setLoadingVideoIds(new Set(missingRefs.map(r => r.id)))
+    })()
 
     const playlistSeenRelaysSet = getSeenRelays(playlistEvent)
     const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
@@ -223,6 +241,9 @@ export function usePlaylistDetails(
     const completedIds = new Set<string>()
 
     const timeoutId = setTimeout(() => {
+      if (cancelled) {
+        return
+      }
       missingRefs.forEach(ref => {
         if (!eventStore.hasEvent(ref.id)) {
           setFailedVideoIds(prev => new Set([...prev, ref.id]))
@@ -235,26 +256,27 @@ export function usePlaylistDetails(
     const batchLoader = createTimelineLoader(pool, batchRelays, { ids: missingIds }, { eventStore })
 
     const subscription = batchLoader().subscribe({
-      next: events => {
-        events.forEach(event => {
-          if (event && missingIds.includes(event.id)) {
-            eventStore.add(event)
-            completedIds.add(event.id)
-            setLoadingVideoIds(prev => {
-              const next = new Set(prev)
-              next.delete(event.id)
-              return next
-            })
-            setFailedVideoIds(prev => {
-              const next = new Set(prev)
-              next.delete(event.id)
-              return next
-            })
-          }
-        })
+      next: event => {
+        if (!cancelled && event && missingIds.includes(event.id)) {
+          eventStore.add(event)
+          completedIds.add(event.id)
+          setLoadingVideoIds(prev => {
+            const next = new Set(prev)
+            next.delete(event.id)
+            return next
+          })
+          setFailedVideoIds(prev => {
+            const next = new Set(prev)
+            next.delete(event.id)
+            return next
+          })
+        }
       },
       complete: () => {
         // Mark any events that didn't load as failed
+        if (cancelled) {
+          return
+        }
         missingRefs.forEach(ref => {
           if (!completedIds.has(ref.id) && !eventStore.hasEvent(ref.id)) {
             setFailedVideoIds(prev => new Set([...prev, ref.id]))
@@ -268,6 +290,9 @@ export function usePlaylistDetails(
       },
       error: err => {
         console.error('[usePlaylistDetails] Failed to load playlist videos:', err)
+        if (cancelled) {
+          return
+        }
         // Mark all as failed on error
         missingRefs.forEach(ref => {
           setFailedVideoIds(prev => new Set([...prev, ref.id]))
@@ -277,6 +302,7 @@ export function usePlaylistDetails(
     })
 
     return () => {
+      cancelled = true
       clearTimeout(timeoutId)
       subscription.unsubscribe()
     }

@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { useCallback } from 'react'
 import 'hls-video-element'
 import { type TextTrack } from '@/utils/video-event'

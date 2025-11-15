@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppContext, useUserRelays, useCurrentUser } from '@/hooks'
-import { RelayTag } from '@/contexts/AppContext'
+import { type RelayTag } from '@/contexts/AppContext'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

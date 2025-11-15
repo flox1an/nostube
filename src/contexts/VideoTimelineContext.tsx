@@ -7,8 +7,8 @@ import React, {
   useRef,
   useEffect,
 } from 'react'
-import { VideoType } from '@/contexts/AppContext'
-import { VideoEvent } from '@/utils/video-event'
+import { type VideoType } from '@/contexts/AppContext'
+import { type VideoEvent } from '@/utils/video-event'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useReportedPubkeys, useAppContext } from '@/hooks'
 import { getKindsForType } from '@/lib/video-types'
@@ -16,7 +16,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
 import { hashObjectBigInt } from '@/lib/utils'
-import { Filter } from 'nostr-tools'
+import { type Filter } from 'nostr-tools'
 
 const lastLoadedTimestamp = new Map<string, number>()
 
@@ -108,7 +108,6 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
         setTimelineState(prev => ({ ...prev, videosLoading: true }))
         loaderSubscriptionRef.current = createTimelineLoader(pool, readRelays, filter, {
           limit: 50,
-          timeout: 5000, // 5 second timeout per relay to prevent blocking
           eventStore,
         })()
           .pipe(
@@ -122,7 +121,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
           })
       }
     },
-    [blockedPubkeys, eventStore, config.relays, pool]
+    [blockedPubkeys, eventStore, config.relays, config.blossomServers, pool]
   )
 
   const contextValue = useMemo(

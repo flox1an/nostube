@@ -10,5 +10,6 @@ import { useReadRelays } from './useReadRelays'
  */
 export function useStableRelays(): string[] {
   const relaysFromHook = useReadRelays()
-  return useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
+  const relaysKey = relaysFromHook.join(',')
+  return useMemo(() => relaysFromHook, [relaysKey])
 }

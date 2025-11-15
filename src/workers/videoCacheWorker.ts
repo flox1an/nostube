@@ -1,5 +1,5 @@
-import { SimplePool, Filter } from 'nostr-tools'
-import { VideoEvent, processEvents } from '../utils/video-event'
+import { SimplePool, type Filter } from 'nostr-tools'
+import { type VideoEvent, processEvents } from '../utils/video-event'
 import { getKindsForType, type VideoType } from '../lib/video-types'
 import type { ReportedPubkeys } from '@/hooks'
 import { presetRelays } from '@/constants/relays'

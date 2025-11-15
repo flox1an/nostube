@@ -52,18 +52,33 @@ export function useUltraWideVideo({
 
   // Reset aspect ratio and temp cinema mode when video changes
   useEffect(() => {
-    setVideoAspectRatio(null)
-    setTempCinemaModeForWideVideo(false)
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setVideoAspectRatio(null)
+        setTempCinemaModeForWideVideo(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [videoId])
 
   // Auto-enable TEMP cinema mode for ultra-wide videos (doesn't affect persisted state)
   useEffect(() => {
     // Don't do anything until we have the aspect ratio
-    if (videoAspectRatio === null) return
+    if (videoAspectRatio === null || !isUltraWide || persistedCinemaMode) return
 
-    // Enable temp cinema mode for ultra-wide videos (if not already in cinema mode via user preference)
-    if (isUltraWide && !persistedCinemaMode) {
-      setTempCinemaModeForWideVideo(true)
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setTempCinemaModeForWideVideo(true)
+      }
+    })()
+    return () => {
+      cancelled = true
     }
   }, [isUltraWide, videoAspectRatio, persistedCinemaMode])
 

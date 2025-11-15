@@ -1,4 +1,4 @@
-import { BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from 'blossom-client-sdk'
 import { Check, ExternalLink } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'

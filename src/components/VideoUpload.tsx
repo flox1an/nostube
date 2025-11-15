@@ -8,7 +8,7 @@ import {
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
-import { BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from 'blossom-client-sdk'
 import { useNavigate } from 'react-router-dom'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection'
@@ -91,7 +91,7 @@ export function VideoUpload() {
 
       // Upload generated thumbnail to Blossom servers
       try {
-        thumbnailUploadedBlobs = await uploadFileToMultipleServers({
+        thumbnailUploadedBlobs = await uploadFileToMultipleServersChunked({
           file: thumbnailFile,
           servers: blossomInitalUploadServers!.map(server => server.url),
           signer: async draft => await user.signer.signEvent(draft),

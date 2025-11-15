@@ -51,7 +51,6 @@ export function usePlaylists() {
   const loader = useMemo(
     () =>
       createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
-        timeout: 5000, // 5 second timeout per relay to prevent blocking
         eventStore,
       }),
     [pool, readRelays, filters, deletionFilters, eventStore]
@@ -339,7 +338,6 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   const loader = useMemo(
     () =>
       createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
-        timeout: 5000, // 5 second timeout per relay to prevent blocking
         eventStore,
       }),
     [pool, readRelays, filters, deletionFilters, eventStore]

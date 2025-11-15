@@ -1,4 +1,4 @@
-import type { EventStore } from 'applesauce-core'
+import type { IEventStore } from 'applesauce-core'
 import type { NostrEvent } from 'nostr-tools'
 
 /**
@@ -7,7 +7,7 @@ import type { NostrEvent } from 'nostr-tools'
  * @param event The event to check
  * @returns true if the event has been deleted
  */
-export function isEventDeleted(eventStore: EventStore, event: NostrEvent): boolean {
+export function isEventDeleted(eventStore: IEventStore, event: NostrEvent): boolean {
   // Get all deletion events (kind 5) by the same author
   const deletionEvents = eventStore.getByFilters({
     kinds: [5],
@@ -49,7 +49,7 @@ export function isEventDeleted(eventStore: EventStore, event: NostrEvent): boole
  * @returns Array of events that haven't been deleted
  */
 export function filterDeletedEvents<T extends NostrEvent>(
-  eventStore: EventStore,
+  eventStore: IEventStore,
   events: T[]
 ): T[] {
   return events.filter(event => !isEventDeleted(eventStore, event))

@@ -302,7 +302,6 @@ export function VideoComments({
     const loader = createTimelineLoader(pool, readRelays, filters, {
       limit: 50,
       eventStore,
-      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
     const subscription = loader().subscribe(e => eventStore.add(e))
 

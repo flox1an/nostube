@@ -1,4 +1,4 @@
-import { Relay, BlossomServer } from '@/contexts/AppContext'
+import { type Relay, type BlossomServer } from '@/contexts/AppContext'
 
 export const presetRelays: Relay[] = [
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },

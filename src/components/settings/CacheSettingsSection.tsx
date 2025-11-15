@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -19,26 +19,39 @@ export function CacheSettingsSection() {
   const [isClearing, setIsClearing] = useState(false)
   const [cacheSize, setCacheSize] = useState<string>('Calculating...')
 
-  // Calculate approximate cache size
-  const calculateCacheSize = async () => {
+  const estimateCacheSize = useCallback(async () => {
     try {
       if ('storage' in navigator && 'estimate' in navigator.storage) {
         const estimate = await navigator.storage.estimate()
         const usageInMB = ((estimate.usage || 0) / 1024 / 1024).toFixed(2)
-        setCacheSize(`~${usageInMB} MB`)
-      } else {
-        setCacheSize('Unknown')
+        return `~${usageInMB} MB`
       }
     } catch (error) {
       console.error('Failed to estimate cache size:', error)
-      setCacheSize('Unknown')
     }
-  }
+    return 'Unknown'
+  }, [])
+
+  const refreshCacheSize = useCallback(async () => {
+    setCacheSize('Calculating...')
+    const size = await estimateCacheSize()
+    setCacheSize(size)
+  }, [estimateCacheSize])
 
   // Initial cache size calculation
   useEffect(() => {
-    calculateCacheSize()
-  }, [])
+    let cancelled = false
+    const run = async () => {
+      const size = await estimateCacheSize()
+      if (!cancelled) {
+        setCacheSize(size)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [estimateCacheSize])
 
   const handleClearCache = async () => {
     setIsClearing(true)
@@ -78,7 +91,12 @@ export function CacheSettingsSection() {
               <p className="font-medium">Cache Size</p>
               <p className="text-sm text-muted-foreground">{cacheSize}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={calculateCacheSize} disabled={isClearing}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refreshCacheSize()}
+              disabled={isClearing}
+            >
               Refresh
             </Button>
           </div>

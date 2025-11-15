@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react'
-import { VideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '@/utils/video-event'
 
 interface VideoCacheContextType {
   videos: VideoEvent[]

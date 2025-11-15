@@ -10,11 +10,12 @@ export function Sidebar() {
   const { user } = useCurrentUser()
   const { config: _config, toggleSidebar } = useAppContext()
   const readRelays = useReadRelays()
+  const pubkey = user?.pubkey
 
   const userNprofile = useMemo(() => {
-    if (!user?.pubkey) return ''
-    return nip19.nprofileEncode({ pubkey: user.pubkey, relays: readRelays.slice(0, 5) })
-  }, [user?.pubkey, readRelays])
+    if (!pubkey) return ''
+    return nip19.nprofileEncode({ pubkey, relays: readRelays.slice(0, 5) })
+  }, [pubkey, readRelays])
 
   const navigationItems = [
     { name: 'Home', icon: Home, href: '/' },

@@ -1,4 +1,4 @@
-import { RelayPool } from 'applesauce-relay'
+import { type RelayPool } from 'applesauce-relay'
 import { createContext } from 'react'
 
 export type Theme = 'dark' | 'light' | 'system'

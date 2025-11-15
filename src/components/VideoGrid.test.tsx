@@ -60,17 +60,18 @@ const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({
   id: `video-${Math.random()}`,
   pubkey: 'test-pubkey',
   title: 'Test Video',
-  summary: 'Test summary',
-  published_at: Date.now() / 1000,
+  description: 'Test description',
   created_at: Date.now() / 1000,
   tags: [],
   type: 'videos',
-  url: 'https://example.com/video.mp4',
-  thumbnailUrl: 'https://example.com/thumb.jpg',
+  kind: 34235,
+  images: ['https://example.com/thumb.jpg'],
   duration: 120,
-  videoId: 'test-video-id',
-  authorName: 'Test Author',
-  contentWarning: false,
+  searchText: 'test video',
+  urls: ['https://example.com/video.mp4'],
+  link: '/video/test',
+  textTracks: [],
+  contentWarning: undefined,
   ...overrides,
 })
 
@@ -208,8 +209,8 @@ describe('VideoGrid', () => {
   describe('NSFW Filtering', () => {
     it('should filter out NSFW videos when nsfwFilter is hide', () => {
       const videos = [
-        createMockVideo({ id: 'video-1', title: 'Safe Video', contentWarning: false }),
-        createMockVideo({ id: 'video-2', title: 'NSFW Video', contentWarning: true }),
+        createMockVideo({ id: 'video-1', title: 'Safe Video', contentWarning: undefined }),
+        createMockVideo({ id: 'video-2', title: 'NSFW Video', contentWarning: 'NSFW' }),
       ]
 
       renderWithRouter(<VideoGrid videos={videos} />)
@@ -222,7 +223,7 @@ describe('VideoGrid', () => {
       // This test verifies that the component can handle videos with contentWarning flag
       // The actual filtering behavior is tested in the previous test
       const videos = [
-        createMockVideo({ id: 'video-1', title: 'Safe Video', contentWarning: false }),
+        createMockVideo({ id: 'video-1', title: 'Safe Video', contentWarning: undefined }),
       ]
 
       renderWithRouter(<VideoGrid videos={videos} />)
@@ -259,7 +260,7 @@ describe('VideoGrid', () => {
         createMockVideo({
           id: 'video-1',
           title: '',
-          thumbnailUrl: undefined,
+          images: [],
         }),
       ]
 

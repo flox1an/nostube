@@ -62,7 +62,7 @@ export const EditProfileForm: React.FC = () => {
   }, [form])
 
   // Handle file uploads for profile picture and banner
-  const uploadPicture = async (file: File, field: 'picture' | 'banner') => {
+  const uploadPicture = async (_file: File, field: 'picture' | 'banner') => {
     try {
       // The first tuple in the array contains the URL
       // const [[_, url]] = await uploadFile(file);

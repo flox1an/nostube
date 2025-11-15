@@ -79,7 +79,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   onVideoElementReady,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [hlsEl, setHlsEl] = useState<HTMLVideoElement | null>(null)
+  const hlsElRef = useRef<HTMLVideoElement | null>(null)
+  const [hlsElementVersion, setHlsElementVersion] = useState(0)
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
@@ -152,10 +153,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Reset when URLs change (new video)
   useEffect(() => {
     lastNotifiedElementRef.current = null
-    // Reset play/pause overlay state
-    setShowPlayPauseIcon(false)
-    setIsPaused(false)
-    setIsFadingOut(false)
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setShowPlayPauseIcon(false)
+        setIsPaused(false)
+        setIsFadingOut(false)
+      }
+    })()
     if (playPauseTimeoutRef.current !== null) {
       clearTimeout(playPauseTimeoutRef.current)
       playPauseTimeoutRef.current = null
@@ -164,11 +170,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       clearTimeout(fadeOutTimeoutRef.current)
       fadeOutTimeoutRef.current = null
     }
+    return () => {
+      cancelled = true
+    }
   }, [urls])
 
   // Notify parent when element is ready (only once per element)
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
 
     // Only notify if element changed and we haven't notified for this element yet
     if (el && el !== lastNotifiedElementRef.current && onVideoElementReadyRef.current) {
@@ -176,7 +185,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       // Use requestAnimationFrame to defer the callback to avoid triggering during render
       requestAnimationFrame(() => {
         // Double-check the element is still the same before calling
-        const currentEl = isHls ? hlsEl : videoRef.current
+        const currentEl = isHls ? hlsElRef.current : videoRef.current
         if (
           currentEl === el &&
           lastNotifiedElementRef.current === el &&
@@ -186,14 +195,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         }
       })
     }
-  }, [isHls, hlsEl])
+  }, [isHls, hlsElementVersion])
 
   // Track if we've already set the initial position
   const hasSetInitialPos = useRef(false)
 
   // Set initial play position on mount
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el || hasSetInitialPos.current) return
     if (initialPlayPos > 0) {
       // Only seek if the difference is significant (e.g., >1s)
@@ -202,7 +211,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         hasSetInitialPos.current = true
       }
     }
-  }, [initialPlayPos, isHls, hlsEl])
+  }, [initialPlayPos, isHls, hlsElementVersion])
 
   // Reset the flag when URLs change (new video)
   useEffect(() => {
@@ -211,7 +220,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   // Detect video dimensions when metadata is loaded
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el) return
 
     const handleLoadedMetadata = () => {
@@ -230,11 +239,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     return () => {
       el.removeEventListener('loadedmetadata', handleLoadedMetadata)
     }
-  }, [isHls, hlsEl, onVideoDimensionsLoaded])
+  }, [isHls, hlsElementVersion, onVideoDimensionsLoaded])
 
   // Handle video loading state and spinner display
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el) return
 
     const handleLoadStart = () => {
@@ -286,23 +295,22 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         clearTimeout(spinnerTimeoutRef.current)
       }
     }
-  }, [isHls, hlsEl])
+  }, [isHls, hlsElementVersion])
 
   // Ref callback for hls-video custom element
-  const hlsElRef = useRef<HTMLVideoElement | null>(null)
   const hlsRef = useCallback((node: Element | null) => {
     const newEl = node && 'currentTime' in node ? (node as HTMLVideoElement) : null
     // Only update state if the element actually changed
     if (newEl !== hlsElRef.current) {
       hlsElRef.current = newEl
-      setHlsEl(newEl)
+      setHlsElementVersion(prev => prev + 1)
     }
   }, [])
 
   // Throttle time updates to reduce re-renders (from ~4Hz to ~1Hz)
   const lastTimeUpdateRef = useRef<number>(0)
   const handleTimeUpdate = useCallback(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (onTimeUpdate && el) {
       const now = Date.now()
       // Only update once per second (1000ms) instead of every 250ms
@@ -311,7 +319,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onTimeUpdate(el.currentTime)
       }
     }
-  }, [onTimeUpdate, isHls, hlsEl])
+  }, [onTimeUpdate, isHls])
 
   const handleEndedEvent = useCallback(() => {
     if (onEnded) {
@@ -341,17 +349,17 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   useEffect(() => {
     if (!onEnded) return
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el) return
     el.addEventListener('ended', handleEndedEvent)
     return () => {
       el.removeEventListener('ended', handleEndedEvent)
     }
-  }, [onEnded, isHls, hlsEl, handleEndedEvent])
+  }, [onEnded, isHls, hlsElementVersion, handleEndedEvent])
 
   // Handle play/pause events to show icon overlay
   useEffect(() => {
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el) return
 
     const handlePlay = () => {
@@ -418,13 +426,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         clearTimeout(fadeOutTimeoutRef.current)
       }
     }
-  }, [isHls, hlsEl])
+  }, [isHls, hlsElementVersion])
 
   // Handle automatic fullscreen on orientation change for mobile devices
   useEffect(() => {
     if (!isMobile) return
 
-    const el = isHls ? hlsEl : videoRef.current
+    const el = isHls ? hlsElRef.current : videoRef.current
     if (!el) return
 
     const handleOrientationChange = async () => {
@@ -469,7 +477,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     return () => {
       window.screen.orientation?.removeEventListener('change', handleOrientationChange)
     }
-  }, [isMobile, isHls, hlsEl])
+  }, [isMobile, isHls, hlsElementVersion])
 
   // Show loading state if video URLs are still loading
   if (isLoadingVideoUrls || !videoUrl) {

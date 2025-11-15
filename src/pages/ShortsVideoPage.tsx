@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
@@ -148,12 +148,19 @@ function ShortVideoItem({
   useEffect(() => {
     const videoEl = videoElementRef.current
     if (!videoEl) return
+    let cancelled = false
+    const syncPausedState = async (paused: boolean) => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setIsPaused(paused)
+      }
+    }
 
     if (isActive) {
       // Reset to beginning and play immediately
       videoEl.currentTime = 0
       videoEl.muted = false
-      setIsPaused(false)
+      syncPausedState(false)
 
       if (videoUrl) {
         playActiveVideo()
@@ -162,7 +169,10 @@ function ShortVideoItem({
       // Pause and mute inactive videos
       videoEl.pause()
       videoEl.muted = true
-      setIsPaused(false)
+      syncPausedState(false)
+    }
+    return () => {
+      cancelled = true
     }
   }, [isActive, playActiveVideo, video.id, videoUrl])
 
@@ -450,7 +460,6 @@ export function ShortsVideoPage() {
   const { config } = useAppContext()
   const { nevent } = useParams<{ nevent: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
   const [searchParams] = useSearchParams()
   const eventStore = useEventStore()
   const { pool } = useAppContext()
@@ -510,7 +519,6 @@ export function ShortsVideoPage() {
 
         const target = bestEntry.target as HTMLElement
         const indexAttr = target.dataset.index
-        const targetVideoId = target.dataset.videoId
         if (!indexAttr) return
         const nextIndex = Number(indexAttr)
         if (Number.isNaN(nextIndex)) return
@@ -616,7 +624,6 @@ export function ShortsVideoPage() {
     const suggestionsLoader = createTimelineLoader(pool, readRelays, filters, {
       eventStore,
       limit: 50,
-      timeout: 5000, // 5 second timeout per relay to prevent blocking
     })
 
     const subscription = suggestionsLoader().subscribe({

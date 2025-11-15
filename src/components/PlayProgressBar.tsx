@@ -1,5 +1,5 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 
 interface PlayProgressBarProps {
   videoId: string
@@ -8,26 +8,22 @@ interface PlayProgressBarProps {
 
 export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
   const { user } = useCurrentUser()
-  const [playPos, setPlayPos] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!user || !videoId) {
-      setPlayPos(null)
-      return
+  const playPos = useMemo(() => {
+    const pubkey = user?.pubkey
+    if (!pubkey || !videoId) {
+      return null
     }
-    const key = `playpos:${user.pubkey}:${videoId}`
+    const key = `playpos:${pubkey}:${videoId}`
     const val = localStorage.getItem(key)
-    if (val) {
-      const n = parseFloat(val)
-      if (!isNaN(n) && n > 0) {
-        setPlayPos(n)
-      } else {
-        setPlayPos(null)
-      }
-    } else {
-      setPlayPos(null)
+    if (!val) {
+      return null
     }
-  }, [user, videoId])
+    const n = parseFloat(val)
+    if (Number.isNaN(n) || n <= 0) {
+      return null
+    }
+    return n
+  }, [user?.pubkey, videoId])
 
   if (playPos === null || duration <= 0 || playPos <= 0 || playPos >= duration) {
     return null

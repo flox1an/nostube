@@ -51,7 +51,8 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
         // Extract bitrate from all tracks
         let totalBitrate = 0
         for (const track of info.tracks) {
-          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
+          if (import.meta.env.DEV)
+            console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
           // Sum up bitrates from video and audio tracks
@@ -61,7 +62,8 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
         }
 
         const bitrate = totalBitrate > 0 ? Math.floor(totalBitrate) : undefined
-        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
+        if (import.meta.env.DEV)
+          console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
         resolve({ videoCodec, audioCodec, bitrate })
       }
     }
@@ -216,7 +218,8 @@ async function tryParseFromRange(
         // Extract bitrate from all tracks
         let totalBitrate = 0
         for (const track of info.tracks) {
-          if (import.meta.env.DEV) console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
+          if (import.meta.env.DEV)
+            console.log('[CODEC] Track:', track.type, track.codec, 'bitrate:', track.bitrate)
           if (track.type && track.type === 'video' && track.codec) videoCodec = track.codec
           if (track.type && track.type === 'audio' && track.codec) audioCodec = track.codec
           // Sum up bitrates from video and audio tracks
@@ -226,7 +229,8 @@ async function tryParseFromRange(
         }
 
         const bitrate = totalBitrate > 0 ? Math.floor(totalBitrate) : undefined
-        if (import.meta.env.DEV) console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
+        if (import.meta.env.DEV)
+          console.log('[CODEC] Detected codecs:', { videoCodec, audioCodec, bitrate })
         resolve({ videoCodec, audioCodec, bitrate })
       }
     }

@@ -332,17 +332,13 @@ export function VideoComments({
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
     // Get video author's inbox relays (write relays from their NIP-65 relay list)
-    const videoAuthorInbox = videoAuthorRelays.data
-      ?.filter(r => r.write)
-      .map(r => r.url) || []
+    const videoAuthorInbox = videoAuthorRelays.data?.filter(r => r.write).map(r => r.url) || []
 
     // Combine relays: video event relays + video author's inbox + user's write relays
     // Use Set to remove duplicates
-    const targetRelays = Array.from(new Set([
-      ...videoEventRelays,
-      ...videoAuthorInbox,
-      ...writeRelays,
-    ]))
+    const targetRelays = Array.from(
+      new Set([...videoEventRelays, ...videoAuthorInbox, ...writeRelays])
+    )
 
     // Get a relay hint (use first video event relay or first write relay)
     const relayHint = videoEventRelays[0] || writeRelays[0] || readRelays[0] || ''
@@ -392,9 +388,7 @@ export function VideoComments({
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
     // Get comment author's inbox relays (write relays from their NIP-65 relay list)
-    const replyToAuthorInbox = replyToAuthorRelays.data
-      ?.filter(r => r.write)
-      .map(r => r.url) || []
+    const replyToAuthorInbox = replyToAuthorRelays.data?.filter(r => r.write).map(r => r.url) || []
 
     // Get relays where the parent comment is hosted
     const parentCommentEvent = eventStore.getEvent(replyTo.id)
@@ -404,11 +398,9 @@ export function VideoComments({
 
     // Combine relays: parent comment relays + comment author's inbox + user's write relays
     // Use Set to remove duplicates
-    const targetRelays = Array.from(new Set([
-      ...parentCommentRelays,
-      ...replyToAuthorInbox,
-      ...writeRelays,
-    ]))
+    const targetRelays = Array.from(
+      new Set([...parentCommentRelays, ...replyToAuthorInbox, ...writeRelays])
+    )
 
     // Get a relay hint (use first parent comment relay or first write relay)
     const relayHint = parentCommentRelays[0] || writeRelays[0] || readRelays[0] || ''

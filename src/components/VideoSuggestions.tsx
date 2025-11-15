@@ -8,7 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays, imageProxy } from '@/lib/utils'
+import {
+  imageProxyVideoPreview,
+  imageProxyVideoThumbnail,
+  combineRelays,
+  imageProxy,
+} from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'

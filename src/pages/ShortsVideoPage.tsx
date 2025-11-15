@@ -9,11 +9,15 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { formatDistance } from 'date-fns'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
-import { decodeEventPointer } from '@/lib/nip19'
+import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useProfile, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { createEventLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
+import {
+  createEventLoader,
+  createAddressLoader,
+  createTimelineLoader,
+} from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, ChevronDown, Share2 } from 'lucide-react'
 import { imageProxy, imageProxyVideoPreview, combineRelays } from '@/lib/utils'
@@ -131,8 +135,15 @@ function ShortVideoItem({
   const pointerRelays = useMemo(() => {
     if (!video.link) return []
     try {
-      const pointer = decodeEventPointer(video.link)
-      return pointer?.relays ? [...pointer.relays] : []
+      const identifier = decodeVideoEventIdentifier(video.link)
+      if (!identifier) return []
+      const relays =
+        identifier.type === 'event'
+          ? identifier.data?.relays
+          : identifier.type === 'address'
+            ? identifier.data?.relays
+            : undefined
+      return relays ? [...relays] : []
     } catch {
       return []
     }
@@ -550,30 +561,56 @@ export function ShortsVideoPage() {
   // Use centralized read relays hook
   const readRelays = useReadRelays()
 
-  const eventPointer = useMemo(() => {
+  // Decode video identifier (supports both nevent and naddr)
+  const videoIdentifier = useMemo(() => {
     if (!nevent) return null
-    return decodeEventPointer(nevent)
+    return decodeVideoEventIdentifier(nevent)
   }, [nevent])
 
-  const loader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
+  const eventLoader = useMemo(() => createEventLoader(pool, { eventStore }), [pool, eventStore])
+  const addressLoader = useMemo(() => createAddressLoader(pool, { eventStore }), [pool, eventStore])
   const authorParam = searchParams.get('author') || undefined
 
   // Use EventStore to get the initial video event
   const videoObservable = useMemo(() => {
-    if (!eventPointer) return of(undefined)
-    return eventStore.event(eventPointer.id).pipe(
-      switchMap(event => {
-        if (event) {
-          return of(event)
-        }
-        return loader(eventPointer)
-      }),
-      catchError(() => {
-        return loader(eventPointer)
-      }),
-      map(event => event ?? undefined) // Normalize null to undefined
-    )
-  }, [eventStore, loader, eventPointer])
+    if (!videoIdentifier) return of(undefined)
+
+    if (videoIdentifier.type === 'event') {
+      const eventPointer = videoIdentifier.data
+      return eventStore.event(eventPointer.id).pipe(
+        switchMap(event => {
+          if (event) {
+            return of(event)
+          }
+          return eventLoader(eventPointer)
+        }),
+        catchError(() => {
+          return eventLoader(eventPointer)
+        }),
+        map(event => event ?? undefined) // Normalize null to undefined
+      )
+    } else if (videoIdentifier.type === 'address') {
+      const addressPointer = videoIdentifier.data
+      if (!addressPointer) return of(undefined)
+
+      return eventStore
+        .replaceable(addressPointer.kind, addressPointer.pubkey, addressPointer.identifier)
+        .pipe(
+          switchMap(event => {
+            if (event) {
+              return of(event)
+            }
+            return addressLoader(addressPointer)
+          }),
+          catchError(() => {
+            return addressLoader(addressPointer)
+          }),
+          map(event => event ?? undefined) // Normalize null to undefined
+        )
+    }
+
+    return of(undefined)
+  }, [eventStore, eventLoader, addressLoader, videoIdentifier])
 
   const initialVideoEvent = useObservableState(videoObservable)
 

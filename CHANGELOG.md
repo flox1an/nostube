@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Test Infrastructure Setup**:
+  - Configured Vitest with jsdom environment for DOM testing
+  - Added comprehensive test setup with browser API mocks (localStorage, indexedDB, IntersectionObserver, ResizeObserver, matchMedia)
+  - Created complete unit test suite for CollapsibleText component
+    - 16 test cases covering basic rendering, collapsible behavior, line clamping, edge cases, and accessibility
+    - Mocked RichTextContent and nostr core dependencies for isolated testing
+    - Tests validate className application, prop passing, click handlers, and text updates
+
 - **Phase 3 Refactoring - Extract Utility Functions**:
   - Created `lib/blossom-utils.ts` with Blossom-specific utilities
     - `formatFileSize`: Format bytes to human-readable size (MB/GB)

@@ -26,6 +26,11 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+  },
   build: {
     sourcemap: false, // Disable sourcemaps in production for smaller bundle
     minify: 'terser',

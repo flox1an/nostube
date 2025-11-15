@@ -16,6 +16,7 @@ vi.mock('applesauce-core/helpers/relays', () => ({
 vi.mock('nostr-tools', () => ({
   nip19: {
     neventEncode: vi.fn(({ id }) => `nevent1${id}`),
+    naddrEncode: vi.fn(({ identifier }) => `naddr1${identifier || 'mock'}`),
   },
 }))
 
@@ -566,6 +567,29 @@ describe('processEvent', () => {
       expect(result?.images[0]).toBe(
         'https://blossom.primal.net/ee4ec8d9eb9692dabbd4ed1b0bce3c101d70780b94c28a99fb9f4adfdee26921.mp4'
       )
+    })
+
+    it('should generate naddr link for addressable horizontal video (kind 34235)', () => {
+      const result = processEvent(yakihonneHorizontalEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.link).toMatch(/^naddr1/)
+      // Verify it's a valid naddr by checking it contains the identifier
+      expect(result?.link).toContain('YG0jA04d_aH5HUYUoBT-q')
+    })
+
+    it('should generate naddr link for addressable vertical video (kind 34236)', () => {
+      const result = processEvent(verticalAddressableEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.link).toMatch(/^naddr1/)
+    })
+
+    it('should generate naddr link for old format addressable event', () => {
+      const result = processEvent(oldFormatEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.link).toMatch(/^naddr1/)
     })
   })
 

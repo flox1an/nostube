@@ -39,6 +39,36 @@ export function decodeEventPointer(nevent: string): EventPointer | null {
 }
 
 /**
+ * Decode a video event identifier (nevent, note, or naddr)
+ * Returns an object indicating the type and decoded data
+ */
+export function decodeVideoEventIdentifier(
+  nip19String: string
+):
+  | { type: 'event'; data: EventPointer }
+  | { type: 'address'; data: ReturnType<typeof decodeAddressPointer> }
+  | null {
+  try {
+    const decoded = nip19.decode(nip19String)
+
+    if (decoded.type === 'nevent' || decoded.type === 'note') {
+      const eventPointer = decodeEventPointer(nip19String)
+      return eventPointer ? { type: 'event', data: eventPointer } : null
+    }
+
+    if (decoded.type === 'naddr') {
+      const addressPointer = decodeAddressPointer(nip19String)
+      return addressPointer ? { type: 'address', data: addressPointer } : null
+    }
+
+    return null
+  } catch (error) {
+    console.error('Failed to decode video event identifier:', error)
+    return null
+  }
+}
+
+/**
  * Decode a nprofile/npub NIP-19 identifier to ProfilePointer
  * Returns null if decoding fails or type doesn't match
  */

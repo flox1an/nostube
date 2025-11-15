@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Addressable Event URL Encoding**: Fixed addressable video events (kinds 34235, 34236) to use `naddr` encoding instead of `nevent`
+  - Regular video events (kinds 21, 22) continue to use `nevent` encoding
+  - Addressable events now generate NIP-19 `naddr` links with kind+pubkey+identifier for proper addressable reference
+  - Added `generateEventLink` helper function in `video-event.ts` to determine correct encoding based on event kind
+  - Added test coverage with 3 new tests verifying naddr generation for addressable events
+  - Added `decodeVideoEventIdentifier` helper in `lib/nip19.ts` to decode both nevent and naddr identifiers
+
 ### Added
 
 - **NIP-71 Addressable Video Event Support**: Full support for addressable video events (kinds 34235, 34236)

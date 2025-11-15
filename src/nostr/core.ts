@@ -1,6 +1,6 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { createTimelineLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
 import type { IDBPDatabase } from 'idb'
@@ -30,6 +30,20 @@ export async function cacheRequest(filters: Filter[]) {
 // Initialize EventStore
 export const eventStore = new EventStore()
 export const relayPool = new RelayPool()
+
+// Configure loaders for replaceable events (kind 10000-19999)
+// This includes kind 10063 (blossom servers), kind 10002 (relay lists), etc.
+const replaceableLoader = createAddressLoader(relayPool, {
+  eventStore,
+  cache: cacheRequest,
+  lookupRelays: DEFAULT_RELAYS,
+})
+
+// Set loaders on event store so useEventModel can fetch data
+eventStore.replaceableLoader = replaceableLoader
+eventStore.addressableLoader = replaceableLoader
+
+console.log('📡 Configured EventStore loaders with relays:', DEFAULT_RELAYS)
 
 // Save all new events to the cache
 presistEventsToCache(eventStore, events => addEvents(cache!, events))

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Upload Button Authentication**: Upload button in header now only displays when user is logged in
+  - Added conditional rendering based on authentication state using `useCurrentUser` hook
+  - Anonymous users no longer see the upload button, reducing confusion
+  - Improves UX by showing upload option only when it's actually available
+
 ### Fixed
 
 - **Infinite Re-render in useUserBlossomServers**: Fixed infinite loop causing performance issues during video playback

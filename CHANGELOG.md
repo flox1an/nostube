@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - 16 test cases covering basic rendering, collapsible behavior, line clamping, edge cases, and accessibility
     - Mocked RichTextContent and nostr core dependencies for isolated testing
     - Tests validate className application, prop passing, click handlers, and text updates
+  - Created comprehensive unit test suite for VideoGrid component
+    - 22 test cases covering empty states, loading states, video rendering, layout modes, NSFW filtering, and edge cases
+    - Tests validate auto/horizontal/vertical layout modes, skeleton rendering, video type separation
+    - Tests handle 100+ videos, empty arrays, missing fields, and NSFW content filtering
+    - Mocked VideoCard, useWindowWidth, and useAppContext for isolated testing
+  - Tests run automatically in GitHub Actions on push to main and pull requests
 
 - **Phase 3 Refactoring - Extract Utility Functions**:
   - Created `lib/blossom-utils.ts` with Blossom-specific utilities

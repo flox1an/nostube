@@ -369,7 +369,7 @@ export function VideoUpload() {
         videoUrl: url,
         videoCodec: codecs.videoCodec,
         audioCodec: codecs.audioCodec,
-        bitrate: codecs.bitrate,
+        bitrate: Math.floor(codecs.bitrate || 0),
       })
 
       setUploadState('finished')
@@ -492,7 +492,7 @@ export function VideoUpload() {
           mirroredBlobs: [],
           videoCodec: codecs.videoCodec,
           audioCodec: codecs.audioCodec,
-          bitrate: codecs.bitrate,
+          bitrate: Math.floor(codecs.bitrate || 0),
         })
 
         if (blossomMirrorServers && blossomMirrorServers.length > 0) {

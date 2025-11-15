@@ -1,5 +1,5 @@
 import { VideoMetadata } from './VideoMetadata'
-import { BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from 'blossom-client-sdk'
 
 interface VideoPreviewProps {
   inputMethod: 'file' | 'url'

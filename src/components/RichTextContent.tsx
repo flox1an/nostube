@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { nip19 } from 'nostr-tools'
 import { useProfile } from '@/hooks/useProfile'
 import { genUserName } from '@/lib/genUserName'
-import { cn } from '@/lib/utils'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
@@ -137,9 +136,12 @@ function NostrMention({
   const eventStore = useEventStore()
   const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
 
-  // Get seen relays for this pubkey and generate nprofile
+  // Generate nprofile link with relays if available
   const nprofileLink = useMemo(() => {
-    const seenRelays = getSeenRelays(eventStore, profilePointer.pubkey)
+    // Try to get the profile event to extract seen relays
+    const profileEvent = eventStore.getReplaceable(0, profilePointer.pubkey)
+    const seenRelaysSet = profileEvent ? getSeenRelays(profileEvent) : undefined
+    const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
     const relays = profilePointer.relays || seenRelays
 
     if (relays && relays.length > 0) {

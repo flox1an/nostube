@@ -1,5 +1,5 @@
 import type { IAccount } from 'applesauce-accounts'
-import { AccountManager } from 'applesauce-accounts'
+import { type AccountManager } from 'applesauce-accounts'
 import { ExtensionAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { ExtensionSigner, NostrConnectSigner } from 'applesauce-signers'
 

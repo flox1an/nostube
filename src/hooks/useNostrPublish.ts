@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
-import { EventTemplate, Event } from 'nostr-tools'
+import { type EventTemplate, type Event } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
 import { relayPool } from '@/nostr/core'
 

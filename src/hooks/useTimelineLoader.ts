@@ -4,7 +4,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
 import { map } from 'rxjs'
-import { NostrEvent } from 'nostr-tools'
+import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 
 interface UseTimelineLoaderOptions {
@@ -28,11 +28,6 @@ interface UseTimelineLoaderOptions {
    * Optional limit for initial load (default: 50)
    */
   limit?: number
-
-  /**
-   * Optional timeout per relay in milliseconds (default: 5000)
-   */
-  timeout?: number
 }
 
 /**
@@ -51,7 +46,6 @@ export function useTimelineLoader({
   relays,
   reloadDependency,
   limit = 50,
-  timeout = 5000,
 }: UseTimelineLoaderOptions): {
   videos: VideoEvent[]
   loading: boolean
@@ -76,17 +70,22 @@ export function useTimelineLoader({
     )
   }, [eventStore, filters, relays, blockedPubkeys, config.blossomServers])
 
-  const videos = useObservableMemo(() => videos$ || null, [videos$]) || []
+  const videos = useObservableMemo(() => videos$ || undefined, [videos$]) || []
 
   // Load initial events from relays
   useEffect(() => {
     if (!filters || !pool || hasLoaded) return
 
-    setLoading(true)
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setLoading(true)
+      }
+    })()
     const loader = createTimelineLoader(pool, relays, filters, {
       eventStore,
       limit,
-      timeout,
     })
 
     const subscription = loader().subscribe({
@@ -94,25 +93,42 @@ export function useTimelineLoader({
         eventStore.add(event)
       },
       complete: () => {
+        if (cancelled) {
+          return
+        }
         setLoading(false)
         setHasLoaded(true)
       },
       error: err => {
         console.error('Error loading timeline:', err)
+        if (cancelled) {
+          return
+        }
         setLoading(false)
         setHasLoaded(true)
       },
     })
 
     return () => {
+      cancelled = true
       subscription.unsubscribe()
     }
-  }, [filters, pool, relays, eventStore, hasLoaded, limit, timeout])
+  }, [filters, pool, relays, eventStore, hasLoaded, limit])
 
   // Reset hasLoaded when reload dependency changes (e.g., tag or author changes)
   useEffect(() => {
-    if (reloadDependency !== undefined) {
-      setHasLoaded(false)
+    if (reloadDependency === undefined) {
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      await Promise.resolve()
+      if (!cancelled) {
+        setHasLoaded(false)
+      }
+    })()
+    return () => {
+      cancelled = true
     }
   }, [reloadDependency])
 
@@ -130,7 +146,6 @@ export function useTimelineLoader({
     const loader = createTimelineLoader(pool, relays, paginatedFilters, {
       eventStore,
       limit,
-      timeout,
     })
 
     const subscription = loader().subscribe({
@@ -149,7 +164,7 @@ export function useTimelineLoader({
     return () => {
       subscription.unsubscribe()
     }
-  }, [filters, pool, relays, eventStore, loading, videos, limit, timeout])
+  }, [filters, pool, relays, eventStore, loading, videos, limit])
 
   return {
     videos,

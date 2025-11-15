@@ -1,21 +1,15 @@
-import { useEffect, useState } from 'react'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
-import { TimelineLoader } from 'applesauce-loaders/loaders'
 import { useStableRelays } from '@/hooks'
 
 export function HomePage() {
   const relays = useStableRelays()
 
-  const [loader, setLoader] = useState<TimelineLoader | undefined>()
-
-  useEffect(() => {
-    const newLoader = videoTypeLoader('videos', relays)
-    setLoader(newLoader)
-  }, [relays])
-
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(
+    videoTypeLoader('videos', relays),
+    relays
+  )
 
   if (!videos) return null
 

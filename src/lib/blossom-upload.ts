@@ -1,4 +1,4 @@
-import { BlobDescriptor, BlossomClient, Signer } from 'blossom-client-sdk'
+import { type BlobDescriptor, BlossomClient, type Signer } from 'blossom-client-sdk'
 import { createSHA256 } from 'hash-wasm'
 
 export interface UploadFileWithProgressProps {
@@ -340,8 +340,6 @@ export async function uploadChunk(
   offset: number,
   authToken: string
 ): Promise<Response> {
-  const _end = offset + chunk.size - 1
-
   if (import.meta.env.DEV) {
     console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${server}`)
     console.log(

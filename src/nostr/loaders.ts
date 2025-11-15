@@ -1,5 +1,5 @@
 import { getTimelineLoader } from './core'
-import { VideoType } from '@/contexts/AppContext'
+import { type VideoType } from '@/contexts/AppContext'
 import { getKindsForType } from '@/lib/video-types'
 
 // Kind 21 (videos)

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { applyTheme, getThemeById, nostubeTheme } from '@/lib/themes'
+import { applyTheme, getThemeById } from '@/lib/themes'
 
 type Theme = 'dark' | 'light' | 'system'
 

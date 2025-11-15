@@ -277,7 +277,7 @@ export function VideoPage() {
         markVideoAsMissing(video.id, urls)
       }
     },
-    [video?.id, markVideoAsMissing]
+    [video, markVideoAsMissing]
   )
 
   // Stable callback for video dimensions loaded (memoized)
@@ -396,15 +396,15 @@ export function VideoPage() {
         videoPlayer={renderVideoPlayer()}
         videoInfo={
           <VideoInfoSection
-            video={video}
+            video={video ?? null}
             isLoading={isLoading}
             metadata={metadata}
             authorName={authorName}
             relaysToUse={relaysToUse}
             userPubkey={user?.pubkey}
             configRelays={config.relays}
-            configBlossomServers={config.blossomServers}
-            videoEvent={videoEvent}
+            configBlossomServers={config.blossomServers || []}
+            videoEvent={videoEvent || undefined}
             shareOpen={shareOpen}
             setShareOpen={setShareOpen}
             shareUrl={shareUrl}

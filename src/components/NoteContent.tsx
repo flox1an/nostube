@@ -62,33 +62,49 @@ export function NoteContent({ event, className }: NoteContentProps) {
         )
       } else if (nostrPrefix && nostrData) {
         // Handle Nostr references
-        try {
-          const nostrId = `${nostrPrefix}${nostrData}`
-          const decoded = nip19.decode(nostrId)
+        const nostrId = `${nostrPrefix}${nostrData}`
+        let decodedData: { type: string; pubkey?: string; relays?: string[] } | null = null
 
+        try {
+          const decoded = nip19.decode(nostrId)
           if (decoded.type === 'npub') {
-            const pubkey = decoded.data
-            parts.push(<NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey }} />)
+            decodedData = { type: 'npub', pubkey: decoded.data }
           } else if (decoded.type === 'nprofile') {
-            // Handle nprofile with custom relays
             const { pubkey, relays } = decoded.data
-            parts.push(
-              <NostrMention key={`mention-${keyCounter++}`} profilePointer={{ pubkey, relays }} />
-            )
+            decodedData = { type: 'nprofile', pubkey, relays }
           } else {
-            // For other types, just show as a link
-            parts.push(
-              <Link
-                key={`nostr-${keyCounter++}`}
-                to={`/${nostrId}`}
-                className="text-blue-500 hover:underline"
-              >
-                {fullMatch}
-              </Link>
-            )
+            decodedData = { type: 'other' }
           }
         } catch {
-          // If decoding fails, just render as text
+          // If decoding fails, will render as text
+        }
+
+        if (decodedData?.type === 'npub' && decodedData.pubkey) {
+          parts.push(
+            <NostrMention
+              key={`mention-${keyCounter++}`}
+              profilePointer={{ pubkey: decodedData.pubkey }}
+            />
+          )
+        } else if (decodedData?.type === 'nprofile' && decodedData.pubkey) {
+          parts.push(
+            <NostrMention
+              key={`mention-${keyCounter++}`}
+              profilePointer={{ pubkey: decodedData.pubkey, relays: decodedData.relays }}
+            />
+          )
+        } else if (decodedData?.type === 'other') {
+          parts.push(
+            <Link
+              key={`nostr-${keyCounter++}`}
+              to={`/${nostrId}`}
+              className="text-blue-500 hover:underline"
+            >
+              {fullMatch}
+            </Link>
+          )
+        } else {
+          // If decoding failed, just render as text
           parts.push(fullMatch)
         }
       } else if (hashtag) {
@@ -138,9 +154,12 @@ function NostrMention({
   const eventStore = useEventStore()
   const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
 
-  // Get seen relays for this pubkey and generate nprofile
+  // Generate nprofile link with relays if available
   const nprofileLink = useMemo(() => {
-    const seenRelays = getSeenRelays(eventStore, profilePointer.pubkey)
+    // Try to get the profile event to extract seen relays
+    const profileEvent = eventStore.getReplaceable(0, profilePointer.pubkey)
+    const seenRelaysSet = profileEvent ? getSeenRelays(profileEvent) : undefined
+    const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
     const relays = profilePointer.relays || seenRelays
 
     if (relays && relays.length > 0) {

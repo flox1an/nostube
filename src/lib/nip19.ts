@@ -1,5 +1,5 @@
 import { nip19 } from 'nostr-tools'
-import { EventPointer, ProfilePointer } from 'nostr-tools/nip19'
+import { type EventPointer, type ProfilePointer } from 'nostr-tools/nip19'
 
 /**
  * Safely decode a NIP-19 identifier

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NIP-71 Addressable Video Event Support**: Full support for addressable video events (kinds 34235, 34236)
+  - Extracts `d` tag (identifier) from both imeta format and old format addressable events
+  - Supports new `origin` tag for tracking imported content from legacy platforms
+    - Format: `["origin", "<platform>", "<external-id>", "<original-url>", "<optional-metadata>"]`
+    - Preserves original platform identifiers and URLs when migrating content
+  - Added `VideoOrigin` type with platform, externalId, originalUrl, and metadata fields
+  - Comprehensive test coverage with 39 test cases including addressable event scenarios
+  - Enables updateable video metadata while maintaining addressable references
+
 - **Automatic NIP-63 Blossom Server Loading**: User's published blossom servers (kind 10063) now automatically sync to app configuration
   - Fetches and merges user's NIP-63 blossom servers when logged in
   - Only adds new servers not already in config (URL-based deduplication)

@@ -39,7 +39,9 @@ const originalRequest = relayPool.request.bind(relayPool)
 
 relayPool.request = ((relays, filters, opts) => {
   const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
-    mergeMap(() => throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`)))
+    mergeMap(() =>
+      throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`))
+    )
   )
   return race(originalRequest(relays, filters, opts), timeout$)
 }) as typeof relayPool.request

@@ -22,6 +22,13 @@ export type TextTrack = {
   url: string
 }
 
+export type VideoOrigin = {
+  platform: string
+  externalId: string
+  originalUrl?: string
+  metadata?: string
+}
+
 export interface VideoEvent {
   id: string
   kind: number
@@ -43,6 +50,7 @@ export interface VideoEvent {
   textTracks: TextTrack[]
   contentWarning: string | undefined
   x?: string
+  origin?: VideoOrigin
 }
 
 // Create an in-memory index for fast text search
@@ -152,13 +160,27 @@ export function processEvent(
 
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1])
     const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0')
+    const identifier = event.tags.find(t => t[0] === 'd')?.[1]
+
+    // Extract origin tag if present
+    const originTag = event.tags.find(t => t[0] === 'origin')
+    const origin: VideoOrigin | undefined = originTag
+      ? {
+          platform: originTag[1],
+          externalId: originTag[2],
+          originalUrl: originTag[3],
+          metadata: originTag[4],
+        }
+      : undefined
+
     // Only process if it's a video
     //if (!url || !mimeType?.startsWith('video/')) return null;
 
     const textTracks: TextTrack[] = []
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track')
     textTrackTags.forEach(vtt => {
-      let [_, url, lang] = vtt
+      // eslint-disable-next-line prefer-const
+      let [, url, lang] = vtt
       // Generate mirror URLs if the URL is a Blossom URL and mirror servers are configured
       if (url && blossomServers && blossomServers.length > 0) {
         const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
@@ -190,6 +212,7 @@ export function processEvent(
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
+      identifier,
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
       images: images.length > 0 ? images : [url || blurHashToDataURL(blurhash) || ''], // use the video url, which is converted to an image by the image proxy
@@ -209,6 +232,7 @@ export function processEvent(
       }),
       type: getTypeForKind(event.kind),
       contentWarning,
+      origin,
     }
 
     // Create search index
@@ -225,6 +249,17 @@ export function processEvent(
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1])
     let url = event.tags.find(t => t[0] === 'url')?.[1] || ''
     const mimeType = event.tags.find(t => t[0] === 'm')?.[1] || ''
+
+    // Extract origin tag if present
+    const originTag = event.tags.find(t => t[0] === 'origin')
+    const origin: VideoOrigin | undefined = originTag
+      ? {
+          platform: originTag[1],
+          externalId: originTag[2],
+          originalUrl: originTag[3],
+          metadata: originTag[4],
+        }
+      : undefined
 
     // There are some events that have the whole imeta data in the first string.
     if (url.includes(' ')) {
@@ -260,6 +295,7 @@ export function processEvent(
       }),
       type: getTypeForKind(event.kind),
       contentWarning,
+      origin,
     }
 
     // Create search index

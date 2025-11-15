@@ -82,14 +82,10 @@ function RelayPoolSync() {
   const { readRelays, writeRelays } = useUserRelaysContext()
 
   useEffect(() => {
-    const userRelaySet = new Set<string>([
-      ...(readRelays ?? []),
-      ...(writeRelays ?? []),
-    ])
+    const userRelaySet = new Set<string>([...(readRelays ?? []), ...(writeRelays ?? [])])
 
     const configRelays = config.relays.map(relay => relay.url)
-    const effectiveRelays =
-      userRelaySet.size > 0 ? Array.from(userRelaySet) : configRelays
+    const effectiveRelays = userRelaySet.size > 0 ? Array.from(userRelaySet) : configRelays
 
     pool.group(effectiveRelays)
   }, [config.relays, pool, readRelays, writeRelays])

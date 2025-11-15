@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- **Phase 2 Refactoring - Timeline & Form Hooks**:
+  - `useTimelineLoader`: Encapsulates timeline loading pattern with EventStore and relay queries
+    - Eliminates ~100 lines of duplicate code from HashtagPage and SubscriptionsPage
+    - Provides reactive updates via EventStore subscription
+    - Built-in pagination support with `loadMore` function
+    - Automatic reload on dependency changes
+  - `useFormDialog`: Manages form state in dialogs with validation and error handling
+    - Applied to CreatePlaylistDialog, reducing form boilerplate
+    - Provides `updateField`, `handleSubmit`, `resetForm` utilities
+    - Automatic toast notifications on success/error
+    - Built-in validation support
+- **Phase 1 Refactoring - Reusable Components**:
+  - `VideoTimelinePage`: Combines VideoGrid + InfiniteScrollTrigger with consistent layout
+  - `useStableRelays`: Prevents unnecessary re-renders from relay array reference changes
+  - `useAsyncAction`: Handles async operations with loading state and toast notifications
+
 - **Hashtag Search Feature**: New hashtag search page accessible at `/tag/:tag`
   - Global search across all videos with a specific hashtag
   - Supports all video kinds (regular videos and shorts)
@@ -19,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All hashtag links navigate to `/tag/:tag` route
 
 ### Changed
+
 - **Tag Normalization**: All hashtags are now normalized to lowercase
   - Tag URLs always use lowercase format (e.g., `/tag/bitcoin` not `/tag/Bitcoin`)
   - Tag input in upload form automatically converts to lowercase and removes `#` prefix
@@ -28,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AuthorPage: Tags tab shows `#tag` format with hover effect
 
 ### Technical Details
+
 - Created `HashtagPage.tsx` component using similar pattern as `SubscriptionsPage`
 - Uses Nostr `#t` tag filter for hashtag queries
 - Leverages existing `VideoGrid` and `InfiniteScrollTrigger` components

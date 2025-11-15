@@ -41,8 +41,7 @@ export function useAsyncAction() {
         toast({
           title: 'Error',
           description:
-            options?.errorMessage ||
-            (error instanceof Error ? error.message : 'An error occurred'),
+            options?.errorMessage || (error instanceof Error ? error.message : 'An error occurred'),
           variant: 'destructive',
         })
         options?.onError?.(error instanceof Error ? error : new Error('Unknown error'))

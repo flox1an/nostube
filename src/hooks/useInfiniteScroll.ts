@@ -18,7 +18,7 @@ export function useInfiniteScroll({
   loading,
   exhausted,
   threshold = 0,
-  rootMargin = '200px',
+  rootMargin = '0px 0px 800px 0px',
 }: UseInfiniteScrollOptions) {
   const { ref, inView } = useInView({
     threshold,

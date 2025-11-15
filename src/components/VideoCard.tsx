@@ -259,11 +259,13 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
       <Skeleton className={cn('w-full', aspectRatio)} />
       <div className="pt-3">
         <div className="flex gap-3">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-3 w-1/4" />
+          <div className="shrink-0">
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/2 mt-1" />
+            <Skeleton className="h-3 w-1/4 mt-1" />
           </div>
         </div>
       </div>

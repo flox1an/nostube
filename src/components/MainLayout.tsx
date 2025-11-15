@@ -9,14 +9,14 @@ export function MainLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative w-full">
         {/* Floating sidebar */}
         {isSidebarOpen && (
           <div className="absolute left-0 top-0 z-50 h-full">
             <Sidebar />
           </div>
         )}
-        <main className="flex-1 bg-background overflow-auto">
+        <main className="flex-1 bg-background overflow-auto w-full">
           {/*          <DisclaimerBanner />*/}
           <Outlet />
         </main>

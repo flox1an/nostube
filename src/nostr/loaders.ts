@@ -32,7 +32,11 @@ export const authorVideoLoader = (pubkey: string, relays: string[]) => {
 
 // By video type
 export const videoTypeLoader = (type: VideoType, relays?: string[]) => {
-  const loader = getTimelineLoader(`k21:type:${type}`, { kinds: getKindsForType(type), limit: 20 }, relays)
+  const loader = getTimelineLoader(
+    `k21:type:${type}`,
+    { kinds: getKindsForType(type), limit: 20 },
+    relays
+  )
   return () => loader
 }
 

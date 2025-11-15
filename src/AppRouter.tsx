@@ -17,6 +17,9 @@ const LikedVideosPage = lazy(() =>
 )
 const VideoPage = lazy(() => import('./pages/VideoPage').then(m => ({ default: m.VideoPage })))
 const AuthorPage = lazy(() => import('./pages/AuthorPage').then(m => ({ default: m.AuthorPage })))
+const HashtagPage = lazy(() =>
+  import('./pages/HashtagPage').then(m => ({ default: m.HashtagPage }))
+)
 const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default: m.UploadPage })))
 const PlaylistPage = lazy(() => import('./pages/Playlists'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
@@ -96,6 +99,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <AuthorPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/tag/:tag"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <HashtagPage />
               </Suspense>
             }
           />

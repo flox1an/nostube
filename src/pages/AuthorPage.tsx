@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
@@ -411,12 +411,11 @@ export function AuthorPage() {
         <TabsContent value="tags" className="mt-6">
           <div className="flex flex-wrap gap-2">
             {uniqueTags.map(tag => (
-              <span
-                key={tag}
-                className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
-              >
-                #{tag}
-              </span>
+              <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
+                <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm cursor-pointer hover:bg-muted/80 transition-colors">
+                  #{tag}
+                </span>
+              </Link>
             ))}
           </div>
         </TabsContent>

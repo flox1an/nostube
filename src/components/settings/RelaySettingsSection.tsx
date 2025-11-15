@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppContext, useUserRelays, useCurrentUser } from '@/hooks'
+import { useAppContext } from '@/hooks'
 import { type RelayTag } from '@/contexts/AppContext'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -19,9 +19,6 @@ import { Badge } from '../ui/badge'
 export function RelaySettingsSection() {
   const { config, updateConfig } = useAppContext()
   const [newRelayUrl, setNewRelayUrl] = useState('')
-
-  const { user } = useCurrentUser()
-  const userRelays = useUserRelays(user?.pubkey)
 
   const handleAddRelay = () => {
     if (newRelayUrl.trim()) {
@@ -55,17 +52,11 @@ export function RelaySettingsSection() {
   const handleResetRelays = () => {
     updateConfig(currentConfig => ({
       ...currentConfig,
-      relays: userRelays.data
-        ? userRelays.data.map(r => ({
-            url: r.url,
-            name: r.url.replace(/^wss:\/\//, '').replace(/\/$/, ''),
-            tags: ['read', 'write'] as RelayTag[],
-          }))
-        : presetRelays.map(r => ({
-            url: r.url,
-            name: r.name || r.url.replace(/^wss:\/\//, ''),
-            tags: ['read', 'write'] as RelayTag[],
-          })),
+      relays: presetRelays.map(relay => ({
+        url: relay.url,
+        name: relay.name || relay.url.replace(/^wss:\/\//, '').replace(/\/$/, ''),
+        tags: ['read', 'write'] as RelayTag[],
+      })),
     }))
   }
 
@@ -81,7 +72,6 @@ export function RelaySettingsSection() {
   }
 
   const availableTags: RelayTag[] = ['read', 'write']
-
   return (
     <Card>
       <CardHeader>

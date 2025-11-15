@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback, useEffect } from 'react'
+import { type ReactNode, useState, useCallback } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
@@ -19,12 +19,6 @@ export function AppProvider(props: AppProviderProps) {
   // App configuration state with localStorage persistence
   const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-
-  // Configure relayPool when relays change
-  useEffect(() => {
-    // RelayPool doesn't have a clear method, just reconfigure the group
-    relayPool.group(config.relays.map(r => r.url))
-  }, [config.relays])
 
   //const { user } = useCurrentUser();
   // const userRelays = useUserRelays(user?.pubkey);

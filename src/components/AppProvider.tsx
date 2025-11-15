@@ -1,7 +1,15 @@
 import { type ReactNode, useState, useCallback, useEffect } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
+import {
+  AppContext,
+  type Relay,
+  type AppConfig,
+  type AppContextType,
+  type BlossomServerTag,
+} from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 
 interface AppProviderProps {
   children: ReactNode
@@ -20,11 +28,43 @@ export function AppProvider(props: AppProviderProps) {
   const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
+  const { user } = useCurrentUser()
+  const userBlossomServers = useUserBlossomServers()
+
   // Configure relayPool when relays change
   useEffect(() => {
     // RelayPool doesn't have a clear method, just reconfigure the group
     relayPool.group(config.relays.map(r => r.url))
   }, [config.relays])
+
+  // Auto-load user's NIP-63 (kind 10063) blossom servers
+  useEffect(() => {
+    // Only proceed if user is logged in and has blossom servers
+    if (!user?.pubkey || !userBlossomServers.data?.length) {
+      return
+    }
+
+    // Get current servers from config
+    const currentServers = config.blossomServers || []
+    const currentUrls = new Set(currentServers.map(s => s.url))
+
+    // Find new servers (not already in config)
+    const newServers = userBlossomServers.data
+      .filter(url => !currentUrls.has(url))
+      .map(url => ({
+        url,
+        name: url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+        tags: [] as BlossomServerTag[], // Empty tags for user's 10063 servers
+      }))
+
+    // Only update if there are new servers to add
+    if (newServers.length > 0) {
+      setConfig(currentConfig => ({
+        ...currentConfig,
+        blossomServers: [...(currentConfig.blossomServers || []), ...newServers],
+      }))
+    }
+  }, [user?.pubkey, userBlossomServers.data, setConfig])
 
   //const { user } = useCurrentUser();
   // const userRelays = useUserRelays(user?.pubkey);

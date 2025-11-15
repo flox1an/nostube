@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Automatic NIP-63 Blossom Server Loading**: User's published blossom servers (kind 10063) now automatically sync to app configuration
+  - Fetches and merges user's NIP-63 blossom servers when logged in
+  - Only adds new servers not already in config (URL-based deduplication)
+  - Preserves existing server configurations including manual tags
+  - New servers from NIP-63 are added without tags
+  - Syncs on every login, keeping config up-to-date with user's published preferences
+
 - **Test Infrastructure Setup**:
   - Configured Vitest with jsdom environment for DOM testing
   - Added comprehensive test setup with browser API mocks (localStorage, IntersectionObserver, ResizeObserver, matchMedia)

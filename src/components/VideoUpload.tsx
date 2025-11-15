@@ -225,11 +225,14 @@ export function VideoUpload() {
 
   const addTagsFromInput = (input: string) => {
     // Split by spaces and filter out empty strings
-    const newTags = input.split(/\s+/).filter(tag => tag.trim().length > 0)
-    const uniqueNewTags = newTags.filter(tag => !tags.includes(tag.trim()))
+    const newTags = input
+      .split(/\s+/)
+      .filter(tag => tag.trim().length > 0)
+      .map(tag => tag.trim().replace(/^#/, '').toLowerCase()) // Remove # prefix and convert to lowercase
+    const uniqueNewTags = newTags.filter(tag => !tags.includes(tag))
 
     if (uniqueNewTags.length > 0) {
-      setTags([...tags, ...uniqueNewTags.map(tag => tag.trim())])
+      setTags([...tags, ...uniqueNewTags])
     }
   }
 

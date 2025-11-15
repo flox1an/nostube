@@ -8,7 +8,7 @@ import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { processEvent } from '@/utils/video-event'
-import { decodeEventPointer } from '@/lib/nip19'
+import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   useAppContext,
@@ -23,7 +23,7 @@ import {
   usePlaylistNavigation,
   useVideoKeyboardShortcuts,
 } from '@/hooks'
-import { createEventLoader } from 'applesauce-loaders/loaders'
+import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { extractBlossomHash } from '@/utils/video-event'
@@ -43,7 +43,8 @@ export function VideoPage() {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
   const navigate = useNavigate()
-  const eventPointer = useMemo(() => decodeEventPointer(nevent ?? ''), [nevent])
+  // Decode video identifier (supports both nevent and naddr)
+  const videoIdentifier = useMemo(() => decodeVideoEventIdentifier(nevent ?? ''), [nevent])
   const { markVideoAsMissing, clearMissingVideo, isVideoMissing } = useMissingVideos()
   const { cinemaMode: persistedCinemaMode, setCinemaMode } = useCinemaMode()
   const location = useLocation()
@@ -51,49 +52,98 @@ export function VideoPage() {
 
   // Get initial relays for loading the video event
   const initialRelays = useVideoPageRelays({
-    neventRelays: eventPointer?.relays,
+    neventRelays:
+      videoIdentifier?.type === 'event'
+        ? videoIdentifier.data?.relays
+        : videoIdentifier?.type === 'address'
+          ? videoIdentifier.data?.relays
+          : undefined,
     videoEvent: undefined, // Not loaded yet
     playlistEvent: undefined, // Not loaded yet
     authorPubkey: undefined, // Don't know author yet
   })
 
-  const loader = useMemo(
+  const eventLoader = useMemo(
     () => createEventLoader(pool, { eventStore, extraRelays: initialRelays }),
+    [pool, eventStore, initialRelays]
+  )
+
+  const addressLoader = useMemo(
+    () => createAddressLoader(pool, { eventStore, extraRelays: initialRelays }),
     [pool, eventStore, initialRelays]
   )
 
   // Use EventStore to get the video event with fallback to loader
   const videoObservable = useMemo(() => {
-    if (!eventPointer) return of(undefined)
+    if (!videoIdentifier) return of(undefined)
 
-    const subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
-      ids: [eventPointer.id],
-    })
-
-    return eventStore.event(eventPointer.id).pipe(
-      switchMap(event => {
-        if (event) {
-          return of(event)
-        }
-        // If no event in store, fallback to loader
-        return loader(eventPointer)
-      }),
-      catchError(() => {
-        // If eventStore fails, fallback to loader
-        return loader(eventPointer)
-      }),
-      map(event => event ?? undefined), // Normalize null to undefined
-      finalize(() => {
-        logSubscriptionClosed(subId)
+    if (videoIdentifier.type === 'event') {
+      const eventPointer = videoIdentifier.data
+      const subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
+        ids: [eventPointer.id],
       })
-    )
-  }, [eventStore, loader, eventPointer, initialRelays])
+
+      return eventStore.event(eventPointer.id).pipe(
+        switchMap(event => {
+          if (event) {
+            return of(event)
+          }
+          // If no event in store, fallback to loader
+          return eventLoader(eventPointer)
+        }),
+        catchError(() => {
+          // If eventStore fails, fallback to loader
+          return eventLoader(eventPointer)
+        }),
+        map(event => event ?? undefined), // Normalize null to undefined
+        finalize(() => {
+          logSubscriptionClosed(subId)
+        })
+      )
+    } else if (videoIdentifier.type === 'address') {
+      const addressPointer = videoIdentifier.data
+      if (!addressPointer) return of(undefined)
+
+      const subId = logSubscriptionCreated('VideoPage-address', initialRelays, {
+        kinds: [addressPointer.kind],
+        authors: [addressPointer.pubkey],
+        '#d': [addressPointer.identifier],
+      })
+
+      return eventStore
+        .replaceable(addressPointer.kind, addressPointer.pubkey, addressPointer.identifier)
+        .pipe(
+          switchMap(event => {
+            if (event) {
+              return of(event)
+            }
+            // If no event in store, fallback to loader
+            return addressLoader(addressPointer)
+          }),
+          catchError(() => {
+            // If eventStore fails, fallback to loader
+            return addressLoader(addressPointer)
+          }),
+          map(event => event ?? undefined), // Normalize null to undefined
+          finalize(() => {
+            logSubscriptionClosed(subId)
+          })
+        )
+    }
+
+    return of(undefined)
+  }, [eventStore, eventLoader, addressLoader, videoIdentifier, initialRelays])
 
   const videoEvent = useObservableState(videoObservable)
 
   // Get relays for playlist loading (includes video event relays once available)
   const playlistRelays = useVideoPageRelays({
-    neventRelays: eventPointer?.relays,
+    neventRelays:
+      videoIdentifier?.type === 'event'
+        ? videoIdentifier.data?.relays
+        : videoIdentifier?.type === 'address'
+          ? videoIdentifier.data?.relays
+          : undefined,
     videoEvent: videoEvent,
     playlistEvent: undefined, // Not loaded yet
     authorPubkey: videoEvent?.pubkey,
@@ -112,7 +162,12 @@ export function VideoPage() {
 
   // Get relays for comment loading (includes all available context)
   const commentRelays = useVideoPageRelays({
-    neventRelays: eventPointer?.relays,
+    neventRelays:
+      videoIdentifier?.type === 'event'
+        ? videoIdentifier.data?.relays
+        : videoIdentifier?.type === 'address'
+          ? videoIdentifier.data?.relays
+          : undefined,
     videoEvent: videoEvent,
     playlistEvent: playlistEvent,
     authorPubkey: videoEvent?.pubkey,
@@ -319,7 +374,10 @@ export function VideoPage() {
 
   // Handle video not found or missing
   if (!isLoading && !video) {
-    const isMissing = eventPointer && isVideoMissing(eventPointer.id)
+    // Get event ID for missing video check
+    const eventId = videoIdentifier?.type === 'event' ? videoIdentifier.data.id : videoEvent?.id // For addressable events, use the actual event ID once loaded
+
+    const isMissing = eventId && isVideoMissing(eventId)
     return (
       <div className="max-w-4xl mx-auto p-6">
         <Alert variant={isMissing ? 'destructive' : 'default'}>
@@ -331,10 +389,10 @@ export function VideoPage() {
                 ? 'This video has been marked as unavailable because it could not be loaded from any source. It will be automatically retried later.'
                 : 'This video could not be found. It may have been deleted or the event ID is incorrect.'}
             </p>
-            {isMissing && eventPointer && (
+            {isMissing && eventId && (
               <Button
                 onClick={() => {
-                  clearMissingVideo(eventPointer.id)
+                  clearMissingVideo(eventId)
                   window.location.reload()
                 }}
                 variant="outline"

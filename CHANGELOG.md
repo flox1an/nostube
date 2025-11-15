@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Infinite Re-render in useUserBlossomServers**: Fixed infinite loop causing performance issues during video playback
+  - Root cause: Hook was creating new arrays and objects on every render without memoization
+  - Solution: Added `useMemo` to memoize `serverUrls` array and result object
+  - Hook now only re-computes when `blossomServers` or `user` actually change
+  - Eliminates console spam and performance degradation during video playback
+
+- **Video Loading with naddr URLs**: Fixed VideoPage and ShortsVideoPage to properly load addressable video events (kinds 34235, 34236) via naddr URLs
+  - Root cause: Both pages were using `decodeEventPointer()` which only handles nevent/note, returning null for naddr
+  - Solution: Updated both pages to use `decodeVideoEventIdentifier()` which handles both nevent and naddr types
+  - Added both `eventLoader` and `addressLoader` to handle regular and addressable events respectively
+  - For naddr events, uses `eventStore.replaceable(kind, pubkey, identifier)` instead of `eventStore.event(id)`
+  - Added regression tests in `lib/nip19.test.ts` verifying decoder functions work correctly
+  - Videos with naddr URLs now load correctly instead of showing "Video Not Found" error
+  - Also fixed relay extraction in ShortVideoItem component to handle naddr links
+
 - **Addressable Event URL Encoding**: Fixed addressable video events (kinds 34235, 34236) to use `naddr` encoding instead of `nevent`
   - Regular video events (kinds 21, 22) continue to use `nevent` encoding
   - Addressable events now generate NIP-19 `naddr` links with kind+pubkey+identifier for proper addressable reference

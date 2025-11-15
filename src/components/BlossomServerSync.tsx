@@ -4,6 +4,7 @@ import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { type BlossomServerTag } from '@/contexts/AppContext'
 import { useEventStore } from 'applesauce-react/hooks'
+import { useReadRelays } from '@/hooks/useReadRelays'
 
 /**
  * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
@@ -12,26 +13,63 @@ import { useEventStore } from 'applesauce-react/hooks'
 export function BlossomServerSync() {
   const { user } = useCurrentUser()
   const userBlossomServers = useUserBlossomServers()
-  const { config, updateConfig } = useAppContext()
+  const { config, updateConfig, pool } = useAppContext()
   const eventStore = useEventStore()
+  const readRelays = useReadRelays()
 
-  // Debug: Check EventStore directly for kind 10063 events
+  // Debug: Check which relays we're connected to and query for kind 10063
   useEffect(() => {
     if (user?.pubkey) {
-      console.log('🔎 Checking EventStore for kind 10063 events')
-      const events = eventStore.getEventsForFilters([
+      console.log('🌐 Connected relays:', readRelays)
+      console.log('🔎 Querying relays for kind 10063 events')
+      console.log('  User pubkey:', user.pubkey)
+
+      // Check EventStore first
+      const eventsInStore = eventStore.getEventsForFilters([
         {
           kinds: [10063],
           authors: [user.pubkey],
         },
       ])
-      console.log('  Found kind 10063 events in EventStore:', events)
-      if (events.length > 0) {
-        console.log('  Event content:', events[0])
-        console.log('  Event tags:', events[0].tags)
+      console.log('  Events already in EventStore:', eventsInStore)
+      if (eventsInStore.length > 0) {
+        console.log('  Event found in store:')
+        console.log('    ID:', eventsInStore[0].id)
+        console.log('    Created:', new Date(eventsInStore[0].created_at * 1000).toISOString())
+        console.log('    Tags:', eventsInStore[0].tags)
+        console.log('    Content:', eventsInStore[0].content)
+      }
+
+      // Query relays for the event
+      console.log('  Querying relays...')
+      const sub = pool.subscribe(
+        [
+          {
+            kinds: [10063],
+            authors: [user.pubkey],
+            limit: 1,
+          },
+        ],
+        readRelays,
+        {
+          onEvent: event => {
+            console.log('  📥 Received kind 10063 event from relay:', event)
+            console.log('    Event ID:', event.id)
+            console.log('    Tags:', event.tags)
+            console.log('    Server tags:', event.tags.filter(t => t[0] === 'server'))
+          },
+          onComplete: () => {
+            console.log('  ✅ Query complete')
+          },
+        }
+      )
+
+      return () => {
+        console.log('  🛑 Closing subscription')
+        sub.close()
       }
     }
-  }, [user?.pubkey, eventStore])
+  }, [user?.pubkey, eventStore, pool, readRelays])
 
   // Auto-load user's NIP-63 (kind 10063) blossom servers
   useEffect(() => {

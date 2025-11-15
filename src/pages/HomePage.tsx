@@ -1,16 +1,12 @@
-import { useEffect, useState, useMemo } from 'react'
-import { VideoGrid } from '@/components/VideoGrid'
-import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
+import { useEffect, useState } from 'react'
+import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { TimelineLoader } from 'applesauce-loaders/loaders'
-import { useInfiniteScroll, useReadRelays } from '@/hooks'
+import { useStableRelays } from '@/hooks'
 
 export function HomePage() {
-  const relaysFromHook = useReadRelays()
-
-  // Stabilize relays array to prevent unnecessary loader recreations
-  const relays = useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
+  const relays = useStableRelays()
 
   const [loader, setLoader] = useState<TimelineLoader | undefined>()
 
@@ -21,27 +17,18 @@ export function HomePage() {
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
-  const { ref } = useInfiniteScroll({
-    onLoadMore: loadMore,
-    loading,
-    exhausted,
-  })
-
   if (!videos) return null
 
   return (
-    <div className="sm:px-4 sm:py-4">
-      <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="horizontal" />
-
-      <InfiniteScrollTrigger
-        triggerRef={ref}
-        loading={loading}
-        exhausted={exhausted}
-        itemCount={videos.length}
-        emptyMessage="No videos found."
-        loadingMessage="Loading more videos..."
-        exhaustedMessage="No more videos to load."
-      />
-    </div>
+    <VideoTimelinePage
+      videos={videos}
+      loading={loading}
+      exhausted={exhausted}
+      onLoadMore={loadMore}
+      layoutMode="horizontal"
+      emptyMessage="No videos found."
+      exhaustedMessage="No more videos to load."
+      className="sm:px-4 sm:py-4"
+    />
   )
 }

@@ -82,9 +82,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - VideoInfoSection: Badges show `#tag` format with hover effect
   - AuthorPage: Tags tab shows `#tag` format with hover effect
 
+### Fixed
+
+- **Timeline Observable Subscription Issue**: Fixed videos not displaying in pages using `useTimelineLoader`
+  - Root cause: Observable was being recreated when dependencies like `relays`, `blockedPubkeys`, or `config.blossomServers` changed
+  - `eventStore.timeline()` doesn't emit existing events to new subscribers, only emits on new event additions
+  - Solution: Separated EventStore subscription from processing logic
+    - Use `useObservableState` with default value for stable timeline subscription
+    - Only recreate observable when filters change (not when processing dependencies change)
+    - Apply `processEvents` transformation in separate `useMemo` that depends on processing parameters
+  - Ensures videos remain visible when blocked users list or other config changes
+
 ### Technical Details
 
 - Created `HashtagPage.tsx` component using similar pattern as `SubscriptionsPage`
 - Uses Nostr `#t` tag filter for hashtag queries
 - Leverages existing `VideoGrid` and `InfiniteScrollTrigger` components
 - Implements reactive timeline loading with EventStore and relay subscriptions
+- Fixed `useTimelineLoader` by switching from `useObservableMemo` to `useObservableState` pattern

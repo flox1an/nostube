@@ -18,7 +18,6 @@ import {
   useLoadAuthorRelayList,
 } from '@/hooks'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
-import type { TimelineLoader } from 'applesauce-loaders/loaders'
 import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'

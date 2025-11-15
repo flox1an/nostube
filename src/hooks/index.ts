@@ -13,6 +13,7 @@ export {
 export type { AccountMethod, PersistedAccount } from './useAccountPersistence'
 
 // Hooks
+export { useAsyncAction } from './useAsyncAction'
 export { useAppContext } from './useAppContext'
 export { useCinemaMode } from './useCinemaMode'
 export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
@@ -37,6 +38,7 @@ export { useProfile } from './useProfile'
 export { useBatchedProfileLoader, requestProfile } from './useBatchedProfiles'
 export { useQueryParams } from './useQueryParams'
 export { useReadRelays } from './useReadRelays'
+export { useStableRelays } from './useStableRelays'
 export { useReportedPubkeys } from './useReportedPubkeys'
 export type { ReportedPubkeys } from './useReportedPubkeys'
 export { useReports } from './useReports'

@@ -1,9 +1,7 @@
-import { VideoGrid } from '@/components/VideoGrid'
-import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
+import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import {
   useFollowedAuthors,
-  useInfiniteScroll,
-  useReadRelays,
+  useStableRelays,
   useAppContext,
   useReportedPubkeys,
 } from '@/hooks'
@@ -28,7 +26,7 @@ export function SubscriptionsPage() {
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
 
-  const readRelays = useReadRelays()
+  const readRelays = useStableRelays()
 
   // Create filter for all followed authors
   const filters = useMemo(() => {
@@ -125,37 +123,20 @@ export function SubscriptionsPage() {
     }
   }, [filters, pool, readRelays, eventStore, loading, videos])
 
-  const { ref } = useInfiniteScroll({
-    onLoadMore: loadMore,
-    loading,
-    exhausted: false,
-  })
-
-  const isLoadingInitial = loading && videos.length === 0
-  const isLoadingMore = loading && videos.length > 0
-
   return (
-    <div className="sm:p-4">
-      <VideoGrid
-        videos={videos}
-        isLoading={isLoadingInitial}
-        showSkeletons={true}
-        layoutMode="auto"
-      />
-
-      <InfiniteScrollTrigger
-        triggerRef={ref}
-        loading={isLoadingMore}
-        exhausted={false}
-        itemCount={videos.length}
-        emptyMessage={
-          followedPubkeys.length === 0
-            ? 'Follow some authors to see their videos here.'
-            : 'No videos found from your subscriptions.'
-        }
-        loadingMessage="Loading more videos..."
-        exhaustedMessage=""
-      />
-    </div>
+    <VideoTimelinePage
+      videos={videos}
+      loading={loading}
+      exhausted={false}
+      onLoadMore={loadMore}
+      layoutMode="auto"
+      emptyMessage={
+        followedPubkeys.length === 0
+          ? 'Follow some authors to see their videos here.'
+          : 'No videos found from your subscriptions.'
+      }
+      exhaustedMessage=""
+      className="sm:p-4"
+    />
   )
 }

@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { VideoGrid } from '@/components/VideoGrid'
-import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
-import { useInfiniteScroll, useReadRelays, useAppContext, useReportedPubkeys } from '@/hooks'
+import { VideoTimelinePage } from '@/components/VideoTimelinePage'
+import { useStableRelays, useAppContext, useReportedPubkeys } from '@/hooks'
 import { useMemo, useEffect, useState, useCallback } from 'react'
 import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -18,7 +17,7 @@ export function HashtagPage() {
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
 
-  const readRelays = useReadRelays()
+  const readRelays = useStableRelays()
 
   // Create filter for hashtag
   const filters = useMemo(() => {
@@ -115,15 +114,6 @@ export function HashtagPage() {
     }
   }, [filters, pool, readRelays, eventStore, loading, videos])
 
-  const { ref } = useInfiniteScroll({
-    onLoadMore: loadMore,
-    loading,
-    exhausted: false,
-  })
-
-  const isLoadingInitial = loading && videos.length === 0
-  const isLoadingMore = loading && videos.length > 0
-
   // Update document title
   useEffect(() => {
     if (tag) {
@@ -142,21 +132,15 @@ export function HashtagPage() {
         <h1 className="text-2xl font-bold mb-4">#{tag}</h1>
       </div>
 
-      <VideoGrid
+      <VideoTimelinePage
         videos={videos}
-        isLoading={isLoadingInitial}
-        showSkeletons={true}
-        layoutMode="auto"
-      />
-
-      <InfiniteScrollTrigger
-        triggerRef={ref}
-        loading={isLoadingMore}
+        loading={loading}
         exhausted={false}
-        itemCount={videos.length}
+        onLoadMore={loadMore}
+        layoutMode="auto"
         emptyMessage={`No videos found with hashtag #${tag}.`}
-        loadingMessage="Loading more videos..."
         exhaustedMessage=""
+        className=""
       />
     </div>
   )

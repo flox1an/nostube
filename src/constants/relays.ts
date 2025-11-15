@@ -1,6 +1,7 @@
 import { type Relay, type BlossomServer } from '@/contexts/AppContext'
 
 export const presetRelays: Relay[] = [
+  { url: 'wss://relay.divine.video', name: 'Divine Video', tags: ['read'] },
   { url: 'wss://ditto.pub/relay', name: 'Ditto', tags: ['read'] },
   { url: 'wss://relay.nostr.band', name: 'Nostr.Band', tags: ['read'] },
   { url: 'wss://relay.damus.io', name: 'Damus', tags: ['read'] },
@@ -14,4 +15,10 @@ export const presetRelays: Relay[] = [
  */
 export const METADATA_RELAY = 'wss://purplepag.es'
 
-export const presetBlossomServers: BlossomServer[] = []
+export const presetBlossomServers: BlossomServer[] = [
+  {
+    url: 'https://almond.slidestr.net',
+    name: 'Almond Slidestr',
+    tags: ['proxy', 'initial upload'],
+  },
+]

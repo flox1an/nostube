@@ -2,14 +2,15 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
+import { useMemo } from 'react'
 
 export function HomePage() {
   const relays = useStableRelays()
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(
-    videoTypeLoader('videos', relays),
-    relays
-  )
+  // Memoize the loader to prevent recreation on every render
+  const loader = useMemo(() => videoTypeLoader('videos', relays), [relays])
+
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
   if (!videos) return null
 

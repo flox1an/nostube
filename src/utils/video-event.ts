@@ -85,6 +85,30 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
   }
 }
 
+/**
+ * Generate NIP-19 encoded link for a video event
+ * Addressable events (kinds 34235, 34236) use naddr
+ * Regular events (kinds 21, 22) use nevent
+ */
+function generateEventLink(event: Event, identifier: string | undefined, relays: string[]): string {
+  const isAddressable = event.kind === 34235 || event.kind === 34236
+
+  if (isAddressable && identifier) {
+    return nip19.naddrEncode({
+      kind: event.kind,
+      pubkey: event.pubkey,
+      identifier,
+      relays,
+    })
+  }
+
+  return nip19.neventEncode({
+    kind: event.kind,
+    id: event.id,
+    relays,
+  })
+}
+
 // Deprecated functions removed - use generateMediaUrls from @/lib/media-url-generator instead
 // Process Nostr events into cache entries
 export function processEvents(
@@ -225,11 +249,7 @@ export function processEvent(
       urls: finalUrls,
       mimeType,
       textTracks,
-      link: nip19.neventEncode({
-        kind: event.kind,
-        id: event.id,
-        relays: eventRelays,
-      }),
+      link: generateEventLink(event, identifier, eventRelays),
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,
@@ -288,11 +308,7 @@ export function processEvent(
       mimeType,
       dimensions: event.tags.find(t => t[0] === 'dim')?.[1],
       size: parseInt(event.tags.find(t => t[0] === 'size')?.[1] || '0'),
-      link: nip19.neventEncode({
-        kind: event.kind,
-        id: event.id,
-        relays: eventRelays,
-      }),
+      link: generateEventLink(event, identifier, eventRelays),
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
+import { useEventStore } from 'applesauce-react/hooks'
+import { useObservableState } from 'observable-hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
-import { map } from 'rxjs'
+import { of } from 'rxjs'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 
@@ -59,18 +60,21 @@ export function useTimelineLoader({
   const [hasLoaded, setHasLoaded] = useState(false)
 
   // Subscribe to events from EventStore for reactive updates
-  const videos$ = useMemo(() => {
+  // Only recreate observable when filters change, not when processing dependencies change
+  const timeline$ = useMemo(() => {
     if (!filters) {
-      return null
+      return of([]) // Return observable that emits empty array
     }
-    return eventStore.timeline(filters).pipe(
-      map(events => {
-        return processEvents(events, relays, blockedPubkeys, config.blossomServers)
-      })
-    )
-  }, [eventStore, filters, relays, blockedPubkeys, config.blossomServers])
+    return eventStore.timeline(filters)
+  }, [eventStore, filters])
 
-  const videos = useObservableMemo(() => videos$ || undefined, [videos$]) || []
+  // Subscribe to timeline with default empty array
+  const events = useObservableState(timeline$, [])
+
+  // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
+  const videos = useMemo(() => {
+    return processEvents(events, relays, blockedPubkeys, config.blossomServers)
+  }, [events, relays, blockedPubkeys, config.blossomServers])
 
   // Load initial events from relays
   useEffect(() => {

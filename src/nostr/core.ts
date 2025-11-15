@@ -38,7 +38,7 @@ export const relayPool = new RelayPool()
 // This includes kind 10063 (blossom servers), kind 10002 (relay lists), etc.
 const replaceableLoader = createAddressLoader(relayPool, {
   eventStore,
-  cache: cacheRequest,
+  cacheRequest,
   lookupRelays: DEFAULT_RELAYS,
 })
 

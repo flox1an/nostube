@@ -3,8 +3,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { type BlossomServerTag } from '@/contexts/AppContext'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useReadRelays } from '@/hooks/useReadRelays'
 
 /**
  * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
@@ -13,54 +11,7 @@ import { useReadRelays } from '@/hooks/useReadRelays'
 export function BlossomServerSync() {
   const { user } = useCurrentUser()
   const userBlossomServers = useUserBlossomServers()
-  const { config, updateConfig, pool } = useAppContext()
-  const eventStore = useEventStore()
-  const readRelays = useReadRelays()
-
-  // Debug: Check which relays we're connected to and query for kind 10063
-  useEffect(() => {
-    if (user?.pubkey) {
-      console.log('🌐 Connected relays:', readRelays)
-      console.log('🔎 Querying relays for kind 10063 events')
-      console.log('  User pubkey:', user.pubkey)
-
-      // Query relays for the event
-      console.log('  Sending query to relays...')
-      const sub = pool.subscribe(
-        [
-          {
-            kinds: [10063],
-            authors: [user.pubkey],
-            limit: 1,
-          },
-        ],
-        readRelays,
-        {
-          onEvent: event => {
-            console.log('  📥 Received kind 10063 event from relay!')
-            console.log('    Event ID:', event.id)
-            console.log('    Created:', new Date(event.created_at * 1000).toISOString())
-            console.log('    Tags:', event.tags)
-            const serverTags = event.tags.filter(t => t[0] === 'server')
-            console.log('    Server tags:', serverTags)
-            console.log('    Server URLs:', serverTags.map(t => t[1]))
-
-            // Add to EventStore
-            eventStore.add(event)
-            console.log('    ✅ Added to EventStore')
-          },
-          onComplete: () => {
-            console.log('  ✅ Query complete')
-          },
-        }
-      )
-
-      return () => {
-        console.log('  🛑 Closing subscription')
-        sub.close()
-      }
-    }
-  }, [user?.pubkey, eventStore, pool, readRelays])
+  const { config, updateConfig } = useAppContext()
 
   // Auto-load user's NIP-63 (kind 10063) blossom servers
   useEffect(() => {

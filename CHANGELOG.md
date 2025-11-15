@@ -81,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag Display**: Hashtags now display with `#` prefix for better visual recognition
   - VideoInfoSection: Badges show `#tag` format with hover effect
   - AuthorPage: Tags tab shows `#tag` format with hover effect
+- **VideoCardSkeleton Alignment**: Improved skeleton loader alignment to better match actual video cards
+  - Added `shrink-0` wrapper around avatar skeleton to prevent shrinking
+  - Changed spacing from uniform `space-y-2` to explicit `mt-1` margins matching real card layout
+  - Adjusted skeleton heights: title (h-5), author (h-4), date (h-3) to better match text sizes
 
 ### Fixed
 

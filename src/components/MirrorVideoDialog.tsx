@@ -14,6 +14,7 @@ import { Loader2, Copy, Check, Server } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { extractBlossomHash } from '@/utils/video-event'
 import {
   formatFileSize,
@@ -21,7 +22,9 @@ import {
   getSizeFromVideoEvent,
   fetchVideoSizeFromBlossom,
 } from '@/lib/blossom-utils'
+import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { NostrEvent } from 'nostr-tools'
+import type { BlobDescriptor } from 'blossom-client-sdk'
 
 interface MirrorVideoDialogProps {
   open: boolean
@@ -47,6 +50,7 @@ export function MirrorVideoDialog({
 }: MirrorVideoDialogProps) {
   const { toast } = useToast()
   const { config } = useAppContext()
+  const { user } = useCurrentUser()
   const { data: userBlossomServers } = useUserBlossomServers()
   const sizeFromEvent = useMemo(() => getSizeFromVideoEvent(videoEvent), [videoEvent])
   const [resolvedVideoSize, setResolvedVideoSize] = useState<number | undefined>(
@@ -165,20 +169,96 @@ export function MirrorVideoDialog({
       return
     }
 
+    // Check if user is logged in
+    if (!user?.signer) {
+      toast({
+        title: 'Not logged in',
+        description: 'Please log in to mirror videos.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Find working blossom URL from videoUrls
+    const workingUrl = videoUrls.find(url => {
+      const { sha256 } = extractBlossomHash(url)
+      return sha256 // Has valid hash = valid blossom URL
+    })
+
+    if (!workingUrl) {
+      toast({
+        title: 'Invalid video',
+        description: 'No valid blossom URL found.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Extract blob info
+    const { sha256, ext } = extractBlossomHash(workingUrl)
+    if (!sha256) {
+      toast({
+        title: 'Invalid video',
+        description: 'Could not extract video hash.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Determine MIME type from extension
+    const mimeTypes: Record<string, string> = {
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      mov: 'video/quicktime',
+      avi: 'video/x-msvideo',
+    }
+    const mimeType = ext ? mimeTypes[ext] || 'video/mp4' : 'video/mp4'
+
+    const blobDescriptor: BlobDescriptor = {
+      sha256,
+      size: resolvedVideoSize || 0,
+      type: mimeType,
+      url: workingUrl,
+      uploaded: Date.now(),
+    }
+
     setIsMirroring(true)
     try {
-      // TODO: Implement actual mirroring logic
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      toast({
-        title: 'Mirror not implemented',
-        description: 'This feature will copy the video to your selected blossom servers.',
+      const results = await mirrorBlobsToServers({
+        mirrorServers: Array.from(selectedServers),
+        blob: blobDescriptor,
+        signer: async draft => await user.signer.signEvent(draft),
       })
 
-      onOpenChange(false)
+      const successCount = results.length
+      const totalCount = selectedServers.size
+      const failedCount = totalCount - successCount
+
+      if (successCount === 0) {
+        // All failed
+        toast({
+          title: 'Mirror failed',
+          description: 'Could not mirror to any servers. Please try again.',
+          variant: 'destructive',
+        })
+      } else if (failedCount > 0) {
+        // Partial success - show warning
+        toast({
+          title: 'Partially mirrored',
+          description: `Mirrored to ${successCount} of ${totalCount} servers. ${failedCount} failed.`,
+        })
+        onOpenChange(false)
+      } else {
+        // All succeeded
+        toast({
+          title: 'Mirror complete',
+          description: `Successfully mirrored to ${successCount} server${successCount !== 1 ? 's' : ''}.`,
+        })
+        onOpenChange(false)
+      }
     } catch (error) {
       toast({
-        title: 'Error',
+        title: 'Mirror error',
         description: error instanceof Error ? error.message : 'Failed to mirror video.',
         variant: 'destructive',
       })
@@ -280,7 +360,10 @@ export function MirrorVideoDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isMirroring}>
             Cancel
           </Button>
-          <Button onClick={handleMirror} disabled={selectedServers.size === 0 || isMirroring}>
+          <Button
+            onClick={handleMirror}
+            disabled={selectedServers.size === 0 || isMirroring || !user}
+          >
             {isMirroring ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

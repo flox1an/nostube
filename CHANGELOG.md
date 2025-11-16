@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mirror Video Dialog Functionality**: Implemented actual Blossom mirror requests in the Mirror Video dialog
+  - Users can now mirror videos to additional Blossom servers for improved redundancy and availability
+  - Dialog shows currently hosting servers and allows selection of additional servers to mirror to
+  - Integrated with existing `mirrorBlobsToServers()` function from blossom-upload.ts
+  - Provides detailed feedback: success toast when all mirrors complete, warning toast for partial success with failure count, error toast when all mirrors fail
+  - Mirror button is disabled when user is not logged in
+  - Uses authenticated Nostr events for mirror authorization via user's signer
+  - Automatically checks if files already exist on target servers before mirroring
+
 ### Changed
 
 - **Blossom Mirror Request Headers**: Modified mirror requests to exclude X-SHA-256 header
@@ -37,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - HEAD request builder: `buildBlossomHeadUrls` (blossom-utils.ts)
     - BlobDescriptor creation: `createMockBlobDescriptor` (blossom-upload.ts)
   - Fixes GET/HEAD/POST/PUT/PATCH requests with double slashes (e.g., `https://server.com//hash` or `https://server.com//upload`)
-  - Fixes blob URLs in upload dialog links (target="_blank") showing double slashes
+  - Fixes blob URLs in upload dialog links (target="\_blank") showing double slashes
   - Ensures all server URLs follow format: `protocol://host:port` (no trailing slash, no path)
   - Affects all Blossom operations: uploads, mirrors, blob fetching, size checks, and UI display
 

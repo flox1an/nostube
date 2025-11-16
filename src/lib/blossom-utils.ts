@@ -15,15 +15,16 @@ export function formatFileSize(bytes?: number): string {
 }
 
 /**
- * Normalize a server URL to a consistent format (remove trailing slash, lowercase hostname)
+ * Normalize a server URL to a consistent format (remove trailing slash, remove path, preserve port)
  */
 export function normalizeServerUrl(url: string): string {
   try {
     const urlObj = new URL(url)
-    // Normalize: protocol + lowercase hostname (no trailing slash, no path)
-    return `${urlObj.protocol}//${urlObj.hostname.toLowerCase()}`
+    // Normalize: protocol + lowercase host (with port) - no trailing slash, no path
+    return `${urlObj.protocol}//${urlObj.host.toLowerCase()}`
   } catch {
-    return url.replace(/\/$/, '').toLowerCase()
+    // Fallback: just remove trailing slash
+    return url.replace(/\/$/, '')
   }
 }
 

@@ -17,6 +17,7 @@ import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext 
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { Button } from '../ui/button'
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void
@@ -83,8 +84,8 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 py-1 px-3 rounded-full hover:bg-accent transition-all w-full text-foreground">
-          <Avatar className="w-10 h-10">
+        <Button variant="outline">
+          <Avatar className="w-8 h-8">
             <AvatarImage
               src={imageProxy(profile?.picture as string, config.thumbResizeServerUrl)}
               alt={getDisplayName(profile)}
@@ -95,7 +96,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
             <p className="font-medium text-sm truncate">{getDisplayName(profile)}</p>
           </div>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 p-2 animate-scale-in">
         <DropdownMenuItem

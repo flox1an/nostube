@@ -58,14 +58,14 @@ export function Header({ transparent = false }: HeaderProps) {
         <div className="flex items-center gap-4">
           {user && (
             <Link to="/upload" className="hidden md:block">
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload
               </Button>
             </Link>
           )}
 
-          <LoginArea className="lg:w-48" />
+          <LoginArea />
         </div>
       </div>
     </header>

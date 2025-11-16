@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Button Component Standardization**: Replaced all standard HTML button elements with shadcn/ui Button components
+  - Converted AccountSwitcher to use `<Button variant="outline">` instead of custom-styled `<button>` element
+  - Simplified LoginArea Button to use `variant="outline"` prop instead of custom className
+  - Added `cursor-pointer` class to all Button components for consistent hover behavior
+  - Improved consistency and maintainability across the codebase
+  - All interactive elements now use the standardized Button component with proper variants
+
 - **Upload Button Authentication**: Upload button in header now only displays when user is logged in
   - Added conditional rendering based on authentication state using `useCurrentUser` hook
   - Anonymous users no longer see the upload button, reducing confusion

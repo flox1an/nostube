@@ -157,7 +157,7 @@ export function buildBlossomHeadUrls(videoUrls: string[]): string[] {
       hostCandidates.add(urlObj.origin)
 
       for (const host of hostCandidates) {
-        const normalizedHost = host.replace(/\/$/, '')
+        const normalizedHost = normalizeServerUrl(host)
         const candidateUrl = `${normalizedHost}/${sha256}${ext ? `.${ext}` : ''}`
         if (!seen.has(candidateUrl)) {
           seen.add(candidateUrl)

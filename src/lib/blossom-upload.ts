@@ -7,6 +7,39 @@ export interface UploadFileWithProgressProps {
   signer: Signer
 }
 
+/**
+ * Custom implementation of blob mirroring without X-SHA-256 header
+ * Makes a PUT request to /mirror endpoint with the blob URL to copy
+ */
+async function customMirrorBlob(
+  server: string,
+  blob: BlobDescriptor,
+  authToken: string
+): Promise<BlobDescriptor> {
+  if (import.meta.env.DEV) {
+    console.log(`[MIRROR] Mirroring blob to ${server}`)
+  }
+
+  const response = await fetch(`${server}/mirror`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Nostr ${authToken}`,
+    },
+    body: JSON.stringify({ url: blob.url }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Mirror request failed: ${response.status} ${response.statusText}`)
+  }
+
+  const blobData = await response.json()
+  if (import.meta.env.DEV) {
+    console.log(`[MIRROR] Successfully mirrored to ${server}`)
+  }
+  return blobData as BlobDescriptor
+}
+
 export async function mirrorBlobsToServers({
   mirrorServers,
   blob,
@@ -34,7 +67,9 @@ export async function mirrorBlobsToServers({
 
       console.debug(`File does not exist on ${server}, proceeding with mirror`)
       const auth = await BlossomClient.createUploadAuth(signer, blob.sha256)
-      return await BlossomClient.mirrorBlob(server, blob, { auth })
+      const authString = JSON.stringify(auth)
+      const authBase64 = btoa(authString)
+      return await customMirrorBlob(server, blob, authBase64)
     })
   )
 

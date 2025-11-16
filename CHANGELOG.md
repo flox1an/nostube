@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Blossom Server URL Double Slashes**: Fixed 404 errors caused by double slashes in Blossom server URLs
+  - Updated `normalizeServerUrl()` function to preserve port numbers and remove trailing slashes
+  - Added URL normalization at the entry point of all Blossom upload/mirror functions
+  - Functions now normalize server URLs before constructing API endpoints
+  - Fixes errors like `https://server.com//upload` being incorrectly constructed
+  - Ensures all server URLs follow format: `protocol://host:port` (no trailing slash, no path)
+
 - **Infinite Re-render in useUserBlossomServers**: Fixed infinite loop causing performance issues during video playback
   - Root cause: Hook was creating new arrays and objects on every render without memoization
   - Solution: Added `useMemo` to memoize `serverUrls` array and result object

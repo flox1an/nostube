@@ -1,5 +1,6 @@
 import { type BlobDescriptor, BlossomClient, type Signer } from 'blossom-client-sdk'
 import { createSHA256 } from 'hash-wasm'
+import { normalizeServerUrl } from './blossom-utils'
 
 export interface UploadFileWithProgressProps {
   file: File
@@ -16,11 +17,14 @@ async function customMirrorBlob(
   blob: BlobDescriptor,
   authToken: string
 ): Promise<BlobDescriptor> {
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
   if (import.meta.env.DEV) {
-    console.log(`[MIRROR] Mirroring blob to ${server}`)
+    console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
   }
 
-  const response = await fetch(`${server}/mirror`, {
+  const response = await fetch(`${normalizedServer}/mirror`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -121,13 +125,16 @@ function createMockBlobDescriptor(
  * with the SHA256 hash in the URL or as a query parameter
  */
 export async function checkFileExists(server: string, fileHash: string): Promise<boolean> {
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
   try {
     // Try HEAD request with hash as path parameter
-    const response = await fetch(`${server}/${fileHash}`, {
+    const response = await fetch(`${normalizedServer}/${fileHash}`, {
       method: 'HEAD',
     })
 
-    console.debug(`File existence check for ${server}:`, response.status)
+    console.debug(`File existence check for ${normalizedServer}:`, response.status)
 
     // 200 means file exists, 404 means it doesn't exist
     return response.status === 200
@@ -147,13 +154,19 @@ export async function getUploadCapabilities(server: string): Promise<{
   requiredHeaders?: string[]
   error?: string
 }> {
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
   try {
-    const response = await fetch(`${server}/upload`, {
+    const response = await fetch(`${normalizedServer}/upload`, {
       method: 'OPTIONS',
     })
 
-    console.debug(`Server ${server} OPTIONS response status:`, response.status)
-    console.debug(`Server ${server} all headers:`, Object.fromEntries(response.headers.entries()))
+    console.debug(`Server ${normalizedServer} OPTIONS response status:`, response.status)
+    console.debug(
+      `Server ${normalizedServer} all headers:`,
+      Object.fromEntries(response.headers.entries())
+    )
 
     if (!response.ok) {
       return {
@@ -375,14 +388,17 @@ export async function uploadChunk(
   offset: number,
   authToken: string
 ): Promise<Response> {
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
   if (import.meta.env.DEV) {
-    console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${server}`)
+    console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} to ${normalizedServer}`)
     console.log(
       `[CHUNK] Chunk size: ${(chunk.size / (1024 * 1024)).toFixed(1)}MB, offset: ${offset}`
     )
   }
 
-  const response = await fetch(`${server}/upload`, {
+  const response = await fetch(`${normalizedServer}/upload`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -426,17 +442,22 @@ export async function uploadFileChunked(
   callbacks: ChunkedUploadCallbacks = {},
   providedFileHash?: string
 ): Promise<BlobDescriptor> {
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
   // BUD-10: First negotiate capabilities via OPTIONS
-  const capabilities = await getUploadCapabilities(server)
+  const capabilities = await getUploadCapabilities(normalizedServer)
 
   if (!capabilities.supportsPatch) {
     throw new Error(
-      `Server ${server} does not support PATCH chunked uploads according to BUD-10. ` +
+      `Server ${normalizedServer} does not support PATCH chunked uploads according to BUD-10. ` +
         `OPTIONS /upload response: ${capabilities.error || 'No PATCH support detected'}`
     )
   }
 
-  console.debug(`Server ${server} supports PATCH chunked uploads, proceeding with BUD-10 flow`)
+  console.debug(
+    `Server ${normalizedServer} supports PATCH chunked uploads, proceeding with BUD-10 flow`
+  )
 
   // Use server's max chunk size if available, otherwise use default
   const defaultChunkSize = capabilities.maxChunkSize || 8 * 1024 * 1024 // 8MB default
@@ -446,7 +467,7 @@ export async function uploadFileChunked(
     console.log(
       `[UPLOAD] Starting BUD-10 chunked upload for file: ${(file.size / (1024 * 1024)).toFixed(2)}MB`
     )
-    console.log(`[UPLOAD] Server: ${server}`)
+    console.log(`[UPLOAD] Server: ${normalizedServer}`)
     console.log(`[UPLOAD] Chunk size: ${(chunkSize / (1024 * 1024)).toFixed(1)}MB`)
   }
 
@@ -515,7 +536,7 @@ export async function uploadFileChunked(
         )
 
         const response = await uploadChunk(
-          server,
+          normalizedServer,
           chunk,
           chunkIndex,
           chunks.length,
@@ -573,7 +594,7 @@ export async function uploadFileChunked(
       )
 
       const lastResponse = await uploadChunk(
-        server,
+        normalizedServer,
         lastChunk,
         lastChunkIndex,
         chunks.length,
@@ -708,7 +729,10 @@ async function uploadFileToSingleServer(
   signer: Signer,
   fileHash: string
 ): Promise<BlobDescriptor> {
-  console.log(`[UPLOAD] Starting regular upload to ${server}`)
+  // Normalize server URL to prevent double slashes
+  const normalizedServer = normalizeServerUrl(server)
+
+  console.log(`[UPLOAD] Starting regular upload to ${normalizedServer}`)
 
   // Create auth
   const authEvent = await BlossomClient.createUploadAuth(signer, fileHash)
@@ -716,7 +740,7 @@ async function uploadFileToSingleServer(
   const authBase64 = btoa(authString)
 
   // Upload file
-  const response = await fetch(`${server}/upload`, {
+  const response = await fetch(`${normalizedServer}/upload`, {
     method: 'PUT',
     headers: {
       'Content-Type': file.type,
@@ -731,6 +755,6 @@ async function uploadFileToSingleServer(
   }
 
   const blobData = await response.json()
-  console.log(`[UPLOAD] Regular upload completed successfully to ${server}`)
+  console.log(`[UPLOAD] Regular upload completed successfully to ${normalizedServer}`)
   return blobData as BlobDescriptor
 }

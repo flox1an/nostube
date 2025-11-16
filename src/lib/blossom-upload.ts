@@ -111,11 +111,14 @@ function createMockBlobDescriptor(
   size: number,
   type: string
 ): BlobDescriptor {
+  // Normalize server URL to prevent double slashes in blob.url
+  const normalizedServer = normalizeServerUrl(server)
+
   return {
     sha256: fileHash,
     size: size,
     type: type,
-    url: `${server}/${fileHash}`,
+    url: `${normalizedServer}/${fileHash}`,
     uploaded: Date.now(),
   } as BlobDescriptor
 }

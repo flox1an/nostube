@@ -35,9 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Upload functions: `customMirrorBlob`, `checkFileExists`, `getUploadCapabilities`, `uploadChunk`, `uploadFileChunked`, `uploadFileToSingleServer`
     - Media URL generation: `generateMirrorUrls`, `generateProxyUrls` (media-url-generator.ts)
     - HEAD request builder: `buildBlossomHeadUrls` (blossom-utils.ts)
+    - BlobDescriptor creation: `createMockBlobDescriptor` (blossom-upload.ts)
   - Fixes GET/HEAD/POST/PUT/PATCH requests with double slashes (e.g., `https://server.com//hash` or `https://server.com//upload`)
+  - Fixes blob URLs in upload dialog links (target="_blank") showing double slashes
   - Ensures all server URLs follow format: `protocol://host:port` (no trailing slash, no path)
-  - Affects all Blossom operations: uploads, mirrors, blob fetching, and size checks
+  - Affects all Blossom operations: uploads, mirrors, blob fetching, size checks, and UI display
 
 - **Infinite Re-render in useUserBlossomServers**: Fixed infinite loop causing performance issues during video playback
   - Root cause: Hook was creating new arrays and objects on every render without memoization

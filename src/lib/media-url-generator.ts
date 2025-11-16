@@ -6,6 +6,7 @@
  */
 
 import type { BlossomServer } from '@/contexts/AppContext'
+import { normalizeServerUrl } from './blossom-utils'
 
 export type MediaType = 'video' | 'image' | 'vtt' | 'audio'
 
@@ -87,7 +88,7 @@ function generateMirrorUrls(
   }
 
   for (const server of mirrorServers) {
-    const baseUrl = server.url.replace(/\/$/, '')
+    const baseUrl = normalizeServerUrl(server.url)
     const mirrorUrl = `${baseUrl}/${sha256}.${ext}`
 
     urls.push(mirrorUrl)
@@ -136,7 +137,7 @@ function generateProxyUrls(
 
   // Generate proxy URLs for each proxy server
   for (const server of proxyServers) {
-    const baseUrl = server.url.replace(/\/$/, '')
+    const baseUrl = normalizeServerUrl(server.url)
 
     // Check if the original URL is already from this proxy server
     let proxyOrigin = ''
@@ -162,7 +163,7 @@ function generateProxyUrls(
 
     // Add all proxy servers as XS query parameters (except the current proxy server)
     for (const proxyServer of proxyServers) {
-      const proxyServerUrl = proxyServer.url.replace(/\/$/, '')
+      const proxyServerUrl = normalizeServerUrl(proxyServer.url)
 
       // Skip if this is the same server we're creating the proxy URL for
       try {

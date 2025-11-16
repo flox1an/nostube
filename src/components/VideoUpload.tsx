@@ -12,6 +12,7 @@ import { type BlobDescriptor } from 'blossom-client-sdk'
 import { useNavigate } from 'react-router-dom'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection'
+import { presetBlossomServers } from '@/constants/relays'
 import { UploadServer } from './UploadServer'
 import {
   InputMethodSelector,
@@ -56,9 +57,15 @@ export function VideoUpload() {
   const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
   const [contentWarningReason, setContentWarningReason] = useState('')
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
+  const [showProgressDetails, setShowProgressDetails] = useState(false)
+  const [publishSummary, setPublishSummary] = useState<{
+    eventId?: string
+    primaryUrl?: string
+    fallbackUrls: string[]
+  }>({ fallbackUrls: [] })
 
   const { user } = useCurrentUser()
-  const { config } = useAppContext()
+  const { config, updateConfig } = useAppContext()
   const { publish, isPending: isPublishing } = useNostrPublish()
   const blossomInitalUploadServers = config.blossomServers?.filter(server =>
     server.tags.includes('initial upload')
@@ -68,9 +75,21 @@ export function VideoUpload() {
   )
   const navigate = useNavigate()
 
+  const handleUseRecommendedServers = () => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      blossomServers: presetBlossomServers.map(server => ({
+        ...server,
+        tags: Array.from(new Set([...(server.tags || []), 'initial upload', 'mirror'])),
+      })),
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
+
+    setPublishSummary({ fallbackUrls: [] })
 
     // Check if we have either a file or URL
     if (inputMethod === 'file' && (!file || !blossomInitalUploadServers)) return
@@ -131,6 +150,7 @@ export function VideoUpload() {
       const videoUrl =
         inputMethod === 'url' ? uploadInfo.videoUrl : uploadInfo.uploadedBlobs?.[0].url
       const imetaTag = ['imeta', `dim ${uploadInfo.dimension}`, `url ${videoUrl}`]
+      const fallbackUrls: string[] = []
 
       // Add hash and mime type for uploaded files
       if (inputMethod === 'file' && uploadInfo.uploadedBlobs?.[0]) {
@@ -156,11 +176,13 @@ export function VideoUpload() {
         if (uploadInfo.uploadedBlobs.length > 1) {
           for (const blob of uploadInfo.uploadedBlobs.slice(1)) {
             imetaTag.push(`fallback ${blob.url}`)
+            fallbackUrls.push(blob.url)
           }
         }
         if (uploadInfo.mirroredBlobs.length > 0) {
           for (const blob of uploadInfo.mirroredBlobs) {
             imetaTag.push(`fallback ${blob.url}`)
+            fallbackUrls.push(blob.url)
           }
         }
       }
@@ -200,15 +222,17 @@ export function VideoUpload() {
     // reference links
     ["r", "<url>"],
     ["r", "<url>"]
-    */
+      */
 
-      await publish({
+      const publishedEvent = await publish({
         event,
         relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
       })
-
-      // Navigate to home or videos page since we don't have the event ID yet
-      navigate('/')
+      setPublishSummary({
+        eventId: publishedEvent.id,
+        primaryUrl: videoUrl,
+        fallbackUrls,
+      })
 
       // Reset form
       setTitle('')
@@ -667,200 +691,285 @@ export function VideoUpload() {
   }
 
   return (
-    <Card>
-      {/* Info bar above drop zone */}
-      <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
-        <div className="text-sm text-muted-foreground">
-          Uploading directly to{' '}
-          <b className="text-foreground">{blossomInitalUploadServers?.length ?? 0}</b> server
-          {(blossomInitalUploadServers?.length ?? 0) === 1 ? '' : 's'}. Mirroring to{' '}
-          <b className="text-foreground">{blossomMirrorServers?.length ?? 0}</b> server
-          {(blossomMirrorServers?.length ?? 0) === 1 ? '' : 's'}.
+    <>
+      <Card>
+        {/* Info bar above drop zone */}
+        <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
+          <div className="text-sm text-muted-foreground flex flex-col gap-1">
+            <span>
+              Uploading directly to{' '}
+              <b className="text-foreground">{blossomInitalUploadServers?.length ?? 0}</b> server
+              {(blossomInitalUploadServers?.length ?? 0) === 1 ? '' : 's'}. Mirroring to{' '}
+              <b className="text-foreground">{blossomMirrorServers?.length ?? 0}</b> server
+              {(blossomMirrorServers?.length ?? 0) === 1 ? '' : 's'}.
+            </span>
+            <span className="text-xs">
+              Tip: MP4 (H.264) under 2GB uploads fastest and plays everywhere. We’ll retry on backup
+              servers automatically.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleUseRecommendedServers}
+                className="cursor-pointer"
+              >
+                Use recommended servers
+              </Button>
+            )}
+            <Button
+              onClick={() => navigate('/settings')}
+              variant={'outline'}
+              className=" cursor-pointer"
+            >
+              Advanced
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => navigate('/settings')}
-          variant={'outline'}
-          className=" cursor-pointer"
-        >
-          Configure servers
-        </Button>
-      </div>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="flex flex-col gap-4">
-          {/* Input method selection - hide after processing */}
-          {uploadState === 'initial' && (
-            <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
-          )}
+        <form onSubmit={handleSubmit}>
+          <CardContent className="flex flex-col gap-4">
+            {/* Input method selection - hide after processing */}
+            {uploadState === 'initial' && (
+              <div className="space-y-1">
+                <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
+                <p className="text-xs text-muted-foreground">
+                  Quick start: leave on “Upload File”. Use “From URL” only if your video is already
+                  hosted somewhere.
+                </p>
+              </div>
+            )}
 
-          {/* URL input field - hide after processing */}
-          {inputMethod === 'url' && uploadState !== 'finished' && (
-            <UrlInputSection
-              videoUrl={videoUrl}
-              onVideoUrlChange={setVideoUrl}
-              onProcess={() => handleUrlVideoProcessing(videoUrl)}
-              isProcessing={uploadState === 'uploading'}
-            />
-          )}
+            {/* URL input field - hide after processing */}
+            {inputMethod === 'url' && uploadState !== 'finished' && (
+              <UrlInputSection
+                videoUrl={videoUrl}
+                onVideoUrlChange={setVideoUrl}
+                onProcess={() => handleUrlVideoProcessing(videoUrl)}
+                isProcessing={uploadState === 'uploading'}
+              />
+            )}
 
-          {/* Video preview or dropzone */}
-          {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) ||
-          (inputMethod === 'url' && uploadInfo.videoUrl) ? (
-            <VideoPreview
+            {/* Video preview or dropzone */}
+            {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) ||
+            (inputMethod === 'url' && uploadInfo.videoUrl) ? (
+              <VideoPreview
+                inputMethod={inputMethod}
+                uploadedBlobs={uploadInfo.uploadedBlobs}
+                videoUrl={uploadInfo.videoUrl}
+                dimension={uploadInfo.dimension}
+                sizeMB={uploadInfo.sizeMB}
+                duration={uploadInfo.duration}
+                videoCodec={uploadInfo.videoCodec}
+                audioCodec={uploadInfo.audioCodec}
+              />
+            ) : inputMethod === 'file' &&
+              blossomInitalUploadServers &&
+              blossomInitalUploadServers.length > 0 ? (
+              <FileDropzone
+                onDrop={onDrop}
+                accept={{ 'video/*': [] }}
+                selectedFile={file}
+                className="mb-4"
+                style={{
+                  display:
+                    uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
+                      ? 'none'
+                      : undefined,
+                }}
+              />
+            ) : inputMethod === 'file' ? (
+              <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
+                <span>
+                  You do not have any Blossom server tagged with <b>"initial upload"</b>.<br />
+                  Please go to{' '}
+                  <a href="/settings" className="underline text-blue-600">
+                    Settings
+                  </a>{' '}
+                  and assign the <b>"initial upload"</b> tag to at least one server.
+                </span>
+              </div>
+            ) : null}
+
+            {/* Server upload/mirror status */}
+            <UploadServer
               inputMethod={inputMethod}
+              uploadState={uploadState}
               uploadedBlobs={uploadInfo.uploadedBlobs}
-              videoUrl={uploadInfo.videoUrl}
-              dimension={uploadInfo.dimension}
-              sizeMB={uploadInfo.sizeMB}
-              duration={uploadInfo.duration}
-              videoCodec={uploadInfo.videoCodec}
-              audioCodec={uploadInfo.audioCodec}
+              mirroredBlobs={uploadInfo.mirroredBlobs}
+              hasInitialUploadServers={
+                !!(blossomInitalUploadServers && blossomInitalUploadServers.length > 0)
+              }
             />
-          ) : inputMethod === 'file' &&
-            blossomInitalUploadServers &&
-            blossomInitalUploadServers.length > 0 ? (
-            <FileDropzone
-              onDrop={onDrop}
-              accept={{ 'video/*': [] }}
-              selectedFile={file}
-              className="mb-4"
-              style={{
-                display:
-                  uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
-                    ? 'none'
-                    : undefined,
-              }}
-            />
-          ) : inputMethod === 'file' ? (
-            <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
-              <span>
-                You do not have any Blossom server tagged with <b>"initial upload"</b>.<br />
-                Please go to{' '}
-                <a href="/settings" className="underline text-blue-600">
-                  Settings
-                </a>{' '}
-                and assign the <b>"initial upload"</b> tag to at least one server.
-              </span>
-            </div>
-          ) : null}
 
-          {/* Server upload/mirror status */}
-          <UploadServer
-            inputMethod={inputMethod}
-            uploadState={uploadState}
-            uploadedBlobs={uploadInfo.uploadedBlobs}
-            mirroredBlobs={uploadInfo.mirroredBlobs}
-            hasInitialUploadServers={
-              !!(blossomInitalUploadServers && blossomInitalUploadServers.length > 0)
-            }
-          />
-
-          {/* Upload progress indicator */}
-          {uploadProgress && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="animate-spin h-5 w-5 text-primary" />
-                  <span>Uploading video...</span>
+            {/* Upload progress indicator */}
+            {uploadProgress && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin h-5 w-5 text-primary" />
+                    <span>Uploading video...</span>
+                  </div>
+                  <span>{uploadProgress.percentage}%</span>
                 </div>
-                <span>{uploadProgress.percentage}%</span>
-              </div>
 
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress.percentage}%` }}
-                />
-              </div>
-              <div className="text-xs text-gray-500">
-                Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}&nbsp;•&nbsp;
-                {Math.round(uploadProgress.uploadedBytes / 1024 / 1024)}MB /{' '}
-                {Math.round(uploadProgress.totalBytes / 1024 / 1024)}MB
-                {uploadProgress.speedMBps !== undefined && (
-                  <> • {uploadProgress.speedMBps.toFixed(1)} MB/s</>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress.percentage}%` }}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-3">
+                  <span>
+                    {Math.round(uploadProgress.uploadedBytes / 1024 / 1024)}MB /{' '}
+                    {Math.round(uploadProgress.totalBytes / 1024 / 1024)}MB
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() => setShowProgressDetails(d => !d)}
+                  >
+                    {showProgressDetails ? 'Hide details' : 'Show details'}
+                  </Button>
+                </div>
+                {showProgressDetails && (
+                  <div className="text-[11px] text-gray-500">
+                    Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}&nbsp;•&nbsp;
+                    {uploadProgress.speedMBps !== undefined && (
+                      <> {uploadProgress.speedMBps.toFixed(1)} MB/s&nbsp;•&nbsp;</>
+                    )}
+                    We retry on backup servers if one is slow.
+                  </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Show form fields only after upload has started */}
-          {uploadState !== 'initial' && (
-            <>
-              <FormFields
-                title={title}
-                onTitleChange={setTitle}
-                description={description}
-                onDescriptionChange={setDescription}
-                tags={tags}
-                tagInput={tagInput}
-                onTagInputChange={setTagInput}
-                onAddTag={handleAddTag}
-                onPaste={handlePaste}
-                onRemoveTag={removeTag}
-                onTagInputBlur={() => {
-                  if (tagInput.trim()) {
-                    addTagsFromInput(tagInput)
-                    setTagInput('')
-                  }
-                }}
-                language={language}
-                onLanguageChange={setLanguage}
-              />
-
-              <ThumbnailSection
-                thumbnailSource={thumbnailSource}
-                onThumbnailSourceChange={handleThumbnailSourceChange}
-                thumbnailBlob={thumbnailBlob}
-                thumbnailUrl={thumbnailUrl}
-                onThumbnailDrop={handleThumbnailDrop}
-                isThumbDragActive={false}
-                thumbnailUploadInfo={thumbnailUploadInfo}
-              />
-
-              <ContentWarning
-                enabled={contentWarningEnabled}
-                reason={contentWarningReason}
-                onEnabledChange={setContentWarningEnabled}
-                onReasonChange={setContentWarningReason}
-              />
-            </>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleReset}
-            title="Reset form"
-            aria-label="Reset form"
-          >
-            <Trash className="w-5 h-5" />
-          </Button>
-          <Button
-            type="submit"
-            disabled={
-              isPublishing ||
-              (inputMethod === 'file' &&
-                (!uploadInfo.uploadedBlobs || uploadInfo.uploadedBlobs.length === 0)) ||
-              (inputMethod === 'url' && !uploadInfo.videoUrl) ||
-              !title ||
-              !thumbnailSource ||
-              (thumbnailSource === 'generated' && !thumbnailBlob) ||
-              (thumbnailSource === 'upload' &&
-                (!thumbnailUploadInfo.uploadedBlobs ||
-                  thumbnailUploadInfo.uploadedBlobs.length === 0))
-            }
-          >
-            {isPublishing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              'Publish video'
             )}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+
+            {/* Show form fields only after upload has started */}
+            {uploadState !== 'initial' && (
+              <>
+                <FormFields
+                  title={title}
+                  onTitleChange={setTitle}
+                  description={description}
+                  onDescriptionChange={setDescription}
+                  tags={tags}
+                  tagInput={tagInput}
+                  onTagInputChange={setTagInput}
+                  onAddTag={handleAddTag}
+                  onPaste={handlePaste}
+                  onRemoveTag={removeTag}
+                  onTagInputBlur={() => {
+                    if (tagInput.trim()) {
+                      addTagsFromInput(tagInput)
+                      setTagInput('')
+                    }
+                  }}
+                  language={language}
+                  onLanguageChange={setLanguage}
+                />
+
+                <ThumbnailSection
+                  thumbnailSource={thumbnailSource}
+                  onThumbnailSourceChange={handleThumbnailSourceChange}
+                  thumbnailBlob={thumbnailBlob}
+                  thumbnailUrl={thumbnailUrl}
+                  onThumbnailDrop={handleThumbnailDrop}
+                  isThumbDragActive={false}
+                  thumbnailUploadInfo={thumbnailUploadInfo}
+                />
+                <p className="text-xs text-muted-foreground -mt-2">
+                  We auto-pick a frame for you. Use a custom image only if you want a specific
+                  cover.
+                </p>
+
+                <ContentWarning
+                  enabled={contentWarningEnabled}
+                  reason={contentWarningReason}
+                  onEnabledChange={setContentWarningEnabled}
+                  onReasonChange={setContentWarningReason}
+                />
+              </>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleReset}
+              title="Reset form"
+              aria-label="Reset form"
+            >
+              <Trash className="w-5 h-5" />
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                isPublishing ||
+                (inputMethod === 'file' &&
+                  (!uploadInfo.uploadedBlobs || uploadInfo.uploadedBlobs.length === 0)) ||
+                (inputMethod === 'url' && !uploadInfo.videoUrl) ||
+                !title ||
+                !thumbnailSource ||
+                (thumbnailSource === 'generated' && !thumbnailBlob) ||
+                (thumbnailSource === 'upload' &&
+                  (!thumbnailUploadInfo.uploadedBlobs ||
+                    thumbnailUploadInfo.uploadedBlobs.length === 0))
+              }
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                'Publish video'
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+
+      {publishSummary.eventId && (
+        <div className="mt-4 border rounded-lg p-4 bg-muted">
+          <div className="flex flex-col gap-2">
+            <div className="text-sm">
+              <b>Published!</b> Event <span className="font-mono">{publishSummary.eventId}</span>{' '}
+              sent to your write relays.
+            </div>
+            {publishSummary.primaryUrl && (
+              <div className="text-sm">
+                Primary video URL:{' '}
+                <a className="underline" href={publishSummary.primaryUrl} target="_blank">
+                  {publishSummary.primaryUrl}
+                </a>
+              </div>
+            )}
+            {publishSummary.fallbackUrls.length > 0 && (
+              <div className="text-sm">
+                Mirror URLs:{' '}
+                <span className="font-mono">{publishSummary.fallbackUrls.join(', ')}</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button type="button" onClick={() => navigate('/')}>
+                View home
+              </Button>
+              {publishSummary.primaryUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.open(publishSummary.primaryUrl, '_blank')}
+                >
+                  Open video
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

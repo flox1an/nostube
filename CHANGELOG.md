@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Blossom Mirror Request Headers**: Modified mirror requests to exclude X-SHA-256 header
+  - Implemented custom `customMirrorBlob()` function to replace `BlossomClient.mirrorBlob()`
+  - Mirror requests to `/mirror` endpoint now only send `Content-Type` and `Authorization` headers
+  - X-SHA-256 header is still sent for upload requests (PUT/PATCH to `/upload`) as required
+  - Improves compatibility with Blossom servers that don't require SHA-256 hash for mirror operations
+
 - **Button Component Standardization**: Replaced all standard HTML button elements with shadcn/ui Button components
   - Converted AccountSwitcher to use `<Button variant="outline">` instead of custom-styled `<button>` element
   - Simplified LoginArea Button to use `variant="outline"` prop instead of custom className

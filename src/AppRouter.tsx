@@ -21,6 +21,9 @@ const AuthorPage = lazy(() => import('./pages/AuthorPage').then(m => ({ default:
 const HashtagPage = lazy(() =>
   import('./pages/HashtagPage').then(m => ({ default: m.HashtagPage }))
 )
+const HistoryPage = lazy(() =>
+  import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage }))
+)
 const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default: m.UploadPage })))
 const PlaylistPage = lazy(() => import('./pages/Playlists'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
@@ -101,6 +104,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <HashtagPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <HistoryPage />
               </Suspense>
             }
           />

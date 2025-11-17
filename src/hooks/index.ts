@@ -55,6 +55,8 @@ export { useUltraWideVideo } from './useUltraWideVideo'
 export { usePlaylistNavigation } from './usePlaylistNavigation'
 export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
 export { useReactions } from './useReactions'
+export { useVideoServerAvailability } from './useVideoServerAvailability'
+export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

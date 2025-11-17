@@ -22,11 +22,12 @@ import {
   useUltraWideVideo,
   usePlaylistNavigation,
   useVideoKeyboardShortcuts,
+  useVideoServerAvailability,
+  useUserBlossomServers,
 } from '@/hooks'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { extractBlossomHash } from '@/utils/video-event'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
 import { VideoInfoSection } from '@/components/VideoInfoSection'
 import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
@@ -194,6 +195,23 @@ export function VideoPage() {
   const metadata = useProfile(video?.pubkey ? { pubkey: video.pubkey } : undefined)
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
 
+  // Get user's blossom servers
+  const { data: userBlossomServers } = useUserBlossomServers()
+
+  // Use video server availability hook
+  const { serverList, serverAvailability, checkAvailability, isChecking } =
+    useVideoServerAvailability({
+      videoUrls: video?.urls || [],
+      videoHash: video?.x,
+      configServers: config.blossomServers,
+      userServers: userBlossomServers,
+    })
+
+  // Count servers that currently host the video (from video URLs)
+  const blossomServerCount = useMemo(() => {
+    return serverList.filter(s => s.source === 'video-url').length
+  }, [serverList])
+
   // Use ultra-wide video detection hook
   const { tempCinemaModeForWideVideo, setTempCinemaModeForWideVideo, handleVideoDimensionsLoaded } =
     useUltraWideVideo({
@@ -274,35 +292,10 @@ export function VideoPage() {
     }
   }, [video, initialPlayPos])
 
-  // Check if video is only available on 1 blossom server
-  const blossomServerCount = useMemo(() => {
-    if (!video || !video.urls || video.urls.length === 0) return 0
-
-    // Extract unique blossom server hostnames (exclude proxy URLs which have ?origin=)
-    const servers = new Set<string>()
-
-    for (const url of video.urls) {
-      // Skip proxy URLs (they have ?origin= query parameter)
-      if (url.includes('?origin=')) continue
-
-      try {
-        const urlObj = new URL(url)
-        const { sha256 } = extractBlossomHash(url)
-        // Only count if it's a valid blossom URL (has SHA256 hash)
-        if (sha256) {
-          servers.add(urlObj.origin)
-        }
-      } catch {
-        // Invalid URL, skip
-      }
-    }
-
-    return servers.size
-  }, [video])
-
-  // Handle mirror action
+  // Handle mirror action - trigger availability check when dialog opens
   const handleMirror = () => {
     setMirrorDialogOpen(true)
+    checkAvailability()
   }
 
   // Build share URL and links
@@ -331,8 +324,10 @@ export function VideoPage() {
       if (video?.id) {
         markVideoAsMissing(video.id, urls)
       }
+      // Trigger availability check to find alternative servers
+      checkAvailability()
     },
-    [video, markVideoAsMissing]
+    [video, markVideoAsMissing, checkAvailability]
   )
 
   // Stable callback for video dimensions loaded (memoized)
@@ -471,6 +466,9 @@ export function VideoPage() {
             shareLinks={shareLinks}
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
+            serverList={serverList}
+            serverAvailability={serverAvailability}
+            onCheckAvailability={checkAvailability}
           />
         }
         sidebar={
@@ -492,6 +490,9 @@ export function VideoPage() {
           videoUrls={video.urls}
           videoSize={video.size}
           videoEvent={videoEvent}
+          serverList={serverList}
+          serverAvailability={serverAvailability}
+          isCheckingAvailability={isChecking}
         />
       )}
     </>

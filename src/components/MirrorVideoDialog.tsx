@@ -12,19 +12,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Loader2, Copy, Check, Server } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
-import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
-import { useAppContext } from '@/hooks/useAppContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { extractBlossomHash } from '@/utils/video-event'
-import {
-  formatFileSize,
-  normalizeServerUrl,
-  getSizeFromVideoEvent,
-  fetchVideoSizeFromBlossom,
-} from '@/lib/blossom-utils'
+import { formatFileSize, getSizeFromVideoEvent, fetchVideoSizeFromBlossom } from '@/lib/blossom-utils'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
 
 interface MirrorVideoDialogProps {
   open: boolean
@@ -32,13 +26,9 @@ interface MirrorVideoDialogProps {
   videoUrls: string[]
   videoSize?: number // Size in bytes
   videoEvent?: NostrEvent | null
-}
-
-interface NormalizedServer {
-  url: string
-  name: string
-  isCurrentHost: boolean
-  source: 'user' | 'config'
+  serverList: ServerInfo[]
+  serverAvailability: Map<string, ServerAvailability>
+  isCheckingAvailability: boolean
 }
 
 export function MirrorVideoDialog({
@@ -47,11 +37,12 @@ export function MirrorVideoDialog({
   videoUrls,
   videoSize,
   videoEvent,
+  serverList,
+  serverAvailability,
+  isCheckingAvailability: _isCheckingAvailability,
 }: MirrorVideoDialogProps) {
   const { toast } = useToast()
-  const { config } = useAppContext()
   const { user } = useCurrentUser()
-  const { data: userBlossomServers } = useUserBlossomServers()
   const sizeFromEvent = useMemo(() => getSizeFromVideoEvent(videoEvent), [videoEvent])
   const [resolvedVideoSize, setResolvedVideoSize] = useState<number | undefined>(
     videoSize && videoSize > 0 ? videoSize : sizeFromEvent
@@ -81,71 +72,15 @@ export function MirrorVideoDialog({
     }
   }, [open, videoUrls, resolvedVideoSize])
 
-  // Extract current hosting servers from video URLs
+  // Get servers that currently host the video (from video URLs)
   const currentHosts = useMemo(() => {
-    if (!open) return new Set<string>()
-    const hosts = new Set<string>()
-    for (const url of videoUrls) {
-      // Skip proxy URLs (they have ?origin= query parameter)
-      if (url.includes('?origin=')) continue
+    return serverList.filter(s => s.source === 'video-url')
+  }, [serverList])
 
-      try {
-        const urlObj = new URL(url)
-        const { sha256 } = extractBlossomHash(url)
-        // Only count if it's a valid blossom URL (has SHA256 hash)
-        if (sha256) {
-          hosts.add(normalizeServerUrl(urlObj.origin))
-        }
-      } catch {
-        // Invalid URL, skip
-      }
-    }
-    return hosts
-  }, [videoUrls, open])
-
-  // Combine and deduplicate servers from user's 10063 list and app config
+  // Get available servers to mirror to (exclude current hosts)
   const availableServers = useMemo(() => {
-    if (!open) return []
-    const serverMap = new Map<string, NormalizedServer>()
-
-    // Add user's blossom servers from kind 10063
-    if (userBlossomServers && userBlossomServers.length > 0) {
-      for (const serverUrl of userBlossomServers) {
-        const normalized = normalizeServerUrl(serverUrl)
-        if (!serverMap.has(normalized)) {
-          serverMap.set(normalized, {
-            url: normalized,
-            name: new URL(normalized).hostname,
-            isCurrentHost: currentHosts.has(normalized),
-            source: 'user',
-          })
-        }
-      }
-    }
-
-    // Add servers from app config
-    if (config.blossomServers && config.blossomServers.length > 0) {
-      for (const server of config.blossomServers) {
-        const normalized = normalizeServerUrl(server.url)
-        if (!serverMap.has(normalized)) {
-          serverMap.set(normalized, {
-            url: normalized,
-            name: server.name || new URL(normalized).hostname,
-            isCurrentHost: currentHosts.has(normalized),
-            source: 'config',
-          })
-        }
-      }
-    }
-
-    // Sort: current hosts first, then alphabetically by name
-    const sorted = Array.from(serverMap.values()).sort((a, b) => {
-      if (a.isCurrentHost && !b.isCurrentHost) return -1
-      if (!a.isCurrentHost && b.isCurrentHost) return 1
-      return a.name.localeCompare(b.name)
-    })
-    return sorted
-  }, [userBlossomServers, config.blossomServers, currentHosts, open])
+    return serverList.filter(s => s.source !== 'video-url')
+  }, [serverList])
 
   const handleToggleServer = (serverUrl: string) => {
     setSelectedServers(prev => {
@@ -279,27 +214,20 @@ export function MirrorVideoDialog({
 
         <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {/* Current hosting servers */}
-          {currentHosts.size > 0 && (
+          {currentHosts.length > 0 && (
             <div>
               <h3 className="text-sm font-medium mb-3">Currently Hosted On</h3>
               <div className="space-y-2">
-                {Array.from(currentHosts).map(host => {
-                  try {
-                    const hostname = new URL(host).hostname
-                    return (
-                      <div
-                        key={host}
-                        className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border"
-                      >
-                        <Server className="h-4 w-4 text-green-500" />
-                        <span className="text-sm flex-1">{hostname}</span>
-                        <Check className="h-4 w-4 text-green-500" />
-                      </div>
-                    )
-                  } catch {
-                    return null
-                  }
-                })}
+                {currentHosts.map(server => (
+                  <div
+                    key={server.url}
+                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border"
+                  >
+                    <Server className="h-4 w-4 text-green-500" />
+                    <span className="text-sm flex-1">{server.name}</span>
+                    <Check className="h-4 w-4 text-green-500" />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -316,41 +244,45 @@ export function MirrorVideoDialog({
               </div>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {availableServers.map(server => (
-                  <div
-                    key={server.url}
-                    className={`flex items-center gap-3 p-3 rounded-md border ${
-                      server.isCurrentHost
-                        ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
-                        : 'hover:bg-muted/50'
-                    }`}
-                  >
-                    <Checkbox
-                      id={server.url}
-                      checked={selectedServers.has(server.url)}
-                      onCheckedChange={() => handleToggleServer(server.url)}
-                      disabled={server.isCurrentHost}
-                    />
-                    <Label
-                      htmlFor={server.url}
-                      className="flex-1 cursor-pointer flex items-center gap-2"
+                {availableServers.map(server => {
+                  const availability = serverAvailability.get(server.url)
+                  const isAvailable = availability?.status === 'available'
+                  const isChecking = availability?.status === 'checking'
+
+                  return (
+                    <div
+                      key={server.url}
+                      className="flex items-center gap-3 p-3 rounded-md border hover:bg-muted/50"
                     >
-                      <Server className="h-4 w-4" />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{server.name}</div>
-                        <div className="text-xs text-muted-foreground">{server.url}</div>
-                      </div>
-                      {server.isCurrentHost && (
-                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                          Already hosted
+                      <Checkbox
+                        id={server.url}
+                        checked={selectedServers.has(server.url)}
+                        onCheckedChange={() => handleToggleServer(server.url)}
+                      />
+                      <Label
+                        htmlFor={server.url}
+                        className="flex-1 cursor-pointer flex items-center gap-2"
+                      >
+                        <Server className="h-4 w-4" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{server.name}</div>
+                          <div className="text-xs text-muted-foreground">{server.url}</div>
+                        </div>
+                        {isChecking && (
+                          <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />
+                        )}
+                        {isAvailable && (
+                          <span className="text-xs text-green-600 dark:text-green-400">
+                            Available
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground capitalize">
+                          ({server.source})
                         </span>
-                      )}
-                      <span className="text-xs text-muted-foreground capitalize">
-                        ({server.source})
-                      </span>
-                    </Label>
-                  </div>
-                ))}
+                      </Label>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

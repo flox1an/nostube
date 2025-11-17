@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Watch History Feature**: Implemented video watch history tracking and History page
+  - Created `useVideoHistory` hook for tracking video plays in local storage
+  - Videos are automatically tracked when loaded in VideoPage and ShortsVideoPage
+  - Each history entry stores the full video event and timestamp
+  - History is limited to 100 most recent videos (oldest removed first)
+  - If the same video is watched again, timestamp updates and moves to front
+  - Created new History page (`/history`) to display watch history
+  - History page shows videos in a responsive grid layout with most recent first
+  - Added "Clear History" button with confirmation dialog
+  - Enabled History link in sidebar navigation (previously disabled)
+  - History is stored per-device in local storage
+
 - **Mirror Video Dialog Functionality**: Implemented actual Blossom mirror requests in the Mirror Video dialog
   - Users can now mirror videos to additional Blossom servers for improved redundancy and availability
   - Dialog shows currently hosting servers and allows selection of additional servers to mirror to

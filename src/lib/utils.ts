@@ -176,7 +176,7 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   if (url.startsWith('data:')) return url
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fill:480:480/plain/${encodeURIComponent(url)}`
 }
 
 /**
@@ -188,9 +188,9 @@ export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   // imgproxy can generate thumbnails from video URLs
-  // Format: /insecure/f:webp/rs:fit:480:480/plain/{video_url}
+  // Format: /insecure/f:webp/rs:fill:480:480/plain/{video_url}
   // The video URL itself will be used to extract a frame
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(videoUrl)}`
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fill:480:480/plain/${encodeURIComponent(videoUrl)}`
 }
 
 function bigIntHash(str: string): string {

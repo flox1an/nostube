@@ -1,4 +1,4 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Scissors, Cog } from 'lucide-react'
+import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
@@ -33,7 +33,6 @@ export function Sidebar() {
     },
     { name: 'Watch later', icon: Clock, href: '/watch-later', disabled: true },
     { name: 'Liked videos', icon: ThumbsUp, href: '/liked-videos' },
-    { name: 'Your clips', icon: Scissors, href: '/clips', disabled: true },
   ]
 
   const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }]

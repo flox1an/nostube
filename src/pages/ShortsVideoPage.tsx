@@ -32,6 +32,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { VideoComments } from '@/components/VideoComments'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { presetRelays } from '@/constants/relays'
+import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
 
 function ShortVideoItem({
   video,
@@ -52,7 +53,6 @@ function ShortVideoItem({
   const eventStore = useEventStore()
   const userReadRelays = useReadRelays()
   const { config } = useAppContext()
-  const [isPaused, setIsPaused] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<number | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
 
@@ -159,19 +159,11 @@ function ShortVideoItem({
   useEffect(() => {
     const videoEl = videoElementRef.current
     if (!videoEl) return
-    let cancelled = false
-    const syncPausedState = async (paused: boolean) => {
-      await Promise.resolve()
-      if (!cancelled) {
-        setIsPaused(paused)
-      }
-    }
 
     if (isActive) {
       // Reset to beginning and play immediately
       videoEl.currentTime = 0
       videoEl.muted = false
-      syncPausedState(false)
 
       if (videoUrl) {
         playActiveVideo()
@@ -180,10 +172,6 @@ function ShortVideoItem({
       // Pause and mute inactive videos
       videoEl.pause()
       videoEl.muted = true
-      syncPausedState(false)
-    }
-    return () => {
-      cancelled = true
     }
   }, [isActive, playActiveVideo, video.id, videoUrl])
 
@@ -194,10 +182,8 @@ function ShortVideoItem({
 
     if (videoEl.paused) {
       videoEl.play()
-      setIsPaused(false)
     } else {
       videoEl.pause()
-      setIsPaused(true)
     }
   }, [isActive])
 
@@ -224,7 +210,6 @@ function ShortVideoItem({
       setAspectRatio(videoEl.videoWidth / videoEl.videoHeight)
     }
     if (isActive) {
-      setIsPaused(false)
       playActiveVideo()
     }
   }, [isActive, playActiveVideo])
@@ -325,16 +310,8 @@ function ShortVideoItem({
                   onError={handleVideoError}
                   style={{ opacity: isActive ? 1 : 0.5 }}
                 />
-                {/* Pause indicator */}
-                {isPaused && isActive && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="bg-black/50 rounded-full p-4">
-                      <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
+                {/* Play/Pause icon overlay with animation */}
+                {isActive && <PlayPauseOverlay videoRef={videoElementRef} />}
               </div>
               {/* Show thumbnail overlay when not active for better visibility */}
               {!isActive && thumbnailUrl && (

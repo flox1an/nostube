@@ -84,7 +84,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
+        <Button variant="ghost">
           <Avatar className="w-8 h-8">
             <AvatarImage
               src={imageProxy(profile?.picture as string, config.thumbResizeServerUrl)}

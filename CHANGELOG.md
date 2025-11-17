@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Play/Pause Overlay Component**: Refactored animated play/pause overlay into reusable component
+  - Created new `PlayPauseOverlay` component in `src/components/PlayPauseOverlay.tsx`
+  - Extracted duplicate play/pause animation logic from `VideoPlayer` and `ShortsVideoPage`
+  - Component handles play/pause event listeners, animation timing, and visual transitions
+  - Reduces code duplication and improves maintainability
+  - Uses same fade-in/fade-out animations with 700ms delay before fade-out
+  - Automatically initializes paused state and cleans up event listeners on unmount
+
 - **Blossom Mirror Request Headers**: Modified mirror requests to exclude X-SHA-256 header
   - Implemented custom `customMirrorBlob()` function to replace `BlossomClient.mirrorBlob()`
   - Mirror requests to `/mirror` endpoint now only send `Content-Type` and `Authorization` headers

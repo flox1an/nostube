@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '../hooks'
 import { NativeVideoPlayer } from './video/NativeVideoPlayer'
+import { PlayPauseOverlay } from './PlayPauseOverlay'
 
 // Lazy load HLS video player only when needed
 const HLSVideoPlayer = lazy(() =>
@@ -84,11 +85,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
-  const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [isFadingOut, setIsFadingOut] = useState(false)
-  const playPauseTimeoutRef = useRef<number | null>(null)
-  const fadeOutTimeoutRef = useRef<number | null>(null)
 
   // Memoize proxyConfig to prevent infinite loops
   const proxyConfig = React.useMemo(
@@ -153,26 +149,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Reset when URLs change (new video)
   useEffect(() => {
     lastNotifiedElementRef.current = null
-    let cancelled = false
-    ;(async () => {
-      await Promise.resolve()
-      if (!cancelled) {
-        setShowPlayPauseIcon(false)
-        setIsPaused(false)
-        setIsFadingOut(false)
-      }
-    })()
-    if (playPauseTimeoutRef.current !== null) {
-      clearTimeout(playPauseTimeoutRef.current)
-      playPauseTimeoutRef.current = null
-    }
-    if (fadeOutTimeoutRef.current !== null) {
-      clearTimeout(fadeOutTimeoutRef.current)
-      fadeOutTimeoutRef.current = null
-    }
-    return () => {
-      cancelled = true
-    }
   }, [urls])
 
   // Notify parent when element is ready (only once per element)
@@ -357,77 +333,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [onEnded, isHls, hlsElementVersion, handleEndedEvent])
 
-  // Handle play/pause events to show icon overlay
-  useEffect(() => {
-    const el = isHls ? hlsElRef.current : videoRef.current
-    if (!el) return
-
-    const handlePlay = () => {
-      setIsPaused(false)
-      setIsFadingOut(false)
-      setShowPlayPauseIcon(true)
-      // Clear existing timeouts
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
-      // Start fade-out after 1 second
-      playPauseTimeoutRef.current = window.setTimeout(() => {
-        setIsFadingOut(true)
-        // Hide icon after fade-out completes (100ms)
-        fadeOutTimeoutRef.current = window.setTimeout(() => {
-          setShowPlayPauseIcon(false)
-          setIsFadingOut(false)
-          playPauseTimeoutRef.current = null
-          fadeOutTimeoutRef.current = null
-        }, 100)
-      }, 700)
-    }
-
-    const handlePause = () => {
-      setIsPaused(true)
-      setIsFadingOut(false)
-      setShowPlayPauseIcon(true)
-      // Clear existing timeouts
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
-      // Start fade-out after 1 second
-      playPauseTimeoutRef.current = window.setTimeout(() => {
-        setIsFadingOut(true)
-        // Hide icon after fade-out completes (100ms)
-        fadeOutTimeoutRef.current = window.setTimeout(() => {
-          setShowPlayPauseIcon(false)
-          setIsFadingOut(false)
-          playPauseTimeoutRef.current = null
-          fadeOutTimeoutRef.current = null
-        }, 100)
-      }, 700)
-    }
-
-    el.addEventListener('play', handlePlay)
-    el.addEventListener('pause', handlePause)
-
-    // Initialize paused state
-    setIsPaused(el.paused)
-
-    return () => {
-      el.removeEventListener('play', handlePlay)
-      el.removeEventListener('pause', handlePause)
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
-    }
-  }, [isHls, hlsElementVersion])
-
   // Handle automatic fullscreen on orientation change for mobile devices
   useEffect(() => {
     if (!isMobile) return
@@ -536,27 +441,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       )}
 
       {/* Play/Pause icon overlay */}
-      {showPlayPauseIcon && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div
-            className={`bg-black/50 rounded-full p-4 ${
-              isFadingOut ? 'animate-fade-out' : 'animate-reveal'
-            }`}
-          >
-            {isPaused ? (
-              // Pause icon (two rectangles)
-              <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-              </svg>
-            ) : (
-              // Play icon (triangle pointing right)
-              <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
-          </div>
-        </div>
-      )}
+      <PlayPauseOverlay videoRef={isHls ? hlsElRef : videoRef} />
 
       {hasCaptions && <media-captions-menu hidden anchor="auto"></media-captions-menu>}
 

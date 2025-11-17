@@ -57,6 +57,8 @@ export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
 export { useReactions } from './useReactions'
 export { useVideoServerAvailability } from './useVideoServerAvailability'
 export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
+export { useVideoHistory } from './useVideoHistory'
+export type { VideoHistoryEntry } from './useVideoHistory'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

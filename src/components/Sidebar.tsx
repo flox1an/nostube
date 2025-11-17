@@ -24,7 +24,7 @@ export function Sidebar() {
 
   const libraryItems = [
     { name: 'Subscriptions', icon: Users, href: '/subscriptions' },
-    { name: 'History', icon: History, href: '/history', disabled: true },
+    { name: 'History', icon: History, href: '/history', disabled: false },
     { name: 'Playlists', icon: ListVideo, href: '/playlists' },
     {
       name: 'Your videos',

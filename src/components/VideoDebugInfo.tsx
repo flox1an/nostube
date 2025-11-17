@@ -12,7 +12,8 @@ import { Check, Circle, Loader2, X } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent } from '@/utils/video-event'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
 
 interface VideoDebugInfoProps {
   open: boolean
@@ -20,48 +21,9 @@ interface VideoDebugInfoProps {
   videoEvent: NostrEvent | null | undefined
   video: VideoEvent | null
   blossomServers?: BlossomServer[]
-}
-
-type ServerStatus = 'checking' | 'available' | 'unavailable' | 'error'
-
-interface ServerAvailability {
-  url: string
-  status: ServerStatus
-  statusCode?: number
-  contentLength?: number
-}
-
-/**
- * Check if a file exists on a blossom server using HEAD request
- */
-async function checkBlossomServer(
-  serverUrl: string,
-  sha256: string,
-  ext: string
-): Promise<ServerAvailability> {
-  const normalizedUrl = serverUrl.replace(/\/$/, '')
-  const fileUrl = `${normalizedUrl}/${sha256}.${ext}`
-
-  try {
-    const response = await fetch(fileUrl, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000), // 5 second timeout
-    })
-
-    const contentLength = response.headers.get('content-length')
-
-    return {
-      url: serverUrl,
-      status: response.ok ? 'available' : 'unavailable',
-      statusCode: response.status,
-      contentLength: contentLength ? parseInt(contentLength) : undefined,
-    }
-  } catch {
-    return {
-      url: serverUrl,
-      status: 'error',
-    }
-  }
+  serverList: ServerInfo[]
+  serverAvailability: Map<string, ServerAvailability>
+  onCheckAvailability: () => Promise<void>
 }
 
 export function VideoDebugInfo({
@@ -70,83 +32,21 @@ export function VideoDebugInfo({
   videoEvent,
   video,
   blossomServers,
+  serverList: _serverList,
+  serverAvailability,
+  onCheckAvailability,
 }: VideoDebugInfoProps) {
-  const [serverAvailability, setServerAvailability] = useState<Map<string, ServerAvailability>>(
-    new Map()
-  )
-
   // Extract SHA256 and extension from first video URL
   const videoHash = video?.urls[0]
     ? extractBlossomHash(video.urls[0])
     : { sha256: undefined, ext: undefined }
 
-  // Check all blossom servers when dialog opens
+  // Trigger availability check when dialog opens
   useEffect(() => {
-    if (!open || !videoHash.sha256 || !videoHash.ext) {
-      return
+    if (open) {
+      onCheckAvailability()
     }
-
-    const serversToCheck: string[] = []
-
-    // Add configured blossom servers
-    if (blossomServers && blossomServers.length > 0) {
-      blossomServers.forEach(server => {
-        serversToCheck.push(server.url)
-      })
-    }
-
-    // Add origins from original URLs
-    if (video?.urls) {
-      video.urls.forEach(url => {
-        // Skip proxy URLs
-        if (url.includes('?origin=') || url.includes('?xs=')) return
-
-        try {
-          const urlObj = new URL(url)
-          const origin = urlObj.origin
-          if (!serversToCheck.includes(origin)) {
-            serversToCheck.push(origin)
-          }
-        } catch {
-          // Invalid URL, skip
-        }
-      })
-    }
-
-    if (serversToCheck.length === 0) {
-      return
-    }
-
-    let cancelled = false
-
-    // Reset all to checking state after yielding to avoid React Compiler warning
-    ;(async () => {
-      await Promise.resolve()
-      if (cancelled) {
-        return
-      }
-      const initialMap = new Map<string, ServerAvailability>()
-      serversToCheck.forEach(serverUrl => {
-        initialMap.set(serverUrl, { url: serverUrl, status: 'checking' })
-      })
-      setServerAvailability(initialMap)
-    })()
-
-    // Check each server
-    serversToCheck.forEach(serverUrl => {
-      ;(async () => {
-        const result = await checkBlossomServer(serverUrl, videoHash.sha256!, videoHash.ext!)
-        if (cancelled) {
-          return
-        }
-        setServerAvailability(prev => new Map(prev).set(serverUrl, result))
-      })()
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [open, videoHash.sha256, videoHash.ext, blossomServers, video?.urls])
+  }, [open, onCheckAvailability])
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">

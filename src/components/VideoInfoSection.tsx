@@ -33,6 +33,7 @@ import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { type VideoEvent } from '../utils/video-event'
+import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
 
 interface VideoInfoSectionProps {
   video: VideoEvent | null
@@ -59,6 +60,9 @@ interface VideoInfoSectionProps {
   }
   onDelete?: () => void
   onMirror?: () => void
+  serverList: ServerInfo[]
+  serverAvailability: Map<string, ServerAvailability>
+  onCheckAvailability: () => Promise<void>
 }
 
 export const VideoInfoSection = React.memo(function VideoInfoSection({
@@ -79,6 +83,9 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   shareLinks,
   onDelete,
   onMirror,
+  serverList,
+  serverAvailability,
+  onCheckAvailability,
 }: VideoInfoSectionProps) {
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -258,6 +265,9 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         videoEvent={videoEvent}
         video={video}
         blossomServers={configBlossomServers}
+        serverList={serverList}
+        serverAvailability={serverAvailability}
+        onCheckAvailability={onCheckAvailability}
       />
       {video && (
         <div className="py-4">

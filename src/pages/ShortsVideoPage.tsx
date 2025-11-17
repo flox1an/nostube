@@ -11,7 +11,13 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAppContext, useProfile, useReportedPubkeys, useReadRelays } from '@/hooks'
+import {
+  useAppContext,
+  useProfile,
+  useReportedPubkeys,
+  useReadRelays,
+  useVideoHistory,
+} from '@/hooks'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import {
   createEventLoader,
@@ -453,6 +459,7 @@ export function ShortsVideoPage() {
   const { pool } = useAppContext()
   const containerRef = useRef<HTMLDivElement>(null)
   const blockedPubkeys = useReportedPubkeys()
+  const { addToHistory } = useVideoHistory()
 
   // Use zustand store for videos and current index
   const {
@@ -726,6 +733,17 @@ export function ShortsVideoPage() {
       loadSourceRef.current = null
     }
   }, [])
+
+  // Track video in history when loaded (using ref to avoid dependency on addToHistory)
+  const addToHistoryRef = useRef(addToHistory)
+  useEffect(() => {
+    addToHistoryRef.current = addToHistory
+  })
+  useEffect(() => {
+    if (initialVideoEvent) {
+      addToHistoryRef.current(initialVideoEvent)
+    }
+  }, [initialVideoEvent])
 
   // Only reset scroll flags when navigation comes from outside this page
   useEffect(() => {

@@ -6,7 +6,7 @@ import { switchMap, catchError, finalize, map } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { processEvent } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,6 +24,7 @@ import {
   useVideoKeyboardShortcuts,
   useVideoServerAvailability,
   useUserBlossomServers,
+  useVideoHistory,
 } from '@/hooks'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -50,6 +51,7 @@ export function VideoPage() {
   const { cinemaMode: persistedCinemaMode, setCinemaMode } = useCinemaMode()
   const location = useLocation()
   const { user } = useCurrentUser()
+  const { addToHistory } = useVideoHistory()
 
   // Get initial relays for loading the video event
   const initialRelays = useVideoPageRelays({
@@ -291,6 +293,17 @@ export function VideoPage() {
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
   }, [video, initialPlayPos])
+
+  // Track video in history when loaded (using ref to avoid dependency on addToHistory)
+  const addToHistoryRef = useRef(addToHistory)
+  useEffect(() => {
+    addToHistoryRef.current = addToHistory
+  })
+  useEffect(() => {
+    if (videoEvent) {
+      addToHistoryRef.current(videoEvent)
+    }
+  }, [videoEvent])
 
   // Handle mirror action - trigger availability check when dialog opens
   const handleMirror = () => {

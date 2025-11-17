@@ -6,7 +6,7 @@ import { switchMap, catchError, finalize, map } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { processEvent } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -294,12 +294,16 @@ export function VideoPage() {
     }
   }, [video, initialPlayPos])
 
-  // Track video in history when loaded
+  // Track video in history when loaded (using ref to avoid dependency on addToHistory)
+  const addToHistoryRef = useRef(addToHistory)
+  useEffect(() => {
+    addToHistoryRef.current = addToHistory
+  })
   useEffect(() => {
     if (videoEvent) {
-      addToHistory(videoEvent)
+      addToHistoryRef.current(videoEvent)
     }
-  }, [videoEvent, addToHistory])
+  }, [videoEvent])
 
   // Handle mirror action - trigger availability check when dialog opens
   const handleMirror = () => {

@@ -734,12 +734,16 @@ export function ShortsVideoPage() {
     }
   }, [])
 
-  // Track video in history when loaded
+  // Track video in history when loaded (using ref to avoid dependency on addToHistory)
+  const addToHistoryRef = useRef(addToHistory)
+  useEffect(() => {
+    addToHistoryRef.current = addToHistory
+  })
   useEffect(() => {
     if (initialVideoEvent) {
-      addToHistory(initialVideoEvent)
+      addToHistoryRef.current(initialVideoEvent)
     }
-  }, [initialVideoEvent, addToHistory])
+  }, [initialVideoEvent])
 
   // Only reset scroll flags when navigation comes from outside this page
   useEffect(() => {

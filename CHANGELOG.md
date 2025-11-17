@@ -46,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Anonymous users no longer see the upload button, reducing confusion
   - Improves UX by showing upload option only when it's actually available
 
+- **Major Package Updates**: Upgraded all packages to latest versions for improved performance and security
+  - **React 19**: Upgraded from React 18.3.1 to React 19.2.0 (with react-dom)
+    - Added npm overrides to force React 19 across all dependencies including applesauce-react
+    - Full compatibility with shadcn/ui and all Radix UI components
+    - All tests passing with new React 19 features and behavior
+  - **Applesauce packages**: Updated core and relay from 4.2.0 to 4.4.2
+  - **nostr-idb**: Upgraded from 3.0.0 to 4.0.1
+  - **react-intersection-observer**: Upgraded from 9.16.0 to 10.0.0 (infinite scroll)
+  - **vitest**: Upgraded from 3.2.4 to 4.0.10 (test runner)
+  - **Minor updates**: Updated ~12 packages including @types/react, @types/react-dom, @vitejs/plugin-react, jsdom, lucide-react, react-hook-form, react-router-dom, and typescript-eslint
+  - Added SECURITY_AUDIT_2025-11-17.md documenting full security audit and upgrade analysis
+  - No security vulnerabilities found in npm audit
+  - All builds and tests verified working after upgrades
+
 ### Fixed
 
 - **Blossom Server URL Double Slashes**: Fixed 404 errors caused by double slashes in Blossom server URLs

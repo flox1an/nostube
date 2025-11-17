@@ -215,6 +215,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Shorts Thumbnail Display**: Fixed thumbnails with fewer pixels appearing too small in shorts grid
+  - Added `h-full` class to thumbnail img elements in VideoCard component (src/components/VideoCard.tsx:168)
+  - Ensures img elements fill their container properly when images are smaller than 480x480
+  - Works with existing `object-cover` to scale up small images while maintaining proper aspect ratio
+  - Fixes visual inconsistency where small thumbnails appeared tiny compared to full-size thumbnails
+  - Affects ShortsPage grid layout and all video card thumbnails
+
 - **Comment Text Wrapping**: Fixed long comment text and URLs breaking layout
   - Changed `wrap-break-word` (invalid class) to standard Tailwind `break-words` class in VideoComments
   - Added `break-all` class to URL links in RichTextContent to force long URLs to wrap

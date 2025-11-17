@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Sidebar Menu Cleanup**: Removed "Your clips" menu item from the sidebar
+  - Removed disabled "Your clips" item from the Library section
+  - Removed unused Scissors icon import from lucide-react
+  - Streamlines the navigation menu by removing non-functional placeholder items
+
 - **Play/Pause Overlay Component**: Refactored animated play/pause overlay into reusable component
   - Created new `PlayPauseOverlay` component in `src/components/PlayPauseOverlay.tsx`
   - Extracted duplicate play/pause animation logic from `VideoPlayer` and `ShortsVideoPage`

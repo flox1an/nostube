@@ -14,7 +14,11 @@ import { Loader2, Copy, Check, Server } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { extractBlossomHash } from '@/utils/video-event'
-import { formatFileSize, getSizeFromVideoEvent, fetchVideoSizeFromBlossom } from '@/lib/blossom-utils'
+import {
+  formatFileSize,
+  getSizeFromVideoEvent,
+  fetchVideoSizeFromBlossom,
+} from '@/lib/blossom-utils'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from 'blossom-client-sdk'
@@ -268,9 +272,7 @@ export function MirrorVideoDialog({
                           <div className="text-sm font-medium">{server.name}</div>
                           <div className="text-xs text-muted-foreground">{server.url}</div>
                         </div>
-                        {isChecking && (
-                          <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />
-                        )}
+                        {isChecking && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
                         {isAvailable && (
                           <span className="text-xs text-green-600 dark:text-green-400">
                             Available

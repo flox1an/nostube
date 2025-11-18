@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Docker Deployment Support**: Added full Docker support with runtime environment configuration
+  - Created multi-stage Dockerfile (builder + nginx runtime) optimizing image size (~50MB final)
+  - Runtime environment variables injected at container startup (no rebuild needed for config changes)
+  - Supports `RUNTIME_RELAYS`, `RUNTIME_BLOSSOM_SERVERS`, `RUNTIME_APP_TITLE`, `RUNTIME_DEBUG`, and `RUNTIME_CUSTOM_CONFIG`
+  - Added nginx configuration with SPA routing, gzip compression, security headers, and health check endpoint
+  - Created docker-compose.yml for easy deployment with docker-compose
+  - Added entrypoint script that generates runtime-env.js exposing `window.__RUNTIME_ENV__` to the app
+  - Created public/runtime-env.js fallback for local development (non-Docker)
+  - Added comprehensive DOCKER.md documentation with deployment examples (Docker Compose, Kubernetes, CI/CD)
+  - Added .dockerignore to optimize build context
+  - Added .env.example showing available runtime configuration options
+  - Updated README.md with Docker quick start instructions
+  - Health check available at `/health` endpoint for container orchestration
+
 - **Watch History Feature**: Implemented video watch history tracking and History page
   - Created `useVideoHistory` hook for tracking video plays in local storage
   - Videos are automatically tracked when loaded in VideoPage and ShortsVideoPage

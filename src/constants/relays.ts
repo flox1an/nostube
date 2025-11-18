@@ -18,7 +18,7 @@ export const METADATA_RELAY = 'wss://purplepag.es'
 export const presetBlossomServers: BlossomServer[] = [
   {
     url: 'https://almond.slidestr.net',
-    name: 'Almond Slidestr',
+    name: 'almond.slidestr.net',
     tags: ['initial upload'],
   },
 ]
@@ -26,6 +26,6 @@ export const presetBlossomServers: BlossomServer[] = [
 export const presetCachingServers: CachingServer[] = [
   {
     url: 'https://almond.slidestr.net',
-    name: 'Almond Slidestr',
+    name: 'almond.slidestr.net',
   },
 ]

@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { GlobalSearchBar } from '@/components/GlobalSearchBar'
 
 interface HeaderProps {
   transparent?: boolean
@@ -47,14 +48,9 @@ export function Header({ transparent = false }: HeaderProps) {
             </span>
           </Link>
         </div>
-        {/*
-        <SearchBar
-          className="flex-1 max-w-2xl px-4"
-          allTags={allTags}
-          onSearch={searchVideos}
-          onTagsChange={filterByTags}
-        />
-*/}
+
+        <GlobalSearchBar />
+
         <div className="flex items-center gap-4">
           {user && (
             <Link to="/upload" className="hidden md:block">

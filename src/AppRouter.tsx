@@ -21,6 +21,7 @@ const AuthorPage = lazy(() => import('./pages/AuthorPage').then(m => ({ default:
 const HashtagPage = lazy(() =>
   import('./pages/HashtagPage').then(m => ({ default: m.HashtagPage }))
 )
+const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
 const HistoryPage = lazy(() =>
   import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage }))
 )
@@ -104,6 +105,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <HashtagPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <SearchPage />
               </Suspense>
             }
           />

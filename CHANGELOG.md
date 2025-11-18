@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NIP-50 Full-Text Search**: Implemented global video search using NIP-50 protocol
+  - Created `SearchPage` component with NIP-50 search filter for full-text search
+  - Added `GlobalSearchBar` component in header for easy access to search
+  - Created dedicated `useSearchVideos` hook with isolated RelayPool that **only** queries `wss://relay.nostr.band`
+  - Search queries all video kinds (21, 22, 34235, 34236) using NIP-50 full-text search
+  - Dedicated search pool ensures no other user-configured relays are used for search
+  - **Search always uses loader directly**: Events collected from relay subscription in real-time, not from EventStore cache
+    - Each search query fetches fresh results from relay instead of reading cached events
+    - Events accumulated in local state via `setEvents` for immediate display
+    - Events also added to EventStore for caching in other parts of the app
+  - Results displayed in responsive video grid with infinite scroll
+  - Added `/search` route with query parameter support (`/search?q=query`)
+  - Empty state shown when no query provided
+  - Document title updates to show search query
+  - Comprehensive test coverage with 5 unit tests for SearchPage component
+
 - **Media Caching Servers**: Separated caching/proxy servers from Blossom servers into dedicated configuration
   - Created new `CachingServer` interface (url and name only, no tags)
   - Added `cachingServers` configuration to AppConfig

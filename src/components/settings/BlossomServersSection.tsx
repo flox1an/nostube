@@ -16,7 +16,7 @@ import {
 import { presetBlossomServers } from '@/constants/relays'
 import { cn } from '@/lib/utils'
 
-const availableTags: BlossomServerTag[] = ['mirror', 'initial upload', 'proxy']
+const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 
 export function BlossomServersSection() {
   const { config, updateConfig } = useAppContext()
@@ -132,9 +132,7 @@ export function BlossomServersSection() {
                                 ['text-xs'],
                                 tag == 'mirror'
                                   ? 'bg-blue-500 hover:bg-blue-500/90'
-                                  : tag === 'proxy'
-                                    ? 'bg-purple-500 hover:bg-purple-500/90'
-                                    : 'bg-orange-500 hover:bg-orange-500/90'
+                                  : 'bg-orange-500 hover:bg-orange-500/90'
                               )}
                             >
                               {tag}

@@ -81,6 +81,9 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   // Memoize blossomServers to prevent unnecessary re-renders
   const blossomServers = useMemo(() => config.blossomServers || [], [config.blossomServers])
 
+  // Memoize cachingServers to prevent unnecessary re-renders
+  const cachingServers = useMemo(() => config.cachingServers || [], [config.cachingServers])
+
   // Use media config from context if not provided in options
   const mediaConfig = config.media
 
@@ -128,6 +131,10 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     () => blossomServers.map(s => s.url).join('|'),
     [blossomServers]
   )
+  const cachingServersKey = useMemo(
+    () => cachingServers.map(s => s.url).join('|'),
+    [cachingServers]
+  )
 
   // Generate URLs from original URLs + mirrors + proxies
   useEffect(() => {
@@ -140,6 +147,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
       const generated = generateMediaUrls({
         urls: originalUrls,
         blossomServers,
+        cachingServers,
         sha256,
         kind,
         mediaType,
@@ -167,6 +175,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     authorPubkey,
     enabled,
     blossomServersKey,
+    cachingServersKey,
   ])
 
   // Serialize discovery relays for stable comparison

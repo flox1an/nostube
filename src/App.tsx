@@ -11,7 +11,7 @@ import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 import { eventStore } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
-import { presetRelays, presetBlossomServers } from '@/constants/relays'
+import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
 import { useAppContext } from '@/hooks'
@@ -24,6 +24,7 @@ const defaultConfig: AppConfig = {
   relays: presetRelays,
   videoType: 'videos',
   blossomServers: [...presetBlossomServers],
+  cachingServers: [...presetCachingServers],
   nsfwFilter: 'warning',
   thumbResizeServerUrl: defaultResizeServer,
   media: {

@@ -5,7 +5,7 @@
  * Supports videos, images, VTT captions, and audio files.
  */
 
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { normalizeServerUrl } from './blossom-utils'
 
 export type MediaType = 'video' | 'image' | 'vtt' | 'audio'
@@ -15,6 +15,7 @@ export type UrlSource = 'original' | 'mirror' | 'proxy' | 'discovered'
 export interface MediaUrlOptions {
   urls: string[] // Original URLs from event
   blossomServers: BlossomServer[] // User's + app config servers
+  cachingServers?: CachingServer[] // Servers for caching/proxying content
   sha256?: string // File hash for discovery
   kind?: number // Event kind for relay search
   mediaType: MediaType
@@ -103,12 +104,12 @@ function generateMirrorUrls(
 
 /**
  * Generate proxy URLs for a given original URL
- * Proxy URLs are transcoded/resized versions from Blossom servers
+ * Proxy URLs are transcoded/resized versions from caching servers
  * Uses XS query parameters for servers and AS for author
  */
 function generateProxyUrls(
   originalUrl: string,
-  proxyServers: BlossomServer[],
+  cachingServers: CachingServer[],
   proxyConfig?: MediaUrlOptions['proxyConfig'],
   authorPubkey?: string,
   mirrorServers: BlossomServer[] = []
@@ -135,21 +136,21 @@ function generateProxyUrls(
     return { urls, metadata }
   }
 
-  // Generate proxy URLs for each proxy server
-  for (const server of proxyServers) {
+  // Generate proxy URLs for each caching server
+  for (const server of cachingServers) {
     const baseUrl = normalizeServerUrl(server.url)
 
-    // Check if the original URL is already from this proxy server
+    // Check if the original URL is already from this caching server
     let proxyOrigin = ''
     try {
       const proxyUrlObj = new URL(baseUrl)
       proxyOrigin = proxyUrlObj.origin
     } catch {
-      // If URL parsing fails, skip this proxy server
+      // If URL parsing fails, skip this caching server
       continue
     }
 
-    // Skip if the original URL already points to this proxy server
+    // Skip if the original URL already points to this caching server
     if (originalOrigin === proxyOrigin) {
       continue
     }
@@ -161,9 +162,9 @@ function generateProxyUrls(
     const params = new URLSearchParams()
     const addedHostnames = new Set<string>() // Track added hostnames to avoid duplicates
 
-    // Add all proxy servers as XS query parameters (except the current proxy server)
-    for (const proxyServer of proxyServers) {
-      const proxyServerUrl = normalizeServerUrl(proxyServer.url)
+    // Add all caching servers as XS query parameters (except the current caching server)
+    for (const cachingServer of cachingServers) {
+      const proxyServerUrl = normalizeServerUrl(cachingServer.url)
 
       // Skip if this is the same server we're creating the proxy URL for
       try {
@@ -255,30 +256,35 @@ function generateProxyUrls(
  * Generate all possible media URLs with fallbacks
  *
  * Priority Order:
- * 1. Proxy URLs (if proxy servers configured - tried first with backend servers as fallbacks)
+ * 1. Proxy URLs (if caching servers configured - tried first with backend servers as fallbacks)
  * 2. Original URLs (if valid Blossom URLs)
  * 3. Mirror URLs (exact copies from user's Blossom servers)
  * 4. Original URLs again (if not Blossom URLs)
  */
 export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
-  const { urls: originalUrls, blossomServers, proxyConfig, authorPubkey } = options
+  const {
+    urls: originalUrls,
+    blossomServers,
+    cachingServers = [],
+    proxyConfig,
+    authorPubkey,
+  } = options
 
   const allUrls: string[] = []
   const allMetadata: UrlMetadata[] = []
 
-  // Filter servers by type
+  // Filter Blossom servers by type
   const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
-  const proxyServers = blossomServers.filter(server => server.tags.includes('proxy'))
 
   // Process each original URL
   for (const originalUrl of originalUrls) {
     const isBlossom = isBlossomUrl(originalUrl)
 
-    // 1. Generate and add proxy URLs FIRST (if configured)
-    if (proxyServers.length > 0) {
+    // 1. Generate and add proxy URLs FIRST (if caching servers configured)
+    if (cachingServers.length > 0) {
       const { urls: proxyUrls, metadata: proxyMetadata } = generateProxyUrls(
         originalUrl,
-        proxyServers,
+        cachingServers,
         proxyConfig,
         authorPubkey,
         mirrorServers

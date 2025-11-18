@@ -42,8 +42,8 @@ export const presetRelays: Relay[] = [
 export const presetBlossomServers: BlossomServer[] = [
   {
     url: 'https://almond.slidestr.net',
-    name: 'Almond Slidestr',
-    tags: ['proxy', 'initial upload'],
+    name: 'almond.slidestr.net',
+    tags: ['initial upload'],
   },
 ]
 ```

@@ -437,9 +437,7 @@ export function VideoPage() {
         mime={video.mimeType || ''}
         poster={video.images[0] || ''}
         loop={shouldVideoLoop(video.kind)}
-        className={
-          cinemaMode ? 'w-full aspect-video' : 'w-full max-h-[80dvh] aspect-video rounded-lg'
-        }
+        className={cinemaMode ? 'w-full' : 'w-full max-h-[80dvh] aspect-video rounded-lg'}
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={currentPlayPos > 0 ? currentPlayPos : initialPlayPos}
         contentWarning={video.contentWarning}

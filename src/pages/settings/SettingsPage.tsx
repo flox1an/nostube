@@ -1,6 +1,7 @@
 import { GeneralSettingsSection } from '@/components/settings/GeneralSettingsSection'
 import { RelaySettingsSection } from '@/components/settings/RelaySettingsSection'
 import { BlossomServersSection } from '@/components/settings/BlossomServersSection'
+import { CachingServersSection } from '@/components/settings/CachingServersSection'
 import { MissingVideosSection } from '@/components/settings/MissingVideosSection'
 import { CacheSettingsSection } from '@/components/settings/CacheSettingsSection'
 
@@ -11,6 +12,7 @@ export default function SettingsPage() {
       <GeneralSettingsSection />
       <RelaySettingsSection />
       <BlossomServersSection />
+      <CachingServersSection />
       <CacheSettingsSection />
       <MissingVideosSection />
     </div>

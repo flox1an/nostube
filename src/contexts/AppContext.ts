@@ -3,7 +3,7 @@ import { createContext } from 'react'
 
 export type Theme = 'dark' | 'light' | 'system'
 export type VideoType = 'all' | 'shorts' | 'videos'
-export type BlossomServerTag = 'mirror' | 'initial upload' | 'proxy'
+export type BlossomServerTag = 'mirror' | 'initial upload'
 export type RelayTag = 'read' | 'write'
 export type NsfwFilter = 'hide' | 'warning' | 'show'
 
@@ -17,6 +17,11 @@ export interface BlossomServer {
   url: string
   name: string
   tags: BlossomServerTag[]
+}
+
+export interface CachingServer {
+  url: string
+  name: string
 }
 
 export interface MediaConfig {
@@ -49,6 +54,8 @@ export interface AppConfig {
   videoType: VideoType
   /** Blossom servers for file uploads */
   blossomServers?: BlossomServer[]
+  /** Media caching servers for proxying/caching video content */
+  cachingServers?: CachingServer[]
   /** Thumbnail resize server URL (optional) */
   thumbResizeServerUrl?: string
   /** NSFW content filter setting */

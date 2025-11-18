@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Media Caching Servers**: Separated caching/proxy servers from Blossom servers into dedicated configuration
+  - Created new `CachingServer` interface (url and name only, no tags)
+  - Added `cachingServers` configuration to AppConfig
+  - Created new "Media Caching Servers" settings section in Settings page
+  - Users can now manage caching servers independently from upload servers
+  - Added `presetCachingServers` with default caching server (https://almond.slidestr.net)
+  - Updated `generateMediaUrls` to use cachingServers instead of filtering by 'proxy' tag
+  - Updated all types in AppContext and global.d.ts to support caching servers
+  - Caching servers are used for faster video playback via proxy/caching without upload capabilities
+
 - **Docker Deployment Support**: Added full Docker support with runtime environment configuration
   - Created multi-stage Dockerfile (builder + nginx runtime) optimizing image size (~50MB final)
   - Runtime environment variables injected at container startup (no rebuild needed for config changes)
@@ -45,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatically checks if files already exist on target servers before mirroring
 
 ### Changed
+
+- **Blossom Server Tags**: Removed 'proxy' tag from Blossom server configuration
+  - Blossom servers now only support 'mirror' and 'initial upload' tags
+  - Proxy/caching functionality moved to dedicated Media Caching Servers section
+  - Default blossom server (https://almond.slidestr.net) now has only 'initial upload' tag
+  - Improves separation of concerns between upload servers and caching servers
 
 - **Sidebar Menu Cleanup**: Removed "Your clips" menu item from the sidebar
   - Removed disabled "Your clips" item from the Library section

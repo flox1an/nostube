@@ -1,4 +1,4 @@
-import { type Relay, type BlossomServer } from '@/contexts/AppContext'
+import { type Relay, type BlossomServer, type CachingServer } from '@/contexts/AppContext'
 
 export const presetRelays: Relay[] = [
   { url: 'wss://relay.divine.video', name: 'relay.divine.video', tags: ['read'] },
@@ -19,6 +19,13 @@ export const presetBlossomServers: BlossomServer[] = [
   {
     url: 'https://almond.slidestr.net',
     name: 'Almond Slidestr',
-    tags: ['proxy', 'initial upload'],
+    tags: ['initial upload'],
+  },
+]
+
+export const presetCachingServers: CachingServer[] = [
+  {
+    url: 'https://almond.slidestr.net',
+    name: 'Almond Slidestr',
   },
 ]

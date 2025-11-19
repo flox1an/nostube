@@ -72,11 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **VideoPage Skeleton Loading**: Improved skeleton loading behavior to only show on initial page load
-  - Skeleton now only displays when opening VideoPage for the first time
-  - When switching between videos while staying on the page, the previous video remains visible until the new video loads
-  - Prevents jarring skeleton flash during video navigation
-  - Uses state tracking with `queueMicrotask` to avoid set-state-in-effect warnings
+- **VideoPage Loading Experience**: Removed video player skeleton to eliminate flickering
+  - Skeleton has been completely removed from VideoPage video player area
+  - Previous video remains visible when switching videos instead of showing a skeleton
+  - Smoother video navigation experience without loading flicker
+  - Video info section and sidebar continue to update normally during video transitions
 
 - **Video Poster Loading States**: Added skeleton loading state for video poster thumbnails on VideoPage
   - Both NativeVideoPlayer and HLSVideoPlayer now show a skeleton placeholder while the poster image loads

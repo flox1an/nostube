@@ -129,6 +129,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No security vulnerabilities found in npm audit
   - All builds and tests verified working after upgrades
 
+### Changed
+
+- **Thumbnail Error Handling**: Improved VideoCard error state when thumbnails fail to load
+  - Shows "Thumbnail unavailable" message with broken image icon instead of infinite skeleton loading
+  - Tries fallback to video URL thumbnail generation before showing error state
+  - Uses muted background with `ImageOff` icon and clear error message
+  - Provides better user feedback when both original thumbnail and fallback fail
+
 ### Fixed
 
 - **Timeline Pages Loading States**: Fixed timeline pages showing empty state flash or stuck in skeleton loading

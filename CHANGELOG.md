@@ -131,6 +131,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Homepage Loading Flicker**: Fixed brief flash of "No videos found" message when loading the homepage
+  - Root cause: `useInfiniteTimeline` initialized with `loading = false`, causing the empty state to render before the InfiniteScrollTrigger activated
+  - Solution: Initialize `loading = true` and allow first load to proceed even when loading is true
+  - Added `isFirstLoadRef` to track initial load and bypass loading check in `next()` function
+  - Updated `reset()` to restore `loading = true` and reset first load flag when loader changes
+  - Skeletons now display immediately on mount instead of briefly showing empty state
+  - Also fixes the same issue on ShortsPage and other pages using `useInfiniteTimeline`
+
 - **Blossom Server URL Double Slashes**: Fixed 404 errors caused by double slashes in Blossom server URLs
   - Updated `normalizeServerUrl()` function to preserve port numbers and remove trailing slashes
   - Added URL normalization at the entry point of all Blossom functions:

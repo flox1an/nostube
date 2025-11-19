@@ -11,7 +11,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   const { getAllMissingVideos } = useMissingVideos()
 
   const [events, setEvents] = useState<NostrEvent[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [exhausted, setExhausted] = useState(false)
 
   // Store subscription reference for cleanup
@@ -38,10 +38,15 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     return new Set(Object.keys(missingMap))
   }, [getAllMissingVideos])
 
+  // Track if this is the first load to allow calling next() when loading=true initially
+  const isFirstLoadRef = useRef(true)
+
   const next = useCallback(() => {
-    if (!loader || loading || exhausted) {
+    // Allow first load even if loading is true (initial state)
+    if (!loader || (loading && !isFirstLoadRef.current) || exhausted) {
       return
     }
+    isFirstLoadRef.current = false
 
     // Cleanup previous subscription and timeout before creating a new one
     subscriptionRef.current?.unsubscribe()
@@ -198,7 +203,8 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     }
     setEvents([])
     setExhausted(false)
-    setLoading(false)
+    setLoading(true)
+    isFirstLoadRef.current = true
   }, [])
 
   // Reset when loader changes (e.g., when relays or filters change)

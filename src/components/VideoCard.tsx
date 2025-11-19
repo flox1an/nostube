@@ -56,19 +56,25 @@ export const VideoCard = React.memo(function VideoCard({
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
-  const [fallbackFailed, setFallbackFailed] = useState(false)
+  // Check if we have no thumbnail at all - immediately mark as failed
+  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
+  const [fallbackFailed, setFallbackFailed] = useState(hasNoThumbnail)
 
   const hoverPreviewEnabled = false
 
   // Generate thumbnail URL with fallback to video URL if image fails
   const thumbnailUrl = useMemo(() => {
+    // If no thumbnail exists, return empty string
+    if (hasNoThumbnail) {
+      return ''
+    }
     // If thumbnail failed and we have video URLs, try generating thumbnail from video
     if (thumbnailError && video.urls && video.urls.length > 0) {
       return imageProxyVideoThumbnail(video.urls[0], config.thumbResizeServerUrl)
     }
     // Otherwise use the original image thumbnail
     return imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)
-  }, [thumbnailError, video.images, video.urls, config.thumbResizeServerUrl])
+  }, [hasNoThumbnail, thumbnailError, video.images, video.urls, config.thumbResizeServerUrl])
 
   // Determine navigation path based on video type
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`

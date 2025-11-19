@@ -12,7 +12,7 @@ export function MainLayout() {
       <div className="flex flex-1 relative w-full">
         {/* Floating sidebar */}
         {isSidebarOpen && (
-          <div className="absolute left-0 top-0 z-50 h-full">
+          <div className="fixed left-0 top-0 z-[200] h-full">
             <Sidebar />
           </div>
         )}

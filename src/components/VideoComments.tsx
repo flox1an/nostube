@@ -165,7 +165,7 @@ const CommentItem = React.memo(function CommentItem({
           <RichTextContent
             content={comment.content}
             videoLink={link}
-            className="mt-1 break-words text-sm"
+            className="mt-1 break-all text-sm"
           />
           {onReply && !isReplying && (
             <Button

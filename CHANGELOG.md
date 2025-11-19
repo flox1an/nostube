@@ -147,6 +147,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Comment Text Wrapping**: Fixed long comment text breaking layout by adding proper word wrapping
+  - Changed `wrap-break-word` (invalid class) to standard Tailwind `break-words` class
+  - Long URLs and unbreakable text in comments now wrap correctly instead of overflowing
+
 - **Timeline Pages Loading States**: Fixed timeline pages showing empty state flash or stuck in skeleton loading
   - **useInfiniteTimeline fix (HomePage, ShortsPage, HashtagPage)**:
     - Root cause: Previous fix changed `loading = true` initially but forgot to trigger the first load

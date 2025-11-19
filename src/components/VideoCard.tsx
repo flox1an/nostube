@@ -12,6 +12,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { nprofileFromEvent } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
+import { ImageOff } from 'lucide-react'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -55,6 +56,7 @@ export const VideoCard = React.memo(function VideoCard({
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
+  const [fallbackFailed, setFallbackFailed] = useState(false)
 
   const hoverPreviewEnabled = false
 
@@ -134,6 +136,9 @@ export const VideoCard = React.memo(function VideoCard({
     if (!thumbnailError) {
       setThumbnailError(true)
       setThumbnailLoaded(false) // Reset loaded state for fallback
+    } else {
+      // Fallback also failed, mark as completely failed
+      setFallbackFailed(true)
     }
   }
 
@@ -164,22 +169,34 @@ export const VideoCard = React.memo(function VideoCard({
       <div className="p-0">
         <Link to={to} onClick={handleShortsClick}>
           <div className="w-full overflow-hidden sm:rounded-lg relative">
-            {/* Placeholder background shown while thumbnail loads */}
-            {!thumbnailLoaded && <Skeleton className={cn('w-full absolute', aspectRatio)} />}
-            <img
-              src={thumbnailUrl}
-              loading="lazy"
-              alt={video.title}
-              referrerPolicy="no-referrer"
-              className={cn(
-                showNsfwWarning ? 'blur-lg' : '',
-                'w-full object-cover transition-opacity duration-300',
-                aspectRatio,
-                isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
-              )}
-              onError={handleThumbnailError}
-              onLoad={handleThumbnailLoad}
-            />
+            {/* Show error state if both thumbnail and fallback failed */}
+            {fallbackFailed ? (
+              <div className={cn('w-full bg-muted flex items-center justify-center', aspectRatio)}>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <ImageOff className="h-12 w-12" />
+                  <span className="text-sm">Thumbnail unavailable</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Placeholder background shown while thumbnail loads */}
+                {!thumbnailLoaded && <Skeleton className={cn('w-full absolute', aspectRatio)} />}
+                <img
+                  src={thumbnailUrl}
+                  loading="lazy"
+                  alt={video.title}
+                  referrerPolicy="no-referrer"
+                  className={cn(
+                    showNsfwWarning ? 'blur-lg' : '',
+                    'w-full object-cover transition-opacity duration-300',
+                    aspectRatio,
+                    isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
+                  )}
+                  onError={handleThumbnailError}
+                  onLoad={handleThumbnailLoad}
+                />
+              </>
+            )}
             {showNsfwWarning && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
                 <div className="text-2xl font-bold text-white drop-shadow-lg">Content warning</div>

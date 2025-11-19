@@ -1,8 +1,9 @@
+import { useMemo } from 'react'
 import { useCurrentUser, useNostrPublish, useAppContext } from '@/hooks'
 import { useReactions } from '@/hooks/useReactions'
 import { useEventStore } from 'applesauce-react/hooks'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
-import { nowInSecs } from '@/lib/utils'
+import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 interface VideoReactionButtonsProps {
@@ -29,6 +30,17 @@ export function VideoReactionButtons({
 
   // Use the useReactions hook to load reactions from relays
   const reactions = useReactions({ eventId, authorPubkey, kind, relays })
+
+  // Check if current user has upvoted or downvoted
+  const hasUpvoted = useMemo(
+    () => user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+'),
+    [user, reactions]
+  )
+  const hasDownvoted = useMemo(
+    () => user && reactions.some(event => event.pubkey === user.pubkey && event.content === '-'),
+    [user, reactions]
+  )
+  const hasReacted = hasUpvoted || hasDownvoted
 
   // Count upvotes (+) - deduplicate by user
   const upvoteCount = reactions
@@ -59,7 +71,7 @@ export function VideoReactionButtons({
     ).count
 
   const handleUpvote = async () => {
-    if (!user) return
+    if (!user || hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -84,7 +96,7 @@ export function VideoReactionButtons({
   }
 
   const handleDownvote = async () => {
-    if (!user) return
+    if (!user || hasReacted) return
 
     try {
       const signedEvent = await publish({
@@ -116,20 +128,20 @@ export function VideoReactionButtons({
           variant="secondary"
           className={className}
           onClick={handleUpvote}
-          disabled={!user || isPending}
+          disabled={!user || isPending || hasReacted}
           aria-label="Upvote"
         >
-          <ThumbsUp className="h-5 w-5" />
+          <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
           <span className="ml-2">{upvoteCount}</span>
         </Button>
         <Button
           variant="secondary"
           className={className}
           onClick={handleDownvote}
-          disabled={!user || isPending}
+          disabled={!user || isPending || hasReacted}
           aria-label="Downvote"
         >
-          <ThumbsDown className="h-5 w-5" />
+          <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
           <span className="ml-2">{downvoteCount}</span>
         </Button>
       </>
@@ -146,10 +158,10 @@ export function VideoReactionButtons({
           size="icon"
           className="rounded-full"
           onClick={handleUpvote}
-          disabled={!user || isPending}
+          disabled={!user || isPending || hasReacted}
           aria-label="Upvote"
         >
-          <ThumbsUp className="h-5 w-5" />
+          <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
         </Button>
         <span className="text-sm font-medium">{upvoteCount}</span>
       </div>
@@ -161,10 +173,10 @@ export function VideoReactionButtons({
           size="icon"
           className="rounded-full"
           onClick={handleDownvote}
-          disabled={!user || isPending}
+          disabled={!user || isPending || hasReacted}
           aria-label="Downvote"
         >
-          <ThumbsDown className="h-5 w-5" />
+          <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
         </Button>
         <span className="text-sm font-medium">{downvoteCount}</span>
       </div>

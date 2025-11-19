@@ -56,7 +56,7 @@ export function useTimelineLoader({
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
   const blockedPubkeys = useReportedPubkeys()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true) // Start true to show skeletons instead of empty state
   const [hasLoaded, setHasLoaded] = useState(false)
 
   // Subscribe to events from EventStore for reactive updates
@@ -128,6 +128,7 @@ export function useTimelineLoader({
     ;(async () => {
       await Promise.resolve()
       if (!cancelled) {
+        setLoading(true) // Show skeletons during reload
         setHasLoaded(false)
       }
     })()

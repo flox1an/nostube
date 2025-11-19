@@ -131,13 +131,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Homepage Stuck in Skeleton State**: Fixed homepage and other timeline pages being stuck showing skeleton loaders indefinitely
-  - Root cause: Previous fix for loading flicker changed `loading = true` initially but forgot to trigger the first load
-  - The 24 skeleton cards pushed InfiniteScrollTrigger out of view, preventing `useInfiniteScroll` from triggering `onLoadMore`
-  - Solution: Added `useEffect` to call `next()` when loader becomes available, triggering initial data fetch
-  - Uses `queueMicrotask` to defer state updates and avoid React's `set-state-in-effect` warning
-  - Combines with existing `isFirstLoadRef` mechanism to allow first load even when `loading=true`
-  - Fixes HomePage, ShortsPage, HashtagPage, and all other pages using `useInfiniteTimeline`
+- **Timeline Pages Loading States**: Fixed timeline pages showing empty state flash or stuck in skeleton loading
+  - **useInfiniteTimeline fix (HomePage, ShortsPage, HashtagPage)**:
+    - Root cause: Previous fix changed `loading = true` initially but forgot to trigger the first load
+    - The 24 skeleton cards pushed InfiniteScrollTrigger out of view, preventing automatic trigger
+    - Solution: Added `useEffect` to call `next()` when loader becomes available
+    - Uses `queueMicrotask` to defer state updates and avoid React's `set-state-in-effect` warning
+    - Combines with existing `isFirstLoadRef` mechanism to allow first load when `loading=true`
+  - **useTimelineLoader fix (SubscriptionsPage)**:
+    - Root cause: Hook initialized with `loading = false`, causing empty state flash before loading effect
+    - Solution: Initialize `loading = true` to show skeletons immediately instead of empty state
+    - Also set `loading = true` during reload when `reloadDependency` changes for consistent UX
+  - All timeline pages now show skeletons during initial load instead of empty state or being stuck
 
 - **Blossom Server URL Double Slashes**: Fixed 404 errors caused by double slashes in Blossom server URLs
   - Updated `normalizeServerUrl()` function to preserve port numbers and remove trailing slashes

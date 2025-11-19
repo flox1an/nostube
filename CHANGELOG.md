@@ -131,13 +131,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Homepage Loading Flicker**: Fixed brief flash of "No videos found" message when loading the homepage
-  - Root cause: `useInfiniteTimeline` initialized with `loading = false`, causing the empty state to render before the InfiniteScrollTrigger activated
-  - Solution: Initialize `loading = true` and allow first load to proceed even when loading is true
-  - Added `isFirstLoadRef` to track initial load and bypass loading check in `next()` function
-  - Updated `reset()` to restore `loading = true` and reset first load flag when loader changes
-  - Skeletons now display immediately on mount instead of briefly showing empty state
-  - Also fixes the same issue on ShortsPage and other pages using `useInfiniteTimeline`
+- **Homepage Stuck in Skeleton State**: Fixed homepage and other timeline pages being stuck showing skeleton loaders indefinitely
+  - Root cause: Previous fix for loading flicker changed `loading = true` initially but forgot to trigger the first load
+  - The 24 skeleton cards pushed InfiniteScrollTrigger out of view, preventing `useInfiniteScroll` from triggering `onLoadMore`
+  - Solution: Added `useEffect` to call `next()` when loader becomes available, triggering initial data fetch
+  - Uses `queueMicrotask` to defer state updates and avoid React's `set-state-in-effect` warning
+  - Combines with existing `isFirstLoadRef` mechanism to allow first load even when `loading=true`
+  - Fixes HomePage, ShortsPage, HashtagPage, and all other pages using `useInfiniteTimeline`
 
 - **Blossom Server URL Double Slashes**: Fixed 404 errors caused by double slashes in Blossom server URLs
   - Updated `normalizeServerUrl()` function to preserve port numbers and remove trailing slashes

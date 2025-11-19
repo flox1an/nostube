@@ -207,6 +207,14 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     isFirstLoadRef.current = true
   }, [])
 
+  // Trigger initial load when loader becomes available
+  useEffect(() => {
+    if (loader && isFirstLoadRef.current) {
+      // Defer to avoid synchronous setState in effect
+      queueMicrotask(() => next())
+    }
+  }, [loader, next])
+
   // Reset when loader changes (e.g., when relays or filters change)
   // Use a ref to track the loader and only reset if it actually changed
   const loaderRef = useRef(loader)

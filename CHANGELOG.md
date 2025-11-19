@@ -72,6 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Video Poster Loading States**: Added skeleton loading state for video poster thumbnails on VideoPage
+  - Both NativeVideoPlayer and HLSVideoPlayer now show a skeleton placeholder while the poster image loads
+  - Uses the same pattern as VideoCard thumbnail loading for consistent UX
+  - Preloads poster images and tracks loading state to determine when to hide the skeleton
+  - Prevents empty/blank video player appearance while poster images are downloading
+  - Uses `queueMicrotask` to defer state updates and avoid React's set-state-in-effect warning
+
 - **Thumbnail Loading States**: Added placeholder background while thumbnails are loading
   - VideoCard now shows a skeleton/placeholder background while the thumbnail image loads
   - Provides visual feedback during image loading instead of showing empty space

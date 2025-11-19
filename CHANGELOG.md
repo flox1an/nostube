@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions
+  - Buttons are now marked with semi-transparent fill (`fill-current/80`) when the current user has already reacted
+  - Both buttons are disabled after reacting (either up or down) to prevent changing reactions
+  - Icon uses text color with 80% opacity fill when active, maintaining consistent theming
+  - Added `useMemo` optimization to efficiently check user's reaction status
+  - Applies to both inline layout (VideoPage) and vertical layout (ShortsPage)
+  - User can only react once per video with either upvote or downvote
+
 ### Added
 
 - **NIP-50 Full-Text Search**: Implemented global video search using NIP-50 protocol

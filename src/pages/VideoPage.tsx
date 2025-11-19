@@ -9,7 +9,6 @@ import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { processEvent } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   useAppContext,
   useCurrentUser,
@@ -52,9 +51,6 @@ export function VideoPage() {
   const location = useLocation()
   const { user } = useCurrentUser()
   const { addToHistory } = useVideoHistory()
-
-  // Track if we've ever loaded a video (to avoid showing skeleton when switching videos)
-  const [hasLoadedVideo, setHasLoadedVideo] = useState(false)
 
   // Get initial relays for loading the video event
   const initialRelays = useVideoPageRelays({
@@ -196,14 +192,6 @@ export function VideoPage() {
   }, [nevent, videoEvent, config.blossomServers])
 
   const isLoading = !video && videoEvent === undefined
-
-  // Update hasLoadedVideo when we successfully load a video
-  useEffect(() => {
-    if (video && !hasLoadedVideo) {
-      // Defer state update to avoid set-state-in-effect warning
-      queueMicrotask(() => setHasLoadedVideo(true))
-    }
-  }, [video, hasLoadedVideo])
 
   const metadata = useProfile(video?.pubkey ? { pubkey: video.pubkey } : undefined)
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
@@ -428,11 +416,6 @@ export function VideoPage() {
 
   // Render video player
   const renderVideoPlayer = () => {
-    // Only show skeleton on initial load, not when switching between videos
-    if (isLoading && !hasLoadedVideo) {
-      return <Skeleton className="w-full aspect-video" />
-    }
-
     if (!video || video.urls.length === 0) {
       return null
     }

@@ -59,6 +59,7 @@ export { useVideoServerAvailability } from './useVideoServerAvailability'
 export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
 export { useVideoHistory } from './useVideoHistory'
 export type { VideoHistoryEntry } from './useVideoHistory'
+export { useVideoUpload } from './useVideoUpload'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

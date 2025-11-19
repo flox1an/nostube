@@ -22,7 +22,7 @@ export function VideoPageLayout({
       <div className={cinemaMode ? 'flex flex-col' : 'flex gap-6 md:px-4 flex-col lg:flex-row'}>
         {/* Video player container - always rendered in same position */}
         <div className={cinemaMode ? '' : 'flex-1'}>
-          {videoPlayer}
+          <div className="flex justify-center">{videoPlayer}</div>
           {!cinemaMode && videoInfo}
         </div>
 

@@ -9,13 +9,23 @@ interface PlayPauseOverlayProps {
    * Optional class name for the overlay container
    */
   className?: string
+  /**
+   * Ref to track if the play/pause action was user-initiated.
+   * Set to true before user-triggered play/pause to show overlay.
+   * Automatically reset to false after overlay is shown.
+   */
+  userInitiatedRef?: React.MutableRefObject<boolean>
 }
 
 /**
  * Animated play/pause overlay that appears when video playback state changes.
  * Shows a play or pause icon with fade-in/fade-out animation.
  */
-export function PlayPauseOverlay({ videoRef, className = '' }: PlayPauseOverlayProps) {
+export function PlayPauseOverlay({
+  videoRef,
+  className = '',
+  userInitiatedRef,
+}: PlayPauseOverlayProps) {
   const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isFadingOut, setIsFadingOut] = useState(false)
@@ -28,6 +38,16 @@ export function PlayPauseOverlay({ videoRef, className = '' }: PlayPauseOverlayP
     if (!videoEl) return
 
     const handlePlay = () => {
+      // Only show overlay if this was a user-initiated action
+      if (userInitiatedRef && !userInitiatedRef.current) {
+        return
+      }
+
+      // Reset the flag after checking
+      if (userInitiatedRef) {
+        userInitiatedRef.current = false
+      }
+
       setIsPaused(false)
       setIsFadingOut(false)
       setShowPlayPauseIcon(true)
@@ -52,6 +72,16 @@ export function PlayPauseOverlay({ videoRef, className = '' }: PlayPauseOverlayP
     }
 
     const handlePause = () => {
+      // Only show overlay if this was a user-initiated action
+      if (userInitiatedRef && !userInitiatedRef.current) {
+        return
+      }
+
+      // Reset the flag after checking
+      if (userInitiatedRef) {
+        userInitiatedRef.current = false
+      }
+
       setIsPaused(true)
       setIsFadingOut(false)
       setShowPlayPauseIcon(true)
@@ -91,7 +121,7 @@ export function PlayPauseOverlay({ videoRef, className = '' }: PlayPauseOverlayP
         clearTimeout(fadeOutTimeoutRef.current)
       }
     }
-  }, [videoRef])
+  }, [videoRef, userInitiatedRef])
 
   if (!showPlayPauseIcon) {
     return null

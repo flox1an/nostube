@@ -3,7 +3,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
-import { ButtonWithReactions } from '@/components/ButtonWithReactions'
+import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { formatDistance } from 'date-fns'
@@ -17,6 +17,8 @@ import {
   useReportedPubkeys,
   useReadRelays,
   useVideoHistory,
+  useCommentCount,
+  usePreloadVideoData,
 } from '@/hooks'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import {
@@ -25,9 +27,8 @@ import {
   createTimelineLoader,
 } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { MessageCircle, ChevronDown, Share2 } from 'lucide-react'
+import { MessageCircle, Share2 } from 'lucide-react'
 import { imageProxy, imageProxyVideoPreview, combineRelays } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { getKindsForType } from '@/lib/video-types'
 import { nprofileFromEvent } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
@@ -56,11 +57,15 @@ function ShortVideoItem({
   const authorPicture = metadata?.picture
   const videoRef = useRef<HTMLDivElement>(null)
   const videoElementRef = useRef<HTMLVideoElement>(null)
+  const userInitiatedPlayPauseRef = useRef<boolean>(false)
   const eventStore = useEventStore()
   const userReadRelays = useReadRelays()
   const { config } = useAppContext()
   const [aspectRatio, setAspectRatio] = useState<number | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
+
+  // Get comment count
+  const commentCount = useCommentCount({ videoId: video.id })
 
   const playActiveVideo = useCallback(() => {
     const videoEl = videoElementRef.current
@@ -161,6 +166,15 @@ function ShortVideoItem({
     [eventRelays, pointerRelays, userReadRelays, presetRelayUrls]
   )
 
+  // Preload reactions and comments for this video
+  usePreloadVideoData({
+    videoId: video.id,
+    authorPubkey: video.pubkey,
+    kind: video.kind,
+    relays: reactionRelays,
+    enabled: shouldPreload || isActive,
+  })
+
   // Auto-play/pause based on isActive
   useEffect(() => {
     const videoEl = videoElementRef.current
@@ -185,6 +199,9 @@ function ShortVideoItem({
   const handleVideoClick = useCallback(() => {
     const videoEl = videoElementRef.current
     if (!videoEl || !isActive) return
+
+    // Mark this as a user-initiated action to show the play/pause overlay
+    userInitiatedPlayPauseRef.current = true
 
     if (videoEl.paused) {
       videoEl.play()
@@ -281,9 +298,9 @@ function ShortVideoItem({
       className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
       style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
     >
-      <div className="relative w-full h-screen flex flex-col items-center justify-center">
+      <div className="relative w-full h-screen flex flex-col md:flex-row items-center justify-center">
         {/* Video player - fullscreen vertical */}
-        <div className="relative w-full h-full flex items-center justify-center bg-black">
+        <div className="relative w-full md:flex-1 h-full flex items-center justify-center bg-black">
           <div className="relative w-full h-full" style={{ maxWidth: getMaxWidth() }}>
             {video.contentWarning && !isActive && (
               <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-lg">
@@ -317,7 +334,12 @@ function ShortVideoItem({
                   style={{ opacity: isActive ? 1 : 0.5 }}
                 />
                 {/* Play/Pause icon overlay with animation */}
-                {isActive && <PlayPauseOverlay videoRef={videoElementRef} />}
+                {isActive && (
+                  <PlayPauseOverlay
+                    videoRef={videoElementRef}
+                    userInitiatedRef={userInitiatedPlayPauseRef}
+                  />
+                )}
               </div>
               {/* Show thumbnail overlay when not active for better visibility */}
               {!isActive && thumbnailUrl && (
@@ -337,49 +359,40 @@ function ShortVideoItem({
           </div>
         </div>
 
-        {/* Right sidebar with interactions */}
-        <div className="absolute right-4 bottom-24 flex flex-col items-center gap-4 z-10">
-          {/* Like button */}
-          <div className="flex flex-col items-center gap-1">
-            <ButtonWithReactions
-              eventId={video.id}
-              kind={video.kind}
-              authorPubkey={video.pubkey}
-              relays={reactionRelays}
-              className="bg-black/50 hover:bg-black/70 text-white border-white/20"
-            />
-          </div>
+        {/* Right sidebar with interactions - mobile: absolute overlay, desktop: relative right side */}
+        <div className="absolute md:relative bottom-24 right-4 md:right-0 md:-translate-y-1/2 flex flex-col items-center gap-4 z-10 md:pr-8 pb-8">
+          {/* Upvote and Downvote buttons */}
+          <VideoReactionButtons
+            eventId={video.id}
+            kind={video.kind}
+            authorPubkey={video.pubkey}
+            relays={reactionRelays}
+          />
 
           {/* Comments button */}
           <div className="flex flex-col items-center gap-1">
             <button
-              className="bg-black/50 hover:bg-black/70 rounded-full p-2 border border-white/20 transition-colors"
+              className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors"
               onClick={() => setCommentsOpen(true)}
+              aria-label="Comments"
             >
               <MessageCircle className="h-6 w-6 text-white" />
             </button>
-            <span className="text-white text-xs">Comments</span>
+            <span className="text-white text-sm font-medium">{commentCount}</span>
           </div>
 
           {/* Share button */}
           <div className="flex flex-col items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="bg-black/50 hover:bg-black/70 rounded-full border border-white/20"
+            <button
+              className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors"
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl)
               }}
+              aria-label="Share"
             >
               <Share2 className="h-6 w-6 text-white" />
-            </Button>
-            <span className="text-white text-xs">Share</span>
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="flex flex-col items-center gap-2 mt-4">
-            <ChevronDown className="h-6 w-6 text-white/70 animate-bounce" />
-            <span className="text-white/70 text-xs">Next</span>
+            </button>
+            <span className="text-white text-sm font-medium">Share</span>
           </div>
         </div>
 
@@ -387,9 +400,9 @@ function ShortVideoItem({
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 md:px-8 md:pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
           <div className="w-full" style={{ maxWidth: getMaxWidth() }}>
             {/* Follow button and Author info */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
               <FollowButton pubkey={video.pubkey} className="text-white self-start" />
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <Link to={`/author/${authorNprofile}`}>
                   <Avatar className="h-10 w-10 border-2 border-white">
                     <AvatarImage
@@ -413,7 +426,7 @@ function ShortVideoItem({
             </div>
 
             {/* Video title/description */}
-            <div className="text-white mb-2 line-clamp-3">{video.title || video.description}</div>
+            <div className="text-white my-2 line-clamp-3">{video.title || video.description}</div>
 
             {/* Tags */}
             {video.tags.length > 0 && (
@@ -853,15 +866,16 @@ export function ShortsVideoPage() {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed top-0 left-0 right-0 z-[100]">
         <Header transparent />
       </div>
       <div
         ref={containerRef}
-        className="fixed inset-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        className="fixed top-0 left-0 right-0 bottom-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
         style={{
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
+          paddingTop: 'calc(56px + env(safe-area-inset-top, 0))',
         }}
       >
         {allVideos.map((video, index) => {

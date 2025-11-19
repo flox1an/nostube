@@ -28,7 +28,7 @@ import { MoreVertical, TrashIcon, Bug, Copy } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
-import { ButtonWithReactions } from '@/components/ButtonWithReactions'
+import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
@@ -146,7 +146,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
       <div className="flex flex-col gap-4 p-2 sm:px-0">
         {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
 
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col md:flex-row items-start justify-between">
           <Link
             to={`/author/${nip19.nprofileEncode({ pubkey: video?.pubkey || '', relays: relaysToUse })}`}
             className="flex items-center gap-4"
@@ -166,20 +166,23 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto">
             {userPubkey && (
-              <AddToPlaylistButton
-                videoId={video.id}
-                videoKind={video.kind}
-                videoTitle={video.title}
-              />
+              <>
+                <VideoReactionButtons
+                  eventId={video.id}
+                  authorPubkey={video.pubkey}
+                  kind={video.kind}
+                  relays={relaysToUse}
+                  layout="inline"
+                />
+                <AddToPlaylistButton
+                  videoId={video.id}
+                  videoKind={video.kind}
+                  videoTitle={video.title}
+                />
+              </>
             )}
-            <ButtonWithReactions
-              eventId={video.id}
-              authorPubkey={video.pubkey}
-              kind={video.kind}
-              relays={relaysToUse}
-            />
             <ShareButton
               shareOpen={shareOpen}
               setShareOpen={setShareOpen}

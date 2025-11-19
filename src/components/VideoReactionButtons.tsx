@@ -3,6 +3,7 @@ import { useReactions } from '@/hooks/useReactions'
 import { useEventStore } from 'applesauce-react/hooks'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { nowInSecs } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface VideoReactionButtonsProps {
   eventId: string
@@ -10,6 +11,7 @@ interface VideoReactionButtonsProps {
   authorPubkey: string
   relays?: string[]
   className?: string
+  layout?: 'vertical' | 'inline' // vertical: count below (Shorts), inline: count inside button (VideoPage)
 }
 
 export function VideoReactionButtons({
@@ -18,6 +20,7 @@ export function VideoReactionButtons({
   authorPubkey,
   relays = [],
   className = '',
+  layout = 'vertical',
 }: VideoReactionButtonsProps) {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
@@ -105,32 +108,65 @@ export function VideoReactionButtons({
     }
   }
 
-  return (
-    <>
-      {/* Upvote button */}
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
-        <button
-          className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
+  if (layout === 'inline') {
+    // VideoPage layout: count inside button
+    return (
+      <>
+        <Button
+          variant="secondary"
+          className={className}
           onClick={handleUpvote}
           disabled={!user || isPending}
           aria-label="Upvote"
         >
-          <ThumbsUp className="h-6 w-6 text-white" />
-        </button>
-        <span className="text-white text-sm font-medium">{upvoteCount}</span>
-      </div>
-
-      {/* Downvote button */}
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
-        <button
-          className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
+          <ThumbsUp className="h-5 w-5" />
+          <span className="ml-2">{upvoteCount}</span>
+        </Button>
+        <Button
+          variant="secondary"
+          className={className}
           onClick={handleDownvote}
           disabled={!user || isPending}
           aria-label="Downvote"
         >
-          <ThumbsDown className="h-6 w-6 text-white" />
-        </button>
-        <span className="text-white text-sm font-medium">{downvoteCount}</span>
+          <ThumbsDown className="h-5 w-5" />
+          <span className="ml-2">{downvoteCount}</span>
+        </Button>
+      </>
+    )
+  }
+
+  // ShortsPage layout: count below button (vertical)
+  return (
+    <>
+      {/* Upvote button */}
+      <div className={`flex flex-col items-center gap-1 ${className}`}>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="rounded-full"
+          onClick={handleUpvote}
+          disabled={!user || isPending}
+          aria-label="Upvote"
+        >
+          <ThumbsUp className="h-5 w-5" />
+        </Button>
+        <span className="text-sm font-medium">{upvoteCount}</span>
+      </div>
+
+      {/* Downvote button */}
+      <div className={`flex flex-col items-center gap-1 ${className}`}>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="rounded-full"
+          onClick={handleDownvote}
+          disabled={!user || isPending}
+          aria-label="Downvote"
+        >
+          <ThumbsDown className="h-5 w-5" />
+        </Button>
+        <span className="text-sm font-medium">{downvoteCount}</span>
       </div>
     </>
   )

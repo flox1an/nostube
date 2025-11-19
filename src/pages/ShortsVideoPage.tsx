@@ -6,6 +6,7 @@ import { switchMap, catchError, map } from 'rxjs/operators'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
@@ -371,28 +372,32 @@ function ShortVideoItem({
 
           {/* Comments button */}
           <div className="flex flex-col items-center gap-1">
-            <button
-              className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors"
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full"
               onClick={() => setCommentsOpen(true)}
               aria-label="Comments"
             >
-              <MessageCircle className="h-6 w-6 text-white" />
-            </button>
-            <span className="text-white text-sm font-medium">{commentCount}</span>
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+            <span className="text-sm font-medium">{commentCount}</span>
           </div>
 
           {/* Share button */}
           <div className="flex flex-col items-center gap-1">
-            <button
-              className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors"
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full"
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl)
               }}
               aria-label="Share"
             >
-              <Share2 className="h-6 w-6 text-white" />
-            </button>
-            <span className="text-white text-sm font-medium">Share</span>
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <span className="text-sm font-medium">Share</span>
           </div>
         </div>
 

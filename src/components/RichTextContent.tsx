@@ -288,7 +288,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent-foreground hover:underline"
+                className="text-accent-foreground hover:underline break-all"
               >
                 {url}
               </a>

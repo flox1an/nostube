@@ -153,9 +153,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Comment Text Wrapping**: Fixed long comment text breaking layout by adding proper word wrapping
-  - Changed `wrap-break-word` (invalid class) to standard Tailwind `break-words` class
+- **Comment Text Wrapping**: Fixed long comment text and URLs breaking layout
+  - Changed `wrap-break-word` (invalid class) to standard Tailwind `break-words` class in VideoComments
+  - Added `break-all` class to URL links in RichTextContent to force long URLs to wrap
   - Long URLs and unbreakable text in comments now wrap correctly instead of overflowing
+  - Prevents horizontal scrolling caused by very long URLs in comment text
 
 - **Timeline Pages Loading States**: Fixed timeline pages showing empty state flash or stuck in skeleton loading
   - **useInfiniteTimeline fix (HomePage, ShortsPage, HashtagPage)**:

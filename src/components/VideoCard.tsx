@@ -54,6 +54,7 @@ export const VideoCard = React.memo(function VideoCard({
   const [isHovered, setIsHovered] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
 
   const hoverPreviewEnabled = false
 
@@ -132,7 +133,12 @@ export const VideoCard = React.memo(function VideoCard({
     // Only try video fallback once to avoid infinite loops
     if (!thumbnailError) {
       setThumbnailError(true)
+      setThumbnailLoaded(false) // Reset loaded state for fallback
     }
+  }
+
+  const handleThumbnailLoad = () => {
+    setThumbnailLoaded(true)
   }
 
   // Handle shorts click - populate store with video list
@@ -158,6 +164,8 @@ export const VideoCard = React.memo(function VideoCard({
       <div className="p-0">
         <Link to={to} onClick={handleShortsClick}>
           <div className="w-full overflow-hidden sm:rounded-lg relative">
+            {/* Placeholder background shown while thumbnail loads */}
+            {!thumbnailLoaded && <Skeleton className={cn('w-full absolute', aspectRatio)} />}
             <img
               src={thumbnailUrl}
               loading="lazy"
@@ -170,6 +178,7 @@ export const VideoCard = React.memo(function VideoCard({
                 isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
               )}
               onError={handleThumbnailError}
+              onLoad={handleThumbnailLoad}
             />
             {showNsfwWarning && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">

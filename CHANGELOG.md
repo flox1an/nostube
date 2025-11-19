@@ -72,6 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **VideoPage Player Centering**: Centered video player horizontally in VideoPageLayout
+  - Video player now centered horizontally in normal (non-cinema) mode
+  - Uses flexbox with items-center for proper alignment
+  - Video info section maintains full width below the player
+  - Improves visual balance and professional appearance
+  - Cinema mode layout remains unchanged
+
 - **Shorts Comments Sheet Width**: Added max-width to comments sheet on desktop
   - Comments sheet in ShortsVideoPage now has a max-width of 2xl (42rem/672px)
   - Centered on desktop for better readability and focused layout

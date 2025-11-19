@@ -116,6 +116,8 @@ const CommentItem = React.memo(function CommentItem({
   onReplyContentChange,
   onSubmitReply,
   onCancelReply,
+  expandedComments,
+  onToggleExpanded,
 }: {
   comment: Comment
   link: string
@@ -126,12 +128,16 @@ const CommentItem = React.memo(function CommentItem({
   onReplyContentChange?: (content: string) => void
   onSubmitReply?: (e: React.FormEvent) => void
   onCancelReply?: () => void
+  expandedComments: Set<string>
+  onToggleExpanded: (commentId: string) => void
 }) {
   const metadata = useProfile({ pubkey: comment.pubkey })
   const name = metadata?.name || comment.pubkey.slice(0, 8)
   const maxDepth = 5 // Maximum nesting level
   const isReplying = replyingTo === comment.id
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isExpanded = expandedComments.has(comment.id)
+  const hasReplies = comment.replies && comment.replies.length > 0
 
   // Focus textarea when replying to this comment
   useEffect(() => {
@@ -170,6 +176,19 @@ const CommentItem = React.memo(function CommentItem({
             >
               <Reply className="w-3 h-3 mr-1" />
               Reply
+            </Button>
+          )}
+
+          {/* Show replies toggle button */}
+          {hasReplies && depth < maxDepth && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => onToggleExpanded(comment.id)}
+            >
+              {isExpanded ? '▼' : '▶'} {comment.replies!.length}{' '}
+              {comment.replies!.length === 1 ? 'reply' : 'replies'}
             </Button>
           )}
 
@@ -212,10 +231,10 @@ const CommentItem = React.memo(function CommentItem({
             </form>
           )}
 
-          {/* Render nested replies */}
-          {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
+          {/* Render nested replies (only if expanded) */}
+          {hasReplies && isExpanded && depth < maxDepth && (
             <div className="mt-3">
-              {comment.replies.map(reply => (
+              {comment.replies!.map(reply => (
                 <CommentItem
                   key={reply.id}
                   comment={reply}
@@ -227,14 +246,17 @@ const CommentItem = React.memo(function CommentItem({
                   onReplyContentChange={onReplyContentChange}
                   onSubmitReply={onSubmitReply}
                   onCancelReply={onCancelReply}
+                  expandedComments={expandedComments}
+                  onToggleExpanded={onToggleExpanded}
                 />
               ))}
             </div>
           )}
           {/* Show indicator if max depth reached */}
-          {comment.replies && comment.replies.length > 0 && depth >= maxDepth && (
+          {hasReplies && depth >= maxDepth && (
             <div className="mt-2 text-xs text-muted-foreground">
-              ... {comment.replies.length} more {comment.replies.length === 1 ? 'reply' : 'replies'}
+              ... {comment.replies!.length} more{' '}
+              {comment.replies!.length === 1 ? 'reply' : 'replies'}
             </div>
           )}
         </div>
@@ -253,6 +275,8 @@ export function VideoComments({
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
+  const [visibleComments, setVisibleComments] = useState(15) // Pagination: show 15 initially
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set()) // Track expanded comments
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const eventStore = useEventStore()
   const { user } = useCurrentUser()
@@ -452,6 +476,28 @@ export function VideoComments({
     setReplyContent('')
   }
 
+  // Toggle comment expanded state
+  const toggleExpanded = (commentId: string) => {
+    setExpandedComments(prev => {
+      const next = new Set(prev)
+      if (next.has(commentId)) {
+        next.delete(commentId)
+      } else {
+        next.add(commentId)
+      }
+      return next
+    })
+  }
+
+  // Load more comments
+  const loadMoreComments = () => {
+    setVisibleComments(prev => prev + 15)
+  }
+
+  // Get visible comments for pagination
+  const visibleThreadedComments = threadedComments.slice(0, visibleComments)
+  const hasMoreComments = threadedComments.length > visibleComments
+
   // Hide entire section when not logged in and no comments exist
   if (!user && threadedComments.length === 0) {
     return null
@@ -489,7 +535,7 @@ export function VideoComments({
       )}
 
       <div>
-        {threadedComments.map(comment => (
+        {visibleThreadedComments.map(comment => (
           <CommentItem
             key={comment.id}
             comment={comment}
@@ -500,9 +546,20 @@ export function VideoComments({
             onReplyContentChange={setReplyContent}
             onSubmitReply={handleReplySubmit}
             onCancelReply={cancelReply}
+            expandedComments={expandedComments}
+            onToggleExpanded={toggleExpanded}
           />
         ))}
       </div>
+
+      {/* Load more button */}
+      {hasMoreComments && (
+        <div className="mt-4">
+          <Button variant="outline" onClick={loadMoreComments} className="w-full">
+            Load more comments ({threadedComments.length - visibleComments} remaining)
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

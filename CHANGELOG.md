@@ -72,6 +72,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Comments Pagination and Collapsible Replies**: Improved comments UX with pagination and expandable replies
+  - Top-level comments now show 15 at a time with "Load more" button to show next 15
+  - Replies are hidden by default with expandable toggle showing reply count (e.g., "▶ 5 replies")
+  - Click to expand/collapse reply threads at any nesting level
+  - Prevents overwhelming UI with hundreds of comments loading at once
+  - Improves page performance and readability
+  - Maintains full threading up to 5 levels deep
+
 - **VideoPage Loading Experience**: Removed video player skeleton to eliminate flickering
   - Skeleton has been completely removed from VideoPage video player area
   - Previous video remains visible when switching videos instead of showing a skeleton

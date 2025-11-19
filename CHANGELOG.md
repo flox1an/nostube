@@ -132,10 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Thumbnail Error Handling**: Improved VideoCard error state when thumbnails fail to load
+  - Immediately shows error state if no thumbnail URL is defined in the video event
   - Shows "Thumbnail unavailable" message with broken image icon instead of infinite skeleton loading
   - Tries fallback to video URL thumbnail generation before showing error state
   - Uses muted background with `ImageOff` icon and clear error message
-  - Provides better user feedback when both original thumbnail and fallback fail
+  - Provides better user feedback when thumbnails are missing or fail to load
 
 ### Fixed
 

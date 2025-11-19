@@ -72,6 +72,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Shorts Comments Sheet Width**: Added max-width to comments sheet on desktop
+  - Comments sheet in ShortsVideoPage now has a max-width of 2xl (42rem/672px)
+  - Centered on desktop for better readability and focused layout
+  - Mobile experience remains full-width as expected
+  - Improves UX on wide desktop screens
+
 - **Comments Pagination and Collapsible Replies**: Improved comments UX with pagination and expandable replies
   - Top-level comments now show 15 at a time with "Load more" button to show next 15
   - Replies are hidden by default with expandable toggle showing reply count (e.g., "▶ 5 replies")

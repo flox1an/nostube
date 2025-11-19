@@ -431,7 +431,7 @@ function ShortVideoItem({
 
       {/* Comments Sheet */}
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto max-w-2xl mx-auto">
           <SheetHeader>
             <SheetTitle>Comments</SheetTitle>
           </SheetHeader>

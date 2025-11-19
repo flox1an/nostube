@@ -1,9 +1,8 @@
 import * as React from 'react'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import { type TextTrack } from '@/utils/video-event'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getLanguageLabel } from '@/lib/utils'
-import { Skeleton } from '@/components/ui/skeleton'
 
 interface NativeVideoPlayerProps {
   videoUrl: string
@@ -32,58 +31,25 @@ export function NativeVideoPlayer({
   onTimeUpdate,
   onVideoError,
 }: NativeVideoPlayerProps) {
-  // Track poster loading with a ref for current poster URL and loaded state
-  const [posterLoadState, setPosterLoadState] = useState<{
-    url: string | undefined
-    loaded: boolean
-  }>({
-    url: posterUrl,
-    loaded: !posterUrl, // If no poster, consider it loaded
-  })
-
-  // Preload poster image to track loading state
-  useEffect(() => {
-    // If posterUrl changed, mark as not loaded yet
-    if (posterUrl !== posterLoadState.url) {
-      queueMicrotask(() => setPosterLoadState({ url: posterUrl, loaded: !posterUrl }))
-    }
-
-    if (!posterUrl) return
-
-    const img = new Image()
-    img.onload = () => setPosterLoadState({ url: posterUrl, loaded: true })
-    img.onerror = () => setPosterLoadState({ url: posterUrl, loaded: true }) // Still hide skeleton on error
-    img.src = posterUrl
-
-    return () => {
-      img.onload = null
-      img.onerror = null
-    }
-  }, [posterUrl, posterLoadState.url])
-
   return (
-    <div className="relative w-full h-full">
-      {/* Skeleton overlay while poster loads */}
-      {!posterLoadState.loaded && <Skeleton className="absolute inset-0 w-full h-full" />}
-      <video
-        crossOrigin="anonymous"
-        src={videoUrl}
-        ref={videoRef}
-        className={cinemaMode || isMobile ? 'cinema' : 'normal'}
-        slot="media"
-        autoPlay={!contentWarning}
-        loop={loop}
-        poster={posterUrl}
-        onTimeUpdate={onTimeUpdate}
-        tabIndex={0}
-        onError={onVideoError}
-      >
-        {/* Captions for regular video */}
-        {textTracks.map(vtt => (
-          <CaptionTrack key={vtt.lang} track={vtt} sha256={sha256} />
-        ))}
-      </video>
-    </div>
+    <video
+      crossOrigin="anonymous"
+      src={videoUrl}
+      ref={videoRef}
+      className={cinemaMode || isMobile ? 'cinema' : 'normal'}
+      slot="media"
+      autoPlay={!contentWarning}
+      loop={loop}
+      poster={posterUrl}
+      onTimeUpdate={onTimeUpdate}
+      tabIndex={0}
+      onError={onVideoError}
+    >
+      {/* Captions for regular video */}
+      {textTracks.map(vtt => (
+        <CaptionTrack key={vtt.lang} track={vtt} sha256={sha256} />
+      ))}
+    </video>
   )
 }
 

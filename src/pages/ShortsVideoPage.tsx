@@ -384,10 +384,10 @@ function ShortVideoItem({
         </div>
 
         {/* Bottom info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 bg-linear-to-t from-black/80 via-black/40 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 md:px-8 md:pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
           <div className="w-full" style={{ maxWidth: getMaxWidth() }}>
             {/* Follow button and Author info */}
-            <div className="flex flex-col gap-2 mb-3">
+            <div className="flex flex-col gap-2">
               <FollowButton pubkey={video.pubkey} className="text-white self-start" />
               <div className="flex items-center gap-3">
                 <Link to={`/author/${authorNprofile}`}>
@@ -865,12 +865,32 @@ export function ShortsVideoPage() {
         }}
       >
         {allVideos.map((video, index) => {
+          // Only render videos within a window around the current video to keep DOM tidy
+          // Render window: current +/- 3 videos (7 total: 3 before, current, 3 after)
+          const distanceFromCurrent = Math.abs(index - currentVideoIndex)
+          const shouldRender = distanceFromCurrent <= 3
+
+          if (!shouldRender) {
+            // Render placeholder to maintain scroll positioning for far videos
+            return (
+              <div
+                key={video.id}
+                data-video-id={video.id}
+                data-index={index.toString()}
+                className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
+                style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
+                ref={registerVideoElement(video.id, index)}
+              />
+            )
+          }
+
           // Preload current video, previous video, and next 2 videos for smoother scrolling
           const shouldPreload =
             index === currentVideoIndex || // Current
             index === currentVideoIndex - 1 || // Previous
             index === currentVideoIndex + 1 || // Next
             index === currentVideoIndex + 2 // Next + 1
+
           return (
             <ShortVideoItem
               key={video.id}

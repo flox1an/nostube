@@ -58,8 +58,11 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     }
   }
 
+  // Link to shorts page for short videos, video page for regular videos
+  const linkTo = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
+
   return (
-    <Link to={`/video/${video.link}`}>
+    <Link to={linkTo}>
       <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
         <div className="relative w-40 h-24 shrink-0">
           <img

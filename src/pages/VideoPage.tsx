@@ -9,6 +9,7 @@ import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { processEvent } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   useAppContext,
   useCurrentUser,
@@ -416,6 +417,10 @@ export function VideoPage() {
 
   // Render video player
   const renderVideoPlayer = () => {
+    if (isLoading) {
+      return <Skeleton className="w-full aspect-video" />
+    }
+
     if (!video || video.urls.length === 0) {
       return null
     }

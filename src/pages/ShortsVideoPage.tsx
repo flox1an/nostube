@@ -360,7 +360,7 @@ function ShortVideoItem({
         </div>
 
         {/* Right sidebar with interactions - mobile: absolute overlay, desktop: relative right side */}
-        <div className="absolute md:relative bottom-24 right-4 md:right-0 md:-translate-y-1/2 flex flex-col items-center gap-4 z-10 md:pr-8 pb-8">
+        <div className="absolute bottom-24 right-4 md:right-0 flex flex-col items-center gap-4 z-10 md:pr-8 pb-8">
           {/* Upvote and Downvote buttons */}
           <VideoReactionButtons
             eventId={video.id}
@@ -372,7 +372,7 @@ function ShortVideoItem({
           {/* Comments button */}
           <div className="flex flex-col items-center gap-1">
             <button
-              className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors"
+              className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors"
               onClick={() => setCommentsOpen(true)}
               aria-label="Comments"
             >
@@ -384,7 +384,7 @@ function ShortVideoItem({
           {/* Share button */}
           <div className="flex flex-col items-center gap-1">
             <button
-              className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors"
+              className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors"
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl)
               }}

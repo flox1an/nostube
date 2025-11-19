@@ -110,7 +110,7 @@ export function VideoReactionButtons({
       {/* Upvote button */}
       <div className={`flex flex-col items-center gap-1 ${className}`}>
         <button
-          className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
+          className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
           onClick={handleUpvote}
           disabled={!user || isPending}
           aria-label="Upvote"
@@ -123,7 +123,7 @@ export function VideoReactionButtons({
       {/* Downvote button */}
       <div className={`flex flex-col items-center gap-1 ${className}`}>
         <button
-          className="bg-black/50 hover:bg-black/70 rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
+          className="bg-black/50 hover:bg-black/70 cursor-pointer rounded-full p-3 border border-white/20 transition-colors disabled:opacity-50"
           onClick={handleDownvote}
           disabled={!user || isPending}
           aria-label="Downvote"

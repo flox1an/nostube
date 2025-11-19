@@ -72,6 +72,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Thumbnail Loading States**: Added placeholder background while thumbnails are loading
+  - VideoCard now shows a skeleton/placeholder background while the thumbnail image loads
+  - Provides visual feedback during image loading instead of showing empty space
+  - Placeholder automatically disappears once the image has loaded
+  - Improves perceived performance and visual polish in video grids
+
 - **Blossom Server Tags**: Removed 'proxy' tag from Blossom server configuration
   - Blossom servers now only support 'mirror' and 'initial upload' tags
   - Proxy/caching functionality moved to dedicated Media Caching Servers section

@@ -58,7 +58,6 @@ function getCodecWarning(
 export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariantsTableProps) {
   const { t } = useTranslation()
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
   if (videos.length === 0) {
     return null
@@ -75,10 +74,6 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
     }
   }
 
-  const handleToggleExpand = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index)
-  }
-
   return (
     <div className="space-y-4">
       <div className="border rounded-lg overflow-hidden">
@@ -90,17 +85,14 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
               <TableHead>{t('upload.videoTable.dimensions')}</TableHead>
               <TableHead>{t('upload.videoTable.duration')}</TableHead>
               <TableHead>{t('upload.videoTable.size')}</TableHead>
-              <TableHead>{t('upload.videoTable.videoCodec')}</TableHead>
-              <TableHead>{t('upload.videoTable.audioCodec')}</TableHead>
+              <TableHead>{t('upload.videoTable.codec')}</TableHead>
               <TableHead className="w-28">{t('upload.videoTable.status')}</TableHead>
-              <TableHead className="w-32 text-right">{t('upload.videoTable.actions')}</TableHead>
+              <TableHead className="w-24 text-right">{t('upload.videoTable.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {videos.map((video, index) => {
               const codecWarning = getCodecWarning(video.videoCodec)
-              const isExpanded = expandedIndex === index
-              const hasDetails = codecWarning || video.uploadedBlobs.length > 0
 
               return (
                 <>
@@ -116,35 +108,37 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                     <TableCell className="font-mono text-sm">
                       {video.sizeMB ? `${video.sizeMB} MB` : '-'}
                     </TableCell>
-                    <TableCell
-                      className="font-mono text-xs max-w-[120px] truncate"
-                      title={video.videoCodec}
-                    >
-                      <div className="flex items-center gap-1">
-                        {video.videoCodec || '-'}
-                        {codecWarning && (
-                          <>
-                            {codecWarning.type === 'error' && (
-                              <AlertTriangle className="h-3 w-3 text-red-500" />
-                            )}
-                            {codecWarning.type === 'warning' && (
-                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                            )}
-                            {codecWarning.type === 'info' && (
-                              <Info className="h-3 w-3 text-blue-500" />
-                            )}
-                            {codecWarning.type === 'success' && (
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            )}
-                          </>
-                        )}
+                    <TableCell className="font-mono text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">V:</span>
+                          <span className="truncate max-w-[100px]" title={video.videoCodec}>
+                            {video.videoCodec || '-'}
+                          </span>
+                          {codecWarning && (
+                            <>
+                              {codecWarning.type === 'error' && (
+                                <AlertTriangle className="h-3 w-3 text-red-500 flex-shrink-0" />
+                              )}
+                              {codecWarning.type === 'warning' && (
+                                <AlertTriangle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                              )}
+                              {codecWarning.type === 'info' && (
+                                <Info className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                              )}
+                              {codecWarning.type === 'success' && (
+                                <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">A:</span>
+                          <span className="truncate max-w-[100px]" title={video.audioCodec}>
+                            {video.audioCodec || '-'}
+                          </span>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell
-                      className="font-mono text-xs max-w-[120px] truncate"
-                      title={video.audioCodec}
-                    >
-                      {video.audioCodec || '-'}
                     </TableCell>
                     <TableCell>
                       <TooltipProvider>
@@ -208,21 +202,6 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        {hasDetails && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleExpand(index)}
-                            className="h-8 w-8 p-0"
-                            title={
-                              isExpanded
-                                ? t('upload.videoTable.hideDetails')
-                                : t('upload.videoTable.showDetails')
-                            }
-                          >
-                            <Info className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -246,71 +225,42 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                       </div>
                     </TableCell>
                   </TableRow>
-                  {isExpanded && (
-                    <TableRow key={`${index}-details`}>
-                      <TableCell colSpan={8} className="bg-muted/30 p-4">
-                        <div className="space-y-3">
-                          {/* Codec Warning */}
-                          {codecWarning && (
-                            <Alert
-                              variant={
-                                codecWarning.type === 'error' || codecWarning.type === 'warning'
-                                  ? 'destructive'
-                                  : 'default'
-                              }
-                              className={
-                                codecWarning.type === 'success'
-                                  ? 'border-green-500 bg-green-50'
-                                  : codecWarning.type === 'info'
-                                    ? 'border-blue-500 bg-blue-50'
-                                    : ''
-                              }
-                            >
-                              <div className="flex items-start gap-2">
-                                {codecWarning.type === 'error' && (
-                                  <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
-                                )}
-                                {codecWarning.type === 'warning' && (
-                                  <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                                )}
-                                {codecWarning.type === 'info' && (
-                                  <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                                )}
-                                {codecWarning.type === 'success' && (
-                                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                                )}
-                                <AlertDescription className="text-sm">
-                                  {t(codecWarning.key)}
-                                </AlertDescription>
-                              </div>
-                            </Alert>
-                          )}
-
-                          {/* Upload Status */}
-                          {video.uploadedBlobs.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-semibold">
-                                {t('upload.videoTable.uploadStatus')}
-                              </h4>
-                              <div className="grid gap-2">
-                                <div className="text-sm">
-                                  <span className="font-medium">
-                                    {t('upload.videoTable.uploadedTo')}:
-                                  </span>{' '}
-                                  {video.uploadedBlobs.length} {t('upload.videoTable.servers')}
-                                </div>
-                                {video.mirroredBlobs.length > 0 && (
-                                  <div className="text-sm">
-                                    <span className="font-medium">
-                                      {t('upload.videoTable.mirroredTo')}:
-                                    </span>{' '}
-                                    {video.mirroredBlobs.length} {t('upload.videoTable.servers')}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                  {/* Codec Warning Row */}
+                  {codecWarning && (
+                    <TableRow key={`${index}-warning`}>
+                      <TableCell colSpan={8} className="p-0">
+                        <Alert
+                          variant={
+                            codecWarning.type === 'error' || codecWarning.type === 'warning'
+                              ? 'destructive'
+                              : 'default'
+                          }
+                          className={`rounded-none border-0 border-t ${
+                            codecWarning.type === 'success'
+                              ? 'bg-green-50 border-green-200'
+                              : codecWarning.type === 'info'
+                                ? 'bg-blue-50 border-blue-200'
+                                : ''
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {codecWarning.type === 'error' && (
+                              <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                            )}
+                            {codecWarning.type === 'warning' && (
+                              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                            )}
+                            {codecWarning.type === 'info' && (
+                              <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                            )}
+                            {codecWarning.type === 'success' && (
+                              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                            )}
+                            <AlertDescription className="text-sm">
+                              {t(codecWarning.key)}
+                            </AlertDescription>
+                          </div>
+                        </Alert>
                       </TableCell>
                     </TableRow>
                   )}

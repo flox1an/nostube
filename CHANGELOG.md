@@ -9,22 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Multi-Video Upload Support**: Upload dialog now supports uploading multiple video files with different quality variants
-  - Created `VideoVariantsTable` component to display all uploaded videos in a table format with quality, dimensions, duration, size, codec information, and upload status
-  - Added "Add Another Video" button to upload additional videos after the first one
+- **Multi-Video Upload Support**: Upload dialog now supports uploading multiple quality variants of the same video
+  - Created `VideoVariantsTable` component to display all uploaded video variants in a compact table format
+  - Added "Add Another Quality/Resolution" button to upload the same video in different resolutions (e.g., 1080p, 720p, 480p)
   - Each video variant gets its own `imeta` tag in the published Nostr event
   - Extracted reusable video processing utilities to `lib/video-processing.ts` for handling video metadata extraction
   - Added quality label generation (4K, 1080p, 720p, 480p, 360p) based on video dimensions
-  - **Codec Warnings**: Each video shows codec compatibility warnings (AV1, VP9, H.265, H.264) with color-coded icons
+  - **Codec Warnings**: Each video shows codec compatibility warnings as dedicated table rows below each video
     - Red alert for AV1/VP9 (not supported on iOS/Safari)
     - Yellow warning for H.265 hev1 (not on iOS)
     - Blue info for H.265 hvc1 (widely supported)
     - Green checkmark for H.264 (best compatibility)
-    - Expandable details section shows full codec warning message
-  - **Upload Status Display**: Compact status column in table shows upload and mirror progress
-    - Green checkmark icon with count shows number of initial upload servers (with tooltip listing server hostnames)
-    - Blue copy icon with count shows number of mirror servers (with tooltip listing server hostnames)
-    - All uploads are chunked (10MB chunks) for reliable large file uploads
+    - Warnings displayed as full-width alert banners directly below each video row
+  - **Compact Table Layout**: Optimized table design for clarity
+    - Combined video and audio codec into single two-line cell (V: codec / A: codec)
+    - Status column shows upload and mirror progress with tooltips
+    - Green checkmark icon with count shows number of initial upload servers
+    - Blue copy icon with count shows number of mirror servers
+  - **Upload Progress**: Progress bar visible during chunked uploads (10MB chunks)
+    - Shows percentage and current chunk progress during upload
     - Automatic mirroring to configured mirror servers after initial upload completes
   - Table includes preview functionality to watch any uploaded video before publishing
   - Remove functionality to delete individual video variants (minimum one required)

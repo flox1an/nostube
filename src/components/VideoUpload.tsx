@@ -153,9 +153,11 @@ export function VideoUpload() {
                     >
                       <input {...getInputPropsAdditional()} />
                       <Button type="button" variant="outline" className="cursor-pointer">
-                        {t('upload.addAnotherVideo')}
+                        {t('upload.addAnotherQuality')}
                       </Button>
-                      <p className="text-xs text-muted-foreground text-center">{t('upload.tip')}</p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t('upload.addAnotherQualityHint')}
+                      </p>
                     </div>
                   </div>
                 )}

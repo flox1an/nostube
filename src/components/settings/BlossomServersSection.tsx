@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppContext, useUserBlossomServers } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils'
 const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 
 export function BlossomServersSection() {
+  const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const [newServerUrl, setNewServerUrl] = useState('')
   const userBlossomServers = useUserBlossomServers()
@@ -106,16 +108,14 @@ export function BlossomServersSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Blossom Servers</CardTitle>
-        <CardDescription>Manage the Blossom servers used for file uploads.</CardDescription>
+        <CardTitle>{t('settings.blossom.title')}</CardTitle>
+        <CardDescription>{t('settings.blossom.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
             {(config.blossomServers?.length ?? 0) === 0 ? (
-              <p className="text-muted-foreground">
-                No Blossom servers configured. Add some below or reset to defaults.
-              </p>
+              <p className="text-muted-foreground">{t('settings.blossom.noServers')}</p>
             ) : (
               <ScrollArea className="w-full rounded-md border p-4">
                 <ul className="space-y-2">
@@ -135,7 +135,9 @@ export function BlossomServersSection() {
                                   : 'bg-orange-500 hover:bg-orange-500/90'
                               )}
                             >
-                              {tag}
+                              {t(
+                                `settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`
+                              )}
                             </Badge>
                           ))}
                         </div>
@@ -143,8 +145,12 @@ export function BlossomServersSection() {
                       <div className="flex items-center gap-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Edit tags">
-                              <span className="sr-only">Edit tags</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={t('auth.account.editTags')}
+                            >
+                              <span className="sr-only">{t('auth.account.editTags')}</span>
                               <Cog className="h-6 w-6" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -155,7 +161,9 @@ export function BlossomServersSection() {
                                 checked={server.tags.includes(tag)}
                                 onCheckedChange={() => handleToggleTag(server.url, tag)}
                               >
-                                {tag}
+                                {t(
+                                  `settings.blossom.${tag === 'mirror' ? 'mirror' : 'initialUpload'}`
+                                )}
                               </DropdownMenuCheckboxItem>
                             ))}
                           </DropdownMenuContent>
@@ -177,7 +185,7 @@ export function BlossomServersSection() {
 
           <div className="flex w-full space-x-2">
             <Input
-              placeholder="Add new Blossom server URL (e.g., https://blossom.nostr.build)"
+              placeholder={t('settings.blossom.addPlaceholder')}
               value={newServerUrl}
               onChange={e => setNewServerUrl(e.target.value)}
               onKeyPress={e => {
@@ -186,11 +194,11 @@ export function BlossomServersSection() {
                 }
               }}
             />
-            <Button onClick={handleAddServer}>Add Server</Button>
+            <Button onClick={handleAddServer}>{t('settings.blossom.addButton')}</Button>
           </div>
 
           <Button variant="outline" onClick={handleResetServers}>
-            Reset to Default Servers
+            {t('settings.blossom.resetButton')}
           </Button>
         </div>
       </CardContent>

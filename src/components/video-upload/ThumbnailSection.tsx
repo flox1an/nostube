@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label'
 import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
 import { type BlobDescriptor } from 'blossom-client-sdk'
+import { useTranslation } from 'react-i18next'
 
 interface ThumbnailSectionProps {
   thumbnailSource: 'generated' | 'upload'
@@ -27,9 +28,11 @@ export function ThumbnailSection({
   onThumbnailDrop,
   thumbnailUploadInfo,
 }: ThumbnailSectionProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="thumbnail">Thumbnail</Label>
+      <Label htmlFor="thumbnail">{t('upload.thumbnail.title')}</Label>
       <RadioGroup
         value={thumbnailSource}
         onValueChange={onThumbnailSourceChange}
@@ -38,11 +41,11 @@ export function ThumbnailSection({
       >
         <div className="flex items-center gap-2">
           <RadioGroupItem value="generated" id="generated-thumb" />
-          <Label htmlFor="generated-thumb">Use generated thumbnail</Label>
+          <Label htmlFor="generated-thumb">{t('upload.thumbnail.useGenerated')}</Label>
         </div>
         <div className="flex items-center gap-2">
           <RadioGroupItem value="upload" id="upload-thumb" />
-          <Label htmlFor="upload-thumb">Upload custom thumbnail</Label>
+          <Label htmlFor="upload-thumb">{t('upload.thumbnail.uploadCustom')}</Label>
         </div>
       </RadioGroup>
 
@@ -50,7 +53,7 @@ export function ThumbnailSection({
         <div className="">
           <img
             src={thumbnailUrl}
-            alt="Generated thumbnail"
+            alt={t('upload.thumbnail.generated')}
             className="rounded border mt-2 max-h-80"
           />
         </div>

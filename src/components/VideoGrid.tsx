@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
 import { useCallback, useMemo } from 'react'
 import { useAppContext } from '@/hooks'
+import { useTranslation } from 'react-i18next'
 
 interface VideoGridProps {
   videos: VideoEvent[]
@@ -21,6 +22,7 @@ export function VideoGrid({
   layoutMode = 'auto',
   playlistParam,
 }: VideoGridProps) {
+  const { t } = useTranslation()
   const width = useWindowWidth()
   const { config } = useAppContext()
 
@@ -142,7 +144,7 @@ export function VideoGrid({
         <Card className="border-dashed">
           <CardContent className="py-12 px-8 text-center">
             <div className="max-w-sm mx-auto space-y-6">
-              <p className="text-muted-foreground">No results found. Try another relay?</p>
+              <p className="text-muted-foreground">{t('video.noVideosFound')}</p>
             </div>
           </CardContent>
         </Card>

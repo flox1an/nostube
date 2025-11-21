@@ -13,6 +13,7 @@ import { nprofileFromEvent } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -31,6 +32,7 @@ export const VideoCard = React.memo(function VideoCard({
   allVideos,
   videoIndex,
 }: VideoCardProps) {
+  const { t } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
@@ -180,7 +182,7 @@ export const VideoCard = React.memo(function VideoCard({
               <div className={cn('w-full bg-muted flex items-center justify-center', aspectRatio)}>
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <ImageOff className="h-12 w-12" />
-                  <span className="text-sm">Thumbnail unavailable</span>
+                  <span className="text-sm">{t('video.thumbnailUnavailable')}</span>
                 </div>
               </div>
             ) : (

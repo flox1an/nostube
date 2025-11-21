@@ -72,6 +72,8 @@ const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({
   link: '/video/test',
   textTracks: [],
   contentWarning: undefined,
+  videoVariants: [],
+  thumbnailVariants: [],
   ...overrides,
 })
 

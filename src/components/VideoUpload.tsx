@@ -88,7 +88,7 @@ export function VideoUpload() {
 
   return (
     <>
-      <Card>
+      <Card className="max-w-4xl mx-auto">
         {/* Info bar above drop zone */}
         <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
           <div className="text-sm text-muted-foreground flex flex-col gap-1">

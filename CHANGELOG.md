@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Debug Dialog Infinite Checks**: Fixed server availability checks running continuously every second in Debug dialog
+  - Root cause: `checkAllAvailability` function was recreated on every state update, triggering infinite useEffect loop
+  - Solution: Store function in ref and only trigger check on dialog open transition (false → true)
+  - Now checks run only once when dialog opens instead of continuously
+
 ### Added
 
 - **Multiple Video Quality Variants Support**: Videos can now have multiple quality variants (e.g., 1080p, 720p, 480p)

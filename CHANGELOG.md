@@ -58,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Mirror Dialog Auto-Recheck**: Mirror Video dialog now automatically rechecks server availability after successful mirroring
+  - Added `onMirrorComplete` callback prop to `MirrorVideoDialog`
+  - Automatically triggers availability recheck after successful or partial mirror completion
+  - Users can immediately see the video is now available on newly mirrored servers
+  - Improves UX by confirming mirror operation worked without manual refresh
+
 - **Debug Logging Throttling**: Reduced excessive console logging during video playback
   - `useUserBlossomServers` hook now throttles debug logs to prevent spam
   - Only logs when values actually change (server count, user pubkey) or once every 10 seconds

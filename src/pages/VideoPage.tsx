@@ -502,6 +502,7 @@ export function VideoPage() {
           serverList={serverList}
           serverAvailability={serverAvailability}
           isCheckingAvailability={isChecking}
+          onMirrorComplete={checkAvailability}
         />
       )}
     </>

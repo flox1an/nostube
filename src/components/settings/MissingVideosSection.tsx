@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
-import { enUS, de, fr, es } from 'date-fns/locale'
 import { RefreshCw, Trash2 } from 'lucide-react'
+import { getDateLocale } from '@/lib/date-locale'
 
 export function MissingVideosSection() {
   const { t, i18n } = useTranslation()
-  const dateLocale =
-    i18n.language === 'de' ? de : i18n.language === 'fr' ? fr : i18n.language === 'es' ? es : enUS
+  const dateLocale = getDateLocale(i18n.language)
   const { getAllMissingVideos, clearMissingVideo, clearAllMissing, getMissingCount } =
     useMissingVideos()
 

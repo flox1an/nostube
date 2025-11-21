@@ -38,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated 6 components to use centralized utility: `VideoCard`, `VideoInfoSection`, `VideoComments`, `MissingVideosSection`, `VideoSuggestions`, `ShortsVideoPage`
     - Dates and relative times (e.g., "3 hours ago") now display in the user's selected language
 
+### Fixed
+
+- **AuthorPage Video Loading**: Fixed AuthorPage videos not loading, with skeleton staying visible indefinitely
+  - Root cause: Reset effect in `useInfiniteTimeline` triggered on initial mount when loader was first defined
+  - The reset would cancel the initial load that was just started by the trigger effect
+  - Solution: Changed initial mount check from `if (!loaderRef.current && !loader)` to `if (loaderRef.current === undefined)`
+  - Now properly handles both cases: loader undefined or loader defined on first render
+  - Only triggers reset when loader changes from a previous non-undefined value
+  - Fixes AuthorPage and any other pages where loader is defined immediately on mount
+
 ### Changed
 
 - **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions

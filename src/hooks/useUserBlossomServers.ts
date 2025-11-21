@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventModel } from 'applesauce-react/hooks'
 import { UserBlossomServersModel } from 'applesauce-core/models'
+import { isBlossomServerBlocked } from '@/constants/relays'
 
 export function useUserBlossomServers() {
   const { user } = useCurrentUser()
@@ -13,8 +14,11 @@ export function useUserBlossomServers() {
   const blossomServers =
     useEventModel(UserBlossomServersModel, user?.pubkey ? [user.pubkey] : null) || []
 
-  // Convert URL objects to strings for compatibility - memoized to prevent infinite loops
-  const serverUrls = useMemo(() => blossomServers.map(url => url.toString()), [blossomServers])
+  // Convert URL objects to strings and filter out blocked servers - memoized to prevent infinite loops
+  const serverUrls = useMemo(
+    () => blossomServers.map(url => url.toString()).filter(url => !isBlossomServerBlocked(url)),
+    [blossomServers]
+  )
 
   // Memoize result object to prevent infinite re-renders
   const result = useMemo(

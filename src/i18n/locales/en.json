@@ -272,7 +272,9 @@
       "addButton": "Add Server",
       "resetButton": "Reset to Default Servers",
       "mirror": "mirror",
-      "initialUpload": "initial upload"
+      "initialUpload": "initial upload",
+      "blockedServer": "Server Blocked",
+      "blockedServerDescription": "This server re-encodes videos and serves low-quality content. It cannot be added."
     },
     "caching": {
       "title": "Media Caching Servers",

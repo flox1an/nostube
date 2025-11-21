@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Blossom Server Filtering**: Added automatic filtering of cdn.nostrcheck.me from all blossom server lists
+  - cdn.nostrcheck.me re-encodes videos and serves low-quality content
+  - Blocked server list defined in `BLOCKED_BLOSSOM_SERVERS` constant in `src/constants/relays.ts`
+  - Filtering applied in multiple locations:
+    - `useUserBlossomServers` hook filters user's NIP-63 servers at source
+    - `BlossomServerSync` component filters when syncing user servers to config
+    - `BlossomServersSection` settings UI prevents manual addition with toast notification
+  - Added translation strings for blocked server messages in all 4 languages (en, de, es, fr)
+  - Created `isBlossomServerBlocked()` helper function for consistent checking across the app
+
+### Added
+
 - **Video Notes Page**: New page for viewing and reposting videos from Kind 1 notes
   - Created `/video-notes` route to display all Kind 1 notes containing videos
   - `useVideoNotes` hook loads user's Kind 1 notes and extracts video URLs from content and imeta tags

@@ -272,7 +272,9 @@
       "addButton": "Agregar Servidor",
       "resetButton": "Restablecer a Servidores Predeterminados",
       "mirror": "replicar",
-      "initialUpload": "subida inicial"
+      "initialUpload": "subida inicial",
+      "blockedServer": "Servidor bloqueado",
+      "blockedServerDescription": "Este servidor recodifica videos y sirve contenido de baja calidad. No se puede agregar."
     },
     "caching": {
       "title": "Servidores de Caché de Medios",

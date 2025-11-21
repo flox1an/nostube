@@ -14,8 +14,9 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu'
-import { presetBlossomServers } from '@/constants/relays'
+import { presetBlossomServers, isBlossomServerBlocked } from '@/constants/relays'
 import { cn } from '@/lib/utils'
+import { toast } from '@/hooks/useToast'
 
 const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 
@@ -40,6 +41,18 @@ export function BlossomServersSection() {
   const handleAddServer = () => {
     if (newServerUrl.trim()) {
       const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
+
+      // Block servers that re-encode videos
+      if (isBlossomServerBlocked(normalizedUrl)) {
+        toast({
+          title: t('settings.blossom.blockedServer'),
+          description: t('settings.blossom.blockedServerDescription'),
+          variant: 'destructive',
+        })
+        setNewServerUrl('')
+        return
+      }
+
       updateConfig(currentConfig => {
         const servers = currentConfig.blossomServers || []
         if (servers.some(s => s.url === normalizedUrl)) return currentConfig
@@ -64,11 +77,13 @@ export function BlossomServersSection() {
     if (userBlossomServers.data && userBlossomServers.data?.length > 0) {
       updateConfig(currentConfig => ({
         ...currentConfig,
-        blossomServers: userBlossomServers.data.map(s => ({
-          url: s,
-          name: s.replace(/^https?:\/\//, ''),
-          tags: [],
-        })),
+        blossomServers: userBlossomServers.data
+          .filter(s => !isBlossomServerBlocked(s))
+          .map(s => ({
+            url: s,
+            name: s.replace(/^https?:\/\//, ''),
+            tags: [],
+          })),
       }))
     } else {
       updateConfig(currentConfig => ({

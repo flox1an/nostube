@@ -3,6 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
 import { type BlossomServerTag } from '@/contexts/AppContext'
+import { isBlossomServerBlocked } from '@/constants/relays'
 
 /**
  * Automatically syncs user's NIP-63 (kind 10063) blossom servers to app config.
@@ -39,12 +40,15 @@ export function BlossomServerSync() {
     const currentUrls = new Set(currentServers.map(s => s.url))
     console.log('  Current server URLs:', Array.from(currentUrls))
 
-    // Find new servers (not already in config)
+    // Find new servers (not already in config, and not blocked)
     const newServers = userBlossomServers.data
       .filter(url => {
         const exists = currentUrls.has(url)
-        console.log(`    Checking ${url}: ${exists ? 'already exists' : 'NEW'}`)
-        return !exists
+        const blocked = isBlossomServerBlocked(url)
+        console.log(
+          `    Checking ${url}: ${exists ? 'already exists' : blocked ? 'BLOCKED' : 'NEW'}`
+        )
+        return !exists && !blocked
       })
       .map(url => ({
         url,

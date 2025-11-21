@@ -256,11 +256,39 @@ export function processEvent(
       .map(tag => parseImetaTag(tag))
       .filter((v): v is VideoVariant => v !== null)
 
+    // Extract thumbnail variants from 'image' fields in imeta tags
+    // Multiple 'image' fields in the same imeta tag are fallback URLs for the SAME thumbnail
+    const thumbnailsFromImeta: VideoVariant[] = []
+    for (const imetaTag of imetaTags) {
+      const imageUrls: string[] = []
+      for (let i = 1; i < imetaTag.length; i++) {
+        const firstSpace = imetaTag[i].indexOf(' ')
+        if (firstSpace !== -1) {
+          const key = imetaTag[i].slice(0, firstSpace)
+          const value = imetaTag[i].slice(firstSpace + 1)
+          if (key === 'image' && value) {
+            imageUrls.push(value)
+          }
+        }
+      }
+      // Create a single thumbnail variant with first URL as primary and rest as fallbacks
+      if (imageUrls.length > 0) {
+        thumbnailsFromImeta.push({
+          url: imageUrls[0],
+          fallbackUrls: imageUrls.slice(1),
+          mimeType: 'image/jpeg', // Default mime type for images
+        })
+      }
+    }
+
     // Separate video variants from thumbnail variants
     const videoVariants = sortVideoVariantsByQuality(
       allVariants.filter(v => v.mimeType?.startsWith('video/'))
     )
-    const thumbnailVariants = allVariants.filter(v => v.mimeType?.startsWith('image/'))
+    const thumbnailVariants = [
+      ...allVariants.filter(v => v.mimeType?.startsWith('image/')),
+      ...thumbnailsFromImeta,
+    ]
 
     // For backward compatibility, use first imeta tag data
     const imetaTag = imetaTags[0]

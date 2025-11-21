@@ -61,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Thumbnail Variants Not Showing in Debug Dialog**: Fixed thumbnails not appearing in Debug dialog when images are defined in imeta tags
+  - Root cause: `image` fields in imeta tags were collected but not converted into `VideoVariant` objects for `thumbnailVariants` array
+  - Solution: Extract all `image` URLs from imeta tags and create thumbnail variants with first URL as primary and rest as fallbacks
+  - Multiple `image` fields in the same imeta tag are now correctly treated as alternative URLs for the same thumbnail
+  - Debug dialog now correctly shows thumbnail tabs with server availability and fallback URLs
+  - Affects events with `image` fields in imeta tags (e.g., events with multiple thumbnail URLs on different servers)
+
 - **Debug Dialog Infinite Checks**: Fixed server availability checks running continuously every second in Debug dialog
   - Root cause: `checkAllAvailability` function was recreated on every state update, triggering infinite useEffect loop
   - Solution: Store function in ref and only trigger check on dialog open transition (false → true)

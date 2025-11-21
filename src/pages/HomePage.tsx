@@ -3,8 +3,10 @@ import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function HomePage() {
+  const { t } = useTranslation()
   const relays = useStableRelays()
 
   // Memoize the loader to prevent recreation on every render
@@ -21,8 +23,8 @@ export function HomePage() {
       exhausted={exhausted}
       onLoadMore={loadMore}
       layoutMode="horizontal"
-      emptyMessage="No videos found."
-      exhaustedMessage="No more videos to load."
+      emptyMessage={t('pages.home.noVideos')}
+      exhaustedMessage={t('pages.home.noMore')}
       className="sm:px-4 sm:py-4"
     />
   )

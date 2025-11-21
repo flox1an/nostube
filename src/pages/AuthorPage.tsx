@@ -22,6 +22,7 @@ import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
+import { useTranslation } from 'react-i18next'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 
@@ -40,6 +41,7 @@ function AuthorProfile({
   joinedDate: Date
   className: string
 }) {
+  const { t } = useTranslation()
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
@@ -59,7 +61,9 @@ function AuthorProfile({
       </div>
       <div className="flex-1 min-w-0">
         <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
-        <p className="text-sm text-muted-foreground">Joined {joinedDate.toLocaleDateString()}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('pages.author.joined', { date: joinedDate.toLocaleDateString() })}
+        </p>
         {metadata?.about && (
           <RichTextContent
             content={metadata.about}
@@ -72,6 +76,7 @@ function AuthorProfile({
 }
 
 export function AuthorPage() {
+  const { t } = useTranslation()
   const { nprofile } = useParams<{ nprofile: string }>()
   const [activeTab, setActiveTab] = useState<Tabs>('videos')
   const setShortsFeedVideos = useShortsFeedStore(state => state.setVideos)
@@ -286,18 +291,18 @@ export function AuthorPage() {
         <TabsList>
           {videos.length > 0 && (
             <TabsTrigger value="videos" className="cursor-pointer">
-              All videos ({videos.length})
+              {t('pages.author.allVideos', { count: videos.length })}
             </TabsTrigger>
           )}
           {shorts.length > 0 && (
             <TabsTrigger value="shorts" className="cursor-pointer">
-              All shorts ({shorts.length})
+              {t('pages.author.allShorts', { count: shorts.length })}
             </TabsTrigger>
           )}
 
           {isLoadingPlaylists && (
             <TabsTrigger value="playlists-loading" disabled>
-              Loading playlists...
+              {t('pages.author.loadingPlaylists')}
             </TabsTrigger>
           )}
           {playlists.map(playlist => (
@@ -315,7 +320,7 @@ export function AuthorPage() {
             </TabsTrigger>
           ))}
           <TabsTrigger value="tags" className="cursor-pointer">
-            Tags
+            {t('pages.author.tags')}
           </TabsTrigger>
         </TabsList>
 
@@ -336,9 +341,9 @@ export function AuthorPage() {
                 loading={loading && videos.length > 0}
                 exhausted={exhausted}
                 itemCount={videos.length}
-                emptyMessage="No videos found."
-                loadingMessage="Loading more videos..."
-                exhaustedMessage="No more videos to load."
+                emptyMessage={t('pages.author.noVideos')}
+                loadingMessage={t('pages.author.loadingMore')}
+                exhaustedMessage={t('pages.author.noMore')}
               />
             </>
           )}
@@ -361,9 +366,9 @@ export function AuthorPage() {
                 loading={loading && shorts.length > 0}
                 exhausted={exhausted}
                 itemCount={shorts.length}
-                emptyMessage="No shorts found."
-                loadingMessage="Loading more shorts..."
-                exhaustedMessage="No more shorts to load."
+                emptyMessage={t('pages.author.noShorts')}
+                loadingMessage={t('pages.author.loadingMoreShorts')}
+                exhaustedMessage={t('pages.author.noMoreShorts')}
               />
             </>
           )}

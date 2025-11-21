@@ -3,8 +3,10 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useStableRelays, useTimelineLoader } from '@/hooks'
 import { useMemo, useEffect } from 'react'
 import { getKindsForType } from '@/lib/video-types'
+import { useTranslation } from 'react-i18next'
 
 export function HashtagPage() {
+  const { t } = useTranslation()
   const { tag } = useParams<{ tag: string }>()
   const relays = useStableRelays()
 
@@ -40,7 +42,7 @@ export function HashtagPage() {
   return (
     <div className="sm:p-4">
       <div className="p-2">
-        <h1 className="text-2xl font-bold mb-4">#{tag}</h1>
+        <h1 className="text-2xl font-bold mb-4">{t('pages.hashtag.title', { tag })}</h1>
       </div>
 
       <VideoTimelinePage
@@ -49,7 +51,7 @@ export function HashtagPage() {
         exhausted={false}
         onLoadMore={loadMore}
         layoutMode="auto"
-        emptyMessage={`No videos found with hashtag #${tag}.`}
+        emptyMessage={t('pages.hashtag.noVideos', { tag })}
         exhaustedMessage=""
         className=""
       />

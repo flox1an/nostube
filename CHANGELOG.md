@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Page Components Internationalization**: Updated all page components to use react-i18next for internationalization
+  - **HomePage**: Empty states and loading messages now use translation keys
+  - **ShortsPage**: Empty states and loading messages now use translation keys
+  - **HistoryPage**: Title, clear history dialog, and empty state now use translation keys
+  - **LikedVideosPage**: Title and empty states now use translation keys
+  - **SearchPage**: Empty state and search results text now use translation keys
+  - **HashtagPage**: Title and empty state now use translation keys with dynamic tag interpolation
+  - **SubscriptionsPage**: Empty states now use translation keys
+  - **NotFound (404 page)**: All text (code, title, and return link) now uses translation keys
+  - **AuthorPage**: Various labels and empty states now use translation keys including:
+    - Joined date with interpolation
+    - All videos/shorts count with interpolation
+    - Loading playlists message
+    - Tags label
+    - Videos/shorts empty states and loading messages
+  - All pages now support multiple languages through the i18n system
+  - Uses interpolation for dynamic values (e.g., counts, dates, search queries)
+
 ### Changed
 
 - **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions

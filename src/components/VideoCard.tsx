@@ -13,6 +13,8 @@ import { nprofileFromEvent } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -31,11 +33,15 @@ export const VideoCard = React.memo(function VideoCard({
   allVideos,
   videoIndex,
 }: VideoCardProps) {
+  const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const { setVideos } = useShortsFeedStore()
+
+  // Map i18n language codes to date-fns locales
+  const dateLocale = getDateLocale(i18n.language)
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -180,7 +186,7 @@ export const VideoCard = React.memo(function VideoCard({
               <div className={cn('w-full bg-muted flex items-center justify-center', aspectRatio)}>
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <ImageOff className="h-12 w-12" />
-                  <span className="text-sm">Thumbnail unavailable</span>
+                  <span className="text-sm">{t('video.thumbnailUnavailable')}</span>
                 </div>
               </div>
             ) : (
@@ -267,6 +273,7 @@ export const VideoCard = React.memo(function VideoCard({
               <div className="text-xs text-muted-foreground">
                 {formatDistance(new Date(video.created_at * 1000), new Date(), {
                   addSuffix: true,
+                  locale: dateLocale,
                 })}
               </div>
             </div>

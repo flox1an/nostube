@@ -1,5 +1,45 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
+
+// Initialize i18n for tests
+i18n.use(initReactI18next).init({
+  lng: 'en',
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: {
+        common: {
+          beta: 'BETA',
+          cancel: 'Cancel',
+          delete: 'Delete',
+          deleting: 'Deleting...',
+          loading: 'Loading...',
+          loadingMore: 'Loading more...',
+          retryNow: 'Retry Now',
+        },
+        video: {
+          noVideosFound: 'No videos found.',
+          noMoreVideos: 'No more videos to load.',
+          thumbnailUnavailable: 'Thumbnail unavailable',
+          unavailable: 'Video Unavailable',
+          notFound: 'Video Not Found',
+        },
+        pages: {
+          search: {
+            emptyState: 'Enter a search query to find videos',
+            resultsFor: 'Search Results for: {{query}}',
+            noResults: 'No videos found for "{{query}}".',
+          },
+        },
+      },
+    },
+  },
+  interpolation: {
+    escapeValue: false,
+  },
+})
 
 // Mock nostr-idb module since it's only used as a cache
 // This prevents IndexedDB initialization errors in tests

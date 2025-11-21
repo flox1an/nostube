@@ -36,8 +36,10 @@ import { VideoPageLayout } from '@/components/VideoPageLayout'
 import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
 import { Button } from '@/components/ui/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
+import { useTranslation } from 'react-i18next'
 
 export function VideoPage() {
+  const { t } = useTranslation()
   const { config } = useAppContext()
   const { nevent } = useParams<{ nevent: string }>()
   const [searchParams] = useSearchParams()
@@ -315,7 +317,7 @@ export function VideoPage() {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = buildShareUrl(baseUrl, nevent || '', includeTimestamp, currentPlayPos)
   const fullUrl = shareUrl
-  const title = video?.title || 'Watch this video'
+  const title = video?.title || t('video.watchThisVideo')
   const thumbnailUrl = video?.images[0] || ''
 
   const shareLinks = useMemo(() => {
@@ -390,13 +392,9 @@ export function VideoPage() {
       <div className="max-w-4xl mx-auto p-6">
         <Alert variant={isMissing ? 'destructive' : 'default'}>
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{isMissing ? 'Video Unavailable' : 'Video Not Found'}</AlertTitle>
+          <AlertTitle>{isMissing ? t('video.unavailable') : t('video.notFound')}</AlertTitle>
           <AlertDescription className="flex flex-col gap-4">
-            <p>
-              {isMissing
-                ? 'This video has been marked as unavailable because it could not be loaded from any source. It will be automatically retried later.'
-                : 'This video could not be found. It may have been deleted or the event ID is incorrect.'}
-            </p>
+            <p>{isMissing ? t('video.unavailableDescription') : t('video.notFoundDescription')}</p>
             {isMissing && eventId && (
               <Button
                 onClick={() => {
@@ -406,7 +404,7 @@ export function VideoPage() {
                 variant="outline"
                 className="w-fit"
               >
-                Retry Now
+                {t('common.retryNow')}
               </Button>
             )}
           </AlertDescription>

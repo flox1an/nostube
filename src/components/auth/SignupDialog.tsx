@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog.tsx'
 import { toast, useLoginActions } from '@/hooks'
 import { generateSecretKey, nip19 } from 'nostr-tools'
+import { useTranslation } from 'react-i18next'
 
 interface SignupDialogProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ interface SignupDialogProps {
 }
 
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation()
   const [step, setStep] = useState<'generate' | 'download' | 'done'>('generate')
   const [isLoading, setIsLoading] = useState(false)
   const [nsec, setNsec] = useState('')
@@ -39,8 +41,8 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Failed to generate key:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to generate key. Please try again.',
+        title: t('auth.signup.errorTitle'),
+        description: t('auth.signup.errorMessage'),
         variant: 'destructive',
       })
     } finally {
@@ -65,8 +67,8 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     document.body.removeChild(a)
 
     toast({
-      title: 'Key downloaded',
-      description: 'Your key has been downloaded. Keep it safe!',
+      title: t('auth.signup.keyDownloaded'),
+      description: t('auth.signup.keyDownloadedMessage'),
     })
   }
 
@@ -78,14 +80,13 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
       onClose()
 
       toast({
-        title: 'Account created',
-        description: 'You are now logged in.',
+        title: t('auth.signup.accountCreated'),
+        description: t('auth.signup.accountCreatedMessage'),
       })
     } catch (error) {
       toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Failed to create account. Please try again.',
+        title: t('auth.signup.errorTitle'),
+        description: error instanceof Error ? error.message : t('auth.signup.errorMessage'),
         variant: 'destructive',
       })
       setIsLoading(false)
@@ -97,14 +98,14 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
       <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
-            {step === 'generate' && 'Create Your Account'}
-            {step === 'download' && 'Download Your Key'}
-            {step === 'done' && 'Setting Up Your Account'}
+            {step === 'generate' && t('auth.signup.title')}
+            {step === 'download' && t('auth.signup.downloadTitle')}
+            {step === 'done' && t('auth.signup.settingUpTitle')}
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground mt-2">
-            {step === 'generate' && 'Generate a secure key for your account'}
-            {step === 'download' && "Keep your key safe - you'll need it to log in"}
-            {step === 'done' && 'Finalizing your account setup'}
+            {step === 'generate' && t('auth.signup.generateDescription')}
+            {step === 'download' && t('auth.signup.keepSafeDescription')}
+            {step === 'done' && t('auth.signup.finalizingDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -115,14 +116,14 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
                 <Key className="w-16 h-16 text-primary" />
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                We'll generate a secure key for your account. You'll need this key to log in later.
+                {t('auth.signup.introText')}
               </p>
               <Button
                 className="w-full rounded-full py-6"
                 onClick={generateKey}
                 disabled={isLoading}
               >
-                {isLoading ? 'Generating key...' : 'Generate my key'}
+                {isLoading ? t('auth.signup.generating') : t('auth.signup.generateButton')}
               </Button>
             </div>
           )}
@@ -134,22 +135,22 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                <p className="font-medium text-red-500">Important:</p>
+                <p className="font-medium text-red-500">{t('auth.signup.important')}</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>This is your only way to access your account</li>
-                  <li>Store it somewhere safe</li>
-                  <li>Never share this key with anyone</li>
+                  <li>{t('auth.signup.importantItem1')}</li>
+                  <li>{t('auth.signup.importantItem2')}</li>
+                  <li>{t('auth.signup.importantItem3')}</li>
                 </ul>
               </div>
 
               <div className="flex flex-col space-y-3">
                 <Button variant="outline" className="w-full" onClick={downloadKey}>
                   <Download className="w-4 h-4 mr-2" />
-                  Download Key
+                  {t('auth.signup.downloadKey')}
                 </Button>
 
                 <Button className="w-full rounded-full py-6" onClick={finishSignup}>
-                  I've saved my key, continue
+                  {t('auth.signup.savedKey')}
                 </Button>
               </div>
             </div>

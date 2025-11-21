@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMissingVideos } from '@/hooks/useMissingVideos'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -6,8 +7,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
 import { RefreshCw, Trash2 } from 'lucide-react'
+import { getDateLocale } from '@/lib/date-locale'
 
 export function MissingVideosSection() {
+  const { t, i18n } = useTranslation()
+  const dateLocale = getDateLocale(i18n.language)
   const { getAllMissingVideos, clearMissingVideo, clearAllMissing, getMissingCount } =
     useMissingVideos()
 
@@ -28,8 +32,8 @@ export function MissingVideosSection() {
 
   const formatRetryTime = (retryAfter: number | undefined) => {
     if (!retryAfter) return 'Unknown'
-    if (now >= retryAfter) return 'Ready to retry'
-    return `Retry in ${formatDistance(retryAfter, now)}`
+    if (now >= retryAfter) return t('settings.missingVideos.ready')
+    return `Retry in ${formatDistance(retryAfter, now, { locale: dateLocale })}`
   }
 
   const getStatusBadge = (video: {
@@ -40,41 +44,38 @@ export function MissingVideosSection() {
     const isPermanent = now - video.failedAt > 7 * 24 * 60 * 60 * 1000 // 7 days
 
     if (isPermanent) {
-      return <Badge variant="destructive">Permanent</Badge>
+      return <Badge variant="destructive">{t('settings.missingVideos.permanent')}</Badge>
     }
 
     if (video.retryAfter && now >= video.retryAfter) {
       return (
         <Badge variant="default" className="bg-green-500">
-          Ready to Retry
+          {t('settings.missingVideos.readyToRetry')}
         </Badge>
       )
     }
 
-    return <Badge variant="secondary">Cooldown</Badge>
+    return <Badge variant="secondary">{t('settings.missingVideos.cooldown')}</Badge>
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Missing Videos</span>
+          <span>{t('settings.missingVideos.title')}</span>
           {missingCount > 0 && (
             <Badge variant="outline" className="ml-2">
-              {missingCount} filtered
+              {t('settings.missingVideos.filtered', { count: missingCount })}
             </Badge>
           )}
         </CardTitle>
-        <CardDescription>
-          Videos that failed to load from all sources are automatically filtered from your feed.
-          They will be retried automatically based on the schedule below.
-        </CardDescription>
+        <CardDescription>{t('settings.missingVideos.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {entries.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No missing videos. All videos are loading successfully!
+              {t('settings.missingVideos.noMissing')}
             </p>
           ) : (
             <>
@@ -94,14 +95,19 @@ export function MissingVideosSection() {
                         </div>
                         <div className="text-sm space-y-1">
                           <p className="text-muted-foreground">
-                            Failed: {formatDistance(video.failedAt, now, { addSuffix: true })}
+                            {t('settings.missingVideos.failed')}{' '}
+                            {formatDistance(video.failedAt, now, {
+                              addSuffix: true,
+                              locale: dateLocale,
+                            })}
                           </p>
                           <p className="text-muted-foreground">
-                            Attempts: {video.attemptCount} • {formatRetryTime(video.retryAfter)}
+                            {t('settings.missingVideos.attempts')} {video.attemptCount} •{' '}
+                            {formatRetryTime(video.retryAfter)}
                           </p>
                           <details className="text-xs text-muted-foreground">
                             <summary className="cursor-pointer hover:text-foreground">
-                              Show URLs ({video.urls.length})
+                              {t('settings.missingVideos.showUrls')} ({video.urls.length})
                             </summary>
                             <ul className="mt-2 space-y-1 pl-4">
                               {video.urls.map((url, i) => (
@@ -120,7 +126,7 @@ export function MissingVideosSection() {
                           onClick={() => {
                             clearMissingVideo(videoId)
                           }}
-                          title="Retry now"
+                          title={t('settings.missingVideos.retryNow')}
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
@@ -128,7 +134,7 @@ export function MissingVideosSection() {
                           variant="ghost"
                           size="icon"
                           onClick={() => clearMissingVideo(videoId)}
-                          title="Remove from list"
+                          title={t('settings.missingVideos.remove')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -140,17 +146,17 @@ export function MissingVideosSection() {
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={clearAllMissing} className="w-full">
-                  Clear All ({entries.length})
+                  {t('settings.missingVideos.clearAll')} ({entries.length})
                 </Button>
               </div>
 
               <div className="text-sm text-muted-foreground space-y-1 p-4 bg-muted rounded-lg">
-                <p className="font-semibold">Retry Schedule:</p>
+                <p className="font-semibold">{t('settings.missingVideos.scheduleTitle')}</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>1st failure: Retry after 1 hour</li>
-                  <li>2nd failure: Retry after 6 hours</li>
-                  <li>3rd+ failures: Retry after 24 hours</li>
-                  <li>After 7 days: Marked as permanently unavailable</li>
+                  <li>{t('settings.missingVideos.schedule1')}</li>
+                  <li>{t('settings.missingVideos.schedule2')}</li>
+                  <li>{t('settings.missingVideos.schedule3')}</li>
+                  <li>{t('settings.missingVideos.schedule4')}</li>
                 </ul>
               </div>
             </>

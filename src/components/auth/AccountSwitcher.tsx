@@ -18,6 +18,7 @@ import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '../ui/button'
+import { useTranslation } from 'react-i18next'
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void
@@ -55,6 +56,7 @@ function AccountSwitchItem({
 }
 
 export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
+  const { t } = useTranslation()
   const activeAccount = useActiveAccount()
   const accountManager = useAccountManager()
   const profile = useProfile(activeAccount ? { pubkey: activeAccount?.pubkey } : undefined)
@@ -104,7 +106,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Playlists</span>
+          <span>{t('auth.account.playlists')}</span>
         </DropdownMenuItem>
         <ThemeToggle />
         <DropdownMenuSeparator />
@@ -115,7 +117,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
 
         {otherAccounts.length > 0 && (
           <>
-            <div className="font-medium text-sm px-2 py-1.5">Switch Account</div>
+            <div className="font-medium text-sm px-2 py-1.5">{t('auth.account.switchAccount')}</div>
             {otherAccounts.map(account => (
               <AccountSwitchItem
                 key={account.pubkey}
@@ -132,7 +134,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Add another account</span>
+          <span>{t('auth.account.addAccount')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
@@ -148,7 +150,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500"
         >
           <LogOut className="w-4 h-4" />
-          <span>Log out</span>
+          <span>{t('auth.account.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

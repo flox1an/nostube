@@ -34,6 +34,8 @@ import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { type VideoEvent } from '../utils/video-event'
 import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
+import { useTranslation } from 'react-i18next'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface VideoInfoSectionProps {
   video: VideoEvent | null
@@ -87,9 +89,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   serverAvailability,
   onCheckAvailability,
 }: VideoInfoSectionProps) {
+  const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
+
+  // Map i18n language codes to date-fns locales
+  const dateLocale = getDateLocale(i18n.language)
 
   if (isLoading) {
     return (
@@ -129,7 +135,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     await publish({
       event: {
         kind: 5,
-        content: 'Deleted by author',
+        content: t('video.deletedByAuthor'),
         tags: [['e', video.id]],
         created_at: nowInSecs(),
       },
@@ -161,6 +167,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 {video?.created_at &&
                   formatDistance(new Date(video.created_at * 1000), new Date(), {
                     addSuffix: true,
+                    locale: dateLocale,
                   })}
               </div>
             </div>
@@ -201,7 +208,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 {onMirror && (
                   <DropdownMenuItem onSelect={onMirror}>
                     <Copy className="w-5 h-5" />
-                    &nbsp; Mirror Video
+                    &nbsp; {t('video.mirrorVideo')}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onSelect={() => setShowDebugDialog(true)}>
@@ -211,7 +218,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 {userPubkey === video.pubkey && (
                   <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
                     <TrashIcon className="w-5 h-5" />
-                    &nbsp; Delete Video
+                    &nbsp; {t('video.deleteVideo')}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -244,20 +251,17 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Video?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this video? This action cannot be undone. A deletion
-              event will be published to all relays.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('video.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('video.deleteConfirmMessage')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeleting}
               onClick={handleDelete}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? t('common.deleting') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

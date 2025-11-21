@@ -3,8 +3,10 @@ import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function ShortsPage() {
+  const { t } = useTranslation()
   const relays = useStableRelays()
 
   // Memoize the loader to prevent recreation on every render
@@ -19,9 +21,9 @@ export function ShortsPage() {
       exhausted={exhausted}
       onLoadMore={loadMore}
       layoutMode="vertical"
-      emptyMessage="No shorts found."
-      loadingMessage="Loading more shorts..."
-      exhaustedMessage="No more shorts to load."
+      emptyMessage={t('pages.shorts.noShorts')}
+      loadingMessage={t('pages.shorts.loadingMore')}
+      exhaustedMessage={t('pages.shorts.noMore')}
       className="sm:px-4 sm:py-4"
     />
   )

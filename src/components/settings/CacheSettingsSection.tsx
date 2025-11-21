@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -15,9 +16,10 @@ import { Trash2, Database, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks'
 
 export function CacheSettingsSection() {
+  const { t } = useTranslation()
   const [showClearDialog, setShowClearDialog] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
-  const [cacheSize, setCacheSize] = useState<string>('Calculating...')
+  const [cacheSize, setCacheSize] = useState<string>(t('settings.cache.calculating'))
 
   const estimateCacheSize = useCallback(async () => {
     try {
@@ -33,10 +35,10 @@ export function CacheSettingsSection() {
   }, [])
 
   const refreshCacheSize = useCallback(async () => {
-    setCacheSize('Calculating...')
+    setCacheSize(t('settings.cache.calculating'))
     const size = await estimateCacheSize()
     setCacheSize(size)
-  }, [estimateCacheSize])
+  }, [estimateCacheSize, t])
 
   // Initial cache size calculation
   useEffect(() => {
@@ -61,8 +63,8 @@ export function CacheSettingsSection() {
     sessionStorage.setItem('clearCacheOnLoad', 'true')
 
     toast({
-      title: 'Clearing Cache',
-      description: 'The app will reload and clear the cache...',
+      title: t('settings.cache.clearingTitle'),
+      description: t('settings.cache.clearingMessage'),
     })
 
     // Reload the page - this will close all DB connections
@@ -78,17 +80,14 @@ export function CacheSettingsSection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            Cache Management
+            {t('settings.cache.title')}
           </CardTitle>
-          <CardDescription>
-            Clear cached events and data to free up storage space. This will remove all locally
-            stored Nostr events.
-          </CardDescription>
+          <CardDescription>{t('settings.cache.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
-              <p className="font-medium">Cache Size</p>
+              <p className="font-medium">{t('settings.cache.cacheSize')}</p>
               <p className="text-sm text-muted-foreground">{cacheSize}</p>
             </div>
             <Button
@@ -97,15 +96,15 @@ export function CacheSettingsSection() {
               onClick={() => void refreshCacheSize()}
               disabled={isClearing}
             >
-              Refresh
+              {t('common.refresh')}
             </Button>
           </div>
 
           <div className="flex items-center justify-between p-4 border rounded-lg border-destructive/50 bg-destructive/5">
             <div>
-              <p className="font-medium text-destructive">Clear All Cache</p>
+              <p className="font-medium text-destructive">{t('settings.cache.clearButton')}</p>
               <p className="text-sm text-muted-foreground">
-                Remove all cached events and data. The app will reload.
+                {t('settings.cache.clearDescription')}
               </p>
             </div>
             <Button
@@ -117,30 +116,26 @@ export function CacheSettingsSection() {
               {isClearing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Clearing...
+                  {t('settings.cache.clearing')}
                 </>
               ) : (
                 <>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Clear Cache
+                  {t('settings.cache.clearButton')}
                 </>
               )}
             </Button>
           </div>
 
           <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-2">What gets cleared:</p>
+            <p className="font-medium mb-2">{t('settings.cache.whatGetsCleared')}</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>All cached Nostr events</li>
-              <li>Event metadata and profiles</li>
-              <li>Timeline data</li>
-              <li>Local database storage (IndexedDB)</li>
+              <li>{t('settings.cache.item1')}</li>
+              <li>{t('settings.cache.item2')}</li>
+              <li>{t('settings.cache.item3')}</li>
+              <li>{t('settings.cache.item4')}</li>
             </ul>
-            <p className="mt-3">
-              <strong>Note:</strong> The app will reload to close database connections before
-              clearing. Your account settings, relay configuration, and app preferences will not be
-              affected.
-            </p>
+            <p className="mt-3">{t('settings.cache.note')}</p>
           </div>
         </CardContent>
       </Card>
@@ -148,17 +143,16 @@ export function CacheSettingsSection() {
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear All Cache?</AlertDialogTitle>
+            <AlertDialogTitle>{t('settings.cache.confirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all cached Nostr events and data from your browser. The
-              app will reload to reinitialize the cache.
+              {t('settings.cache.confirmMessage')}
               <br />
               <br />
-              This action cannot be undone, but events will be re-fetched from relays as needed.
+              {t('settings.cache.confirmWarning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isClearing}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearCache}
               disabled={isClearing}
@@ -167,10 +161,10 @@ export function CacheSettingsSection() {
               {isClearing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Clearing...
+                  {t('settings.cache.clearing')}
                 </>
               ) : (
-                'Clear Cache'
+                t('settings.cache.clearButton')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

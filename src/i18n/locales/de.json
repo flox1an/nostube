@@ -272,7 +272,9 @@
       "addButton": "Server hinzufügen",
       "resetButton": "Auf Standard-Server zurücksetzen",
       "mirror": "spiegeln",
-      "initialUpload": "Initialer Upload"
+      "initialUpload": "Initialer Upload",
+      "blockedServer": "Server blockiert",
+      "blockedServerDescription": "Dieser Server codiert Videos neu und liefert Inhalte mit niedriger Qualität. Er kann nicht hinzugefügt werden."
     },
     "caching": {
       "title": "Medien-Caching-Server",

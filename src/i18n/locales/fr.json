@@ -272,7 +272,9 @@
       "addButton": "Ajouter un serveur",
       "resetButton": "Réinitialiser aux serveurs par défaut",
       "mirror": "duplication",
-      "initialUpload": "mise en ligne initiale"
+      "initialUpload": "mise en ligne initiale",
+      "blockedServer": "Serveur bloqué",
+      "blockedServerDescription": "Ce serveur réencode les vidéos et sert du contenu de faible qualité. Il ne peut pas être ajouté."
     },
     "caching": {
       "title": "Serveurs de mise en cache multimédia",

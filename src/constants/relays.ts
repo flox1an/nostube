@@ -29,3 +29,19 @@ export const presetCachingServers: CachingServer[] = [
     name: 'almond.slidestr.net',
   },
 ]
+
+/**
+ * Blossom servers that should be blocked/filtered out.
+ * These servers re-encode videos and serve low-quality content.
+ */
+export const BLOCKED_BLOSSOM_SERVERS = ['cdn.nostrcheck.me']
+
+/**
+ * Check if a blossom server URL should be blocked.
+ * @param url - The server URL to check (with or without protocol)
+ * @returns true if the server should be blocked
+ */
+export function isBlossomServerBlocked(url: string): boolean {
+  const normalizedUrl = url.toLowerCase()
+  return BLOCKED_BLOSSOM_SERVERS.some(blocked => normalizedUrl.includes(blocked.toLowerCase()))
+}

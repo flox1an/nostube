@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useNavigate } from 'react-router-dom'
-import { UploadServer } from './UploadServer'
 import {
   InputMethodSelector,
   UrlInputSection,
@@ -183,14 +182,6 @@ export function VideoUpload() {
                 </span>
               </div>
             ) : null}
-
-            {/* Server upload/mirror status */}
-            <UploadServer
-              inputMethod={inputMethod}
-              uploadState={uploadState}
-              uploadedBlobs={uploadInfo.videos.length > 0 ? uploadInfo.videos[0].uploadedBlobs : []}
-              mirroredBlobs={uploadInfo.videos.length > 0 ? uploadInfo.videos[0].mirroredBlobs : []}
-            />
 
             {uploadProgress && (
               <div className="space-y-1">

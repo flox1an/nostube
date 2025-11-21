@@ -29,8 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Upload Progress**: Progress bar visible during chunked uploads (10MB chunks)
     - Shows percentage and current chunk progress during upload
     - Automatic mirroring to configured mirror servers after initial upload completes
-  - Table includes preview functionality to watch any uploaded video before publishing
+  - **Video Preview**: Modal dialog for previewing uploaded videos
+    - Click play button to open full-screen preview dialog
+    - Video auto-plays in preview for immediate feedback
+    - Clean modal interface with centered video player
   - Remove functionality to delete individual video variants (minimum one required)
+  - Removed redundant "Uploaded to..." and "Mirrored to..." status display - all server information now shown in table status column
   - All videos share the same thumbnail (no additional thumbnail upload needed)
   - Added internationalization support for all new UI elements (EN, DE, FR, ES)
   - Comprehensive TypeScript interfaces: `VideoVariant` for individual videos, updated `UploadInfo` to array-based structure

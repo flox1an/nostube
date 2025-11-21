@@ -9,12 +9,14 @@ import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { GlobalSearchBar } from '@/components/GlobalSearchBar'
+import { useTranslation } from 'react-i18next'
 
 interface HeaderProps {
   transparent?: boolean
 }
 
 export function Header({ transparent = false }: HeaderProps) {
+  const { t } = useTranslation()
   const { toggleSidebar } = useAppContext()
   const { scrollDirection, isAtTop } = useScrollDirection()
   const isMobile = useIsMobile()
@@ -43,7 +45,7 @@ export function Header({ transparent = false }: HeaderProps) {
             <span className="relative">
               {appTitle.text}
               <span className="absolute -top-1 -right-6 text-[0.5rem] font-semibold text-muted-foreground">
-                BETA
+                {t('common.beta')}
               </span>
             </span>
           </Link>
@@ -56,7 +58,7 @@ export function Header({ transparent = false }: HeaderProps) {
             <Link to="/upload" className="hidden md:block">
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                Upload
+                {t('header.upload')}
               </Button>
             </Link>
           )}

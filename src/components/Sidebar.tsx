@@ -5,8 +5,10 @@ import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
 import { nip19 } from 'nostr-tools'
 import { cn } from '@/lib/utils'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function Sidebar() {
+  const { t } = useTranslation()
   const { user } = useCurrentUser()
   const { config: _config, toggleSidebar } = useAppContext()
   const readRelays = useReadRelays()
@@ -18,24 +20,26 @@ export function Sidebar() {
   }, [pubkey, readRelays])
 
   const navigationItems = [
-    { name: 'Home', icon: Home, href: '/' },
-    { name: 'Shorts', icon: Play, href: '/shorts' },
+    { name: t('navigation.home'), icon: Home, href: '/' },
+    { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
   ]
 
   const libraryItems = [
-    { name: 'Subscriptions', icon: Users, href: '/subscriptions' },
-    { name: 'History', icon: History, href: '/history', disabled: false },
-    { name: 'Playlists', icon: ListVideo, href: '/playlists' },
+    { name: t('navigation.subscriptions'), icon: Users, href: '/subscriptions' },
+    { name: t('navigation.history'), icon: History, href: '/history', disabled: false },
+    { name: t('navigation.playlists'), icon: ListVideo, href: '/playlists' },
     {
-      name: 'Your videos',
+      name: t('navigation.yourVideos'),
       icon: Play,
       href: `/author/${userNprofile}`,
     },
-    { name: 'Watch later', icon: Clock, href: '/watch-later', disabled: true },
-    { name: 'Liked videos', icon: ThumbsUp, href: '/liked-videos' },
+    { name: t('navigation.watchLater'), icon: Clock, href: '/watch-later', disabled: true },
+    { name: t('navigation.likedVideos'), icon: ThumbsUp, href: '/liked-videos' },
   ]
 
-  const configItems = [{ name: 'Settings', icon: Cog, href: '/settings', disabled: false }]
+  const configItems = [
+    { name: t('navigation.settings'), icon: Cog, href: '/settings', disabled: false },
+  ]
 
   return (
     <div className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg pt-4">
@@ -58,7 +62,7 @@ export function Sidebar() {
           <>
             <Separator className="my-4" />
             <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">
-              Library
+              {t('navigation.library')}
             </h2>
             <nav className="px-2">
               {libraryItems.map(item => (
@@ -83,7 +87,7 @@ export function Sidebar() {
 
         <Separator className="my-4" />
         <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">
-          Configuration
+          {t('navigation.configuration')}
         </h2>
         <nav className="px-2">
           {configItems.map(item => (

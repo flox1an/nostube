@@ -13,6 +13,7 @@ import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { Reply } from 'lucide-react'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { useTranslation } from 'react-i18next'
 
 interface Comment {
   id: string
@@ -131,6 +132,7 @@ const CommentItem = React.memo(function CommentItem({
   expandedComments: Set<string>
   onToggleExpanded: (commentId: string) => void
 }) {
+  const { t } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
   const name = metadata?.name || comment.pubkey.slice(0, 8)
   const maxDepth = 5 // Maximum nesting level
@@ -175,7 +177,7 @@ const CommentItem = React.memo(function CommentItem({
               onClick={() => onReply(comment)}
             >
               <Reply className="w-3 h-3 mr-1" />
-              Reply
+              {t('video.comments.replyButton')}
             </Button>
           )}
 
@@ -188,7 +190,9 @@ const CommentItem = React.memo(function CommentItem({
               onClick={() => onToggleExpanded(comment.id)}
             >
               {isExpanded ? '▼' : '▶'} {comment.replies!.length}{' '}
-              {comment.replies!.length === 1 ? 'reply' : 'replies'}
+              {comment.replies!.length === 1
+                ? t('video.comments.reply')
+                : t('video.comments.replies')}
             </Button>
           )}
 
@@ -200,7 +204,7 @@ const CommentItem = React.memo(function CommentItem({
                   ref={textareaRef}
                   value={replyContent || ''}
                   onChange={e => onReplyContentChange(e.target.value)}
-                  placeholder="Write a reply..."
+                  placeholder={t('video.comments.writeReply')}
                   className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
                   rows={1}
                   onKeyDown={e => {
@@ -219,13 +223,13 @@ const CommentItem = React.memo(function CommentItem({
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <Button type="submit" disabled={!replyContent?.trim()} size="sm">
-                  Reply
+                  {t('video.comments.replyButton')}
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={onCancelReply}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  Ctrl+Enter to submit, Esc to cancel
+                  {t('video.comments.replyHint')}
                 </span>
               </div>
             </form>
@@ -256,7 +260,9 @@ const CommentItem = React.memo(function CommentItem({
           {hasReplies && depth >= maxDepth && (
             <div className="mt-2 text-xs text-muted-foreground">
               ... {comment.replies!.length} more{' '}
-              {comment.replies!.length === 1 ? 'reply' : 'replies'}
+              {comment.replies!.length === 1
+                ? t('video.comments.reply')
+                : t('video.comments.replies')}
             </div>
           )}
         </div>
@@ -272,6 +278,7 @@ export function VideoComments({
   relays,
   videoKind,
 }: VideoCommentsProps) {
+  const { t } = useTranslation()
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
@@ -505,7 +512,7 @@ export function VideoComments({
 
   return (
     <div className="px-2 sm:px-0">
-      <h2 className="mb-4">Comments</h2>
+      <h2 className="mb-4">{t('video.comments.title')}</h2>
       {user && (
         <form onSubmit={handleSubmit} className="mb-8">
           <div className="relative">
@@ -513,7 +520,7 @@ export function VideoComments({
               ref={textareaRef}
               value={newComment}
               onChange={e => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
+              placeholder={t('video.comments.addComment')}
               className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
               rows={1}
               onKeyDown={e => {
@@ -527,9 +534,9 @@ export function VideoComments({
           </div>
           <div className="flex items-center gap-2 mt-2">
             <Button type="submit" disabled={!newComment.trim()} size="sm">
-              Comment
+              {t('video.comments.commentButton')}
             </Button>
-            <span className="text-xs text-muted-foreground">Ctrl+Enter to submit</span>
+            <span className="text-xs text-muted-foreground">{t('video.comments.commentHint')}</span>
           </div>
         </form>
       )}
@@ -556,7 +563,8 @@ export function VideoComments({
       {hasMoreComments && (
         <div className="mt-4">
           <Button variant="outline" onClick={loadMoreComments} className="w-full">
-            Load more comments ({threadedComments.length - visibleComments} remaining)
+            {t('video.comments.loadMore')} ({threadedComments.length - visibleComments}{' '}
+            {t('video.comments.remaining')})
           </Button>
         </div>
       )}

@@ -13,8 +13,10 @@ import {
   ContentWarning,
   ThumbnailSection,
 } from './video-upload'
+import { useTranslation } from 'react-i18next'
 
 export function VideoUpload() {
+  const { t } = useTranslation()
   const {
     // State
     title,
@@ -63,7 +65,7 @@ export function VideoUpload() {
   const navigate = useNavigate()
 
   if (!user) {
-    return <div>Please log in to upload videos</div>
+    return <div>{t('upload.loginRequired')}</div>
   }
 
   return (
@@ -73,16 +75,12 @@ export function VideoUpload() {
         <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
           <div className="text-sm text-muted-foreground flex flex-col gap-1">
             <span>
-              Uploading directly to{' '}
-              <b className="text-foreground">{blossomInitalUploadServers?.length ?? 0}</b> server
-              {(blossomInitalUploadServers?.length ?? 0) === 1 ? '' : 's'}. Mirroring to{' '}
-              <b className="text-foreground">{blossomMirrorServers?.length ?? 0}</b> server
-              {(blossomMirrorServers?.length ?? 0) === 1 ? '' : 's'}.
+              {t('upload.uploadInfo', {
+                upload: blossomInitalUploadServers?.length ?? 0,
+                mirror: blossomMirrorServers?.length ?? 0,
+              })}
             </span>
-            <span className="text-xs">
-              Tip: MP4 (H.264) under 2GB uploads fastest and plays everywhere. We’ll retry on backup
-              servers automatically.
-            </span>
+            <span className="text-xs">{t('upload.tip')}</span>
           </div>
           <div className="flex gap-2">
             {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
@@ -92,7 +90,7 @@ export function VideoUpload() {
                 onClick={handleUseRecommendedServers}
                 className="cursor-pointer"
               >
-                Use recommended servers
+                {t('upload.useRecommended')}
               </Button>
             )}
             <Button
@@ -100,7 +98,7 @@ export function VideoUpload() {
               variant={'outline'}
               className=" cursor-pointer"
             >
-              Advanced
+              {t('upload.advanced')}
             </Button>
           </div>
         </div>
@@ -110,10 +108,7 @@ export function VideoUpload() {
             {uploadState === 'initial' && (
               <div className="space-y-1">
                 <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
-                <p className="text-xs text-muted-foreground">
-                  Quick start: leave on “Upload File”. Use “From URL” only if your video is already
-                  hosted somewhere.
-                </p>
+                <p className="text-xs text-muted-foreground">{t('upload.quickStart')}</p>
               </div>
             )}
 
@@ -158,12 +153,9 @@ export function VideoUpload() {
             ) : inputMethod === 'file' ? (
               <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
                 <span>
-                  You do not have any Blossom server tagged with <b>"initial upload"</b>.<br />
-                  Please go to{' '}
-                  <a href="/settings" className="underline text-blue-600">
-                    Settings
-                  </a>{' '}
-                  and assign the <b>"initial upload"</b> tag to at least one server.
+                  {t('upload.noUploadServers')}
+                  <br />
+                  {t('upload.configureServers')}
                 </span>
               </div>
             ) : null}
@@ -179,7 +171,7 @@ export function VideoUpload() {
             {uploadProgress && (
               <div className="space-y-1">
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Uploading...</span>
+                  <span>{t('upload.uploading')}</span>
                   <span>{Math.round(uploadProgress.percentage)}%</span>
                 </div>
                 <Progress value={uploadProgress.percentage} />
@@ -234,7 +226,7 @@ export function VideoUpload() {
                       (inputMethod === 'url' && !uploadInfo.videoUrl)
                     }
                   >
-                    {isPublishing ? 'Publishing...' : 'Publish Video'}
+                    {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
                   </Button>
                 </div>
               </>

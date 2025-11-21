@@ -9,23 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Page Components Internationalization**: Updated all page components to use react-i18next for internationalization
-  - **HomePage**: Empty states and loading messages now use translation keys
-  - **ShortsPage**: Empty states and loading messages now use translation keys
-  - **HistoryPage**: Title, clear history dialog, and empty state now use translation keys
-  - **LikedVideosPage**: Title and empty states now use translation keys
-  - **SearchPage**: Empty state and search results text now use translation keys
-  - **HashtagPage**: Title and empty state now use translation keys with dynamic tag interpolation
-  - **SubscriptionsPage**: Empty states now use translation keys
-  - **NotFound (404 page)**: All text (code, title, and return link) now uses translation keys
-  - **AuthorPage**: Various labels and empty states now use translation keys including:
-    - Joined date with interpolation
-    - All videos/shorts count with interpolation
-    - Loading playlists message
-    - Tags label
-    - Videos/shorts empty states and loading messages
-  - All pages now support multiple languages through the i18n system
-  - Uses interpolation for dynamic values (e.g., counts, dates, search queries)
+- **Internationalization (i18n) Support**: Full internationalization implementation with English and German translations
+  - Added `react-i18next` for translation management
+  - Created comprehensive translation files in `src/i18n/locales/`:
+    - `en.json` - English translations (default)
+    - `de.json` - German translations
+  - Language switcher added to Settings > General Settings
+  - Language preference persisted in localStorage
+  - Automatic language detection based on browser settings
+  - All user-facing text externalized to translation files including:
+    - Navigation menu items (Sidebar, Header)
+    - Authentication flows (Login, Signup, Account Switcher)
+    - Video components (VideoPage, VideoComments, ShareButton, MirrorVideoDialog)
+    - Upload workflow (VideoUpload, FormFields, VideoMetadata, ThumbnailSection, ContentWarning)
+    - Settings sections (General, Relays, Blossom Servers, Caching Servers, Cache Management, Missing Videos)
+    - All page components (HomePage, ShortsPage, HistoryPage, LikedVideosPage, SearchPage, HashtagPage, AuthorPage, SubscriptionsPage, NotFound)
+    - Playlist management (Playlists, CreatePlaylistDialog)
+    - Common UI elements (buttons, errors, toasts, empty states)
+  - Translation interpolation for dynamic values (counts, dates, usernames, etc.)
+  - Organized translation keys by feature/component area for maintainability
+  - 500+ translation strings covering the entire application
 
 ### Changed
 

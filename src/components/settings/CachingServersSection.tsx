@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,7 @@ import { XIcon } from 'lucide-react'
 import { presetCachingServers } from '@/constants/relays'
 
 export function CachingServersSection() {
+  const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const [newServerUrl, setNewServerUrl] = useState('')
 
@@ -57,19 +59,14 @@ export function CachingServersSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Media Caching Servers</CardTitle>
-        <CardDescription>
-          Manage servers used for caching and proxying video content. These servers provide faster
-          playback and reduce load on origin servers.
-        </CardDescription>
+        <CardTitle>{t('settings.caching.title')}</CardTitle>
+        <CardDescription>{t('settings.caching.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
             {(config.cachingServers?.length ?? 0) === 0 ? (
-              <p className="text-muted-foreground">
-                No caching servers configured. Add some below or reset to defaults.
-              </p>
+              <p className="text-muted-foreground">{t('settings.caching.noServers')}</p>
             ) : (
               <ScrollArea className="w-full rounded-md border p-4">
                 <ul className="space-y-2">
@@ -98,7 +95,7 @@ export function CachingServersSection() {
 
           <div className="flex w-full space-x-2">
             <Input
-              placeholder="Add new caching server URL (e.g., https://cache.example.com)"
+              placeholder={t('settings.caching.addPlaceholder')}
               value={newServerUrl}
               onChange={e => setNewServerUrl(e.target.value)}
               onKeyPress={e => {
@@ -107,11 +104,11 @@ export function CachingServersSection() {
                 }
               }}
             />
-            <Button onClick={handleAddServer}>Add Server</Button>
+            <Button onClick={handleAddServer}>{t('settings.caching.addButton')}</Button>
           </div>
 
           <Button variant="outline" onClick={handleResetServers}>
-            Reset to Default Servers
+            {t('settings.caching.resetButton')}
           </Button>
         </div>
       </CardContent>

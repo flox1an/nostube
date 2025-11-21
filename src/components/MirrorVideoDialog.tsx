@@ -23,6 +23,7 @@ import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from 'blossom-client-sdk'
 import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
+import { useTranslation } from 'react-i18next'
 
 interface MirrorVideoDialogProps {
   open: boolean
@@ -45,6 +46,7 @@ export function MirrorVideoDialog({
   serverAvailability,
   isCheckingAvailability: _isCheckingAvailability,
 }: MirrorVideoDialogProps) {
+  const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useCurrentUser()
   const sizeFromEvent = useMemo(() => getSizeFromVideoEvent(videoEvent), [videoEvent])
@@ -101,8 +103,8 @@ export function MirrorVideoDialog({
   const handleMirror = async () => {
     if (selectedServers.size === 0) {
       toast({
-        title: 'No servers selected',
-        description: 'Please select at least one server to mirror to.',
+        title: t('video.mirror.noSelection'),
+        description: t('video.mirror.noSelectionMessage'),
         variant: 'destructive',
       })
       return
@@ -111,8 +113,8 @@ export function MirrorVideoDialog({
     // Check if user is logged in
     if (!user?.signer) {
       toast({
-        title: 'Not logged in',
-        description: 'Please log in to mirror videos.',
+        title: t('video.mirror.notLoggedIn'),
+        description: t('video.mirror.notLoggedInMessage'),
         variant: 'destructive',
       })
       return
@@ -126,8 +128,8 @@ export function MirrorVideoDialog({
 
     if (!workingUrl) {
       toast({
-        title: 'Invalid video',
-        description: 'No valid blossom URL found.',
+        title: t('video.mirror.invalidVideo'),
+        description: t('video.mirror.noBlossomUrl'),
         variant: 'destructive',
       })
       return
@@ -137,8 +139,8 @@ export function MirrorVideoDialog({
     const { sha256, ext } = extractBlossomHash(workingUrl)
     if (!sha256) {
       toast({
-        title: 'Invalid video',
-        description: 'Could not extract video hash.',
+        title: t('video.mirror.invalidVideo'),
+        description: t('video.mirror.noVideoHash'),
         variant: 'destructive',
       })
       return
@@ -176,29 +178,33 @@ export function MirrorVideoDialog({
       if (successCount === 0) {
         // All failed
         toast({
-          title: 'Mirror failed',
-          description: 'Could not mirror to any servers. Please try again.',
+          title: t('video.mirror.failed'),
+          description: t('video.mirror.failedMessage'),
           variant: 'destructive',
         })
       } else if (failedCount > 0) {
         // Partial success - show warning
         toast({
-          title: 'Partially mirrored',
-          description: `Mirrored to ${successCount} of ${totalCount} servers. ${failedCount} failed.`,
+          title: t('video.mirror.partial'),
+          description: t('video.mirror.partialMessage', {
+            success: successCount,
+            total: totalCount,
+            failed: failedCount,
+          }),
         })
         onOpenChange(false)
       } else {
         // All succeeded
         toast({
-          title: 'Mirror complete',
-          description: `Successfully mirrored to ${successCount} server${successCount !== 1 ? 's' : ''}.`,
+          title: t('video.mirror.complete'),
+          description: t('video.mirror.completeMessage', { count: successCount }),
         })
         onOpenChange(false)
       }
     } catch (error) {
       toast({
-        title: 'Mirror error',
-        description: error instanceof Error ? error.message : 'Failed to mirror video.',
+        title: t('video.mirror.errorTitle'),
+        description: error instanceof Error ? error.message : t('video.mirror.errorMessage'),
         variant: 'destructive',
       })
     } finally {
@@ -210,17 +216,17 @@ export function MirrorVideoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Mirror Video ({formatFileSize(resolvedVideoSize)})</DialogTitle>
-          <DialogDescription>
-            Copy this video to additional blossom servers for better redundancy and availability.
-          </DialogDescription>
+          <DialogTitle>
+            {t('video.mirror.title')} ({formatFileSize(resolvedVideoSize)})
+          </DialogTitle>
+          <DialogDescription>{t('video.mirror.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {/* Current hosting servers */}
           {currentHosts.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium mb-3">Currently Hosted On</h3>
+              <h3 className="text-sm font-medium mb-3">{t('video.mirror.currentlyHosted')}</h3>
               <div className="space-y-2">
                 {currentHosts.map(server => (
                   <div
@@ -239,12 +245,11 @@ export function MirrorVideoDialog({
           {/* Available servers to mirror to */}
           <div>
             <h3 className="text-sm font-medium mb-3">
-              Available Servers ({availableServers.length})
+              {t('video.mirror.availableServers')} ({availableServers.length})
             </h3>
             {availableServers.length === 0 ? (
               <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
-                No blossom servers configured. Add servers in your settings or publish a kind 10063
-                event with your preferred servers.
+                {t('video.mirror.noServers')}
               </div>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -275,7 +280,7 @@ export function MirrorVideoDialog({
                         {isChecking && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
                         {isAvailable && (
                           <span className="text-xs text-green-600 dark:text-green-400">
-                            Available
+                            {t('common.available')}
                           </span>
                         )}
                         <span className="text-xs text-muted-foreground capitalize">
@@ -292,7 +297,7 @@ export function MirrorVideoDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isMirroring}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleMirror}
@@ -301,12 +306,12 @@ export function MirrorVideoDialog({
             {isMirroring ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Mirroring...
+                {t('video.mirror.mirroring')}
               </>
             ) : (
               <>
                 <Copy className="mr-2 h-4 w-4" />
-                Mirror to {selectedServers.size} server{selectedServers.size !== 1 ? 's' : ''}
+                {t('video.mirror.mirrorButton', { count: selectedServers.size })}
               </>
             )}
           </Button>

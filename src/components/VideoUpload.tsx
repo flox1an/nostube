@@ -120,7 +120,7 @@ export function VideoUpload() {
             </Button>
           </div>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <CardContent className="flex flex-col gap-4">
             {/* Input method selection - hide after processing */}
             {uploadState === 'initial' && (

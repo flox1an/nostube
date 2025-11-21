@@ -3,8 +3,10 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSearchVideos } from '@/hooks/useSearchVideos'
 import { useEffect } from 'react'
 import { getKindsForType } from '@/lib/video-types'
+import { useTranslation } from 'react-i18next'
 
 export function SearchPage() {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')
 
@@ -29,7 +31,7 @@ export function SearchPage() {
   if (!query) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-muted-foreground">Enter a search query to find videos</p>
+        <p className="text-muted-foreground">{t('pages.search.emptyState')}</p>
       </div>
     )
   }
@@ -37,7 +39,7 @@ export function SearchPage() {
   return (
     <div className="sm:p-4">
       <div className="p-2">
-        <h1 className="text-2xl font-bold mb-4">Search Results for: {query}</h1>
+        <h1 className="text-2xl font-bold mb-4">{t('pages.search.resultsFor', { query })}</h1>
       </div>
 
       <VideoTimelinePage
@@ -46,7 +48,7 @@ export function SearchPage() {
         exhausted={false}
         onLoadMore={loadMore}
         layoutMode="auto"
-        emptyMessage={`No videos found for "${query}".`}
+        emptyMessage={t('pages.search.noResults', { query })}
         exhaustedMessage=""
         className=""
       />

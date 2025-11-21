@@ -206,7 +206,27 @@
       "useGenerated": "Generiertes Vorschaubild verwenden",
       "uploadCustom": "Eigenes Vorschaubild hochladen",
       "generated": "Generiertes Vorschaubild"
-    }
+    },
+    "videoTable": {
+      "quality": "Qualität",
+      "dimensions": "Abmessungen",
+      "duration": "Dauer",
+      "size": "Größe",
+      "codec": "Codec",
+      "status": "Status",
+      "actions": "Aktionen",
+      "preview": "Vorschau",
+      "remove": "Entfernen",
+      "previewTitle": "Vorschau: {{quality}}",
+      "closePreview": "Schließen",
+      "uploadedTo": "Hochgeladen auf",
+      "mirroredTo": "Gespiegelt auf",
+      "servers": "Server"
+    },
+    "addAnotherQuality": "Weitere Qualität/Auflösung hinzufügen",
+    "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z.B. 1080p, 720p, 480p)",
+    "uploadingVideo": "Video wird hochgeladen...",
+    "processingVideo": "Video wird verarbeitet..."
   },
   "settings": {
     "title": "Einstellungen",

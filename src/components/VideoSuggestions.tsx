@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns'
-import { enUS, de } from 'date-fns/locale'
+import { enUS, de, fr, es } from 'date-fns/locale'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
@@ -40,7 +40,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   thumbResizeServerUrl?: string
 }) {
   const { i18n } = useTranslation()
-  const dateLocale = i18n.language === 'de' ? de : enUS
+  const dateLocale =
+    i18n.language === 'de' ? de : i18n.language === 'fr' ? fr : i18n.language === 'es' ? es : enUS
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture

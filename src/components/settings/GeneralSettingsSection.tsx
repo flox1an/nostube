@@ -107,6 +107,8 @@ export function GeneralSettingsSection() {
             <SelectContent>
               <SelectItem value="en">{t('languages.en')}</SelectItem>
               <SelectItem value="de">{t('languages.de')}</SelectItem>
+              <SelectItem value="es">{t('languages.es')}</SelectItem>
+              <SelectItem value="fr">{t('languages.fr')}</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">

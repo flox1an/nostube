@@ -7,7 +7,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { formatDistance } from 'date-fns'
-import { enUS, de, fr, es } from 'date-fns/locale'
 import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
@@ -15,6 +14,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { Reply } from 'lucide-react'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useTranslation } from 'react-i18next'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface Comment {
   id: string
@@ -137,8 +137,7 @@ const CommentItem = React.memo(function CommentItem({
   const metadata = useProfile({ pubkey: comment.pubkey })
   const name = metadata?.name || comment.pubkey.slice(0, 8)
   const maxDepth = 5 // Maximum nesting level
-  const dateLocale =
-    i18n.language === 'de' ? de : i18n.language === 'fr' ? fr : i18n.language === 'es' ? es : enUS
+  const dateLocale = getDateLocale(i18n.language)
   const isReplying = replyingTo === comment.id
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isExpanded = expandedComments.has(comment.id)

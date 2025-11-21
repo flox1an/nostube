@@ -4,7 +4,6 @@ import { nip19, type NostrEvent } from 'nostr-tools'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
-import { enUS, de, fr, es } from 'date-fns/locale'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
@@ -36,6 +35,7 @@ import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { type VideoEvent } from '../utils/video-event'
 import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useTranslation } from 'react-i18next'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface VideoInfoSectionProps {
   video: VideoEvent | null
@@ -95,8 +95,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const [showDebugDialog, setShowDebugDialog] = useState(false)
 
   // Map i18n language codes to date-fns locales
-  const dateLocale =
-    i18n.language === 'de' ? de : i18n.language === 'fr' ? fr : i18n.language === 'es' ? es : enUS
+  const dateLocale = getDateLocale(i18n.language)
 
   if (isLoading) {
     return (

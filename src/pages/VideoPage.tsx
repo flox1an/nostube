@@ -475,9 +475,7 @@ export function VideoPage() {
             shareLinks={shareLinks}
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
-            serverList={serverList}
-            serverAvailability={serverAvailability}
-            onCheckAvailability={checkAvailability}
+            userServers={userBlossomServers}
           />
         }
         sidebar={

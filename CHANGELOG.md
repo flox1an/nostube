@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-Video Upload Support**: Upload dialog now supports uploading multiple quality variants of the same video
+  - Created `VideoVariantsTable` component to display all uploaded video variants in a compact table format
+  - Added "Add Another Quality/Resolution" button to upload the same video in different resolutions (e.g., 1080p, 720p, 480p)
+  - Each video variant gets its own `imeta` tag in the published Nostr event
+  - Extracted reusable video processing utilities to `lib/video-processing.ts` for handling video metadata extraction
+  - Added quality label generation (4K, 1080p, 720p, 480p, 360p) based on video dimensions
+  - **Codec Warnings**: Each video shows codec compatibility warnings as dedicated table rows below each video
+    - Red alert for AV1/VP9 (not supported on iOS/Safari)
+    - Yellow warning for H.265 hev1 (not on iOS)
+    - Blue info for H.265 hvc1 (widely supported)
+    - Green checkmark for H.264 (best compatibility)
+    - Warnings displayed as full-width alert banners directly below each video row
+  - **Compact Table Layout**: Optimized table design for clarity
+    - Combined video and audio codec into single two-line cell (V: codec / A: codec)
+    - Status column shows upload and mirror progress with tooltips
+    - Green checkmark icon with count shows number of initial upload servers
+    - Blue copy icon with count shows number of mirror servers
+  - **Upload Progress**: Progress bar visible during chunked uploads (10MB chunks)
+    - Shows percentage and current chunk progress during upload
+    - Automatic mirroring to configured mirror servers after initial upload completes
+  - **Video Preview**: Modal dialog for previewing uploaded videos
+    - Click play button to open full-screen preview dialog
+    - Video auto-plays in preview for immediate feedback
+    - Clean modal interface with centered video player
+  - Remove functionality to delete individual video variants (minimum one required)
+  - Removed redundant "Uploaded to..." and "Mirrored to..." status display - all server information now shown in table status column
+  - All videos share the same thumbnail (no additional thumbnail upload needed)
+  - Added internationalization support for all new UI elements (EN, DE, FR, ES)
+  - Comprehensive TypeScript interfaces: `VideoVariant` for individual videos, updated `UploadInfo` to array-based structure
+  - Event creation now generates multiple `imeta` tags with proper dimensions, codecs, bitrate, size, and fallback URLs for each variant
+  - Full backward compatibility maintained with single-video uploads
+
 ### Fixed
 
 - **Debug Dialog Infinite Checks**: Fixed server availability checks running continuously every second in Debug dialog

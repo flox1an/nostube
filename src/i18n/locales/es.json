@@ -206,7 +206,27 @@
       "useGenerated": "Usar miniatura generada",
       "uploadCustom": "Subir miniatura personalizada",
       "generated": "Miniatura generada"
-    }
+    },
+    "videoTable": {
+      "quality": "Calidad",
+      "dimensions": "Dimensiones",
+      "duration": "Duración",
+      "size": "Tamaño",
+      "codec": "Códec",
+      "status": "Estado",
+      "actions": "Acciones",
+      "preview": "Vista previa",
+      "remove": "Eliminar",
+      "previewTitle": "Vista previa: {{quality}}",
+      "closePreview": "Cerrar",
+      "uploadedTo": "Subido a",
+      "mirroredTo": "Replicado en",
+      "servers": "servidor(es)"
+    },
+    "addAnotherQuality": "Añadir otra calidad/resolución",
+    "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
+    "uploadingVideo": "Subiendo vídeo...",
+    "processingVideo": "Procesando vídeo..."
   },
   "settings": {
     "title": "Ajustes",

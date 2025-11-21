@@ -206,7 +206,27 @@
       "useGenerated": "Use generated thumbnail",
       "uploadCustom": "Upload custom thumbnail",
       "generated": "Generated thumbnail"
-    }
+    },
+    "videoTable": {
+      "quality": "Quality",
+      "dimensions": "Dimensions",
+      "duration": "Duration",
+      "size": "Size",
+      "codec": "Codec",
+      "status": "Status",
+      "actions": "Actions",
+      "preview": "Preview",
+      "remove": "Remove",
+      "previewTitle": "Preview: {{quality}}",
+      "closePreview": "Close",
+      "uploadedTo": "Uploaded to",
+      "mirroredTo": "Mirrored to",
+      "servers": "server(s)"
+    },
+    "addAnotherQuality": "Add Another Quality/Resolution",
+    "addAnotherQualityHint": "Upload the same video in a different resolution (e.g., 1080p, 720p, 480p)",
+    "uploadingVideo": "Uploading video...",
+    "processingVideo": "Processing video..."
   },
   "settings": {
     "title": "Settings",

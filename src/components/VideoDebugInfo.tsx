@@ -142,9 +142,7 @@ export function VideoDebugInfo({
             {variant.size && (
               <div>
                 <span className="font-medium">Size: </span>
-                <span className="text-xs">
-                  {(variant.size / 1024 / 1024).toFixed(2)} MB
-                </span>
+                <span className="text-xs">{(variant.size / 1024 / 1024).toFixed(2)} MB</span>
               </div>
             )}
             {variant.mimeType && (
@@ -174,9 +172,7 @@ export function VideoDebugInfo({
                     <div className="flex-1">
                       <code className="text-xs block">{server.url}</code>
                       <div className="text-xs text-muted-foreground">{server.name}</div>
-                      <div className={`text-xs ${statusColor} font-medium`}>
-                        {statusText}
-                      </div>
+                      <div className={`text-xs ${statusColor} font-medium`}>{statusText}</div>
                     </div>
                   </li>
                 )
@@ -190,9 +186,7 @@ export function VideoDebugInfo({
         {/* Fallback URLs */}
         {variantUrls.length > 1 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">
-              Fallback URLs ({variantUrls.length - 1})
-            </h4>
+            <h4 className="text-sm font-medium mb-2">Fallback URLs ({variantUrls.length - 1})</h4>
             <ul className="space-y-1 text-sm">
               {variantUrls.slice(1).map((url, idx) => (
                 <li key={idx} className="break-all">
@@ -268,10 +262,7 @@ export function VideoDebugInfo({
                   {allVariants.map((variantData, idx) => (
                     <TabsContent key={idx} value={idx.toString()} className="mt-4">
                       <div className="bg-muted p-4 rounded-lg">
-                        {renderVariantServers(
-                          variantData.variant,
-                          variantData.serverAvailability
-                        )}
+                        {renderVariantServers(variantData.variant, variantData.serverAvailability)}
                       </div>
                     </TabsContent>
                   ))}

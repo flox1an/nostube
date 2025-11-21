@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns'
-import { enUS, de } from 'date-fns/locale'
+import { enUS, de, fr, es } from 'date-fns/locale'
 import { type VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -41,7 +41,8 @@ export const VideoCard = React.memo(function VideoCard({
   const { setVideos } = useShortsFeedStore()
 
   // Map i18n language codes to date-fns locales
-  const dateLocale = i18n.language === 'de' ? de : enUS
+  const dateLocale =
+    i18n.language === 'de' ? de : i18n.language === 'fr' ? fr : i18n.language === 'es' ? es : enUS
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])

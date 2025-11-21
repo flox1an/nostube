@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Translation interpolation for dynamic values (counts, dates, usernames, etc.)
   - Organized translation keys by feature/component area for maintainability
   - 500+ translation strings covering the entire application
+  - **Date Localization**: Added French and Spanish date-fns locale support
+    - Extended date formatting to support French (`fr`) and Spanish (`es`) in addition to English (`en`) and German (`de`)
+    - Updated 6 components to include `fr` and `es` imports from `date-fns/locale`
+    - Modified `dateLocale` mapping in `VideoCard`, `VideoInfoSection`, `VideoComments`, `MissingVideosSection`, `VideoSuggestions`, and `ShortsVideoPage`
+    - Dates and relative times (e.g., "3 hours ago") now display in the user's selected language
 
 ### Changed
 

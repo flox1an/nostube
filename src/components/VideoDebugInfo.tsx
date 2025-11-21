@@ -12,7 +12,7 @@ import { Check, Circle, Loader2, X } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent } from '@/utils/video-event'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
 
 interface VideoDebugInfoProps {
@@ -41,12 +41,18 @@ export function VideoDebugInfo({
     ? extractBlossomHash(video.urls[0])
     : { sha256: undefined, ext: undefined }
 
+  // Store latest callback in ref to avoid depending on it in useEffect
+  const onCheckAvailabilityRef = useRef(onCheckAvailability)
+  useEffect(() => {
+    onCheckAvailabilityRef.current = onCheckAvailability
+  }, [onCheckAvailability])
+
   // Trigger availability check when dialog opens
   useEffect(() => {
     if (open) {
-      onCheckAvailability()
+      onCheckAvailabilityRef.current()
     }
-  }, [open, onCheckAvailability])
+  }, [open])
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">

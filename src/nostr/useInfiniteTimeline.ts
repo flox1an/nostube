@@ -236,13 +236,20 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         await Promise.resolve()
         if (!cancelled) {
           reset()
+          // Trigger load after reset completes
+          // Use queueMicrotask to ensure reset state updates are applied first
+          queueMicrotask(() => {
+            if (!cancelled) {
+              next()
+            }
+          })
         }
       })()
       return () => {
         cancelled = true
       }
     }
-  }, [loader, reset])
+  }, [loader, reset, next])
 
   return {
     videos,

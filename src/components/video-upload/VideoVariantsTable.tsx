@@ -237,7 +237,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                               ? 'destructive'
                               : 'default'
                           }
-                          className="rounded-none border-0 border-t"
+                          className="rounded-none border-0"
                         >
                           <div className="flex items-start gap-2">
                             {codecWarning.type === 'error' && (

@@ -7,19 +7,11 @@ import {
 } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
-import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from '@/lib/codec-detection'
 import { presetBlossomServers } from '@/constants/relays'
+import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
 
 export interface UploadInfo {
-  dimension?: string
-  sizeMB?: number
-  duration?: number
-  uploadedBlobs: BlobDescriptor[]
-  mirroredBlobs: BlobDescriptor[]
-  videoCodec?: string
-  audioCodec?: string
-  bitrate?: number
-  videoUrl?: string
+  videos: VideoVariant[]
 }
 
 export interface ThumbnailUploadInfo {
@@ -45,7 +37,7 @@ export function useVideoUpload() {
   const [videoUrl, setVideoUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
-  const [uploadInfo, setUploadInfo] = useState<UploadInfo>({ uploadedBlobs: [], mirroredBlobs: [] })
+  const [uploadInfo, setUploadInfo] = useState<UploadInfo>({ videos: [] })
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated')
@@ -142,26 +134,10 @@ export function useVideoUpload() {
   const handleUrlVideoProcessing = async (url: string) => {
     if (!url) return
 
-    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+    setUploadInfo({ videos: [] })
     setUploadState('uploading')
 
     try {
-      const video = document.createElement('video')
-      video.src = url
-      video.crossOrigin = 'anonymous'
-      video.muted = true
-      video.playsInline = true
-      video.preload = 'metadata'
-
-      await new Promise((resolve, reject) => {
-        video.onloadedmetadata = resolve
-        video.onerror = () => reject(new Error('Failed to load video from URL'))
-        setTimeout(() => reject(new Error('Video loading timeout')), 10000)
-      })
-
-      const duration = Math.round(video.duration)
-      const dimensions = `${video.videoWidth}x${video.videoHeight}`
-      const codecs = await getCodecsFromUrl(url)
       const blossomInfo = parseBlossomUrl(url)
       let mirroredBlobs: BlobDescriptor[] = []
 
@@ -191,22 +167,17 @@ export function useVideoUpload() {
         }
       }
 
+      const videoVariant = await processVideoUrl(url, mirroredBlobs)
+
       setUploadInfo({
-        dimension: dimensions,
-        duration,
-        uploadedBlobs: [],
-        mirroredBlobs,
-        videoUrl: url,
-        videoCodec: codecs.videoCodec,
-        audioCodec: codecs.audioCodec,
-        bitrate: Math.floor(codecs.bitrate || 0),
+        videos: [videoVariant],
       })
 
       setUploadState('finished')
     } catch (error) {
       console.error('Failed to process video URL:', error)
       setUploadState('initial')
-      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+      setUploadInfo({ videos: [] })
     }
   }
 
@@ -257,7 +228,7 @@ export function useVideoUpload() {
       const file = acceptedFiles[0] ?? null
 
       setFile(file)
-      setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+      setUploadInfo({ videos: [] })
       setUploadState('uploading')
       setUploadProgress(null)
 
@@ -285,31 +256,10 @@ export function useVideoUpload() {
           },
         })
 
-        const video = document.createElement('video')
-        video.src = URL.createObjectURL(acceptedFiles[0])
-        await new Promise(resolve => {
-          video.onloadedmetadata = resolve
-        })
-        const duration = Math.round(video.duration)
-        const dimensions = `${video.videoWidth}x${video.videoHeight}`
-        const sizeMB = acceptedFiles[0].size / 1024 / 1024
-
-        let codecs: CodecInfo = {}
-        try {
-          codecs = await getCodecsFromFile(acceptedFiles[0])
-        } catch {
-          codecs = {}
-        }
+        const videoVariant = await processUploadedVideo(acceptedFiles[0], uploadedBlobs)
 
         setUploadInfo({
-          dimension: dimensions,
-          sizeMB: Number(sizeMB.toFixed(2)),
-          duration,
-          uploadedBlobs: uploadedBlobs,
-          mirroredBlobs: [],
-          videoCodec: codecs.videoCodec,
-          audioCodec: codecs.audioCodec,
-          bitrate: Math.floor(codecs.bitrate || 0),
+          videos: [videoVariant],
         })
 
         if (blossomMirrorServers && blossomMirrorServers.length > 0) {
@@ -319,14 +269,13 @@ export function useVideoUpload() {
             signer: async draft => await user.signer.signEvent(draft),
           })
           setUploadInfo(ui => ({
-            ...ui,
-            mirroredBlobs,
+            videos: ui.videos.map((v, i) => (i === 0 ? { ...v, mirroredBlobs } : v)),
           }))
         }
       } catch (error) {
         console.error('BUD-10 upload failed:', error)
         setUploadState('initial')
-        setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+        setUploadInfo({ videos: [] })
         setUploadProgress(null)
 
         if (error instanceof Error) {
@@ -375,13 +324,15 @@ export function useVideoUpload() {
   }
 
   const currentVideoUrl = useMemo(() => {
-    if (inputMethod === 'url' && uploadInfo.videoUrl) {
-      return uploadInfo.videoUrl
+    if (uploadInfo.videos.length === 0) return undefined
+    const firstVideo = uploadInfo.videos[0]
+    if (firstVideo.inputMethod === 'url' && firstVideo.url) {
+      return firstVideo.url
     }
-    return uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
-      ? uploadInfo.uploadedBlobs[0].url
+    return firstVideo.uploadedBlobs && firstVideo.uploadedBlobs.length > 0
+      ? firstVideo.uploadedBlobs[0].url
       : undefined
-  }, [inputMethod, uploadInfo.videoUrl, uploadInfo.uploadedBlobs])
+  }, [uploadInfo.videos])
 
   useEffect(() => {
     async function createThumbnailFromUrl(videoUrl: string, seekTime = 1): Promise<Blob | null> {
@@ -462,12 +413,87 @@ export function useVideoUpload() {
     setVideoUrl('')
     setFile(null)
     setThumbnail(null)
-    setUploadInfo({ uploadedBlobs: [], mirroredBlobs: [] })
+    setUploadInfo({ videos: [] })
     setUploadState('initial')
     setThumbnailBlob(null)
     setThumbnailSource('generated')
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
     setUploadProgress(null)
+  }
+
+  // Handler to add another video
+  const handleAddVideo = async (acceptedFiles: File[]) => {
+    if (
+      !acceptedFiles ||
+      !acceptedFiles[0] ||
+      !blossomInitalUploadServers ||
+      blossomInitalUploadServers.length === 0 ||
+      !user
+    ) {
+      return
+    }
+
+    setUploadState('uploading')
+    setUploadProgress(null)
+
+    try {
+      setUploadProgress({
+        uploadedBytes: 0,
+        totalBytes: acceptedFiles[0].size,
+        percentage: 0,
+        currentChunk: 0,
+        totalChunks: 1,
+      })
+
+      const uploadedBlobs = await uploadFileToMultipleServersChunked({
+        file: acceptedFiles[0],
+        servers: blossomInitalUploadServers.map(server => server.url),
+        signer: async draft => await user.signer.signEvent(draft),
+        options: {
+          chunkSize: 10 * 1024 * 1024,
+          maxConcurrentChunks: 2,
+        },
+        callbacks: {
+          onProgress: progress => {
+            setUploadProgress(progress)
+          },
+        },
+      })
+
+      const videoVariant = await processUploadedVideo(acceptedFiles[0], uploadedBlobs)
+
+      setUploadInfo(ui => ({
+        videos: [...ui.videos, videoVariant],
+      }))
+
+      if (blossomMirrorServers && blossomMirrorServers.length > 0) {
+        const mirroredBlobs = await mirrorBlobsToServers({
+          mirrorServers: blossomMirrorServers.map(s => s.url),
+          blob: uploadedBlobs[0],
+          signer: async draft => await user.signer.signEvent(draft),
+        })
+        setUploadInfo(ui => ({
+          videos: ui.videos.map((v, i) =>
+            i === ui.videos.length - 1 ? { ...v, mirroredBlobs } : v
+          ),
+        }))
+      }
+
+      setUploadState('finished')
+    } catch (error) {
+      console.error('Failed to add video:', error)
+      setUploadState('finished')
+      alert(`Failed to upload video: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setUploadProgress(null)
+    }
+  }
+
+  // Handler to remove a video variant
+  const handleRemoveVideo = (index: number) => {
+    setUploadInfo(ui => ({
+      videos: ui.videos.filter((_, i) => i !== index),
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -476,8 +502,8 @@ export function useVideoUpload() {
 
     setPublishSummary({ fallbackUrls: [] })
 
-    if (inputMethod === 'file' && (!file || !blossomInitalUploadServers)) return
-    if (inputMethod === 'url' && !videoUrl) return
+    // Validate that we have at least one video
+    if (uploadInfo.videos.length === 0) return
 
     let thumbnailFile: File | null = null
     let thumbnailUploadedBlobs: BlobDescriptor[] = []
@@ -515,50 +541,73 @@ export function useVideoUpload() {
       thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
     }
 
-    if (inputMethod === 'file' && (!file || !(file instanceof File)))
-      throw new Error('No valid video file selected')
-    if (inputMethod === 'url' && !uploadInfo.videoUrl)
-      throw new Error('No valid video URL provided')
     if (!thumbnailFile) throw new Error('No valid thumbnail file selected')
 
     try {
-      const [width, height] = uploadInfo.dimension?.split('x').map(Number) || [0, 0]
+      // Determine video kind based on first video's dimensions
+      const firstVideo = uploadInfo.videos[0]
+      const [width, height] = firstVideo.dimension.split('x').map(Number)
       const kind = height > width ? 22 : 21
 
-      const videoUrl =
-        inputMethod === 'url' ? uploadInfo.videoUrl : uploadInfo.uploadedBlobs?.[0].url
-      const imetaTag = ['imeta', `dim ${uploadInfo.dimension}`, `url ${videoUrl}`]
-      const fallbackUrls: string[] = []
+      // Create multiple imeta tags - one for each video variant
+      const imetaTags: string[][] = []
+      const allFallbackUrls: string[] = []
 
-      if (inputMethod === 'file' && uploadInfo.uploadedBlobs?.[0]) {
-        imetaTag.push(`x ${uploadInfo.uploadedBlobs[0].sha256}`)
-        imetaTag.push(
-          `m ${buildAdvancedMimeType(file!.type, uploadInfo.videoCodec, uploadInfo.audioCodec)}`
-        )
-      } else if (inputMethod === 'url') {
-        imetaTag.push(`m video/mp4`)
-      }
+      for (const video of uploadInfo.videos) {
+        const imetaTag = ['imeta', `dim ${video.dimension}`]
 
-      if (uploadInfo.bitrate) {
-        imetaTag.push(`bitrate ${uploadInfo.bitrate}`)
-      }
+        // Add primary URL
+        const primaryUrl = video.inputMethod === 'url' ? video.url : video.uploadedBlobs[0]?.url
+        if (primaryUrl) {
+          imetaTag.push(`url ${primaryUrl}`)
+        }
 
-      thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
-      thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+        // Add SHA256 hash for uploaded files
+        if (video.inputMethod === 'file' && video.uploadedBlobs[0]?.sha256) {
+          imetaTag.push(`x ${video.uploadedBlobs[0].sha256}`)
+        }
 
-      if (inputMethod === 'file') {
-        if (uploadInfo.uploadedBlobs.length > 1) {
-          for (const blob of uploadInfo.uploadedBlobs.slice(1)) {
-            imetaTag.push(`fallback ${blob.url}`)
-            fallbackUrls.push(blob.url)
+        // Add MIME type with codecs
+        if (video.inputMethod === 'file' && video.file) {
+          imetaTag.push(
+            `m ${buildAdvancedMimeType(video.file.type, video.videoCodec, video.audioCodec)}`
+          )
+        } else if (video.inputMethod === 'url') {
+          imetaTag.push(`m video/mp4`)
+        }
+
+        // Add bitrate if available
+        if (video.bitrate) {
+          imetaTag.push(`bitrate ${video.bitrate}`)
+        }
+
+        // Add size if available (in bytes)
+        if (video.sizeMB) {
+          const sizeBytes = Math.round(video.sizeMB * 1024 * 1024)
+          imetaTag.push(`size ${sizeBytes}`)
+        }
+
+        // Add thumbnail URLs (shared across all videos)
+        thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+        thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+
+        // Add fallback URLs from multiple upload servers
+        if (video.inputMethod === 'file') {
+          if (video.uploadedBlobs.length > 1) {
+            for (const blob of video.uploadedBlobs.slice(1)) {
+              imetaTag.push(`fallback ${blob.url}`)
+              allFallbackUrls.push(blob.url)
+            }
+          }
+          if (video.mirroredBlobs.length > 0) {
+            for (const blob of video.mirroredBlobs) {
+              imetaTag.push(`fallback ${blob.url}`)
+              allFallbackUrls.push(blob.url)
+            }
           }
         }
-        if (uploadInfo.mirroredBlobs.length > 0) {
-          for (const blob of uploadInfo.mirroredBlobs) {
-            imetaTag.push(`fallback ${blob.url}`)
-            fallbackUrls.push(blob.url)
-          }
-        }
+
+        imetaTags.push(imetaTag)
       }
 
       const event = {
@@ -569,8 +618,8 @@ export function useVideoUpload() {
           ['title', title],
           ['alt', description],
           ['published_at', nowInSecs().toString()],
-          ['duration', uploadInfo.duration?.toString() || '0'],
-          imetaTag,
+          ['duration', firstVideo.duration.toString()],
+          ...imetaTags, // Multiple imeta tags, one per video variant
           ...(contentWarningEnabled
             ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
             : []),
@@ -585,10 +634,14 @@ export function useVideoUpload() {
         event,
         relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
       })
+
+      const primaryVideoUrl =
+        firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideo.uploadedBlobs[0]?.url
+
       setPublishSummary({
         eventId: publishedEvent.id,
-        primaryUrl: videoUrl,
-        fallbackUrls,
+        primaryUrl: primaryVideoUrl,
+        fallbackUrls: allFallbackUrls,
       })
 
       setTitle('')
@@ -648,5 +701,7 @@ export function useVideoUpload() {
     onDrop,
     handleReset,
     handleSubmit,
+    handleAddVideo,
+    handleRemoveVideo,
   }
 }

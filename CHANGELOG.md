@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Internationalization (i18n) Support**: Full internationalization implementation with 4 languages
+  - Added `react-i18next` for translation management
+  - Created comprehensive translation files in `src/i18n/locales/`:
+    - `en.json` - English translations (default)
+    - `de.json` - German translations
+    - `fr.json` - French translations
+    - `es.json` - Spanish translations
+  - Language switcher added to Settings > General Settings with 4 language options
+  - Language preference persisted in localStorage
+  - Automatic language detection based on browser settings
+  - All user-facing text externalized to translation files including:
+    - Navigation menu items (Sidebar, Header)
+    - Authentication flows (Login, Signup, Account Switcher)
+    - Video components (VideoPage, VideoComments, ShareButton, MirrorVideoDialog)
+    - Upload workflow (VideoUpload, FormFields, VideoMetadata, ThumbnailSection, ContentWarning)
+    - Settings sections (General, Relays, Blossom Servers, Caching Servers, Cache Management, Missing Videos)
+    - All page components (HomePage, ShortsPage, HistoryPage, LikedVideosPage, SearchPage, HashtagPage, AuthorPage, SubscriptionsPage, NotFound)
+    - Playlist management (Playlists, CreatePlaylistDialog)
+    - Common UI elements (buttons, errors, toasts, empty states)
+  - Translation interpolation for dynamic values (counts, dates, usernames, etc.)
+  - Organized translation keys by feature/component area for maintainability
+  - 500+ translation strings covering the entire application in all 4 languages
+  - **Date Localization**: Full date-fns locale support for all languages
+    - Relative time formatting (e.g., "2 hours ago", "vor 2 Stunden", "il y a 2 heures", "hace 2 horas")
+    - Created centralized `getDateLocale()` utility in `src/lib/date-locale.ts`
+    - Supports English (`en`), German (`de`), French (`fr`), and Spanish (`es`)
+    - Updated 6 components to use centralized utility: `VideoCard`, `VideoInfoSection`, `VideoComments`, `MissingVideosSection`, `VideoSuggestions`, `ShortsVideoPage`
+    - Dates and relative times (e.g., "3 hours ago") now display in the user's selected language
+
 ### Changed
 
 - **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions

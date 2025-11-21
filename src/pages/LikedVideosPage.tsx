@@ -5,8 +5,10 @@ import { useMemo, useEffect, useState, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
+import { useTranslation } from 'react-i18next'
 
 export function LikedVideosPage() {
+  const { t } = useTranslation()
   const { data: likedEventIds = [], isLoading: isLoadingReactions } = useLikedEvents()
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
@@ -130,7 +132,7 @@ export function LikedVideosPage() {
 
   return (
     <div className="sm:p-4">
-      <div className="text-2xl font-semibold mb-4">Liked Videos</div>
+      <div className="text-2xl font-semibold mb-4">{t('pages.likedVideos.title')}</div>
 
       {isLoading && videos.length === 0 ? (
         <VideoGridSkeleton count={8} />
@@ -140,8 +142,8 @@ export function LikedVideosPage() {
 
           {videos.length === 0 && !isLoading && (
             <div className="text-center py-12 text-muted-foreground">
-              <p>No liked videos found.</p>
-              <p className="text-sm mt-2">Like some videos to see them here!</p>
+              <p>{t('pages.likedVideos.noVideos')}</p>
+              <p className="text-sm mt-2">{t('pages.likedVideos.emptyState')}</p>
             </div>
           )}
         </>

@@ -3,6 +3,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
+import { useTranslation } from 'react-i18next'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -41,6 +42,7 @@ import { VideoComments } from '@/components/VideoComments'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { presetRelays } from '@/constants/relays'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
+import { getDateLocale } from '@/lib/date-locale'
 
 function ShortVideoItem({
   video,
@@ -53,6 +55,8 @@ function ShortVideoItem({
   shouldPreload: boolean
   registerIntersectionRef?: (element: HTMLDivElement | null) => void
 }) {
+  const { i18n } = useTranslation()
+  const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
   const authorPicture = metadata?.picture
@@ -424,6 +428,7 @@ function ShortVideoItem({
                   <div className="text-white/70 text-sm">
                     {formatDistance(new Date(video.created_at * 1000), new Date(), {
                       addSuffix: true,
+                      locale: dateLocale,
                     })}
                   </div>
                 </div>

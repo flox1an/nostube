@@ -2,6 +2,7 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { useInfiniteScroll } from '@/hooks'
 import type { VideoEvent } from '@/utils/video-event'
+import { useTranslation } from 'react-i18next'
 
 interface VideoTimelinePageProps {
   videos: VideoEvent[]
@@ -28,17 +29,23 @@ export function VideoTimelinePage({
   exhausted,
   onLoadMore,
   layoutMode = 'horizontal',
-  emptyMessage = 'No videos found.',
-  loadingMessage = 'Loading more videos...',
-  exhaustedMessage = 'No more videos to load.',
+  emptyMessage,
+  loadingMessage,
+  exhaustedMessage,
   showSkeletons = true,
   className = 'sm:p-4',
 }: VideoTimelinePageProps) {
+  const { t } = useTranslation()
   const { ref } = useInfiniteScroll({
     onLoadMore,
     loading,
     exhausted,
   })
+
+  // Use translations for default messages if not provided
+  const defaultEmptyMessage = emptyMessage ?? t('video.noVideosFound')
+  const defaultLoadingMessage = loadingMessage ?? t('common.loadingMore')
+  const defaultExhaustedMessage = exhaustedMessage ?? t('video.noMoreVideos')
 
   const isLoadingInitial = loading && videos.length === 0
   const isLoadingMore = loading && videos.length > 0
@@ -57,9 +64,9 @@ export function VideoTimelinePage({
         loading={isLoadingMore}
         exhausted={exhausted}
         itemCount={videos.length}
-        emptyMessage={emptyMessage}
-        loadingMessage={loadingMessage}
-        exhaustedMessage={exhaustedMessage}
+        emptyMessage={defaultEmptyMessage}
+        loadingMessage={defaultLoadingMessage}
+        exhaustedMessage={defaultExhaustedMessage}
       />
     </div>
   )

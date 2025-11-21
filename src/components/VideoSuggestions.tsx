@@ -1,6 +1,7 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns'
@@ -18,6 +19,7 @@ import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { getDateLocale } from '@/lib/date-locale'
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -37,6 +39,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   video: VideoEvent
   thumbResizeServerUrl?: string
 }) {
+  const { i18n } = useTranslation()
+  const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
@@ -91,6 +95,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(video.created_at * 1000), new Date(), {
               addSuffix: true,
+              locale: dateLocale,
             })}
           </div>
         </div>

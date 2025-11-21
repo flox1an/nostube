@@ -227,20 +227,15 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                   {/* Codec Warning Row */}
                   {codecWarning && (
                     <TableRow key={`${index}-warning`}>
-                      <TableCell colSpan={8} className="p-0">
+                      <TableCell className="p-0"></TableCell>
+                      <TableCell colSpan={7} className="p-0">
                         <Alert
                           variant={
                             codecWarning.type === 'error' || codecWarning.type === 'warning'
                               ? 'destructive'
                               : 'default'
                           }
-                          className={`rounded-none border-0 border-t ${
-                            codecWarning.type === 'success'
-                              ? 'bg-green-50 border-green-200'
-                              : codecWarning.type === 'info'
-                                ? 'bg-blue-50 border-blue-200'
-                                : ''
-                          }`}
+                          className="rounded-none border-0 border-t"
                         >
                           <div className="flex items-start gap-2">
                             {codecWarning.type === 'error' && (

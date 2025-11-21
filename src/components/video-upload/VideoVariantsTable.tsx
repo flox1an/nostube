@@ -282,6 +282,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
               controls
               autoPlay
               className="w-full rounded border shadow"
+              style={{ maxWidth: '80dvw', maxHeight: '80dvh' }}
               crossOrigin="anonymous"
               key={previewIndex}
             >

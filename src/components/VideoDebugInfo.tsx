@@ -13,7 +13,7 @@ import { Check, Circle, Loader2, X, Video, Image } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
 
@@ -94,13 +94,21 @@ export function VideoDebugInfo({
     userServers,
   })
 
-  // Trigger availability check when dialog opens
-  // Note: The infinite loop fix will be applied in a later commit
+  // Store checkAllAvailability in ref to avoid triggering effect on every state update
+  const checkAllAvailabilityRef = useRef(checkAllAvailability)
   useEffect(() => {
-    if (open && allVariants.length > 0) {
-      checkAllAvailability()
+    checkAllAvailabilityRef.current = checkAllAvailability
+  }, [checkAllAvailability])
+
+  // Trigger availability check when dialog opens (only on open transition)
+  const prevOpenRef = useRef(open)
+  useEffect(() => {
+    // Only trigger when dialog opens (transitions from false to true)
+    if (open && !prevOpenRef.current && allVariants.length > 0) {
+      checkAllAvailabilityRef.current()
     }
-  }, [open, checkAllAvailability, allVariants.length])
+    prevOpenRef.current = open
+  }, [open, allVariants.length])
 
   // Helper function to render server availability for a variant
   const renderVariantServers = (

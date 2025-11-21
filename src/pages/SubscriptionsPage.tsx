@@ -2,8 +2,10 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useFollowedAuthors, useStableRelays, useTimelineLoader } from '@/hooks'
 import { useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
+import { useTranslation } from 'react-i18next'
 
 export function SubscriptionsPage() {
+  const { t } = useTranslation()
   const { data: followedProfiles = [] } = useFollowedAuthors()
   const followedPubkeys = useMemo(
     () => followedProfiles.map(profile => profile.pubkey),
@@ -38,8 +40,8 @@ export function SubscriptionsPage() {
       layoutMode="auto"
       emptyMessage={
         followedPubkeys.length === 0
-          ? 'Follow some authors to see their videos here.'
-          : 'No videos found from your subscriptions.'
+          ? t('pages.subscriptions.emptyState')
+          : t('pages.subscriptions.noVideos')
       }
       exhaustedMessage=""
       className="sm:p-4"

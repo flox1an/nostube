@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppContext } from '@/hooks'
 import { type RelayTag } from '@/contexts/AppContext'
 import { normalizeRelayUrl } from '@/lib/utils'
@@ -17,6 +18,7 @@ import {
 import { Badge } from '../ui/badge'
 
 export function RelaySettingsSection() {
+  const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const [newRelayUrl, setNewRelayUrl] = useState('')
 
@@ -75,16 +77,14 @@ export function RelaySettingsSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Relays</CardTitle>
-        <CardDescription>Manage the Nostr relays your client connects to.</CardDescription>
+        <CardTitle>{t('settings.relays.title')}</CardTitle>
+        <CardDescription>{t('settings.relays.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
             {config.relays.length === 0 ? (
-              <p className="text-muted-foreground">
-                No relays configured. Add some below or reset to defaults.
-              </p>
+              <p className="text-muted-foreground">{t('settings.relays.noRelays')}</p>
             ) : (
               <ScrollArea className="w-full rounded-md border p-4">
                 <ul className="space-y-2">
@@ -96,7 +96,7 @@ export function RelaySettingsSection() {
                           {(relay.tags || []).map(tag => (
                             <Badge key={tag} variant={tag == 'write' ? 'default' : 'outline'}>
                               {' '}
-                              {tag}
+                              {t(`settings.relays.${tag}`)}
                             </Badge>
                           ))}
                         </div>
@@ -104,8 +104,12 @@ export function RelaySettingsSection() {
                       <div className="flex items-center gap-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Edit tags">
-                              <span className="sr-only">Edit tags</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={t('settings.relays.editTags')}
+                            >
+                              <span className="sr-only">{t('settings.relays.editTags')}</span>
                               <Cog className="h-6 w-6" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -116,7 +120,7 @@ export function RelaySettingsSection() {
                                 checked={(relay.tags || []).includes(tag)}
                                 onCheckedChange={() => handleToggleTag(relay.url, tag)}
                               >
-                                {tag}
+                                {t(`settings.relays.${tag}`)}
                               </DropdownMenuCheckboxItem>
                             ))}
                           </DropdownMenuContent>
@@ -138,7 +142,7 @@ export function RelaySettingsSection() {
 
           <div className="flex w-full space-x-2">
             <Input
-              placeholder="Add new relay URL (e.g., wss://relay.damus.io)"
+              placeholder={t('settings.relays.addPlaceholder')}
               value={newRelayUrl}
               onChange={e => setNewRelayUrl(e.target.value)}
               onKeyPress={e => {
@@ -147,11 +151,11 @@ export function RelaySettingsSection() {
                 }
               }}
             />
-            <Button onClick={handleAddRelay}>Add Relay</Button>
+            <Button onClick={handleAddRelay}>{t('settings.relays.addButton')}</Button>
           </div>
 
           <Button variant="outline" onClick={handleResetRelays}>
-            Reset to Default Relays
+            {t('settings.relays.resetButton')}
           </Button>
         </div>
       </CardContent>

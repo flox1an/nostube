@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
 import { Alert, AlertDescription } from '@/components/ui/alert.tsx'
 import { useLoginActions } from '@/hooks/useLoginActions'
+import { useTranslation } from 'react-i18next'
 
 interface LoginDialogProps {
   isOpen: boolean
@@ -24,6 +25,7 @@ interface LoginDialogProps {
 }
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onSignup }) => {
+  const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
@@ -129,9 +131,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
-          <DialogTitle className="text-xl font-semibold text-center">Log in</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-center">
+            {t('auth.login.title')}
+          </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground mt-2">
-            Access your account securely with your preferred method
+            {t('auth.login.subtitle')}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,21 +153,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             onValueChange={() => setError(null)}
           >
             <TabsList className="grid grid-cols-3 mb-6">
-              <TabsTrigger value="extension">Extension</TabsTrigger>
-              <TabsTrigger value="key">Nsec</TabsTrigger>
-              <TabsTrigger value="bunker">Bunker</TabsTrigger>
+              <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
+              <TabsTrigger value="key">{t('auth.login.nsec')}</TabsTrigger>
+              <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="extension" className="space-y-4">
               <div className="text-center p-4 rounded-lg bg-card">
                 <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
-                <p className="text-sm mb-4">Login with one click using the browser extension</p>
+                <p className="text-sm mb-4">{t('auth.login.extensionDescription')}</p>
                 <Button
                   className="w-full rounded-full py-6"
                   onClick={handleExtensionLogin}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Logging in...' : 'Login with Extension'}
+                  {isLoading ? t('auth.login.loggingIn') : t('auth.login.loginWithExtension')}
                 </Button>
               </div>
             </TabsContent>
@@ -175,19 +179,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     htmlFor="nsec"
                     className="text-sm font-medium text-gray-700 dark:text-gray-400"
                   >
-                    Enter your nsec
+                    {t('auth.login.enterNsec')}
                   </label>
                   <Input
                     id="nsec"
                     value={nsec}
                     onChange={e => setNsec(e.target.value)}
                     className="rounded-lg focus-visible:ring-primary"
-                    placeholder="nsec1..."
+                    placeholder={t('auth.login.nsecPlaceholder')}
                   />
                 </div>
 
                 <div className="text-center">
-                  <p className="text-sm mb-2">Or upload a key file</p>
+                  <p className="text-sm mb-2">{t('auth.login.uploadKeyFile')}</p>
                   <input
                     type="file"
                     accept=".txt"
@@ -201,7 +205,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Nsec File
+                    {t('auth.login.uploadNsecFile')}
                   </Button>
                 </div>
 
@@ -210,7 +214,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   onClick={handleKeyLogin}
                   disabled={isLoading || !nsec.trim()}
                 >
-                  {isLoading ? 'Verifying...' : 'Login with Nsec'}
+                  {isLoading ? t('auth.login.verifying') : t('auth.login.loginWithNsec')}
                 </Button>
               </div>
             </TabsContent>
@@ -221,17 +225,17 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   htmlFor="bunkerUri"
                   className="text-sm font-medium text-gray-700 dark:text-gray-400"
                 >
-                  Bunker URI
+                  {t('auth.login.bunkerUri')}
                 </label>
                 <Input
                   id="bunkerUri"
                   value={bunkerUri}
                   onChange={e => setBunkerUri(e.target.value)}
                   className="rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary"
-                  placeholder="bunker://"
+                  placeholder={t('auth.login.bunkerPlaceholder')}
                 />
                 {bunkerUri && !bunkerUri.startsWith('bunker://') && (
-                  <p className="text-red-500 text-xs">URI must start with bunker://</p>
+                  <p className="text-red-500 text-xs">{t('auth.login.bunkerUriError')}</p>
                 )}
               </div>
 
@@ -240,19 +244,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 onClick={handleBunkerLogin}
                 disabled={isLoading || !bunkerUri.trim() || !bunkerUri.startsWith('bunker://')}
               >
-                {isLoading ? 'Connecting...' : 'Login with Bunker'}
+                {isLoading ? t('auth.login.connecting') : t('auth.login.loginWithBunker')}
               </Button>
             </TabsContent>
           </Tabs>
 
           <div className="text-center text-sm">
             <p className="text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
+              {t('auth.login.noAccount')}{' '}
               <button
                 onClick={handleSignupClick}
                 className="text-primary hover:underline font-medium"
               >
-                Sign up
+                {t('auth.login.signUp')}
               </button>
             </p>
           </div>

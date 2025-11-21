@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **HomePage Video Loading on Login**: Fixed videos not loading on HomePage after user login
+  - Root cause: When user logs in, their NIP-65 relay list is fetched, changing relays and recreating the loader
+  - The reset effect would trigger, but the trigger effect wouldn't run again since loader didn't change a second time
+  - This left the page in a loading state with no videos displayed
+  - Solution: Modified reset effect to call `next()` after reset completes when loader changes
+  - Uses `queueMicrotask` to ensure reset state updates are applied before triggering the load
+  - Fixes HomePage and all timeline pages that reload when relays change (e.g., after login, settings changes)
+
 - **AuthorPage Video Loading**: Fixed AuthorPage videos not loading, with skeleton staying visible indefinitely
   - Root cause: Reset effect in `useInfiniteTimeline` triggered on initial mount when loader was first defined
   - The reset would cancel the initial load that was just started by the trigger effect

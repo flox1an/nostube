@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Multiple Video Quality Variants Support**: Videos can now have multiple quality variants (e.g., 1080p, 720p, 480p)
+  - Enhanced `VideoEvent` data model with `videoVariants` and `thumbnailVariants` arrays
+  - Each variant includes URL, SHA256 hash, file size, dimensions, quality label, and fallback URLs
+  - Created `VideoVariant` type with comprehensive metadata for each video quality
+  - Automatic quality-based fallback: Player tries highest quality first, falls back to lower qualities if unavailable
+  - Videos sorted by quality (highest first) for optimal playback experience
+  - Supports multiple `imeta` tags in Nostr events for different quality variants
+  - Debug Page enhanced with tabbed interface showing Blossom server availability for each variant
+    - Separate tabs for each video variant (Video 1, Video 2, etc.) with quality labels
+    - Dedicated tab for thumbnail variants
+    - Each tab displays server availability, file metadata, and fallback URLs
+    - Icons distinguish between video variants and thumbnails
+  - Created `useMultiVideoServerAvailability` hook for parallel availability checking across all variants
+  - Preserves backward compatibility with single-video events
+
 - **Internationalization (i18n) Support**: Full internationalization implementation with 4 languages
   - Added `react-i18next` for translation management
   - Created comprehensive translation files in `src/i18n/locales/`:

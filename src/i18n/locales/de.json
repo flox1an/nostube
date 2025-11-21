@@ -206,7 +206,23 @@
       "useGenerated": "Generiertes Vorschaubild verwenden",
       "uploadCustom": "Eigenes Vorschaubild hochladen",
       "generated": "Generiertes Vorschaubild"
-    }
+    },
+    "videoTable": {
+      "quality": "Qualität",
+      "dimensions": "Abmessungen",
+      "duration": "Dauer",
+      "size": "Größe",
+      "videoCodec": "Video-Codec",
+      "audioCodec": "Audio-Codec",
+      "actions": "Aktionen",
+      "preview": "Vorschau",
+      "remove": "Entfernen",
+      "previewTitle": "Vorschau: {{quality}}",
+      "closePreview": "Schließen"
+    },
+    "addAnotherVideo": "Weiteres Video hinzufügen",
+    "uploadingVideo": "Video wird hochgeladen...",
+    "processingVideo": "Video wird verarbeitet..."
   },
   "settings": {
     "title": "Einstellungen",

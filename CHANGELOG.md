@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-Video Upload Support**: Upload dialog now supports uploading multiple video files with different quality variants
+  - Created `VideoVariantsTable` component to display all uploaded videos in a table format with quality, dimensions, duration, size, and codec information
+  - Added "Add Another Video" button to upload additional videos after the first one
+  - Each video variant gets its own `imeta` tag in the published Nostr event
+  - Extracted reusable video processing utilities to `lib/video-processing.ts` for handling video metadata extraction
+  - Added quality label generation (4K, 1080p, 720p, 480p, 360p) based on video dimensions
+  - Table includes preview functionality to watch any uploaded video before publishing
+  - Remove functionality to delete individual video variants (minimum one required)
+  - All videos share the same thumbnail (no additional thumbnail upload needed)
+  - Added internationalization support for all new UI elements (EN, DE, FR, ES)
+  - Comprehensive TypeScript interfaces: `VideoVariant` for individual videos, updated `UploadInfo` to array-based structure
+  - Event creation now generates multiple `imeta` tags with proper dimensions, codecs, bitrate, size, and fallback URLs for each variant
+  - Full backward compatibility maintained with single-video uploads
+
 ### Fixed
 
 - **Debug Dialog Infinite Checks**: Fixed server availability checks running continuously every second in Debug dialog

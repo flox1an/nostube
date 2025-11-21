@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { type VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -32,12 +33,15 @@ export const VideoCard = React.memo(function VideoCard({
   allVideos,
   videoIndex,
 }: VideoCardProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.display_name || metadata?.name || video?.pubkey.slice(0, 8)
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const { setVideos } = useShortsFeedStore()
+
+  // Map i18n language codes to date-fns locales
+  const dateLocale = i18n.language === 'de' ? de : enUS
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -269,6 +273,7 @@ export const VideoCard = React.memo(function VideoCard({
               <div className="text-xs text-muted-foreground">
                 {formatDistance(new Date(video.created_at * 1000), new Date(), {
                   addSuffix: true,
+                  locale: dateLocale,
                 })}
               </div>
             </div>

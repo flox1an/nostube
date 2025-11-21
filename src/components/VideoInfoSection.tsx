@@ -4,6 +4,7 @@ import { nip19, type NostrEvent } from 'nostr-tools'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
@@ -88,10 +89,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   serverAvailability,
   onCheckAvailability,
 }: VideoInfoSectionProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
+
+  // Map i18n language codes to date-fns locales
+  const dateLocale = i18n.language === 'de' ? de : enUS
 
   if (isLoading) {
     return (
@@ -163,6 +167,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 {video?.created_at &&
                   formatDistance(new Date(video.created_at * 1000), new Date(), {
                     addSuffix: true,
+                    locale: dateLocale,
                   })}
               </div>
             </div>

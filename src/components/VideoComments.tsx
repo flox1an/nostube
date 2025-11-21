@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
@@ -132,10 +133,11 @@ const CommentItem = React.memo(function CommentItem({
   expandedComments: Set<string>
   onToggleExpanded: (commentId: string) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
   const name = metadata?.name || comment.pubkey.slice(0, 8)
   const maxDepth = 5 // Maximum nesting level
+  const dateLocale = i18n.language === 'de' ? de : enUS
   const isReplying = replyingTo === comment.id
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isExpanded = expandedComments.has(comment.id)
@@ -161,6 +163,7 @@ const CommentItem = React.memo(function CommentItem({
             <div className="text-xs text-muted-foreground">
               {formatDistance(new Date(comment.created_at * 1000), new Date(), {
                 addSuffix: true,
+                locale: dateLocale,
               })}
             </div>
           </div>

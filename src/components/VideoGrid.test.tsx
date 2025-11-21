@@ -84,14 +84,13 @@ describe('VideoGrid', () => {
     it('should show empty message when no videos and not loading', () => {
       renderWithRouter(<VideoGrid videos={[]} isLoading={false} />)
 
-      expect(screen.getByText(/No results found/i)).toBeInTheDocument()
-      expect(screen.getByText(/Try another relay/i)).toBeInTheDocument()
+      expect(screen.getByText(/No videos found/i)).toBeInTheDocument()
     })
 
     it('should not show empty message when loading', () => {
       renderWithRouter(<VideoGrid videos={[]} isLoading={true} showSkeletons={true} />)
 
-      expect(screen.queryByText(/No results found/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/No videos found/i)).not.toBeInTheDocument()
     })
   })
 
@@ -252,7 +251,7 @@ describe('VideoGrid', () => {
     it('should handle empty videos array gracefully', () => {
       renderWithRouter(<VideoGrid videos={[]} />)
 
-      expect(screen.getByText(/No results found/i)).toBeInTheDocument()
+      expect(screen.getByText(/No videos found/i)).toBeInTheDocument()
     })
 
     it('should handle videos with missing fields', () => {

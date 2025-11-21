@@ -29,6 +29,17 @@ export type VideoOrigin = {
   metadata?: string
 }
 
+export type VideoVariant = {
+  url: string
+  hash?: string // SHA256
+  size?: number // bytes
+  dimensions?: string // e.g., "1920x1080"
+  mimeType?: string
+  quality?: string // e.g., "1080p", "720p", "480p"
+  fallbackUrls: string[] // fallback URLs for this variant
+  blurhash?: string // for thumbnails
+}
+
 export interface VideoEvent {
   id: string
   kind: number
@@ -51,6 +62,9 @@ export interface VideoEvent {
   contentWarning: string | undefined
   x?: string
   origin?: VideoOrigin
+  // New fields for multi-video support
+  videoVariants: VideoVariant[] // All video variants (different qualities)
+  thumbnailVariants: VideoVariant[] // All thumbnail variants
 }
 
 // Create an in-memory index for fast text search
@@ -83,6 +97,96 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
   } catch {
     return {}
   }
+}
+
+/**
+ * Parse an imeta tag into a VideoVariant
+ */
+function parseImetaTag(imetaTag: string[]): VideoVariant | null {
+  const imetaValues = new Map<string, string[]>()
+
+  // Parse all key-value pairs in the imeta tag
+  for (let i = 1; i < imetaTag.length; i++) {
+    const firstSpace = imetaTag[i].indexOf(' ')
+    let key: string | undefined, value: string | undefined
+    if (firstSpace !== -1) {
+      key = imetaTag[i].slice(0, firstSpace)
+      value = imetaTag[i].slice(firstSpace + 1)
+    } else {
+      key = imetaTag[i]
+      value = undefined
+    }
+    if (key && value) {
+      if (!imetaValues.has(key)) {
+        imetaValues.set(key, [value])
+      } else {
+        imetaValues.get(key)!.push(value)
+      }
+    }
+  }
+
+  const url = imetaValues.get('url')?.[0]
+  if (!url) return null
+
+  // Clean up URL if it has space (malformed events)
+  const cleanUrl = url.includes(' ') ? url.split(' ')[0] : url
+
+  const mimeType = imetaValues.get('m')?.[0]
+  const dimensions = imetaValues.get('dim')?.[0]
+  const size = imetaValues.get('size')?.[0] ? parseInt(imetaValues.get('size')![0]) : undefined
+  const hash = imetaValues.get('x')?.[0]
+  const blurhash = imetaValues.get('blurhash')?.[0]
+
+  // Collect fallback URLs
+  const fallbackUrls: string[] = []
+  imetaValues.get('fallback')?.forEach(url => fallbackUrls.push(url))
+  imetaValues.get('mirror')?.forEach(url => fallbackUrls.push(url))
+
+  // Extract quality from dimensions (e.g., "1920x1080" -> "1080p")
+  let quality: string | undefined
+  if (dimensions) {
+    const match = dimensions.match(/x(\d+)/)
+    if (match) {
+      quality = `${match[1]}p`
+    }
+  }
+
+  return {
+    url: cleanUrl,
+    hash,
+    size,
+    dimensions,
+    mimeType,
+    quality,
+    fallbackUrls,
+    blurhash,
+  }
+}
+
+/**
+ * Sort video variants by quality (highest first)
+ */
+function sortVideoVariantsByQuality(variants: VideoVariant[]): VideoVariant[] {
+  return variants.sort((a, b) => {
+    // Extract numeric quality (e.g., "1080p" -> 1080)
+    const getNumericQuality = (v: VideoVariant): number => {
+      if (v.quality) {
+        const match = v.quality.match(/(\d+)/)
+        if (match) return parseInt(match[1])
+      }
+      if (v.dimensions) {
+        const match = v.dimensions.match(/x(\d+)/)
+        if (match) return parseInt(match[1])
+      }
+      return 0
+    }
+
+    const qualityA = getNumericQuality(a)
+    const qualityB = getNumericQuality(b)
+
+    // Higher quality first
+    return qualityB - qualityA
+  })
 }
 
 /**
@@ -141,11 +245,25 @@ export function processEvent(
   // Get relays from applesauce's seenRelays tracking
   const seenRelays = getSeenRelays(event)
   const eventRelays = seenRelays ? Array.from(seenRelays) : relays
-  // First check for imeta tag
-  const imetaTag = event.tags.find(t => t[0] === 'imeta')
+
+  // Find ALL imeta tags
+  const imetaTags = event.tags.filter(t => t[0] === 'imeta')
   const contentWarning = event.tags.find(t => t[0] == 'content-warning')?.[1]
 
-  if (imetaTag) {
+  if (imetaTags.length > 0) {
+    // Parse all imeta tags
+    const allVariants = imetaTags
+      .map(tag => parseImetaTag(tag))
+      .filter((v): v is VideoVariant => v !== null)
+
+    // Separate video variants from thumbnail variants
+    const videoVariants = sortVideoVariantsByQuality(
+      allVariants.filter(v => v.mimeType?.startsWith('video/'))
+    )
+    const thumbnailVariants = allVariants.filter(v => v.mimeType?.startsWith('image/'))
+
+    // For backward compatibility, use first imeta tag data
+    const imetaTag = imetaTags[0]
     // Parse imeta tag values
     const imetaValues = new Map<string, string[]>()
     for (let i = 1; i < imetaTag.length; i++) {
@@ -231,7 +349,17 @@ export function processEvent(
 
     // NOTE: URL generation (mirrors, proxies) is now handled by useMediaUrls hook in VideoPlayer
     // We just pass the raw video URLs here
-    const finalUrls = videoUrls
+    // Flatten video variants into URLs array (quality-sorted, highest first)
+    const finalUrls: string[] = []
+    for (const variant of videoVariants) {
+      finalUrls.push(variant.url)
+      finalUrls.push(...variant.fallbackUrls)
+    }
+
+    // Get mime type and dimensions from highest quality variant (first one)
+    const primaryVariant = videoVariants[0]
+    const primaryMimeType = primaryVariant?.mimeType || mimeType
+    const primaryDimensions = primaryVariant?.dimensions
 
     const videoEvent: VideoEvent = {
       id: event.id,
@@ -243,16 +371,19 @@ export function processEvent(
       pubkey: event.pubkey,
       created_at: event.created_at,
       duration,
-      x,
+      x: primaryVariant?.hash || x,
       tags,
       searchText: '',
       urls: finalUrls,
-      mimeType,
+      mimeType: primaryMimeType,
+      dimensions: primaryDimensions,
       textTracks,
       link: generateEventLink(event, identifier, eventRelays),
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,
+      videoVariants,
+      thumbnailVariants,
     }
 
     // Create search index
@@ -291,6 +422,33 @@ export function processEvent(
     // We just pass the raw video URL here
     const finalUrls = [url]
 
+    // For old format, create single video variant
+    const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
+    const size = parseInt(event.tags.find(t => t[0] === 'size')?.[1] || '0')
+    const x = event.tags.find(t => t[0] === 'x')?.[1]
+
+    const videoVariants: VideoVariant[] = url
+      ? [
+          {
+            url,
+            hash: x,
+            size: size || undefined,
+            dimensions,
+            mimeType,
+            fallbackUrls: [],
+          },
+        ]
+      : []
+
+    const thumbnailVariants: VideoVariant[] = thumb
+      ? [
+          {
+            url: thumb,
+            fallbackUrls: [],
+          },
+        ]
+      : []
+
     const videoEvent: VideoEvent = {
       id: event.id,
       kind: event.kind,
@@ -306,12 +464,15 @@ export function processEvent(
       urls: finalUrls,
       textTracks: [],
       mimeType,
-      dimensions: event.tags.find(t => t[0] === 'dim')?.[1],
-      size: parseInt(event.tags.find(t => t[0] === 'size')?.[1] || '0'),
+      dimensions,
+      size: size || undefined,
+      x,
       link: generateEventLink(event, identifier, eventRelays),
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,
+      videoVariants,
+      thumbnailVariants,
     }
 
     // Create search index

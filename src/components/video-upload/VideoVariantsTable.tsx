@@ -202,6 +202,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handlePreviewClick(index)}
@@ -212,6 +213,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                         </Button>
                         {onRemove && videos.length > 1 && (
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => onRemove(index)}

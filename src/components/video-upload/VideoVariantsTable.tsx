@@ -13,6 +13,7 @@ import {
 import { useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface VideoVariantsTableProps {
   videos: VideoVariant[]
@@ -58,19 +59,17 @@ function getCodecWarning(
 export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariantsTableProps) {
   const { t } = useTranslation()
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
 
   if (videos.length === 0) {
     return null
   }
 
   const handlePreviewClick = (index: number) => {
-    if (previewIndex === index) {
-      setPreviewIndex(null)
-    } else {
-      setPreviewIndex(index)
-      if (onPreview) {
-        onPreview(videos[index])
-      }
+    setPreviewIndex(index)
+    setIsPreviewDialogOpen(true)
+    if (onPreview) {
+      onPreview(videos[index])
     }
   }
 
@@ -96,7 +95,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
 
               return (
                 <>
-                  <TableRow key={index} className={previewIndex === index ? 'bg-muted/50' : ''}>
+                  <TableRow key={index}>
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell>
                       <span className="inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
@@ -271,45 +270,42 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
         </Table>
       </div>
 
-      {/* Video Preview */}
-      {previewIndex !== null && videos[previewIndex] && (
-        <div className="border rounded-lg p-4 bg-muted/30">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium">
-              {t('upload.videoTable.previewTitle', {
-                quality: videos[previewIndex].qualityLabel,
-              })}
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPreviewIndex(null)}
-              className="h-8 cursor-pointer"
+      {/* Video Preview Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {previewIndex !== null && videos[previewIndex]
+                ? t('upload.videoTable.previewTitle', {
+                    quality: videos[previewIndex].qualityLabel,
+                  })
+                : ''}
+            </DialogTitle>
+          </DialogHeader>
+          {previewIndex !== null && videos[previewIndex] && (
+            <video
+              controls
+              autoPlay
+              className="w-full rounded border shadow"
+              crossOrigin="anonymous"
+              key={previewIndex}
             >
-              {t('upload.videoTable.closePreview')}
-            </Button>
-          </div>
-          <video
-            controls
-            className="w-full rounded border shadow max-h-96"
-            crossOrigin="anonymous"
-            key={previewIndex}
-          >
-            <source
-              src={
-                videos[previewIndex].inputMethod === 'url'
-                  ? videos[previewIndex].url
-                  : videos[previewIndex].uploadedBlobs[0]?.url
-              }
-            />
-            {videos[previewIndex].inputMethod === 'file' &&
-              videos[previewIndex].uploadedBlobs
-                .slice(1)
-                .map((blob, idx) => <source key={blob.url || idx} src={blob.url} />)}
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      )}
+              <source
+                src={
+                  videos[previewIndex].inputMethod === 'url'
+                    ? videos[previewIndex].url
+                    : videos[previewIndex].uploadedBlobs[0]?.url
+                }
+              />
+              {videos[previewIndex].inputMethod === 'file' &&
+                videos[previewIndex].uploadedBlobs
+                  .slice(1)
+                  .map((blob, idx) => <source key={blob.url || idx} src={blob.url} />)}
+              Your browser does not support the video tag.
+            </video>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

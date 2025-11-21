@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { RefreshCw, Trash2 } from 'lucide-react'
 
 export function MissingVideosSection() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language === 'de' ? de : enUS
   const { getAllMissingVideos, clearMissingVideo, clearAllMissing, getMissingCount } =
     useMissingVideos()
 
@@ -31,7 +33,7 @@ export function MissingVideosSection() {
   const formatRetryTime = (retryAfter: number | undefined) => {
     if (!retryAfter) return 'Unknown'
     if (now >= retryAfter) return t('settings.missingVideos.ready')
-    return `Retry in ${formatDistance(retryAfter, now)}`
+    return `Retry in ${formatDistance(retryAfter, now, { locale: dateLocale })}`
   }
 
   const getStatusBadge = (video: {
@@ -94,7 +96,10 @@ export function MissingVideosSection() {
                         <div className="text-sm space-y-1">
                           <p className="text-muted-foreground">
                             {t('settings.missingVideos.failed')}{' '}
-                            {formatDistance(video.failedAt, now, { addSuffix: true })}
+                            {formatDistance(video.failedAt, now, {
+                              addSuffix: true,
+                              locale: dateLocale,
+                            })}
                           </p>
                           <p className="text-muted-foreground">
                             {t('settings.missingVideos.attempts')} {video.attemptCount} •{' '}

@@ -3,11 +3,13 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
+import { useTranslation } from 'react-i18next'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import { FollowButton } from '@/components/FollowButton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { processEvent, type VideoEvent, processEvents } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
@@ -53,6 +55,8 @@ function ShortVideoItem({
   shouldPreload: boolean
   registerIntersectionRef?: (element: HTMLDivElement | null) => void
 }) {
+  const { i18n } = useTranslation()
+  const dateLocale = i18n.language === 'de' ? de : enUS
   const metadata = useProfile({ pubkey: video.pubkey })
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
   const authorPicture = metadata?.picture
@@ -424,6 +428,7 @@ function ShortVideoItem({
                   <div className="text-white/70 text-sm">
                     {formatDistance(new Date(video.created_at * 1000), new Date(), {
                       addSuffix: true,
+                      locale: dateLocale,
                     })}
                   </div>
                 </div>

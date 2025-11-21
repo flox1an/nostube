@@ -1,9 +1,11 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns'
+import { enUS, de } from 'date-fns/locale'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
@@ -37,6 +39,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   video: VideoEvent
   thumbResizeServerUrl?: string
 }) {
+  const { i18n } = useTranslation()
+  const dateLocale = i18n.language === 'de' ? de : enUS
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
@@ -91,6 +95,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
           <div className="text-xs text-muted-foreground mt-1">
             {formatDistance(new Date(video.created_at * 1000), new Date(), {
               addSuffix: true,
+              locale: dateLocale,
             })}
           </div>
         </div>

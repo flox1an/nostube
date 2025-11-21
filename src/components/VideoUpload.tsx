@@ -8,12 +8,14 @@ import {
   InputMethodSelector,
   UrlInputSection,
   FileDropzone,
-  VideoPreview,
   FormFields,
   ContentWarning,
   ThumbnailSection,
+  VideoVariantsTable,
 } from './video-upload'
 import { useTranslation } from 'react-i18next'
+import { useCallback } from 'react'
+import { useDropzone } from 'react-dropzone'
 
 export function VideoUpload() {
   const { t } = useTranslation()
@@ -59,7 +61,24 @@ export function VideoUpload() {
     handleThumbnailSourceChange,
     onDrop,
     handleSubmit,
+    handleAddVideo,
+    handleRemoveVideo,
   } = useVideoUpload()
+
+  // Dropzone for adding additional videos
+  const onDropAdditional = useCallback(
+    (acceptedFiles: File[]) => {
+      handleAddVideo(acceptedFiles)
+    },
+    [handleAddVideo]
+  )
+
+  const { getRootProps: getRootPropsAdditional, getInputProps: getInputPropsAdditional } =
+    useDropzone({
+      onDrop: onDropAdditional,
+      accept: { 'video/*': [] },
+      multiple: false,
+    })
 
   const { user } = useCurrentUser()
   const navigate = useNavigate()
@@ -122,19 +141,25 @@ export function VideoUpload() {
               />
             )}
 
-            {/* Video preview or dropzone */}
-            {(uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0) ||
-            (inputMethod === 'url' && uploadInfo.videoUrl) ? (
-              <VideoPreview
-                inputMethod={inputMethod}
-                uploadedBlobs={uploadInfo.uploadedBlobs}
-                videoUrl={uploadInfo.videoUrl}
-                dimension={uploadInfo.dimension}
-                sizeMB={uploadInfo.sizeMB}
-                duration={uploadInfo.duration}
-                videoCodec={uploadInfo.videoCodec}
-                audioCodec={uploadInfo.audioCodec}
-              />
+            {/* Video variants table */}
+            {uploadInfo.videos.length > 0 ? (
+              <div className="space-y-4">
+                <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
+                {inputMethod === 'file' && uploadState === 'finished' && (
+                  <div className="border-2 border-dashed rounded-lg p-4">
+                    <div
+                      {...getRootPropsAdditional()}
+                      className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+                    >
+                      <input {...getInputPropsAdditional()} />
+                      <Button type="button" variant="outline" className="cursor-pointer">
+                        {t('upload.addAnotherVideo')}
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">{t('upload.tip')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : inputMethod === 'file' &&
               blossomInitalUploadServers &&
               blossomInitalUploadServers.length > 0 ? (
@@ -144,10 +169,7 @@ export function VideoUpload() {
                 selectedFile={file}
                 className="mb-4"
                 style={{
-                  display:
-                    uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0
-                      ? 'none'
-                      : undefined,
+                  display: uploadInfo.videos.length > 0 ? 'none' : undefined,
                 }}
               />
             ) : inputMethod === 'file' ? (
@@ -164,8 +186,8 @@ export function VideoUpload() {
             <UploadServer
               inputMethod={inputMethod}
               uploadState={uploadState}
-              uploadedBlobs={uploadInfo.uploadedBlobs}
-              mirroredBlobs={uploadInfo.mirroredBlobs}
+              uploadedBlobs={uploadInfo.videos.length > 0 ? uploadInfo.videos[0].uploadedBlobs : []}
+              mirroredBlobs={uploadInfo.videos.length > 0 ? uploadInfo.videos[0].mirroredBlobs : []}
             />
 
             {uploadProgress && (
@@ -179,8 +201,7 @@ export function VideoUpload() {
             )}
 
             {/* Metadata fields - show only after video is processed/uploaded */}
-            {(uploadState === 'finished' ||
-              (uploadInfo.uploadedBlobs && uploadInfo.uploadedBlobs.length > 0)) && (
+            {(uploadState === 'finished' || uploadInfo.videos.length > 0) && (
               <>
                 <FormFields
                   title={title}
@@ -219,11 +240,7 @@ export function VideoUpload() {
                   <Button
                     type="submit"
                     disabled={
-                      isPublishing ||
-                      !title ||
-                      !thumbnail ||
-                      (inputMethod === 'file' && uploadInfo.uploadedBlobs.length === 0) ||
-                      (inputMethod === 'url' && !uploadInfo.videoUrl)
+                      isPublishing || !title || !thumbnail || uploadInfo.videos.length === 0
                     }
                   >
                     {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}

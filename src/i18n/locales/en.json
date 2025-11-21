@@ -206,7 +206,23 @@
       "useGenerated": "Use generated thumbnail",
       "uploadCustom": "Upload custom thumbnail",
       "generated": "Generated thumbnail"
-    }
+    },
+    "videoTable": {
+      "quality": "Quality",
+      "dimensions": "Dimensions",
+      "duration": "Duration",
+      "size": "Size",
+      "videoCodec": "Video Codec",
+      "audioCodec": "Audio Codec",
+      "actions": "Actions",
+      "preview": "Preview",
+      "remove": "Remove",
+      "previewTitle": "Preview: {{quality}}",
+      "closePreview": "Close"
+    },
+    "addAnotherVideo": "Add Another Video",
+    "uploadingVideo": "Uploading video...",
+    "processingVideo": "Processing video..."
   },
   "settings": {
     "title": "Settings",

@@ -38,7 +38,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated 6 components to use centralized utility: `VideoCard`, `VideoInfoSection`, `VideoComments`, `MissingVideosSection`, `VideoSuggestions`, `ShortsVideoPage`
     - Dates and relative times (e.g., "3 hours ago") now display in the user's selected language
 
+### Fixed
+
+- **HomePage Video Loading on Login**: Fixed videos not loading on HomePage after user login
+  - Root cause: When user logs in, their NIP-65 relay list is fetched, changing relays and recreating the loader
+  - The reset effect would trigger, but the trigger effect wouldn't run again since loader didn't change a second time
+  - This left the page in a loading state with no videos displayed
+  - Solution: Modified reset effect to call `next()` after reset completes when loader changes
+  - Uses `queueMicrotask` to ensure reset state updates are applied before triggering the load
+  - Fixes HomePage and all timeline pages that reload when relays change (e.g., after login, settings changes)
+
+- **AuthorPage Video Loading**: Fixed AuthorPage videos not loading, with skeleton staying visible indefinitely
+  - Root cause: Reset effect in `useInfiniteTimeline` triggered on initial mount when loader was first defined
+  - The reset would cancel the initial load that was just started by the trigger effect
+  - Solution: Changed initial mount check from `if (!loaderRef.current && !loader)` to `if (loaderRef.current === undefined)`
+  - Now properly handles both cases: loader undefined or loader defined on first render
+  - Only triggers reset when loader changes from a previous non-undefined value
+  - Fixes AuthorPage and any other pages where loader is defined immediately on mount
+
 ### Changed
+
+- **Mirror Dialog Auto-Recheck**: Mirror Video dialog now automatically rechecks server availability after successful mirroring
+  - Added `onMirrorComplete` callback prop to `MirrorVideoDialog`
+  - Automatically triggers availability recheck after successful or partial mirror completion
+  - Users can immediately see the video is now available on newly mirrored servers
+  - Improves UX by confirming mirror operation worked without manual refresh
+
+- **Debug Logging Throttling**: Reduced excessive console logging during video playback
+  - `useUserBlossomServers` hook now throttles debug logs to prevent spam
+  - Only logs when values actually change (server count, user pubkey) or once every 10 seconds
+  - Moved logging to `useEffect` to comply with React's purity requirements
+  - Eliminates console spam during video playback while preserving debug information
 
 - **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions
   - Buttons are now marked with semi-transparent fill (`fill-current/80`) when the current user has already reacted

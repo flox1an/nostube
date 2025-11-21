@@ -58,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Debug Logging Throttling**: Reduced excessive console logging during video playback
+  - `useUserBlossomServers` hook now throttles debug logs to prevent spam
+  - Only logs when values actually change (server count, user pubkey) or once every 10 seconds
+  - Moved logging to `useEffect` to comply with React's purity requirements
+  - Eliminates console spam during video playback while preserving debug information
+
 - **Reaction Buttons UX Improvement**: Enhanced video reaction buttons (upvote/downvote) to prevent duplicate reactions
   - Buttons are now marked with semi-transparent fill (`fill-current/80`) when the current user has already reacted
   - Both buttons are disabled after reacting (either up or down) to prevent changing reactions

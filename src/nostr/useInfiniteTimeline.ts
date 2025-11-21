@@ -220,13 +220,14 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   const loaderRef = useRef(loader)
 
   useEffect(() => {
-    // Skip reset on initial mount (loader is undefined)
-    if (!loaderRef.current && !loader) {
+    // On initial mount, just set the ref without triggering reset
+    // This handles both cases: loader undefined or loader defined on first render
+    if (loaderRef.current === undefined) {
       loaderRef.current = loader
       return
     }
 
-    // If loader changed, always reset
+    // If loader changed from a previous value, reset
     // The loading guard in `next()` will prevent new loads while loading
     if (loaderRef.current !== loader) {
       loaderRef.current = loader
@@ -235,13 +236,20 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         await Promise.resolve()
         if (!cancelled) {
           reset()
+          // Trigger load after reset completes
+          // Use queueMicrotask to ensure reset state updates are applied first
+          queueMicrotask(() => {
+            if (!cancelled) {
+              next()
+            }
+          })
         }
       })()
       return () => {
         cancelled = true
       }
     }
-  }, [loader, reset])
+  }, [loader, reset, next])
 
   return {
     videos,

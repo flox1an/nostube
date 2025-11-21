@@ -34,6 +34,7 @@ interface MirrorVideoDialogProps {
   serverList: ServerInfo[]
   serverAvailability: Map<string, ServerAvailability>
   isCheckingAvailability: boolean
+  onMirrorComplete?: () => void // Callback to trigger availability recheck after successful mirror
 }
 
 export function MirrorVideoDialog({
@@ -45,6 +46,7 @@ export function MirrorVideoDialog({
   serverList,
   serverAvailability,
   isCheckingAvailability: _isCheckingAvailability,
+  onMirrorComplete,
 }: MirrorVideoDialogProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
@@ -192,6 +194,8 @@ export function MirrorVideoDialog({
             failed: failedCount,
           }),
         })
+        // Trigger availability recheck after partial success
+        onMirrorComplete?.()
         onOpenChange(false)
       } else {
         // All succeeded
@@ -199,6 +203,8 @@ export function MirrorVideoDialog({
           title: t('video.mirror.complete'),
           description: t('video.mirror.completeMessage', { count: successCount }),
         })
+        // Trigger availability recheck after successful mirror
+        onMirrorComplete?.()
         onOpenChange(false)
       }
     } catch (error) {

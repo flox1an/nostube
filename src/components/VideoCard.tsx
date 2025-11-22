@@ -200,7 +200,7 @@ export const VideoCard = React.memo(function VideoCard({
                   referrerPolicy="no-referrer"
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
-                    'w-full object-cover transition-opacity duration-300',
+                    'w-full h-full object-cover transition-opacity duration-300',
                     aspectRatio,
                     isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
                   )}

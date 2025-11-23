@@ -18,9 +18,22 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
   const dateLocale = getDateLocale(i18n.language)
 
   const handleRepost = () => {
-    // Navigate to upload page with URL prefilled
+    // Navigate to upload page with URL and description prefilled
     const url = note.videoUrls[0]
-    navigate(`/upload?url=${encodeURIComponent(url)}`)
+
+    // Remove all video URLs from the content to use as description
+    let description = note.content
+    note.videoUrls.forEach(videoUrl => {
+      description = description.replace(videoUrl, '')
+    })
+    // Clean up extra whitespace
+    description = description.replace(/\s+/g, ' ').trim()
+
+    const params = new URLSearchParams({
+      url,
+      ...(description && { description }),
+    })
+    navigate(`/upload?${params.toString()}`)
   }
 
   // Truncate content for preview

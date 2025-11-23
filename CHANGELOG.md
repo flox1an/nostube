@@ -21,9 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added "Video notes" link to sidebar navigation under Library section
   - Full internationalization support (EN, DE, FR, ES)
 
-- **Video Upload URL Prefilling**: Upload page now accepts `url` query parameter to prefill video URL
-  - Users can navigate to `/upload?url=<video-url>` to auto-populate the URL input field
+- **Video Upload URL Prefilling**: Upload page now accepts `url` and `description` query parameters
+  - Users can navigate to `/upload?url=<video-url>&description=<text>` to auto-populate fields
   - Automatically switches to URL input method and processes the video
+  - Description is prefilled with note content (video URLs automatically removed)
   - Enables seamless workflow from Video Notes page to video upload
 
 - **Multi-Video Upload Support**: Upload dialog now supports uploading multiple quality variants of the same video

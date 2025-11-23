@@ -83,16 +83,31 @@ export function VideoUpload() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
 
-  // Handle URL prefilling from query params (e.g., /upload?url=...)
+  // Handle URL and description prefilling from query params (e.g., /upload?url=...&description=...)
   useEffect(() => {
     const urlParam = searchParams.get('url')
+    const descriptionParam = searchParams.get('description')
+
     if (urlParam && urlParam.trim() && videoUrl !== urlParam) {
       setInputMethod('url')
       setVideoUrl(urlParam)
       // Auto-process the URL
       handleUrlVideoProcessing(urlParam)
     }
-  }, [searchParams, videoUrl, setInputMethod, setVideoUrl, handleUrlVideoProcessing])
+
+    // Prefill description if provided
+    if (descriptionParam && descriptionParam.trim() && description !== descriptionParam) {
+      setDescription(descriptionParam)
+    }
+  }, [
+    searchParams,
+    videoUrl,
+    description,
+    setInputMethod,
+    setVideoUrl,
+    setDescription,
+    handleUrlVideoProcessing,
+  ])
 
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>

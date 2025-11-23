@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Blog Article - Upload Process**: Created comprehensive beginner-friendly blog article explaining the upload process
+  - Detailed explanation of temp storage (initial upload) concept in Blossom
+  - In-depth coverage of chunked uploads (BUD-10 protocol)
+  - Step-by-step breakdown of the complete upload journey from file selection to Nostr event publishing
+  - Covers SHA256 hash calculation, server availability checks, mirroring, and multiple quality variants
+  - Beginner-friendly language with real examples, HTTP requests, and JSON responses
+  - Explains the benefits: reliability, efficiency, user experience, decentralization, and privacy
+  - Includes configuration tips and technical details for developers
+  - Article saved in `blog-upload-process.md` at project root
+
 - **Multi-Video Upload Support**: Upload dialog now supports uploading multiple quality variants of the same video
   - Created `VideoVariantsTable` component to display all uploaded video variants in a compact table format
   - Added "Add Another Quality/Resolution" button to upload the same video in different resolutions (e.g., 1080p, 720p, 480p)

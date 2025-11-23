@@ -114,6 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Play/Pause Overlay UX Improvement**: Made play/pause overlay smaller and appear faster
+  - Reduced icon size from `w-20 h-20` (80px) to `w-14 h-14` (56px) - about 30% smaller
+  - Reduced padding from `p-4` to `p-3` for more compact appearance
+  - Reduced fade-out delay from 700ms to 400ms for faster appearance and disappearance
+  - Improves video playback UX with more subtle, responsive visual feedback
+
 - **Mirror Dialog Auto-Recheck**: Mirror Video dialog now automatically rechecks server availability after successful mirroring
   - Added `onMirrorComplete` callback prop to `MirrorVideoDialog`
   - Automatically triggers availability recheck after successful or partial mirror completion

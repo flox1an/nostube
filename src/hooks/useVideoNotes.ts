@@ -70,10 +70,19 @@ export function useVideoNotes() {
 
   useEffect(() => {
     if (!user) {
+      console.log('VideoNotes: No user logged in')
       queueMicrotask(() => setLoading(false))
       return
     }
 
+    if (!pool || !readRelays || readRelays.length === 0) {
+      console.log('VideoNotes: Waiting for pool or relays...')
+      return
+    }
+
+    console.log('VideoNotes: Starting to load notes for user:', user.pubkey.slice(0, 8))
+
+    let videoSub: { unsubscribe: () => void } | null = null
     let notesSub: { unsubscribe: () => void } | null = null
 
     // Load user's video events to check for reposts
@@ -85,7 +94,9 @@ export function useVideoNotes() {
       { eventStore }
     )
 
-    const videoSub = videoLoader().subscribe({
+    console.log('VideoNotes: Created video loader, subscribing...')
+
+    videoSub = videoLoader().subscribe({
       next: (event: NostrEvent) => {
         // Extract URLs from imeta tags
         const imetaTags = event.tags.filter(t => t[0] === 'imeta')
@@ -105,7 +116,7 @@ export function useVideoNotes() {
         }
       },
       complete: () => {
-        console.log(`Loaded ${videoUrlSet.size} video URLs from user's uploaded videos`)
+        console.log(`VideoNotes: Loaded ${videoUrlSet.size} video URLs from user's uploaded videos`)
 
         // Only load notes after video URLs are loaded
         const notesLoader = createTimelineLoader(
@@ -115,14 +126,16 @@ export function useVideoNotes() {
           { eventStore }
         )
 
-        let notesArray: NostrEvent[] = []
+        console.log('VideoNotes: Created notes loader, subscribing...')
+
+        const notesArray: NostrEvent[] = []
 
         notesSub = notesLoader().subscribe({
           next: (event: NostrEvent) => {
             notesArray.push(event)
           },
           complete: () => {
-            console.log(`Loaded ${notesArray.length} Kind 1 notes total`)
+            console.log(`VideoNotes: Loaded ${notesArray.length} Kind 1 notes total`)
 
             const processedNotes: VideoNote[] = notesArray
               .map(event => {
@@ -167,24 +180,26 @@ export function useVideoNotes() {
               .filter((note): note is VideoNote => note !== null)
               .sort((a, b) => b.created_at - a.created_at) // Sort by newest first
 
-            console.log(`Found ${processedNotes.length} notes with videos`)
+            console.log(`VideoNotes: Found ${processedNotes.length} notes with videos`)
             setNotes(processedNotes)
             setLoading(false)
           },
           error: err => {
-            console.error('Error loading video notes:', err)
+            console.error('VideoNotes: Error loading notes:', err)
             setLoading(false)
           },
         })
       },
       error: err => {
-        console.error('Error loading video events:', err)
+        console.error('VideoNotes: Error loading video events:', err)
         setLoading(false)
       },
     })
 
     return () => {
-      videoSub.unsubscribe()
+      if (videoSub) {
+        videoSub.unsubscribe()
+      }
       if (notesSub) {
         notesSub.unsubscribe()
       }

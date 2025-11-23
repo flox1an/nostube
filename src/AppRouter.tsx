@@ -25,6 +25,9 @@ const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default:
 const HistoryPage = lazy(() =>
   import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage }))
 )
+const VideoNotesPage = lazy(() =>
+  import('./pages/VideoNotesPage').then(m => ({ default: m.VideoNotesPage }))
+)
 const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default: m.UploadPage })))
 const PlaylistPage = lazy(() => import('./pages/Playlists'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
@@ -121,6 +124,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <HistoryPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/video-notes"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <VideoNotesPage />
               </Suspense>
             }
           />

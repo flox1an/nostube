@@ -33,6 +33,7 @@
     "history": "Verlauf",
     "playlists": "Playlists",
     "yourVideos": "Deine Videos",
+    "videoNotes": "Video-Notizen",
     "watchLater": "Später ansehen",
     "likedVideos": "Gemochte Videos",
     "configuration": "Konfiguration",
@@ -382,6 +383,18 @@
     "subscriptions": {
       "emptyState": "Folge einigen Autoren, um ihre Videos hier zu sehen.",
       "noVideos": "Keine Videos von deinen Abonnements gefunden."
+    },
+    "videoNotes": {
+      "title": "Video-Notizen",
+      "description": "Deine Kind-1-Notizen, die Videos enthalten. Teile sie als richtige Video-Events.",
+      "loginRequired": "Bitte melde dich an, um deine Video-Notizen zu sehen.",
+      "empty": "Keine Video-Notizen gefunden. Poste einige Notizen mit Video-URLs, um sie hier zu sehen.",
+      "preview": "Videovorschau",
+      "reposted": "Geteilt",
+      "alreadyReposted": "Bereits geteilt",
+      "repostAsVideo": "Als Video teilen",
+      "multipleVideos": "{{count}} Videos",
+      "blossomUrl": "{{count}} Blossom-URL"
     },
     "notFound": {
       "code": "404",

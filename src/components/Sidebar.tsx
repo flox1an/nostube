@@ -1,4 +1,4 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog } from 'lucide-react'
+import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog, FileText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
@@ -33,6 +33,7 @@ export function Sidebar() {
       icon: Play,
       href: `/author/${userNprofile}`,
     },
+    { name: t('navigation.videoNotes'), icon: FileText, href: '/video-notes', disabled: false },
     { name: t('navigation.watchLater'), icon: Clock, href: '/watch-later', disabled: true },
     { name: t('navigation.likedVideos'), icon: ThumbsUp, href: '/liked-videos' },
   ]

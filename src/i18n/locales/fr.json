@@ -33,6 +33,7 @@
     "history": "Historique",
     "playlists": "Listes de lecture",
     "yourVideos": "Vos vidéos",
+    "videoNotes": "Notes vidéo",
     "watchLater": "À regarder plus tard",
     "likedVideos": "Vidéos aimées",
     "configuration": "Configuration",
@@ -382,6 +383,18 @@
     "subscriptions": {
       "emptyState": "Suivez quelques auteurs pour voir leurs vidéos ici.",
       "noVideos": "Aucune vidéo trouvée dans vos abonnements."
+    },
+    "videoNotes": {
+      "title": "Notes vidéo",
+      "description": "Vos notes Kind 1 contenant des vidéos. Republier-les en tant qu'événements vidéo appropriés.",
+      "loginRequired": "Veuillez vous connecter pour voir vos notes vidéo.",
+      "empty": "Aucune note vidéo trouvée. Publiez quelques notes avec des URLs vidéo pour les voir ici.",
+      "preview": "Aperçu vidéo",
+      "reposted": "Republié",
+      "alreadyReposted": "Déjà republié",
+      "repostAsVideo": "Republier en tant que vidéo",
+      "multipleVideos": "{{count}} vidéos",
+      "blossomUrl": "{{count}} URL Blossom"
     },
     "notFound": {
       "code": "404",

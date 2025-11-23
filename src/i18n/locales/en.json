@@ -33,6 +33,7 @@
     "history": "History",
     "playlists": "Playlists",
     "yourVideos": "Your videos",
+    "videoNotes": "Video notes",
     "watchLater": "Watch later",
     "likedVideos": "Liked videos",
     "configuration": "Configuration",
@@ -382,6 +383,18 @@
     "subscriptions": {
       "emptyState": "Follow some authors to see their videos here.",
       "noVideos": "No videos found from your subscriptions."
+    },
+    "videoNotes": {
+      "title": "Video Notes",
+      "description": "Your Kind 1 notes that contain videos. Repost them as proper video events.",
+      "loginRequired": "Please log in to view your video notes.",
+      "empty": "No video notes found. Post some notes with video URLs to see them here.",
+      "preview": "Video Preview",
+      "reposted": "Reposted",
+      "alreadyReposted": "Already reposted",
+      "repostAsVideo": "Repost as video",
+      "multipleVideos": "{{count}} videos",
+      "blossomUrl": "{{count}} Blossom URL"
     },
     "notFound": {
       "code": "404",

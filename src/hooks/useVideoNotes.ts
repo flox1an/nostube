@@ -94,6 +94,7 @@ export function useVideoNotes() {
 
     let videoSub: { unsubscribe: () => void } | null = null
     let notesSub: { unsubscribe: () => void } | null = null
+    const notesArray: NostrEvent[] = []
 
     // Load user's video events to check for reposts
     const videoKinds = [21, 22, 34235, 34236]
@@ -104,8 +105,17 @@ export function useVideoNotes() {
       { eventStore }
     )
 
-    console.log('VideoNotes: Created video loader, subscribing...')
+    // Load Kind 1 notes in parallel
+    const notesLoader = createTimelineLoader(
+      pool,
+      readRelays,
+      [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
+      { eventStore }
+    )
 
+    console.log('VideoNotes: Created loaders, subscribing...')
+
+    // Subscribe to video events to build URL set
     videoSub = videoLoader().subscribe({
       next: (event: NostrEvent) => {
         // Extract URLs from imeta tags
@@ -125,88 +135,77 @@ export function useVideoNotes() {
           videoUrlSet.add(urlTag[1])
         }
       },
-      complete: () => {
-        console.log(`VideoNotes: Loaded ${videoUrlSet.size} video URLs from user's uploaded videos`)
-
-        // Only load notes after video URLs are loaded
-        const notesLoader = createTimelineLoader(
-          pool,
-          readRelays,
-          [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
-          { eventStore }
-        )
-
-        console.log('VideoNotes: Created notes loader, subscribing...')
-
-        const notesArray: NostrEvent[] = []
-
-        notesSub = notesLoader().subscribe({
-          next: (event: NostrEvent) => {
-            notesArray.push(event)
-          },
-          complete: () => {
-            console.log(`VideoNotes: Loaded ${notesArray.length} Kind 1 notes total`)
-
-            const processedNotes: VideoNote[] = notesArray
-              .map(event => {
-                const videoUrls = extractVideoUrls(event.content, event.tags)
-                if (videoUrls.length === 0) return null
-
-                const imetaTags = event.tags.filter(t => t[0] === 'imeta')
-                const blossomHashes = videoUrls
-                  .map(url => extractBlossomHash(url).sha256)
-                  .filter((hash): hash is string => !!hash)
-
-                // Get thumbnail from imeta or first video URL
-                let thumbnailUrl: string | undefined
-                if (imetaTags.length > 0) {
-                  const firstImeta = imetaTags[0]
-                  for (let i = 1; i < firstImeta.length; i++) {
-                    const [key, value] = firstImeta[i].split(' ', 2)
-                    if (key === 'image' && value) {
-                      thumbnailUrl = value
-                      break
-                    }
-                  }
-                }
-                if (!thumbnailUrl && videoUrls[0]) {
-                  thumbnailUrl = videoUrls[0]
-                }
-
-                // Check if any of the video URLs have been reposted
-                const isReposted = videoUrls.some(url => videoUrlSet.has(url))
-
-                return {
-                  id: event.id,
-                  content: event.content,
-                  created_at: event.created_at,
-                  videoUrls,
-                  imetaTags,
-                  blossomHashes,
-                  thumbnailUrl,
-                  isReposted,
-                } as VideoNote
-              })
-              .filter((note): note is VideoNote => note !== null)
-              .sort((a, b) => b.created_at - a.created_at) // Sort by newest first
-
-            console.log(`VideoNotes: Found ${processedNotes.length} notes with videos`)
-            setNotes(processedNotes)
-            setLoading(false)
-          },
-          error: err => {
-            console.error('VideoNotes: Error loading notes:', err)
-            setLoading(false)
-          },
-        })
-      },
       error: err => {
         console.error('VideoNotes: Error loading video events:', err)
-        setLoading(false)
       },
     })
 
+    // Subscribe to Kind 1 notes
+    notesSub = notesLoader().subscribe({
+      next: (event: NostrEvent) => {
+        notesArray.push(event)
+      },
+      error: err => {
+        console.error('VideoNotes: Error loading notes:', err)
+      },
+    })
+
+    // Process notes after a delay to allow events to load
+    const processTimeout = setTimeout(() => {
+      console.log(
+        `VideoNotes: Processing ${notesArray.length} notes with ${videoUrlSet.size} video URLs`
+      )
+
+      const processedNotes: VideoNote[] = notesArray
+        .map(event => {
+          const videoUrls = extractVideoUrls(event.content, event.tags)
+          if (videoUrls.length === 0) return null
+
+          const imetaTags = event.tags.filter(t => t[0] === 'imeta')
+          const blossomHashes = videoUrls
+            .map(url => extractBlossomHash(url).sha256)
+            .filter((hash): hash is string => !!hash)
+
+          // Get thumbnail from imeta or first video URL
+          let thumbnailUrl: string | undefined
+          if (imetaTags.length > 0) {
+            const firstImeta = imetaTags[0]
+            for (let i = 1; i < firstImeta.length; i++) {
+              const [key, value] = firstImeta[i].split(' ', 2)
+              if (key === 'image' && value) {
+                thumbnailUrl = value
+                break
+              }
+            }
+          }
+          if (!thumbnailUrl && videoUrls[0]) {
+            thumbnailUrl = videoUrls[0]
+          }
+
+          // Check if any of the video URLs have been reposted
+          const isReposted = videoUrls.some(url => videoUrlSet.has(url))
+
+          return {
+            id: event.id,
+            content: event.content,
+            created_at: event.created_at,
+            videoUrls,
+            imetaTags,
+            blossomHashes,
+            thumbnailUrl,
+            isReposted,
+          } as VideoNote
+        })
+        .filter((note): note is VideoNote => note !== null)
+        .sort((a, b) => b.created_at - a.created_at) // Sort by newest first
+
+      console.log(`VideoNotes: Found ${processedNotes.length} notes with videos`)
+      setNotes(processedNotes)
+      setLoading(false)
+    }, 3000) // Wait 3 seconds for events to load
+
     return () => {
+      clearTimeout(processTimeout)
       if (videoSub) {
         videoSub.unsubscribe()
       }

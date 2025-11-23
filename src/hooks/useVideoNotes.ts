@@ -90,7 +90,7 @@ export function useVideoNotes() {
     const videoLoader = createTimelineLoader(
       pool,
       readRelays,
-      [{ kinds: videoKinds, authors: [user.pubkey], limit: 500 }],
+      [{ kinds: videoKinds, authors: [user.pubkey], limit: 100 }],
       { eventStore }
     )
 
@@ -122,7 +122,7 @@ export function useVideoNotes() {
         const notesLoader = createTimelineLoader(
           pool,
           readRelays,
-          [{ kinds: [1], authors: [user.pubkey], limit: 500 }],
+          [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
           { eventStore }
         )
 

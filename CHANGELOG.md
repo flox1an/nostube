@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Video Notes Page**: New page for viewing and reposting videos from Kind 1 notes
+  - Created `/video-notes` route to display all Kind 1 notes containing videos
+  - `useVideoNotes` hook loads user's Kind 1 notes and extracts video URLs from content and imeta tags
+  - Automatically detects video URLs (by extension or Blossom hash pattern)
+  - Displays video thumbnails and preview player in modal dialog
+  - Tracks which videos have already been reposted as proper video events (kinds 21, 22, 34235, 34236)
+  - "Repost as video" button navigates to upload page with URL prefilled (`/upload?url=...`)
+  - "Already reposted" badge and disabled button for videos that have been published
+  - Shows video metadata: multiple video count, Blossom URL count, timestamps
+  - Added "Video notes" link to sidebar navigation under Library section
+  - Full internationalization support (EN, DE, FR, ES)
+
+- **Video Upload URL Prefilling**: Upload page now accepts `url` query parameter to prefill video URL
+  - Users can navigate to `/upload?url=<video-url>` to auto-populate the URL input field
+  - Automatically switches to URL input method and processes the video
+  - Enables seamless workflow from Video Notes page to video upload
+
 - **Multi-Video Upload Support**: Upload dialog now supports uploading multiple quality variants of the same video
   - Created `VideoVariantsTable` component to display all uploaded video variants in a compact table format
   - Added "Add Another Quality/Resolution" button to upload the same video in different resolutions (e.g., 1080p, 720p, 480p)

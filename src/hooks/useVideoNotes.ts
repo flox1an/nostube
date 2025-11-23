@@ -41,14 +41,17 @@ function extractVideoUrls(content: string, tags: string[][]): string[] {
   })
 
   // Filter for video-like URLs (common video extensions or blossom URLs)
-  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8']
-  return urls.filter(url => {
+  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8', '.flv', '.wmv']
+  const videoUrls = urls.filter(url => {
     const lowerUrl = url.toLowerCase()
-    // Include if it has a video extension OR looks like a Blossom URL (64 char hex)
-    return (
-      videoExtensions.some(ext => lowerUrl.includes(ext)) || /[a-f0-9]{64}/.test(url) // Blossom hash pattern
-    )
+    // Include if it has a video extension OR looks like a Blossom URL (64 char hex with slash before)
+    const hasVideoExt = videoExtensions.some(ext => lowerUrl.includes(ext))
+    const isBlossomUrl = /\/[a-f0-9]{64}/.test(url) // Blossom hash pattern (with slash before it)
+
+    return hasVideoExt || isBlossomUrl
   })
+
+  return videoUrls
 }
 
 /**
@@ -102,6 +105,8 @@ export function useVideoNotes() {
         }
       },
       complete: () => {
+        console.log(`Loaded ${videoUrlSet.size} video URLs from user's uploaded videos`)
+
         // Only load notes after video URLs are loaded
         const notesLoader = createTimelineLoader(
           pool,
@@ -117,6 +122,8 @@ export function useVideoNotes() {
             notesArray.push(event)
           },
           complete: () => {
+            console.log(`Loaded ${notesArray.length} Kind 1 notes total`)
+
             const processedNotes: VideoNote[] = notesArray
               .map(event => {
                 const videoUrls = extractVideoUrls(event.content, event.tags)

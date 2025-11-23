@@ -1,4 +1,4 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog } from 'lucide-react'
+import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog, FileText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
@@ -19,6 +19,10 @@ export function Sidebar() {
     return nip19.nprofileEncode({ pubkey, relays: readRelays.slice(0, 5) })
   }, [pubkey, readRelays])
 
+  // Beta feature: only show video-notes for specific pubkey
+  const BETA_PUBKEY = 'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81'
+  const isVideoNotesBetaUser = pubkey === BETA_PUBKEY
+
   const navigationItems = [
     { name: t('navigation.home'), icon: Home, href: '/' },
     { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
@@ -33,6 +37,10 @@ export function Sidebar() {
       icon: Play,
       href: `/author/${userNprofile}`,
     },
+    // Only show video-notes for beta users
+    ...(isVideoNotesBetaUser
+      ? [{ name: t('navigation.videoNotes'), icon: FileText, href: '/video-notes', disabled: false }]
+      : []),
     { name: t('navigation.watchLater'), icon: Clock, href: '/watch-later', disabled: true },
     { name: t('navigation.likedVideos'), icon: ThumbsUp, href: '/liked-videos' },
   ]

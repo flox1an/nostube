@@ -2,7 +2,7 @@ import { useCurrentUser, useVideoUpload } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   InputMethodSelector,
   UrlInputSection,
@@ -13,11 +13,12 @@ import {
   VideoVariantsTable,
 } from './video-upload'
 import { useTranslation } from 'react-i18next'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 
 export function VideoUpload() {
   const { t } = useTranslation()
+  const [searchParams] = useSearchParams()
   const {
     // State
     title,
@@ -81,6 +82,32 @@ export function VideoUpload() {
 
   const { user } = useCurrentUser()
   const navigate = useNavigate()
+
+  // Handle URL and description prefilling from query params (e.g., /upload?url=...&description=...)
+  useEffect(() => {
+    const urlParam = searchParams.get('url')
+    const descriptionParam = searchParams.get('description')
+
+    if (urlParam && urlParam.trim() && videoUrl !== urlParam) {
+      setInputMethod('url')
+      setVideoUrl(urlParam)
+      // Auto-process the URL
+      handleUrlVideoProcessing(urlParam)
+    }
+
+    // Prefill description if provided
+    if (descriptionParam && descriptionParam.trim() && description !== descriptionParam) {
+      setDescription(descriptionParam)
+    }
+  }, [
+    searchParams,
+    videoUrl,
+    description,
+    setInputMethod,
+    setVideoUrl,
+    setDescription,
+    handleUrlVideoProcessing,
+  ])
 
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>

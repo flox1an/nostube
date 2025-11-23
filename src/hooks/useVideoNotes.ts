@@ -40,15 +40,12 @@ function extractVideoUrls(content: string, tags: string[][]): string[] {
     }
   })
 
-  // Filter for video-like URLs (common video extensions or blossom URLs)
+  // Filter for video URLs (must have video extension)
   const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8', '.flv', '.wmv']
   const videoUrls = urls.filter(url => {
     const lowerUrl = url.toLowerCase()
-    // Include if it has a video extension OR looks like a Blossom URL (64 char hex with slash before)
-    const hasVideoExt = videoExtensions.some(ext => lowerUrl.includes(ext))
-    const isBlossomUrl = /\/[a-f0-9]{64}/.test(url) // Blossom hash pattern (with slash before it)
-
-    return hasVideoExt || isBlossomUrl
+    // Only include URLs with video extensions
+    return videoExtensions.some(ext => lowerUrl.includes(ext))
   })
 
   return videoUrls

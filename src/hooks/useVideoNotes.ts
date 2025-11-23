@@ -58,12 +58,22 @@ function extractVideoUrls(content: string, tags: string[][]): string[] {
  * Hook to load and process Kind 1 notes with videos from the current user
  */
 export function useVideoNotes() {
+  console.log('VideoNotes: Hook function called')
+
   const { user } = useCurrentUser()
   const { pool } = useAppContext()
   const readRelays = useReadRelays()
   const eventStore = useEventStore()
   const [notes, setNotes] = useState<VideoNote[]>([])
   const [loading, setLoading] = useState(true)
+
+  console.log('VideoNotes: Dependencies loaded:', {
+    hasUser: !!user,
+    userPubkey: user?.pubkey?.slice(0, 8),
+    hasPool: !!pool,
+    readRelaysCount: readRelays?.length,
+    hasEventStore: !!eventStore,
+  })
 
   // Track which video URLs the user has already reposted
   const videoUrlSet = useMemo(() => new Set<string>(), [])

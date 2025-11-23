@@ -58,7 +58,7 @@ export function PlayPauseOverlay({
       if (fadeOutTimeoutRef.current !== null) {
         clearTimeout(fadeOutTimeoutRef.current)
       }
-      // Start fade-out after 700ms
+      // Start fade-out after 400ms
       playPauseTimeoutRef.current = window.setTimeout(() => {
         setIsFadingOut(true)
         // Hide icon after fade-out completes (100ms)
@@ -68,7 +68,7 @@ export function PlayPauseOverlay({
           playPauseTimeoutRef.current = null
           fadeOutTimeoutRef.current = null
         }, 100)
-      }, 700)
+      }, 400)
     }
 
     const handlePause = () => {
@@ -92,7 +92,7 @@ export function PlayPauseOverlay({
       if (fadeOutTimeoutRef.current !== null) {
         clearTimeout(fadeOutTimeoutRef.current)
       }
-      // Start fade-out after 700ms
+      // Start fade-out after 400ms
       playPauseTimeoutRef.current = window.setTimeout(() => {
         setIsFadingOut(true)
         // Hide icon after fade-out completes (100ms)
@@ -102,7 +102,7 @@ export function PlayPauseOverlay({
           playPauseTimeoutRef.current = null
           fadeOutTimeoutRef.current = null
         }, 100)
-      }, 700)
+      }, 400)
     }
 
     videoEl.addEventListener('play', handlePlay)
@@ -132,18 +132,18 @@ export function PlayPauseOverlay({
       className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10 ${className}`}
     >
       <div
-        className={`bg-black/50 rounded-full p-4 ${
+        className={`bg-black/50 rounded-full p-3 ${
           isFadingOut ? 'animate-fade-out' : 'animate-reveal'
         }`}
       >
         {isPaused ? (
           // Pause icon (two rectangles)
-          <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
           </svg>
         ) : (
           // Play icon (triangle pointing right)
-          <svg className="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         )}

@@ -113,6 +113,9 @@
     "noVideosFound": "No se encontraron videos.",
     "noMoreVideos": "No hay más videos para cargar.",
     "thumbnailUnavailable": "Miniatura no disponible",
+    "languages": "Idiomas",
+    "location": "Ubicación",
+    "viewLocation": "Ver ubicación en el mapa",
     "comments": {
       "title": "Comentarios",
       "addComment": "Agregar un comentario...",
@@ -403,6 +406,25 @@
       "title": "¡Ups! Página no encontrada",
       "returnHome": "Volver al Inicio"
     }
+  },
+  "labelVideo": {
+    "button": "Etiquetar video",
+    "title": "Etiquetar video",
+    "description": "Agregue hashtags y etiquetas de idioma para ayudar a categorizar este video usando NIP-32.",
+    "hashtagsLabel": "Hashtags",
+    "hashtagsPlaceholder": "bitcoin, nostr, tutorial",
+    "hashtagsHelp": "Hashtags separados por comas (sin símbolo #)",
+    "languageLabel": "Idioma",
+    "languagePlaceholder": "Seleccione el idioma del video",
+    "languageNone": "Ninguno",
+    "explanationLabel": "Explicación (Opcional)",
+    "explanationPlaceholder": "¿Por qué está agregando estas etiquetas?",
+    "explanationHelp": "Explicación opcional de sus elecciones de etiquetado",
+    "submitButton": "Publicar etiquetas",
+    "loginRequired": "Por favor inicie sesión para etiquetar videos",
+    "noLabelsError": "Por favor agregue al menos un hashtag o seleccione un idioma",
+    "success": "Etiquetas publicadas exitosamente",
+    "error": "No se pudieron publicar las etiquetas"
   },
   "errors": {
     "connectionError": "Error de Conexión",

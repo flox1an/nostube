@@ -1,7 +1,8 @@
 import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
-import { useStableRelays, useTimelineLoader } from '@/hooks'
-import { useMemo, useEffect } from 'react'
+import { useStableRelays } from '@/hooks'
+import { useHashtagVideos } from '@/hooks/useHashtagVideos'
+import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 
@@ -10,21 +11,14 @@ export function HashtagPage() {
   const { tag } = useParams<{ tag: string }>()
   const relays = useStableRelays()
 
-  // Create filter for hashtag
-  const filters = useMemo(() => {
-    if (!tag) {
-      return null
-    }
-    return {
-      kinds: getKindsForType('all'),
-      '#t': [tag.toLowerCase()], // Hashtags are typically lowercase in Nostr
-    }
-  }, [tag])
+  // Memoize videoKinds to prevent infinite re-renders
+  const videoKinds = useMemo(() => getKindsForType('all'), [])
 
-  const { videos, loading, loadMore } = useTimelineLoader({
-    filters,
+  // Use new hook that includes NIP-32 labeled videos
+  const { videos, loading, loadMore } = useHashtagVideos({
+    tag,
     relays,
-    reloadDependency: tag,
+    videoKinds,
   })
 
   // Update document title

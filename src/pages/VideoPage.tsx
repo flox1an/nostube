@@ -26,6 +26,7 @@ import {
   useUserBlossomServers,
   useVideoHistory,
 } from '@/hooks'
+import { useVideoLabels } from '@/hooks/useVideoLabels'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
@@ -195,6 +196,63 @@ export function VideoPage() {
   }, [nevent, videoEvent, config.blossomServers])
 
   const isLoading = !video && videoEvent === undefined
+
+  // Load NIP-32 labels for this video
+  const { hashtags: labelHashtags, languages: labelLanguages } = useVideoLabels(video?.id)
+
+  // Extract language from video event's L/l tags (NIP-32)
+  const videoLanguage = useMemo(() => {
+    if (!videoEvent) return null
+
+    // Find L tag with ISO-639-1 namespace
+    const lTagIndex = videoEvent.tags.findIndex(tag => tag[0] === 'L' && tag[1] === 'ISO-639-1')
+
+    if (lTagIndex === -1) return null
+
+    // Look for corresponding l tag after the L tag
+    for (let i = lTagIndex + 1; i < videoEvent.tags.length; i++) {
+      const tag = videoEvent.tags[i]
+
+      // Stop if we hit another L tag (different namespace)
+      if (tag[0] === 'L') break
+
+      // Check if this is an l tag matching our namespace
+      if (tag[0] === 'l' && tag[2] === 'ISO-639-1') {
+        return tag[1]?.toLowerCase() || null
+      }
+    }
+
+    return null
+  }, [videoEvent])
+
+  // Extract geohash from video event's g tag
+  const videoGeohash = useMemo(() => {
+    if (!videoEvent) return null
+
+    // Find g tag (geohash)
+    const gTag = videoEvent.tags.find(tag => tag[0] === 'g')
+
+    return gTag?.[1] || null
+  }, [videoEvent])
+
+  // Merge video with label data
+  const videoWithLabels = useMemo(() => {
+    if (!video) return null
+
+    // Merge hashtags: combine video tags with label hashtags (deduplicate)
+    const allTags = [...new Set([...video.tags, ...labelHashtags])]
+
+    // Merge languages: combine video language with label languages (deduplicate)
+    const videoLangs = videoLanguage ? [videoLanguage] : []
+    const allLanguages = [...new Set([...videoLangs, ...labelLanguages])]
+
+    return {
+      ...video,
+      tags: allTags,
+      // Store merged languages for display
+      languages: allLanguages,
+    }
+  }, [video, labelHashtags, labelLanguages, videoLanguage])
 
   const metadata = useProfile(video?.pubkey ? { pubkey: video.pubkey } : undefined)
   const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
@@ -458,7 +516,7 @@ export function VideoPage() {
         videoPlayer={renderVideoPlayer()}
         videoInfo={
           <VideoInfoSection
-            video={video ?? null}
+            video={videoWithLabels ?? null}
             isLoading={isLoading}
             metadata={metadata}
             authorName={authorName}
@@ -476,6 +534,7 @@ export function VideoPage() {
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
             userServers={userBlossomServers}
+            geohash={videoGeohash}
           />
         }
         sidebar={

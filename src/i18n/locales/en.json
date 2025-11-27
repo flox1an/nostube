@@ -113,6 +113,9 @@
     "noVideosFound": "No videos found.",
     "noMoreVideos": "No more videos to load.",
     "thumbnailUnavailable": "Thumbnail unavailable",
+    "languages": "Languages",
+    "location": "Location",
+    "viewLocation": "View location on map",
     "comments": {
       "title": "Comments",
       "addComment": "Add a comment...",
@@ -403,6 +406,25 @@
       "title": "Oops! Page not found",
       "returnHome": "Return to Home"
     }
+  },
+  "labelVideo": {
+    "button": "Label Video",
+    "title": "Label Video",
+    "description": "Add hashtags and language labels to help categorize this video using NIP-32.",
+    "hashtagsLabel": "Hashtags",
+    "hashtagsPlaceholder": "bitcoin, nostr, tutorial",
+    "hashtagsHelp": "Comma-separated hashtags (without # symbol)",
+    "languageLabel": "Language",
+    "languagePlaceholder": "Select video language",
+    "languageNone": "None",
+    "explanationLabel": "Explanation (Optional)",
+    "explanationPlaceholder": "Why are you adding these labels?",
+    "explanationHelp": "Optional explanation for your labeling choices",
+    "submitButton": "Publish Labels",
+    "loginRequired": "Please log in to label videos",
+    "noLabelsError": "Please add at least one hashtag or select a language",
+    "success": "Labels published successfully",
+    "error": "Failed to publish labels"
   },
   "errors": {
     "connectionError": "Connection Error",

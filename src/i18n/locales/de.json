@@ -113,6 +113,9 @@
     "noVideosFound": "Keine Videos gefunden.",
     "noMoreVideos": "Keine weiteren Videos zum Laden.",
     "thumbnailUnavailable": "Vorschaubild nicht verfügbar",
+    "languages": "Sprachen",
+    "location": "Standort",
+    "viewLocation": "Standort auf Karte anzeigen",
     "comments": {
       "title": "Kommentare",
       "addComment": "Kommentar hinzufügen...",
@@ -403,6 +406,25 @@
       "title": "Hoppla! Seite nicht gefunden",
       "returnHome": "Zurück zur Startseite"
     }
+  },
+  "labelVideo": {
+    "button": "Video kennzeichnen",
+    "title": "Video kennzeichnen",
+    "description": "Füge Hashtags und Sprachkennzeichnungen hinzu, um dieses Video mit NIP-32 zu kategorisieren.",
+    "hashtagsLabel": "Hashtags",
+    "hashtagsPlaceholder": "bitcoin, nostr, tutorial",
+    "hashtagsHelp": "Kommagetrennte Hashtags (ohne #-Symbol)",
+    "languageLabel": "Sprache",
+    "languagePlaceholder": "Videosprache auswählen",
+    "languageNone": "Keine",
+    "explanationLabel": "Erklärung (Optional)",
+    "explanationPlaceholder": "Warum fügst du diese Kennzeichnungen hinzu?",
+    "explanationHelp": "Optionale Erklärung für deine Kennzeichnungen",
+    "submitButton": "Kennzeichnungen veröffentlichen",
+    "loginRequired": "Bitte melde dich an, um Videos zu kennzeichnen",
+    "noLabelsError": "Bitte füge mindestens einen Hashtag hinzu oder wähle eine Sprache aus",
+    "success": "Kennzeichnungen erfolgreich veröffentlicht",
+    "error": "Kennzeichnungen konnten nicht veröffentlicht werden"
   },
   "errors": {
     "connectionError": "Verbindungsfehler",

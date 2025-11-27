@@ -8,8 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Play, Upload, CheckCircle2 } from 'lucide-react'
-import { VideoCardSkeleton } from '@/components/VideoCard'
+import { Play, Upload, CheckCircle2, Loader2 } from 'lucide-react'
 
 function VideoNoteCard({ note }: { note: VideoNote }) {
   const { t, i18n } = useTranslation()
@@ -157,29 +156,14 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
 
 export function VideoNotesPage() {
   const { t } = useTranslation()
-  const { notes, loading, hasUser } = useVideoNotes()
-
-  if (!hasUser) {
-    return (
-      <div className="container mx-auto py-6 max-w-4xl px-4">
-        <h1 className="text-3xl font-bold mb-6">{t('pages.videoNotes.title')}</h1>
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">{t('pages.videoNotes.loginRequired')}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const { notes, loading } = useVideoNotes()
 
   if (loading) {
     return (
       <div className="container mx-auto py-6 max-w-4xl px-4">
         <h1 className="text-3xl font-bold mb-6">{t('pages.videoNotes.title')}</h1>
-        <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <VideoCardSkeleton key={i} format="horizontal" />
-          ))}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     )

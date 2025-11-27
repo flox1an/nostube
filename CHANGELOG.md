@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Share Dialog Embed Option**: Added tabbed interface to share dialog with "Link" and "Embed" tabs. Users can now choose between sharing a direct link or copying iframe embed code. Embed code automatically includes video ID and optional timestamp. Features copy-to-clipboard functionality and help text. Supports all four languages (EN/DE/FR/ES)
+
 ### Changed
 
 - **Embed Test Suite**: Redesigned to load only one iframe at a time to prevent relay rate limiting. Features interactive dropdown selector with 23 test cases organized by category, Previous/Next navigation buttons, keyboard navigation (arrow keys), and detailed descriptions for each test scenario
 - **Embed Player Branding**: Moved branding logo to top-right corner with auto-hide behavior. Displays Nostube SVG logo instead of text. Fades out after 3 seconds, reappears on hover/pause, matching title overlay behavior
 - **NIP-19 nevent Encoding**: All nevent identifiers now include author pubkey for better relay hints and event discoverability
-
-### Added
 
 - **Embed Player Play/Pause Overlay**: Animated play/pause indicator appears when video playback state changes. Shows play icon (triangle) or pause icon (two bars) with smooth fade-in/fade-out animation. Icon appears centered with semi-transparent background, visible for 400ms before fading out. Matches main VideoPlayer component behavior. Includes 19 unit tests
 

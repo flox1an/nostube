@@ -132,6 +132,11 @@
     "share": {
       "title": "Share this video",
       "description": "Share this video on your favorite platform or copy the link.",
+      "linkTab": "Link",
+      "embedTab": "Embed",
+      "embedCode": "Embed Code",
+      "copyEmbed": "Copy Embed Code",
+      "embedDescription": "Copy and paste this code into your website to embed the video.",
       "includeTimestamp": "Include current timestamp",
       "viaEmail": "Share via Email",
       "onWhatsapp": "Share on WhatsApp",

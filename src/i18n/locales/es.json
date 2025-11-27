@@ -132,6 +132,11 @@
     "share": {
       "title": "Compartir este video",
       "description": "Comparta este video en su plataforma favorita o copie el enlace.",
+      "linkTab": "Enlace",
+      "embedTab": "Incrustar",
+      "embedCode": "Código de incrustación",
+      "copyEmbed": "Copiar código de incrustación",
+      "embedDescription": "Copie y pegue este código en su sitio web para incrustar el video.",
       "includeTimestamp": "Incluir marca de tiempo actual",
       "viaEmail": "Compartir por Correo",
       "onWhatsapp": "Compartir en WhatsApp",

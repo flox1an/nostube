@@ -1,4 +1,5 @@
 import { parseURLParams, validateParams } from './url-params.js'
+import { decodeVideoIdentifier, buildRelayList } from './nostr-decoder.js'
 
 // Main entry point
 async function initPlayer() {
@@ -16,7 +17,20 @@ async function initPlayer() {
 
   console.log('[Nostube Embed] Configuration:', config)
 
-  // TODO: Continue initialization
+  // Decode video identifier
+  const decoded = decodeVideoIdentifier(config.videoId)
+  if (!decoded) {
+    showError('Failed to decode video identifier')
+    return
+  }
+
+  console.log('[Nostube Embed] Decoded identifier:', decoded)
+
+  // Build relay list
+  const relays = buildRelayList(decoded.data.relays, config.customRelays)
+  console.log('[Nostube Embed] Using relays:', relays)
+
+  // TODO: Connect to relays and fetch event
 }
 
 // Temporary error display function

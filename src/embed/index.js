@@ -1,6 +1,7 @@
 import { parseURLParams, validateParams } from './url-params.js'
 import { decodeVideoIdentifier, buildRelayList } from './nostr-decoder.js'
 import { NostrClient } from './nostr-client.js'
+import { parseVideoEvent, selectVideoVariant } from './video-parser.js'
 
 let client = null
 
@@ -28,24 +29,36 @@ async function initPlayer() {
       return
     }
 
-    console.log('[Nostube Embed] Decoded:', decoded)
-
-    // Build relay list
+    // Build relay list and fetch event
     const relays = buildRelayList(decoded.data.relays, config.customRelays)
-    console.log('[Nostube Embed] Relays:', relays)
-
-    // Fetch event from relays
     client = new NostrClient(relays)
     const event = await client.fetchEvent(decoded)
 
-    console.log('[Nostube Embed] Event fetched:', event)
+    // Parse video metadata
+    const video = parseVideoEvent(event)
+    console.log('[Nostube Embed] Parsed video:', video)
 
-    // TODO: Parse event and build player
-    showSuccess('Event fetched successfully! (Next: parse and render player)')
+    // Select video variant based on quality preference
+    const selectedVariant = selectVideoVariant(video.videoVariants, config.preferredQuality)
+    if (!selectedVariant) {
+      showError('No video URLs found in event')
+      return
+    }
+
+    console.log('[Nostube Embed] Selected variant:', selectedVariant)
+
+    // TODO: Render video player
+    showSuccess(`Video parsed! Title: "${video.title}"`)
 
   } catch (error) {
     console.error('[Nostube Embed] Error:', error)
-    showError(error.message)
+    if (error.message.includes('timeout')) {
+      showError('Connection failed. Unable to fetch video.')
+    } else if (error.message.includes('not found')) {
+      showError('Video not found')
+    } else {
+      showError(error.message)
+    }
   }
 }
 

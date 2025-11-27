@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Embeddable Video Player - Comprehensive Example Page (Phase 5)**: Created complete documentation and interactive demo page for the embed player
+  - Created `public/embed-examples.html` with 14 example configurations and interactive builder
+  - **Parameter Reference Section**: Complete table documenting all 11 embed parameters with types, defaults, and descriptions
+  - **Basic Examples (6 examples)**: Default player, autoplay muted, no title overlay, no branding, start time, looping
+  - **Advanced Examples (6 examples)**: Minimal player, custom color themes (red, blue, orange), background video mode, addressable event (naddr)
+  - **Edge Cases (2 examples)**: Invalid video ID and missing video ID error states
+  - **Interactive Embed Builder**: Live configuration form with real-time preview and generated embed code
+    - All 11 parameters as form inputs (text, checkboxes, selects, number inputs)
+    - Live preview iframe that updates as parameters change
+    - Generated production-ready embed code with proper HTML formatting
+    - Direct link to full embed URL for testing
+    - Copy-to-clipboard functionality for generated code
+  - **Best Practices Section**: Responsive design guide, lazy loading examples, accessibility recommendations
+  - **22 Copy Buttons**: One-click copying for all code examples with success feedback
+  - **Smooth Navigation**: Internal anchor links with smooth scrolling between sections
+  - **Professional Design**: Modern, clean CSS with purple accent color matching Nostube branding
+    - Responsive grid layouts (stacks on mobile)
+    - Card-based example presentation with hover effects
+    - Syntax-highlighted code blocks with dark background
+    - Info boxes and warning boxes for tips and gotchas
+    - 16:9 aspect ratio containers for all video embeds
+  - **Self-Contained**: No external CSS frameworks or JavaScript libraries
+  - **Production Ready**: File automatically included in build output at `dist/embed-examples.html`
+  - Comprehensive documentation covering all embedding scenarios for developers
+  - 1,427 lines of complete HTML, CSS, and JavaScript documentation
+
 - **Embeddable Video Player - Title Overlay (Phase 4)**: Implemented video title and author information overlay for embedded videos
   - Created `TitleOverlay` module displaying video metadata at top and author info at bottom-left
   - Auto-hide behavior: initially visible for 3 seconds, then fades out during playback

@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Comprehensive examples and documentation for the Nostube embeddable video player"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Nostube Embed Player - Examples & Documentation" />
+    <meta
+      property="og:description"
+      content="Interactive examples and parameter reference for embedding Nostr videos"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Nostube Embed Player - Examples & Documentation</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-primary: #f5f5f5;
+        --bg-secondary: #ffffff;
+        --bg-code: #2d3748;
+        --text-primary: #1a1a1a;
+        --text-secondary: #666666;
+        --text-code: #e2e8f0;
+        --accent: #8b5cf6;
+        --accent-hover: #7c3aed;
+        --border: #e0e0e0;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: var(--text-primary);
+        background: var(--bg-primary);
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* Header */
+      header {
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        padding: 40px 0;
+        margin-bottom: 40px;
+        box-shadow: var(--shadow);
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      header .subtitle {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+      }
+
+      header .links {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+
+      header .links a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: color 0.2s;
+      }
+
+      header .links a:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+      }
+
+      /* Navigation */
+      nav {
+        background: var(--bg-secondary);
+        padding: 20px 0;
+        margin-bottom: 40px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      nav ul {
+        list-style: none;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      nav a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+
+      nav a:hover {
+        background: var(--bg-primary);
+        color: var(--accent);
+      }
+
+      /* Section */
+      section {
+        margin-bottom: 60px;
+      }
+
+      section h2 {
+        font-size: 2rem;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--accent);
+      }
+
+      section h3 {
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+        color: var(--text-primary);
+      }
+
+      section p {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+      }
+
+      /* Parameter Table */
+      .param-table {
+        width: 100%;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .param-table table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .param-table th {
+        background: var(--accent);
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .param-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .param-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .param-table code {
+        background: var(--bg-code);
+        color: var(--text-code);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
+        font-family: 'Courier New', monospace;
+      }
+
+      .param-table .required {
+        color: var(--error);
+        font-weight: 600;
+        font-size: 0.85em;
+      }
+
+      /* Example Grid */
+      .example-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+      }
+
+      @media (max-width: 768px) {
+        .example-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Example Card */
+      .example {
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.3s;
+      }
+
+      .example:hover {
+        box-shadow: var(--shadow-lg);
+      }
+
+      .example h3 {
+        color: var(--accent);
+        margin-bottom: 8px;
+      }
+
+      .example .description {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 16px;
+      }
+
+      .example .iframe-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        margin-bottom: 16px;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .example .iframe-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .example .code-block {
+        position: relative;
+        background: var(--bg-code);
+        border-radius: 6px;
+        padding: 16px;
+        overflow-x: auto;
+      }
+
+      .example .code-block pre {
+        margin: 0;
+        color: var(--text-code);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+      }
+
+      .copy-btn:hover {
+        background: var(--accent-hover);
+      }
+
+      .copy-btn:active {
+        transform: scale(0.95);
+      }
+
+      .copy-btn.copied {
+        background: var(--success);
+      }
+
+      /* Builder Section */
+      .builder-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        background: var(--bg-secondary);
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      @media (max-width: 1024px) {
+        .builder-container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .builder-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-group label {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+      }
+
+      .form-group input,
+      .form-group select {
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        background: white;
+        transition: border-color 0.2s;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .form-group input[type='checkbox'] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .checkbox-group label {
+        margin-bottom: 0;
+      }
+
+      .builder-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .builder-preview h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .builder-preview .iframe-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .builder-preview .iframe-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .builder-preview .code-output {
+        background: var(--bg-code);
+        border-radius: 6px;
+        padding: 16px;
+        position: relative;
+        overflow-x: auto;
+      }
+
+      .builder-preview .code-output pre {
+        margin: 0;
+        color: var(--text-code);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+
+      /* Info Box */
+      .info-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: 16px;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+
+      .info-box h4 {
+        color: #1e40af;
+        margin-bottom: 8px;
+      }
+
+      .info-box p {
+        color: #1e3a8a;
+        margin: 0;
+      }
+
+      .info-box ul {
+        color: #1e3a8a;
+        margin: 8px 0 0 20px;
+      }
+
+      /* Warning Box */
+      .warning-box {
+        background: #fef3c7;
+        border-left: 4px solid var(--warning);
+        padding: 16px;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+
+      .warning-box h4 {
+        color: #92400e;
+        margin-bottom: 8px;
+      }
+
+      .warning-box p {
+        color: #78350f;
+        margin: 0;
+      }
+
+      /* Footer */
+      footer {
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        padding: 40px 0;
+        margin-top: 80px;
+        text-align: center;
+        color: var(--text-secondary);
+      }
+
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Responsive Typography */
+      @media (max-width: 768px) {
+        header h1 {
+          font-size: 2rem;
+        }
+
+        section h2 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="container">
+        <h1>Nostube Embed Player</h1>
+        <p class="subtitle">
+          Interactive examples and complete documentation for embedding Nostr videos on any website
+        </p>
+        <div class="links">
+          <a href="https://nostube.com">← Back to Nostube</a>
+          <a href="#parameters">📋 Parameters</a>
+          <a href="#basic-examples">🎬 Basic Examples</a>
+          <a href="#advanced-examples">⚡ Advanced Examples</a>
+          <a href="#builder">🔧 Builder</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick Navigation -->
+    <div class="container">
+      <nav>
+        <ul>
+          <li><a href="#parameters">Parameter Reference</a></li>
+          <li><a href="#basic-examples">Basic Examples</a></li>
+          <li><a href="#advanced-examples">Advanced Examples</a></li>
+          <li><a href="#edge-cases">Edge Cases</a></li>
+          <li><a href="#builder">Interactive Builder</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <main class="container">
+      <!-- Parameter Reference Section -->
+      <section id="parameters">
+        <h2>Parameter Reference</h2>
+        <p>
+          All parameters are passed via URL query string. Only the <code>v</code> parameter is
+          required.
+        </p>
+
+        <div class="param-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>v</code> <span class="required">REQUIRED</span></td>
+                <td>string</td>
+                <td>-</td>
+                <td>
+                  Video identifier in NIP-19 format: <code>nevent1...</code>,
+                  <code>naddr1...</code>, or <code>note1...</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>autoplay</code></td>
+                <td>0 or 1</td>
+                <td>0</td>
+                <td>
+                  Auto-play video on load. Note: Most browsers require <code>muted=1</code> for
+                  autoplay to work
+                </td>
+              </tr>
+              <tr>
+                <td><code>muted</code></td>
+                <td>0 or 1</td>
+                <td>0</td>
+                <td>Start video muted. Required for autoplay in most browsers</td>
+              </tr>
+              <tr>
+                <td><code>loop</code></td>
+                <td>0 or 1</td>
+                <td>0</td>
+                <td>Loop video playback continuously</td>
+              </tr>
+              <tr>
+                <td><code>t</code></td>
+                <td>number</td>
+                <td>0</td>
+                <td>Start time in seconds (e.g., <code>t=30</code> starts at 30 seconds)</td>
+              </tr>
+              <tr>
+                <td><code>controls</code></td>
+                <td>0 or 1</td>
+                <td>1</td>
+                <td>Show/hide native video controls (play, pause, volume, fullscreen)</td>
+              </tr>
+              <tr>
+                <td><code>title</code></td>
+                <td>0 or 1</td>
+                <td>1</td>
+                <td>Show/hide title overlay with video name and author</td>
+              </tr>
+              <tr>
+                <td><code>branding</code></td>
+                <td>0 or 1</td>
+                <td>1</td>
+                <td>Show/hide "Watch on Nostube" branding link in bottom-right corner</td>
+              </tr>
+              <tr>
+                <td><code>quality</code></td>
+                <td>string</td>
+                <td>auto</td>
+                <td>
+                  Preferred video quality: <code>1080p</code>, <code>720p</code>, <code>480p</code>,
+                  <code>360p</code>, or <code>auto</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>color</code></td>
+                <td>hex</td>
+                <td>8b5cf6</td>
+                <td>
+                  Accent color for UI elements (without # prefix, e.g., <code>ff0000</code> for red)
+                </td>
+              </tr>
+              <tr>
+                <td><code>relays</code></td>
+                <td>string</td>
+                <td>auto</td>
+                <td>
+                  Custom relay list (comma-separated WebSocket URLs). By default uses hint relays
+                  from the video identifier
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="info-box">
+          <h4>💡 Usage Tips</h4>
+          <ul>
+            <li>
+              Use <code>autoplay=1&muted=1</code> together for reliable autoplay across browsers
+            </li>
+            <li>Set <code>title=0&branding=0</code> for a minimal, distraction-free player</li>
+            <li>Custom colors enhance brand consistency (e.g., match your site's theme)</li>
+            <li>
+              Quality selection is automatic by default but can be forced for bandwidth
+              considerations
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Basic Examples Section -->
+      <section id="basic-examples">
+        <h2>Basic Examples</h2>
+        <p>Common embedding scenarios to get you started quickly.</p>
+
+        <div class="example-grid">
+          <!-- Example 1: Default Player -->
+          <div class="example">
+            <h3>1. Default Player</h3>
+            <p class="description">
+              All features enabled with default settings. Shows title overlay, branding, and native
+              controls.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="default">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 2: Autoplay Muted -->
+          <div class="example">
+            <h3>2. Autoplay (Muted)</h3>
+            <p class="description">
+              Video starts playing automatically when loaded. Muted is required for autoplay to work
+              in most browsers.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="autoplay">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 3: No Title Overlay -->
+          <div class="example">
+            <h3>3. No Title Overlay</h3>
+            <p class="description">
+              Hide the title overlay for a cleaner look. Branding link remains visible.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="notitle">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 4: No Branding -->
+          <div class="example">
+            <h3>4. No Branding Link</h3>
+            <p class="description">
+              Remove the "Watch on Nostube" link. Title overlay still displays.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&branding=0"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="nobranding">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&branding=0"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 5: Start at Specific Time -->
+          <div class="example">
+            <h3>5. Start at Specific Time</h3>
+            <p class="description">
+              Video starts playing from 30 seconds. Useful for highlighting specific moments.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&t=30"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="starttime">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&t=30"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 6: Looping Video -->
+          <div class="example">
+            <h3>6. Looping Video</h3>
+            <p class="description">
+              Video automatically restarts when it reaches the end. Perfect for background videos or
+              demos.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&loop=1"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="loop">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&loop=1"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Advanced Examples Section -->
+      <section id="advanced-examples">
+        <h2>Advanced Examples</h2>
+        <p>Advanced configurations for specific use cases and custom branding requirements.</p>
+
+        <div class="example-grid">
+          <!-- Example 7: Minimal Player -->
+          <div class="example">
+            <h3>7. Minimal Player</h3>
+            <p class="description">
+              Absolutely minimal player with all overlays disabled. Just the video and controls.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0&branding=0"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="minimal">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0&branding=0"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 8: Custom Red Theme -->
+          <div class="example">
+            <h3>8. Custom Red Theme</h3>
+            <p class="description">
+              Custom accent color for branding. The "Watch on Nostube" link glows red on hover.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff0000"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="red">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff0000"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 9: Custom Blue Theme -->
+          <div class="example">
+            <h3>9. Custom Blue Theme</h3>
+            <p class="description">
+              Cyan/aqua accent color for a modern, vibrant look matching your brand colors.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=00d4ff"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="blue">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=00d4ff"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 10: Custom Orange Theme -->
+          <div class="example">
+            <h3>10. Custom Orange Theme</h3>
+            <p class="description">
+              Warm orange accent for an energetic, attention-grabbing player appearance.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff6b35"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="orange">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff6b35"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 11: Autoplay + Loop + Muted -->
+          <div class="example">
+            <h3>11. Background Video</h3>
+            <p class="description">
+              Perfect for background videos: autoplays, loops continuously, muted, no overlays.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&loop=1&muted=1&title=0&branding=0"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="background">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&loop=1&muted=1&title=0&branding=0"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 12: Addressable Event (naddr) -->
+          <div class="example">
+            <h3>12. Addressable Event (naddr)</h3>
+            <p class="description">
+              Embedding an addressable video event using naddr format. Same features as nevent.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="naddr">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="warning-box">
+          <h4>⚠️ Browser Autoplay Policies</h4>
+          <p>
+            Most modern browsers block autoplay with sound. Always use
+            <code>autoplay=1&muted=1</code> together for reliable autoplay. Users can unmute after
+            the video starts playing.
+          </p>
+        </div>
+      </section>
+
+      <!-- Edge Cases Section -->
+      <section id="edge-cases">
+        <h2>Edge Cases & Error Handling</h2>
+        <p>
+          The embed player handles various error scenarios gracefully with user-friendly messages.
+        </p>
+
+        <div class="example-grid">
+          <!-- Example 13: Invalid Video ID -->
+          <div class="example">
+            <h3>13. Invalid Video ID</h3>
+            <p class="description">
+              When the video identifier format is invalid or malformed, an error message is
+              displayed.
+            </p>
+            <div class="iframe-container">
+              <iframe
+                src="embed-demo.html?v=invalid123"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+              ></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="invalid">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed?v=invalid123"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+
+          <!-- Example 14: Missing Video ID -->
+          <div class="example">
+            <h3>14. Missing Video ID</h3>
+            <p class="description">
+              When the required <code>v</code> parameter is not provided, a clear error is shown.
+            </p>
+            <div class="iframe-container">
+              <iframe src="embed-demo.html" allowfullscreen allow="autoplay; fullscreen"></iframe>
+            </div>
+            <div class="code-block">
+              <button class="copy-btn" data-clipboard="missing">Copy</button>
+              <pre><code>&lt;iframe
+  src="https://nostube.com/embed"
+  width="640"
+  height="360"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <h4>📝 Error States</h4>
+          <p>The embed player handles these error scenarios:</p>
+          <ul>
+            <li>Missing or invalid video ID format</li>
+            <li>Video event not found on relays</li>
+            <li>Relay connection failures</li>
+            <li>Missing video URLs in event data</li>
+            <li>Video file loading errors</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Interactive Builder Section -->
+      <section id="builder">
+        <h2>Interactive Embed Builder</h2>
+        <p>
+          Create custom embed codes with live preview. Adjust parameters and see changes in
+          real-time.
+        </p>
+
+        <div class="builder-container">
+          <!-- Builder Form -->
+          <div class="builder-form">
+            <h3>Configuration</h3>
+
+            <div class="form-group">
+              <label for="videoId"> Video ID <span style="color: var(--error)">*</span> </label>
+              <input
+                type="text"
+                id="videoId"
+                name="videoId"
+                placeholder="nevent1... or naddr1... or note1..."
+                value="nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+                required
+              />
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="autoplay" name="autoplay" />
+              <label for="autoplay">Autoplay</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="muted" name="muted" />
+              <label for="muted">Muted</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="loop" name="loop" />
+              <label for="loop">Loop</label>
+            </div>
+
+            <div class="form-group">
+              <label for="startTime">Start Time (seconds)</label>
+              <input type="number" id="startTime" name="startTime" min="0" value="0" />
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="controls" name="controls" checked />
+              <label for="controls">Show Controls</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="showTitle" name="showTitle" checked />
+              <label for="showTitle">Show Title Overlay</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="showBranding" name="showBranding" checked />
+              <label for="showBranding">Show Branding Link</label>
+            </div>
+
+            <div class="form-group">
+              <label for="quality">Preferred Quality</label>
+              <select id="quality" name="quality">
+                <option value="auto">Auto (Default)</option>
+                <option value="1080p">1080p</option>
+                <option value="720p">720p</option>
+                <option value="480p">480p</option>
+                <option value="360p">360p</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="accentColor">Accent Color (hex without #)</label>
+              <input
+                type="text"
+                id="accentColor"
+                name="accentColor"
+                placeholder="8b5cf6"
+                value="8b5cf6"
+                maxlength="6"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="customRelays">Custom Relays (comma-separated, optional)</label>
+              <input
+                type="text"
+                id="customRelays"
+                name="customRelays"
+                placeholder="wss://relay1.com,wss://relay2.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="iframeWidth">Iframe Width (px)</label>
+              <input type="number" id="iframeWidth" name="iframeWidth" value="640" min="100" />
+            </div>
+
+            <div class="form-group">
+              <label for="iframeHeight">Iframe Height (px)</label>
+              <input type="number" id="iframeHeight" name="iframeHeight" value="360" min="100" />
+            </div>
+          </div>
+
+          <!-- Builder Preview -->
+          <div class="builder-preview">
+            <h3>Live Preview</h3>
+            <div class="iframe-container">
+              <iframe id="preview-iframe" allowfullscreen allow="autoplay; fullscreen"></iframe>
+            </div>
+
+            <h3>Embed Code</h3>
+            <div class="code-output">
+              <button class="copy-btn" id="copy-builder-code">Copy</button>
+              <pre><code id="generated-code"></code></pre>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px">
+              <h4>🔗 Direct Link</h4>
+              <p style="word-break: break-all; font-family: monospace; font-size: 0.85em">
+                <a
+                  id="direct-link"
+                  href="#"
+                  target="_blank"
+                  style="color: var(--accent); text-decoration: underline"
+                ></a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Best Practices Section -->
+      <section id="best-practices">
+        <h2>Best Practices</h2>
+
+        <div class="info-box">
+          <h4>✅ Recommended Practices</h4>
+          <ul>
+            <li>
+              <strong>Responsive Design:</strong> Use percentage widths (width="100%") and CSS for
+              responsive embedding
+            </li>
+            <li>
+              <strong>Aspect Ratio:</strong> Maintain 16:9 aspect ratio (360p → 640×360, 720p →
+              1280×720)
+            </li>
+            <li>
+              <strong>Autoplay:</strong> Always combine <code>autoplay=1</code> with
+              <code>muted=1</code> for browser compatibility
+            </li>
+            <li><strong>Accessibility:</strong> Provide text alternatives for embedded videos</li>
+            <li>
+              <strong>Performance:</strong> Lazy-load embeds below the fold using
+              <code>loading="lazy"</code>
+            </li>
+            <li><strong>Privacy:</strong> Nostube embeds don't track users or use cookies</li>
+          </ul>
+        </div>
+
+        <div class="warning-box">
+          <h4>⚠️ Common Pitfalls</h4>
+          <ul>
+            <li><strong>Don't:</strong> Use autoplay without muted - browsers will block it</li>
+            <li><strong>Don't:</strong> Set controls=0 without providing alternative controls</li>
+            <li>
+              <strong>Don't:</strong> Embed dozens of autoplaying videos on one page - performance
+              impact
+            </li>
+            <li>
+              <strong>Don't:</strong> Forget the <code>allow</code> attribute for
+              autoplay/fullscreen
+            </li>
+          </ul>
+        </div>
+
+        <h3>Responsive Embed Example (CSS)</h3>
+        <div class="code-block">
+          <button class="copy-btn" data-clipboard="responsive-css">Copy</button>
+          <pre><code>/* Responsive 16:9 video container */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}</code></pre>
+        </div>
+
+        <h3>Lazy Loading Example (HTML)</h3>
+        <div class="code-block">
+          <button class="copy-btn" data-clipboard="lazy-loading">Copy</button>
+          <pre><code>&lt;!-- Iframe loads only when visible --&gt;
+&lt;iframe
+  src="https://nostube.com/embed?v=nevent1..."
+  width="640"
+  height="360"
+  frameborder="0"
+  loading="lazy"
+  allowfullscreen
+  allow="autoplay; fullscreen"&gt;
+&lt;/iframe&gt;</code></pre>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <p>
+          <strong>Nostube Embed Player</strong> - Part of the
+          <a href="https://nostube.com">Nostube</a> project
+        </p>
+        <p style="margin-top: 10px; font-size: 0.9rem">
+          Built on <a href="https://nostr.com">Nostr</a> - A decentralized protocol for video
+          sharing
+        </p>
+        <p style="margin-top: 20px; font-size: 0.85rem; color: #999">
+          © 2025 Nostube. Licensed under MIT. No tracking, no cookies, no analytics.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Copy to clipboard functionality
+      function setupCopyButtons() {
+        document.querySelectorAll('.copy-btn').forEach(button => {
+          button.addEventListener('click', function () {
+            const codeBlock =
+              this.parentElement.querySelector('code') || this.parentElement.querySelector('pre')
+            const text = codeBlock ? codeBlock.textContent : ''
+
+            navigator.clipboard
+              .writeText(text)
+              .then(() => {
+                const originalText = this.textContent
+                this.textContent = 'Copied!'
+                this.classList.add('copied')
+
+                setTimeout(() => {
+                  this.textContent = originalText
+                  this.classList.remove('copied')
+                }, 2000)
+              })
+              .catch(err => {
+                console.error('Failed to copy:', err)
+                this.textContent = 'Failed'
+                setTimeout(() => {
+                  this.textContent = 'Copy'
+                }, 2000)
+              })
+          })
+        })
+      }
+
+      // Interactive builder
+      function setupBuilder() {
+        const form = document.querySelector('.builder-form')
+        const previewIframe = document.getElementById('preview-iframe')
+        const generatedCodeElement = document.getElementById('generated-code')
+        const directLinkElement = document.getElementById('direct-link')
+
+        function updatePreview() {
+          const videoId = document.getElementById('videoId').value.trim()
+          const autoplay = document.getElementById('autoplay').checked
+          const muted = document.getElementById('muted').checked
+          const loop = document.getElementById('loop').checked
+          const startTime = parseInt(document.getElementById('startTime').value) || 0
+          const controls = document.getElementById('controls').checked
+          const showTitle = document.getElementById('showTitle').checked
+          const showBranding = document.getElementById('showBranding').checked
+          const quality = document.getElementById('quality').value
+          const accentColor = document.getElementById('accentColor').value.trim()
+          const customRelays = document.getElementById('customRelays').value.trim()
+          const iframeWidth = document.getElementById('iframeWidth').value || '640'
+          const iframeHeight = document.getElementById('iframeHeight').value || '360'
+
+          // Build URL parameters
+          const params = new URLSearchParams()
+          if (videoId) params.set('v', videoId)
+          if (autoplay) params.set('autoplay', '1')
+          if (muted) params.set('muted', '1')
+          if (loop) params.set('loop', '1')
+          if (startTime > 0) params.set('t', startTime.toString())
+          if (!controls) params.set('controls', '0')
+          if (!showTitle) params.set('title', '0')
+          if (!showBranding) params.set('branding', '0')
+          if (quality !== 'auto') params.set('quality', quality)
+          if (accentColor && accentColor !== '8b5cf6') params.set('color', accentColor)
+          if (customRelays) params.set('relays', customRelays)
+
+          // Update preview iframe (use relative URL for local testing)
+          const embedUrl = `embed-demo.html?${params.toString()}`
+          previewIframe.src = embedUrl
+
+          // Generate production embed code
+          const productionUrl = `https://nostube.com/embed?${params.toString()}`
+          const embedCode = `<iframe
+  src="${productionUrl}"
+  width="${iframeWidth}"
+  height="${iframeHeight}"
+  frameborder="0"
+  allowfullscreen
+  allow="autoplay; fullscreen">
+</iframe>`
+
+          generatedCodeElement.textContent = embedCode
+
+          // Update direct link
+          directLinkElement.href = productionUrl
+          directLinkElement.textContent = productionUrl
+        }
+
+        // Listen to all form inputs
+        form.addEventListener('input', updatePreview)
+        form.addEventListener('change', updatePreview)
+
+        // Initial preview
+        updatePreview()
+
+        // Copy builder code button
+        document.getElementById('copy-builder-code').addEventListener('click', function () {
+          const code = generatedCodeElement.textContent
+          navigator.clipboard
+            .writeText(code)
+            .then(() => {
+              this.textContent = 'Copied!'
+              this.classList.add('copied')
+              setTimeout(() => {
+                this.textContent = 'Copy'
+                this.classList.remove('copied')
+              }, 2000)
+            })
+            .catch(err => {
+              console.error('Failed to copy:', err)
+            })
+        })
+      }
+
+      // Smooth scrolling for navigation links
+      function setupSmoothScrolling() {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+          anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href')
+            if (href === '#') return
+
+            e.preventDefault()
+            const target = document.querySelector(href)
+            if (target) {
+              target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+              })
+            }
+          })
+        })
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        setupCopyButtons()
+        setupBuilder()
+        setupSmoothScrolling()
+      })
+    </script>
+  </body>
+</html>

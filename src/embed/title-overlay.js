@@ -184,4 +184,40 @@ export class TitleOverlay {
     `)
     )
   }
+
+  /**
+   * Update overlay with profile data (for live updates after initial render)
+   * @param {HTMLElement} overlay - Overlay element
+   * @param {Object} profile - Profile data {picture, displayName, name}
+   */
+  static updateProfile(overlay, profile) {
+    if (!overlay) {
+      console.warn('[TitleOverlay] Cannot update profile: overlay not found')
+      return
+    }
+
+    if (!profile) {
+      console.warn('[TitleOverlay] Cannot update profile: profile is null')
+      return
+    }
+
+    console.log('[TitleOverlay] Updating profile:', profile)
+
+    // Update avatar
+    const avatar = overlay.querySelector('.author-avatar')
+    if (avatar && profile.picture) {
+      avatar.src = profile.picture
+      console.log('[TitleOverlay] Updated avatar')
+    }
+
+    // Update author name (prefer displayName, fallback to name)
+    const authorName = overlay.querySelector('.author-name')
+    if (authorName) {
+      const newName = profile.displayName || profile.name
+      if (newName) {
+        authorName.textContent = newName
+        console.log('[TitleOverlay] Updated author name to:', newName)
+      }
+    }
+  }
 }

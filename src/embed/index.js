@@ -5,8 +5,11 @@ import { parseVideoEvent, selectVideoVariant } from './video-parser.js'
 import { PlayerUI } from './player-ui.js'
 import { ContentWarning } from './content-warning.js'
 import { TitleOverlay } from './title-overlay.js'
+import { BrandingLink } from './branding.js'
+import { ProfileFetcher } from './profile-fetcher.js'
 
 let client = null
+let profileFetcher = null
 
 // Main entry point
 async function initPlayer() {
@@ -35,11 +38,26 @@ async function initPlayer() {
     // Build relay list and fetch event
     const relays = buildRelayList(decoded.data.relays, config.customRelays)
     client = new NostrClient(relays)
+    profileFetcher = new ProfileFetcher(client)
+
+    // For naddr: start profile fetch in parallel (we have pubkey)
+    let profilePromise = null
+    if (decoded.type === 'address' && decoded.data.pubkey) {
+      console.log('[Nostube Embed] Starting parallel profile fetch (naddr)')
+      profilePromise = profileFetcher.fetchProfile(decoded.data.pubkey, relays)
+    }
+
     const event = await client.fetchEvent(decoded)
 
     // Parse video metadata
     const video = parseVideoEvent(event)
     console.log('[Nostube Embed] Parsed video:', video)
+
+    // For nevent: start profile fetch now (we have pubkey from event)
+    if (decoded.type === 'event' && video.author) {
+      console.log('[Nostube Embed] Starting profile fetch (nevent)')
+      profilePromise = profileFetcher.fetchProfile(video.author, relays)
+    }
 
     // Select video variant based on quality preference
     const selectedVariant = selectVideoVariant(video.videoVariants, config.preferredQuality)
@@ -58,12 +76,36 @@ async function initPlayer() {
       // Apply content warning overlay if video has sensitive content
       ContentWarning.applyToPlayer(container, videoElement, video)
 
-      // Apply title overlay if enabled
-      TitleOverlay.applyToPlayer(container, videoElement, video, config)
+      // Apply title overlay if enabled (store reference for profile updates)
+      let titleOverlay = null
+      if (config.showTitle) {
+        TitleOverlay.applyToPlayer(container, videoElement, video, config)
+        // Get the overlay element that was just created
+        titleOverlay = container.querySelector('.title-overlay')
+      }
+
+      // Apply branding link if enabled
+      BrandingLink.applyToPlayer(container, videoElement, config.videoId, config)
 
       // Clear loading state and show player
       document.body.innerHTML = ''
       document.body.appendChild(container)
+
+      // Update overlay with profile data when it arrives
+      if (profilePromise && titleOverlay) {
+        profilePromise
+          .then(profile => {
+            if (profile) {
+              console.log('[Nostube Embed] Profile fetched, updating overlay')
+              TitleOverlay.updateProfile(titleOverlay, profile)
+            } else {
+              console.log('[Nostube Embed] Profile fetch returned null, using fallback')
+            }
+          })
+          .catch(error => {
+            console.warn('[Nostube Embed] Profile fetch error:', error.message)
+          })
+      }
 
       // Optional: Log when video is ready
       videoElement.addEventListener(

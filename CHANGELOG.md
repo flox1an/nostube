@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Embed Player Play/Pause Overlay**: Animated play/pause indicator appears when video playback state changes. Shows play icon (triangle) or pause icon (two bars) with smooth fade-in/fade-out animation. Icon appears centered with semi-transparent background, visible for 400ms before fading out. Matches main VideoPlayer component behavior. Includes 19 unit tests
+
 - **Embed Player Event Caching**: Video events now cached in localStorage with 1-hour TTL to reduce relay load and improve performance for frequently accessed videos. Supports both nevent (by event ID) and naddr (by kind:pubkey:identifier key) identifiers. Includes cache statistics, manual clearing, and automatic expiration. Comprehensive test suite with 23 tests
 
 - **Embed Player Profile Fetching**: Embed player now fetches and displays author profile information (avatar and display name) from Nostr kind 0 events. Features: localStorage caching with 24-hour TTL, 5-second timeout, parallel fetch for naddr (when pubkey is known), sequential fetch for nevent, live overlay updates when profile data arrives, silent fallback to default avatar and formatted pubkey on errors. Includes comprehensive test suite with 19 tests

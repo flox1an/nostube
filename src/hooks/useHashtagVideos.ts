@@ -111,9 +111,15 @@ export function useHashtagVideos({
 
     // Wait for initial batch to load
     const timeout = setTimeout(() => {
-      console.log('[useHashtagVideos] Phase 1 timeout fired. Found', processedVideos.length, 'native videos')
+      console.log(
+        '[useHashtagVideos] Phase 1 timeout fired. Found',
+        processedVideos.length,
+        'native videos'
+      )
       setNativeVideos(processedVideos)
-      console.log('[useHashtagVideos] Phase 1 setting loading=false and marking phase1CompletedOnce=true')
+      console.log(
+        '[useHashtagVideos] Phase 1 setting loading=false and marking phase1CompletedOnce=true'
+      )
       console.log('[useHashtagVideos] Phase 1 capturing relays for Phase 2:', relays)
       phase1CompletedOnce.current = true
       phase1Relays.current = relays // Capture relays for Phase 2
@@ -162,7 +168,10 @@ export function useHashtagVideos({
 
     // Debounce: wait 500ms after native results loaded
     const debounceTimer = setTimeout(() => {
-      console.log('[useHashtagVideos] Phase 2 debounce complete, starting label query for tag:', tag)
+      console.log(
+        '[useHashtagVideos] Phase 2 debounce complete, starting label query for tag:',
+        tag
+      )
       labelQueriesStarted.current = true
       queueMicrotask(() => setLoadingLabels(true))
 
@@ -179,7 +188,11 @@ export function useHashtagVideos({
       const queryRelays = phase1Relays.current
       console.log('[useHashtagVideos] Phase 2 relays being queried (from Phase 1):', queryRelays)
       // Use pool.req() directly to ensure REQ is sent to relays
-      console.log('[useHashtagVideos] Phase 2 calling pool.req() with', queryRelays.length, 'relays')
+      console.log(
+        '[useHashtagVideos] Phase 2 calling pool.req() with',
+        queryRelays.length,
+        'relays'
+      )
       const subscription = pool.req(queryRelays, filter).subscribe({
         next: (response: NostrEvent | 'EOSE') => {
           if (response === 'EOSE') {
@@ -202,7 +215,11 @@ export function useHashtagVideos({
 
       // Wait for label events to load, then extract video IDs
       const timeout = setTimeout(() => {
-        console.log('[useHashtagVideos] Phase 2 timeout complete. Found', labelEvents.length, 'label events')
+        console.log(
+          '[useHashtagVideos] Phase 2 timeout complete. Found',
+          labelEvents.length,
+          'label events'
+        )
         const videoIds = extractVideoIdsFromLabels(labelEvents)
         console.log('[useHashtagVideos] Phase 2 extracted', videoIds.size, 'video IDs')
         setLabeledVideoIds(videoIds)

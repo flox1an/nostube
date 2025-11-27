@@ -23,7 +23,10 @@ export function parseURLParams() {
     // Quality and relay options
     preferredQuality: params.get('quality') || 'auto',
     customRelays: params.get('relays')
-      ? params.get('relays').split(',').map(r => r.trim())
+      ? params
+          .get('relays')
+          .split(',')
+          .map(r => r.trim())
       : [],
 
     // Styling
@@ -42,10 +45,15 @@ export function validateParams(config) {
   }
 
   // Basic validation that it looks like a nostr identifier
-  if (!config.videoId.startsWith('nevent1') &&
-      !config.videoId.startsWith('naddr1') &&
-      !config.videoId.startsWith('note1')) {
-    return { valid: false, error: 'Invalid video ID format. Must be nevent1..., naddr1..., or note1...' }
+  if (
+    !config.videoId.startsWith('nevent1') &&
+    !config.videoId.startsWith('naddr1') &&
+    !config.videoId.startsWith('note1')
+  ) {
+    return {
+      valid: false,
+      error: 'Invalid video ID format. Must be nevent1..., naddr1..., or note1...',
+    }
   }
 
   return { valid: true }

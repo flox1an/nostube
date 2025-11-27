@@ -29,7 +29,7 @@ Phase 4 of the Nostube embeddable video player implementation adds a content war
    - Added ContentWarning import
    - Integrated `ContentWarning.applyToPlayer()` in player initialization
 
-2. **`public/nostube-embed.css`**
+2. **`public/embed.css`**
    - Added ~170 lines of content warning overlay styles
    - Blurred background, dark overlay, centered content
    - Mobile responsive design
@@ -206,16 +206,16 @@ document.body.appendChild(container)
 npm run build:embed
 
 # 2. Verify ContentWarning in bundle
-grep -c "ContentWarning" public/nostube-embed.js  # Output: 1
+grep -c "ContentWarning" public/  # Output: 1
 
 # 3. Verify CSS in bundle
-grep -c "content-warning-overlay" public/nostube-embed.css  # Output: 3
+grep -c "content-warning-overlay" public/embed.css  # Output: 3
 ```
 
 ### Files Generated
 
-- `public/nostube-embed.js` - Bundled player with ContentWarning
-- `public/nostube-embed.css` - Styles including overlay
+- `public/` - Bundled player with ContentWarning
+- `public/embed.css` - Styles including overlay
 
 ### Bundle Size Impact
 
@@ -234,7 +234,7 @@ grep -c "content-warning-overlay" public/nostube-embed.css  # Output: 3
 2. **Embed the video:**
 
    ```html
-   <iframe src="embed-demo.html?v=nevent1..."></iframe>
+   <iframe src="embed.html?v=nevent1..."></iframe>
    ```
 
 3. **Verify overlay appears:**
@@ -258,7 +258,7 @@ grep -c "content-warning-overlay" public/nostube-embed.css  # Output: 3
 1. **Video without content-warning:**
 
    ```html
-   <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3..."></iframe>
+   <iframe src="embed.html?v=nevent1qvzqqqqqz5q3..."></iframe>
    ```
 
 2. **Verify normal behavior:**
@@ -309,7 +309,7 @@ Phase 4 is complete. Next phases from design doc:
 | `src/embed/content-warning.js`      | 150       | ContentWarning class implementation |
 | `src/embed/content-warning.test.js` | 390       | Unit tests (34 test cases)          |
 | `src/embed/index.js`                | +3        | Integration with player             |
-| `public/nostube-embed.css`          | +170      | Overlay styles                      |
+| `public/embed.css`                  | +170      | Overlay styles                      |
 | `docs/embed-phase4-complete.md`     | 380       | This document                       |
 | **Total**                           | **~1100** | **Phase 4 implementation**          |
 

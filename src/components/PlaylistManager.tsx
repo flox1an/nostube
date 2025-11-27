@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
+import { useEventStore } from 'applesauce-react/hooks'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,6 +55,7 @@ interface VideoListProps {
 
 function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
   const navigate = useNavigate()
+  const eventStore = useEventStore()
 
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground py-2">No videos in this playlist yet.</p>
@@ -71,14 +73,21 @@ function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
               <button
                 type="button"
                 className="text-left w-full hover:underline"
-                onClick={() =>
-                  navigate(
-                    `/video/${nip19.neventEncode({
-                      id: video.id,
-                      kind: video.kind,
-                    })}?playlist=${encodeURIComponent(playlistParam)}`
-                  )
-                }
+                onClick={() => {
+                  // Fetch event from store to get author pubkey
+                  const event = eventStore.getEvent(video.id)
+                  const nevent = event
+                    ? nip19.neventEncode({
+                        id: video.id,
+                        kind: video.kind,
+                        author: event.pubkey,
+                      })
+                    : nip19.neventEncode({
+                        id: video.id,
+                        kind: video.kind,
+                      })
+                  navigate(`/video/${nevent}?playlist=${encodeURIComponent(playlistParam)}`)
+                }}
               >
                 {video.title || 'Untitled Video'}
               </button>

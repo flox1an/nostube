@@ -209,6 +209,7 @@ function generateEventLink(event: Event, identifier: string | undefined, relays:
   return nip19.neventEncode({
     kind: event.kind,
     id: event.id,
+    author: event.pubkey,
     relays,
   })
 }

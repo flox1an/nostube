@@ -11,14 +11,14 @@ const config = {
   minify: !isDev,
   target: 'es2020',
   format: 'iife',
-  outfile: 'public/nostube-embed.js',
+  outfile: 'public/embed.js',
   external: [],
   define: {
     'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
     'process.env.VERSION': `"${packageJson.version}"`,
   },
   banner: {
-    js: `/* Nostube Embed Player v${packageJson.version} | https://nostube.com */`,
+    js: `/* Nostube Embed Player v${packageJson.version} | https://nostu.be */`,
   },
   sourcemap: isDev,
 }

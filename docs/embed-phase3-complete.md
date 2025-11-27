@@ -28,7 +28,7 @@ Complete PlayerUI class that handles:
 - `addErrorHandling(videoElement)` - Attach error listeners
 - `createPlayerContainer(videoElement)` - Wrap in container div
 
-### 2. `public/nostube-embed.css` (128 lines)
+### 2. `public/embed.css` (128 lines)
 
 Minimal CSS for Phase 3:
 
@@ -64,12 +64,12 @@ Integrated PlayerUI into main flow:
 - Handle player initialization errors
 - Listen for `canplay` event to confirm ready state
 
-### 5. Updated `public/embed-demo.html`
+### 5. Updated `public/embed.html`
 
 Added CSS link:
 
 ```html
-<link rel="stylesheet" href="nostube-embed.css" />
+<link rel="stylesheet" href="embed.css" />
 ```
 
 ## Design Decisions
@@ -175,16 +175,16 @@ npm run start
 
 ```
 # Default (with controls)
-embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
+embed.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
 
 # Autoplay + muted
-embed-demo.html?v=nevent1...&autoplay=1&muted=1
+embed.html?v=nevent1...&autoplay=1&muted=1
 
 # Loop + start at 30 seconds
-embed-demo.html?v=nevent1...&loop=1&start=30
+embed.html?v=nevent1...&loop=1&start=30
 
 # Hide controls
-embed-demo.html?v=nevent1...&controls=0
+embed.html?v=nevent1...&controls=0
 ```
 
 ### Test Checklist:
@@ -210,8 +210,8 @@ $ npm run build:embed
 Build complete!
 
 $ ls -lh public/nostube-embed.*
--rw-r--r--  2.7K  nostube-embed.css
--rw-r--r--  106K  nostube-embed.js
+-rw-r--r--  2.7K  embed.css
+-rw-r--r--  106K
 ```
 
 ## Next Steps (Phase 4)
@@ -231,14 +231,14 @@ Phase 4 will add UI overlays and enhancements:
 **Created:**
 
 - `src/embed/player-ui.js` - PlayerUI class
-- `public/nostube-embed.css` - Minimal player styles
+- `public/embed.css` - Minimal player styles
 - `src/embed/player-ui.test.js` - Unit tests (22 tests)
 - `docs/embed-phase3-complete.md` - This document
 
 **Modified:**
 
 - `src/embed/index.js` - Integrated PlayerUI
-- `public/embed-demo.html` - Added CSS link
+- `public/embed.html` - Added CSS link
 
 ## Success Criteria - All Met ✅
 

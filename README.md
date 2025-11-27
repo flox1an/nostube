@@ -9,17 +9,20 @@ Support for both landscape and portrait videos (shorts in 9:16 format).
 nostube includes a standalone embeddable video player that can be embedded on any website via iframe, similar to YouTube's embed player.
 
 **Quick Example:**
+
 ```html
 <iframe
-  src="https://nostube.com/embed?v=nevent1qqs..."
+  src="https://nostu.be/embed?v=nevent1qqs..."
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
 
 **Features:**
+
 - ✅ iframe-based embedding
 - ✅ Native HTML5 video controls
 - ✅ Content warning overlays
@@ -28,10 +31,12 @@ nostube includes a standalone embeddable video player that can be embedded on an
 - ✅ ~35KB gzipped bundle
 
 **Documentation:**
+
 - [Embed Documentation](./public/embed-README.md) - Complete embedding guide
-- [Interactive Examples](https://nostube.com/embed-examples.html) - Live demos
+- [Interactive Examples](https://nostu.be/embed-examples.html) - Live demos
 
 **Development:**
+
 ```bash
 # Build embed player
 npm run build:embed

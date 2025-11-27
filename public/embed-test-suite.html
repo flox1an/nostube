@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Comprehensive test suite for Nostube embeddable video player - one test at a time to avoid relay rate limiting"
+    />
+    <title>Nostube Embed Player - Test Suite</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-primary: #0f0f1e;
+        --bg-secondary: #1a1a2e;
+        --bg-card: #252540;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0c0;
+        --accent: #8b5cf6;
+        --accent-hover: #7c3aed;
+        --border: #3a3a5a;
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+      }
+
+      .info-banner {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--accent);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 30px;
+        color: var(--text-secondary);
+      }
+
+      .controls {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 30px;
+      }
+
+      .control-group {
+        margin-bottom: 20px;
+      }
+
+      .control-group:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      select {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      select:hover {
+        border-color: var(--accent);
+      }
+
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 20px;
+        background: var(--accent);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+      }
+
+      button:disabled {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .test-info {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+
+      .test-info h2 {
+        color: var(--accent);
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+      }
+
+      .test-info .description {
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+
+      .test-info .meta {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        background: var(--bg-primary);
+        padding: 12px;
+        border-radius: 6px;
+        border-left: 3px solid var(--accent);
+      }
+
+      .player-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 40px;
+      }
+
+      .iframe-wrapper {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%; /* 16:9 */
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .iframe-wrapper.vertical {
+        padding-bottom: 177.78%; /* 9:16 */
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .iframe-wrapper.square {
+        padding-bottom: 100%; /* 1:1 */
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .iframe-wrapper.ultrawide {
+        padding-bottom: 42.86%; /* 21:9 */
+      }
+
+      iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .counter {
+        text-align: center;
+        color: var(--text-secondary);
+        margin-top: 20px;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2rem;
+        }
+
+        .nav-buttons {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎬 Nostube Embed Player Test Suite</h1>
+        <p class="subtitle">Interactive testing for all embed configurations</p>
+        <div class="info-banner">
+          ⚠️ Only one iframe loads at a time to prevent relay rate limiting
+        </div>
+      </header>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="test-selector">Select Test Case</label>
+          <select id="test-selector">
+            <optgroup label="Standard Aspect Ratios">
+              <option value="0">16:9 Landscape - Default Player</option>
+              <option value="1">16:9 Landscape - Autoplay + Muted</option>
+              <option value="2">4:3 Landscape - Classic TV Format</option>
+              <option value="3">1:1 Square - Instagram Style</option>
+              <option value="4">9:16 Vertical - TikTok/Stories</option>
+              <option value="5">21:9 Ultrawide - Cinematic</option>
+            </optgroup>
+            <optgroup label="Player Features">
+              <option value="6">No Title Overlay (title=0)</option>
+              <option value="7">No Branding (branding=0)</option>
+              <option value="8">Title + No Branding</option>
+              <option value="9">Branding + No Title</option>
+              <option value="10">Loop Enabled (loop=1)</option>
+              <option value="11">Start Time (start=30)</option>
+              <option value="12">No Controls (controls=0)</option>
+            </optgroup>
+            <optgroup label="Quality & Performance">
+              <option value="13">Quality: 1080p</option>
+              <option value="14">Quality: 720p</option>
+              <option value="15">Quality: 480p</option>
+              <option value="16">Quality: Auto (default)</option>
+            </optgroup>
+            <optgroup label="Advanced Features">
+              <option value="17">Content Warning Test</option>
+              <option value="18">Custom Relays</option>
+              <option value="19">Addressable Event (naddr)</option>
+            </optgroup>
+            <optgroup label="Color Themes">
+              <option value="20">Red Theme (color=ef4444)</option>
+              <option value="21">Blue Theme (color=3b82f6)</option>
+              <option value="22">Green Theme (color=10b981)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="nav-buttons">
+          <button id="prev-btn" onclick="previousTest()">← Previous</button>
+          <button id="next-btn" onclick="nextTest()">Next →</button>
+        </div>
+
+        <div class="counter" id="counter">Test 1 of 23</div>
+      </div>
+
+      <div id="test-info" class="test-info"></div>
+      <div id="player-container" class="player-container"></div>
+    </div>
+
+    <script>
+      const nevent =
+        'naddr1qvzqqqy9hvpzpwa4mkswz4t8j70s2s6q00wzqv7k7zamxrmj2y4fs88aktcfuf68qyghwumn8ghj7mn0wd68ytnhd9hx2tcpzamhxue69uhhyetvv9ujumn0wd68ytnzv9hxgtcqgpjk2dr9vvuxgwt9vgunvwfjv3skycnyx3jkgvtzxp3xxefnvvcnqvtyxucrwwpsvgungcej8psnjwtxvgukvdrpv3nxget9xgmrjv33ultsx4'
+      //        'nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy'
+
+      const tests = [
+        {
+          name: '16:9 Landscape - Default Player',
+          description:
+            'Standard widescreen format with default settings. Includes title overlay and branding that auto-hide after 3 seconds.',
+          aspect: 'default',
+          params: '',
+          meta: 'Aspect: 16:9 | Autoplay: No | Title: Yes | Branding: Yes',
+        },
+        {
+          name: '16:9 Landscape - Autoplay + Muted',
+          description:
+            'Widescreen format with autoplay enabled and audio muted. Best for background videos or auto-playing content.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1',
+          meta: 'Aspect: 16:9 | Autoplay: Yes | Muted: Yes',
+        },
+        {
+          name: '4:3 Landscape - Classic TV Format',
+          description:
+            'Classic television aspect ratio. Useful for older content or retro-styled videos.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1',
+          meta: 'Aspect: 4:3 | Classic TV format',
+        },
+        {
+          name: '1:1 Square - Instagram Style',
+          description: 'Square format popular on Instagram and social media feeds.',
+          aspect: 'square',
+          params: '&autoplay=1&muted=1',
+          meta: 'Aspect: 1:1 | Square format',
+        },
+        {
+          name: '9:16 Vertical - TikTok/Stories',
+          description:
+            'Vertical format optimized for mobile viewing, perfect for TikTok-style content or Instagram Stories.',
+          aspect: 'vertical',
+          params: '&autoplay=1&muted=1',
+          meta: 'Aspect: 9:16 | Vertical/Portrait format',
+        },
+        {
+          name: '21:9 Ultrawide - Cinematic',
+          description:
+            'Ultrawide cinematic format for immersive viewing experiences. Common in modern films.',
+          aspect: 'ultrawide',
+          params: '&autoplay=1&muted=1',
+          meta: 'Aspect: 21:9 | Ultrawide/Cinematic format',
+        },
+        {
+          name: 'No Title Overlay',
+          description:
+            'Disables the title and author overlay. Only branding logo is visible. Clean minimal look.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&title=0',
+          meta: 'title=0 | Title overlay disabled',
+        },
+        {
+          name: 'No Branding',
+          description:
+            'Removes the Nostube branding logo. Title overlay remains visible. Useful for white-label implementations.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&branding=0',
+          meta: 'branding=0 | Branding logo hidden',
+        },
+        {
+          name: 'Title + No Branding',
+          description:
+            'Shows title overlay but hides branding. Balanced approach for custom branding.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&branding=0',
+          meta: 'title=1&branding=0 | Title only',
+        },
+        {
+          name: 'Branding + No Title',
+          description:
+            'Shows branding logo but hides title overlay. Minimal distraction with source attribution.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&title=0',
+          meta: 'title=0&branding=1 | Branding only',
+        },
+        {
+          name: 'Loop Enabled',
+          description:
+            'Video automatically restarts after finishing. Perfect for background content.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&loop=1',
+          meta: 'loop=1 | Video loops continuously',
+        },
+        {
+          name: 'Start Time',
+          description:
+            'Video starts playing at 30 seconds. Useful for jumping to specific content or skipping intros.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&start=30',
+          meta: 'start=30 | Begins at 30 seconds',
+        },
+        {
+          name: 'No Controls',
+          description:
+            'Hides video controls. Useful for background videos or controlled playback scenarios.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&controls=0',
+          meta: 'controls=0 | Video controls hidden',
+        },
+        {
+          name: 'Quality: 1080p',
+          description:
+            'Forces 1080p quality if available. Falls back to next available quality if not found.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&quality=1080',
+          meta: 'quality=1080 | Preferred quality: 1080p',
+        },
+        {
+          name: 'Quality: 720p',
+          description:
+            'Forces 720p quality. Good balance between quality and bandwidth for most connections.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&quality=720',
+          meta: 'quality=720 | Preferred quality: 720p',
+        },
+        {
+          name: 'Quality: 480p',
+          description:
+            'Forces 480p quality. Useful for slower connections or bandwidth conservation.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&quality=480',
+          meta: 'quality=480 | Preferred quality: 480p',
+        },
+        {
+          name: 'Quality: Auto',
+          description:
+            'Default behavior - automatically selects highest available quality and implements fallback chain.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1',
+          meta: 'quality=auto (default) | Automatic quality selection',
+        },
+        {
+          name: 'Content Warning Test',
+          description:
+            'Tests the content warning overlay for videos marked as sensitive. Click to reveal video.',
+          aspect: 'default',
+          params: '',
+          meta: 'Content warning overlay test',
+          videoId: 'nevent1qqscontentwarning',
+        },
+        {
+          name: 'Custom Relays',
+          description:
+            'Uses custom relay list to fetch the video event. Useful for private or specialized relays.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&relays=wss://relay.damus.io,wss://relay.nostr.band',
+          meta: 'Custom relay configuration',
+        },
+        {
+          name: 'Addressable Event (naddr)',
+          description:
+            'Tests addressable video events (NIP-71). These events use naddr encoding and can be updated.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1',
+          meta: 'Addressable event format',
+          videoId:
+            'naddr1qqxnzdesxqmnxvpexqunqv3e8qcr2wfn8qcrgwf5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqg4waehxw309ahx7um5wgh8xmmkvf5hgtngdaehgtcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9qv8y0nn',
+        },
+        {
+          name: 'Red Theme',
+          description: 'Custom red color theme for controls and UI elements.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&color=ef4444',
+          meta: 'color=ef4444 | Red theme',
+        },
+        {
+          name: 'Blue Theme',
+          description: 'Custom blue color theme for controls and UI elements.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&color=3b82f6',
+          meta: 'color=3b82f6 | Blue theme',
+        },
+        {
+          name: 'Green Theme',
+          description: 'Custom green color theme for controls and UI elements.',
+          aspect: 'default',
+          params: '&autoplay=1&muted=1&color=10b981',
+          meta: 'color=10b981 | Green theme',
+        },
+      ]
+
+      let currentTest = 0
+
+      function loadTest(index) {
+        currentTest = index
+        const test = tests[index]
+        const videoId = test.videoId || nevent
+
+        // Update test info
+        document.getElementById('test-info').innerHTML = `
+          <h2>${test.name}</h2>
+          <p class="description">${test.description}</p>
+          <div class="meta">${test.meta}</div>
+        `
+
+        // Update player
+        const aspectClass = test.aspect === 'default' ? '' : test.aspect
+        document.getElementById('player-container').innerHTML = `
+          <div class="iframe-wrapper ${aspectClass}">
+            <iframe
+              src="embed.html?v=${videoId}${test.params}"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        `
+
+        // Update counter
+        document.getElementById('counter').textContent = `Test ${index + 1} of ${tests.length}`
+
+        // Update button states
+        document.getElementById('prev-btn').disabled = index === 0
+        document.getElementById('next-btn').disabled = index === tests.length - 1
+
+        // Update selector
+        document.getElementById('test-selector').value = index
+      }
+
+      function nextTest() {
+        if (currentTest < tests.length - 1) {
+          loadTest(currentTest + 1)
+        }
+      }
+
+      function previousTest() {
+        if (currentTest > 0) {
+          loadTest(currentTest - 1)
+        }
+      }
+
+      // Keyboard navigation
+      document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') nextTest()
+        if (e.key === 'ArrowLeft') previousTest()
+      })
+
+      // Selector change
+      document.getElementById('test-selector').addEventListener('change', e => {
+        loadTest(parseInt(e.target.value))
+      })
+
+      // Load first test on page load
+      loadTest(0)
+    </script>
+  </body>
+</html>

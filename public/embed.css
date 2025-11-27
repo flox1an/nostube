@@ -259,18 +259,15 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   outline: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .content-warning-button:hover {
   background: #f0f0f0;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .content-warning-button:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .content-warning-button:focus {
@@ -347,7 +344,6 @@ body {
   left: 0;
   right: 0;
   padding: 16px 20px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
 }
 
 .video-title {
@@ -371,7 +367,6 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
   padding-bottom: 16px;
 }
 
@@ -380,7 +375,6 @@ body {
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.9);
   flex-shrink: 0;
 }
 
@@ -414,5 +408,69 @@ body {
 
   .author-name {
     font-size: 13px;
+  }
+}
+
+/* Branding Link (Phase 4) */
+/* Nostube logo link in top-right corner with auto-hide behavior */
+
+.branding-link {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 15; /* Above overlays */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-decoration: none;
+  transition: all 300ms ease;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.branding-link.hidden {
+  opacity: 0;
+}
+
+.branding-link:hover {
+  transform: scale(1.1);
+  filter: brightness(1.1);
+}
+
+.branding-link:active {
+  transform: scale(0.98);
+}
+
+.branding-link:focus {
+  outline: 3px solid rgba(139, 92, 246, 0.6);
+  outline-offset: 3px;
+}
+
+.branding-link:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Logo SVG */
+.branding-logo {
+  cursor: pointer;
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .branding-link {
+    top: 12px;
+    right: 12px;
+    padding: 6px;
+  }
+
+  .branding-logo {
+    width: 28px;
+    height: 28px;
   }
 }

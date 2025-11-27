@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostube Embed Player - Branding Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: white;
+        text-align: center;
+        margin-bottom: 16px;
+        font-size: 36px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 32px;
+        margin-bottom: 40px;
+      }
+
+      .test-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .test-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .test-card h2 {
+        color: #333;
+        font-size: 20px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .test-card .size-info {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 16px;
+        font-family: 'Courier New', monospace;
+        background: #f5f5f5;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #8b5cf6;
+      }
+
+      .iframe-container {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+      }
+
+      /* Specific aspect ratios */
+      .aspect-16-9 {
+        padding-bottom: 56.25%; /* 16:9 */
+      }
+
+      .aspect-4-3 {
+        padding-bottom: 75%; /* 4:3 */
+      }
+
+      .aspect-1-1 {
+        padding-bottom: 100%; /* 1:1 */
+      }
+
+      .aspect-9-16 {
+        padding-bottom: 177.78%; /* 9:16 (vertical video) */
+      }
+
+      .aspect-21-9 {
+        padding-bottom: 42.86%; /* 21:9 (ultrawide) */
+      }
+
+      /* Fixed sizes */
+      .fixed-320 {
+        width: 320px;
+        height: 180px;
+      }
+
+      .fixed-480 {
+        width: 480px;
+        height: 270px;
+      }
+
+      .fixed-240 {
+        width: 240px;
+        height: 135px;
+      }
+
+      iframe[src*='aspect'] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .section-title {
+        color: white;
+        font-size: 28px;
+        font-weight: 600;
+        margin: 60px 0 24px;
+        text-align: center;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .section-title:first-of-type {
+        margin-top: 0;
+      }
+
+      .info-box {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      }
+
+      .info-box h3 {
+        color: #333;
+        margin-bottom: 12px;
+        font-size: 20px;
+      }
+
+      .info-box p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+
+      .info-box ul {
+        color: #666;
+        margin-left: 20px;
+        line-height: 1.8;
+      }
+
+      .info-box code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        color: #8b5cf6;
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 28px;
+        }
+
+        .subtitle {
+          font-size: 16px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+
+        .section-title {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎬 Nostube Embed Player - Branding Test</h1>
+      <p class="subtitle">Testing branding logo visibility at different iframe sizes</p>
+
+      <div class="info-box">
+        <h3>✨ What to Test</h3>
+        <p>
+          The Nostube logo should appear in the <strong>top-right corner</strong> of each video
+          player:
+        </p>
+        <ul>
+          <li>Logo is visible for <strong>3 seconds</strong> when video loads</li>
+          <li>Logo <strong>fades out</strong> during playback</li>
+          <li><strong>Hover</strong> over the video to show the logo again</li>
+          <li><strong>Pause</strong> the video to keep the logo visible</li>
+          <li>
+            Logo should be <strong>clickable</strong> and open the full video page in a new tab
+          </li>
+        </ul>
+        <p style="margin-top: 12px">
+          <strong>Note:</strong> Logo size adjusts automatically on mobile devices (smaller
+          screens).
+        </p>
+      </div>
+
+      <h2 class="section-title">📐 Standard Aspect Ratios</h2>
+
+      <div class="grid">
+        <!-- 16:9 Landscape (Standard YouTube) -->
+        <div class="test-card">
+          <h2>16:9 Landscape</h2>
+          <div class="size-info">Standard widescreen (YouTube default)</div>
+          <div class="iframe-container aspect-16-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 4:3 Landscape (Classic TV) -->
+        <div class="test-card">
+          <h2>4:3 Landscape</h2>
+          <div class="size-info">Classic TV format</div>
+          <div class="iframe-container aspect-4-3">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 1:1 Square -->
+        <div class="test-card">
+          <h2>1:1 Square</h2>
+          <div class="size-info">Instagram-style square</div>
+          <div class="iframe-container aspect-1-1">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 9:16 Vertical (TikTok/Stories) -->
+        <div class="test-card">
+          <h2>9:16 Vertical</h2>
+          <div class="size-info">TikTok/Instagram Stories format</div>
+          <div class="iframe-container aspect-9-16">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 21:9 Ultrawide -->
+        <div class="test-card">
+          <h2>21:9 Ultrawide</h2>
+          <div class="size-info">Cinematic ultrawide format</div>
+          <div class="iframe-container aspect-21-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">📱 Fixed Sizes (Mobile & Small)</h2>
+      <div class="grid">
+        <!-- 240x135 (Tiny thumbnail) -->
+        <div class="test-card">
+          <h2>240x135 Tiny</h2>
+          <div class="size-info">Very small thumbnail size</div>
+          <div class="iframe-container fixed-240">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 320x180 (Small mobile) -->
+        <div class="test-card">
+          <h2>320x180 Small</h2>
+          <div class="size-info">Small mobile screen size</div>
+          <div class="iframe-container fixed-320">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- 480x270 (Medium) -->
+        <div class="test-card">
+          <h2>480x270 Medium</h2>
+          <div class="size-info">Medium/mobile landscape size</div>
+          <div class="iframe-container fixed-480">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">🎨 Different Configurations</h2>
+      <div class="grid">
+        <!-- No autoplay -->
+        <div class="test-card">
+          <h2>No Autoplay</h2>
+          <div class="size-info">Manual play, unmuted</div>
+          <div class="iframe-container aspect-16-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy"
+              allow="fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- No title overlay -->
+        <div class="test-card">
+          <h2>No Title Overlay</h2>
+          <div class="size-info">Branding only (title=0)</div>
+          <div class="iframe-container aspect-16-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1&title=0"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- No branding -->
+        <div class="test-card">
+          <h2>No Branding</h2>
+          <div class="size-info">Title overlay only (branding=0)</div>
+          <div class="iframe-container aspect-16-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1&branding=0"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- Loop enabled -->
+        <div class="test-card">
+          <h2>Loop Enabled</h2>
+          <div class="size-info">Video loops continuously</div>
+          <div class="iframe-container aspect-16-9">
+            <iframe
+              src="embed.html?v=nevent1qvzqqqqqz5q3vamnwvaz7tmjv4kxz7fwwpexjmtpdshxuet5qyxhwumn8ghj7mn0wvhxcmmvqy8hwumn8ghj7mn0wd68ytnddaksz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgcwaehxw309a5xzan9dch8xmrfv3jhxarj9ehx2aqprpmhxue69uhhyetvv9ujuerfwe5kuefwwe5kget0qy2hwumn8ghj7erfw36x7tnsw43z7un9d3shjqgjwaehxw309ac82unsd3jhqct89ejhxqpq3psl9dhren9ts58tg9q9mgdpzqafavgv8p6la2tq6k0ly6arwa9q4d95qy&autoplay=1&muted=1&loop=1"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-top: 60px">
+        <h3>🔍 Branding Implementation Details</h3>
+        <p><strong>Position:</strong> <code>top: 16px; right: 16px</code> (12px on mobile)</p>
+        <p><strong>Size:</strong> <code>32x32px</code> logo (28x28px on mobile)</p>
+        <p><strong>Auto-hide:</strong> 3 second timer, controlled by video play/pause state</p>
+        <p><strong>Transitions:</strong> 300ms opacity fade in/out</p>
+        <p>
+          <strong>Click action:</strong> Opens <code>https://nostu.be/video/{videoId}</code> in new
+          tab
+        </p>
+        <p>
+          <strong>Logo:</strong> Purple gradient circle with white play button (Nostube SVG logo)
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

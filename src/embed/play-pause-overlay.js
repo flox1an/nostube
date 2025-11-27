@@ -119,7 +119,7 @@ export class PlayPauseOverlay {
     svg.setAttribute('height', '56')
     svg.setAttribute('viewBox', '0 0 24 24')
     svg.setAttribute('fill', 'currentColor')
-    svg.style.cssText = 'color: white;'
+    svg.style.cssText = 'color: white; margin-top:2px;'
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     svg.appendChild(path)

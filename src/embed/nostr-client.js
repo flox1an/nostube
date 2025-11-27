@@ -1,3 +1,5 @@
+import { EventCache } from './event-cache.js'
+
 /**
  * Simple Nostr relay client for fetching video events
  */
@@ -52,6 +54,29 @@ export class NostrClient {
    * @returns {Promise<Object>} - Nostr event
    */
   async fetchEvent(identifier) {
+    // Generate cache key based on identifier type
+    let cacheKey
+    if (identifier.type === 'event') {
+      cacheKey = identifier.data.id
+    } else if (identifier.type === 'address') {
+      cacheKey = EventCache.getAddressableKey(
+        identifier.data.kind,
+        identifier.data.pubkey,
+        identifier.data.identifier
+      )
+    } else {
+      throw new Error('Invalid identifier type')
+    }
+
+    // Check cache first
+    const cached = EventCache.getCachedEvent(cacheKey)
+    if (cached) {
+      console.log(`[Nostr Client] Cache hit for event ${cacheKey.substring(0, 16)}...`)
+      return cached
+    }
+
+    console.log(`[Nostr Client] Cache miss for event ${cacheKey.substring(0, 16)}...`)
+
     const subId = `embed-${Date.now()}`
 
     // Build filter based on identifier type
@@ -64,8 +89,6 @@ export class NostrClient {
         authors: [identifier.data.pubkey],
         '#d': [identifier.data.identifier],
       }
-    } else {
-      throw new Error('Invalid identifier type')
     }
 
     console.log('[Nostr Client] Fetching event with filter:', filter)
@@ -107,6 +130,8 @@ export class NostrClient {
             console.log(
               `[Nostr Client] Returning newest addressable event (created_at: ${newest.created_at})`
             )
+            // Cache the event before returning
+            EventCache.setCachedEvent(cacheKey, newest)
             resolve(newest)
           } else {
             reject(new Error('Event not found (timeout)'))
@@ -138,6 +163,8 @@ export class NostrClient {
                   clearTimeout(timeout)
                   console.log('[Nostr Client] Regular event received, returning immediately')
                   this.closeSubscription(subId)
+                  // Cache the event before returning
+                  EventCache.setCachedEvent(cacheKey, nostrEvent)
                   resolve(nostrEvent)
                 }
               }
@@ -161,6 +188,8 @@ export class NostrClient {
                   console.log(
                     `[Nostr Client] All relays responded, returning newest event (created_at: ${newest.created_at})`
                   )
+                  // Cache the event before returning
+                  EventCache.setCachedEvent(cacheKey, newest)
                   resolve(newest)
                 } else {
                   reject(new Error('Addressable event not found on any relay'))

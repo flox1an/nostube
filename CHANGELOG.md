@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Embeddable Video Player - Content Warning Overlay (Phase 4)**: Implemented sensitive content warning for embedded videos
+  - Created `ContentWarning` module with automatic content warning detection from video events
+  - Displays full-screen overlay with blurred poster background when `content-warning` tag is present
+  - Shows warning icon, "Sensitive Content" heading, custom warning message, and "Click to reveal" button
+  - Click-to-reveal interaction removes overlay and shows video controls
+  - State persists after reveal (no re-blur on pause)
+  - Keyboard accessible with Enter/Space key support
+  - Mobile responsive design with appropriate touch targets
+  - Safety feature: Content warnings cannot be bypassed via URL parameters
+  - Added comprehensive unit tests (34 test cases) covering detection, overlay creation, and interaction behavior
+  - Updated CSS with overlay styles including blurred background, dark semi-transparent layer, centered content
+  - Integrated ContentWarning into embed player initialization pipeline
+  - Videos without content warnings play normally with no overlay
+
 - **Blossom Server Filtering**: Added automatic filtering of cdn.nostrcheck.me from all blossom server lists
   - cdn.nostrcheck.me re-encodes videos and serves low-quality content
   - Blocked server list defined in `BLOCKED_BLOSSOM_SERVERS` constant in `src/constants/relays.ts`

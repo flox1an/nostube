@@ -2,6 +2,8 @@ import { parseURLParams, validateParams } from './url-params.js'
 import { decodeVideoIdentifier, buildRelayList } from './nostr-decoder.js'
 import { NostrClient } from './nostr-client.js'
 import { parseVideoEvent, selectVideoVariant } from './video-parser.js'
+import { PlayerUI } from './player-ui.js'
+import { ContentWarning } from './content-warning.js'
 
 let client = null
 
@@ -47,9 +49,31 @@ async function initPlayer() {
 
     console.log('[Nostube Embed] Selected variant:', selectedVariant)
 
-    // TODO: Render video player
-    showSuccess(`Video parsed! Title: "${video.title}"`)
+    // Build and render video player
+    try {
+      const videoElement = PlayerUI.buildVideoPlayer(video, config)
+      const container = PlayerUI.createPlayerContainer(videoElement)
 
+      // Apply content warning overlay if video has sensitive content
+      ContentWarning.applyToPlayer(container, videoElement, video)
+
+      // Clear loading state and show player
+      document.body.innerHTML = ''
+      document.body.appendChild(container)
+
+      // Optional: Log when video is ready
+      videoElement.addEventListener(
+        'canplay',
+        () => {
+          console.log('[Nostube Embed] Player ready')
+        },
+        { once: true }
+      )
+    } catch (playerError) {
+      console.error('[Nostube Embed] Player error:', playerError)
+      showError(`Failed to initialize player: ${playerError.message}`)
+      return
+    }
   } catch (error) {
     console.error('[Nostube Embed] Error:', error)
     if (error.message.includes('timeout')) {

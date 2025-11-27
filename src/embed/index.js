@@ -7,6 +7,7 @@ import { ContentWarning } from './content-warning.js'
 import { TitleOverlay } from './title-overlay.js'
 import { BrandingLink } from './branding.js'
 import { ProfileFetcher } from './profile-fetcher.js'
+import { PlayPauseOverlay } from './play-pause-overlay.js'
 
 let client = null
 let profileFetcher = null
@@ -86,6 +87,9 @@ async function initPlayer() {
 
       // Apply branding link if enabled
       BrandingLink.applyToPlayer(container, videoElement, config.videoId, config)
+
+      // Apply play/pause overlay for visual feedback
+      PlayPauseOverlay.applyToPlayer(container, videoElement)
 
       // Clear loading state and show player
       document.body.innerHTML = ''

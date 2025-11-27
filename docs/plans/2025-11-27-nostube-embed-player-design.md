@@ -70,6 +70,7 @@ npm run build:embed -- --watch
 ```
 
 Build configuration:
+
 - Bundle format: IIFE (immediately invoked)
 - Target: ES2020
 - Minified: Yes
@@ -85,19 +86,19 @@ https://nostube.com/embed?v=<identifier>&[options]
 
 ### Supported Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `v` | string | **required** | Video identifier (nevent/naddr/note) |
-| `autoplay` | 0/1 | 0 | Auto-play on load |
-| `muted` | 0/1 | 0 | Start muted |
-| `loop` | 0/1 | 0 | Loop playback |
-| `t` | number | 0 | Start time in seconds |
-| `controls` | 0/1 | 1 | Show/hide video controls |
-| `title` | 0/1 | 1 | Show/hide title overlay |
-| `quality` | string | auto | Preferred quality (1080p/720p/480p/auto) |
-| `relays` | string | auto | Custom relay list (comma-separated) |
-| `color` | hex | 8b5cf6 | Accent color for UI elements |
-| `branding` | 0/1 | 1 | Show/hide "Watch on Nostube" link |
+| Parameter  | Type   | Default      | Description                              |
+| ---------- | ------ | ------------ | ---------------------------------------- |
+| `v`        | string | **required** | Video identifier (nevent/naddr/note)     |
+| `autoplay` | 0/1    | 0            | Auto-play on load                        |
+| `muted`    | 0/1    | 0            | Start muted                              |
+| `loop`     | 0/1    | 0            | Loop playback                            |
+| `t`        | number | 0            | Start time in seconds                    |
+| `controls` | 0/1    | 1            | Show/hide video controls                 |
+| `title`    | 0/1    | 1            | Show/hide title overlay                  |
+| `quality`  | string | auto         | Preferred quality (1080p/720p/480p/auto) |
+| `relays`   | string | auto         | Custom relay list (comma-separated)      |
+| `color`    | hex    | 8b5cf6       | Accent color for UI elements             |
+| `branding` | 0/1    | 1            | Show/hide "Watch on Nostube" link        |
 
 ### Example Embed Code
 
@@ -108,7 +109,8 @@ https://nostube.com/embed?v=<identifier>&[options]
   height="360"
   frameborder="0"
   allowfullscreen
-  allow="autoplay; fullscreen">
+  allow="autoplay; fullscreen"
+>
 </iframe>
 ```
 
@@ -145,6 +147,7 @@ All modules live in a single bundled file but organized as separate functions/cl
 ### State Management
 
 Simple vanilla JS state tracking:
+
 - Current relay connections
 - Fetched event data
 - Player state (loading/ready/error)
@@ -223,15 +226,15 @@ INITIALIZING → FETCHING_EVENT → PARSING_EVENT → LOADING_VIDEO → READY
 
 **Error States:**
 
-| State | Display | User Action |
-|-------|---------|-------------|
-| `INITIALIZING` | Black screen + spinner | None |
-| `FETCHING_EVENT` | "Loading video..." + spinner | None |
-| `ERROR_INVALID_ID` | "Invalid video ID" | None |
-| `ERROR_NOT_FOUND` | "Video not found" | None |
-| `ERROR_RELAY_FAILED` | "Connection failed" + retry | Click retry |
-| `ERROR_VIDEO_UNAVAILABLE` | "Video file unavailable" | None |
-| `READY` | Video player ready | Play video |
+| State                     | Display                      | User Action |
+| ------------------------- | ---------------------------- | ----------- |
+| `INITIALIZING`            | Black screen + spinner       | None        |
+| `FETCHING_EVENT`          | "Loading video..." + spinner | None        |
+| `ERROR_INVALID_ID`        | "Invalid video ID"           | None        |
+| `ERROR_NOT_FOUND`         | "Video not found"            | None        |
+| `ERROR_RELAY_FAILED`      | "Connection failed" + retry  | Click retry |
+| `ERROR_VIDEO_UNAVAILABLE` | "Video file unavailable"     | None        |
+| `READY`                   | Video player ready           | Play video  |
 
 **Visual Design:**
 
@@ -351,6 +354,7 @@ Video event has a `content-warning` tag
 **Test page:** `public/embed-example.html`
 
 Test cases:
+
 - Various nevent/naddr identifiers
 - All URL parameters combinations
 - Different video qualities
@@ -361,6 +365,7 @@ Test cases:
 ### 2. Unit Tests
 
 Test individual functions:
+
 - NIP-19 decoding
 - URL parameter parsing
 - Quality selector logic
@@ -370,6 +375,7 @@ Test individual functions:
 ### 3. Integration Tests
 
 Test full flow with mocks:
+
 - Mock WebSocket relay responses
 - Mock video event data
 - Test state transitions
@@ -470,11 +476,13 @@ Test full flow with mocks:
 For testing in `embed-example.html`:
 
 **Regular event (nevent):**
+
 ```
 nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
 ```
 
 **Addressable event (naddr):**
+
 ```
 naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
 ```

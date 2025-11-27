@@ -29,7 +29,7 @@ export class NostrClient {
           resolve(ws)
         }
 
-        ws.onerror = (error) => {
+        ws.onerror = error => {
           clearTimeout(timeout)
           console.error(`[Nostr Client] Connection error ${url}:`, error)
           reject(error)
@@ -100,7 +100,7 @@ export class NostrClient {
       // Subscribe to each connection
       connections.forEach(ws => {
         // Handle messages
-        const messageHandler = (event) => {
+        const messageHandler = event => {
           try {
             const message = JSON.parse(event.data)
 

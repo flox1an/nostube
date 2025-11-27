@@ -4,6 +4,7 @@ import { NostrClient } from './nostr-client.js'
 import { parseVideoEvent, selectVideoVariant } from './video-parser.js'
 import { PlayerUI } from './player-ui.js'
 import { ContentWarning } from './content-warning.js'
+import { TitleOverlay } from './title-overlay.js'
 
 let client = null
 
@@ -56,6 +57,9 @@ async function initPlayer() {
 
       // Apply content warning overlay if video has sensitive content
       ContentWarning.applyToPlayer(container, videoElement, video)
+
+      // Apply title overlay if enabled
+      TitleOverlay.applyToPlayer(container, videoElement, video, config)
 
       // Clear loading state and show player
       document.body.innerHTML = ''

@@ -15,6 +15,7 @@
 ### Task 1: Create Directory Structure
 
 **Files:**
+
 - Create: `src/embed/index.js`
 - Create: `scripts/build-embed.js`
 
@@ -118,6 +119,7 @@ git commit -m "chore: add embed player build infrastructure
 ### Task 2: Create URL Parameter Parser
 
 **Files:**
+
 - Create: `src/embed/url-params.js`
 - Modify: `src/embed/index.js`
 
@@ -151,7 +153,10 @@ export function parseURLParams() {
     // Quality and relay options
     preferredQuality: params.get('quality') || 'auto',
     customRelays: params.get('relays')
-      ? params.get('relays').split(',').map(r => r.trim())
+      ? params
+          .get('relays')
+          .split(',')
+          .map(r => r.trim())
       : [],
 
     // Styling
@@ -170,10 +175,15 @@ export function validateParams(config) {
   }
 
   // Basic validation that it looks like a nostr identifier
-  if (!config.videoId.startsWith('nevent1') &&
-      !config.videoId.startsWith('naddr1') &&
-      !config.videoId.startsWith('note1')) {
-    return { valid: false, error: 'Invalid video ID format. Must be nevent1..., naddr1..., or note1...' }
+  if (
+    !config.videoId.startsWith('nevent1') &&
+    !config.videoId.startsWith('naddr1') &&
+    !config.videoId.startsWith('note1')
+  ) {
+    return {
+      valid: false,
+      error: 'Invalid video ID format. Must be nevent1..., naddr1..., or note1...',
+    }
   }
 
   return { valid: true }
@@ -245,17 +255,26 @@ Create `public/embed-test.html`:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Nostube Embed Test</title>
-  <style>
-    body { margin: 0; padding: 0; }
-    iframe { width: 100%; height: 600px; border: none; }
-  </style>
-</head>
-<body>
-  <h1 style="padding: 20px; font-family: system-ui;">Nostube Embed Test</h1>
-  <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"></iframe>
-</body>
+  <head>
+    <title>Nostube Embed Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      iframe {
+        width: 100%;
+        height: 600px;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="padding: 20px; font-family: system-ui;">Nostube Embed Test</h1>
+    <iframe
+      src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+    ></iframe>
+  </body>
 </html>
 ```
 
@@ -264,18 +283,27 @@ Create `public/embed-demo.html`:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nostube Embed Player</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; }
-  </style>
-</head>
-<body>
-  <script src="nostube-embed.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostube Embed Player</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="nostube-embed.js"></script>
+  </body>
 </html>
 ```
 
@@ -291,8 +319,11 @@ Open browser to: `http://localhost:8080/embed-test.html`
 Expected: Error message "Missing required parameter: v (video ID)" shows (correct behavior)
 
 Change iframe src to include video ID:
+
 ```html
-<iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"></iframe>
+<iframe
+  src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+></iframe>
 ```
 
 Expected: Console shows "Configuration: {videoId: 'nevent1...', ...}"
@@ -316,6 +347,7 @@ git commit -m "feat: add URL parameter parsing for embed player
 ### Task 3: Implement NIP-19 Decoder
 
 **Files:**
+
 - Create: `src/embed/nostr-decoder.js`
 
 **Step 1: Create decoder module**
@@ -381,11 +413,7 @@ export function decodeVideoIdentifier(identifier) {
  * @returns {string[]}
  */
 export function getDefaultRelays() {
-  return [
-    'wss://relay.divine.video',
-    'wss://relay.nostr.band',
-    'wss://relay.damus.io',
-  ]
+  return ['wss://relay.divine.video', 'wss://relay.nostr.band', 'wss://relay.damus.io']
 }
 
 /**
@@ -395,11 +423,7 @@ export function getDefaultRelays() {
  * @returns {string[]}
  */
 export function buildRelayList(hintRelays = [], customRelays = []) {
-  const relays = [
-    ...customRelays,
-    ...hintRelays,
-    ...getDefaultRelays(),
-  ]
+  const relays = [...customRelays, ...hintRelays, ...getDefaultRelays()]
 
   // Remove duplicates while preserving order
   return [...new Set(relays)]
@@ -458,6 +482,7 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected console output:
+
 ```
 [Nostube Embed] Configuration: {videoId: 'nevent1...', ...}
 [Nostube Embed] Decoded identifier: {type: 'event', data: {id: '...', relays: [...]}}
@@ -481,6 +506,7 @@ git commit -m "feat: add NIP-19 identifier decoding
 ### Task 4: Implement Relay Connection and Event Fetching
 
 **Files:**
+
 - Create: `src/embed/nostr-client.js`
 
 **Step 1: Create NostrClient class**
@@ -519,7 +545,7 @@ export class NostrClient {
           resolve(ws)
         }
 
-        ws.onerror = (error) => {
+        ws.onerror = error => {
           clearTimeout(timeout)
           console.error(`[Nostr Client] Connection error ${url}:`, error)
           reject(error)
@@ -590,7 +616,7 @@ export class NostrClient {
       // Subscribe to each connection
       connections.forEach(ws => {
         // Handle messages
-        const messageHandler = (event) => {
+        const messageHandler = event => {
           try {
             const message = JSON.parse(event.data)
 
@@ -729,7 +755,6 @@ async function initPlayer() {
 
     // TODO: Parse event and build player
     showSuccess('Event fetched successfully! (Next: parse and render player)')
-
   } catch (error) {
     console.error('[Nostube Embed] Error:', error)
     showError(error.message)
@@ -814,6 +839,7 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected:
+
 1. Shows "Loading video..." with spinning icon
 2. Console shows relay connections
 3. Console shows "Event fetched: {kind: 34235, ...}"
@@ -837,6 +863,7 @@ git commit -m "feat: add Nostr relay client for event fetching
 ### Task 5: Parse Video Event Into Metadata
 
 **Files:**
+
 - Create: `src/embed/video-parser.js`
 
 **Step 1: Create video event parser**
@@ -892,9 +919,11 @@ function parseImetaFormat(event, imetaTags) {
   })
 
   // Extract other metadata
-  const title = event.tags.find(t => t[0] === 'title')?.[1] ||
-                event.tags.find(t => t[0] === 'alt')?.[1] ||
-                event.content || 'Untitled Video'
+  const title =
+    event.tags.find(t => t[0] === 'title')?.[1] ||
+    event.tags.find(t => t[0] === 'alt')?.[1] ||
+    event.content ||
+    'Untitled Video'
 
   const description = event.content || ''
   const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0', 10)
@@ -928,17 +957,25 @@ function parseLegacyFormat(event) {
   const contentWarning = event.tags.find(t => t[0] === 'content-warning')?.[1]
   const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
 
-  const videoVariants = url ? [{
-    url,
-    mimeType,
-    dimensions,
-    fallbackUrls: [],
-  }] : []
+  const videoVariants = url
+    ? [
+        {
+          url,
+          mimeType,
+          dimensions,
+          fallbackUrls: [],
+        },
+      ]
+    : []
 
-  const thumbnails = thumb ? [{
-    url: thumb,
-    fallbackUrls: [],
-  }] : []
+  const thumbnails = thumb
+    ? [
+        {
+          url: thumb,
+          fallbackUrls: [],
+        },
+      ]
+    : []
 
   return {
     id: event.id,
@@ -1098,7 +1135,6 @@ async function initPlayer() {
 
     // TODO: Render video player
     showSuccess(`Video parsed! Title: "${video.title}"`)
-
   } catch (error) {
     console.error('[Nostube Embed] Error:', error)
     if (error.message.includes('timeout')) {
@@ -1123,6 +1159,7 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected console output:
+
 ```
 [Nostube Embed] Parsed video: {
   id: '...',
@@ -1156,6 +1193,7 @@ git commit -m "feat: add video event parser with quality selection
 ### Task 6: Build Video Player DOM
 
 **Files:**
+
 - Create: `src/embed/player-ui.js`
 - Create: `public/nostube-embed.css`
 
@@ -1235,9 +1273,13 @@ export class PlayerUI {
 
     // Set current time if start time specified
     if (this.config.startTime > 0) {
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = this.config.startTime
-      }, { once: true })
+      video.addEventListener(
+        'loadedmetadata',
+        () => {
+          video.currentTime = this.config.startTime
+        },
+        { once: true }
+      )
     }
 
     return video
@@ -1278,9 +1320,7 @@ export class PlayerUI {
     })
 
     // Error fallback text
-    const errorText = document.createTextNode(
-      'Your browser does not support the video tag.'
-    )
+    const errorText = document.createTextNode('Your browser does not support the video tag.')
     videoEl.appendChild(errorText)
   }
 
@@ -1306,7 +1346,8 @@ Create `public/nostube-embed.css`:
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -1344,7 +1385,12 @@ html, body {
   justify-content: center;
   background: #000;
   color: #fff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   z-index: 100;
 }
 
@@ -1354,8 +1400,12 @@ html, body {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .nostube-loading-text {
@@ -1376,7 +1426,12 @@ html, body {
   justify-content: center;
   background: #000;
   color: #fff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   text-align: center;
   padding: 20px;
   z-index: 100;
@@ -1474,7 +1529,6 @@ async function initPlayer() {
     playerUI.render()
 
     console.log('[Nostube Embed] Player rendered successfully')
-
   } catch (error) {
     console.error('[Nostube Embed] Error:', error)
     if (error.message.includes('timeout')) {
@@ -1534,15 +1588,15 @@ Modify `public/embed-demo.html`:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nostube Embed Player</title>
-  <link rel="stylesheet" href="nostube-embed.css">
-</head>
-<body>
-  <script src="nostube-embed.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostube Embed Player</title>
+    <link rel="stylesheet" href="nostube-embed.css" />
+  </head>
+  <body>
+    <script src="nostube-embed.js"></script>
+  </body>
 </html>
 ```
 
@@ -1555,6 +1609,7 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected:
+
 1. Shows loading spinner
 2. Fetches video from relays
 3. Renders video player with native controls
@@ -1567,34 +1622,56 @@ Update `public/embed-test.html` to test both nevent and naddr:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Nostube Embed Test</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: system-ui; }
-    h1 { margin-bottom: 20px; }
-    .test-case { margin-bottom: 40px; }
-    h2 { font-size: 16px; margin-bottom: 10px; }
-    iframe { width: 100%; height: 400px; border: 1px solid #ccc; }
-  </style>
-</head>
-<body>
-  <h1>Nostube Embed Player Tests</h1>
+  <head>
+    <title>Nostube Embed Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui;
+      }
+      h1 {
+        margin-bottom: 20px;
+      }
+      .test-case {
+        margin-bottom: 40px;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      iframe {
+        width: 100%;
+        height: 400px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Nostube Embed Player Tests</h1>
 
-  <div class="test-case">
-    <h2>Test 1: Regular Event (nevent)</h2>
-    <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"></iframe>
-  </div>
+    <div class="test-case">
+      <h2>Test 1: Regular Event (nevent)</h2>
+      <iframe
+        src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+      ></iframe>
+    </div>
 
-  <div class="test-case">
-    <h2>Test 2: Addressable Event (naddr)</h2>
-    <iframe src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"></iframe>
-  </div>
+    <div class="test-case">
+      <h2>Test 2: Addressable Event (naddr)</h2>
+      <iframe
+        src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+      ></iframe>
+    </div>
 
-  <div class="test-case">
-    <h2>Test 3: With Autoplay &amp; Muted</h2>
-    <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1" allow="autoplay"></iframe>
-  </div>
-</body>
+    <div class="test-case">
+      <h2>Test 3: With Autoplay &amp; Muted</h2>
+      <iframe
+        src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
+        allow="autoplay"
+      ></iframe>
+    </div>
+  </body>
 </html>
 ```
 
@@ -1618,6 +1695,7 @@ git commit -m "feat: add video player UI with native HTML5 controls
 ### Task 7: Add Content Warning Overlay
 
 **Files:**
+
 - Create: `src/embed/content-warning.js`
 - Modify: `src/embed/index.js`
 - Modify: `public/nostube-embed.css`
@@ -1742,7 +1820,12 @@ Add to `public/nostube-embed.css`:
   font-weight: 700;
   color: #fff;
   margin-bottom: 12px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 .nostube-content-warning-message {
@@ -1750,7 +1833,12 @@ Add to `public/nostube-embed.css`:
   color: #ccc;
   margin-bottom: 24px;
   line-height: 1.5;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 .nostube-content-warning-button {
@@ -1763,7 +1851,12 @@ Add to `public/nostube-embed.css`:
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 .nostube-content-warning-button:hover {
@@ -1866,6 +1959,7 @@ return {
 Rebuild and test:
 
 Expected:
+
 1. Shows blurred video with warning overlay
 2. Click anywhere reveals the video
 3. Controls appear after clicking
@@ -1890,6 +1984,7 @@ git commit -m "feat: add content warning overlay for sensitive content
 ### Task 8: Add Title Overlay
 
 **Files:**
+
 - Create: `src/embed/title-overlay.js`
 - Modify: `src/embed/player-ui.js`
 - Modify: `public/nostube-embed.css`
@@ -2054,7 +2149,7 @@ Add to `public/nostube-embed.css`:
   left: 0;
   right: 0;
   padding: 20px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
   z-index: 50;
   pointer-events: none;
   opacity: 1;
@@ -2078,8 +2173,13 @@ Add to `public/nostube-embed.css`:
   font-weight: 700;
   color: #fff;
   margin-bottom: 6px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2088,8 +2188,13 @@ Add to `public/nostube-embed.css`:
 .nostube-title-overlay-author {
   font-size: 14px;
   color: #ddd;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 ```
 
@@ -2172,12 +2277,14 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected behavior:
+
 1. Title appears at top on load
 2. Title fades out after 3 seconds
 3. Title reappears on hover
 4. Title shows when paused, hides when playing
 
 Test `title=0` parameter:
+
 ```html
 <iframe src="embed-demo.html?v=nevent1...&title=0"></iframe>
 ```
@@ -2203,6 +2310,7 @@ git commit -m "feat: add title overlay with auto-hide behavior
 ### Task 9: Add Branding Link
 
 **Files:**
+
 - Create: `src/embed/branding.js`
 - Modify: `src/embed/player-ui.js`
 - Modify: `public/nostube-embed.css`
@@ -2282,20 +2390,25 @@ Add to `public/nostube-embed.css`:
   color: #fff;
   font-size: 13px;
   font-weight: 600;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   text-decoration: none;
   border-radius: 6px;
   z-index: 60;
   opacity: 0.9;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .nostube-branding:hover {
   opacity: 1;
   background: var(--accent-color, #7c3aed);
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Adjust position when controls are hidden */
@@ -2399,12 +2512,14 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-test.html`
 
 Expected:
+
 1. "Watch on Nostube" link appears in bottom-right corner
 2. Link is styled with purple background
 3. Hover effect scales and changes color
 4. Clicking opens video page on Nostube in new tab
 
 Test with `branding=0`:
+
 ```html
 <iframe src="embed-demo.html?v=nevent1...&branding=0"></iframe>
 ```
@@ -2412,6 +2527,7 @@ Test with `branding=0`:
 Expected: No branding link shown
 
 Test with custom color:
+
 ```html
 <iframe src="embed-demo.html?v=nevent1...&color=ff6b6b"></iframe>
 ```
@@ -2439,6 +2555,7 @@ git commit -m "feat: add branding link to video player
 ### Task 10: Create Comprehensive Example Page
 
 **Files:**
+
 - Create: `public/embed-example.html`
 
 **Step 1: Create comprehensive example page**
@@ -2448,232 +2565,250 @@ Create `public/embed-example.html`:
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nostube Embed Player Examples</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostube Embed Player Examples</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      padding: 40px 20px;
-    }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: #f5f5f5;
+        padding: 40px 20px;
+      }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
 
-    h1 {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      color: #111;
-    }
+      h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #111;
+      }
 
-    .subtitle {
-      font-size: 16px;
-      color: #666;
-      margin-bottom: 40px;
-    }
+      .subtitle {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 40px;
+      }
 
-    .example {
-      background: #fff;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+      .example {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 32px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
 
-    .example h2 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #111;
-    }
+      .example h2 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #111;
+      }
 
-    .example p {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 16px;
-      line-height: 1.6;
-    }
+      .example p {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
 
-    .example iframe {
-      width: 100%;
-      height: 400px;
-      border: none;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
+      .example iframe {
+        width: 100%;
+        height: 400px;
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
 
-    .example code {
-      display: block;
-      background: #f5f5f5;
-      padding: 16px;
-      border-radius: 6px;
-      font-size: 13px;
-      line-height: 1.6;
-      overflow-x: auto;
-      white-space: pre;
-      color: #111;
-      font-family: 'Courier New', monospace;
-    }
+      .example code {
+        display: block;
+        background: #f5f5f5;
+        padding: 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+        white-space: pre;
+        color: #111;
+        font-family: 'Courier New', monospace;
+      }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 24px;
-      margin-top: 40px;
-    }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        margin-top: 40px;
+      }
 
-    .grid .example iframe {
-      height: 250px;
-    }
+      .grid .example iframe {
+        height: 250px;
+      }
 
-    .note {
-      background: #fffbeb;
-      border-left: 4px solid #f59e0b;
-      padding: 16px;
-      margin-top: 16px;
-      border-radius: 4px;
-      font-size: 14px;
-      color: #92400e;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Nostube Embed Player Examples</h1>
-    <p class="subtitle">Interactive examples demonstrating all embed player features and parameters</p>
+      .note {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        margin-top: 16px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #92400e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Nostube Embed Player Examples</h1>
+      <p class="subtitle">
+        Interactive examples demonstrating all embed player features and parameters
+      </p>
 
-    <!-- Basic Example -->
-    <div class="example">
-      <h2>1. Basic Embed</h2>
-      <p>Minimal embed with default settings. Just pass the video ID (nevent or naddr).</p>
-      <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"></iframe>
-      <code>&lt;iframe
-  src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
-  width="640"
-  height="360"
-  frameborder="0"
-  allowfullscreen&gt;
-&lt;/iframe&gt;</code>
+      <!-- Basic Example -->
+      <div class="example">
+        <h2>1. Basic Embed</h2>
+        <p>Minimal embed with default settings. Just pass the video ID (nevent or naddr).</p>
+        <iframe
+          src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+        ></iframe>
+        <code
+          >&lt;iframe
+          src="https://nostube.com/embed?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+          width="640" height="360" frameborder="0" allowfullscreen&gt; &lt;/iframe&gt;</code
+        >
+      </div>
+
+      <!-- Addressable Event -->
+      <div class="example">
+        <h2>2. Addressable Event (naddr)</h2>
+        <p>Embed using an addressable event identifier (NIP-33).</p>
+        <iframe
+          src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+        ></iframe>
+        <code
+          >&lt;iframe
+          src="https://nostube.com/embed?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+          width="640" height="360" frameborder="0" allowfullscreen&gt; &lt;/iframe&gt;</code
+        >
+      </div>
+
+      <!-- Autoplay & Muted -->
+      <div class="example">
+        <h2>3. Autoplay & Muted</h2>
+        <p>
+          Video starts playing automatically when loaded. Note: Browsers require muted=1 for
+          autoplay to work.
+        </p>
+        <iframe
+          src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
+          allow="autoplay"
+        >
+        </iframe>
+        <code
+          >&lt;iframe src="https://nostube.com/embed?v=nevent1...&autoplay=1&muted=1" width="640"
+          height="360" frameborder="0" allowfullscreen allow="autoplay"&gt; &lt;/iframe&gt;</code
+        >
+        <div class="note">
+          <strong>Note:</strong> Most browsers require videos to be muted for autoplay to work.
+          Always use <code>muted=1</code> with <code>autoplay=1</code>.
+        </div>
+      </div>
+
+      <!-- Grid of smaller examples -->
+      <h2 style="margin-top: 40px; margin-bottom: 20px;">More Examples</h2>
+
+      <div class="grid">
+        <!-- Loop -->
+        <div class="example">
+          <h2>4. Loop Video</h2>
+          <p>Video loops continuously.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&loop=1&muted=1"
+          ></iframe>
+          <code>...?v=nevent1...&loop=1</code>
+        </div>
+
+        <!-- Start Time -->
+        <div class="example">
+          <h2>5. Start at Specific Time</h2>
+          <p>Start video at 30 seconds.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&t=30"
+          ></iframe>
+          <code>...?v=nevent1...&t=30</code>
+        </div>
+
+        <!-- No Controls -->
+        <div class="example">
+          <h2>6. No Controls</h2>
+          <p>Hide video controls.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&controls=0&autoplay=1&muted=1"
+            allow="autoplay"
+          ></iframe>
+          <code>...?v=nevent1...&controls=0</code>
+        </div>
+
+        <!-- No Title -->
+        <div class="example">
+          <h2>7. No Title Overlay</h2>
+          <p>Hide title and author overlay.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0"
+          ></iframe>
+          <code>...?v=nevent1...&title=0</code>
+        </div>
+
+        <!-- No Branding -->
+        <div class="example">
+          <h2>8. No Branding</h2>
+          <p>Hide "Watch on Nostube" link.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&branding=0"
+          ></iframe>
+          <code>...?v=nevent1...&branding=0</code>
+        </div>
+
+        <!-- Custom Color -->
+        <div class="example">
+          <h2>9. Custom Accent Color</h2>
+          <p>Red branding color.</p>
+          <iframe
+            src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff6b6b"
+          ></iframe>
+          <code>...?v=nevent1...&color=ff6b6b</code>
+        </div>
+      </div>
+
+      <!-- Parameters Reference -->
+      <div class="example" style="margin-top: 40px;">
+        <h2>URL Parameters Reference</h2>
+        <p>All available parameters for customizing the embed player:</p>
+        <code
+          >v - Video ID (nevent/naddr/note) - REQUIRED autoplay - Auto-play on load (0/1, default:
+          0) muted - Start muted (0/1, default: 0) loop - Loop playback (0/1, default: 0) t - Start
+          time in seconds (number, default: 0) controls - Show/hide controls (0/1, default: 1) title
+          - Show/hide title overlay (0/1, default: 1) quality - Preferred quality
+          (auto/1080p/720p/480p, default: auto) relays - Custom relays (comma-separated URLs) color
+          - Accent color (hex without #, default: 8b5cf6) branding - Show/hide branding link (0/1,
+          default: 1)</code
+        >
+      </div>
     </div>
-
-    <!-- Addressable Event -->
-    <div class="example">
-      <h2>2. Addressable Event (naddr)</h2>
-      <p>Embed using an addressable event identifier (NIP-33).</p>
-      <iframe src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"></iframe>
-      <code>&lt;iframe
-  src="https://nostube.com/embed?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
-  width="640"
-  height="360"
-  frameborder="0"
-  allowfullscreen&gt;
-&lt;/iframe&gt;</code>
-    </div>
-
-    <!-- Autoplay & Muted -->
-    <div class="example">
-      <h2>3. Autoplay & Muted</h2>
-      <p>Video starts playing automatically when loaded. Note: Browsers require muted=1 for autoplay to work.</p>
-      <iframe
-        src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
-        allow="autoplay">
-      </iframe>
-      <code>&lt;iframe
-  src="https://nostube.com/embed?v=nevent1...&autoplay=1&muted=1"
-  width="640"
-  height="360"
-  frameborder="0"
-  allowfullscreen
-  allow="autoplay"&gt;
-&lt;/iframe&gt;</code>
-      <div class="note">
-        <strong>Note:</strong> Most browsers require videos to be muted for autoplay to work. Always use <code>muted=1</code> with <code>autoplay=1</code>.
-      </div>
-    </div>
-
-    <!-- Grid of smaller examples -->
-    <h2 style="margin-top: 40px; margin-bottom: 20px;">More Examples</h2>
-
-    <div class="grid">
-      <!-- Loop -->
-      <div class="example">
-        <h2>4. Loop Video</h2>
-        <p>Video loops continuously.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&loop=1&muted=1"></iframe>
-        <code>...?v=nevent1...&loop=1</code>
-      </div>
-
-      <!-- Start Time -->
-      <div class="example">
-        <h2>5. Start at Specific Time</h2>
-        <p>Start video at 30 seconds.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&t=30"></iframe>
-        <code>...?v=nevent1...&t=30</code>
-      </div>
-
-      <!-- No Controls -->
-      <div class="example">
-        <h2>6. No Controls</h2>
-        <p>Hide video controls.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&controls=0&autoplay=1&muted=1" allow="autoplay"></iframe>
-        <code>...?v=nevent1...&controls=0</code>
-      </div>
-
-      <!-- No Title -->
-      <div class="example">
-        <h2>7. No Title Overlay</h2>
-        <p>Hide title and author overlay.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&title=0"></iframe>
-        <code>...?v=nevent1...&title=0</code>
-      </div>
-
-      <!-- No Branding -->
-      <div class="example">
-        <h2>8. No Branding</h2>
-        <p>Hide "Watch on Nostube" link.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&branding=0"></iframe>
-        <code>...?v=nevent1...&branding=0</code>
-      </div>
-
-      <!-- Custom Color -->
-      <div class="example">
-        <h2>9. Custom Accent Color</h2>
-        <p>Red branding color.</p>
-        <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&color=ff6b6b"></iframe>
-        <code>...?v=nevent1...&color=ff6b6b</code>
-      </div>
-    </div>
-
-    <!-- Parameters Reference -->
-    <div class="example" style="margin-top: 40px;">
-      <h2>URL Parameters Reference</h2>
-      <p>All available parameters for customizing the embed player:</p>
-      <code>v          - Video ID (nevent/naddr/note) - REQUIRED
-autoplay   - Auto-play on load (0/1, default: 0)
-muted      - Start muted (0/1, default: 0)
-loop       - Loop playback (0/1, default: 0)
-t          - Start time in seconds (number, default: 0)
-controls   - Show/hide controls (0/1, default: 1)
-title      - Show/hide title overlay (0/1, default: 1)
-quality    - Preferred quality (auto/1080p/720p/480p, default: auto)
-relays     - Custom relays (comma-separated URLs)
-color      - Accent color (hex without #, default: 8b5cf6)
-branding   - Show/hide branding link (0/1, default: 1)</code>
-    </div>
-
-  </div>
-</body>
+  </body>
 </html>
 ```
 
@@ -2684,52 +2819,76 @@ Update `public/embed-test.html` to link to the new example page:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Nostube Embed Test</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: system-ui; }
-    h1 { margin-bottom: 20px; }
-    .links { margin-bottom: 30px; }
-    .links a {
-      display: inline-block;
-      padding: 10px 16px;
-      background: #8b5cf6;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 6px;
-      margin-right: 10px;
-      font-weight: 600;
-    }
-    .links a:hover {
-      background: #7c3aed;
-    }
-    .test-case { margin-bottom: 40px; }
-    h2 { font-size: 16px; margin-bottom: 10px; }
-    iframe { width: 100%; height: 400px; border: 1px solid #ccc; }
-  </style>
-</head>
-<body>
-  <h1>Nostube Embed Player Tests</h1>
+  <head>
+    <title>Nostube Embed Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui;
+      }
+      h1 {
+        margin-bottom: 20px;
+      }
+      .links {
+        margin-bottom: 30px;
+      }
+      .links a {
+        display: inline-block;
+        padding: 10px 16px;
+        background: #8b5cf6;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+        margin-right: 10px;
+        font-weight: 600;
+      }
+      .links a:hover {
+        background: #7c3aed;
+      }
+      .test-case {
+        margin-bottom: 40px;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      iframe {
+        width: 100%;
+        height: 400px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Nostube Embed Player Tests</h1>
 
-  <div class="links">
-    <a href="embed-example.html" target="_blank">View All Examples →</a>
-  </div>
+    <div class="links">
+      <a href="embed-example.html" target="_blank">View All Examples →</a>
+    </div>
 
-  <div class="test-case">
-    <h2>Test 1: Regular Event (nevent)</h2>
-    <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"></iframe>
-  </div>
+    <div class="test-case">
+      <h2>Test 1: Regular Event (nevent)</h2>
+      <iframe
+        src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk"
+      ></iframe>
+    </div>
 
-  <div class="test-case">
-    <h2>Test 2: Addressable Event (naddr)</h2>
-    <iframe src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"></iframe>
-  </div>
+    <div class="test-case">
+      <h2>Test 2: Addressable Event (naddr)</h2>
+      <iframe
+        src="embed-demo.html?v=naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj"
+      ></iframe>
+    </div>
 
-  <div class="test-case">
-    <h2>Test 3: With Autoplay &amp; Muted</h2>
-    <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1" allow="autoplay"></iframe>
-  </div>
-</body>
+    <div class="test-case">
+      <h2>Test 3: With Autoplay &amp; Muted</h2>
+      <iframe
+        src="embed-demo.html?v=nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk&autoplay=1&muted=1"
+        allow="autoplay"
+      ></iframe>
+    </div>
+  </body>
 </html>
 ```
 
@@ -2742,6 +2901,7 @@ npm run build:embed
 Open browser to: `http://localhost:8080/embed-example.html`
 
 Test all examples:
+
 1. Basic embed works
 2. naddr event works
 3. Autoplay/muted works
@@ -2770,13 +2930,14 @@ git commit -m "docs: add comprehensive embed example page
 ### Task 11: Write Embed Documentation (README)
 
 **Files:**
+
 - Create: `public/embed-README.md`
 
 **Step 1: Write comprehensive README**
 
 Create `public/embed-README.md`:
 
-```markdown
+````markdown
 # Nostube Embed Player
 
 Embed Nostr videos on any website with a simple iframe.
@@ -2789,9 +2950,11 @@ Embed Nostr videos on any website with a simple iframe.
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
+````
 
 Replace `YOUR_VIDEO_ID` with a video identifier (nevent, naddr, or note).
 
@@ -2807,7 +2970,8 @@ See live examples at: [https://nostube.com/embed-example.html](https://nostube.c
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
 
@@ -2822,7 +2986,8 @@ Note: Browsers require muted for autoplay.
   height="360"
   frameborder="0"
   allowfullscreen
-  allow="autoplay">
+  allow="autoplay"
+>
 </iframe>
 ```
 
@@ -2834,7 +2999,8 @@ Note: Browsers require muted for autoplay.
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
 
@@ -2846,7 +3012,8 @@ Note: Browsers require muted for autoplay.
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
 
@@ -2854,19 +3021,19 @@ Note: Browsers require muted for autoplay.
 
 All parameters are optional except `v` (video ID).
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `v` | string | **required** | Video identifier (nevent/naddr/note) |
-| `autoplay` | 0/1 | 0 | Auto-play on load |
-| `muted` | 0/1 | 0 | Start muted |
-| `loop` | 0/1 | 0 | Loop playback |
-| `t` | number | 0 | Start time in seconds |
-| `controls` | 0/1 | 1 | Show/hide video controls |
-| `title` | 0/1 | 1 | Show/hide title overlay |
-| `quality` | string | auto | Preferred quality (auto/1080p/720p/480p) |
-| `relays` | string | auto | Custom relay list (comma-separated) |
-| `color` | hex | 8b5cf6 | Accent color (without #) |
-| `branding` | 0/1 | 1 | Show/hide "Watch on Nostube" link |
+| Parameter  | Type   | Default      | Description                              |
+| ---------- | ------ | ------------ | ---------------------------------------- |
+| `v`        | string | **required** | Video identifier (nevent/naddr/note)     |
+| `autoplay` | 0/1    | 0            | Auto-play on load                        |
+| `muted`    | 0/1    | 0            | Start muted                              |
+| `loop`     | 0/1    | 0            | Loop playback                            |
+| `t`        | number | 0            | Start time in seconds                    |
+| `controls` | 0/1    | 1            | Show/hide video controls                 |
+| `title`    | 0/1    | 1            | Show/hide title overlay                  |
+| `quality`  | string | auto         | Preferred quality (auto/1080p/720p/480p) |
+| `relays`   | string | auto         | Custom relay list (comma-separated)      |
+| `color`    | hex    | 8b5cf6       | Accent color (without #)                 |
+| `branding` | 0/1    | 1            | Show/hide "Watch on Nostube" link        |
 
 ## Video Identifiers
 
@@ -2923,13 +3090,12 @@ If a video has multiple quality variants, use the `quality` parameter:
 Specify custom Nostr relays for fetching the video event:
 
 ```html
-<iframe
-  src="https://nostube.com/embed?v=nevent1...&relays=wss://relay1.com,wss://relay2.com"
-  ...>
+<iframe src="https://nostube.com/embed?v=nevent1...&relays=wss://relay1.com,wss://relay2.com" ...>
 </iframe>
 ```
 
 By default, the player uses:
+
 1. Custom relays (if provided)
 2. Hint relays from the nevent/naddr
 3. Default fallback relays (relay.divine.video, relay.nostr.band, relay.damus.io)
@@ -2943,7 +3109,8 @@ For responsive embeds, wrap the iframe in a container:
   <iframe
     src="https://nostube.com/embed?v=nevent1..."
     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-    allowfullscreen>
+    allowfullscreen
+  >
   </iframe>
 </div>
 ```
@@ -2962,6 +3129,7 @@ The embed player works on all modern browsers:
 - ✅ Chrome Mobile (Android)
 
 **Requirements:**
+
 - JavaScript enabled
 - WebSocket support
 - HTML5 video support
@@ -2996,6 +3164,7 @@ Browsers require videos to be muted for autoplay:
 ## Privacy
 
 The embed player:
+
 - ✅ No tracking or analytics
 - ✅ No cookies
 - ✅ No external dependencies except nostr relays
@@ -3011,13 +3180,15 @@ The embed player:
 ## Support
 
 For issues, questions, or feature requests:
+
 - GitHub: [nostube/issues](https://github.com/nostube/nostube/issues)
 - Nostr: [npub1...]
 
 ## License
 
 MIT License - See LICENSE file for details
-```
+
+````
 
 **Step 2: Commit**
 
@@ -3032,7 +3203,7 @@ git commit -m "docs: add comprehensive embed player README
 - Troubleshooting section
 - Browser support information
 - Privacy and technical details"
-```
+````
 
 ---
 
@@ -3041,6 +3212,7 @@ git commit -m "docs: add comprehensive embed player README
 ### Task 12: Add npm Script and Update Main README
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `README.md`
 
@@ -3069,7 +3241,7 @@ Then add an "Embed Player" section. Modify `README.md`:
 
 Add after the main project description:
 
-```markdown
+````markdown
 ## Embed Player
 
 Nostube provides a standalone embeddable video player that can be used on any website.
@@ -3082,9 +3254,11 @@ Nostube provides a standalone embeddable video player that can be used on any we
   width="640"
   height="360"
   frameborder="0"
-  allowfullscreen>
+  allowfullscreen
+>
 </iframe>
 ```
+````
 
 ### Documentation
 
@@ -3103,7 +3277,8 @@ npm run build:embed:watch  # Watch mode
 
 Source code: `src/embed/`
 Output: `public/nostube-embed.js`
-```
+
+````
 
 **Step 3: Test full build**
 
@@ -3116,7 +3291,7 @@ npm run build
 
 # Verify files exist
 ls -lh public/nostube-embed.js public/nostube-embed.css public/embed-example.html
-```
+````
 
 Expected: All files present, nostube-embed.js is ~150-200KB minified
 
@@ -3150,6 +3325,7 @@ npm run dev
 Open `http://localhost:8080/embed-example.html`
 
 ✅ Test checklist:
+
 - [ ] nevent video loads and plays
 - [ ] naddr video loads and plays
 - [ ] Video controls work (play, pause, seek, volume, fullscreen)
@@ -3159,6 +3335,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 2: Parameters**
 
 ✅ Test each parameter:
+
 - [ ] `autoplay=1&muted=1` - Video auto-plays
 - [ ] `loop=1` - Video loops
 - [ ] `t=30` - Starts at 30 seconds
@@ -3170,6 +3347,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 3: UI overlays**
 
 ✅ Test overlays:
+
 - [ ] Title appears on load
 - [ ] Title fades out after 3 seconds
 - [ ] Title reappears on hover
@@ -3181,6 +3359,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 4: Error states**
 
 ✅ Test error handling:
+
 - [ ] Invalid video ID shows error
 - [ ] Network failure shows retry option
 - [ ] Missing video shows "not found"
@@ -3188,6 +3367,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 5: Mobile testing**
 
 ✅ Test on mobile:
+
 - [ ] Player scales correctly
 - [ ] Touch controls work
 - [ ] Fullscreen works
@@ -3196,6 +3376,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 6: Cross-browser**
 
 ✅ Test browsers:
+
 - [ ] Chrome
 - [ ] Firefox
 - [ ] Safari
@@ -3205,6 +3386,7 @@ Open `http://localhost:8080/embed-example.html`
 **Step 7: Documentation**
 
 ✅ Verify documentation:
+
 - [ ] README.md has embed section
 - [ ] embed-README.md is comprehensive
 - [ ] embed-example.html shows all features
@@ -3230,6 +3412,7 @@ git commit -m "test: verify all embed player features
 The embeddable video player is now fully implemented with:
 
 ✅ **Core Features:**
+
 - NIP-19 identifier decoding (nevent, naddr, note)
 - Smart relay selection with fallbacks
 - Video event parsing (NIP-71, NIP-92)
@@ -3238,6 +3421,7 @@ The embeddable video player is now fully implemented with:
 - Quality selection
 
 ✅ **UI Components:**
+
 - Loading states
 - Error handling with retry
 - Content warning overlay
@@ -3245,35 +3429,41 @@ The embeddable video player is now fully implemented with:
 - Branding link
 
 ✅ **Configuration:**
+
 - 11 URL parameters for customization
 - Responsive sizing
 - Custom accent colors
 - Autoplay, muted, loop support
 
 ✅ **Documentation:**
+
 - Comprehensive README
 - Interactive examples page
 - Test page with multiple scenarios
 - Code snippets for all use cases
 
 ✅ **Testing:**
+
 - Manual testing checklist
 - Cross-browser compatibility
 - Mobile device support
 - Error state verification
 
 **Build the player:**
+
 ```bash
 npm run build:embed
 ```
 
 **Output files:**
+
 - `public/nostube-embed.js` (~150KB gzipped)
 - `public/nostube-embed.css`
 - `public/embed-example.html`
 - `public/embed-README.md`
 
 **Next steps:**
+
 1. Deploy to production
 2. Test with real-world embeds
 3. Monitor for issues

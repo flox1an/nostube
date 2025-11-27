@@ -30,6 +30,7 @@ A standalone oEmbed service that enables external websites (Discord, Slack, blog
 ### Two-Project Design
 
 **Project 1: nostube-oembed-service** (new repository)
+
 - Standalone Node.js serverless project
 - Technology: Node.js + nostr-tools + native fetch
 - Deployment: Vercel Functions (or any serverless platform)
@@ -37,6 +38,7 @@ A standalone oEmbed service that enables external websites (Discord, Slack, blog
 - Repository: Separate from main Nostube app
 
 **Project 2: nostube** (main frontend - existing)
+
 - Remains purely static React SPA
 - Add configurable `oembedEndpoint` to AppConfig
 - Default points to official service: `https://oembed.nostube.com`
@@ -67,18 +69,20 @@ nostube-oembed-service/
 ### Endpoint Specification
 
 **URL Format:**
+
 ```
 https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ```
 
 **Supported Parameters:**
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `url` | string | **yes** | - | Full Nostube video URL |
-| `format` | string | no | json | Response format (json only) |
+| Parameter | Type   | Required | Default | Description                 |
+| --------- | ------ | -------- | ------- | --------------------------- |
+| `url`     | string | **yes**  | -       | Full Nostube video URL      |
+| `format`  | string | no       | json    | Response format (json only) |
 
 **Supported URL Patterns:**
+
 - `https://nostube.com/video/<nevent>`
 - `https://nostube.com/video/<naddr>`
 - `https://nostube.com/video/<note>`
@@ -102,6 +106,7 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ### Response Format (Success)
 
 **Standard oEmbed JSON:**
+
 ```json
 {
   "type": "video",
@@ -122,6 +127,7 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ```
 
 **Field Details:**
+
 - `type`: Always "video"
 - `version`: oEmbed spec version (1.0)
 - `title`: Video title from `title` tag
@@ -135,6 +141,7 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ### Response Format (Error/Fallback)
 
 **When metadata fetch fails (relay timeout, event not found):**
+
 ```json
 {
   "type": "video",
@@ -150,6 +157,7 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ```
 
 **Notes:**
+
 - Still returns 200 OK status (not 404)
 - Includes iframe HTML (embed player will handle errors)
 - Minimal metadata (no author, thumbnail, or specific title)
@@ -160,12 +168,14 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ### Relay Selection Strategy
 
 **Use hint relays from identifier:**
+
 - nevent/naddr identifiers include relay hints
 - Example: `nevent1qqsabc...qqhwgryjsrkw464ysmrw3w9f65snfw33k76tw94qcyqqqq` includes relay hints
 - Directly query those specific relays
 - No fallback to default relays (keep it fast and simple)
 
 **Relay Connection Logic:**
+
 ```javascript
 1. Decode nevent/naddr using nostr-tools
 2. Extract hint relays from identifier
@@ -181,12 +191,14 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ### Event Fetching
 
 **Supported Video Kinds:**
+
 - Kind 21: Short video (vertical)
 - Kind 22: Regular video (horizontal)
 - Kind 34235: Addressable short video
 - Kind 34236: Addressable regular video
 
 **Metadata Extraction:**
+
 - `title` tag → video title
 - `pubkey` → author (fetch kind 0 for display name if time permits)
 - `image` tag or imeta → thumbnail URL
@@ -194,6 +206,7 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 - `d` tag → identifier (for addressable events)
 
 **Timeout Handling:**
+
 - 10 seconds total timeout for relay connections
 - If timeout: return minimal fallback response
 - Don't wait indefinitely - oEmbed consumers expect fast responses
@@ -203,12 +216,14 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ### Short-Term In-Memory Cache (10 minutes)
 
 **Implementation:**
+
 - Simple in-memory Map: `{ url: { response, timestamp } }`
 - Cache key: Full video URL (normalized)
 - Cache duration: 10 minutes (600 seconds)
 - Eviction: Check timestamp on read, auto-cleanup on write
 
 **Cache Logic:**
+
 ```javascript
 1. Request comes in with video URL
 2. Check cache: if entry exists and age < 10 min, return cached response
@@ -220,12 +235,14 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 ```
 
 **Why 10 minutes?**
+
 - Handles burst sharing (same video shared multiple times)
 - Keeps metadata reasonably fresh
 - Reduces relay load for viral videos
 - Balances performance vs staleness
 
 **Vercel Edge Caching:**
+
 - Also set `Cache-Control` headers for edge caching
 - Vercel CDN will cache responses at edge locations
 - Further reduces function invocations and latency
@@ -234,19 +251,20 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 
 ### Error Scenarios
 
-| Scenario | HTTP Status | Response | Behavior |
-|----------|-------------|----------|----------|
-| Valid URL, event found | 200 OK | Full oEmbed JSON with metadata | Success case |
-| Valid URL, relay timeout | 200 OK | Minimal oEmbed JSON with iframe | Graceful fallback |
-| Valid URL, event not found | 200 OK | Minimal oEmbed JSON with iframe | Graceful fallback |
-| Invalid identifier format | 200 OK | Minimal oEmbed JSON with iframe | Graceful fallback |
-| Missing `url` parameter | 400 Bad Request | `{ error: "url parameter required" }` | Client error |
-| Non-Nostube URL | 400 Bad Request | `{ error: "URL not supported" }` | Client error |
-| Invalid format parameter | 501 Not Implemented | `{ error: "Only JSON format supported" }` | Spec compliance |
+| Scenario                   | HTTP Status         | Response                                  | Behavior          |
+| -------------------------- | ------------------- | ----------------------------------------- | ----------------- |
+| Valid URL, event found     | 200 OK              | Full oEmbed JSON with metadata            | Success case      |
+| Valid URL, relay timeout   | 200 OK              | Minimal oEmbed JSON with iframe           | Graceful fallback |
+| Valid URL, event not found | 200 OK              | Minimal oEmbed JSON with iframe           | Graceful fallback |
+| Invalid identifier format  | 200 OK              | Minimal oEmbed JSON with iframe           | Graceful fallback |
+| Missing `url` parameter    | 400 Bad Request     | `{ error: "url parameter required" }`     | Client error      |
+| Non-Nostube URL            | 400 Bad Request     | `{ error: "URL not supported" }`          | Client error      |
+| Invalid format parameter   | 501 Not Implemented | `{ error: "Only JSON format supported" }` | Spec compliance   |
 
 ### Graceful Degradation
 
 **Philosophy:** Always return an iframe if possible
+
 - Even if we can't fetch metadata, the embed player can try
 - Embed player has its own error handling and retry logic
 - Better user experience than broken links
@@ -263,17 +281,18 @@ interface AppConfig {
   // ... existing config (relays, blossomServers, etc.)
 
   // oEmbed service endpoint
-  oembedEndpoint?: string; // Default: 'https://oembed.nostube.com'
+  oembedEndpoint?: string // Default: 'https://oembed.nostube.com'
 }
 ```
 
 **Runtime Configuration (Docker/env):**
+
 ```javascript
 // In runtime-env.js or equivalent
 window.__RUNTIME_ENV__ = {
   // ... existing env vars
-  OEMBED_ENDPOINT: 'https://oembed.nostube.com'
-};
+  OEMBED_ENDPOINT: 'https://oembed.nostube.com',
+}
 ```
 
 ### Usage in Main App
@@ -293,18 +312,19 @@ window.__RUNTIME_ENV__ = {
    - Render embedded player inline
 
 **Example Implementation:**
+
 ```typescript
 // src/lib/oembed.ts
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext } from '@/contexts/AppContext'
 
 export function useOembedEndpoint() {
-  const { config } = useAppContext();
-  return config.oembedEndpoint || 'https://oembed.nostube.com';
+  const { config } = useAppContext()
+  return config.oembedEndpoint || 'https://oembed.nostube.com'
 }
 
 export function getOembedUrl(videoUrl: string): string {
-  const endpoint = useOembedEndpoint();
-  return `${endpoint}/api/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
+  const endpoint = useOembedEndpoint()
+  return `${endpoint}/api/oembed?url=${encodeURIComponent(videoUrl)}&format=json`
 }
 ```
 
@@ -313,12 +333,14 @@ export function getOembedUrl(videoUrl: string): string {
 ### Official Nostube oEmbed Service
 
 **Hosting:** Vercel (recommended)
+
 - Domain: `https://oembed.nostube.com`
 - Deploy as Vercel serverless functions
 - Automatic scaling, global edge network
 - Zero-config deployment
 
 **Vercel Configuration (`vercel.json`):**
+
 ```json
 {
   "functions": {
@@ -350,6 +372,7 @@ export function getOembedUrl(videoUrl: string): string {
 **For users who want to run their own oEmbed service:**
 
 **Option 1: Vercel**
+
 ```bash
 # Clone nostube-oembed-service repo
 git clone https://github.com/nostube/nostube-oembed-service.git
@@ -363,6 +386,7 @@ OEMBED_ENDPOINT=https://your-oembed.vercel.app
 ```
 
 **Option 2: Docker + Any Node.js Host**
+
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app
@@ -374,6 +398,7 @@ CMD ["node", "server.js"]
 ```
 
 **Option 3: Cloudflare Workers**
+
 - Adapt code for Cloudflare Workers runtime
 - Deploy via Wrangler CLI
 - Update frontend config to point to worker URL
@@ -383,6 +408,7 @@ CMD ["node", "server.js"]
 ### Unit Tests
 
 **Test Coverage:**
+
 - URL parsing (extract identifiers from various URL formats)
 - NIP-19 decoding (nevent, naddr, note)
 - Video event parsing (all 4 video kinds)
@@ -390,19 +416,31 @@ CMD ["node", "server.js"]
 - Error handling (timeouts, invalid inputs)
 
 **Example Tests:**
+
 ```javascript
 describe('oEmbed Endpoint', () => {
-  test('returns full metadata for valid video URL', async () => { /* ... */ });
-  test('returns minimal response on relay timeout', async () => { /* ... */ });
-  test('handles nevent and naddr identifiers', async () => { /* ... */ });
-  test('caches responses for 10 minutes', async () => { /* ... */ });
-  test('returns 400 for missing url parameter', async () => { /* ... */ });
-});
+  test('returns full metadata for valid video URL', async () => {
+    /* ... */
+  })
+  test('returns minimal response on relay timeout', async () => {
+    /* ... */
+  })
+  test('handles nevent and naddr identifiers', async () => {
+    /* ... */
+  })
+  test('caches responses for 10 minutes', async () => {
+    /* ... */
+  })
+  test('returns 400 for missing url parameter', async () => {
+    /* ... */
+  })
+})
 ```
 
 ### Integration Tests
 
 **Test with Real Relays:**
+
 - Mock WebSocket connections to relay servers
 - Test actual Nostr event fetching
 - Verify timeout handling
@@ -411,6 +449,7 @@ describe('oEmbed Endpoint', () => {
 ### Manual Testing
 
 **Test Platforms:**
+
 - Discord: Paste Nostube URL in channel
 - Slack: Paste URL in message
 - Twitter: Paste URL in tweet (if oEmbed supported)
@@ -418,6 +457,7 @@ describe('oEmbed Endpoint', () => {
 - Custom test page: Fetch oEmbed JSON and render iframe
 
 **Test Cases:**
+
 - Valid nevent video URL
 - Valid naddr video URL
 - Non-existent video (404 from relays)
@@ -430,6 +470,7 @@ describe('oEmbed Endpoint', () => {
 ### README for nostube-oembed-service
 
 **Contents:**
+
 1. **Quick Start** - Deploy in 5 minutes
 2. **API Reference** - Endpoint parameters and responses
 3. **Deployment Guides** - Vercel, Docker, Cloudflare
@@ -440,6 +481,7 @@ describe('oEmbed Endpoint', () => {
 ### Documentation for Main Nostube App
 
 **Add to Nostube docs:**
+
 1. **For Developers** - How to use oEmbed endpoint
 2. **For Self-Hosters** - Configure custom oEmbed endpoint
 3. **Examples** - Sample oEmbed requests/responses
@@ -447,12 +489,14 @@ describe('oEmbed Endpoint', () => {
 ### Registering with oEmbed Consumers
 
 **Some platforms require registration:**
+
 - **Discord/Slack:** Usually auto-discover oEmbed endpoints (no registration)
 - **WordPress:** Auto-discovers (no registration)
 - **Twitter/X:** May require explicit registration (if supported)
 - **Reddit:** May require registration for auto-embed
 
 **Documentation should include:**
+
 - List of platforms that support oEmbed auto-discovery
 - Instructions for platforms requiring registration
 
@@ -486,30 +530,35 @@ describe('oEmbed Endpoint', () => {
 ## Implementation Phases (When Ready)
 
 ### Phase 1: Service Setup
+
 1. Create `nostube-oembed-service` repository
 2. Set up Node.js project with dependencies
 3. Create basic endpoint structure
 4. Deploy to Vercel for testing
 
 ### Phase 2: Nostr Integration
+
 1. Implement NIP-19 decoding
 2. Implement relay connection logic
 3. Implement event fetching with timeout
 4. Parse video events into metadata
 
 ### Phase 3: Response Generation
+
 1. Build oEmbed JSON response structure
 2. Generate iframe HTML
 3. Handle error cases and fallbacks
 4. Implement response caching
 
 ### Phase 4: Main App Integration
+
 1. Add `oembedEndpoint` to AppConfig
 2. Add runtime configuration support
 3. Document configuration for self-hosters
 4. Update deployment docs
 
 ### Phase 5: Testing & Documentation
+
 1. Write unit tests for all modules
 2. Write integration tests with mock relays
 3. Test with real Discord/Slack
@@ -521,11 +570,13 @@ describe('oEmbed Endpoint', () => {
 **For testing in various platforms:**
 
 **Regular video (nevent):**
+
 ```
 https://nostube.com/video/nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
 ```
 
 **Addressable video (naddr):**
+
 ```
 https://nostube.com/video/naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
 ```

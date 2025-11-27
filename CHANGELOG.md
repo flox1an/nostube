@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Embeddable Video Player - Title Overlay (Phase 4)**: Implemented video title and author information overlay for embedded videos
+  - Created `TitleOverlay` module displaying video metadata at top and author info at bottom-left
+  - Auto-hide behavior: initially visible for 3 seconds, then fades out during playback
+  - Reappears on hover, stays visible when paused, hides when playing
+  - Shows video title (truncated at 70 characters with ellipsis)
+  - Displays author avatar and name (with fallback to formatted pubkey if name unavailable)
+  - Default avatar SVG generated for profiles without custom avatars
+  - Can be disabled via `title=0` URL parameter (enabled by default)
+  - CSS transitions: 300ms fade in/out with smooth opacity changes
+  - Mobile responsive: smaller text and avatar sizes on screens under 768px
+  - Z-index management: overlay above video but below content warning (z-index: 10)
+  - Pointer events disabled on overlay (clicks pass through to video)
+  - Integrated into embed player initialization pipeline after ContentWarning
+  - Added comprehensive unit tests (30 test cases) covering overlay creation, auto-hide behavior, event handling, and utility functions
+  - All tests passing (186/186) including proper handling of jsdom video element limitations
+
 - **Embeddable Video Player - Content Warning Overlay (Phase 4)**: Implemented sensitive content warning for embedded videos
   - Created `ContentWarning` module with automatic content warning detection from video events
   - Displays full-screen overlay with blurred poster background when `content-warning` tag is present

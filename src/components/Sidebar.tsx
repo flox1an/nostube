@@ -39,7 +39,14 @@ export function Sidebar() {
     },
     // Only show video-notes for beta users
     ...(isVideoNotesBetaUser
-      ? [{ name: t('navigation.videoNotes'), icon: FileText, href: '/video-notes', disabled: false }]
+      ? [
+          {
+            name: t('navigation.videoNotes'),
+            icon: FileText,
+            href: '/video-notes',
+            disabled: false,
+          },
+        ]
       : []),
     { name: t('navigation.watchLater'), icon: Clock, href: '/watch-later', disabled: true },
     { name: t('navigation.likedVideos'), icon: ThumbsUp, href: '/liked-videos' },

@@ -46,9 +46,11 @@ function parseImetaFormat(event, imetaTags) {
   })
 
   // Extract other metadata
-  const title = event.tags.find(t => t[0] === 'title')?.[1] ||
-                event.tags.find(t => t[0] === 'alt')?.[1] ||
-                event.content || 'Untitled Video'
+  const title =
+    event.tags.find(t => t[0] === 'title')?.[1] ||
+    event.tags.find(t => t[0] === 'alt')?.[1] ||
+    event.content ||
+    'Untitled Video'
 
   const description = event.content || ''
   const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0', 10)
@@ -82,17 +84,25 @@ function parseLegacyFormat(event) {
   const contentWarning = event.tags.find(t => t[0] === 'content-warning')?.[1]
   const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
 
-  const videoVariants = url ? [{
-    url,
-    mimeType,
-    dimensions,
-    fallbackUrls: [],
-  }] : []
+  const videoVariants = url
+    ? [
+        {
+          url,
+          mimeType,
+          dimensions,
+          fallbackUrls: [],
+        },
+      ]
+    : []
 
-  const thumbnails = thumb ? [{
-    url: thumb,
-    fallbackUrls: [],
-  }] : []
+  const thumbnails = thumb
+    ? [
+        {
+          url: thumb,
+          fallbackUrls: [],
+        },
+      ]
+    : []
 
   return {
     id: event.id,

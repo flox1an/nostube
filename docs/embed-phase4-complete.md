@@ -155,13 +155,12 @@ return warningTag?.[1] || null
 
 ```javascript
 // 1. Video element poster attribute
-const posterUrl = videoElement.poster
-
-// 2. First thumbnail from metadata
-|| videoMetadata.thumbnails?.[0]?.url
-
-// 3. Empty string (graceful degradation)
-|| ''
+const posterUrl =
+  videoElement.poster ||
+  // 2. First thumbnail from metadata
+  videoMetadata.thumbnails?.[0]?.url ||
+  // 3. Empty string (graceful degradation)
+  ''
 ```
 
 ### CSS Architecture
@@ -233,6 +232,7 @@ grep -c "content-warning-overlay" public/nostube-embed.css  # Output: 3
    - Or create test event with content-warning
 
 2. **Embed the video:**
+
    ```html
    <iframe src="embed-demo.html?v=nevent1..."></iframe>
    ```
@@ -256,6 +256,7 @@ grep -c "content-warning-overlay" public/nostube-embed.css  # Output: 3
 ### Test with Safe Video
 
 1. **Video without content-warning:**
+
    ```html
    <iframe src="embed-demo.html?v=nevent1qvzqqqqqz5q3..."></iframe>
    ```
@@ -303,14 +304,14 @@ Phase 4 is complete. Next phases from design doc:
 
 ## Files Summary
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `src/embed/content-warning.js` | 150 | ContentWarning class implementation |
-| `src/embed/content-warning.test.js` | 390 | Unit tests (34 test cases) |
-| `src/embed/index.js` | +3 | Integration with player |
-| `public/nostube-embed.css` | +170 | Overlay styles |
-| `docs/embed-phase4-complete.md` | 380 | This document |
-| **Total** | **~1100** | **Phase 4 implementation** |
+| File                                | Lines     | Purpose                             |
+| ----------------------------------- | --------- | ----------------------------------- |
+| `src/embed/content-warning.js`      | 150       | ContentWarning class implementation |
+| `src/embed/content-warning.test.js` | 390       | Unit tests (34 test cases)          |
+| `src/embed/index.js`                | +3        | Integration with player             |
+| `public/nostube-embed.css`          | +170      | Overlay styles                      |
+| `docs/embed-phase4-complete.md`     | 380       | This document                       |
+| **Total**                           | **~1100** | **Phase 4 implementation**          |
 
 ## Deployment Checklist
 

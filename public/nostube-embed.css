@@ -1,0 +1,322 @@
+/**
+ * Nostube Embed Player CSS
+ * Minimal styling for Phase 3 - video player only
+ * Phase 4 will add overlays, branding, and enhanced states
+ */
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+}
+
+/* Player container - centers video */
+.nostube-player-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+/* Video element - responsive sizing */
+.nostube-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Ensure video fills container on mobile */
+@media (max-width: 768px) {
+  .nostube-video {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* Loading state (used by index.js inline styles currently) */
+.nostube-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #000;
+  color: #fff;
+  text-align: center;
+  padding: 20px;
+}
+
+.nostube-loading-spinner {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: spin 1s linear infinite;
+}
+
+.nostube-loading-text {
+  font-size: 14px;
+  color: #999;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error state (used by index.js inline styles currently) */
+.nostube-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #000;
+  color: #fff;
+  text-align: center;
+  padding: 20px;
+}
+
+.nostube-error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.nostube-error-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.nostube-error-message {
+  font-size: 14px;
+  color: #999;
+}
+
+/* Video controls enhancement (native controls + slight styling) */
+.nostube-video::-webkit-media-controls-panel {
+  background-image: linear-gradient(transparent, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.7));
+}
+
+.nostube-video::-webkit-media-controls-play-button,
+.nostube-video::-webkit-media-controls-current-time-display,
+.nostube-video::-webkit-media-controls-time-remaining-display {
+  color: #fff;
+}
+
+/* Fullscreen styles */
+.nostube-video:fullscreen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.nostube-video:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.nostube-video:-moz-full-screen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Focus styles for accessibility */
+.nostube-video:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.nostube-video:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Content Warning Overlay (Phase 4) */
+/* Full-screen overlay for sensitive content */
+.content-warning-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Blurred poster background */
+.content-warning-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(20px);
+  transform: scale(1.1); /* Prevent blur edge artifacts */
+}
+
+/* Dark semi-transparent overlay */
+.content-warning-dark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Content container (centered) */
+.content-warning-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 500px;
+  width: 90%;
+}
+
+/* Warning icon */
+.content-warning-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  line-height: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Heading */
+.content-warning-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+/* Warning message text */
+.content-warning-message {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 28px;
+  max-width: 400px;
+}
+
+/* Reveal button */
+.content-warning-button {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.content-warning-button:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.content-warning-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.content-warning-button:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 3px;
+}
+
+/* Focus styles for overlay (keyboard accessibility) */
+.content-warning-overlay:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.5);
+  outline-offset: -3px;
+}
+
+.content-warning-overlay:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .content-warning-content {
+    padding: 24px 16px;
+    max-width: 100%;
+  }
+
+  .content-warning-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .content-warning-heading {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .content-warning-message {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .content-warning-button {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}
+
+/* Container needs relative positioning for absolute overlay */
+.nostube-player-container {
+  position: relative;
+}

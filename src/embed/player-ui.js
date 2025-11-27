@@ -69,7 +69,8 @@ export class PlayerUI {
       video.loop = true
     }
 
-    if (params.showControls) {
+    // Controls are enabled by default (unless explicitly disabled with controls=0)
+    if (params.controls) {
       video.controls = true
     }
 

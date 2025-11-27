@@ -89,11 +89,28 @@ export class NostrClient {
     // Subscribe and wait for event
     return new Promise((resolve, reject) => {
       let resolved = false
+      const isAddressable = identifier.type === 'address'
+      let collectedEvents = []
+      let eoseCount = 0
+      const totalRelays = connections.length
+
       const timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true
           this.closeSubscription(subId)
-          reject(new Error('Event not found (timeout)'))
+
+          // For addressable events, return newest if we have any
+          if (isAddressable && collectedEvents.length > 0) {
+            const newest = collectedEvents.reduce((prev, current) =>
+              current.created_at > prev.created_at ? current : prev
+            )
+            console.log(
+              `[Nostr Client] Returning newest addressable event (created_at: ${newest.created_at})`
+            )
+            resolve(newest)
+          } else {
+            reject(new Error('Event not found (timeout)'))
+          }
         }
       }, 10000) // 10 second timeout for event fetch
 
@@ -106,19 +123,49 @@ export class NostrClient {
 
             // Handle EVENT messages
             if (message[0] === 'EVENT' && message[1] === subId) {
-              if (!resolved) {
-                resolved = true
-                clearTimeout(timeout)
-                const nostrEvent = message[2]
-                console.log('[Nostr Client] Event received:', nostrEvent)
-                this.closeSubscription(subId)
-                resolve(nostrEvent)
+              const nostrEvent = message[2]
+
+              if (isAddressable) {
+                // For addressable events: collect all events
+                collectedEvents.push(nostrEvent)
+                console.log(
+                  `[Nostr Client] Addressable event received (created_at: ${nostrEvent.created_at}), total: ${collectedEvents.length}`
+                )
+              } else {
+                // For regular events: return immediately on first match
+                if (!resolved) {
+                  resolved = true
+                  clearTimeout(timeout)
+                  console.log('[Nostr Client] Regular event received, returning immediately')
+                  this.closeSubscription(subId)
+                  resolve(nostrEvent)
+                }
               }
             }
 
             // Handle EOSE (end of stored events)
             if (message[0] === 'EOSE' && message[1] === subId) {
-              console.log(`[Nostr Client] EOSE received from relay`)
+              eoseCount++
+              console.log(`[Nostr Client] EOSE received (${eoseCount}/${totalRelays})`)
+
+              // For addressable events: wait for all relays, then return newest
+              if (isAddressable && eoseCount === totalRelays && !resolved) {
+                resolved = true
+                clearTimeout(timeout)
+                this.closeSubscription(subId)
+
+                if (collectedEvents.length > 0) {
+                  const newest = collectedEvents.reduce((prev, current) =>
+                    current.created_at > prev.created_at ? current : prev
+                  )
+                  console.log(
+                    `[Nostr Client] All relays responded, returning newest event (created_at: ${newest.created_at})`
+                  )
+                  resolve(newest)
+                } else {
+                  reject(new Error('Addressable event not found on any relay'))
+                }
+              }
             }
           } catch (error) {
             console.error('[Nostr Client] Failed to parse message:', error)

@@ -48,7 +48,7 @@ describe('PlayerUI', () => {
       autoplay: false,
       muted: false,
       loop: false,
-      showControls: true,
+      controls: true,
       startTime: 0,
       preferredQuality: 'auto',
     }
@@ -86,8 +86,8 @@ describe('PlayerUI', () => {
       expect(video.loop).toBe(true)
     })
 
-    it('should hide controls when showControls is false', () => {
-      mockParams.showControls = false
+    it('should hide controls when controls is false', () => {
+      mockParams.controls = false
       const video = PlayerUI.createVideoElement(mockParams)
 
       expect(video.controls).toBe(false)

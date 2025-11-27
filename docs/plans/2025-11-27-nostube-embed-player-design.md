@@ -30,8 +30,8 @@ A standalone embeddable video player for Nostr videos that can be embedded via i
 
 ```
 public/
-├── nostube-embed.js          # Main embed player (bundled, minified)
-├── nostube-embed.css         # Player styles
+├──           # Main embed player (bundled, minified)
+├── embed.css         # Player styles
 ├── embed-example.html        # Demo/test page
 └── embed-README.md           # Documentation for embedders
 
@@ -66,7 +66,7 @@ npm run build:embed
 # Watch mode for development
 npm run build:embed -- --watch
 
-# Output: public/nostube-embed.js (~150KB gzipped)
+# Output: public/ (~150KB gzipped)
 ```
 
 Build configuration:
@@ -81,7 +81,7 @@ Build configuration:
 ### URL Format
 
 ```
-https://nostube.com/embed?v=<identifier>&[options]
+https://nostu.be/embed?v=<identifier>&[options]
 ```
 
 ### Supported Parameters
@@ -104,7 +104,7 @@ https://nostube.com/embed?v=<identifier>&[options]
 
 ```html
 <iframe
-  src="https://nostube.com/embed?v=nevent1qqs...&autoplay=1&muted=1"
+  src="https://nostu.be/embed?v=nevent1qqs...&autoplay=1&muted=1"
   width="640"
   height="360"
   frameborder="0"
@@ -313,7 +313,7 @@ Video event has a `content-warning` tag
 - Small, semi-transparent button/link
 - Text: "Watch on Nostube"
 - Opens full video page in new tab
-- URL: `https://nostube.com/video/<nevent-or-naddr>`
+- URL: `https://nostu.be/video/<nevent-or-naddr>`
 - Uses accent color from `color` parameter
 
 **Behavior:**

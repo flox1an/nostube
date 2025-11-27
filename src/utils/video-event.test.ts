@@ -15,7 +15,7 @@ vi.mock('applesauce-core/helpers/relays', () => ({
 
 vi.mock('nostr-tools', () => ({
   nip19: {
-    neventEncode: vi.fn(({ id }) => `nevent1${id}`),
+    neventEncode: vi.fn(({ id, author }) => `nevent1${id}-${author || 'no-author'}`),
     naddrEncode: vi.fn(({ identifier }) => `naddr1${identifier || 'mock'}`),
   },
 }))
@@ -685,10 +685,10 @@ describe('processEvent', () => {
       expect(result?.duration).toBe(0)
     })
 
-    it('should generate nevent link with correct parameters', () => {
+    it('should generate nevent link with correct parameters including author pubkey', () => {
       const result = processEvent(zapStreamEvent, defaultRelays)
 
-      expect(result?.link).toBe(`nevent1${zapStreamEvent.id}`)
+      expect(result?.link).toBe(`nevent1${zapStreamEvent.id}-${zapStreamEvent.pubkey}`)
     })
 
     it('should handle missing mime type', () => {

@@ -15,35 +15,41 @@ Successfully implemented a complete standalone embeddable video player for Nostu
 ### All Phases Complete (6/6)
 
 #### ✅ Phase 1: Infrastructure & Core (Tasks 1-2)
+
 - Directory structure created
 - URL parameter parser (11 parameters)
 - Build system with esbuild
 - Development workflow established
 
 #### ✅ Phase 2: Nostr Integration (Tasks 3-5)
+
 - NIP-19 decoder (nevent/naddr/note)
 - Relay connection with WebSocket
 - Event fetching with smart relay logic
 - Video event parser (NIP-71/NIP-92)
 
 #### ✅ Phase 3: Video Player UI (Task 6)
+
 - HTML5 video element with native controls
 - Multi-source fallback support
 - Poster/thumbnail display
 - Playback parameters (autoplay, muted, loop, controls, startTime)
 
 #### ✅ Phase 4: Overlays & UI Enhancements (Tasks 7-9)
+
 - Content warning overlay for sensitive content
 - Title/author overlay with auto-hide
 - Branding link ("Watch on Nostube")
 
 #### ✅ Phase 5: Documentation & Examples (Tasks 10-11)
+
 - Comprehensive example page with 14 scenarios
 - Interactive embed builder
 - Complete developer documentation (embed-README.md)
 - Best practices and troubleshooting guide
 
 #### ✅ Phase 6: Finalization (Tasks 12-13)
+
 - npm scripts configured
 - Main README updated
 - All tests passing (118/118)
@@ -54,17 +60,20 @@ Successfully implemented a complete standalone embeddable video player for Nostu
 ## Technical Achievements
 
 ### Bundle Optimization
+
 - **JavaScript:** 112KB minified (38KB gzipped)
 - **CSS:** 9.1KB minified (2KB gzipped)
 - **Total:** ~40KB gzipped (excellent for a self-contained player!)
 
 ### Test Coverage
+
 - **Total Tests:** 118 passing
 - **Test Files:** 4 (player-ui, content-warning, title-overlay, branding)
 - **Coverage:** All core functionality tested
 - **Status:** ✅ All passing
 
 ### File Structure
+
 ```
 src/embed/                         # Source code
 ├── index.js                       # Main entry point
@@ -79,9 +88,9 @@ src/embed/                         # Source code
 └── *.test.js                      # Unit tests
 
 public/                            # Output & documentation
-├── nostube-embed.js               # Bundled player (112KB)
-├── nostube-embed.css              # Styles (9.1KB)
-├── embed-demo.html                # Player page
+├──                # Bundled player (112KB)
+├── embed.css              # Styles (9.1KB)
+├── embed.html                # Player page
 ├── embed-test.html                # Test wrapper
 ├── embed-examples.html            # Interactive examples (1,427 lines)
 └── embed-README.md                # Full documentation (1,006 lines)
@@ -93,6 +102,7 @@ scripts/
 ### Features Implemented
 
 **Core Features:**
+
 - ✅ iframe-based embedding
 - ✅ Native HTML5 video controls
 - ✅ Multiple video quality variants
@@ -108,7 +118,7 @@ scripts/
 **11 URL Parameters:**
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| v | *required* | Video identifier (nevent/naddr/note) |
+| v | _required_ | Video identifier (nevent/naddr/note) |
 | autoplay | 0 | Auto-play video on load |
 | muted | 0 | Start video muted |
 | loop | 0 | Loop video playback |
@@ -125,24 +135,28 @@ scripts/
 ## Recent Fixes & Optimizations
 
 ### 1. Controls Parameter Fix
+
 **Issue:** Parameter name mismatch (`showControls` vs `controls`)
 **Fix:** Corrected to use `controls` consistently
 **Impact:** Video controls now properly enabled by default
 **Commit:** ae65903
 
 ### 2. Relay Fetching Optimization
+
 **Issue:** Both nevent and naddr treated the same
 **Optimization:**
+
 - **nevent (regular events):** Returns immediately on first event found (fast ⚡)
 - **naddr (addressable events):** Waits for all relays and returns newest by created_at (accurate 🎯)
-**Impact:** Faster loading for regular events, correct version for addressable events
-**Commit:** ae65903
+  **Impact:** Faster loading for regular events, correct version for addressable events
+  **Commit:** ae65903
 
 ---
 
 ## Documentation
 
 ### Developer Documentation
+
 - **Main Guide:** [`public/embed-README.md`](../public/embed-README.md) (1,006 lines)
   - Quick start
   - Complete parameter reference
@@ -155,6 +169,7 @@ scripts/
   - FAQ section
 
 ### Interactive Examples
+
 - **Example Page:** [`public/embed-examples.html`](../public/embed-examples.html) (1,427 lines)
   - 14 example configurations
   - Interactive embed builder
@@ -163,6 +178,7 @@ scripts/
   - Parameter reference table
 
 ### Main Project README
+
 - **Updated:** Added embeddable video player section
 - **Links:** To documentation and examples
 - **npm Scripts:** Documented build commands
@@ -171,25 +187,27 @@ scripts/
 
 ## Browser Support
 
-| Browser | Version | Support |
-|---------|---------|---------|
-| Chrome | 90+ | ✅ Full |
-| Firefox | 88+ | ✅ Full |
-| Safari | 14+ | ✅ Full |
-| Edge | 90+ | ✅ Full |
-| Mobile Chrome | 90+ | ✅ Full |
-| Mobile Safari | 14+ | ✅ Full |
+| Browser       | Version | Support |
+| ------------- | ------- | ------- |
+| Chrome        | 90+     | ✅ Full |
+| Firefox       | 88+     | ✅ Full |
+| Safari        | 14+     | ✅ Full |
+| Edge          | 90+     | ✅ Full |
+| Mobile Chrome | 90+     | ✅ Full |
+| Mobile Safari | 14+     | ✅ Full |
 
 ---
 
 ## Performance Metrics
 
 ### Bundle Sizes
+
 - **JavaScript:** 112KB minified → 38KB gzipped ✅
 - **CSS:** 9.1KB minified → 2KB gzipped ✅
 - **Total:** 121KB → ~40KB gzipped ✅
 
 ### Loading Performance
+
 - **Initial load:** 50-100ms (network dependent)
 - **Video fetch:** 100-500ms (relay speed)
   - nevent: Fast (returns on first match)
@@ -197,6 +215,7 @@ scripts/
 - **First frame:** 500-1500ms (video size dependent)
 
 ### Optimization Tips Documented
+
 1. Use lazy loading for below-the-fold videos
 2. Preload thumbnails to avoid blank player
 3. Add quality variants for adaptive quality
@@ -208,12 +227,14 @@ scripts/
 ## Testing Checklist ✅
 
 ### Build & Bundle
+
 - ✅ Embed build succeeds without errors
 - ✅ Bundle sizes within target (~40KB gzipped)
 - ✅ All files generated correctly
 - ✅ Main app build still works
 
 ### Unit Tests
+
 - ✅ All 118 tests passing
 - ✅ player-ui: 22 tests
 - ✅ content-warning: 34 tests
@@ -221,6 +242,7 @@ scripts/
 - ✅ branding: 32 tests
 
 ### Parameter Testing
+
 - ✅ Video ID (nevent/naddr/note) works
 - ✅ Autoplay works (with muted)
 - ✅ Muted works
@@ -234,6 +256,7 @@ scripts/
 - ✅ Quality selection works
 
 ### Feature Testing
+
 - ✅ Video plays with native controls
 - ✅ Multiple sources fallback works
 - ✅ Poster/thumbnail displays
@@ -244,6 +267,7 @@ scripts/
 - ✅ Keyboard navigation works
 
 ### Relay Logic
+
 - ✅ nevent returns immediately ✅ **Optimized!**
 - ✅ naddr waits for all relays ✅ **Optimized!**
 - ✅ Fallback relays work
@@ -251,6 +275,7 @@ scripts/
 - ✅ Timeout handling works
 
 ### Documentation
+
 - ✅ embed-README.md complete and accurate
 - ✅ embed-examples.html works and interactive
 - ✅ Main README.md updated
@@ -258,6 +283,7 @@ scripts/
 - ✅ Links verified
 
 ### Code Quality
+
 - ✅ ESLint clean
 - ✅ Prettier formatted
 - ✅ No console errors
@@ -286,6 +312,7 @@ ea551dd feat: add title overlay to embeddable video player (Phase 4, Task 8)
 ## Next Steps
 
 ### Immediate (Merging)
+
 1. ✅ All tasks complete - ready to merge
 2. Create pull request from `feat/embed` to `main`
 3. Request code review
@@ -293,6 +320,7 @@ ea551dd feat: add title overlay to embeddable video player (Phase 4, Task 8)
 5. Deploy to production
 
 ### Future Enhancements (v2)
+
 - 🚧 HLS streaming support (.m3u8)
 - 🚧 Blossom server integration (mirrors/proxies)
 - 🚧 JavaScript embed API (programmatic control)
@@ -328,6 +356,7 @@ All success criteria from the original design document have been met:
 The Nostube embeddable video player is **production-ready** and provides a complete, professional solution for embedding Nostr videos on any website.
 
 **Key Highlights:**
+
 - 🎯 All design goals achieved
 - 🚀 Excellent performance (40KB gzipped)
 - ✅ 118/118 tests passing

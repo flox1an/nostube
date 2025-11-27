@@ -17,7 +17,7 @@ Implementation completed successfully on 2025-11-27.
    - Added quality-based variant selection
    - Enhanced error handling for missing video URLs
 
-3. **Updated**: `public/nostube-embed.js` (104KB minified bundle)
+3. **Updated**: `public/` (104KB minified bundle)
    - Rebuilt with all parser code included
 
 ### Test Results

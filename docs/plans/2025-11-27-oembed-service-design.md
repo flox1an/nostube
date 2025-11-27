@@ -34,14 +34,14 @@ A standalone oEmbed service that enables external websites (Discord, Slack, blog
 - Standalone Node.js serverless project
 - Technology: Node.js + nostr-tools + native fetch
 - Deployment: Vercel Functions (or any serverless platform)
-- Default domain: `https://oembed.nostube.com`
+- Default domain: `https://oembed.nostu.be`
 - Repository: Separate from main Nostube app
 
 **Project 2: nostube** (main frontend - existing)
 
 - Remains purely static React SPA
 - Add configurable `oembedEndpoint` to AppConfig
-- Default points to official service: `https://oembed.nostube.com`
+- Default points to official service: `https://oembed.nostu.be`
 - Self-hosters can override to use their own oEmbed instance
 
 ### Project Structure (nostube-oembed-service)
@@ -71,7 +71,7 @@ nostube-oembed-service/
 **URL Format:**
 
 ```
-https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
+https://oembed.nostu.be/api/oembed?url=<video-url>&format=json
 ```
 
 **Supported Parameters:**
@@ -83,9 +83,9 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
 
 **Supported URL Patterns:**
 
-- `https://nostube.com/video/<nevent>`
-- `https://nostube.com/video/<naddr>`
-- `https://nostube.com/video/<note>`
+- `https://nostu.be/video/<nevent>`
+- `https://nostu.be/video/<naddr>`
+- `https://nostu.be/video/<note>`
 - `https://<custom-domain>/video/<identifier>` (if self-hosted)
 
 ### Request Flow
@@ -112,14 +112,14 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
   "type": "video",
   "version": "1.0",
   "provider_name": "Nostube",
-  "provider_url": "https://nostube.com",
+  "provider_url": "https://nostu.be",
   "title": "Video Title from Nostr Event",
   "author_name": "Author Display Name or npub",
-  "author_url": "https://nostube.com/author/<npub>",
+  "author_url": "https://nostu.be/author/<npub>",
   "thumbnail_url": "https://cdn.example.com/thumbnail.jpg",
   "thumbnail_width": 1280,
   "thumbnail_height": 720,
-  "html": "<iframe src=\"https://nostube.com/embed?v=nevent123\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
+  "html": "<iframe src=\"https://nostu.be/embed?v=nevent123\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
   "width": 640,
   "height": 360,
   "cache_age": 600
@@ -147,9 +147,9 @@ https://oembed.nostube.com/api/oembed?url=<video-url>&format=json
   "type": "video",
   "version": "1.0",
   "provider_name": "Nostube",
-  "provider_url": "https://nostube.com",
+  "provider_url": "https://nostu.be",
   "title": "Nostube Video",
-  "html": "<iframe src=\"https://nostube.com/embed?v=nevent123\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
+  "html": "<iframe src=\"https://nostu.be/embed?v=nevent123\" width=\"640\" height=\"360\" frameborder=\"0\" allowfullscreen allow=\"autoplay; fullscreen\"></iframe>",
   "width": 640,
   "height": 360,
   "cache_age": 600
@@ -281,7 +281,7 @@ interface AppConfig {
   // ... existing config (relays, blossomServers, etc.)
 
   // oEmbed service endpoint
-  oembedEndpoint?: string // Default: 'https://oembed.nostube.com'
+  oembedEndpoint?: string // Default: 'https://oembed.nostu.be'
 }
 ```
 
@@ -291,7 +291,7 @@ interface AppConfig {
 // In runtime-env.js or equivalent
 window.__RUNTIME_ENV__ = {
   // ... existing env vars
-  OEMBED_ENDPOINT: 'https://oembed.nostube.com',
+  OEMBED_ENDPOINT: 'https://oembed.nostu.be',
 }
 ```
 
@@ -319,7 +319,7 @@ import { useAppContext } from '@/contexts/AppContext'
 
 export function useOembedEndpoint() {
   const { config } = useAppContext()
-  return config.oembedEndpoint || 'https://oembed.nostube.com'
+  return config.oembedEndpoint || 'https://oembed.nostu.be'
 }
 
 export function getOembedUrl(videoUrl: string): string {
@@ -334,7 +334,7 @@ export function getOembedUrl(videoUrl: string): string {
 
 **Hosting:** Vercel (recommended)
 
-- Domain: `https://oembed.nostube.com`
+- Domain: `https://oembed.nostu.be`
 - Deploy as Vercel serverless functions
 - Automatic scaling, global edge network
 - Zero-config deployment
@@ -572,13 +572,13 @@ describe('oEmbed Endpoint', () => {
 **Regular video (nevent):**
 
 ```
-https://nostube.com/video/nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
+https://nostu.be/video/nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
 ```
 
 **Addressable video (naddr):**
 
 ```
-https://nostube.com/video/naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
+https://nostu.be/video/naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
 ```
 
 ## Conclusion

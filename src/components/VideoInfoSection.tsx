@@ -24,7 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy, MapPin } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -32,9 +32,11 @@ import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
+import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { type VideoEvent } from '../utils/video-event'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
+import ngeohash from 'ngeohash'
 
 interface VideoInfoSectionProps {
   video: VideoEvent | null
@@ -62,6 +64,7 @@ interface VideoInfoSectionProps {
   onDelete?: () => void
   onMirror?: () => void
   userServers?: string[]
+  geohash?: string | null
 }
 
 export const VideoInfoSection = React.memo(function VideoInfoSection({
@@ -83,6 +86,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   onDelete,
   onMirror,
   userServers,
+  geohash,
 }: VideoInfoSectionProps) {
   const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
@@ -193,6 +197,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               setIncludeTimestamp={setIncludeTimestamp}
               shareLinks={shareLinks}
             />
+            {videoEvent && <LabelVideoDialog videoEvent={videoEvent} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" aria-label="More actions">
@@ -231,17 +236,53 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           <Separator />
         )}
 
-        {video && video.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {video.tags.slice(0, 20).map(tag => (
-              <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                  #{tag}
-                </Badge>
-              </Link>
+        {/* Display languages from video and labels */}
+        {video && (video as any).languages && (video as any).languages.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-muted-foreground">{t('video.languages')}:</span>
+            {(video as any).languages.map((lang: string) => (
+              <Badge key={lang} variant="outline">
+                {lang.toUpperCase()}
+              </Badge>
             ))}
           </div>
         )}
+
+        {(video && video.tags.length > 0) || geohash ? (
+          <div className="flex flex-wrap gap-2">
+            {video &&
+              video.tags.slice(0, 20).map(tag => (
+                <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
+                  <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                    #{tag}
+                  </Badge>
+                </Link>
+              ))}
+            {geohash && (
+              <a
+                href={(() => {
+                  try {
+                    const decoded = ngeohash.decode(geohash)
+                    return `https://www.openstreetmap.org/?mlat=${decoded.latitude}&mlon=${decoded.longitude}&zoom=15`
+                  } catch {
+                    return '#'
+                  }
+                })()}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t('video.viewLocation')}
+              >
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-secondary/80 inline-flex items-center"
+                >
+                  <MapPin className="w-3.5 h-3.5 mr-1" />
+                  {t('video.location')}
+                </Badge>
+              </a>
+            )}
+          </div>
+        ) : null}
       </div>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

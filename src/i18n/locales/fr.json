@@ -113,6 +113,9 @@
     "noVideosFound": "Aucune vidéo trouvée.",
     "noMoreVideos": "Plus de vidéos à charger.",
     "thumbnailUnavailable": "Miniature indisponible",
+    "languages": "Langues",
+    "location": "Localisation",
+    "viewLocation": "Voir l'emplacement sur la carte",
     "comments": {
       "title": "Commentaires",
       "addComment": "Ajouter un commentaire...",
@@ -403,6 +406,25 @@
       "title": "Oups ! Page introuvable",
       "returnHome": "Retour à l'accueil"
     }
+  },
+  "labelVideo": {
+    "button": "Étiqueter la vidéo",
+    "title": "Étiqueter la vidéo",
+    "description": "Ajoutez des hashtags et des étiquettes de langue pour aider à catégoriser cette vidéo avec NIP-32.",
+    "hashtagsLabel": "Hashtags",
+    "hashtagsPlaceholder": "bitcoin, nostr, tutoriel",
+    "hashtagsHelp": "Hashtags séparés par des virgules (sans symbole #)",
+    "languageLabel": "Langue",
+    "languagePlaceholder": "Sélectionnez la langue de la vidéo",
+    "languageNone": "Aucune",
+    "explanationLabel": "Explication (Optionnelle)",
+    "explanationPlaceholder": "Pourquoi ajoutez-vous ces étiquettes ?",
+    "explanationHelp": "Explication optionnelle de vos choix d'étiquetage",
+    "submitButton": "Publier les étiquettes",
+    "loginRequired": "Veuillez vous connecter pour étiqueter les vidéos",
+    "noLabelsError": "Veuillez ajouter au moins un hashtag ou sélectionner une langue",
+    "success": "Étiquettes publiées avec succès",
+    "error": "Échec de la publication des étiquettes"
   },
   "errors": {
     "connectionError": "Erreur de connexion",

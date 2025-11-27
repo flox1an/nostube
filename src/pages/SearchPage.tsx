@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSearchVideos } from '@/hooks/useSearchVideos'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 
@@ -10,10 +10,13 @@ export function SearchPage() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')
 
+  // Memoize videoKinds to prevent unnecessary re-renders
+  const videoKinds = useMemo(() => getKindsForType('all'), [])
+
   // Use dedicated search hook that only queries relay.nostr.band
   const { videos, loading, loadMore } = useSearchVideos({
     query,
-    kinds: getKindsForType('all'), // All video kinds: 21, 22, 34235, 34236
+    kinds: videoKinds, // All video kinds: 21, 22, 34235, 34236
   })
 
   // Update document title

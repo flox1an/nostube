@@ -1,9 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
+import { useAppContext, useReadRelays } from '@/hooks'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
+
+// Test npub: npub1cj8znuztfqkvq89pl8hceph0svvvqk0qay6nydgk9uyq7fhpfsgsqwrz4u
+const TEST_PUBKEY = 'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11'
 
 export interface VideoNote {
   id: string
@@ -52,12 +55,11 @@ function extractVideoUrls(content: string, tags: string[][]): string[] {
 }
 
 /**
- * Hook to load and process Kind 1 notes with videos from the current user
+ * Hook to load and process Kind 1 notes with videos from a test user
  */
 export function useVideoNotes() {
   console.log('VideoNotes: Hook function called')
 
-  const { user } = useCurrentUser()
   const { pool } = useAppContext()
   const readRelays = useReadRelays()
   const eventStore = useEventStore()
@@ -65,8 +67,7 @@ export function useVideoNotes() {
   const [loading, setLoading] = useState(true)
 
   console.log('VideoNotes: Dependencies loaded:', {
-    hasUser: !!user,
-    userPubkey: user?.pubkey?.slice(0, 8),
+    testPubkey: TEST_PUBKEY.slice(0, 8),
     hasPool: !!pool,
     readRelaysCount: readRelays?.length,
     hasEventStore: !!eventStore,
@@ -76,29 +77,23 @@ export function useVideoNotes() {
   const videoUrlSet = useMemo(() => new Set<string>(), [])
 
   useEffect(() => {
-    if (!user) {
-      console.log('VideoNotes: No user logged in')
-      queueMicrotask(() => setLoading(false))
-      return
-    }
-
     if (!pool || !readRelays || readRelays.length === 0) {
       console.log('VideoNotes: Waiting for pool or relays...')
       return
     }
 
-    console.log('VideoNotes: Starting to load notes for user:', user.pubkey.slice(0, 8))
+    console.log('VideoNotes: Starting to load notes for test user:', TEST_PUBKEY.slice(0, 8))
 
     let videoSub: { unsubscribe: () => void } | null = null
     let notesSub: { unsubscribe: () => void } | null = null
     const notesArray: NostrEvent[] = []
 
-    // Load user's video events to check for reposts
+    // Load test user's video events to check for reposts
     const videoKinds = [21, 22, 34235, 34236]
     const videoLoader = createTimelineLoader(
       pool,
       readRelays,
-      [{ kinds: videoKinds, authors: [user.pubkey], limit: 100 }],
+      [{ kinds: videoKinds, authors: [TEST_PUBKEY], limit: 100 }],
       { eventStore }
     )
 
@@ -106,7 +101,7 @@ export function useVideoNotes() {
     const notesLoader = createTimelineLoader(
       pool,
       readRelays,
-      [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
+      [{ kinds: [1], authors: [TEST_PUBKEY], limit: 100 }],
       { eventStore }
     )
 
@@ -210,11 +205,10 @@ export function useVideoNotes() {
         notesSub.unsubscribe()
       }
     }
-  }, [user, pool, readRelays, eventStore, videoUrlSet])
+  }, [pool, readRelays, eventStore, videoUrlSet])
 
   return {
     notes,
     loading,
-    hasUser: !!user,
   }
 }

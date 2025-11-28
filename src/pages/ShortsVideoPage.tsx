@@ -78,9 +78,15 @@ function ShortVideoItem({
 
     const playPromise = videoEl.play()
     if (playPromise !== undefined) {
-      playPromise.catch(error => {
-        console.error('Error playing video:', video.id.substring(0, 8), error)
-      })
+      playPromise
+        .then(() => {
+          // Successfully started playing - now unmute for audio
+          // This ensures iOS autoplay restrictions are satisfied (start muted, unmute after playback begins)
+          videoEl.muted = false
+        })
+        .catch(error => {
+          console.error('Error playing video:', video.id.substring(0, 8), error)
+        })
     }
   }, [video.id])
 
@@ -188,7 +194,9 @@ function ShortVideoItem({
     if (isActive) {
       // Reset to beginning and play immediately
       videoEl.currentTime = 0
-      videoEl.muted = false
+      // Start muted to comply with iOS autoplay restrictions
+      // Will be unmuted after playback starts (see playActiveVideo)
+      videoEl.muted = true
 
       if (videoUrl) {
         playActiveVideo()
@@ -209,7 +217,13 @@ function ShortVideoItem({
     userInitiatedPlayPauseRef.current = true
 
     if (videoEl.paused) {
-      videoEl.play()
+      const playPromise = videoEl.play()
+      // User-initiated play can unmute immediately
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          videoEl.muted = false
+        })
+      }
     } else {
       videoEl.pause()
     }
@@ -336,7 +350,7 @@ function ShortVideoItem({
                   src={videoUrl || undefined}
                   className="w-full h-full object-contain cursor-pointer"
                   loop
-                  muted={false}
+                  muted={true}
                   playsInline
                   poster={
                     thumbnailUrl

@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Mobile Sidebar Safe Area**: Fixed sidebar menu overlapping with phone status bar in fullscreen mode. Added safe-area-inset-top padding to prevent content from reaching into the status bar area on mobile devices
 - **Shorts Video Swipe Gesture**: Fixed issue where swiping up/down to navigate between shorts would sometimes pause the video. Added touch event tracking to distinguish between taps (intentional play/pause) and swipe gestures (scrolling). Videos now only pause/play on actual taps, not during scroll gestures
 - **Embed Build Script**: Fixed `outfile` configuration pointing to directory instead of file. Now correctly outputs to `public/embed.js`
 - **Thumbnail Variants Not Showing in Debug Dialog**: Fixed `image` fields in imeta tags not converted to `VideoVariant` objects. Now extracts all image URLs and creates thumbnail variants

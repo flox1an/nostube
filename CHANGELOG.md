@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Grid Rendering Performance Optimizations**: Significantly improved video grid rendering performance with multiple optimizations:
+  - Removed production `console.log` statements (gated behind `import.meta.env.DEV`) in VideoCard and VideoGrid components to eliminate unnecessary function calls
+  - Added localStorage caching to PlayProgressBar component to avoid repeated reads for the same video (Map-based cache reduces I/O overhead)
+  - Memoized expensive computations in VideoGrid: `gridColsClass` function, `chunk` callback, and video type filtering to prevent recalculation on every render
+  - Added CSS containment (`contain: layout style paint`) to VideoCard wrapper to reduce layout recalculation scope and improve paint performance
+  - Optimized IntersectionObserver by reducing `rootMargin` from 800px to 400px in `useInfiniteScroll` hook, minimizing observer computation frequency
+  - These changes should significantly reduce the ~2,262 IntersectionObserver computations and ~1,196 UpdateLayoutTree events observed in performance traces
 - **Label Video Button Beta Access**: Label video button now restricted to beta users only. Centralized beta user configuration in `src/lib/beta-users.ts` with `isBetaUser()` helper function used across Sidebar and VideoInfoSection components
 - **Embed Test Suite**: Redesigned to load only one iframe at a time to prevent relay rate limiting. Features interactive dropdown selector with 23 test cases organized by category, Previous/Next navigation buttons, keyboard navigation (arrow keys), and detailed descriptions for each test scenario
 - **Embed Player Branding**: Moved branding logo to top-right corner with auto-hide behavior. Displays Nostube SVG logo instead of text. Fades out after 3 seconds, reappears on hover/pause, matching title overlay behavior

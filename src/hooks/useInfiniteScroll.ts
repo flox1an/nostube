@@ -12,17 +12,22 @@ interface UseInfiniteScrollOptions {
 /**
  * Hook for infinite scroll functionality
  * Triggers onLoadMore when the trigger element comes into view
+ *
+ * Performance optimized:
+ * - Reduced rootMargin to 400px (from 800px) to minimize IntersectionObserver calculations
+ * - Added triggerOnce: false to properly handle repeated scroll events
  */
 export function useInfiniteScroll({
   onLoadMore,
   loading,
   exhausted,
   threshold = 0,
-  rootMargin = '0px 0px 800px 0px',
+  rootMargin = '0px 0px 400px 0px',
 }: UseInfiniteScrollOptions) {
   const { ref, inView } = useInView({
     threshold,
     rootMargin,
+    triggerOnce: false,
   })
 
   useEffect(() => {

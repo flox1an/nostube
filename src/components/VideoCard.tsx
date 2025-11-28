@@ -105,8 +105,8 @@ export const VideoCard = React.memo(function VideoCard({
     return videoPath
   }, [playlistParam, videoPath, video.type, video.pubkey, video.id, allVideos, videoIndex])
 
-  // Debug: Log navigation state for shorts
-  if (video.type === 'shorts') {
+  // Debug: Log navigation state for shorts (DEV only)
+  if (import.meta.env.DEV && video.type === 'shorts') {
     console.log('[VideoCard] Creating shorts link:', {
       videoTitle: video.title,
       videoType: video.type,
@@ -161,11 +161,13 @@ export const VideoCard = React.memo(function VideoCard({
   // Handle shorts click - populate store with video list
   const handleShortsClick = () => {
     if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
-      console.log('[VideoCard] Populating store with shorts:', {
-        videoCount: allVideos.length,
-        startIndex: videoIndex,
-        clickedTitle: video.title,
-      })
+      if (import.meta.env.DEV) {
+        console.log('[VideoCard] Populating store with shorts:', {
+          videoCount: allVideos.length,
+          startIndex: videoIndex,
+          clickedTitle: video.title,
+        })
+      }
 
       // Populate the store with the shorts list and starting index
       setVideos(allVideos, videoIndex)
@@ -175,6 +177,7 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn('transition-all duration-200', maxWidth)}
+      style={{ contain: 'layout style paint' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

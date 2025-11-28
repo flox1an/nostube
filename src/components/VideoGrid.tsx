@@ -55,42 +55,48 @@ export function VideoGrid({
     [width]
   )
 
-  // Split videos by type for auto mode
-  let wideVideos: VideoEvent[] = []
-  let portraitVideos: VideoEvent[] = []
-  if (layoutMode === 'auto') {
-    wideVideos = filteredVideos.filter(v => v.type === 'videos')
-    portraitVideos = filteredVideos.filter(v => v.type === 'shorts')
-  }
+  // Split videos by type for auto mode (memoized)
+  const { wideVideos, portraitVideos } = useMemo(() => {
+    if (layoutMode === 'auto') {
+      return {
+        wideVideos: filteredVideos.filter(v => v.type === 'videos'),
+        portraitVideos: filteredVideos.filter(v => v.type === 'shorts'),
+      }
+    }
+    return { wideVideos: [], portraitVideos: [] }
+  }, [layoutMode, filteredVideos])
 
-  // Helper to chunk array into rows
-  function chunk<T>(arr: T[], size: number): T[][] {
+  // Helper to chunk array into rows (memoized)
+  const chunk = useCallback(<T,>(arr: T[], size: number): T[][] => {
     const res: T[][] = []
     for (let i = 0; i < arr.length; i += size) {
       res.push(arr.slice(i, i + size))
     }
     return res
-  }
+  }, [])
 
-  // Helper to map column count to Tailwind class
-  const gridColsClass = (cols: number) => {
-    switch (cols) {
-      case 1:
-        return 'grid-cols-1'
-      case 2:
-        return 'grid-cols-2'
-      case 3:
-        return 'grid-cols-3'
-      case 4:
-        return 'grid-cols-4'
-      case 6:
-        return 'grid-cols-6'
-      case 8:
-        return 'grid-cols-8'
-      default:
-        return 'grid-cols-1'
-    }
-  }
+  // Helper to map column count to Tailwind class (memoized)
+  const gridColsClass = useMemo(
+    () => (cols: number) => {
+      switch (cols) {
+        case 1:
+          return 'grid-cols-1'
+        case 2:
+          return 'grid-cols-2'
+        case 3:
+          return 'grid-cols-3'
+        case 4:
+          return 'grid-cols-4'
+        case 6:
+          return 'grid-cols-6'
+        case 8:
+          return 'grid-cols-8'
+        default:
+          return 'grid-cols-1'
+      }
+    },
+    []
+  )
 
   if (isLoading && showSkeletons && filteredVideos.length == 0) {
     // Show skeletons for both types if auto, else just one
@@ -153,8 +159,8 @@ export function VideoGrid({
   }
 
   if (layoutMode === 'auto') {
-    // Debug: Log auto layout rendering
-    if (portraitVideos.length > 0) {
+    // Debug: Log auto layout rendering (DEV only)
+    if (import.meta.env.DEV && portraitVideos.length > 0) {
       console.log('[VideoGrid] Rendering auto layout with shorts:', {
         layoutMode,
         wideVideosCount: wideVideos.length,
@@ -211,8 +217,8 @@ export function VideoGrid({
   const isHorizontal = layoutMode === 'horizontal'
   const cardFormat = isShort ? 'vertical' : isHorizontal ? 'horizontal' : 'horizontal'
 
-  // Debug: Log what we're passing to VideoCard for shorts
-  if (isShort && filteredVideos.length > 0) {
+  // Debug: Log what we're passing to VideoCard for shorts (DEV only)
+  if (import.meta.env.DEV && isShort && filteredVideos.length > 0) {
     console.log('[VideoGrid] Rendering shorts (vertical layout):', {
       layoutMode,
       isShort,

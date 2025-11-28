@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Label Video Button Beta Access**: Label video button now restricted to beta users only. Centralized beta user configuration in `src/lib/beta-users.ts` with `isBetaUser()` helper function used across Sidebar and VideoInfoSection components
 - **Embed Test Suite**: Redesigned to load only one iframe at a time to prevent relay rate limiting. Features interactive dropdown selector with 23 test cases organized by category, Previous/Next navigation buttons, keyboard navigation (arrow keys), and detailed descriptions for each test scenario
 - **Embed Player Branding**: Moved branding logo to top-right corner with auto-hide behavior. Displays Nostube SVG logo instead of text. Fades out after 3 seconds, reappears on hover/pause, matching title overlay behavior
 - **NIP-19 nevent Encoding**: All nevent identifiers now include author pubkey for better relay hints and event discoverability

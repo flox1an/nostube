@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator'
 import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
 import { nip19 } from 'nostr-tools'
 import { cn } from '@/lib/utils'
+import { isBetaUser } from '@/lib/beta-users'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -19,9 +20,8 @@ export function Sidebar() {
     return nip19.nprofileEncode({ pubkey, relays: readRelays.slice(0, 5) })
   }, [pubkey, readRelays])
 
-  // Beta feature: only show video-notes for specific pubkey
-  const BETA_PUBKEY = 'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81'
-  const isVideoNotesBetaUser = pubkey === BETA_PUBKEY
+  // Beta feature: only show video-notes for beta users
+  const isVideoNotesBetaUser = isBetaUser(pubkey)
 
   const navigationItems = [
     { name: t('navigation.home'), icon: Home, href: '/' },

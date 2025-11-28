@@ -475,6 +475,51 @@ describe('processEvent', () => {
       expect(result?.contentWarning).toBe('NSFW')
     })
 
+    it('should automatically mark videos from NSFW authors as NSFW', () => {
+      const nsfwAuthorEvent = {
+        ...nostubeEvent,
+        pubkey: 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400', // NSFW author
+      }
+
+      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+
+      expect(result?.contentWarning).toBe('NSFW')
+    })
+
+    it('should mark videos from second NSFW author as NSFW', () => {
+      const nsfwAuthorEvent = {
+        ...nostubeEvent,
+        pubkey: 'f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0', // NSFW author
+      }
+
+      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+
+      expect(result?.contentWarning).toBe('NSFW')
+    })
+
+    it('should preserve existing content-warning tag for NSFW authors', () => {
+      const nsfwAuthorWithWarning = {
+        ...nostubeEvent,
+        pubkey: 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400', // NSFW author
+        tags: [...nostubeEvent.tags, ['content-warning', 'Custom Warning']],
+      }
+
+      const result = processEvent(nsfwAuthorWithWarning, defaultRelays)
+
+      expect(result?.contentWarning).toBe('Custom Warning')
+    })
+
+    it('should not mark videos from non-NSFW authors', () => {
+      const normalEvent = {
+        ...nostubeEvent,
+        pubkey: 'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81', // Normal author
+      }
+
+      const result = processEvent(normalEvent, defaultRelays)
+
+      expect(result?.contentWarning).toBeUndefined()
+    })
+
     it('should create search index from title, description, and tags', () => {
       const eventWithTags = {
         ...nostubeEvent,

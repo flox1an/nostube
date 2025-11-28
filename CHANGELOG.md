@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **iOS Shorts Autoplay After Multiple Videos**: Fixed autoplay failure after ~5 videos on iOS Safari by complying with iOS autoplay restrictions. Videos now start muted (required for iOS autoplay), then unmute after playback begins. This ensures reliable autoplay across all videos in the feed without hitting iOS gesture exhaustion limits
 - **Shorts Autoplay on Slow Loading**: Fixed issue where slow-loading short videos wouldn't autoplay when swiped to. Added `onLoadedData` event handler as additional safeguard to ensure videos start playing once they've loaded enough data, even if they load after becoming active
 - **Mobile Sidebar Safe Area**: Fixed sidebar menu overlapping with phone status bar in fullscreen mode. Added safe-area-inset-top padding to prevent content from reaching into the status bar area on mobile devices
 - **Embed Build Script**: Fixed `outfile` configuration pointing to directory instead of file. Now correctly outputs to `public/embed.js`

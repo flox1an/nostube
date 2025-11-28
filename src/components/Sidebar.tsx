@@ -57,7 +57,10 @@ export function Sidebar() {
   ]
 
   return (
-    <div className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg pt-4">
+    <div
+      className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
       <div className="flex flex-col h-full">
         <nav className="px-2">
           {navigationItems.map(item => (

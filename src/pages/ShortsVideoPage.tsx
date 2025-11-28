@@ -237,6 +237,16 @@ function ShortVideoItem({
     if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
       setAspectRatio(videoEl.videoWidth / videoEl.videoHeight)
     }
+    // Always try to play when video becomes ready and is active
+    // This ensures videos that loaded slowly will still autoplay
+    if (isActive) {
+      playActiveVideo()
+    }
+  }, [isActive, playActiveVideo])
+
+  // Handle when video has loaded enough data to start playing
+  // This is an additional safeguard for slow-loading videos
+  const handleLoadedData = useCallback(() => {
     if (isActive) {
       playActiveVideo()
     }
@@ -335,6 +345,7 @@ function ShortVideoItem({
                   }
                   preload={shouldPreload || isActive ? 'auto' : 'metadata'}
                   onCanPlay={handleCanPlay}
+                  onLoadedData={handleLoadedData}
                   onError={handleVideoError}
                   style={{ opacity: isActive ? 1 : 0.5 }}
                 />

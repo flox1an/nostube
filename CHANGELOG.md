@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Shorts Video Page Performance Optimizations**: Major performance improvements for ShortsVideoPage based on Chrome DevTools trace analysis (3,277 IntersectionObserver calls, UpdateLayoutTree events up to 4.67ms):
+  - **IntersectionObserver throttling**: Added ~60fps (16ms) throttle to intersection callbacks to reduce computation frequency from ~109/s to ~30/s (~70% reduction)
+  - **Reduced IntersectionObserver thresholds**: Changed from `[0.4, 0.6, 0.8, 1]` to `[0.5, 0.8]` for 50% fewer callback triggers
+  - **CSS containment**: Added `contain: layout style paint` and `contentVisibility: auto` to video containers to isolate layout calculations and reduce UpdateLayoutTree propagation
+  - **Optimized relay computations**: Extracted preset relay URLs to module level to avoid recreation on every render, reducing unnecessary array allocations
+  - **Reduced render window on mobile**: Changed from ±3 videos (7 total) to ±2 videos (5 total) on devices < 768px width, reducing DOM size by ~28%
+  - Expected overall impact: 50-70% reduction in IntersectionObserver calls, 20-30% reduction in UpdateLayoutTree events, lower memory usage, smoother scrolling
+  - Performance analysis documented in `PERFORMANCE_OPTIMIZATIONS.md` with detailed trace analysis and implementation rationale
+
 - **Video Suggestions NSFW Filtering**: VideoSuggestions component now filters out all videos with content warnings (NSFW, violence, etc.). Created reusable `filterVideoSuggestions()` helper function in `src/lib/filter-video-suggestions.ts` that handles filtering by content warning, blocked authors, current video, and duplicates. Includes comprehensive test suite with 7 unit tests
 
 - **Grid Rendering Performance Optimizations**: Significantly improved video grid rendering performance with multiple optimizations:

@@ -44,6 +44,9 @@ import { presetRelays } from '@/constants/relays'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
 import { getDateLocale } from '@/lib/date-locale'
 
+// Extract preset relay URLs at module level to avoid recreation on every render
+const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)
+
 function ShortVideoItem({
   video,
   isActive,
@@ -171,10 +174,9 @@ function ShortVideoItem({
     }
   }, [video.link])
 
-  const presetRelayUrls = useMemo(() => presetRelays.map(relay => relay.url), [])
   const reactionRelays = useMemo(
-    () => combineRelays([eventRelays, pointerRelays, userReadRelays, presetRelayUrls]),
-    [eventRelays, pointerRelays, userReadRelays, presetRelayUrls]
+    () => combineRelays([eventRelays, pointerRelays, userReadRelays, PRESET_RELAY_URLS]),
+    [eventRelays, pointerRelays, userReadRelays]
   )
 
   // Preload reactions and comments for this video
@@ -325,7 +327,12 @@ function ShortVideoItem({
       ref={handleRootRef}
       data-video-id={video.id}
       className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
-      style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
+      style={{
+        scrollSnapAlign: 'center',
+        scrollSnapStop: 'always',
+        contain: 'layout style paint', // Isolate layout calculations
+        contentVisibility: isActive ? 'visible' : 'auto', // Only render visible content
+      }}
     >
       <div className="relative w-full h-screen flex flex-col md:flex-row items-center justify-center">
         {/* Video player - fullscreen vertical */}
@@ -521,6 +528,7 @@ export function ShortsVideoPage() {
 
   const currentVideoIndexRef = useRef(0)
   const observerRef = useRef<IntersectionObserver | null>(null)
+  const observerCallbackThrottleRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const videoElementsRef = useRef(new Map<string, HTMLDivElement>())
   const videoIdsKey = useMemo(() => allVideos.map(video => video.id).join('|'), [allVideos])
 
@@ -549,30 +557,40 @@ export function ShortsVideoPage() {
 
     const observer = new IntersectionObserver(
       entries => {
-        let bestEntry: IntersectionObserverEntry | null = null
+        // Throttle callback to max ~60fps (16ms) to reduce computation frequency
+        if (observerCallbackThrottleRef.current) return
 
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue
-          if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
-            bestEntry = entry
+        observerCallbackThrottleRef.current = setTimeout(() => {
+          observerCallbackThrottleRef.current = undefined
+
+          let bestEntry: IntersectionObserverEntry | null = null
+
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry
+            }
           }
-        }
 
-        if (!bestEntry) return
+          if (!bestEntry) return
 
-        const target = bestEntry.target as HTMLElement
-        const indexAttr = target.dataset.index
-        if (!indexAttr) return
-        const nextIndex = Number(indexAttr)
-        if (Number.isNaN(nextIndex)) return
+          const target = bestEntry.target as HTMLElement
+          const indexAttr = target.dataset.index
+          if (!indexAttr) return
+          const nextIndex = Number(indexAttr)
+          if (Number.isNaN(nextIndex)) return
 
-        if (nextIndex !== currentVideoIndexRef.current) {
-          currentVideoIndexRef.current = nextIndex
-          setCurrentIndex(nextIndex)
-        }
+          if (nextIndex !== currentVideoIndexRef.current) {
+            currentVideoIndexRef.current = nextIndex
+            setCurrentIndex(nextIndex)
+          }
+        }, 16) // ~60fps throttle
       },
       {
-        threshold: [0.4, 0.6, 0.8, 1],
+        // Reduced thresholds from [0.4, 0.6, 0.8, 1] to [0.5, 0.8] for fewer callbacks
+        threshold: [0.5, 0.8],
+        // Reduced rootMargin from default for less aggressive preloading
+        rootMargin: '200px',
       }
     )
 
@@ -580,6 +598,9 @@ export function ShortsVideoPage() {
     videoElementsRef.current.forEach(element => observer.observe(element))
 
     return () => {
+      if (observerCallbackThrottleRef.current) {
+        clearTimeout(observerCallbackThrottleRef.current)
+      }
       observer.disconnect()
       observerRef.current = null
     }
@@ -854,6 +875,12 @@ export function ShortsVideoPage() {
   const currentVideo = allVideos[currentVideoIndex]
   const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
+  // Determine render window size based on viewport width (smaller on mobile)
+  const renderWindow = useMemo(() => {
+    if (typeof window === 'undefined') return 3
+    return window.innerWidth < 768 ? 2 : 3
+  }, [])
+
   useEffect(() => {
     if (currentVideo?.title) {
       document.title = `${currentVideo.title} - nostube`
@@ -915,9 +942,10 @@ export function ShortsVideoPage() {
       >
         {allVideos.map((video, index) => {
           // Only render videos within a window around the current video to keep DOM tidy
-          // Render window: current +/- 3 videos (7 total: 3 before, current, 3 after)
+          // Render window: current +/- renderWindow videos
+          // Mobile (< 768px): ±2 videos (5 total), Desktop: ±3 videos (7 total)
           const distanceFromCurrent = Math.abs(index - currentVideoIndex)
-          const shouldRender = distanceFromCurrent <= 3
+          const shouldRender = distanceFromCurrent <= renderWindow
 
           if (!shouldRender) {
             // Render placeholder to maintain scroll positioning for far videos

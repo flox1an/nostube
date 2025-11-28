@@ -63,6 +63,7 @@ function ShortVideoItem({
   const videoRef = useRef<HTMLDivElement>(null)
   const videoElementRef = useRef<HTMLVideoElement>(null)
   const userInitiatedPlayPauseRef = useRef<boolean>(false)
+  const isSwipingRef = useRef<boolean>(false)
   const eventStore = useEventStore()
   const userReadRelays = useReadRelays()
   const { config } = useAppContext()
@@ -200,10 +201,26 @@ function ShortVideoItem({
     }
   }, [isActive, playActiveVideo, video.id, videoUrl])
 
+  // Track touch start to reset swiping flag
+  const handleTouchStart = useCallback(() => {
+    isSwipingRef.current = false
+  }, [])
+
+  // Detect when user is swiping vs tapping
+  const handleTouchMove = useCallback(() => {
+    isSwipingRef.current = true
+  }, [])
+
   // Handle click/touch to pause/play
   const handleVideoClick = useCallback(() => {
     const videoEl = videoElementRef.current
     if (!videoEl || !isActive) return
+
+    // Ignore clicks that are part of a swipe gesture
+    if (isSwipingRef.current) {
+      isSwipingRef.current = false
+      return
+    }
 
     // Mark this as a user-initiated action to show the play/pause overlay
     userInitiatedPlayPauseRef.current = true
@@ -320,7 +337,12 @@ function ShortVideoItem({
               </div>
             )}
             <div className="relative w-full h-full">
-              <div className="relative w-full h-full" onClick={handleVideoClick}>
+              <div
+                className="relative w-full h-full"
+                onClick={handleVideoClick}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+              >
                 <video
                   ref={videoElementRef}
                   src={videoUrl || undefined}

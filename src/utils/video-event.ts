@@ -5,6 +5,7 @@ import { nip19 } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
+import { isNSFWAuthor } from '@/lib/nsfw-authors'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -249,7 +250,9 @@ export function processEvent(
 
   // Find ALL imeta tags
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')
-  const contentWarning = event.tags.find(t => t[0] == 'content-warning')?.[1]
+  const contentWarning =
+    event.tags.find(t => t[0] == 'content-warning')?.[1] ||
+    (isNSFWAuthor(event.pubkey) ? 'NSFW' : undefined)
 
   if (imetaTags.length > 0) {
     // Parse all imeta tags

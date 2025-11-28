@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
+import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import {
   imageProxyVideoPreview,
   imageProxyVideoThumbnail,
@@ -226,20 +227,22 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const suggestions = useMemo(() => {
     const events = [...authorSuggestions, ...globalSuggestions]
 
-    // Process and filter unique videos, excluding the current video
+    // Process events into VideoEvent objects
     const processedVideos: VideoEvent[] = []
-    const seenIds = new Set<string>()
-
     for (const event of events) {
-      if (blockedPubkeys && blockedPubkeys[event.pubkey]) continue
       const processed = processEvent(event, readRelays, config.blossomServers)
-      if (processed && processed.id !== currentVideoId && !seenIds.has(processed.id)) {
+      if (processed) {
         processedVideos.push(processed)
-        seenIds.add(processed.id)
       }
     }
 
-    return processedVideos.slice(0, 30) // Return up to 30 unique suggestions
+    // Filter videos using the shared filter function
+    const filtered = filterVideoSuggestions(processedVideos, {
+      currentVideoId,
+      blockedPubkeys,
+    })
+
+    return filtered.slice(0, 30) // Return up to 30 unique suggestions
   }, [
     authorSuggestions,
     globalSuggestions,

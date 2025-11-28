@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NSFW Author Filtering**: Automatic content warning for videos from specific authors. Created `src/lib/nsfw-authors.ts` with hardcoded NSFW author pubkeys and `isNSFWAuthor()` helper function. Videos from these authors are automatically marked with `contentWarning: 'NSFW'` in `processEvent()`. Existing content-warning tags are preserved. Includes comprehensive test suite with 8 unit tests for NSFW detection and 5 integration tests in video-event processing
+
 - **Share Dialog Embed Option**: Added tabbed interface to share dialog with "Link" and "Embed" tabs. Users can now choose between sharing a direct link or copying iframe embed code. Embed code automatically includes video ID and optional timestamp. Features copy-to-clipboard functionality and help text. Supports all four languages (EN/DE/FR/ES)
 
 ### Changed
+
+- **Video Suggestions NSFW Filtering**: VideoSuggestions component now filters out all videos with content warnings (NSFW, violence, etc.). Created reusable `filterVideoSuggestions()` helper function in `src/lib/filter-video-suggestions.ts` that handles filtering by content warning, blocked authors, current video, and duplicates. Includes comprehensive test suite with 7 unit tests
 
 - **Grid Rendering Performance Optimizations**: Significantly improved video grid rendering performance with multiple optimizations:
   - Removed production `console.log` statements (gated behind `import.meta.env.DEV`) in VideoCard and VideoGrid components to eliminate unnecessary function calls

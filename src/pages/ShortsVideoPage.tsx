@@ -531,6 +531,7 @@ export function ShortsVideoPage() {
   const observerCallbackThrottleRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const videoElementsRef = useRef(new Map<string, HTMLDivElement>())
   const videoIdsKey = useMemo(() => allVideos.map(video => video.id).join('|'), [allVideos])
+  const lastTouchEndTimeRef = useRef(0)
 
   const registerVideoElement = useCallback(
     (videoId: string, index: number) => (element: HTMLDivElement | null) => {
@@ -605,6 +606,57 @@ export function ShortsVideoPage() {
       observerRef.current = null
     }
   }, [setCurrentIndex, videoIdsKey])
+
+  // iOS autoplay fix: trigger play during user gesture (touchend/scroll)
+  // This ensures play() is called within the user gesture context, which iOS requires
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const playActiveVideoOnGesture = () => {
+      // Throttle to avoid too many play attempts
+      const now = Date.now()
+      if (now - lastTouchEndTimeRef.current < 100) return
+      lastTouchEndTimeRef.current = now
+
+      // Find the video element at the current index
+      const currentVideo = allVideos[currentVideoIndexRef.current]
+      if (!currentVideo) return
+
+      const videoContainer = videoElementsRef.current.get(currentVideo.id)
+      if (!videoContainer) return
+
+      const videoElement = videoContainer.querySelector('video')
+      if (!videoElement) return
+
+      // Play within gesture context - iOS will allow this
+      if (videoElement.paused) {
+        // Start muted for iOS autoplay compliance
+        videoElement.muted = true
+        const playPromise = videoElement.play()
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              // Unmute after playback starts
+              videoElement.muted = false
+            })
+            .catch(error => {
+              console.error('Error playing video during gesture:', error)
+            })
+        }
+      }
+    }
+
+    // Listen for touchend (swipe gesture completion on mobile)
+    container.addEventListener('touchend', playActiveVideoOnGesture)
+    // Also listen for scroll events (for mouse wheel or programmatic scrolls)
+    container.addEventListener('scrollend', playActiveVideoOnGesture)
+
+    return () => {
+      container.removeEventListener('touchend', playActiveVideoOnGesture)
+      container.removeEventListener('scrollend', playActiveVideoOnGesture)
+    }
+  }, [allVideos, videoIdsKey])
 
   // Sync ref with store's currentIndex
   useEffect(() => {

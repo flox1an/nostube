@@ -194,8 +194,11 @@ function ShortVideoItem({
     if (!videoEl) return
 
     if (isActive) {
-      // Reset to beginning and play immediately
-      videoEl.currentTime = 0
+      // Only reset to beginning if video has ended or is at the very start
+      // This prevents jarring resets when scrolling back to a partially watched video
+      if (videoEl.ended || videoEl.currentTime === 0) {
+        videoEl.currentTime = 0
+      }
       // Start muted to comply with iOS autoplay restrictions
       // Will be unmuted after playback starts (see playActiveVideo)
       videoEl.muted = true
@@ -204,7 +207,7 @@ function ShortVideoItem({
         playActiveVideo()
       }
     } else {
-      // Pause and mute inactive videos
+      // Pause inactive videos at current position (don't reset)
       videoEl.pause()
       videoEl.muted = true
     }

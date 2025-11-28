@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Shorts Video Position Reset on Swipe**: Fixed jarring video position reset when scrolling away from partially-watched videos. Videos now only reset to position 0 if they've ended or are at the start. When scrolling away, videos pause at their current position instead of resetting, providing smoother scrolling UX
 - **iOS Shorts Autoplay After Multiple Videos**: Fixed autoplay failure after ~5 videos on iOS Safari by triggering play() within user gesture context. Added touchend and scrollend event listeners that call play() directly during swipe gestures, ensuring iOS recognizes each play as user-initiated. Videos start muted (iOS requirement), then unmute after playback begins. This prevents iOS from exhausting its autoplay budget and ensures reliable autoplay across all videos in the feed
 - **Shorts Autoplay on Slow Loading**: Fixed issue where slow-loading short videos wouldn't autoplay when swiped to. Added `onLoadedData` event handler as additional safeguard to ensure videos start playing once they've loaded enough data, even if they load after becoming active
 - **Mobile Sidebar Safe Area**: Fixed sidebar menu overlapping with phone status bar in fullscreen mode. Added safe-area-inset-top padding to prevent content from reaching into the status bar area on mobile devices

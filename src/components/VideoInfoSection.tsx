@@ -36,6 +36,7 @@ import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { type VideoEvent } from '../utils/video-event'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
+import { isBetaUser } from '@/lib/beta-users'
 import ngeohash from 'ngeohash'
 
 interface VideoInfoSectionProps {
@@ -197,7 +198,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               setIncludeTimestamp={setIncludeTimestamp}
               shareLinks={shareLinks}
             />
-            {videoEvent && <LabelVideoDialog videoEvent={videoEvent} />}
+            {videoEvent && isBetaUser(userPubkey) && <LabelVideoDialog videoEvent={videoEvent} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" aria-label="More actions">

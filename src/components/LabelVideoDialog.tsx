@@ -48,14 +48,24 @@ const LANGUAGE_OPTIONS = [
 interface LabelVideoDialogProps {
   videoEvent: NostrEvent
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function LabelVideoDialog({ videoEvent, trigger }: LabelVideoDialogProps) {
+export function LabelVideoDialog({
+  videoEvent,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: LabelVideoDialogProps) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
 
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? onOpenChange! : setInternalOpen
   const [hashtags, setHashtags] = useState('')
   const [language, setLanguage] = useState('')
   const [explanation, setExplanation] = useState('')

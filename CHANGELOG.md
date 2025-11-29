@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Label Video Button UX**: Moved label video button from standalone position to burger menu (three-dot menu) in VideoInfoSection. Updated LabelVideoDialog component to support controlled open state via optional `open` and `onOpenChange` props while maintaining backward compatibility with uncontrolled mode. Menu item only appears for beta users when logged in
 - **Video Availability Alert Logic**: VideoAvailabilityAlert component now shows when videos have fewer than 2 blossom servers (previously only exactly 1). Fixed condition from `blossomServerCount !== 1` to `blossomServerCount > 1` to ensure proper redundancy checking. Also restricted to logged-in users only. Message now dynamically shows server count with proper pluralization
 - **Shorts Video Page Performance Optimizations**: Major performance improvements for ShortsVideoPage based on Chrome DevTools trace analysis (3,277 IntersectionObserver calls, UpdateLayoutTree events up to 4.67ms):
   - **IntersectionObserver throttling**: Added ~60fps (16ms) throttle to intersection callbacks to reduce computation frequency from ~109/s to ~30/s (~70% reduction)

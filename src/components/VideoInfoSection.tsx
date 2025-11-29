@@ -24,7 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy, MapPin } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -93,6 +93,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const { publish, isPending: isDeleting } = useNostrPublish()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
+  const [showLabelDialog, setShowLabelDialog] = useState(false)
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
@@ -198,7 +199,6 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               setIncludeTimestamp={setIncludeTimestamp}
               shareLinks={shareLinks}
             />
-            {videoEvent && isBetaUser(userPubkey) && <LabelVideoDialog videoEvent={videoEvent} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" aria-label="More actions">
@@ -206,6 +206,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
+                {videoEvent && isBetaUser(userPubkey) && (
+                  <DropdownMenuItem onSelect={() => setShowLabelDialog(true)}>
+                    <Tag className="w-5 h-5" />
+                    &nbsp; {t('labelVideo.button')}
+                  </DropdownMenuItem>
+                )}
                 {onMirror && (
                   <DropdownMenuItem onSelect={onMirror}>
                     <Copy className="w-5 h-5" />
@@ -311,6 +317,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         blossomServers={configBlossomServers}
         userServers={userServers}
       />
+      {videoEvent && (
+        <LabelVideoDialog
+          videoEvent={videoEvent}
+          open={showLabelDialog}
+          onOpenChange={setShowLabelDialog}
+        />
+      )}
       {video && (
         <div className="py-4">
           <VideoComments

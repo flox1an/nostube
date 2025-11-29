@@ -55,15 +55,25 @@ interface LanguageSelectProps {
   onValueChange: (value: string) => void
   placeholder?: string
   id?: string
+  allowNone?: boolean
+  noneLabel?: string
 }
 
-export function LanguageSelect({ value, onValueChange, placeholder, id }: LanguageSelectProps) {
+export function LanguageSelect({
+  value,
+  onValueChange,
+  placeholder,
+  id,
+  allowNone = false,
+  noneLabel = 'None',
+}: LanguageSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger id={id}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
+        {allowNone && <SelectItem value="">{noneLabel}</SelectItem>}
         {LANGUAGES.map(lang => (
           <SelectItem key={lang.code} value={lang.code}>
             {lang.flag} {lang.name} ({lang.code})

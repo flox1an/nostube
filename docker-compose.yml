@@ -17,7 +17,7 @@ services:
       - RUNTIME_BLOSSOM_SERVERS=https://almond.slidestr.net,https://cdn.satellite.earth
 
       # Application title
-      - RUNTIME_APP_TITLE=Nostube
+      - RUNTIME_APP_TITLE=nostube
 
       # Enable debug mode (true/false)
       - RUNTIME_DEBUG=false

@@ -19,7 +19,7 @@ export function VideoAvailabilityAlert({
 }: VideoAvailabilityAlertProps) {
   const currentUser = useCurrentUser()
 
-  if (!currentUser || blossomServerCount > 1) return null
+  if (!currentUser.user || blossomServerCount > 1) return null
 
   return (
     <Alert className="border-primary">

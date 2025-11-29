@@ -12,38 +12,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { LanguageSelect } from '@/components/ui/language-select'
 import { Tag, Loader2 } from 'lucide-react'
 import { useNostrPublish } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import type { NostrEvent } from 'nostr-tools'
-
-// Common ISO-639-1 language codes
-const LANGUAGE_OPTIONS = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'pt', name: 'Português' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'ja', name: '日本語' },
-  { code: 'zh', name: '中文' },
-  { code: 'ko', name: '한국어' },
-  { code: 'ar', name: 'العربية' },
-  { code: 'hi', name: 'हिन्दी' },
-  { code: 'nl', name: 'Nederlands' },
-  { code: 'pl', name: 'Polski' },
-  { code: 'tr', name: 'Türkçe' },
-]
 
 interface LabelVideoDialogProps {
   videoEvent: NostrEvent
@@ -168,18 +143,12 @@ export function LabelVideoDialog({
             {/* Language Select */}
             <div className="space-y-2">
               <Label htmlFor="language">{t('labelVideo.languageLabel')}</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger id="language">
-                  <SelectValue placeholder={t('labelVideo.languagePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGE_OPTIONS.map(lang => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name} ({lang.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <LanguageSelect
+                id="language"
+                value={language}
+                onValueChange={setLanguage}
+                placeholder={t('labelVideo.languagePlaceholder')}
+              />
             </div>
 
             {/* Optional Explanation */}

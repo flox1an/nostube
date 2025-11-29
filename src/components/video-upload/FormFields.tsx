@@ -3,29 +3,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { LanguageSelect } from '@/components/ui/language-select'
 import { useTranslation } from 'react-i18next'
-
-const LANGUAGES = [
-  { code: 'en', flag: '🇬🇧' },
-  { code: 'es', flag: '🇪🇸' },
-  { code: 'de', flag: '🇩🇪' },
-  { code: 'ru', flag: '🇷🇺' },
-  { code: 'ja', flag: '🇯🇵' },
-  { code: 'fr', flag: '🇫🇷' },
-  { code: 'zh', flag: '🇨🇳' },
-  { code: 'pt', flag: '🇧🇷' },
-  { code: 'ko', flag: '🇰🇷' },
-  { code: 'it', flag: '🇮🇹' },
-  { code: 'tr', flag: '🇹🇷' },
-  { code: 'nl', flag: '🇳🇱' },
-]
 
 interface FormFieldsProps {
   title: string
@@ -78,18 +57,12 @@ export function FormFields({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="language">{t('upload.form.language')}</Label>
-        <Select value={language} onValueChange={onLanguageChange}>
-          <SelectTrigger id="language">
-            <SelectValue placeholder={t('upload.form.selectLanguage')} />
-          </SelectTrigger>
-          <SelectContent>
-            {LANGUAGES.map(lang => (
-              <SelectItem key={lang.code} value={lang.code}>
-                {lang.flag} {t(`languages.${lang.code}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <LanguageSelect
+          id="language"
+          value={language}
+          onValueChange={onLanguageChange}
+          placeholder={t('upload.form.selectLanguage')}
+        />
       </div>
 
       <div className="flex flex-col gap-2">

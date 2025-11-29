@@ -377,6 +377,9 @@
       "title": "#{{tag}}",
       "noVideos": "No se encontraron videos con el hashtag #{{tag}}."
     },
+    "category": {
+      "noVideos": "No se encontraron videos en {{category}}."
+    },
     "author": {
       "joined": "Se unió {{date}}",
       "allVideos": "Todos los videos ({{count}})",

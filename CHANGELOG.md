@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Category Browsing**: Added category-based video discovery with 9 predefined categories (Bitcoin, Nostr, Music, Social Media, Entertainment, Technology & Innovation, Photography & Art, Politics & Economics, Travel & Nature). Features horizontal scrollable category button bar on HomePage and CategoryPage, new `/category/:category` route with URL-safe slugs (e.g., `/category/music`, `/category/technology-and-innovation`), and efficient OR query across all category hashtags in a single Nostr filter. Components: `CategoryButtonBar`, `CategoryPage`, `useCategoryVideos` hook. Data structure in `src/lib/tag-categories.ts`. i18n support for all four languages (EN/DE/FR/ES)
+
 - **NSFW Author Filtering**: Automatic content warning for videos from specific authors. Created `src/lib/nsfw-authors.ts` with hardcoded NSFW author pubkeys and `isNSFWAuthor()` helper function. Videos from these authors are automatically marked with `contentWarning: 'NSFW'` in `processEvent()`. Existing content-warning tags are preserved. Includes comprehensive test suite with 8 unit tests for NSFW detection and 5 integration tests in video-event processing
 
 - **Share Dialog Embed Option**: Added tabbed interface to share dialog with "Link" and "Embed" tabs. Users can now choose between sharing a direct link or copying iframe embed code. Embed code automatically includes video ID and optional timestamp. Features copy-to-clipboard functionality and help text. Supports all four languages (EN/DE/FR/ES)

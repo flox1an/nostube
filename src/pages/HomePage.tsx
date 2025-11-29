@@ -1,4 +1,5 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
+import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
@@ -17,15 +18,18 @@ export function HomePage() {
   if (!videos) return null
 
   return (
-    <VideoTimelinePage
-      videos={videos}
-      loading={loading}
-      exhausted={exhausted}
-      onLoadMore={loadMore}
-      layoutMode="horizontal"
-      emptyMessage={t('pages.home.noVideos')}
-      exhaustedMessage={t('pages.home.noMore')}
-      className="sm:px-4 sm:py-4"
-    />
+    <>
+      <CategoryButtonBar />
+      <VideoTimelinePage
+        videos={videos}
+        loading={loading}
+        exhausted={exhausted}
+        onLoadMore={loadMore}
+        layoutMode="horizontal"
+        emptyMessage={t('pages.home.noVideos')}
+        exhaustedMessage={t('pages.home.noMore')}
+        className="sm:px-4 sm:py-4"
+      />
+    </>
   )
 }

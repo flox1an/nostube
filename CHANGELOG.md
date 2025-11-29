@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Video Availability Alert Logic**: VideoAvailabilityAlert component now shows when videos have fewer than 2 blossom servers (previously only exactly 1). Fixed condition from `blossomServerCount !== 1` to `blossomServerCount > 1` to ensure proper redundancy checking. Also restricted to logged-in users only. Message now dynamically shows server count with proper pluralization
 - **Shorts Video Page Performance Optimizations**: Major performance improvements for ShortsVideoPage based on Chrome DevTools trace analysis (3,277 IntersectionObserver calls, UpdateLayoutTree events up to 4.67ms):
   - **IntersectionObserver throttling**: Added ~60fps (16ms) throttle to intersection callbacks to reduce computation frequency from ~109/s to ~30/s (~70% reduction)
   - **Reduced IntersectionObserver thresholds**: Changed from `[0.4, 0.6, 0.8, 1]` to `[0.5, 0.8]` for 50% fewer callback triggers

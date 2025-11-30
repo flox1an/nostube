@@ -19,7 +19,9 @@ export function HomePage() {
 
   return (
     <>
-      <CategoryButtonBar />
+      <div className="px-4">
+        <CategoryButtonBar />
+      </div>
       <VideoTimelinePage
         videos={videos}
         loading={loading}
@@ -28,7 +30,7 @@ export function HomePage() {
         layoutMode="horizontal"
         emptyMessage={t('pages.home.noVideos')}
         exhaustedMessage={t('pages.home.noMore')}
-        className="sm:px-4 sm:py-4"
+        className="sm:px-4"
       />
     </>
   )

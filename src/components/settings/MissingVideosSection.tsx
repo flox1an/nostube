@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { formatDistance } from 'date-fns'
+import { formatDistance } from 'date-fns/formatDistance'
 import { RefreshCw, Trash2 } from 'lucide-react'
 import { getDateLocale } from '@/lib/date-locale'
 

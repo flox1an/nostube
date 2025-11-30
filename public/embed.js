@@ -1918,7 +1918,6 @@
         if ((ot(i), i < 0 || i >= e)) throw new Error(`Wrong integer: ${i}`)
       });
       ;
-
     ) {
       let i = 0,
         a = !0

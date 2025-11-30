@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { formatDistance } from 'date-fns'
+import { formatDistance } from 'date-fns/formatDistance'
 import { type VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'

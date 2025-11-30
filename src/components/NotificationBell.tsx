@@ -14,7 +14,7 @@ import { Button } from './ui/button'
 export function NotificationBell() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
-  const { notifications, unreadCount, markAsRead } = useNotifications()
+  const { notifications, unreadCount, isLoading, error, markAsRead } = useNotifications()
 
   if (!user) {
     return null
@@ -42,6 +42,8 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-80">
         <NotificationDropdown
           notifications={notifications}
+          isLoading={isLoading}
+          error={error}
           onNotificationClick={handleNotificationClick}
         />
       </DropdownMenuContent>

@@ -434,6 +434,10 @@
     "success": "Étiquettes publiées avec succès",
     "error": "Échec de la publication des étiquettes"
   },
+  "notifications": {
+    "commentedOnYourVideo": "a commenté votre vidéo",
+    "noNotifications": "Aucune nouvelle notification"
+  },
   "errors": {
     "connectionError": "Erreur de connexion",
     "authRequired": "Authentification requise",

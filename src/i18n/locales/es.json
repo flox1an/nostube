@@ -434,6 +434,10 @@
     "success": "Etiquetas publicadas exitosamente",
     "error": "No se pudieron publicar las etiquetas"
   },
+  "notifications": {
+    "commentedOnYourVideo": "comentó en tu video",
+    "noNotifications": "No hay notificaciones nuevas"
+  },
   "errors": {
     "connectionError": "Error de Conexión",
     "authRequired": "Autenticación Requerida",

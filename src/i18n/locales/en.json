@@ -434,6 +434,10 @@
     "success": "Labels published successfully",
     "error": "Failed to publish labels"
   },
+  "notifications": {
+    "commentedOnYourVideo": "commented on your video",
+    "noNotifications": "No new notifications"
+  },
   "errors": {
     "connectionError": "Connection Error",
     "authRequired": "Authentication Required",

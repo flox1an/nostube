@@ -434,6 +434,10 @@
     "success": "Kennzeichnungen erfolgreich veröffentlicht",
     "error": "Kennzeichnungen konnten nicht veröffentlicht werden"
   },
+  "notifications": {
+    "commentedOnYourVideo": "hat Ihr Video kommentiert",
+    "noNotifications": "Keine neuen Benachrichtigungen"
+  },
   "errors": {
     "connectionError": "Verbindungsfehler",
     "authRequired": "Authentifizierung erforderlich",

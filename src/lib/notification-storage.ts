@@ -41,3 +41,9 @@ export function cleanupOldNotifications(
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 100)
 }
+
+export function updateLastLoginTime(): void {
+  const storage = getNotificationStorage()
+  storage.lastLoginTime = Math.floor(Date.now() / 1000)
+  saveNotificationStorage(storage)
+}

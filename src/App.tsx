@@ -11,6 +11,7 @@ import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 import { eventStore } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
+import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
@@ -78,6 +79,11 @@ function BatchedProfileLoaderInit() {
   return null
 }
 
+function LoginTimeTrackingInit() {
+  useLoginTimeTracking()
+  return null
+}
+
 function RelayPoolSync() {
   const { config, pool } = useAppContext()
   const { readRelays, writeRelays } = useUserRelaysContext()
@@ -110,6 +116,7 @@ export function App() {
                   <UserRelaySync />
                   <RelayPoolSync />
                   <BatchedProfileLoaderInit />
+                  <LoginTimeTrackingInit />
                   <BlossomServerSync />
                   <Suspense>
                     <AppRouter />

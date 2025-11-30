@@ -9,12 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-<<<<<<< HEAD
+- **Video Comment Notifications**: Bell icon in header with dropdown showing notifications when someone comments on your videos. Features: localStorage persistence with 7-day cleanup, polling every 2.5 minutes, dot indicator for unread notifications, click-to-navigate with comment highlighting, multi-tab synchronization. Components: `NotificationBell`, `NotificationDropdown`, `NotificationItem`. Hooks: `useNotifications`, `useLoginTimeTracking`, `useCommentHighlight`. i18n support for EN/DE/FR/ES
 
-- # **Category Browsing**: Added category-based video discovery with 9 predefined categories (Bitcoin, Nostr, Music, Social Media, Entertainment, Technology & Innovation, Photography & Art, Politics & Economics, Travel & Nature). Features horizontal scrollable category button bar on HomePage and CategoryPage, new `/category/:category` route with URL-safe slugs (e.g., `/category/music`, `/category/technology-and-innovation`), and efficient OR query across all category hashtags in a single Nostr filter. Components: `CategoryButtonBar`, `CategoryPage`, `useCategoryVideos` hook. Data structure in `src/lib/tag-categories.ts`. i18n support for all four languages (EN/DE/FR/ES)
+- **Category Browsing**: Added category-based video discovery with 9 predefined categories (Bitcoin, Nostr, Music, Social Media, Entertainment, Technology & Innovation, Photography & Art, Politics & Economics, Travel & Nature). Features horizontal scrollable category button bar on HomePage and CategoryPage, new `/category/:category` route with URL-safe slugs (e.g., `/category/music`, `/category/technology-and-innovation`), and efficient OR query across all category hashtags in a single Nostr filter. Components: `CategoryButtonBar`, `CategoryPage`, `useCategoryVideos` hook. Data structure in `src/lib/tag-categories.ts`. i18n support for all four languages (EN/DE/FR/ES)
+
 - **Shared Language Select Component**: Created unified `LanguageSelect` component (`src/components/ui/language-select.tsx`) with comprehensive language list (39 languages) including flag emojis, native language names, and ISO 639-1 codes in parentheses. Replaces duplicate language dropdowns in upload form and label video dialog. Language names are NOT translated - they appear in their native form (e.g., "Deutsch" not "German")
-
-  > > > > > > > ec0a6a8 (feat: create shared language select component with flags)
 
 - **NSFW Author Filtering**: Automatic content warning for videos from specific authors. Created `src/lib/nsfw-authors.ts` with hardcoded NSFW author pubkeys and `isNSFWAuthor()` helper function. Videos from these authors are automatically marked with `contentWarning: 'NSFW'` in `processEvent()`. Existing content-warning tags are preserved. Includes comprehensive test suite with 8 unit tests for NSFW detection and 5 integration tests in video-event processing
 

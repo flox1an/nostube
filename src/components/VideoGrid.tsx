@@ -209,6 +209,38 @@ export function VideoGrid({
         )
       }
     }
+
+    // Add skeleton rows when loading more videos (pagination)
+    if (isLoading && filteredVideos.length > 0) {
+      const wideCols = getCols('horizontal')
+      const portraitCols = getCols('vertical')
+
+      // Add 2 rows of horizontal skeletons
+      for (let i = 0; i < 2; i++) {
+        rows.push(
+          <div key={`loading-wide-${i}`} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
+            {Array.from({ length: wideCols }).map((_, j) => (
+              <VideoCardSkeleton key={j} format="horizontal" />
+            ))}
+          </div>
+        )
+      }
+
+      // Add 2 rows of portrait skeletons
+      for (let i = 0; i < 2; i++) {
+        rows.push(
+          <div
+            key={`loading-portrait-${i}`}
+            className={`grid gap-4 ${gridColsClass(portraitCols)}`}
+          >
+            {Array.from({ length: portraitCols }).map((_, j) => (
+              <VideoCardSkeleton key={j} format="vertical" />
+            ))}
+          </div>
+        )
+      }
+    }
+
     return <div className="flex flex-col gap-8">{rows}</div>
   }
 
@@ -227,6 +259,10 @@ export function VideoGrid({
       firstVideoTitle: filteredVideos[0]?.title,
     })
   }
+
+  // Calculate number of skeleton items for 2 rows based on layout mode
+  const cols = isShort ? getCols('vertical') : getCols('horizontal')
+  const skeletonCount = isLoading && filteredVideos.length > 0 ? cols * 2 : 0
 
   return (
     <div
@@ -248,6 +284,10 @@ export function VideoGrid({
           allVideos={isShort ? filteredVideos : undefined}
           videoIndex={isShort ? index : undefined}
         />
+      ))}
+      {/* Add skeleton placeholders when loading more (pagination) */}
+      {Array.from({ length: skeletonCount }).map((_, i) => (
+        <VideoCardSkeleton key={`loading-${i}`} format={cardFormat} />
       ))}
     </div>
   )

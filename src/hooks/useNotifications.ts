@@ -1,42 +1,19 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { NostrEvent } from 'nostr-tools'
-import { nip19 } from 'nostr-tools'
 import type { VideoNotification } from '../types/notification'
 import {
   getNotificationStorage,
   saveNotificationStorage,
   cleanupOldNotifications,
 } from '../lib/notification-storage'
+import { generateEventLink } from '../lib/nostr'
 import { useCurrentUser } from './useCurrentUser'
-import { relayPool, eventStore } from '@/nostr/core'
-
-/**
- * Helper function to generate NIP-19 encoded link for a video event
- * Addressable events (kinds 34235, 34236) use naddr
- * Regular events (kinds 21, 22) use nevent
- */
-function generateEventLink(event: { id: string; kind: number; pubkey: string }, identifier?: string, relays: string[] = []): string {
-  const isAddressable = event.kind === 34235 || event.kind === 34236
-
-  if (isAddressable && identifier) {
-    return nip19.naddrEncode({
-      kind: event.kind,
-      pubkey: event.pubkey,
-      identifier,
-      relays,
-    })
-  }
-
-  return nip19.neventEncode({
-    kind: event.kind,
-    id: event.id,
-    author: event.pubkey,
-    relays,
-  })
-}
+import { useEventStore } from 'applesauce-react/hooks'
+import { relayPool } from '@/nostr/core'
 
 export function useNotifications() {
   const { user } = useCurrentUser()
+  const eventStore = useEventStore()
   const [notifications, setNotifications] = useState<VideoNotification[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const isFetchingRef = useRef(false)
@@ -142,8 +119,8 @@ export function useNotifications() {
       const newNotifications: VideoNotification[] = []
 
       for (const comment of comments) {
-        // Extract video ID from 'E' tag
-        const eTag = comment.tags.find((t) => t[0] === 'E')
+        // Extract video ID from 'e' tag
+        const eTag = comment.tags.find((t) => t[0] === 'e')
         if (!eTag) continue
 
         const videoId = eTag[1]
@@ -198,7 +175,7 @@ export function useNotifications() {
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [user])
+  }, [user, eventStore])
 
   return {
     notifications,

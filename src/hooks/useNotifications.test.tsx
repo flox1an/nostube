@@ -13,10 +13,6 @@ vi.mock('@/nostr/core', async () => {
       ...actual.relayPool,
       subscription: vi.fn(),
     },
-    eventStore: {
-      ...actual.eventStore,
-      getEvent: vi.fn(),
-    },
   }
 })
 
@@ -111,7 +107,7 @@ describe('useNotifications', () => {
           created_at: Math.floor(Date.now() / 1000),
           kind: 1111,
           content: 'Great video!',
-          tags: [['E', 'video-event-id']],
+          tags: [['e', 'video-event-id']],
           sig: 'sig',
         },
       ]
@@ -130,8 +126,8 @@ describe('useNotifications', () => {
         },
       } as any)
 
-      // Mock eventStore.getEvent
-      vi.mocked(eventStore.getEvent).mockReturnValue({
+      // Spy on eventStore.getEvent
+      vi.spyOn(eventStore, 'getEvent').mockReturnValue({
         id: 'video-event-id',
         kind: 34235,
         pubkey: 'test-user-pubkey',
@@ -224,7 +220,7 @@ describe('useNotifications', () => {
             created_at: 1234567890,
             kind: 1111,
             content: 'Great',
-            tags: [['E', 'video1']],
+            tags: [['e', 'video1']],
             sig: 'sig',
           })
           observer.next('EOSE')
@@ -232,7 +228,7 @@ describe('useNotifications', () => {
         },
       } as any)
 
-      vi.mocked(eventStore.getEvent).mockReturnValue({
+      vi.spyOn(eventStore, 'getEvent').mockReturnValue({
         id: 'video1',
         kind: 34235,
         pubkey: 'test-pubkey',

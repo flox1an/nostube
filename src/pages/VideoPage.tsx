@@ -27,6 +27,7 @@ import {
   useVideoHistory,
 } from '@/hooks'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
+import { useCommentHighlight } from '@/hooks/useCommentHighlight'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
@@ -48,6 +49,9 @@ export function VideoPage() {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
   const navigate = useNavigate()
+
+  // Use comment highlight hook
+  useCommentHighlight()
   // Decode video identifier (supports both nevent and naddr)
   const videoIdentifier = useMemo(() => decodeVideoEventIdentifier(nevent ?? ''), [nevent])
   const { markVideoAsMissing, clearMissingVideo, isVideoMissing } = useMissingVideos()

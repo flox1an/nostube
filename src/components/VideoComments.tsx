@@ -151,7 +151,7 @@ const CommentItem = React.memo(function CommentItem({
   }, [isReplying])
 
   return (
-    <div className={`mb-4 ${depth > 0 ? 'ml-4' : ''}`}>
+    <div id={`comment-${comment.id}`} className={`mb-4 ${depth > 0 ? 'ml-4' : ''}`}>
       <div className="flex gap-3">
         <Avatar className={depth > 0 ? 'h-8 w-8' : 'h-10 w-10'}>
           <AvatarImage src={imageProxy(metadata?.picture)} />

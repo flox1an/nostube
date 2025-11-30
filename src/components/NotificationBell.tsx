@@ -4,11 +4,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { NotificationDropdown } from './NotificationDropdown'
 import type { VideoNotification } from '../types/notification'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Button } from './ui/button'
 
 export function NotificationBell() {

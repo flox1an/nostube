@@ -178,6 +178,23 @@ export function useNotifications() {
     }
   }, [user, eventStore])
 
+  // Sync read state across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'nostube_notifications' && e.newValue) {
+        try {
+          const updated = JSON.parse(e.newValue)
+          setNotifications(updated.notifications)
+        } catch (error) {
+          console.error('Failed to sync notifications:', error)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
   // Start polling when user is logged in
   useEffect(() => {
     if (!user) return

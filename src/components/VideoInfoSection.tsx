@@ -309,14 +309,16 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <VideoDebugInfo
-        open={showDebugDialog}
-        onOpenChange={setShowDebugDialog}
-        videoEvent={videoEvent}
-        video={video}
-        blossomServers={configBlossomServers}
-        userServers={userServers}
-      />
+      {videoEvent && (
+        <VideoDebugInfo
+          open={showDebugDialog}
+          onOpenChange={setShowDebugDialog}
+          videoEvent={videoEvent}
+          video={video}
+          blossomServers={configBlossomServers}
+          userServers={userServers}
+        />
+      )}
       {videoEvent && (
         <LabelVideoDialog
           videoEvent={videoEvent}

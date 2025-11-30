@@ -15,6 +15,7 @@ import { Reply } from 'lucide-react'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
+import { useCommentHighlightStore } from '@/stores/commentHighlightStore'
 
 interface Comment {
   id: string
@@ -120,6 +121,7 @@ const CommentItem = React.memo(function CommentItem({
   onCancelReply,
   expandedComments,
   onToggleExpanded,
+  highlightedCommentId,
 }: {
   comment: Comment
   link: string
@@ -132,6 +134,7 @@ const CommentItem = React.memo(function CommentItem({
   onCancelReply?: () => void
   expandedComments: Set<string>
   onToggleExpanded: (commentId: string) => void
+  highlightedCommentId?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
@@ -142,6 +145,7 @@ const CommentItem = React.memo(function CommentItem({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isExpanded = expandedComments.has(comment.id)
   const hasReplies = comment.replies && comment.replies.length > 0
+  const isHighlighted = highlightedCommentId === comment.id
 
   // Focus textarea when replying to this comment
   useEffect(() => {
@@ -151,7 +155,10 @@ const CommentItem = React.memo(function CommentItem({
   }, [isReplying])
 
   return (
-    <div id={`comment-${comment.id}`} className={`mb-4 ${depth > 0 ? 'ml-4' : ''}`}>
+    <div
+      id={`comment-${comment.id}`}
+      className={`mb-4 ${depth > 0 ? 'ml-4' : ''} ${isHighlighted ? 'highlight-comment' : ''}`}
+    >
       <div className="flex gap-3">
         <Avatar className={depth > 0 ? 'h-8 w-8' : 'h-10 w-10'}>
           <AvatarImage src={imageProxy(metadata?.picture)} />
@@ -255,6 +262,7 @@ const CommentItem = React.memo(function CommentItem({
                   onCancelReply={onCancelReply}
                   expandedComments={expandedComments}
                   onToggleExpanded={onToggleExpanded}
+                  highlightedCommentId={highlightedCommentId}
                 />
               ))}
             </div>
@@ -286,12 +294,35 @@ export function VideoComments({
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [visibleComments, setVisibleComments] = useState(15) // Pagination: show 15 initially
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set()) // Track expanded comments
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const eventStore = useEventStore()
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
   const { pool, config } = useAppContext()
+
+  // Use Zustand store for comment highlight/expand state
+  const expandedComments = useCommentHighlightStore(state => state.expandedComments)
+  const highlightedCommentId = useCommentHighlightStore(state => state.highlightedCommentId)
+  const toggleExpanded = useCommentHighlightStore(state => state.toggleExpanded)
+  const setHighlightedCommentId = useCommentHighlightStore(state => state.setHighlightedCommentId)
+  const setCommentParentMap = useCommentHighlightStore(state => state.setCommentParentMap)
+  const clearState = useCommentHighlightStore(state => state.clearState)
+
+  // Clear store state when unmounting (leaving video page)
+  useEffect(() => {
+    return () => clearState()
+  }, [clearState])
+
+  // Auto-remove highlight after 3 seconds
+  useEffect(() => {
+    if (!highlightedCommentId) return
+
+    const timer = setTimeout(() => {
+      setHighlightedCommentId(null)
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [highlightedCommentId, setHighlightedCommentId])
 
   // Get inbox relays for the video author (NIP-65)
   const videoAuthorRelays = useUserRelays(authorPubkey)
@@ -356,6 +387,11 @@ export function VideoComments({
   const threadedComments = useMemo(() => {
     return buildCommentTree(flatComments)
   }, [flatComments])
+
+  // Update comment parent map whenever comments change
+  useEffect(() => {
+    setCommentParentMap(flatComments)
+  }, [flatComments, setCommentParentMap])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -486,18 +522,6 @@ export function VideoComments({
     setReplyContent('')
   }
 
-  // Toggle comment expanded state
-  const toggleExpanded = (commentId: string) => {
-    setExpandedComments(prev => {
-      const next = new Set(prev)
-      if (next.has(commentId)) {
-        next.delete(commentId)
-      } else {
-        next.add(commentId)
-      }
-      return next
-    })
-  }
 
   // Load more comments
   const loadMoreComments = () => {
@@ -558,6 +582,7 @@ export function VideoComments({
             onCancelReply={cancelReply}
             expandedComments={expandedComments}
             onToggleExpanded={toggleExpanded}
+            highlightedCommentId={highlightedCommentId}
           />
         ))}
       </div>

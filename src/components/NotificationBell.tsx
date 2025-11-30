@@ -27,10 +27,13 @@ export function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+            <span
+              className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"
+              aria-label={`${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`}
+            />
           )}
         </Button>
       </DropdownMenuTrigger>

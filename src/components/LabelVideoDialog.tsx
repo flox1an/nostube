@@ -113,14 +113,6 @@ export function LabelVideoDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="cursor-pointer">
-            <Tag className="h-4 w-4 mr-1" />
-            {t('labelVideo.button')}
-          </Button>
-        )}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{t('labelVideo.title')}</DialogTitle>

@@ -215,7 +215,23 @@ export function VideoGrid({
       const wideCols = getCols('horizontal')
       const portraitCols = getCols('vertical')
 
-      // Add 2 rows of horizontal skeletons
+      // Calculate how many items are in the last row to fill it up
+      const wideItemsInLastRow = wideVideos.length % wideCols
+      const portraitItemsInLastRow = portraitVideos.length % portraitCols
+
+      // If last wide row is partial, fill it first
+      if (wideItemsInLastRow > 0) {
+        const skeletonsNeeded = wideCols - wideItemsInLastRow
+        rows.push(
+          <div key={`loading-wide-fill`} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
+            {Array.from({ length: skeletonsNeeded }).map((_, j) => (
+              <VideoCardSkeleton key={j} format="horizontal" />
+            ))}
+          </div>
+        )
+      }
+
+      // Add 2 full rows of horizontal skeletons
       for (let i = 0; i < 2; i++) {
         rows.push(
           <div key={`loading-wide-${i}`} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
@@ -226,7 +242,22 @@ export function VideoGrid({
         )
       }
 
-      // Add 2 rows of portrait skeletons
+      // If last portrait row is partial, fill it first
+      if (portraitItemsInLastRow > 0) {
+        const skeletonsNeeded = portraitCols - portraitItemsInLastRow
+        rows.push(
+          <div
+            key={`loading-portrait-fill`}
+            className={`grid gap-4 ${gridColsClass(portraitCols)}`}
+          >
+            {Array.from({ length: skeletonsNeeded }).map((_, j) => (
+              <VideoCardSkeleton key={j} format="vertical" />
+            ))}
+          </div>
+        )
+      }
+
+      // Add 2 full rows of portrait skeletons
       for (let i = 0; i < 2; i++) {
         rows.push(
           <div
@@ -260,9 +291,18 @@ export function VideoGrid({
     })
   }
 
-  // Calculate number of skeleton items for 2 rows based on layout mode
+  // Calculate number of skeleton items based on layout mode
   const cols = isShort ? getCols('vertical') : getCols('horizontal')
-  const skeletonCount = isLoading && filteredVideos.length > 0 ? cols * 2 : 0
+  let skeletonCount = 0
+
+  if (isLoading && filteredVideos.length > 0) {
+    // Calculate how many items are in the last row
+    const itemsInLastRow = filteredVideos.length % cols
+    // Fill the last row if partial
+    const fillSkeletons = itemsInLastRow > 0 ? cols - itemsInLastRow : 0
+    // Add 2 full rows of skeletons
+    skeletonCount = fillSkeletons + cols * 2
+  }
 
   return (
     <div

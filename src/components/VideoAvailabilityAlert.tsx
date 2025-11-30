@@ -11,7 +11,7 @@ interface VideoAvailabilityAlertProps {
 /**
  * Alert shown when a video has limited availability (fewer than 2 servers)
  * Suggests mirroring for better redundancy
- * Only displayed when user is logged in
+ * Only displayed when user is logged in and video has at least one Blossom URL
  */
 export function VideoAvailabilityAlert({
   blossomServerCount,
@@ -19,7 +19,8 @@ export function VideoAvailabilityAlert({
 }: VideoAvailabilityAlertProps) {
   const currentUser = useCurrentUser()
 
-  if (!currentUser.user || blossomServerCount > 1) return null
+  // Only show if logged in, has at least one Blossom URL, and fewer than 2 servers
+  if (!currentUser.user || blossomServerCount === 0 || blossomServerCount > 1) return null
 
   return (
     <Alert className="border-primary">

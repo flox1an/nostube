@@ -11,6 +11,8 @@ import { useCurrentUser } from './useCurrentUser'
 import { useEventStore } from 'applesauce-react/hooks'
 import { relayPool } from '@/nostr/core'
 
+const POLL_INTERVAL_MS = 150000 // 2.5 minutes
+
 export function useNotifications() {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
@@ -176,6 +178,23 @@ export function useNotifications() {
       isFetchingRef.current = false
     }
   }, [user, eventStore])
+
+  // Start polling when user is logged in
+  useEffect(() => {
+    if (!user) return
+
+    // Initial fetch
+    fetchNotifications()
+
+    // Set up polling
+    const intervalId = setInterval(() => {
+      fetchNotifications()
+    }, POLL_INTERVAL_MS)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [user, fetchNotifications])
 
   return {
     notifications,

@@ -18,6 +18,7 @@ export function useNotifications() {
   const eventStore = useEventStore()
   const [notifications, setNotifications] = useState<VideoNotification[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
 
   // Load notifications from localStorage on mount
@@ -28,15 +29,13 @@ export function useNotifications() {
 
   // Calculate unread count
   const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.read).length
+    return notifications.filter(n => !n.read).length
   }, [notifications])
 
   // Mark notification as read
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications((prev) => {
-      const updated = prev.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
+    setNotifications(prev => {
+      const updated = prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
 
       // Save to localStorage
       const storage = getNotificationStorage()
@@ -53,6 +52,7 @@ export function useNotifications() {
 
     isFetchingRef.current = true
     setIsLoading(true)
+    setError(null) // Clear previous errors
 
     try {
       const storage = getNotificationStorage()
@@ -76,33 +76,31 @@ export function useNotifications() {
 
       const comments: NostrEvent[] = []
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         let timeoutId: NodeJS.Timeout | undefined
 
         // Create subscription using RxJS observable pattern
-        const subscription = relayPool
-          .subscription(relays, [filter])
-          .subscribe({
-            next: (msg) => {
-              // Filter out EOSE messages
-              if (typeof msg !== 'string' && 'kind' in msg) {
-                comments.push(msg)
-              } else if (msg === 'EOSE') {
-                // End of stored events - wait a bit more for any late arrivals
-                if (!timeoutId) {
-                  timeoutId = setTimeout(() => {
-                    subscription.unsubscribe()
-                    resolve()
-                  }, 1000)
-                }
+        const subscription = relayPool.subscription(relays, [filter]).subscribe({
+          next: msg => {
+            // Filter out EOSE messages
+            if (typeof msg !== 'string' && 'kind' in msg) {
+              comments.push(msg)
+            } else if (msg === 'EOSE') {
+              // End of stored events - wait a bit more for any late arrivals
+              if (!timeoutId) {
+                timeoutId = setTimeout(() => {
+                  subscription.unsubscribe()
+                  resolve()
+                }, 1000)
               }
-            },
-            error: (err) => {
-              console.error('Subscription error:', err)
-              subscription.unsubscribe()
-              resolve()
-            },
-          })
+            }
+          },
+          error: err => {
+            console.error('Subscription error:', err)
+            subscription.unsubscribe()
+            resolve()
+          },
+        })
 
         // Set overall timeout
         const overallTimeout = setTimeout(() => {
@@ -122,17 +120,17 @@ export function useNotifications() {
 
       for (const comment of comments) {
         // Extract video ID from 'e' tag
-        const eTag = comment.tags.find((t) => t[0] === 'e')
+        const eTag = comment.tags.find(t => t[0] === 'e')
         if (!eTag) continue
 
         const videoId = eTag[1]
 
         // Fetch video metadata from eventStore
         const videoEvent = eventStore.getEvent(videoId)
-        const videoTitle = videoEvent?.tags.find((t) => t[0] === 'title')?.[1] || 'Unknown video'
+        const videoTitle = videoEvent?.tags.find(t => t[0] === 'title')?.[1] || 'Unknown video'
 
         // Extract identifier for addressable events
-        const identifier = videoEvent?.tags.find((t) => t[0] === 'd')?.[1]
+        const identifier = videoEvent?.tags.find(t => t[0] === 'd')?.[1]
 
         // Create notification
         const notification: VideoNotification = {
@@ -157,9 +155,9 @@ export function useNotifications() {
       }
 
       // Merge with existing notifications (deduplicate by ID)
-      setNotifications((prev) => {
-        const existingIds = new Set(prev.map((n) => n.id))
-        const toAdd = newNotifications.filter((n) => !existingIds.has(n.id))
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id))
+        const toAdd = newNotifications.filter(n => !existingIds.has(n.id))
         const merged = [...prev, ...toAdd]
 
         // Cleanup and save
@@ -173,6 +171,7 @@ export function useNotifications() {
       })
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
+      setError('Failed to load notifications')
     } finally {
       setIsLoading(false)
       isFetchingRef.current = false
@@ -200,6 +199,7 @@ export function useNotifications() {
     notifications,
     unreadCount,
     isLoading,
+    error,
     markAsRead,
     fetchNotifications,
   }

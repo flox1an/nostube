@@ -47,14 +47,13 @@ export function VideoTimelinePage({
   const defaultLoadingMessage = loadingMessage ?? t('common.loadingMore')
   const defaultExhaustedMessage = exhaustedMessage ?? t('video.noMoreVideos')
 
-  const isLoadingInitial = loading && videos.length === 0
   const isLoadingMore = loading && videos.length > 0
 
   return (
     <div className={className}>
       <VideoGrid
         videos={videos}
-        isLoading={isLoadingInitial}
+        isLoading={loading}
         showSkeletons={showSkeletons}
         layoutMode={layoutMode}
       />

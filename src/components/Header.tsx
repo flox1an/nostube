@@ -9,6 +9,7 @@ import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { GlobalSearchBar } from '@/components/GlobalSearchBar'
+import { NotificationBell } from '@/components/NotificationBell'
 import { useTranslation } from 'react-i18next'
 
 interface HeaderProps {
@@ -54,6 +55,8 @@ export function Header({ transparent = false }: HeaderProps) {
         <GlobalSearchBar />
 
         <div className="flex items-center gap-4">
+          <NotificationBell />
+
           {user && (
             <Link to="/upload" className="hidden md:block">
               <Button variant="outline">

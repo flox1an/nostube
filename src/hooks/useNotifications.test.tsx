@@ -133,7 +133,10 @@ describe('useNotifications', () => {
         pubkey: 'test-user-pubkey',
         created_at: 1234567890,
         content: '',
-        tags: [['title', 'Test Video'], ['d', 'test-identifier']],
+        tags: [
+          ['title', 'Test Video'],
+          ['d', 'test-identifier'],
+        ],
         sig: 'sig',
       })
 

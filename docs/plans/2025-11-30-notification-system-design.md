@@ -18,37 +18,44 @@ Add a notification system to nostube that alerts users when someone comments dir
 ## Design Decisions
 
 ### 1. Notification Scope
+
 - **Only direct comments on user's videos** (not replies to other comments)
 - Use NIP-22 `#P` tag query to find comments where user is the root pubkey (video author)
 - Query: `{ kinds: [1111], '#P': [userPubkey], since: lastLoginTime }`
 
 ### 2. Persistence Strategy
+
 - **Hybrid approach**: Store in localStorage with automatic cleanup
 - Keep notifications since last login (not time-limited)
 - Auto-prune notifications older than 7 days from localStorage
 - Limit to 100 most recent notifications to prevent storage bloat
 
 ### 3. Read/Unread Behavior
+
 - Notifications marked as read when clicked
 - Clicking navigates to video page and scrolls to the specific comment
 - Read notifications remain visible but are styled differently (slightly grayed out)
 
 ### 4. Visual Indicator
+
 - Simple **red dot indicator** on bell icon (no count badge)
 - Dot only shows when there are unread notifications
 - Clean, minimal design that doesn't distract
 
 ### 5. Update Mechanism
+
 - **Polling every 2.5 minutes** (150 seconds)
 - No real-time WebSocket subscription (simpler, less resource intensive)
 - Poll uses `since` timestamp of most recent notification to avoid fetching duplicates
 
 ### 6. Time Window
+
 - **Since last login**: Show all notifications from when user last logged in
 - Track `lastLoginTime` in localStorage, update on each login
 - Ensures users never miss notifications regardless of how long they were away
 
 ### 7. Dropdown UI
+
 - **Show all notifications** with overflow scroll
 - Max height: `80dvh` for responsive design
 - No pagination or "view all" page - keep it simple
@@ -56,21 +63,23 @@ Add a notification system to nostube that alerts users when someone comments dir
 ## Data Model
 
 ### VideoNotification Interface
+
 ```typescript
 interface VideoNotification {
-  id: string                    // comment event ID
-  commentId: string             // same as id, for clarity
-  videoId: string               // the video that was commented on
-  videoTitle?: string           // cached video title
-  commenterPubkey: string       // who commented
-  commentContent: string        // what they said (first 100 chars)
-  timestamp: number             // when (created_at)
-  read: boolean                 // read status
-  videoEventId: string          // for navigation (nevent or naddr)
+  id: string // comment event ID
+  commentId: string // same as id, for clarity
+  videoId: string // the video that was commented on
+  videoTitle?: string // cached video title
+  commenterPubkey: string // who commented
+  commentContent: string // what they said (first 100 chars)
+  timestamp: number // when (created_at)
+  read: boolean // read status
+  videoEventId: string // for navigation (nevent or naddr)
 }
 ```
 
 ### localStorage Structure
+
 ```typescript
 {
   lastLoginTime: number,         // timestamp of last login
@@ -105,6 +114,7 @@ interface VideoNotification {
 ### Hooks
 
 **useNotifications**
+
 - Manages notification state
 - Handles localStorage persistence
 - Implements polling logic
@@ -112,6 +122,7 @@ interface VideoNotification {
 - Returns: `{ notifications, unreadCount, markAsRead, isLoading }`
 
 **useLoginTimeTracking**
+
 - Tracks when user logs in
 - Updates `lastLoginTime` in localStorage
 - Integrates with existing `useCurrentUser` hook
@@ -143,6 +154,7 @@ interface VideoNotification {
 ### Comment Navigation & Highlighting
 
 When navigating to `/video/{eventId}#comment-{commentId}`:
+
 1. VideoPage reads hash from URL
 2. Add `id="comment-{commentId}"` to CommentItem div
 3. After render, scroll to comment: `element.scrollIntoView({ behavior: 'smooth', block: 'center' })`
@@ -169,7 +181,7 @@ useEffect(() => {
 
 ```typescript
 function cleanupOldNotifications(notifications: VideoNotification[]) {
-  const sevenDaysAgo = Date.now() / 1000 - (7 * 24 * 60 * 60)
+  const sevenDaysAgo = Date.now() / 1000 - 7 * 24 * 60 * 60
   return notifications
     .filter(n => n.timestamp > sevenDaysAgo)
     .slice(0, 100) // Keep max 100 notifications
@@ -180,12 +192,14 @@ function cleanupOldNotifications(notifications: VideoNotification[]) {
 ## Error Handling
 
 ### Graceful Degradation
+
 - Video metadata fails → show "Unknown video"
 - Profile fails to load → show truncated pubkey
 - Relay connection fails → retry with exponential backoff
 - Show toast notification on persistent errors
 
 ### Edge Cases
+
 - **Deleted video**: Notification stays, links to 404 (show graceful error)
 - **Deleted comment**: Keep notification, show "[deleted]" state
 - **Multiple tabs**: Use localStorage events to sync read state
@@ -202,6 +216,7 @@ function cleanupOldNotifications(notifications: VideoNotification[]) {
 ## Testing Strategy
 
 ### Unit Tests
+
 - [ ] VideoNotification data model validation
 - [ ] localStorage persistence and retrieval
 - [ ] Cleanup logic (7-day limit, 100 item limit)
@@ -209,6 +224,7 @@ function cleanupOldNotifications(notifications: VideoNotification[]) {
 - [ ] Deduplication logic
 
 ### Integration Tests
+
 - [ ] Polling interval starts/stops correctly
 - [ ] Notifications fetch on login
 - [ ] Navigation to comment works
@@ -216,6 +232,7 @@ function cleanupOldNotifications(notifications: VideoNotification[]) {
 - [ ] Empty state displays correctly
 
 ### Manual Testing
+
 - [ ] Create test comment on own video, verify notification appears
 - [ ] Click notification, verify navigation to comment
 - [ ] Verify dot indicator shows/hides correctly
@@ -252,18 +269,21 @@ Header:
 ## Migration & Rollout
 
 ### Phase 1: Core Implementation
+
 - Implement `useNotifications` hook
 - Add NotificationBell to Header
 - Basic localStorage persistence
 - Manual testing
 
 ### Phase 2: Polish & Error Handling
+
 - Add comment highlighting/scrolling
 - Implement error handling
 - Add loading states
 - Multi-tab sync
 
 ### Phase 3: Testing & Refinement
+
 - Write comprehensive tests
 - Performance optimization
 - User feedback iteration
@@ -271,6 +291,7 @@ Header:
 ## Open Questions & Future Enhancements
 
 ### Future Considerations (Out of Scope)
+
 - Push notifications (browser API)
 - Email notifications
 - Notification preferences/settings
@@ -280,6 +301,7 @@ Header:
 - Notification sounds
 
 ### Deferred Decisions
+
 - Should we show comment preview text? (Currently yes, first 100 chars)
 - Should we group notifications by video? (Currently no, keep simple)
 - Should we support keyboard navigation in dropdown? (Nice to have)

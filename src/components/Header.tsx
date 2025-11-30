@@ -54,9 +54,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
         <GlobalSearchBar />
 
-        <div className="flex items-center gap-4">
-          <NotificationBell />
-
+        <div className="flex items-center gap-2">
           {user && (
             <Link to="/upload" className="hidden md:block">
               <Button variant="outline">
@@ -65,6 +63,8 @@ export function Header({ transparent = false }: HeaderProps) {
               </Button>
             </Link>
           )}
+
+          <NotificationBell />
 
           <LoginArea />
         </div>

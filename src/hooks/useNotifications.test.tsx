@@ -1,7 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { useNotifications } from './useNotifications'
 import { TestApp } from '../test/TestApp'
+import type { NostrEvent } from 'nostr-tools'
+
+// Mock the relayPool from @/nostr/core
+vi.mock('@/nostr/core', async () => {
+  const actual = await vi.importActual<typeof import('@/nostr/core')>('@/nostr/core')
+  return {
+    ...actual,
+    relayPool: {
+      ...actual.relayPool,
+      subscription: vi.fn(),
+    },
+    eventStore: {
+      ...actual.eventStore,
+      getEvent: vi.fn(),
+    },
+  }
+})
 
 describe('useNotifications', () => {
   beforeEach(() => {
@@ -80,5 +97,161 @@ describe('useNotifications', () => {
     })
 
     expect(result.current.unreadCount).toBe(1)
+  })
+
+  describe('fetchNotifications', () => {
+    it('should fetch notifications from Nostr relays', async () => {
+      const { relayPool, eventStore } = await import('@/nostr/core')
+
+      // Setup mock comment events
+      const mockComments: NostrEvent[] = [
+        {
+          id: 'comment1',
+          pubkey: 'commenter-pubkey',
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 1111,
+          content: 'Great video!',
+          tags: [['E', 'video-event-id']],
+          sig: 'sig',
+        },
+      ]
+
+      // Mock RxJS subscription
+      const mockSubscription = {
+        unsubscribe: vi.fn(),
+      }
+
+      vi.mocked(relayPool.subscription).mockReturnValue({
+        subscribe: (observer: any) => {
+          // Immediately call observer with mock comments and EOSE
+          mockComments.forEach(comment => observer.next(comment))
+          observer.next('EOSE')
+          return mockSubscription
+        },
+      } as any)
+
+      // Mock eventStore.getEvent
+      vi.mocked(eventStore.getEvent).mockReturnValue({
+        id: 'video-event-id',
+        kind: 34235,
+        pubkey: 'test-user-pubkey',
+        created_at: 1234567890,
+        content: '',
+        tags: [['title', 'Test Video'], ['d', 'test-identifier']],
+        sig: 'sig',
+      })
+
+      // Set lastLoginTime
+      localStorage.setItem(
+        'nostube_notifications',
+        JSON.stringify({
+          lastLoginTime: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
+          notifications: [],
+          lastFetchTime: 0,
+        })
+      )
+
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: TestApp,
+      })
+
+      // Call fetchNotifications
+      await result.current.fetchNotifications()
+
+      // Wait for notifications to be processed
+      await waitFor(() => {
+        expect(result.current.notifications).toHaveLength(1)
+      })
+
+      // Verify notification was created correctly
+      expect(result.current.notifications[0]).toMatchObject({
+        id: 'comment1',
+        commentId: 'comment1',
+        videoId: 'video-event-id',
+        videoTitle: 'Test Video',
+        commenterPubkey: 'commenter-pubkey',
+        commentContent: 'Great video!',
+        read: false,
+      })
+      expect(result.current.unreadCount).toBe(1)
+
+      // Verify subscription was unsubscribed
+      expect(mockSubscription.unsubscribe).toHaveBeenCalled()
+    })
+
+    it('should skip fetching when lastLoginTime is 0', async () => {
+      const { relayPool } = await import('@/nostr/core')
+
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: TestApp,
+      })
+
+      await result.current.fetchNotifications()
+
+      // Should not call subscription
+      expect(relayPool.subscription).not.toHaveBeenCalled()
+    })
+
+    it('should deduplicate notifications by ID', async () => {
+      const { relayPool, eventStore } = await import('@/nostr/core')
+
+      // Setup existing notification
+      const existing = {
+        lastLoginTime: Math.floor(Date.now() / 1000) - 3600,
+        notifications: [
+          {
+            id: 'comment1',
+            commentId: 'comment1',
+            videoId: 'video1',
+            commenterPubkey: 'pubkey1',
+            commentContent: 'Great',
+            timestamp: 1234567890,
+            read: false,
+            videoEventId: 'ne1',
+          },
+        ],
+        lastFetchTime: 0,
+      }
+      localStorage.setItem('nostube_notifications', JSON.stringify(existing))
+
+      // Mock same comment coming from relay
+      const mockSubscription = { unsubscribe: vi.fn() }
+      vi.mocked(relayPool.subscription).mockReturnValue({
+        subscribe: (observer: any) => {
+          observer.next({
+            id: 'comment1',
+            pubkey: 'pubkey1',
+            created_at: 1234567890,
+            kind: 1111,
+            content: 'Great',
+            tags: [['E', 'video1']],
+            sig: 'sig',
+          })
+          observer.next('EOSE')
+          return mockSubscription
+        },
+      } as any)
+
+      vi.mocked(eventStore.getEvent).mockReturnValue({
+        id: 'video1',
+        kind: 34235,
+        pubkey: 'test-pubkey',
+        created_at: 1234567890,
+        content: '',
+        tags: [['title', 'Video 1']],
+        sig: 'sig',
+      })
+
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: TestApp,
+      })
+
+      await result.current.fetchNotifications()
+
+      // Should still have only 1 notification (no duplicate)
+      await waitFor(() => {
+        expect(result.current.notifications).toHaveLength(1)
+      })
+    })
   })
 })

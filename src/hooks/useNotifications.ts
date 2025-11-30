@@ -1,15 +1,45 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import type { NostrEvent } from 'nostr-tools'
+import { nip19 } from 'nostr-tools'
 import type { VideoNotification } from '../types/notification'
 import {
   getNotificationStorage,
   saveNotificationStorage,
+  cleanupOldNotifications,
 } from '../lib/notification-storage'
 import { useCurrentUser } from './useCurrentUser'
+import { relayPool, eventStore } from '@/nostr/core'
+
+/**
+ * Helper function to generate NIP-19 encoded link for a video event
+ * Addressable events (kinds 34235, 34236) use naddr
+ * Regular events (kinds 21, 22) use nevent
+ */
+function generateEventLink(event: { id: string; kind: number; pubkey: string }, identifier?: string, relays: string[] = []): string {
+  const isAddressable = event.kind === 34235 || event.kind === 34236
+
+  if (isAddressable && identifier) {
+    return nip19.naddrEncode({
+      kind: event.kind,
+      pubkey: event.pubkey,
+      identifier,
+      relays,
+    })
+  }
+
+  return nip19.neventEncode({
+    kind: event.kind,
+    id: event.id,
+    author: event.pubkey,
+    relays,
+  })
+}
 
 export function useNotifications() {
   const { user } = useCurrentUser()
   const [notifications, setNotifications] = useState<VideoNotification[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const isFetchingRef = useRef(false)
 
   // Load notifications from localStorage on mount
   useEffect(() => {
@@ -38,18 +68,135 @@ export function useNotifications() {
     })
   }, [])
 
-  // Fetch notifications (placeholder for now)
+  // Fetch notifications from Nostr relays
   const fetchNotifications = useCallback(async () => {
-    if (!user) return
+    if (!user || isFetchingRef.current) return
 
+    isFetchingRef.current = true
     setIsLoading(true)
+
     try {
-      // TODO: Implement Nostr query
-      console.log('Fetching notifications...')
+      const storage = getNotificationStorage()
+      const { lastLoginTime } = storage
+
+      if (lastLoginTime === 0) {
+        // User hasn't logged in yet, skip
+        return
+      }
+
+      // Get relays from config - we'll use the default relays from the pool
+      const relays: string[] = [] // Empty array will use pool's default relays
+
+      // Query for comments on user's videos using NIP-22 #P tag
+      const filter = {
+        kinds: [1111],
+        '#P': [user.pubkey],
+        since: lastLoginTime,
+        limit: 100,
+      }
+
+      const comments: NostrEvent[] = []
+
+      await new Promise<void>((resolve) => {
+        let timeoutId: NodeJS.Timeout | undefined
+
+        // Create subscription using RxJS observable pattern
+        const subscription = relayPool
+          .subscription(relays, [filter])
+          .subscribe({
+            next: (msg) => {
+              // Filter out EOSE messages
+              if (typeof msg !== 'string' && 'kind' in msg) {
+                comments.push(msg)
+              } else if (msg === 'EOSE') {
+                // End of stored events - wait a bit more for any late arrivals
+                if (!timeoutId) {
+                  timeoutId = setTimeout(() => {
+                    subscription.unsubscribe()
+                    resolve()
+                  }, 1000)
+                }
+              }
+            },
+            error: (err) => {
+              console.error('Subscription error:', err)
+              subscription.unsubscribe()
+              resolve()
+            },
+          })
+
+        // Set overall timeout
+        const overallTimeout = setTimeout(() => {
+          subscription.unsubscribe()
+          resolve()
+        }, 5000) // 5 second overall timeout
+
+        // Cleanup
+        return () => {
+          clearTimeout(overallTimeout)
+          if (timeoutId) clearTimeout(timeoutId)
+        }
+      })
+
+      // Process comments into notifications
+      const newNotifications: VideoNotification[] = []
+
+      for (const comment of comments) {
+        // Extract video ID from 'E' tag
+        const eTag = comment.tags.find((t) => t[0] === 'E')
+        if (!eTag) continue
+
+        const videoId = eTag[1]
+
+        // Fetch video metadata from eventStore
+        const videoEvent = eventStore.getEvent(videoId)
+        const videoTitle = videoEvent?.tags.find((t) => t[0] === 'title')?.[1] || 'Unknown video'
+
+        // Extract identifier for addressable events
+        const identifier = videoEvent?.tags.find((t) => t[0] === 'd')?.[1]
+
+        // Create notification
+        const notification: VideoNotification = {
+          id: comment.id,
+          commentId: comment.id,
+          videoId,
+          videoTitle,
+          commenterPubkey: comment.pubkey,
+          commentContent: comment.content.slice(0, 100),
+          timestamp: comment.created_at,
+          read: false,
+          videoEventId: videoEvent
+            ? generateEventLink(
+                { id: videoEvent.id, kind: videoEvent.kind, pubkey: videoEvent.pubkey },
+                identifier,
+                []
+              )
+            : generateEventLink({ id: videoId, kind: 34235, pubkey: user.pubkey }),
+        }
+
+        newNotifications.push(notification)
+      }
+
+      // Merge with existing notifications (deduplicate by ID)
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id))
+        const toAdd = newNotifications.filter((n) => !existingIds.has(n.id))
+        const merged = [...prev, ...toAdd]
+
+        // Cleanup and save
+        const cleaned = cleanupOldNotifications(merged)
+        const updatedStorage = getNotificationStorage()
+        updatedStorage.notifications = cleaned
+        updatedStorage.lastFetchTime = Math.floor(Date.now() / 1000)
+        saveNotificationStorage(updatedStorage)
+
+        return cleaned
+      })
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
     } finally {
       setIsLoading(false)
+      isFetchingRef.current = false
     }
   }, [user])
 

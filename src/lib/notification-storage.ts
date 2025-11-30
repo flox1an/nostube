@@ -32,12 +32,10 @@ export function saveNotificationStorage(data: NotificationStorage): void {
   }
 }
 
-export function cleanupOldNotifications(
-  notifications: VideoNotification[]
-): VideoNotification[] {
+export function cleanupOldNotifications(notifications: VideoNotification[]): VideoNotification[] {
   const sevenDaysAgo = Date.now() / 1000 - SEVEN_DAYS_IN_SECONDS
   return notifications
-    .filter((n) => n.timestamp > sevenDaysAgo)
+    .filter(n => n.timestamp > sevenDaysAgo)
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 100)
 }

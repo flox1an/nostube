@@ -24,10 +24,19 @@ export function NotificationBell() {
     navigate(`/video/${notification.videoEventId}#comment-${notification.commentId}`)
   }
 
+  const hasNotifications = notifications.length > 0
+  const isDisabled = !hasNotifications && !isLoading
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label="Notifications"
+          disabled={isDisabled}
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span

@@ -21,7 +21,7 @@ export function GlobalSearchBar() {
 
   return (
     <form onSubmit={handleSubmit} className="hidden md:flex gap-2 items-center">
-      <div className="relative w-full max-w-[20em]">
+      <div className="relative w-full max-w-[20em] lg:max-w-[28em] lg:w-[28em]">
         <Input
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}

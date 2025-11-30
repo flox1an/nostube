@@ -40,7 +40,7 @@ export function NotificationDropdown({
   }
 
   return (
-    <ScrollArea className="max-h-[80dvh]">
+    <ScrollArea className="h-[400px] max-h-[80dvh]">
       <div className="py-2">
         {notifications.map(notification => (
           <NotificationItem

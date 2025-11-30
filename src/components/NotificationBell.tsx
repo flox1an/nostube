@@ -20,12 +20,13 @@ export function NotificationBell() {
     // Mark as read
     markAsRead(notification.id)
 
-    // Navigate to video page with comment hash
-    navigate(`/video/${notification.videoEventId}#comment-${notification.commentId}`)
+    // Navigate to video page with comment query parameter
+    navigate(`/video/${notification.videoEventId}?comment=${notification.commentId}`)
   }
 
-  const hasNotifications = notifications.length > 0
-  const isDisabled = !hasNotifications && !isLoading
+  // Only disable if there are no notifications AND not loading
+  // Keep enabled if there are notifications (read or unread)
+  const isDisabled = notifications.length === 0 && !isLoading
 
   return (
     <DropdownMenu>

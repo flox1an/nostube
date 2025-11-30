@@ -111,7 +111,7 @@ export function useNotifications() {
 
       await new Promise<void>(resolve => {
         let timeoutId: NodeJS.Timeout | undefined
-        let eoseCount = 0
+        let _eoseCount = 0
 
         // Create subscription using RxJS observable pattern
         const subscription = relayPool.subscription(relays, filters).subscribe({
@@ -126,7 +126,7 @@ export function useNotifications() {
 
               comments.push(msg)
             } else if (msg === 'EOSE') {
-              eoseCount++
+              _eoseCount++
               // End of stored events - wait a bit more for any late arrivals
               if (!timeoutId) {
                 timeoutId = setTimeout(() => {

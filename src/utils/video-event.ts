@@ -353,8 +353,8 @@ export function processEvent(
     const textTracks: TextTrack[] = []
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track')
     textTrackTags.forEach(vtt => {
-      // eslint-disable-next-line prefer-const
-      let [, url, lang] = vtt
+      let url = vtt[1]
+      const lang = vtt[2]
       // Generate mirror URLs if the URL is a Blossom URL and mirror servers are configured
       if (url && blossomServers && blossomServers.length > 0) {
         const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))

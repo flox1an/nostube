@@ -522,7 +522,6 @@ export function VideoComments({
     setReplyContent('')
   }
 
-
   // Load more comments
   const loadMoreComments = () => {
     setVisibleComments(prev => prev + 15)

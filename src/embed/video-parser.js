@@ -1,3 +1,5 @@
+import { filterCompatibleVariants } from './codec-compatibility.js'
+
 /**
  * Parse a Nostr video event into usable metadata
  * Supports kinds 21, 22, 34235, 34236 (NIP-71)
@@ -22,7 +24,10 @@ function parseImetaFormat(event, imetaTags) {
   const allVariants = imetaTags.map(tag => parseImetaTag(tag)).filter(Boolean)
 
   // Separate videos and thumbnails
-  const videoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+  const allVideoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+  // Filter out incompatible codecs for current platform (e.g., HEVC on iOS)
+  const compatibleVideoVariants = filterCompatibleVariants(allVideoVariants)
+  const videoVariants = compatibleVideoVariants
   const thumbnails = allVariants.filter(v => v.mimeType?.startsWith('image/'))
 
   // Also collect image URLs from standalone image fields in imeta

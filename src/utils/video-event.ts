@@ -6,6 +6,7 @@ import type { BlossomServer } from '@/contexts/AppContext'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -286,9 +287,11 @@ export function processEvent(
     }
 
     // Separate video variants from thumbnail variants
-    const videoVariants = sortVideoVariantsByQuality(
-      allVariants.filter(v => v.mimeType?.startsWith('video/'))
-    )
+    const allVideoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+    // Filter out incompatible codecs for current platform (e.g., HEVC on iOS)
+    const compatibleVideoVariants = filterCompatibleVariants(allVideoVariants)
+    const videoVariants = sortVideoVariantsByQuality(compatibleVideoVariants)
+
     const thumbnailVariants = [
       ...allVariants.filter(v => v.mimeType?.startsWith('image/')),
       ...thumbnailsFromImeta,

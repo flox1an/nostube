@@ -23,7 +23,8 @@
     "refresh": "Refresh",
     "optional": "optional",
     "required": "Required",
-    "available": "Available"
+    "available": "Available",
+    "close": "Close"
   },
   "navigation": {
     "home": "Home",
@@ -145,6 +146,12 @@
       "onFacebook": "Share on Facebook",
       "onPinterest": "Share on Pinterest"
     },
+    "availability": {
+      "alertTitle": "Limited Availability",
+      "alertDescription": "This video is available on {{count}} blossom server. Consider mirroring it to your servers for better redundancy.",
+      "alertDescription_other": "This video is available on {{count}} blossom servers. Consider mirroring it to your servers for better redundancy.",
+      "mirrorButton": "Mirror"
+    },
     "mirror": {
       "title": "Mirror Video",
       "description": "Copy this video to additional blossom servers for better redundancy and availability.",
@@ -168,6 +175,30 @@
       "errorMessage": "Failed to mirror video.",
       "mirroring": "Mirroring...",
       "mirrorButton": "Mirror to {{count}} server(s)"
+    },
+    "transform": {
+      "alertTitle": "Video Transformation Needed",
+      "alertDescriptionBoth": "This video could benefit from lower resolution variants and iOS-compatible formats. Consider contributing transformed versions.",
+      "alertDescriptionLowRes": "This video only has high-resolution variants. Consider contributing 720p or lower versions for better accessibility.",
+      "alertDescriptionIOS": "This video may not play on iOS devices. Consider contributing iOS-compatible versions (H.264 or HEVC).",
+      "contributeButton": "Contribute Transformation",
+      "dialogTitle": "Video Transformation (Coming Soon)",
+      "dialogDescription": "Help improve video accessibility by contributing transformed versions at different resolutions and codecs.",
+      "currentVariants": "Current Video Variants",
+      "neededTransforms": "Needed Transformations",
+      "quality": "Quality",
+      "codec": "Codec",
+      "dimensions": "Dimensions",
+      "iosCompatible": "iOS Compatible",
+      "targetQuality": "Target Quality",
+      "targetCodec": "Target Codec",
+      "reason": "Reason",
+      "priority": "Priority",
+      "priorityHigh": "High",
+      "priorityMedium": "Medium",
+      "priorityLow": "Low",
+      "wipTitle": "Feature Coming Soon",
+      "wipMessage": "Video transformation functionality is currently under development. This dialog shows what transformations would be helpful for this video. Check back soon for the ability to contribute transformed versions!"
     }
   },
   "upload": {

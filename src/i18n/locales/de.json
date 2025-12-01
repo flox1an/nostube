@@ -23,7 +23,8 @@
     "refresh": "Aktualisieren",
     "optional": "optional",
     "required": "Erforderlich",
-    "available": "Verfügbar"
+    "available": "Verfügbar",
+    "close": "Schließen"
   },
   "navigation": {
     "home": "Startseite",
@@ -145,6 +146,12 @@
       "onFacebook": "Auf Facebook teilen",
       "onPinterest": "Auf Pinterest teilen"
     },
+    "availability": {
+      "alertTitle": "Begrenzte Verfügbarkeit",
+      "alertDescription": "Dieses Video ist auf {{count}} Blossom-Server verfügbar. Erwäge, es auf deine Server zu spiegeln für bessere Redundanz.",
+      "alertDescription_other": "Dieses Video ist auf {{count}} Blossom-Servern verfügbar. Erwäge, es auf deine Server zu spiegeln für bessere Redundanz.",
+      "mirrorButton": "Spiegeln"
+    },
     "mirror": {
       "title": "Video spiegeln",
       "description": "Kopiere dieses Video auf zusätzliche Blossom-Server für bessere Redundanz und Verfügbarkeit.",
@@ -168,6 +175,30 @@
       "errorMessage": "Video konnte nicht gespiegelt werden.",
       "mirroring": "Wird gespiegelt...",
       "mirrorButton": "Auf {{count}} Server spiegeln"
+    },
+    "transform": {
+      "alertTitle": "Videotransformation erforderlich",
+      "alertDescriptionBoth": "Dieses Video würde von niedrigeren Auflösungsvarianten und iOS-kompatiblen Formaten profitieren. Erwäge, transformierte Versionen beizutragen.",
+      "alertDescriptionLowRes": "Dieses Video hat nur hochauflösende Varianten. Erwäge, 720p oder niedrigere Versionen für bessere Zugänglichkeit beizutragen.",
+      "alertDescriptionIOS": "Dieses Video wird möglicherweise nicht auf iOS-Geräten abgespielt. Erwäge, iOS-kompatible Versionen (H.264 oder HEVC) beizutragen.",
+      "contributeButton": "Transformation beitragen",
+      "dialogTitle": "Videotransformation (Demnächst)",
+      "dialogDescription": "Hilf dabei, die Videoerreichbarkeit zu verbessern, indem du transformierte Versionen mit verschiedenen Auflösungen und Codecs beiträgst.",
+      "currentVariants": "Aktuelle Videovarianten",
+      "neededTransforms": "Benötigte Transformationen",
+      "quality": "Qualität",
+      "codec": "Codec",
+      "dimensions": "Abmessungen",
+      "iosCompatible": "iOS-kompatibel",
+      "targetQuality": "Zielqualität",
+      "targetCodec": "Ziel-Codec",
+      "reason": "Grund",
+      "priority": "Priorität",
+      "priorityHigh": "Hoch",
+      "priorityMedium": "Mittel",
+      "priorityLow": "Niedrig",
+      "wipTitle": "Funktion demnächst verfügbar",
+      "wipMessage": "Die Videotransformationsfunktion befindet sich derzeit in der Entwicklung. Dieser Dialog zeigt, welche Transformationen für dieses Video hilfreich wären. Schaue bald wieder vorbei, um transformierte Versionen beitragen zu können!"
     }
   },
   "upload": {

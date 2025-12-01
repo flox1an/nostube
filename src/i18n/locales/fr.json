@@ -23,7 +23,8 @@
     "refresh": "Actualiser",
     "optional": "optionnel",
     "required": "Obligatoire",
-    "available": "Disponible"
+    "available": "Disponible",
+    "close": "Fermer"
   },
   "navigation": {
     "home": "Accueil",
@@ -145,6 +146,12 @@
       "onFacebook": "Partager sur Facebook",
       "onPinterest": "Partager sur Pinterest"
     },
+    "availability": {
+      "alertTitle": "Disponibilité Limitée",
+      "alertDescription": "Cette vidéo est disponible sur {{count}} serveur blossom. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
+      "alertDescription_other": "Cette vidéo est disponible sur {{count}} serveurs blossom. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
+      "mirrorButton": "Dupliquer"
+    },
     "mirror": {
       "title": "Dupliquer la vidéo",
       "description": "Copiez cette vidéo vers des serveurs Blossom supplémentaires pour une meilleure redondance et disponibilité.",
@@ -168,6 +175,30 @@
       "errorMessage": "Échec de la duplication de la vidéo.",
       "mirroring": "Duplication...",
       "mirrorButton": "Dupliquer vers {{count}} serveur(s)"
+    },
+    "transform": {
+      "alertTitle": "Transformation Vidéo Nécessaire",
+      "alertDescriptionBoth": "Cette vidéo pourrait bénéficier de variantes de résolution inférieure et de formats compatibles iOS. Envisagez de contribuer des versions transformées.",
+      "alertDescriptionLowRes": "Cette vidéo n'a que des variantes haute résolution. Envisagez de contribuer des versions 720p ou inférieures pour une meilleure accessibilité.",
+      "alertDescriptionIOS": "Cette vidéo pourrait ne pas être lue sur les appareils iOS. Envisagez de contribuer des versions compatibles iOS (H.264 ou HEVC).",
+      "contributeButton": "Contribuer une Transformation",
+      "dialogTitle": "Transformation Vidéo (Bientôt disponible)",
+      "dialogDescription": "Aidez à améliorer l'accessibilité des vidéos en contribuant des versions transformées à différentes résolutions et codecs.",
+      "currentVariants": "Variantes Vidéo Actuelles",
+      "neededTransforms": "Transformations Nécessaires",
+      "quality": "Qualité",
+      "codec": "Codec",
+      "dimensions": "Dimensions",
+      "iosCompatible": "Compatible iOS",
+      "targetQuality": "Qualité Cible",
+      "targetCodec": "Codec Cible",
+      "reason": "Raison",
+      "priority": "Priorité",
+      "priorityHigh": "Haute",
+      "priorityMedium": "Moyenne",
+      "priorityLow": "Basse",
+      "wipTitle": "Fonctionnalité Bientôt Disponible",
+      "wipMessage": "La fonctionnalité de transformation vidéo est actuellement en développement. Cette boîte de dialogue montre quelles transformations seraient utiles pour cette vidéo. Revenez bientôt pour contribuer des versions transformées !"
     }
   },
   "upload": {

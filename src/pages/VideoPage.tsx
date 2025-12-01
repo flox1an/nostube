@@ -34,10 +34,13 @@ import { AlertCircle } from 'lucide-react'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
 import { VideoInfoSection } from '@/components/VideoInfoSection'
 import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
+import { VideoTransformAlert } from '@/components/VideoTransformAlert'
 import { VideoPageLayout } from '@/components/VideoPageLayout'
 import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
 import { Button } from '@/components/ui/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
+import { TransformVideoDialog } from '@/components/TransformVideoDialog'
+import { getNeededTransformations } from '@/lib/video-transformation-detection'
 import { useTranslation } from 'react-i18next'
 
 export function VideoPage() {
@@ -201,6 +204,12 @@ export function VideoPage() {
 
   const isLoading = !video && videoEvent === undefined
 
+  // Calculate needed transformations
+  const neededTransformations = useMemo(() => {
+    if (!video?.videoVariants) return []
+    return getNeededTransformations(video.videoVariants).recommendedTransforms
+  }, [video])
+
   // Load NIP-32 labels for this video
   const { hashtags: labelHashtags, languages: labelLanguages } = useVideoLabels(video?.id)
 
@@ -339,6 +348,9 @@ export function VideoPage() {
   // Mirror dialog state
   const [mirrorDialogOpen, setMirrorDialogOpen] = useState(false)
 
+  // Transform dialog state
+  const [transformDialogOpen, setTransformDialogOpen] = useState(false)
+
   // Update document title
   useEffect(() => {
     if (video?.title) {
@@ -374,6 +386,11 @@ export function VideoPage() {
     setMirrorDialogOpen(true)
     checkAvailability()
   }
+
+  // Handle transform action
+  const handleTransform = useCallback(() => {
+    setTransformDialogOpen(true)
+  }, [])
 
   // Build share URL and links
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
@@ -543,10 +560,20 @@ export function VideoPage() {
         }
         sidebar={
           <>
-            <VideoAvailabilityAlert
-              blossomServerCount={blossomServerCount}
-              onMirror={handleMirror}
-            />
+            {video?.id && (
+              <VideoAvailabilityAlert
+                videoId={video.id}
+                blossomServerCount={blossomServerCount}
+                onMirror={handleMirror}
+              />
+            )}
+            {video?.id && video?.videoVariants && blossomServerCount !== 1 && (
+              <VideoTransformAlert
+                videoId={video.id}
+                videoVariants={video.videoVariants}
+                onTransform={handleTransform}
+              />
+            )}
             {renderSidebarContent()}
           </>
         }
@@ -564,6 +591,17 @@ export function VideoPage() {
           serverAvailability={serverAvailability}
           isCheckingAvailability={isChecking}
           onMirrorComplete={checkAvailability}
+        />
+      )}
+
+      {/* Transform Dialog */}
+      {video && (
+        <TransformVideoDialog
+          open={transformDialogOpen}
+          onOpenChange={setTransformDialogOpen}
+          videoEvent={videoEvent}
+          videoVariants={video.videoVariants}
+          neededTransformations={neededTransformations}
         />
       )}
     </>

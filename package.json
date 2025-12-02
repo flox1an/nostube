@@ -122,9 +122,6 @@
     "vite": "^7.1.11",
     "vitest": "^4.0.10"
   },
-  "optionalDependencies": {
-    "@rollup/rollup-darwin-arm64": "^4.52.5"
-  },
   "overrides": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

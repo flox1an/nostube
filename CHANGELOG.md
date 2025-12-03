@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Embed Player Loading Indicator**: Replaced spinning hourglass emoji with pulsating Nostube logo during video loading. Uses the same purple gradient logo as the branding link and reuses the existing CSS pulse animation for consistency
 
+- **Embed Player Load Performance**: Significantly improved initial load time with multiple optimizations:
+  - Subscribe to relays as each connects (no longer waits for all connections)
+  - Early return for addressable events: returns immediately after first EOSE with data
+  - Reduced connection timeout from 10s to 5s for faster failure detection
+  - Reduced overall timeout from 10s to 6s
+  - Reduced default relays from 3 to 2 (prioritizing relay.divine.video)
+  - 200ms grace period after first event to collect newer versions from fast relays
+
 - **Video Grid Loading Skeletons**: Enhanced pagination loading UX by adding 2 rows of skeleton placeholders at the bottom of video grids while loading more videos. Responsive skeleton count adjusts based on grid layout (auto/horizontal/vertical mode) and screen width. Prevents empty appearance during pagination and provides visual feedback to users that more content is loading
 
 - **Label Video Button UX**: Moved label video button from standalone position to burger menu (three-dot menu) in VideoInfoSection. Updated LabelVideoDialog component to support controlled open state via optional `open` and `onOpenChange` props while maintaining backward compatibility with uncontrolled mode. Menu item only appears for beta users when logged in

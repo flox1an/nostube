@@ -2,6 +2,7 @@ import { EventCache } from './event-cache.js'
 
 /**
  * Simple Nostr relay client for fetching video events
+ * Optimized for fast initial load with early-return strategies
  */
 export class NostrClient {
   constructor(relays) {
@@ -19,7 +20,7 @@ export class NostrClient {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Connection timeout: ${url}`))
-      }, 10000) // 10 second timeout
+      }, 5000) // Reduced from 10s to 5s
 
       try {
         const ws = new WebSocket(url)
@@ -50,6 +51,7 @@ export class NostrClient {
 
   /**
    * Fetch a video event by ID or address
+   * Optimized: subscribes as soon as each relay connects, returns early
    * @param {Object} identifier - Decoded identifier {type, data}
    * @returns {Promise<Object>} - Nostr event
    */
@@ -93,113 +95,125 @@ export class NostrClient {
 
     console.log('[Nostr Client] Fetching event with filter:', filter)
 
-    // Connect to all relays in parallel
-    const connectionPromises = this.relays.map(url =>
-      this.connectRelay(url).catch(err => {
-        console.warn(`[Nostr Client] Failed to connect to ${url}:`, err.message)
-        return null
-      })
-    )
+    const isAddressable = identifier.type === 'address'
 
-    const connections = (await Promise.all(connectionPromises)).filter(Boolean)
-
-    if (connections.length === 0) {
-      throw new Error('Failed to connect to any relay')
-    }
-
-    console.log(`[Nostr Client] Connected to ${connections.length}/${this.relays.length} relays`)
-
-    // Subscribe and wait for event
     return new Promise((resolve, reject) => {
       let resolved = false
-      const isAddressable = identifier.type === 'address'
       let collectedEvents = []
       let eoseCount = 0
-      const totalRelays = connections.length
+      let connectedCount = 0
+      let failedCount = 0
+      const totalRelays = this.relays.length
+      let earlyReturnTimer = null
 
+      // Overall timeout - reduced from 10s to 6s
       const timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true
+          clearTimeout(earlyReturnTimer)
           this.closeSubscription(subId)
 
-          // For addressable events, return newest if we have any
-          if (isAddressable && collectedEvents.length > 0) {
+          if (collectedEvents.length > 0) {
             const newest = collectedEvents.reduce((prev, current) =>
               current.created_at > prev.created_at ? current : prev
             )
             console.log(
-              `[Nostr Client] Returning newest addressable event (created_at: ${newest.created_at})`
+              `[Nostr Client] Timeout - returning best event (created_at: ${newest.created_at})`
             )
-            // Cache the event before returning
             EventCache.setCachedEvent(cacheKey, newest)
             resolve(newest)
           } else {
             reject(new Error('Event not found (timeout)'))
           }
         }
-      }, 10000) // 10 second timeout for event fetch
+      }, 6000)
 
-      // Subscribe to each connection
-      connections.forEach(ws => {
-        // Handle messages
-        const messageHandler = event => {
-          try {
-            const message = JSON.parse(event.data)
+      // Handle message from a relay
+      const handleMessage = (ws, event) => {
+        if (resolved) return
 
-            // Handle EVENT messages
-            if (message[0] === 'EVENT' && message[1] === subId) {
-              const nostrEvent = message[2]
+        try {
+          const message = JSON.parse(event.data)
 
-              if (isAddressable) {
-                // For addressable events: collect all events
-                collectedEvents.push(nostrEvent)
-                console.log(
-                  `[Nostr Client] Addressable event received (created_at: ${nostrEvent.created_at}), total: ${collectedEvents.length}`
-                )
-              } else {
-                // For regular events: return immediately on first match
-                if (!resolved) {
-                  resolved = true
-                  clearTimeout(timeout)
-                  console.log('[Nostr Client] Regular event received, returning immediately')
-                  this.closeSubscription(subId)
-                  // Cache the event before returning
-                  EventCache.setCachedEvent(cacheKey, nostrEvent)
-                  resolve(nostrEvent)
-                }
+          // Handle EVENT messages
+          if (message[0] === 'EVENT' && message[1] === subId) {
+            const nostrEvent = message[2]
+
+            if (isAddressable) {
+              // For addressable events: collect and set early return timer
+              collectedEvents.push(nostrEvent)
+              console.log(
+                `[Nostr Client] Addressable event received (created_at: ${nostrEvent.created_at}), total: ${collectedEvents.length}`
+              )
+
+              // Start early return timer after first event (wait 200ms for potentially newer versions)
+              if (!earlyReturnTimer && collectedEvents.length === 1) {
+                earlyReturnTimer = setTimeout(() => {
+                  if (!resolved && collectedEvents.length > 0) {
+                    resolved = true
+                    clearTimeout(timeout)
+                    this.closeSubscription(subId)
+                    const newest = collectedEvents.reduce((prev, current) =>
+                      current.created_at > prev.created_at ? current : prev
+                    )
+                    console.log(`[Nostr Client] Early return - got event after 200ms wait`)
+                    EventCache.setCachedEvent(cacheKey, newest)
+                    resolve(newest)
+                  }
+                }, 200)
               }
+            } else {
+              // For regular events: return immediately on first match
+              resolved = true
+              clearTimeout(timeout)
+              clearTimeout(earlyReturnTimer)
+              console.log('[Nostr Client] Regular event received, returning immediately')
+              this.closeSubscription(subId)
+              EventCache.setCachedEvent(cacheKey, nostrEvent)
+              resolve(nostrEvent)
             }
+          }
 
-            // Handle EOSE (end of stored events)
-            if (message[0] === 'EOSE' && message[1] === subId) {
-              eoseCount++
-              console.log(`[Nostr Client] EOSE received (${eoseCount}/${totalRelays})`)
+          // Handle EOSE (end of stored events)
+          if (message[0] === 'EOSE' && message[1] === subId) {
+            eoseCount++
+            console.log(`[Nostr Client] EOSE received (${eoseCount}/${connectedCount})`)
 
-              // For addressable events: wait for all relays, then return newest
-              if (isAddressable && eoseCount === totalRelays && !resolved) {
+            // For addressable events: return after first EOSE if we have events
+            if (isAddressable && !resolved) {
+              if (collectedEvents.length > 0) {
+                // Got events and at least one relay finished - return immediately
+                // (we already have the event, no need to wait for more)
                 resolved = true
                 clearTimeout(timeout)
+                clearTimeout(earlyReturnTimer)
                 this.closeSubscription(subId)
-
-                if (collectedEvents.length > 0) {
-                  const newest = collectedEvents.reduce((prev, current) =>
-                    current.created_at > prev.created_at ? current : prev
-                  )
-                  console.log(
-                    `[Nostr Client] All relays responded, returning newest event (created_at: ${newest.created_at})`
-                  )
-                  // Cache the event before returning
-                  EventCache.setCachedEvent(cacheKey, newest)
-                  resolve(newest)
-                } else {
-                  reject(new Error('Addressable event not found on any relay'))
-                }
+                const newest = collectedEvents.reduce((prev, current) =>
+                  current.created_at > prev.created_at ? current : prev
+                )
+                console.log(
+                  `[Nostr Client] EOSE-triggered return with ${collectedEvents.length} events`
+                )
+                EventCache.setCachedEvent(cacheKey, newest)
+                resolve(newest)
+              } else if (eoseCount === connectedCount) {
+                // All relays responded with no events
+                resolved = true
+                clearTimeout(timeout)
+                clearTimeout(earlyReturnTimer)
+                this.closeSubscription(subId)
+                reject(new Error('Addressable event not found on any relay'))
               }
             }
-          } catch (error) {
-            console.error('[Nostr Client] Failed to parse message:', error)
           }
+        } catch (error) {
+          console.error('[Nostr Client] Failed to parse message:', error)
         }
+      }
+
+      // Subscribe to a single relay
+      const subscribeToRelay = ws => {
+        const messageHandler = event => handleMessage(ws, event)
 
         ws.addEventListener('message', messageHandler)
 
@@ -212,10 +226,33 @@ export class NostrClient {
           handler: messageHandler,
         })
 
-        // Send REQ message
+        // Send REQ message immediately
         const reqMessage = JSON.stringify(['REQ', subId, filter])
         ws.send(reqMessage)
-        console.log(`[Nostr Client] Sent REQ to relay:`, reqMessage)
+        console.log(`[Nostr Client] Sent REQ to relay`)
+      }
+
+      // Connect to relays and subscribe as each connects (don't wait for all)
+      this.relays.forEach(url => {
+        this.connectRelay(url)
+          .then(ws => {
+            if (resolved) return // Already resolved, skip
+            connectedCount++
+            console.log(`[Nostr Client] Connected ${connectedCount}/${totalRelays}`)
+            subscribeToRelay(ws)
+          })
+          .catch(err => {
+            failedCount++
+            console.warn(`[Nostr Client] Failed to connect to ${url}:`, err.message)
+
+            // If all relays failed, reject
+            if (failedCount === totalRelays && !resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              clearTimeout(earlyReturnTimer)
+              reject(new Error('Failed to connect to any relay'))
+            }
+          })
       })
     })
   }

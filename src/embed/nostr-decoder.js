@@ -53,10 +53,11 @@ export function decodeVideoIdentifier(identifier) {
 
 /**
  * Get default relay list
+ * Prioritized: divine.video is the dedicated video relay (fastest for video events)
  * @returns {string[]}
  */
 export function getDefaultRelays() {
-  return ['wss://relay.divine.video', 'wss://relay.nostr.band', 'wss://relay.damus.io']
+  return ['wss://relay.divine.video', 'wss://relay.nostr.band']
 }
 
 /**

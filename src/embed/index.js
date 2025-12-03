@@ -139,23 +139,24 @@ async function initPlayer() {
 // Loading state
 function showLoading(message) {
   document.body.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center;
-                height: 100vh; background: #000; color: #fff;
-                font-family: system-ui, -apple-system, sans-serif;
-                text-align: center; padding: 20px;">
+    <div class="nostube-loading">
       <div>
-        <div style="font-size: 48px; margin-bottom: 16px; animation: spin 1s linear infinite;">
-          ⏳
+        <div class="nostube-loading-logo">
+          <svg viewBox="0 0 72 72" width="64" height="64">
+            <defs>
+              <linearGradient id="loading-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#9e51ff;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#8e51ff;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#7524ff;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <circle cx="36" cy="36" r="36" fill="url(#loading-logo-gradient)" />
+            <path d="M 28 22 L 28 50 L 50 36 Z" fill="#ffffff" />
+          </svg>
         </div>
-        <div style="font-size: 14px; color: #999;">${message}</div>
+        <div class="nostube-loading-text">${message}</div>
       </div>
     </div>
-    <style>
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    </style>
   `
 }
 

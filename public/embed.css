@@ -66,24 +66,14 @@ body {
   padding: 20px;
 }
 
-.nostube-loading-spinner {
-  font-size: 48px;
+.nostube-loading-logo {
   margin-bottom: 16px;
-  animation: spin 1s linear infinite;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .nostube-loading-text {
   font-size: 14px;
   color: #999;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* Error state (used by index.js inline styles currently) */

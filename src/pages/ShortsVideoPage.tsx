@@ -477,9 +477,13 @@ function ShortVideoItem({
             {video.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
                 {video.tags.slice(0, 3).map(tag => (
-                  <span key={tag} className="text-blue-400 text-sm">
+                  <Link
+                    key={tag}
+                    to={`/tag/${tag}`}
+                    className="text-blue-400 text-sm hover:underline"
+                  >
                     #{tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}

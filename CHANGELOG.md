@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Label Video Button UX**: Moved label video button from standalone position to burger menu (three-dot menu) in VideoInfoSection. Updated LabelVideoDialog component to support controlled open state via optional `open` and `onOpenChange` props while maintaining backward compatibility with uncontrolled mode. Menu item only appears for beta users when logged in
 
+- **Shorts Page Clickable Hashtags**: Hashtags displayed on short videos are now clickable links that navigate to the hashtag page (`/tag/:tag`). Added hover underline effect for visual feedback
+
 ### Fixed
 
 - **Vercel Deployment Build Failure**: Fixed `Cannot find module '@rollup/rollup-linux-x64-gnu'` error on Vercel by removing platform-specific `optionalDependencies` that locked macOS ARM64 bindings. Rollup now auto-installs correct platform bindings during npm install

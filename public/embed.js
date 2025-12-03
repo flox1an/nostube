@@ -6,7 +6,7 @@
   var ti = (t, e) => {
     for (var n in e) qr(t, n, { get: e[n], enumerable: !0 })
   }
-  var z = (t, e, n) => ei(t, typeof e != 'symbol' ? e + '' : e, n)
+  var W = (t, e, n) => ei(t, typeof e != 'symbol' ? e + '' : e, n)
   function Vr() {
     let t = new URLSearchParams(window.location.search)
     return {
@@ -40,31 +40,31 @@
         : { valid: !0 }
       : { valid: !1, error: 'Missing required parameter: v (video ID)' }
   }
-  function zr(t) {
+  function Wr(t) {
     if (!Number.isSafeInteger(t) || t < 0) throw new Error(`Wrong positive integer: ${t}`)
   }
-  function bn(t, ...e) {
+  function xn(t, ...e) {
     if (!(t instanceof Uint8Array)) throw new Error('Expected Uint8Array')
     if (e.length > 0 && !e.includes(t.length))
       throw new Error(`Expected Uint8Array of length ${e}, not of length=${t.length}`)
   }
-  function Wr(t) {
+  function zr(t) {
     if (typeof t != 'function' || typeof t.create != 'function')
       throw new Error('Hash should be wrapped by utils.wrapConstructor')
-    ;(zr(t.outputLen), zr(t.blockLen))
+    ;(Wr(t.outputLen), Wr(t.blockLen))
   }
   function ot(t, e = !0) {
     if (t.destroyed) throw new Error('Hash instance has been destroyed')
     if (e && t.finished) throw new Error('Hash#digest() has already been called')
   }
   function jr(t, e) {
-    bn(t)
+    xn(t)
     let n = e.outputLen
     if (t.length < n) throw new Error(`digestInto() expects output buffer of length at least ${n}`)
   }
-  var St = typeof globalThis == 'object' && 'crypto' in globalThis ? globalThis.crypto : void 0
+  var Lt = typeof globalThis == 'object' && 'crypto' in globalThis ? globalThis.crypto : void 0
   var Kr = t => t instanceof Uint8Array
-  var Lt = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
+  var Bt = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
     fe = (t, e) => (t << (32 - e)) | (t >>> e),
     ni = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68
   if (!ni) throw new Error('Non little-endian hardware is not supported')
@@ -72,7 +72,7 @@
     if (typeof t != 'string') throw new Error(`utf8ToBytes expected string, got ${typeof t}`)
     return new Uint8Array(new TextEncoder().encode(t))
   }
-  function gt(t) {
+  function yt(t) {
     if ((typeof t == 'string' && (t = ri(t)), !Kr(t)))
       throw new Error(`expected Uint8Array, got ${typeof t}`)
     return t
@@ -95,12 +95,12 @@
     },
     Du = {}.toString
   function Gr(t) {
-    let e = r => t().update(gt(r)).digest(),
+    let e = r => t().update(yt(r)).digest(),
       n = t()
     return ((e.outputLen = n.outputLen), (e.blockLen = n.blockLen), (e.create = () => t()), e)
   }
-  function Bt(t = 32) {
-    if (St && typeof St.getRandomValues == 'function') return St.getRandomValues(new Uint8Array(t))
+  function _t(t = 32) {
+    if (Lt && typeof Lt.getRandomValues == 'function') return Lt.getRandomValues(new Uint8Array(t))
     throw new Error('crypto.getRandomValues must be defined')
   }
   function oi(t, e, n, r) {
@@ -113,7 +113,7 @@
       l = r ? 0 : 4
     ;(t.setUint32(e + c, i, r), t.setUint32(e + l, a, r))
   }
-  var _t = class extends st {
+  var kt = class extends st {
     constructor(e, n, r, o) {
       ;(super(),
         (this.blockLen = e),
@@ -125,17 +125,17 @@
         (this.pos = 0),
         (this.destroyed = !1),
         (this.buffer = new Uint8Array(e)),
-        (this.view = Lt(this.buffer)))
+        (this.view = Bt(this.buffer)))
     }
     update(e) {
       ot(this)
       let { view: n, buffer: r, blockLen: o } = this
-      e = gt(e)
+      e = yt(e)
       let s = e.length
       for (let i = 0; i < s; ) {
         let a = Math.min(o - this.pos, s - i)
         if (a === o) {
-          let c = Lt(e)
+          let c = Bt(e)
           for (; o <= s - i; i += o) this.process(c, i)
           continue
         }
@@ -155,7 +155,7 @@
         this.padOffset > o - i && (this.process(r, 0), (i = 0)))
       for (let f = i; f < o; f++) n[f] = 0
       ;(oi(r, o - 8, BigInt(this.length * 8), s), this.process(r, 0))
-      let a = Lt(e),
+      let a = Bt(e),
         c = this.outputLen
       if (c % 4) throw new Error('_sha2: outputLen should be aligned to 32bit')
       let l = c / 4,
@@ -199,7 +199,7 @@
       1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225,
     ]),
     Re = new Uint32Array(64),
-    xn = class extends _t {
+    vn = class extends kt {
       constructor() {
         ;(super(64, 32, 8, !1),
           (this.A = Oe[0] | 0),
@@ -228,16 +228,16 @@
       process(e, n) {
         for (let f = 0; f < 16; f++, n += 4) Re[f] = e.getUint32(n, !1)
         for (let f = 16; f < 64; f++) {
-          let p = Re[f - 15],
+          let h = Re[f - 15],
             y = Re[f - 2],
-            g = fe(p, 7) ^ fe(p, 18) ^ (p >>> 3),
+            g = fe(h, 7) ^ fe(h, 18) ^ (h >>> 3),
             d = fe(y, 17) ^ fe(y, 19) ^ (y >>> 10)
           Re[f] = (d + Re[f - 7] + g + Re[f - 16]) | 0
         }
         let { A: r, B: o, C: s, D: i, E: a, F: c, G: l, H: u } = this
         for (let f = 0; f < 64; f++) {
-          let p = fe(a, 6) ^ fe(a, 11) ^ fe(a, 25),
-            y = (u + p + si(a, c, l) + ai[f] + Re[f]) | 0,
+          let h = fe(a, 6) ^ fe(a, 11) ^ fe(a, 25),
+            y = (u + h + si(a, c, l) + ai[f] + Re[f]) | 0,
             d = ((fe(r, 2) ^ fe(r, 13) ^ fe(r, 22)) + ii(r, o, s)) | 0
           ;((u = l),
             (l = c),
@@ -265,36 +265,36 @@
         ;(this.set(0, 0, 0, 0, 0, 0, 0, 0), this.buffer.fill(0))
       }
     }
-  var Ct = Gr(() => new xn())
-  var An = {}
-  ti(An, {
+  var Ct = Gr(() => new vn())
+  var Sn = {}
+  ti(Sn, {
     bitGet: () => pi,
     bitLen: () => hi,
-    bitMask: () => yt,
+    bitMask: () => mt,
     bitSet: () => gi,
     bytesToHex: () => Ze,
     bytesToNumberBE: () => J,
     bytesToNumberLE: () => Nt,
     concatBytes: () => Ee,
-    createHmacDrbg: () => Tn,
+    createHmacDrbg: () => An,
     ensureBytes: () => K,
     equalBytes: () => fi,
     hexToBytes: () => Ge,
-    hexToNumber: () => En,
+    hexToNumber: () => Tn,
     numberToBytesBE: () => de,
-    numberToBytesLE: () => Ut,
+    numberToBytesLE: () => Ot,
     numberToHexUnpadded: () => Xr,
     numberToVarBytesBE: () => ui,
     utf8ToBytes: () => di,
     validateObject: () => Pe,
   })
   var Jr = BigInt(0),
-    kt = BigInt(1),
+    It = BigInt(1),
     ci = BigInt(2),
-    It = t => t instanceof Uint8Array,
+    Ut = t => t instanceof Uint8Array,
     li = Array.from({ length: 256 }, (t, e) => e.toString(16).padStart(2, '0'))
   function Ze(t) {
-    if (!It(t)) throw new Error('Uint8Array expected')
+    if (!Ut(t)) throw new Error('Uint8Array expected')
     let e = ''
     for (let n = 0; n < t.length; n++) e += li[t[n]]
     return e
@@ -303,7 +303,7 @@
     let e = t.toString(16)
     return e.length & 1 ? `0${e}` : e
   }
-  function En(t) {
+  function Tn(t) {
     if (typeof t != 'string') throw new Error('hex string expected, got ' + typeof t)
     return BigInt(t === '' ? '0' : `0x${t}`)
   }
@@ -322,16 +322,16 @@
     return n
   }
   function J(t) {
-    return En(Ze(t))
+    return Tn(Ze(t))
   }
   function Nt(t) {
-    if (!It(t)) throw new Error('Uint8Array expected')
-    return En(Ze(Uint8Array.from(t).reverse()))
+    if (!Ut(t)) throw new Error('Uint8Array expected')
+    return Tn(Ze(Uint8Array.from(t).reverse()))
   }
   function de(t, e) {
     return Ge(t.toString(16).padStart(e * 2, '0'))
   }
-  function Ut(t, e) {
+  function Ot(t, e) {
     return de(t, e).reverse()
   }
   function ui(t) {
@@ -345,7 +345,7 @@
       } catch (s) {
         throw new Error(`${t} must be valid hex string, got "${e}". Cause: ${s}`)
       }
-    else if (It(e)) r = Uint8Array.from(e)
+    else if (Ut(e)) r = Uint8Array.from(e)
     else throw new Error(`${t} must be hex string or Uint8Array`)
     let o = r.length
     if (typeof n == 'number' && o !== n) throw new Error(`${t} expected ${n} bytes, got ${o}`)
@@ -356,7 +356,7 @@
       n = 0
     return (
       t.forEach(r => {
-        if (!It(r)) throw new Error('Uint8Array expected')
+        if (!Ut(r)) throw new Error('Uint8Array expected')
         ;(e.set(r, n), (n += r.length))
       }),
       e
@@ -373,45 +373,45 @@
   }
   function hi(t) {
     let e
-    for (e = 0; t > Jr; t >>= kt, e += 1);
+    for (e = 0; t > Jr; t >>= It, e += 1);
     return e
   }
   function pi(t, e) {
-    return (t >> BigInt(e)) & kt
+    return (t >> BigInt(e)) & It
   }
-  var gi = (t, e, n) => t | ((n ? kt : Jr) << BigInt(e)),
-    yt = t => (ci << BigInt(t - 1)) - kt,
-    vn = t => new Uint8Array(t),
+  var gi = (t, e, n) => t | ((n ? It : Jr) << BigInt(e)),
+    mt = t => (ci << BigInt(t - 1)) - It,
+    En = t => new Uint8Array(t),
     Fr = t => Uint8Array.from(t)
-  function Tn(t, e, n) {
+  function An(t, e, n) {
     if (typeof t != 'number' || t < 2) throw new Error('hashLen must be a number')
     if (typeof e != 'number' || e < 2) throw new Error('qByteLen must be a number')
     if (typeof n != 'function') throw new Error('hmacFn must be a function')
-    let r = vn(t),
-      o = vn(t),
+    let r = En(t),
+      o = En(t),
       s = 0,
       i = () => {
         ;(r.fill(1), o.fill(0), (s = 0))
       },
       a = (...f) => n(o, r, ...f),
-      c = (f = vn()) => {
+      c = (f = En()) => {
         ;((o = a(Fr([0]), f)), (r = a()), f.length !== 0 && ((o = a(Fr([1]), f)), (r = a())))
       },
       l = () => {
         if (s++ >= 1e3) throw new Error('drbg: tried 1000 values')
         let f = 0,
-          p = []
+          h = []
         for (; f < e; ) {
           r = a()
           let y = r.slice()
-          ;(p.push(y), (f += r.length))
+          ;(h.push(y), (f += r.length))
         }
-        return Ee(...p)
+        return Ee(...h)
       }
-    return (f, p) => {
+    return (f, h) => {
       ;(i(), c(f))
       let y
-      for (; !(y = p(l())); ) c()
+      for (; !(y = h(l())); ) c()
       return (i(), y)
     }
   }
@@ -439,10 +439,10 @@
     return t
   }
   var G = BigInt(0),
-    W = BigInt(1),
+    z = BigInt(1),
     Fe = BigInt(2),
     mi = BigInt(3),
-    Sn = BigInt(4),
+    Ln = BigInt(4),
     Yr = BigInt(5),
     Qr = BigInt(8),
     wi = BigInt(9),
@@ -453,9 +453,9 @@
   }
   function xi(t, e, n) {
     if (n <= G || e < G) throw new Error('Expected power/modulo > 0')
-    if (n === W) return G
-    let r = W
-    for (; e > G; ) (e & W && (r = (r * t) % n), (t = (t * t) % n), (e >>= W))
+    if (n === z) return G
+    let r = z
+    for (; e > G; ) (e & z && (r = (r * t) % n), (t = (t * t) % n), (e >>= z))
     return r
   }
   function re(t, e, n) {
@@ -463,60 +463,60 @@
     for (; e-- > G; ) ((r *= r), (r %= n))
     return r
   }
-  function Ot(t, e) {
+  function Rt(t, e) {
     if (t === G || e <= G)
       throw new Error(`invert: expected positive integers, got n=${t} mod=${e}`)
     let n = Z(t, e),
       r = e,
       o = G,
-      s = W,
-      i = W,
+      s = z,
+      i = z,
       a = G
     for (; n !== G; ) {
       let l = r / n,
         u = r % n,
         f = o - i * l,
-        p = s - a * l
-      ;((r = n), (n = u), (o = i), (s = a), (i = f), (a = p))
+        h = s - a * l
+      ;((r = n), (n = u), (o = i), (s = a), (i = f), (a = h))
     }
-    if (r !== W) throw new Error('invert: does not exist')
+    if (r !== z) throw new Error('invert: does not exist')
     return Z(o, e)
   }
   function vi(t) {
-    let e = (t - W) / Fe,
+    let e = (t - z) / Fe,
       n,
       r,
       o
-    for (n = t - W, r = 0; n % Fe === G; n /= Fe, r++);
-    for (o = Fe; o < t && xi(o, e, t) !== t - W; o++);
+    for (n = t - z, r = 0; n % Fe === G; n /= Fe, r++);
+    for (o = Fe; o < t && xi(o, e, t) !== t - z; o++);
     if (r === 1) {
-      let i = (t + W) / Sn
+      let i = (t + z) / Ln
       return function (c, l) {
         let u = c.pow(l, i)
         if (!c.eql(c.sqr(u), l)) throw new Error('Cannot find square root')
         return u
       }
     }
-    let s = (n + W) / Fe
+    let s = (n + z) / Fe
     return function (a, c) {
       if (a.pow(c, e) === a.neg(a.ONE)) throw new Error('Cannot find square root')
       let l = r,
         u = a.pow(a.mul(a.ONE, o), n),
         f = a.pow(c, s),
-        p = a.pow(c, n)
-      for (; !a.eql(p, a.ONE); ) {
-        if (a.eql(p, a.ZERO)) return a.ZERO
+        h = a.pow(c, n)
+      for (; !a.eql(h, a.ONE); ) {
+        if (a.eql(h, a.ZERO)) return a.ZERO
         let y = 1
-        for (let d = a.sqr(p); y < l && !a.eql(d, a.ONE); y++) d = a.sqr(d)
-        let g = a.pow(u, W << BigInt(l - y - 1))
-        ;((u = a.sqr(g)), (f = a.mul(f, g)), (p = a.mul(p, u)), (l = y))
+        for (let d = a.sqr(h); y < l && !a.eql(d, a.ONE); y++) d = a.sqr(d)
+        let g = a.pow(u, z << BigInt(l - y - 1))
+        ;((u = a.sqr(g)), (f = a.mul(f, g)), (h = a.mul(h, u)), (l = y))
       }
       return f
     }
   }
   function Ei(t) {
-    if (t % Sn === mi) {
-      let e = (t + W) / Sn
+    if (t % Ln === mi) {
+      let e = (t + z) / Ln
       return function (r, o) {
         let s = r.pow(o, e)
         if (!r.eql(r.sqr(s), o)) throw new Error('Cannot find square root')
@@ -556,7 +556,7 @@
     'mulN',
     'sqrN',
   ]
-  function Ln(t) {
+  function Bn(t) {
     let e = { ORDER: 'bigint', MASK: 'bigint', BYTES: 'isSafeInteger', BITS: 'isSafeInteger' },
       n = Ti.reduce((r, o) => ((r[o] = 'function'), r), e)
     return Pe(t, n)
@@ -564,10 +564,10 @@
   function Ai(t, e, n) {
     if (n < G) throw new Error('Expected power > 0')
     if (n === G) return t.ONE
-    if (n === W) return e
+    if (n === z) return e
     let r = t.ONE,
       o = e
-    for (; n > G; ) (n & W && (r = t.mul(r, o)), (o = t.sqr(o)), (n >>= W))
+    for (; n > G; ) (n & z && (r = t.mul(r, o)), (o = t.sqr(o)), (n >>= z))
     return r
   }
   function Si(t, e) {
@@ -579,23 +579,23 @@
       n
     )
   }
-  function Bn(t, e) {
+  function _n(t, e) {
     let n = e !== void 0 ? e : t.toString(2).length,
       r = Math.ceil(n / 8)
     return { nBitLength: n, nByteLength: r }
   }
   function eo(t, e, n = !1, r = {}) {
     if (t <= G) throw new Error(`Expected Field ORDER > 0, got ${t}`)
-    let { nBitLength: o, nByteLength: s } = Bn(t, e)
+    let { nBitLength: o, nByteLength: s } = _n(t, e)
     if (s > 2048) throw new Error('Field lengths over 2048 bytes are not supported')
     let i = Ei(t),
       a = Object.freeze({
         ORDER: t,
         BITS: o,
         BYTES: s,
-        MASK: yt(o),
+        MASK: mt(o),
         ZERO: G,
-        ONE: W,
+        ONE: z,
         create: c => Z(c, t),
         isValid: c => {
           if (typeof c != 'bigint')
@@ -603,7 +603,7 @@
           return G <= c && c < t
         },
         is0: c => c === G,
-        isOdd: c => (c & W) === W,
+        isOdd: c => (c & z) === z,
         neg: c => Z(-c, t),
         eql: (c, l) => c === l,
         sqr: c => Z(c * c, t),
@@ -611,16 +611,16 @@
         sub: (c, l) => Z(c - l, t),
         mul: (c, l) => Z(c * l, t),
         pow: (c, l) => Ai(a, c, l),
-        div: (c, l) => Z(c * Ot(l, t), t),
+        div: (c, l) => Z(c * Rt(l, t), t),
         sqrN: c => c * c,
         addN: (c, l) => c + l,
         subN: (c, l) => c - l,
         mulN: (c, l) => c * l,
-        inv: c => Ot(c, t),
+        inv: c => Rt(c, t),
         sqrt: r.sqrt || (c => i(a, c)),
         invertBatch: c => Si(a, c),
         cmov: (c, l, u) => (u ? l : c),
-        toBytes: c => (n ? Ut(c, s) : de(c, s)),
+        toBytes: c => (n ? Ot(c, s) : de(c, s)),
         fromBytes: c => {
           if (c.length !== s) throw new Error(`Fp.fromBytes: expected ${s}, got ${c.length}`)
           return n ? Nt(c) : J(c)
@@ -633,18 +633,18 @@
     let e = t.toString(2).length
     return Math.ceil(e / 8)
   }
-  function _n(t) {
+  function kn(t) {
     let e = to(t)
     return e + Math.ceil(e / 2)
   }
   function no(t, e, n = !1) {
     let r = t.length,
       o = to(e),
-      s = _n(e)
+      s = kn(e)
     if (r < 16 || r < s || r > 1024) throw new Error(`expected ${s}-1024 bytes of input, got ${r}`)
     let i = n ? J(t) : Nt(t),
-      a = Z(i, e - W) + W
-    return n ? Ut(a, o) : de(a, o)
+      a = Z(i, e - z) + z
+    return n ? Ot(a, o) : de(a, o)
   }
   var Bi = BigInt(0),
     Cn = BigInt(1)
@@ -673,7 +673,7 @@
           u = l
         for (let f = 0; f < i; f++) {
           ;((u = l), c.push(u))
-          for (let p = 1; p < a; p++) ((u = u.add(l)), c.push(u))
+          for (let h = 1; h < a; h++) ((u = u.add(l)), c.push(u))
           l = u.double()
         }
         return c
@@ -683,17 +683,17 @@
           l = t.ZERO,
           u = t.BASE,
           f = BigInt(2 ** o - 1),
-          p = 2 ** o,
+          h = 2 ** o,
           y = BigInt(o)
         for (let g = 0; g < a; g++) {
           let d = g * c,
-            h = Number(i & f)
-          ;((i >>= y), h > c && ((h -= p), (i += Cn)))
+            p = Number(i & f)
+          ;((i >>= y), p > c && ((p -= h), (i += Cn)))
           let m = d,
-            w = d + Math.abs(h) - 1,
+            w = d + Math.abs(p) - 1,
             b = g % 2 !== 0,
-            v = h < 0
-          h === 0 ? (u = u.add(n(b, s[m]))) : (l = l.add(n(v, s[w])))
+            v = p < 0
+          p === 0 ? (u = u.add(n(b, s[m]))) : (l = l.add(n(v, s[w])))
         }
         return { p: l, f: u }
       },
@@ -707,19 +707,19 @@
       },
     }
   }
-  function kn(t) {
+  function In(t) {
     return (
-      Ln(t.Fp),
+      Bn(t.Fp),
       Pe(
         t,
         { n: 'bigint', h: 'bigint', Gx: 'field', Gy: 'field' },
         { nBitLength: 'isSafeInteger', nByteLength: 'isSafeInteger' }
       ),
-      Object.freeze({ ...Bn(t.n, t.nBitLength), ...t, p: t.Fp.ORDER })
+      Object.freeze({ ..._n(t.n, t.nBitLength), ...t, p: t.Fp.ORDER })
     )
   }
   function _i(t) {
-    let e = kn(t)
+    let e = In(t)
     Pe(
       e,
       { a: 'field', b: 'field' },
@@ -742,7 +742,7 @@
     }
     return Object.freeze({ ...e })
   }
-  var { bytesToNumberBE: Ci, hexToBytes: ki } = An,
+  var { bytesToNumberBE: ki, hexToBytes: Ci } = Sn,
     Je = {
       Err: class extends Error {
         constructor(e = '') {
@@ -758,11 +758,11 @@
         if (r[0] & 128) throw new e('Invalid signature integer: negative')
         if (r[0] === 0 && !(r[1] & 128))
           throw new e('Invalid signature integer: unnecessary leading zero')
-        return { d: Ci(r), l: t.subarray(n + 2) }
+        return { d: ki(r), l: t.subarray(n + 2) }
       },
       toSig(t) {
         let { Err: e } = Je,
-          n = typeof t == 'string' ? ki(t) : t
+          n = typeof t == 'string' ? Ci(t) : t
         if (!(n instanceof Uint8Array)) throw new Error('ui8a expected')
         let r = n.length
         if (r < 2 || n[0] != 48) throw new e('Invalid signature tag')
@@ -797,7 +797,7 @@
       { Fp: n } = e,
       r =
         e.toBytes ||
-        ((g, d, h) => {
+        ((g, d, p) => {
           let m = d.toAffine()
           return Ee(Uint8Array.from([4]), n.toBytes(m.x), n.toBytes(m.y))
         }),
@@ -805,15 +805,15 @@
         e.fromBytes ||
         (g => {
           let d = g.subarray(1),
-            h = n.fromBytes(d.subarray(0, n.BYTES)),
+            p = n.fromBytes(d.subarray(0, n.BYTES)),
             m = n.fromBytes(d.subarray(n.BYTES, 2 * n.BYTES))
-          return { x: h, y: m }
+          return { x: p, y: m }
         })
     function s(g) {
-      let { a: d, b: h } = e,
+      let { a: d, b: p } = e,
         m = n.sqr(g),
         w = n.mul(m, g)
-      return n.add(n.add(w, n.mul(g, d)), h)
+      return n.add(n.add(w, n.mul(g, d)), p)
     }
     if (!n.eql(n.sqr(e.Gy), s(e.Gx))) throw new Error('bad generator point: equation left != right')
     function i(g) {
@@ -823,17 +823,17 @@
       if (!i(g)) throw new Error('Expected valid bigint: 0 < bigint < curve.n')
     }
     function c(g) {
-      let { allowedPrivateKeyLengths: d, nByteLength: h, wrapPrivateKey: m, n: w } = e
+      let { allowedPrivateKeyLengths: d, nByteLength: p, wrapPrivateKey: m, n: w } = e
       if (d && typeof g != 'bigint') {
         if ((g instanceof Uint8Array && (g = Ze(g)), typeof g != 'string' || !d.includes(g.length)))
           throw new Error('Invalid key')
-        g = g.padStart(h * 2, '0')
+        g = g.padStart(p * 2, '0')
       }
       let b
       try {
-        b = typeof g == 'bigint' ? g : J(K('private key', g, h))
+        b = typeof g == 'bigint' ? g : J(K('private key', g, p))
       } catch {
-        throw new Error(`private key must be ${h} bytes, hex or bigint, not ${typeof g}`)
+        throw new Error(`private key must be ${p} bytes, hex or bigint, not ${typeof g}`)
       }
       return (m && (b = Z(b, w)), a(b), b)
     }
@@ -842,18 +842,18 @@
       if (!(g instanceof f)) throw new Error('ProjectivePoint expected')
     }
     class f {
-      constructor(d, h, m) {
-        if (((this.px = d), (this.py = h), (this.pz = m), d == null || !n.isValid(d)))
+      constructor(d, p, m) {
+        if (((this.px = d), (this.py = p), (this.pz = m), d == null || !n.isValid(d)))
           throw new Error('x required')
-        if (h == null || !n.isValid(h)) throw new Error('y required')
+        if (p == null || !n.isValid(p)) throw new Error('y required')
         if (m == null || !n.isValid(m)) throw new Error('z required')
       }
       static fromAffine(d) {
-        let { x: h, y: m } = d || {}
-        if (!d || !n.isValid(h) || !n.isValid(m)) throw new Error('invalid affine point')
+        let { x: p, y: m } = d || {}
+        if (!d || !n.isValid(p) || !n.isValid(m)) throw new Error('invalid affine point')
         if (d instanceof f) throw new Error('projective point not allowed')
         let w = b => n.eql(b, n.ZERO)
-        return w(h) && w(m) ? f.ZERO : new f(h, m, n.ONE)
+        return w(p) && w(m) ? f.ZERO : new f(p, m, n.ONE)
       }
       get x() {
         return this.toAffine().x
@@ -862,12 +862,12 @@
         return this.toAffine().y
       }
       static normalizeZ(d) {
-        let h = n.invertBatch(d.map(m => m.pz))
-        return d.map((m, w) => m.toAffine(h[w])).map(f.fromAffine)
+        let p = n.invertBatch(d.map(m => m.pz))
+        return d.map((m, w) => m.toAffine(p[w])).map(f.fromAffine)
       }
       static fromHex(d) {
-        let h = f.fromAffine(o(K('pointHex', d)))
-        return (h.assertValidity(), h)
+        let p = f.fromAffine(o(K('pointHex', d)))
+        return (p.assertValidity(), p)
       }
       static fromPrivateKey(d) {
         return f.BASE.multiply(c(d))
@@ -880,9 +880,9 @@
           if (e.allowInfinityPoint && !n.is0(this.py)) return
           throw new Error('bad point: ZERO')
         }
-        let { x: d, y: h } = this.toAffine()
-        if (!n.isValid(d) || !n.isValid(h)) throw new Error('bad point: x or y not FE')
-        let m = n.sqr(h),
+        let { x: d, y: p } = this.toAffine()
+        if (!n.isValid(d) || !n.isValid(p)) throw new Error('bad point: x or y not FE')
+        let m = n.sqr(p),
           w = s(d)
         if (!n.eql(m, w)) throw new Error('bad point: equation left != right')
         if (!this.isTorsionFree()) throw new Error('bad point: not in prime-order subgroup')
@@ -894,9 +894,9 @@
       }
       equals(d) {
         u(d)
-        let { px: h, py: m, pz: w } = this,
+        let { px: p, py: m, pz: w } = this,
           { px: b, py: v, pz: S } = d,
-          E = n.eql(n.mul(h, S), n.mul(b, w)),
+          E = n.eql(n.mul(p, S), n.mul(b, w)),
           L = n.eql(n.mul(m, S), n.mul(v, w))
         return E && L
       }
@@ -904,42 +904,42 @@
         return new f(this.px, n.neg(this.py), this.pz)
       }
       double() {
-        let { a: d, b: h } = e,
-          m = n.mul(h, oo),
+        let { a: d, b: p } = e,
+          m = n.mul(p, oo),
           { px: w, py: b, pz: v } = this,
           S = n.ZERO,
           E = n.ZERO,
           L = n.ZERO,
           B = n.mul(w, w),
-          U = n.mul(b, b),
+          N = n.mul(b, b),
           I = n.mul(v, v),
-          k = n.mul(w, b)
+          C = n.mul(w, b)
         return (
-          (k = n.add(k, k)),
+          (C = n.add(C, C)),
           (L = n.mul(w, v)),
           (L = n.add(L, L)),
           (S = n.mul(d, L)),
           (E = n.mul(m, I)),
           (E = n.add(S, E)),
-          (S = n.sub(U, E)),
-          (E = n.add(U, E)),
+          (S = n.sub(N, E)),
+          (E = n.add(N, E)),
           (E = n.mul(S, E)),
-          (S = n.mul(k, S)),
+          (S = n.mul(C, S)),
           (L = n.mul(m, L)),
           (I = n.mul(d, I)),
-          (k = n.sub(B, I)),
-          (k = n.mul(d, k)),
-          (k = n.add(k, L)),
+          (C = n.sub(B, I)),
+          (C = n.mul(d, C)),
+          (C = n.add(C, L)),
           (L = n.add(B, B)),
           (B = n.add(L, B)),
           (B = n.add(B, I)),
-          (B = n.mul(B, k)),
+          (B = n.mul(B, C)),
           (E = n.add(E, B)),
           (I = n.mul(b, v)),
           (I = n.add(I, I)),
-          (B = n.mul(I, k)),
+          (B = n.mul(I, C)),
           (S = n.sub(S, B)),
-          (L = n.mul(I, U)),
+          (L = n.mul(I, N)),
           (L = n.add(L, L)),
           (L = n.add(L, L)),
           new f(S, E, L)
@@ -947,51 +947,51 @@
       }
       add(d) {
         u(d)
-        let { px: h, py: m, pz: w } = this,
+        let { px: p, py: m, pz: w } = this,
           { px: b, py: v, pz: S } = d,
           E = n.ZERO,
           L = n.ZERO,
           B = n.ZERO,
-          U = e.a,
+          N = e.a,
           I = n.mul(e.b, oo),
-          k = n.mul(h, b),
+          C = n.mul(p, b),
           $ = n.mul(m, v),
           H = n.mul(w, S),
-          V = n.add(h, m),
+          V = n.add(p, m),
           x = n.add(b, v)
-        ;((V = n.mul(V, x)), (x = n.add(k, $)), (V = n.sub(V, x)), (x = n.add(h, w)))
+        ;((V = n.mul(V, x)), (x = n.add(C, $)), (V = n.sub(V, x)), (x = n.add(p, w)))
         let T = n.add(b, S)
         return (
           (x = n.mul(x, T)),
-          (T = n.add(k, H)),
+          (T = n.add(C, H)),
           (x = n.sub(x, T)),
           (T = n.add(m, w)),
           (E = n.add(v, S)),
           (T = n.mul(T, E)),
           (E = n.add($, H)),
           (T = n.sub(T, E)),
-          (B = n.mul(U, x)),
+          (B = n.mul(N, x)),
           (E = n.mul(I, H)),
           (B = n.add(E, B)),
           (E = n.sub($, B)),
           (B = n.add($, B)),
           (L = n.mul(E, B)),
-          ($ = n.add(k, k)),
-          ($ = n.add($, k)),
-          (H = n.mul(U, H)),
+          ($ = n.add(C, C)),
+          ($ = n.add($, C)),
+          (H = n.mul(N, H)),
           (x = n.mul(I, x)),
           ($ = n.add($, H)),
-          (H = n.sub(k, H)),
-          (H = n.mul(U, H)),
+          (H = n.sub(C, H)),
+          (H = n.mul(N, H)),
           (x = n.add(x, H)),
-          (k = n.mul($, x)),
-          (L = n.add(L, k)),
-          (k = n.mul(T, x)),
+          (C = n.mul($, x)),
+          (L = n.add(L, C)),
+          (C = n.mul(T, x)),
           (E = n.mul(V, E)),
-          (E = n.sub(E, k)),
-          (k = n.mul(V, $)),
+          (E = n.sub(E, C)),
+          (C = n.mul(V, $)),
           (B = n.mul(T, B)),
-          (B = n.add(B, k)),
+          (B = n.add(B, C)),
           new f(E, L, B)
         )
       }
@@ -1002,20 +1002,20 @@
         return this.equals(f.ZERO)
       }
       wNAF(d) {
-        return y.wNAFCached(this, l, d, h => {
-          let m = n.invertBatch(h.map(w => w.pz))
-          return h.map((w, b) => w.toAffine(m[b])).map(f.fromAffine)
+        return y.wNAFCached(this, l, d, p => {
+          let m = n.invertBatch(p.map(w => w.pz))
+          return p.map((w, b) => w.toAffine(m[b])).map(f.fromAffine)
         })
       }
       multiplyUnsafe(d) {
-        let h = f.ZERO
-        if (d === Te) return h
+        let p = f.ZERO
+        if (d === Te) return p
         if ((a(d), d === ie)) return this
         let { endo: m } = e
         if (!m) return y.unsafeLadder(this, d)
         let { k1neg: w, k1: b, k2neg: v, k2: S } = m.splitScalar(d),
-          E = h,
-          L = h,
+          E = p,
+          L = p,
           B = this
         for (; b > Te || S > Te; )
           (b & ie && (E = E.add(B)),
@@ -1032,37 +1032,37 @@
       }
       multiply(d) {
         a(d)
-        let h = d,
+        let p = d,
           m,
           w,
           { endo: b } = e
         if (b) {
-          let { k1neg: v, k1: S, k2neg: E, k2: L } = b.splitScalar(h),
-            { p: B, f: U } = this.wNAF(S),
-            { p: I, f: k } = this.wNAF(L)
+          let { k1neg: v, k1: S, k2neg: E, k2: L } = b.splitScalar(p),
+            { p: B, f: N } = this.wNAF(S),
+            { p: I, f: C } = this.wNAF(L)
           ;((B = y.constTimeNegate(v, B)),
             (I = y.constTimeNegate(E, I)),
             (I = new f(n.mul(I.px, b.beta), I.py, I.pz)),
             (m = B.add(I)),
-            (w = U.add(k)))
+            (w = N.add(C)))
         } else {
-          let { p: v, f: S } = this.wNAF(h)
+          let { p: v, f: S } = this.wNAF(p)
           ;((m = v), (w = S))
         }
         return f.normalizeZ([m, w])[0]
       }
-      multiplyAndAddUnsafe(d, h, m) {
+      multiplyAndAddUnsafe(d, p, m) {
         let w = f.BASE,
           b = (S, E) =>
             E === Te || E === ie || !S.equals(w) ? S.multiplyUnsafe(E) : S.multiply(E),
-          v = b(this, h).add(b(d, m))
+          v = b(this, p).add(b(d, m))
         return v.is0() ? void 0 : v
       }
       toAffine(d) {
-        let { px: h, py: m, pz: w } = this,
+        let { px: p, py: m, pz: w } = this,
           b = this.is0()
         d == null && (d = b ? n.ONE : n.inv(w))
-        let v = n.mul(h, d),
+        let v = n.mul(p, d),
           S = n.mul(m, d),
           E = n.mul(w, d)
         if (b) return { x: n.ZERO, y: n.ZERO }
@@ -1070,14 +1070,14 @@
         return { x: v, y: S }
       }
       isTorsionFree() {
-        let { h: d, isTorsionFree: h } = e
+        let { h: d, isTorsionFree: p } = e
         if (d === ie) return !0
-        if (h) return h(f, this)
+        if (p) return p(f, this)
         throw new Error('isTorsionFree() has not been declared for the elliptic curve')
       }
       clearCofactor() {
-        let { h: d, clearCofactor: h } = e
-        return d === ie ? this : h ? h(f, this) : this.multiplyUnsafe(e.h)
+        let { h: d, clearCofactor: p } = e
+        return d === ie ? this : p ? p(f, this) : this.multiplyUnsafe(e.h)
       }
       toRawBytes(d = !0) {
         return (this.assertValidity(), r(f, this, d))
@@ -1087,8 +1087,8 @@
       }
     }
     ;((f.BASE = new f(e.Gx, e.Gy, n.ONE)), (f.ZERO = new f(n.ZERO, n.ONE, n.ZERO)))
-    let p = e.nBitLength,
-      y = ro(f, e.endo ? Math.ceil(p / 2) : p)
+    let h = e.nBitLength,
+      y = ro(f, e.endo ? Math.ceil(h / 2) : h)
     return {
       CURVE: e,
       ProjectivePoint: f,
@@ -1097,8 +1097,8 @@
       isWithinCurveOrder: i,
     }
   }
-  function Ni(t) {
-    let e = kn(t)
+  function Ui(t) {
+    let e = In(t)
     return (
       Pe(
         e,
@@ -1109,7 +1109,7 @@
     )
   }
   function so(t) {
-    let e = Ni(t),
+    let e = Ui(t),
       { Fp: n, n: r } = e,
       o = n.BYTES + 1,
       s = 2 * n.BYTES + 1
@@ -1120,37 +1120,37 @@
       return Z(x, r)
     }
     function c(x) {
-      return Ot(x, r)
+      return Rt(x, r)
     }
     let {
         ProjectivePoint: l,
         normPrivateKeyToScalar: u,
         weierstrassEquation: f,
-        isWithinCurveOrder: p,
+        isWithinCurveOrder: h,
       } = Ii({
         ...e,
-        toBytes(x, T, C) {
-          let N = T.toAffine(),
-            A = n.toBytes(N.x),
+        toBytes(x, T, k) {
+          let U = T.toAffine(),
+            A = n.toBytes(U.x),
             O = Ee
-          return C
+          return k
             ? O(Uint8Array.from([T.hasEvenY() ? 2 : 3]), A)
-            : O(Uint8Array.from([4]), A, n.toBytes(N.y))
+            : O(Uint8Array.from([4]), A, n.toBytes(U.y))
         },
         fromBytes(x) {
           let T = x.length,
-            C = x[0],
-            N = x.subarray(1)
-          if (T === o && (C === 2 || C === 3)) {
-            let A = J(N)
+            k = x[0],
+            U = x.subarray(1)
+          if (T === o && (k === 2 || k === 3)) {
+            let A = J(U)
             if (!i(A)) throw new Error('Point is not on curve')
             let O = f(A),
               q = n.sqrt(O),
               M = (q & ie) === ie
-            return (((C & 1) === 1) !== M && (q = n.neg(q)), { x: A, y: q })
-          } else if (T === s && C === 4) {
-            let A = n.fromBytes(N.subarray(0, n.BYTES)),
-              O = n.fromBytes(N.subarray(n.BYTES, 2 * n.BYTES))
+            return (((k & 1) === 1) !== M && (q = n.neg(q)), { x: A, y: q })
+          } else if (T === s && k === 4) {
+            let A = n.fromBytes(U.subarray(0, n.BYTES)),
+              O = n.fromBytes(U.subarray(n.BYTES, 2 * n.BYTES))
             return { x: A, y: O }
           } else
             throw new Error(
@@ -1166,37 +1166,37 @@
     function d(x) {
       return g(x) ? a(-x) : x
     }
-    let h = (x, T, C) => J(x.slice(T, C))
+    let p = (x, T, k) => J(x.slice(T, k))
     class m {
-      constructor(T, C, N) {
-        ;((this.r = T), (this.s = C), (this.recovery = N), this.assertValidity())
+      constructor(T, k, U) {
+        ;((this.r = T), (this.s = k), (this.recovery = U), this.assertValidity())
       }
       static fromCompact(T) {
-        let C = e.nByteLength
-        return ((T = K('compactSignature', T, C * 2)), new m(h(T, 0, C), h(T, C, 2 * C)))
+        let k = e.nByteLength
+        return ((T = K('compactSignature', T, k * 2)), new m(p(T, 0, k), p(T, k, 2 * k)))
       }
       static fromDER(T) {
-        let { r: C, s: N } = Je.toSig(K('DER', T))
-        return new m(C, N)
+        let { r: k, s: U } = Je.toSig(K('DER', T))
+        return new m(k, U)
       }
       assertValidity() {
-        if (!p(this.r)) throw new Error('r must be 0 < r < CURVE.n')
-        if (!p(this.s)) throw new Error('s must be 0 < s < CURVE.n')
+        if (!h(this.r)) throw new Error('r must be 0 < r < CURVE.n')
+        if (!h(this.s)) throw new Error('s must be 0 < s < CURVE.n')
       }
       addRecoveryBit(T) {
         return new m(this.r, this.s, T)
       }
       recoverPublicKey(T) {
-        let { r: C, s: N, recovery: A } = this,
+        let { r: k, s: U, recovery: A } = this,
           O = L(K('msgHash', T))
         if (A == null || ![0, 1, 2, 3].includes(A)) throw new Error('recovery id invalid')
-        let q = A === 2 || A === 3 ? C + e.n : C
+        let q = A === 2 || A === 3 ? k + e.n : k
         if (q >= n.ORDER) throw new Error('recovery id 2 or 3 invalid')
         let M = (A & 1) === 0 ? '02' : '03',
           F = l.fromHex(M + y(q)),
           Y = c(q),
           ne = a(-O * Y),
-          se = a(N * Y),
+          se = a(U * Y),
           Q = l.BASE.multiplyAndAddUnsafe(F, ne, se)
         if (!Q) throw new Error('point at infinify')
         return (Q.assertValidity(), Q)
@@ -1230,7 +1230,7 @@
       },
       normPrivateKeyToScalar: u,
       randomPrivateKey: () => {
-        let x = _n(e.n)
+        let x = kn(e.n)
         return no(e.randomBytes(x), e.n)
       },
       precompute(x = 8, T = l.BASE) {
@@ -1242,42 +1242,42 @@
     }
     function v(x) {
       let T = x instanceof Uint8Array,
-        C = typeof x == 'string',
-        N = (T || C) && x.length
-      return T ? N === o || N === s : C ? N === 2 * o || N === 2 * s : x instanceof l
+        k = typeof x == 'string',
+        U = (T || k) && x.length
+      return T ? U === o || U === s : k ? U === 2 * o || U === 2 * s : x instanceof l
     }
-    function S(x, T, C = !0) {
+    function S(x, T, k = !0) {
       if (v(x)) throw new Error('first arg must be private key')
       if (!v(T)) throw new Error('second arg must be public key')
-      return l.fromHex(T).multiply(u(x)).toRawBytes(C)
+      return l.fromHex(T).multiply(u(x)).toRawBytes(k)
     }
     let E =
         e.bits2int ||
         function (x) {
           let T = J(x),
-            C = x.length * 8 - e.nBitLength
-          return C > 0 ? T >> BigInt(C) : T
+            k = x.length * 8 - e.nBitLength
+          return k > 0 ? T >> BigInt(k) : T
         },
       L =
         e.bits2int_modN ||
         function (x) {
           return a(E(x))
         },
-      B = yt(e.nBitLength)
-    function U(x) {
+      B = mt(e.nBitLength)
+    function N(x) {
       if (typeof x != 'bigint') throw new Error('bigint expected')
       if (!(Te <= x && x < B)) throw new Error(`bigint expected < 2^${e.nBitLength}`)
       return de(x, e.nByteLength)
     }
-    function I(x, T, C = k) {
-      if (['recovered', 'canonical'].some(te => te in C))
+    function I(x, T, k = C) {
+      if (['recovered', 'canonical'].some(te => te in k))
         throw new Error('sign() legacy options not supported')
-      let { hash: N, randomBytes: A } = e,
-        { lowS: O, prehash: q, extraEntropy: M } = C
-      ;(O == null && (O = !0), (x = K('msgHash', x)), q && (x = K('prehashed msgHash', N(x))))
+      let { hash: U, randomBytes: A } = e,
+        { lowS: O, prehash: q, extraEntropy: M } = k
+      ;(O == null && (O = !0), (x = K('msgHash', x)), q && (x = K('prehashed msgHash', U(x))))
       let F = L(x),
         Y = u(T),
-        ne = [U(Y), U(F)]
+        ne = [N(Y), N(F)]
       if (M != null) {
         let te = M === !0 ? A(n.BYTES) : M
         ne.push(K('extraEntropy', te))
@@ -1286,32 +1286,32 @@
         Q = F
       function ge(te) {
         let nt = E(te)
-        if (!p(nt)) return
+        if (!h(nt)) return
         let $r = c(nt),
           ye = l.BASE.multiply(nt).toAffine(),
           rt = a(ye.x)
         if (rt === Te) return
-        let At = a($r * a(Q + rt * Y))
-        if (At === Te) return
+        let St = a($r * a(Q + rt * Y))
+        if (St === Te) return
         let Hr = (ye.x === rt ? 0 : 2) | Number(ye.y & ie),
-          Mr = At
-        return (O && g(At) && ((Mr = d(At)), (Hr ^= 1)), new m(rt, Mr, Hr))
+          Mr = St
+        return (O && g(St) && ((Mr = d(St)), (Hr ^= 1)), new m(rt, Mr, Hr))
       }
       return { seed: se, k2sig: ge }
     }
-    let k = { lowS: e.lowS, prehash: !1 },
+    let C = { lowS: e.lowS, prehash: !1 },
       $ = { lowS: e.lowS, prehash: !1 }
-    function H(x, T, C = k) {
-      let { seed: N, k2sig: A } = I(x, T, C),
+    function H(x, T, k = C) {
+      let { seed: U, k2sig: A } = I(x, T, k),
         O = e
-      return Tn(O.hash.outputLen, O.nByteLength, O.hmac)(N, A)
+      return An(O.hash.outputLen, O.nByteLength, O.hmac)(U, A)
     }
     l.BASE._setWindowSize(8)
-    function V(x, T, C, N = $) {
+    function V(x, T, k, U = $) {
       let A = x
-      if (((T = K('msgHash', T)), (C = K('publicKey', C)), 'strict' in N))
+      if (((T = K('msgHash', T)), (k = K('publicKey', k)), 'strict' in U))
         throw new Error('options.strict was renamed to lowS')
-      let { lowS: O, prehash: q } = N,
+      let { lowS: O, prehash: q } = U,
         M,
         F
       try {
@@ -1326,7 +1326,7 @@
           let { r: ye, s: rt } = A
           M = new m(ye, rt)
         } else throw new Error('PARSE')
-        F = l.fromHex(C)
+        F = l.fromHex(k)
       } catch (ye) {
         if (ye.message === 'PARSE')
           throw new Error('signature must be Signature instance, Uint8Array or hex string')
@@ -1353,10 +1353,10 @@
       utils: w,
     }
   }
-  var Rt = class extends st {
+  var Pt = class extends st {
       constructor(e, n) {
-        ;(super(), (this.finished = !1), (this.destroyed = !1), Wr(e))
-        let r = gt(n)
+        ;(super(), (this.finished = !1), (this.destroyed = !1), zr(e))
+        let r = yt(n)
         if (((this.iHash = e.create()), typeof this.iHash.update != 'function'))
           throw new Error('Expected instance of class which extends utils.Hash')
         ;((this.blockLen = this.iHash.blockLen), (this.outputLen = this.iHash.outputLen))
@@ -1373,7 +1373,7 @@
       }
       digestInto(e) {
         ;(ot(this),
-          bn(e, this.outputLen),
+          xn(e, this.outputLen),
           (this.finished = !0),
           this.iHash.digestInto(e),
           this.oHash.update(e),
@@ -1402,22 +1402,22 @@
         ;((this.destroyed = !0), this.oHash.destroy(), this.iHash.destroy())
       }
     },
-    In = (t, e, n) => new Rt(t, e).update(n).digest()
-  In.create = (t, e) => new Rt(t, e)
-  function Ui(t) {
-    return { hash: t, hmac: (e, ...n) => In(t, e, Zr(...n)), randomBytes: Bt }
+    Un = (t, e, n) => new Pt(t, e).update(n).digest()
+  Un.create = (t, e) => new Pt(t, e)
+  function Ni(t) {
+    return { hash: t, hmac: (e, ...n) => Un(t, e, Zr(...n)), randomBytes: _t }
   }
   function io(t, e) {
-    let n = r => so({ ...t, ...Ui(r) })
+    let n = r => so({ ...t, ...Ni(r) })
     return Object.freeze({ ...n(e), create: n })
   }
-  var Mt = BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f'),
-    Pt = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
+  var qt = BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f'),
+    $t = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
     lo = BigInt(1),
-    $t = BigInt(2),
-    ao = (t, e) => (t + e / $t) / e
+    Ht = BigInt(2),
+    ao = (t, e) => (t + e / Ht) / e
   function uo(t) {
-    let e = Mt,
+    let e = qt,
       n = BigInt(3),
       r = BigInt(6),
       o = BigInt(11),
@@ -1428,27 +1428,27 @@
       l = (t * t * t) % e,
       u = (l * l * t) % e,
       f = (re(u, n, e) * u) % e,
-      p = (re(f, n, e) * u) % e,
-      y = (re(p, $t, e) * l) % e,
+      h = (re(f, n, e) * u) % e,
+      y = (re(h, Ht, e) * l) % e,
       g = (re(y, o, e) * y) % e,
       d = (re(g, s, e) * g) % e,
-      h = (re(d, a, e) * d) % e,
-      m = (re(h, c, e) * h) % e,
+      p = (re(d, a, e) * d) % e,
+      m = (re(p, c, e) * p) % e,
       w = (re(m, a, e) * d) % e,
       b = (re(w, n, e) * u) % e,
       v = (re(b, i, e) * g) % e,
       S = (re(v, r, e) * l) % e,
-      E = re(S, $t, e)
-    if (!Un.eql(Un.sqr(E), t)) throw new Error('Cannot find square root')
+      E = re(S, Ht, e)
+    if (!On.eql(On.sqr(E), t)) throw new Error('Cannot find square root')
     return E
   }
-  var Un = eo(Mt, void 0, void 0, { sqrt: uo }),
+  var On = eo(qt, void 0, void 0, { sqrt: uo }),
     $e = io(
       {
         a: BigInt(0),
         b: BigInt(7),
-        Fp: Un,
-        n: Pt,
+        Fp: On,
+        n: $t,
         Gx: BigInt('55066263022277343669578718895168534326250603453777594175500187360389116729240'),
         Gy: BigInt('32670510020758816978083085130507043184471273380659243275938904335757337482424'),
         h: BigInt(1),
@@ -1456,7 +1456,7 @@
         endo: {
           beta: BigInt('0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee'),
           splitScalar: t => {
-            let e = Pt,
+            let e = $t,
               n = BigInt('0x3086d221a7d46bcde86c90e49284eb15'),
               r = -lo * BigInt('0xe4437ed6010e88286f547fa90abfe4c3'),
               o = BigInt('0x114ca50f7a8e2f3f657c1108d9d44cfd8'),
@@ -1467,20 +1467,20 @@
               l = Z(t - a * n - c * o, e),
               u = Z(-a * r - c * s, e),
               f = l > i,
-              p = u > i
-            if ((f && (l = e - l), p && (u = e - u), l > i || u > i))
+              h = u > i
+            if ((f && (l = e - l), h && (u = e - u), l > i || u > i))
               throw new Error('splitScalar: Endomorphism failed, k=' + t)
-            return { k1neg: f, k1: l, k2neg: p, k2: u }
+            return { k1neg: f, k1: l, k2neg: h, k2: u }
           },
         },
       },
       Ct
     ),
-    qt = BigInt(0),
-    fo = t => typeof t == 'bigint' && qt < t && t < Mt,
-    Oi = t => typeof t == 'bigint' && qt < t && t < Pt,
+    Vt = BigInt(0),
+    fo = t => typeof t == 'bigint' && Vt < t && t < qt,
+    Oi = t => typeof t == 'bigint' && Vt < t && t < $t,
     co = {}
-  function Ht(t, ...e) {
+  function Mt(t, ...e) {
     let n = co[t]
     if (n === void 0) {
       let r = Ct(Uint8Array.from(t, o => o.charCodeAt(0)))
@@ -1488,44 +1488,44 @@
     }
     return Ct(Ee(n, ...e))
   }
-  var Pn = t => t.toRawBytes(!0).slice(1),
-    On = t => de(t, 32),
-    Nn = t => Z(t, Mt),
-    mt = t => Z(t, Pt),
-    $n = $e.ProjectivePoint,
-    Ri = (t, e, n) => $n.BASE.multiplyAndAddUnsafe(t, e, n)
-  function Rn(t) {
+  var $n = t => t.toRawBytes(!0).slice(1),
+    Rn = t => de(t, 32),
+    Nn = t => Z(t, qt),
+    wt = t => Z(t, $t),
+    Hn = $e.ProjectivePoint,
+    Ri = (t, e, n) => Hn.BASE.multiplyAndAddUnsafe(t, e, n)
+  function Pn(t) {
     let e = $e.utils.normPrivateKeyToScalar(t),
-      n = $n.fromPrivateKey(e)
-    return { scalar: n.hasEvenY() ? e : mt(-e), bytes: Pn(n) }
+      n = Hn.fromPrivateKey(e)
+    return { scalar: n.hasEvenY() ? e : wt(-e), bytes: $n(n) }
   }
   function ho(t) {
     if (!fo(t)) throw new Error('bad x: need 0 < x < p')
     let e = Nn(t * t),
       n = Nn(e * t + BigInt(7)),
       r = uo(n)
-    r % $t !== qt && (r = Nn(-r))
-    let o = new $n(t, r, lo)
+    r % Ht !== Vt && (r = Nn(-r))
+    let o = new Hn(t, r, lo)
     return (o.assertValidity(), o)
   }
   function po(...t) {
-    return mt(J(Ht('BIP0340/challenge', ...t)))
+    return wt(J(Mt('BIP0340/challenge', ...t)))
   }
   function Pi(t) {
-    return Rn(t).bytes
+    return Pn(t).bytes
   }
-  function $i(t, e, n = Bt(32)) {
+  function $i(t, e, n = _t(32)) {
     let r = K('message', t),
-      { bytes: o, scalar: s } = Rn(e),
+      { bytes: o, scalar: s } = Pn(e),
       i = K('auxRand', n, 32),
-      a = On(s ^ J(Ht('BIP0340/aux', i))),
-      c = Ht('BIP0340/nonce', a, o, r),
-      l = mt(J(c))
-    if (l === qt) throw new Error('sign failed: k is zero')
-    let { bytes: u, scalar: f } = Rn(l),
-      p = po(u, o, r),
+      a = Rn(s ^ J(Mt('BIP0340/aux', i))),
+      c = Mt('BIP0340/nonce', a, o, r),
+      l = wt(J(c))
+    if (l === Vt) throw new Error('sign failed: k is zero')
+    let { bytes: u, scalar: f } = Pn(l),
+      h = po(u, o, r),
       y = new Uint8Array(64)
-    if ((y.set(u, 0), y.set(On(mt(f + p * s)), 32), !go(y, r, o)))
+    if ((y.set(u, 0), y.set(Rn(wt(f + h * s)), 32), !go(y, r, o)))
       throw new Error('sign: Invalid signature produced')
     return y
   }
@@ -1539,8 +1539,8 @@
       if (!fo(a)) return !1
       let c = J(r.subarray(32, 64))
       if (!Oi(c)) return !1
-      let l = po(On(a), Pn(i), o),
-        u = Ri(i, c, mt(-l))
+      let l = po(Rn(a), $n(i), o),
+        u = Ri(i, c, wt(-l))
       return !(!u || !u.hasEvenY() || u.toAffine().x !== a)
     } catch {
       return !1
@@ -1553,22 +1553,22 @@
     utils: {
       randomPrivateKey: $e.utils.randomPrivateKey,
       lift_x: ho,
-      pointToBytes: Pn,
+      pointToBytes: $n,
       numberToBytesBE: de,
       bytesToNumberBE: J,
-      taggedHash: Ht,
+      taggedHash: Mt,
       mod: Z,
     },
   }
-  var Vt = typeof globalThis == 'object' && 'crypto' in globalThis ? globalThis.crypto : void 0
-  var Hn = t => t instanceof Uint8Array
-  var Dt = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
+  var Dt = typeof globalThis == 'object' && 'crypto' in globalThis ? globalThis.crypto : void 0
+  var Mn = t => t instanceof Uint8Array
+  var Wt = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
     he = (t, e) => (t << (32 - e)) | (t >>> e),
     Hi = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68
   if (!Hi) throw new Error('Non little-endian hardware is not supported')
   var Mi = Array.from({ length: 256 }, (t, e) => e.toString(16).padStart(2, '0'))
   function j(t) {
-    if (!Hn(t)) throw new Error('Uint8Array expected')
+    if (!Mn(t)) throw new Error('Uint8Array expected')
     let e = ''
     for (let n = 0; n < t.length; n++) e += Mi[t[n]]
     return e
@@ -1592,7 +1592,7 @@
     return new Uint8Array(new TextEncoder().encode(t))
   }
   function He(t) {
-    if ((typeof t == 'string' && (t = qi(t)), !Hn(t)))
+    if ((typeof t == 'string' && (t = qi(t)), !Mn(t)))
       throw new Error(`expected Uint8Array, got ${typeof t}`)
     return t
   }
@@ -1601,7 +1601,7 @@
       n = 0
     return (
       t.forEach(r => {
-        if (!Hn(r)) throw new Error('Uint8Array expected')
+        if (!Mn(r)) throw new Error('Uint8Array expected')
         ;(e.set(r, n), (n += r.length))
       }),
       e
@@ -1612,16 +1612,16 @@
       return this._cloneInto()
     }
   }
-  function Mn(t) {
+  function qn(t) {
     let e = r => t().update(He(r)).digest(),
       n = t()
     return ((e.outputLen = n.outputLen), (e.blockLen = n.blockLen), (e.create = () => t()), e)
   }
   function zt(t = 32) {
-    if (Vt && typeof Vt.getRandomValues == 'function') return Vt.getRandomValues(new Uint8Array(t))
+    if (Dt && typeof Dt.getRandomValues == 'function') return Dt.getRandomValues(new Uint8Array(t))
     throw new Error('crypto.getRandomValues must be defined')
   }
-  function qn(t) {
+  function Vn(t) {
     if (!Number.isSafeInteger(t) || t < 0) throw new Error(`Wrong positive integer: ${t}`)
   }
   function Vi(t) {
@@ -1635,18 +1635,18 @@
   function Di(t) {
     if (typeof t != 'function' || typeof t.create != 'function')
       throw new Error('Hash should be wrapped by utils.wrapConstructor')
-    ;(qn(t.outputLen), qn(t.blockLen))
+    ;(Vn(t.outputLen), Vn(t.blockLen))
   }
-  function zi(t, e = !0) {
+  function Wi(t, e = !0) {
     if (t.destroyed) throw new Error('Hash instance has been destroyed')
     if (e && t.finished) throw new Error('Hash#digest() has already been called')
   }
-  function Wi(t, e) {
+  function zi(t, e) {
     yo(t)
     let n = e.outputLen
     if (t.length < n) throw new Error(`digestInto() expects output buffer of length at least ${n}`)
   }
-  var ji = { number: qn, bool: Vi, bytes: yo, hash: Di, exists: zi, output: Wi },
+  var ji = { number: Vn, bool: Vi, bytes: yo, hash: Di, exists: Wi, output: zi },
     oe = ji
   function Ki(t, e, n, r) {
     if (typeof t.setBigUint64 == 'function') return t.setBigUint64(e, n, r)
@@ -1658,7 +1658,7 @@
       l = r ? 0 : 4
     ;(t.setUint32(e + c, i, r), t.setUint32(e + l, a, r))
   }
-  var Wt = class extends at {
+  var jt = class extends at {
     constructor(e, n, r, o) {
       ;(super(),
         (this.blockLen = e),
@@ -1670,7 +1670,7 @@
         (this.pos = 0),
         (this.destroyed = !1),
         (this.buffer = new Uint8Array(e)),
-        (this.view = Dt(this.buffer)))
+        (this.view = Wt(this.buffer)))
     }
     update(e) {
       oe.exists(this)
@@ -1680,7 +1680,7 @@
       for (let i = 0; i < s; ) {
         let a = Math.min(o - this.pos, s - i)
         if (a === o) {
-          let c = Dt(e)
+          let c = Wt(e)
           for (; o <= s - i; i += o) this.process(c, i)
           continue
         }
@@ -1700,7 +1700,7 @@
         this.padOffset > o - i && (this.process(r, 0), (i = 0)))
       for (let f = i; f < o; f++) n[f] = 0
       ;(Ki(r, o - 8, BigInt(this.length * 8), s), this.process(r, 0))
-      let a = Dt(e),
+      let a = Wt(e),
         c = this.outputLen
       if (c % 4) throw new Error('_sha2: outputLen should be aligned to 32bit')
       let l = c / 4,
@@ -1744,7 +1744,7 @@
       1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225,
     ]),
     qe = new Uint32Array(64),
-    jt = class extends Wt {
+    Kt = class extends jt {
       constructor() {
         ;(super(64, 32, 8, !1),
           (this.A = Me[0] | 0),
@@ -1773,16 +1773,16 @@
       process(e, n) {
         for (let f = 0; f < 16; f++, n += 4) qe[f] = e.getUint32(n, !1)
         for (let f = 16; f < 64; f++) {
-          let p = qe[f - 15],
+          let h = qe[f - 15],
             y = qe[f - 2],
-            g = he(p, 7) ^ he(p, 18) ^ (p >>> 3),
+            g = he(h, 7) ^ he(h, 18) ^ (h >>> 3),
             d = he(y, 17) ^ he(y, 19) ^ (y >>> 10)
           qe[f] = (d + qe[f - 7] + g + qe[f - 16]) | 0
         }
         let { A: r, B: o, C: s, D: i, E: a, F: c, G: l, H: u } = this
         for (let f = 0; f < 64; f++) {
-          let p = he(a, 6) ^ he(a, 11) ^ he(a, 25),
-            y = (u + p + Zi(a, c, l) + Fi[f] + qe[f]) | 0,
+          let h = he(a, 6) ^ he(a, 11) ^ he(a, 25),
+            y = (u + h + Zi(a, c, l) + Fi[f] + qe[f]) | 0,
             d = ((he(r, 2) ^ he(r, 13) ^ he(r, 22)) + Gi(r, o, s)) | 0
           ;((u = l),
             (l = c),
@@ -1810,7 +1810,7 @@
         ;(this.set(0, 0, 0, 0, 0, 0, 0, 0), this.buffer.fill(0))
       }
     },
-    Vn = class extends jt {
+    Dn = class extends Kt {
       constructor() {
         ;(super(),
           (this.A = -1056596264),
@@ -1824,8 +1824,8 @@
           (this.outputLen = 28))
       }
     },
-    ae = Mn(() => new jt()),
-    Cf = Mn(() => new Vn())
+    ae = qn(() => new Kt()),
+    kf = qn(() => new Dn())
   function lt(t) {
     if (!Number.isSafeInteger(t)) throw new Error(`Wrong integer: ${t}`)
   }
@@ -1876,7 +1876,7 @@
       },
     }
   }
-  function Zt(t, e = '=') {
+  function Gt(t, e = '=') {
     if ((lt(t), typeof e != 'string')) throw new Error('padding chr should be string')
     return {
       encode(n) {
@@ -1941,13 +1941,13 @@
     return o.reverse()
   }
   var To = (t, e) => (e ? To(e, t % e) : t),
-    Kt = (t, e) => t + (e - To(t, e))
-  function Dn(t, e, n, r) {
+    Zt = (t, e) => t + (e - To(t, e))
+  function Wn(t, e, n, r) {
     if (!Array.isArray(t)) throw new Error('convertRadix2: data should be array')
     if (e <= 0 || e > 32) throw new Error(`convertRadix2: wrong from=${e}`)
     if (n <= 0 || n > 32) throw new Error(`convertRadix2: wrong to=${n}`)
-    if (Kt(e, n) > 32)
-      throw new Error(`convertRadix2: carry overflow from=${e} to=${n} carryBits=${Kt(e, n)}`)
+    if (Zt(e, n) > 32)
+      throw new Error(`convertRadix2: carry overflow from=${e} to=${n} carryBits=${Zt(e, n)}`)
     let o = 0,
       s = 0,
       i = 2 ** n - 1,
@@ -1981,16 +1981,16 @@
   }
   function Ve(t, e = !1) {
     if ((lt(t), t <= 0 || t > 32)) throw new Error('radix2: bits should be in (0..32]')
-    if (Kt(8, t) > 32 || Kt(t, 8) > 32) throw new Error('radix2: carry overflow')
+    if (Zt(8, t) > 32 || Zt(t, 8) > 32) throw new Error('radix2: carry overflow')
     return {
       encode: n => {
         if (!(n instanceof Uint8Array)) throw new Error('radix2.encode input should be Uint8Array')
-        return Dn(Array.from(n), 8, t, !e)
+        return Wn(Array.from(n), 8, t, !e)
       },
       decode: n => {
         if (!Array.isArray(n) || (n.length && typeof n[0] != 'number'))
           throw new Error('radix2.decode input should be array of strings')
-        return Uint8Array.from(Dn(n, t, 8, e))
+        return Uint8Array.from(Wn(n, t, 8, e))
       },
     }
   }
@@ -2003,9 +2003,9 @@
     }
   }
   var Xi = Se(Ve(4), Le('0123456789ABCDEF'), Be('')),
-    Yi = Se(Ve(5), Le('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), Zt(5), Be('')),
-    If = Se(Ve(5), Le('0123456789ABCDEFGHIJKLMNOPQRSTUV'), Zt(5), Be('')),
-    Nf = Se(
+    Yi = Se(Ve(5), Le('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), Gt(5), Be('')),
+    If = Se(Ve(5), Le('0123456789ABCDEFGHIJKLMNOPQRSTUV'), Gt(5), Be('')),
+    Uf = Se(
       Ve(5),
       Le('0123456789ABCDEFGHJKMNPQRSTVWXYZ'),
       Be(''),
@@ -2014,19 +2014,19 @@
     ce = Se(
       Ve(6),
       Le('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'),
-      Zt(6),
+      Gt(6),
       Be('')
     ),
     Qi = Se(
       Ve(6),
       Le('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'),
-      Zt(6),
+      Gt(6),
       Be('')
     ),
-    jn = t => Se(Ji(58), Le(t), Be('')),
-    zn = jn('123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'),
-    Uf = jn('123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'),
-    Of = jn('rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz'),
+    Kn = t => Se(Ji(58), Le(t), Be('')),
+    zn = Kn('123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'),
+    Nf = Kn('123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'),
+    Of = Kn('rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz'),
     bo = [0, 2, 3, 5, 6, 7, 9, 10, 11],
     ea = {
       encode(t) {
@@ -2050,9 +2050,9 @@
         return Uint8Array.from(e)
       },
     }
-  var Wn = Se(Le('qpzry9x8gf2tvdw0s3jn54khce6mua7l'), Be('')),
+  var jn = Se(Le('qpzry9x8gf2tvdw0s3jn54khce6mua7l'), Be('')),
     xo = [996825010, 642813549, 513874426, 1027748829, 705979059]
-  function wt(t) {
+  function bt(t) {
     let e = t >> 25,
       n = (t & 33554431) << 5
     for (let r = 0; r < xo.length; r++) ((e >> r) & 1) === 1 && (n ^= xo[r])
@@ -2064,13 +2064,13 @@
     for (let s = 0; s < r; s++) {
       let i = t.charCodeAt(s)
       if (i < 33 || i > 126) throw new Error(`Invalid prefix (${t})`)
-      o = wt(o) ^ (i >> 5)
+      o = bt(o) ^ (i >> 5)
     }
-    o = wt(o)
-    for (let s = 0; s < r; s++) o = wt(o) ^ (t.charCodeAt(s) & 31)
-    for (let s of e) o = wt(o) ^ s
-    for (let s = 0; s < 6; s++) o = wt(o)
-    return ((o ^= n), Wn.encode(Dn([o % 2 ** 30], 30, 5, !1)))
+    o = bt(o)
+    for (let s = 0; s < r; s++) o = bt(o) ^ (t.charCodeAt(s) & 31)
+    for (let s of e) o = bt(o) ^ s
+    for (let s = 0; s < 6; s++) o = bt(o)
+    return ((o ^= n), jn.encode(Wn([o % 2 ** 30], 30, 5, !1)))
   }
   function Ao(t) {
     let e = t === 'bech32' ? 1 : 734539939,
@@ -2078,38 +2078,38 @@
       r = n.decode,
       o = n.encode,
       s = wo(r)
-    function i(u, f, p = 90) {
+    function i(u, f, h = 90) {
       if (typeof u != 'string')
         throw new Error(`bech32.encode prefix should be string, not ${typeof u}`)
       if (!Array.isArray(f) || (f.length && typeof f[0] != 'number'))
         throw new Error(`bech32.encode words should be array of numbers, not ${typeof f}`)
       let y = u.length + 7 + f.length
-      if (p !== !1 && y > p) throw new TypeError(`Length ${y} exceeds limit ${p}`)
-      return ((u = u.toLowerCase()), `${u}1${Wn.encode(f)}${vo(u, f, e)}`)
+      if (h !== !1 && y > h) throw new TypeError(`Length ${y} exceeds limit ${h}`)
+      return ((u = u.toLowerCase()), `${u}1${jn.encode(f)}${vo(u, f, e)}`)
     }
     function a(u, f = 90) {
       if (typeof u != 'string')
         throw new Error(`bech32.decode input should be string, not ${typeof u}`)
       if (u.length < 8 || (f !== !1 && u.length > f))
         throw new TypeError(`Wrong string length: ${u.length} (${u}). Expected (8..${f})`)
-      let p = u.toLowerCase()
-      if (u !== p && u !== u.toUpperCase()) throw new Error('String must be lowercase or uppercase')
-      u = p
+      let h = u.toLowerCase()
+      if (u !== h && u !== u.toUpperCase()) throw new Error('String must be lowercase or uppercase')
+      u = h
       let y = u.lastIndexOf('1')
       if (y === 0 || y === -1)
         throw new Error('Letter "1" must be present between prefix and data only')
       let g = u.slice(0, y),
         d = u.slice(y + 1)
       if (d.length < 6) throw new Error('Data must be at least 6 characters long')
-      let h = Wn.decode(d).slice(0, -6),
-        m = vo(g, h, e)
+      let p = jn.decode(d).slice(0, -6),
+        m = vo(g, p, e)
       if (!d.endsWith(m)) throw new Error(`Invalid checksum in ${u}: expected "${m}"`)
-      return { prefix: g, words: h }
+      return { prefix: g, words: p }
     }
     let c = wo(a)
     function l(u) {
-      let { prefix: f, words: p } = a(u, !1)
-      return { prefix: f, words: p, bytes: r(p) }
+      let { prefix: f, words: h } = a(u, !1)
+      return { prefix: f, words: h, bytes: r(h) }
     }
     return {
       encode: i,
@@ -2147,35 +2147,35 @@
       base58xmr: ea,
     },
     Pf = `Invalid encoding type. Available types: ${Object.keys(ra).join(', ')}`
-  function Gt(t) {
+  function Ft(t) {
     if (!Number.isSafeInteger(t) || t < 0) throw new Error(`positive integer expected, not ${t}`)
   }
-  function Kn(t) {
+  function Zn(t) {
     if (typeof t != 'boolean') throw new Error(`boolean expected, not ${t}`)
   }
-  function Zn(t) {
+  function Gn(t) {
     return (
       t instanceof Uint8Array ||
       (t != null && typeof t == 'object' && t.constructor.name === 'Uint8Array')
     )
   }
   function R(t, ...e) {
-    if (!Zn(t)) throw new Error('Uint8Array expected')
+    if (!Gn(t)) throw new Error('Uint8Array expected')
     if (e.length > 0 && !e.includes(t.length))
       throw new Error(`Uint8Array expected of length ${e}, not of length=${t.length}`)
   }
-  function ze(t, e = !0) {
+  function We(t, e = !0) {
     if (t.destroyed) throw new Error('Hash instance has been destroyed')
     if (e && t.finished) throw new Error('Hash#digest() has already been called')
   }
-  function bt(t, e) {
+  function xt(t, e) {
     R(t)
     let n = e.outputLen
     if (t.length < n) throw new Error(`digestInto() expects output buffer of length at least ${n}`)
   }
-  var Ft = t => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)
+  var Jt = t => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)
   var P = t => new Uint32Array(t.buffer, t.byteOffset, Math.floor(t.byteLength / 4)),
-    We = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
+    ze = t => new DataView(t.buffer, t.byteOffset, t.byteLength),
     oa = new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68
   if (!oa) throw new Error('Non little-endian hardware is not supported')
   var sa = Array.from({ length: 256 }, (t, e) => e.toString(16).padStart(2, '0'))
@@ -2191,7 +2191,7 @@
     if (t >= _e._A && t <= _e._F) return t - (_e._A - 10)
     if (t >= _e._a && t <= _e._f) return t - (_e._a - 10)
   }
-  function Gn(t) {
+  function Fn(t) {
     if (typeof t != 'string') throw new Error('hex string expected, got ' + typeof t)
     let e = t.length,
       n = e / 2
@@ -2214,7 +2214,7 @@
   }
   function me(t) {
     if (typeof t == 'string') t = ia(t)
-    else if (Zn(t)) t = t.slice()
+    else if (Gn(t)) t = t.slice()
     else throw new Error(`Uint8Array expected, got ${typeof t}`)
     return t
   }
@@ -2239,9 +2239,9 @@
       l = r ? 0 : 4
     ;(t.setUint32(e + c, i, r), t.setUint32(e + l, a, r))
   }
-  var Ce = 16,
-    Jn = new Uint8Array(16),
-    be = P(Jn),
+  var ke = 16,
+    Xn = new Uint8Array(16),
+    be = P(Xn),
     aa = 225,
     ca = (t, e, n, r) => {
       let o = r & 1
@@ -2269,10 +2269,10 @@
     return ((t[0] ^= -e & 225), t)
   }
   var ua = t => (t > 64 * 1024 ? 8 : t > 1024 ? 4 : 2),
-    Jt = class {
+    Xt = class {
       constructor(e, n) {
-        ;((this.blockLen = Ce),
-          (this.outputLen = Ce),
+        ;((this.blockLen = ke),
+          (this.outputLen = ke),
           (this.s0 = 0),
           (this.s1 = 0),
           (this.s2 = 0),
@@ -2280,7 +2280,7 @@
           (this.finished = !1),
           (e = me(e)),
           R(e, 16))
-        let r = We(e),
+        let r = ze(e),
           o = r.getUint32(0, !1),
           s = r.getUint32(4, !1),
           i = r.getUint32(8, !1),
@@ -2294,20 +2294,20 @@
           throw new Error(`ghash: wrong window size=${l}, should be 2, 4 or 8`)
         this.W = l
         let f = 128 / l,
-          p = (this.windowSize = 2 ** l),
+          h = (this.windowSize = 2 ** l),
           y = []
         for (let g = 0; g < f; g++)
-          for (let d = 0; d < p; d++) {
-            let h = 0,
+          for (let d = 0; d < h; d++) {
+            let p = 0,
               m = 0,
               w = 0,
               b = 0
             for (let v = 0; v < l; v++) {
               if (!((d >>> (l - v - 1)) & 1)) continue
-              let { s0: E, s1: L, s2: B, s3: U } = c[l * g + v]
-              ;((h ^= E), (m ^= L), (w ^= B), (b ^= U))
+              let { s0: E, s1: L, s2: B, s3: N } = c[l * g + v]
+              ;((p ^= E), (m ^= L), (w ^= B), (b ^= N))
             }
-            y.push({ s0: h, s1: m, s2: w, s3: b })
+            y.push({ s0: p, s1: m, s2: w, s3: b })
           }
         this.t = y
       }
@@ -2318,13 +2318,13 @@
           l = 0,
           u = 0,
           f = 0,
-          p = (1 << s) - 1,
+          h = (1 << s) - 1,
           y = 0
         for (let g of [e, n, r, o])
           for (let d = 0; d < 4; d++) {
-            let h = (g >>> (8 * d)) & 255
+            let p = (g >>> (8 * d)) & 255
             for (let m = 8 / s - 1; m >= 0; m--) {
-              let w = (h >>> (s * m)) & p,
+              let w = (p >>> (s * m)) & h,
                 { s0: b, s1: v, s2: S, s3: E } = i[y * a + w]
               ;((c ^= b), (l ^= v), (u ^= S), (f ^= E), (y += 1))
             }
@@ -2332,15 +2332,15 @@
         ;((this.s0 = c), (this.s1 = l), (this.s2 = u), (this.s3 = f))
       }
       update(e) {
-        ;((e = me(e)), ze(this))
+        ;((e = me(e)), We(this))
         let n = P(e),
-          r = Math.floor(e.length / Ce),
-          o = e.length % Ce
+          r = Math.floor(e.length / ke),
+          o = e.length % ke
         for (let s = 0; s < r; s++)
           this._updateBlock(n[s * 4 + 0], n[s * 4 + 1], n[s * 4 + 2], n[s * 4 + 3])
         return (
           o &&
-            (Jn.set(e.subarray(r * Ce)), this._updateBlock(be[0], be[1], be[2], be[3]), be.fill(0)),
+            (Xn.set(e.subarray(r * ke)), this._updateBlock(be[0], be[1], be[2], be[3]), be.fill(0)),
           this
         )
       }
@@ -2349,39 +2349,39 @@
         for (let n of e) ((n.s0 = 0), (n.s1 = 0), (n.s2 = 0), (n.s3 = 0))
       }
       digestInto(e) {
-        ;(ze(this), bt(e, this), (this.finished = !0))
+        ;(We(this), xt(e, this), (this.finished = !0))
         let { s0: n, s1: r, s2: o, s3: s } = this,
           i = P(e)
         return ((i[0] = n), (i[1] = r), (i[2] = o), (i[3] = s), e)
       }
       digest() {
-        let e = new Uint8Array(Ce)
+        let e = new Uint8Array(ke)
         return (this.digestInto(e), this.destroy(), e)
       }
     },
-    Fn = class extends Jt {
+    Jn = class extends Xt {
       constructor(e, n) {
         e = me(e)
         let r = la(e.slice())
         ;(super(r, n), r.fill(0))
       }
       update(e) {
-        ;((e = me(e)), ze(this))
+        ;((e = me(e)), We(this))
         let n = P(e),
-          r = e.length % Ce,
-          o = Math.floor(e.length / Ce)
+          r = e.length % ke,
+          o = Math.floor(e.length / ke)
         for (let s = 0; s < o; s++)
           this._updateBlock(le(n[s * 4 + 3]), le(n[s * 4 + 2]), le(n[s * 4 + 1]), le(n[s * 4 + 0]))
         return (
           r &&
-            (Jn.set(e.subarray(o * Ce)),
+            (Xn.set(e.subarray(o * ke)),
             this._updateBlock(le(be[3]), le(be[2]), le(be[1]), le(be[0])),
             be.fill(0)),
           this
         )
       }
       digestInto(e) {
-        ;(ze(this), bt(e, this), (this.finished = !0))
+        ;(We(this), xt(e, this), (this.finished = !0))
         let { s0: n, s1: r, s2: o, s3: s } = this,
           i = P(e)
         return ((i[0] = n), (i[1] = r), (i[2] = o), (i[3] = s), e.reverse())
@@ -2397,23 +2397,23 @@
       e
     )
   }
-  var Xn = Bo((t, e) => new Jt(t, e)),
-    _o = Bo((t, e) => new Fn(t, e))
+  var Yn = Bo((t, e) => new Xt(t, e)),
+    _o = Bo((t, e) => new Jn(t, e))
   var ee = 16,
-    er = 4,
-    Xt = new Uint8Array(ee),
+    tr = 4,
+    Yt = new Uint8Array(ee),
     fa = 283
-  function tr(t) {
+  function nr(t) {
     return (t << 1) ^ (fa & -(t >> 7))
   }
   function ut(t, e) {
     let n = 0
-    for (; e > 0; e >>= 1) ((n ^= t & -(e & 1)), (t = tr(t)))
+    for (; e > 0; e >>= 1) ((n ^= t & -(e & 1)), (t = nr(t)))
     return n
   }
-  var Qn = (() => {
+  var er = (() => {
       let t = new Uint8Array(256)
-      for (let n = 0, r = 1; n < 256; n++, r ^= tr(r)) t[n] = r
+      for (let n = 0, r = 1; n < 256; n++, r ^= nr(r)) t[n] = r
       let e = new Uint8Array(256)
       e[0] = 99
       for (let n = 0; n < 255; n++) {
@@ -2422,15 +2422,15 @@
       }
       return e
     })(),
-    da = Qn.map((t, e) => Qn.indexOf(e)),
+    da = er.map((t, e) => er.indexOf(e)),
     ha = t => (t << 24) | (t >>> 8),
-    Yn = t => (t << 8) | (t >>> 24)
-  function Co(t, e) {
+    Qn = t => (t << 8) | (t >>> 24)
+  function ko(t, e) {
     if (t.length !== 256) throw new Error('Wrong sbox length')
     let n = new Uint32Array(256).map((l, u) => e(t[u])),
-      r = n.map(Yn),
-      o = r.map(Yn),
-      s = o.map(Yn),
+      r = n.map(Qn),
+      o = r.map(Qn),
+      s = o.map(Qn),
       i = new Uint32Array(256 * 256),
       a = new Uint32Array(256 * 256),
       c = new Uint16Array(256 * 256)
@@ -2441,11 +2441,11 @@
       }
     return { sbox: t, sbox2: c, T0: n, T1: r, T2: o, T3: s, T01: i, T23: a }
   }
-  var nr = Co(Qn, t => (ut(t, 3) << 24) | (t << 16) | (t << 8) | ut(t, 2)),
-    ko = Co(da, t => (ut(t, 11) << 24) | (ut(t, 13) << 16) | (ut(t, 9) << 8) | ut(t, 14)),
+  var rr = ko(er, t => (ut(t, 3) << 24) | (t << 16) | (t << 8) | ut(t, 2)),
+    Co = ko(da, t => (ut(t, 11) << 24) | (ut(t, 13) << 16) | (ut(t, 9) << 8) | ut(t, 14)),
     pa = (() => {
       let t = new Uint8Array(16)
-      for (let e = 0, n = 1; e < 16; e++, n = tr(n)) t[e] = n
+      for (let e = 0, n = 1; e < 16; e++, n = nr(n)) t[e] = n
       return t
     })()
   function Ke(t) {
@@ -2453,7 +2453,7 @@
     let e = t.length
     if (![16, 24, 32].includes(e))
       throw new Error(`aes: wrong key size: should be 16, 24 or 32, got: ${e}`)
-    let { sbox2: n } = nr,
+    let { sbox2: n } = rr,
       r = P(t),
       o = r.length,
       s = a => xe(n, a, a, a, a),
@@ -2470,8 +2470,8 @@
     let e = Ke(t),
       n = e.slice(),
       r = e.length,
-      { sbox2: o } = nr,
-      { T0: s, T1: i, T2: a, T3: c } = ko
+      { sbox2: o } = rr,
+      { T0: s, T1: i, T2: a, T3: c } = Co
     for (let l = 0; l < r; l += 4) for (let u = 0; u < 4; u++) n[l + u] = e[r - l - 4 + u]
     e.fill(0)
     for (let l = 4; l < r - 4; l++) {
@@ -2488,40 +2488,40 @@
     return t[(e & 255) | (n & 65280)] | (t[((r >>> 16) & 255) | ((o >>> 16) & 65280)] << 16)
   }
   function ue(t, e, n, r, o) {
-    let { sbox2: s, T01: i, T23: a } = nr,
+    let { sbox2: s, T01: i, T23: a } = rr,
       c = 0
     ;((e ^= t[c++]), (n ^= t[c++]), (r ^= t[c++]), (o ^= t[c++]))
     let l = t.length / 4 - 2
     for (let g = 0; g < l; g++) {
       let d = t[c++] ^ je(i, a, e, n, r, o),
-        h = t[c++] ^ je(i, a, n, r, o, e),
+        p = t[c++] ^ je(i, a, n, r, o, e),
         m = t[c++] ^ je(i, a, r, o, e, n),
         w = t[c++] ^ je(i, a, o, e, n, r)
-      ;((e = d), (n = h), (r = m), (o = w))
+      ;((e = d), (n = p), (r = m), (o = w))
     }
     let u = t[c++] ^ xe(s, e, n, r, o),
       f = t[c++] ^ xe(s, n, r, o, e),
-      p = t[c++] ^ xe(s, r, o, e, n),
+      h = t[c++] ^ xe(s, r, o, e, n),
       y = t[c++] ^ xe(s, o, e, n, r)
-    return { s0: u, s1: f, s2: p, s3: y }
+    return { s0: u, s1: f, s2: h, s3: y }
   }
-  function No(t, e, n, r, o) {
-    let { sbox2: s, T01: i, T23: a } = ko,
+  function Uo(t, e, n, r, o) {
+    let { sbox2: s, T01: i, T23: a } = Co,
       c = 0
     ;((e ^= t[c++]), (n ^= t[c++]), (r ^= t[c++]), (o ^= t[c++]))
     let l = t.length / 4 - 2
     for (let g = 0; g < l; g++) {
       let d = t[c++] ^ je(i, a, e, o, r, n),
-        h = t[c++] ^ je(i, a, n, e, o, r),
+        p = t[c++] ^ je(i, a, n, e, o, r),
         m = t[c++] ^ je(i, a, r, n, e, o),
         w = t[c++] ^ je(i, a, o, r, n, e)
-      ;((e = d), (n = h), (r = m), (o = w))
+      ;((e = d), (n = p), (r = m), (o = w))
     }
     let u = t[c++] ^ xe(s, e, o, r, n),
       f = t[c++] ^ xe(s, n, e, o, r),
-      p = t[c++] ^ xe(s, r, n, e, o),
+      h = t[c++] ^ xe(s, r, n, e, o),
       y = t[c++] ^ xe(s, o, r, n, e)
-    return { s0: u, s1: f, s2: p, s3: y }
+    return { s0: u, s1: f, s2: h, s3: y }
   }
   function ft(t, e) {
     if (!e) return new Uint8Array(t)
@@ -2537,48 +2537,48 @@
       i = P(s),
       { s0: a, s1: c, s2: l, s3: u } = ue(t, i[0], i[1], i[2], i[3]),
       f = P(n),
-      p = P(r)
+      h = P(r)
     for (let g = 0; g + 4 <= f.length; g += 4) {
-      ;((p[g + 0] = f[g + 0] ^ a),
-        (p[g + 1] = f[g + 1] ^ c),
-        (p[g + 2] = f[g + 2] ^ l),
-        (p[g + 3] = f[g + 3] ^ u))
+      ;((h[g + 0] = f[g + 0] ^ a),
+        (h[g + 1] = f[g + 1] ^ c),
+        (h[g + 2] = f[g + 2] ^ l),
+        (h[g + 3] = f[g + 3] ^ u))
       let d = 1
-      for (let h = s.length - 1; h >= 0; h--)
-        ((d = (d + (s[h] & 255)) | 0), (s[h] = d & 255), (d >>>= 8))
+      for (let p = s.length - 1; p >= 0; p--)
+        ((d = (d + (s[p] & 255)) | 0), (s[p] = d & 255), (d >>>= 8))
       ;({ s0: a, s1: c, s2: l, s3: u } = ue(t, i[0], i[1], i[2], i[3]))
     }
-    let y = ee * Math.floor(f.length / er)
+    let y = ee * Math.floor(f.length / tr)
     if (y < o) {
       let g = new Uint32Array([a, c, l, u]),
-        d = Ft(g)
-      for (let h = y, m = 0; h < o; h++, m++) r[h] = n[h] ^ d[m]
+        d = Jt(g)
+      for (let p = y, m = 0; p < o; p++, m++) r[p] = n[p] ^ d[m]
     }
     return r
   }
-  function xt(t, e, n, r, o) {
+  function vt(t, e, n, r, o) {
     ;(R(n, ee), R(r), (o = ft(r.length, o)))
     let s = n,
       i = P(s),
-      a = We(s),
+      a = ze(s),
       c = P(r),
       l = P(o),
       u = e ? 0 : 12,
       f = r.length,
-      p = a.getUint32(u, e),
-      { s0: y, s1: g, s2: d, s3: h } = ue(t, i[0], i[1], i[2], i[3])
+      h = a.getUint32(u, e),
+      { s0: y, s1: g, s2: d, s3: p } = ue(t, i[0], i[1], i[2], i[3])
     for (let w = 0; w + 4 <= c.length; w += 4)
       ((l[w + 0] = c[w + 0] ^ y),
         (l[w + 1] = c[w + 1] ^ g),
         (l[w + 2] = c[w + 2] ^ d),
-        (l[w + 3] = c[w + 3] ^ h),
-        (p = (p + 1) >>> 0),
-        a.setUint32(u, p, e),
-        ({ s0: y, s1: g, s2: d, s3: h } = ue(t, i[0], i[1], i[2], i[3])))
-    let m = ee * Math.floor(c.length / er)
+        (l[w + 3] = c[w + 3] ^ p),
+        (h = (h + 1) >>> 0),
+        a.setUint32(u, h, e),
+        ({ s0: y, s1: g, s2: d, s3: p } = ue(t, i[0], i[1], i[2], i[3])))
+    let m = ee * Math.floor(c.length / tr)
     if (m < f) {
-      let w = new Uint32Array([y, g, d, h]),
-        b = Ft(w)
+      let w = new Uint32Array([y, g, d, p]),
+        b = Jt(w)
       for (let v = m, S = 0; v < f; v++, S++) o[v] = r[v] ^ b[S]
     }
     return o
@@ -2593,7 +2593,7 @@
     }
     return { encrypt: (o, s) => r(o, s), decrypt: (o, s) => r(o, s) }
   })
-  function Uo(t) {
+  function No(t) {
     if ((R(t), t.length % ee !== 0))
       throw new Error(`aes/(cbc-ecb).decrypt ciphertext should consist of blocks with size ${ee}`)
   }
@@ -2638,31 +2638,31 @@
             l = Ke(e),
             u = 0
           for (; u + 4 <= i.length; ) {
-            let { s0: f, s1: p, s2: y, s3: g } = ue(l, i[u + 0], i[u + 1], i[u + 2], i[u + 3])
-            ;((a[u++] = f), (a[u++] = p), (a[u++] = y), (a[u++] = g))
+            let { s0: f, s1: h, s2: y, s3: g } = ue(l, i[u + 0], i[u + 1], i[u + 2], i[u + 3])
+            ;((a[u++] = f), (a[u++] = h), (a[u++] = y), (a[u++] = g))
           }
           if (r) {
             let f = Po(o.subarray(u * 4)),
-              { s0: p, s1: y, s2: g, s3: d } = ue(l, f[0], f[1], f[2], f[3])
-            ;((a[u++] = p), (a[u++] = y), (a[u++] = g), (a[u++] = d))
+              { s0: h, s1: y, s2: g, s3: d } = ue(l, f[0], f[1], f[2], f[3])
+            ;((a[u++] = h), (a[u++] = y), (a[u++] = g), (a[u++] = d))
           }
           return (l.fill(0), c)
         },
         decrypt: (o, s) => {
-          Uo(o)
+          No(o)
           let i = Io(e),
             a = ft(o.length, s),
             c = P(o),
             l = P(a)
           for (let u = 0; u + 4 <= c.length; ) {
-            let { s0: f, s1: p, s2: y, s3: g } = No(i, c[u + 0], c[u + 1], c[u + 2], c[u + 3])
-            ;((l[u++] = f), (l[u++] = p), (l[u++] = y), (l[u++] = g))
+            let { s0: f, s1: h, s2: y, s3: g } = Uo(i, c[u + 0], c[u + 1], c[u + 2], c[u + 3])
+            ;((l[u++] = f), (l[u++] = h), (l[u++] = y), (l[u++] = g))
           }
           return (i.fill(0), Ro(a, r))
         },
       }
     }),
-    rr = we({ blockSize: 16, nonceLength: 16 }, function (e, n, r = {}) {
+    or = we({ blockSize: 16, nonceLength: 16 }, function (e, n, r = {}) {
       ;(R(e), R(n, 16))
       let o = !r.disablePadding
       return {
@@ -2670,54 +2670,54 @@
           let a = Ke(e),
             { b: c, o: l, out: u } = Oo(s, o, i),
             f = P(n),
-            p = f[0],
+            h = f[0],
             y = f[1],
             g = f[2],
             d = f[3],
-            h = 0
-          for (; h + 4 <= c.length; )
-            ((p ^= c[h + 0]),
-              (y ^= c[h + 1]),
-              (g ^= c[h + 2]),
-              (d ^= c[h + 3]),
-              ({ s0: p, s1: y, s2: g, s3: d } = ue(a, p, y, g, d)),
-              (l[h++] = p),
-              (l[h++] = y),
-              (l[h++] = g),
-              (l[h++] = d))
+            p = 0
+          for (; p + 4 <= c.length; )
+            ((h ^= c[p + 0]),
+              (y ^= c[p + 1]),
+              (g ^= c[p + 2]),
+              (d ^= c[p + 3]),
+              ({ s0: h, s1: y, s2: g, s3: d } = ue(a, h, y, g, d)),
+              (l[p++] = h),
+              (l[p++] = y),
+              (l[p++] = g),
+              (l[p++] = d))
           if (o) {
-            let m = Po(s.subarray(h * 4))
-            ;((p ^= m[0]),
+            let m = Po(s.subarray(p * 4))
+            ;((h ^= m[0]),
               (y ^= m[1]),
               (g ^= m[2]),
               (d ^= m[3]),
-              ({ s0: p, s1: y, s2: g, s3: d } = ue(a, p, y, g, d)),
-              (l[h++] = p),
-              (l[h++] = y),
-              (l[h++] = g),
-              (l[h++] = d))
+              ({ s0: h, s1: y, s2: g, s3: d } = ue(a, h, y, g, d)),
+              (l[p++] = h),
+              (l[p++] = y),
+              (l[p++] = g),
+              (l[p++] = d))
           }
           return (a.fill(0), u)
         },
         decrypt: (s, i) => {
-          Uo(s)
+          No(s)
           let a = Io(e),
             c = P(n),
             l = ft(s.length, i),
             u = P(s),
             f = P(l),
-            p = c[0],
+            h = c[0],
             y = c[1],
             g = c[2],
             d = c[3]
-          for (let h = 0; h + 4 <= u.length; ) {
-            let m = p,
+          for (let p = 0; p + 4 <= u.length; ) {
+            let m = h,
               w = y,
               b = g,
               v = d
-            ;((p = u[h + 0]), (y = u[h + 1]), (g = u[h + 2]), (d = u[h + 3]))
-            let { s0: S, s1: E, s2: L, s3: B } = No(a, p, y, g, d)
-            ;((f[h++] = S ^ m), (f[h++] = E ^ w), (f[h++] = L ^ b), (f[h++] = B ^ v))
+            ;((h = u[p + 0]), (y = u[p + 1]), (g = u[p + 2]), (d = u[p + 3]))
+            let { s0: S, s1: E, s2: L, s3: B } = Uo(a, h, y, g, d)
+            ;((f[p++] = S ^ m), (f[p++] = E ^ w), (f[p++] = L ^ b), (f[p++] = B ^ v))
           }
           return (a.fill(0), Ro(l, o))
         },
@@ -2732,13 +2732,13 @@
         let l = P(o),
           u = P(i),
           f = s ? u : l,
-          p = P(n),
-          y = p[0],
-          g = p[1],
-          d = p[2],
-          h = p[3]
+          h = P(n),
+          y = h[0],
+          g = h[1],
+          d = h[2],
+          p = h[3]
         for (let w = 0; w + 4 <= l.length; ) {
-          let { s0: b, s1: v, s2: S, s3: E } = ue(a, y, g, d, h)
+          let { s0: b, s1: v, s2: S, s3: E } = ue(a, y, g, d, p)
           ;((u[w + 0] = l[w + 0] ^ b),
             (u[w + 1] = l[w + 1] ^ v),
             (u[w + 2] = l[w + 2] ^ S),
@@ -2746,12 +2746,12 @@
             (y = f[w++]),
             (g = f[w++]),
             (d = f[w++]),
-            (h = f[w++]))
+            (p = f[w++]))
         }
-        let m = ee * Math.floor(l.length / er)
+        let m = ee * Math.floor(l.length / tr)
         if (m < c) {
-          ;({ s0: y, s1: g, s2: d, s3: h } = ue(a, y, g, d, h))
-          let w = Ft(new Uint32Array([y, g, d, h]))
+          ;({ s0: y, s1: g, s2: d, s3: p } = ue(a, y, g, d, p))
+          let w = Jt(new Uint32Array([y, g, d, p]))
           for (let b = m, v = 0; b < c; b++, v++) i[b] = o[b] ^ w[v]
           w.fill(0)
         }
@@ -2763,7 +2763,7 @@
     let s = t.create(n, r.length + (o?.length || 0))
     ;(o && s.update(o), s.update(r))
     let i = new Uint8Array(16),
-      a = We(i)
+      a = ze(i)
     return (
       o && Qe(a, 0, BigInt(o.length * 8), e),
       Qe(a, 8, BigInt(r.length * 8), e),
@@ -2775,119 +2775,119 @@
       if ((R(n), n.length === 0)) throw new Error('aes/gcm: empty nonce')
       let o = 16
       function s(a, c, l) {
-        let u = $o(Xn, !1, a, l, r)
+        let u = $o(Yn, !1, a, l, r)
         for (let f = 0; f < c.length; f++) u[f] ^= c[f]
         return u
       }
       function i() {
         let a = Ke(e),
-          c = Xt.slice(),
-          l = Xt.slice()
-        if ((xt(a, !1, l, l, c), n.length === 12)) l.set(n)
+          c = Yt.slice(),
+          l = Yt.slice()
+        if ((vt(a, !1, l, l, c), n.length === 12)) l.set(n)
         else {
-          let f = Xt.slice(),
-            p = We(f)
-          ;(Qe(p, 8, BigInt(n.length * 8), !1), Xn.create(c).update(n).update(f).digestInto(l))
+          let f = Yt.slice(),
+            h = ze(f)
+          ;(Qe(h, 8, BigInt(n.length * 8), !1), Yn.create(c).update(n).update(f).digestInto(l))
         }
-        let u = xt(a, !1, l, Xt)
+        let u = vt(a, !1, l, Yt)
         return { xk: a, authKey: c, counter: l, tagMask: u }
       }
       return {
         encrypt: a => {
           R(a)
           let { xk: c, authKey: l, counter: u, tagMask: f } = i(),
-            p = new Uint8Array(a.length + o)
-          xt(c, !1, u, a, p)
-          let y = s(l, f, p.subarray(0, p.length - o))
-          return (p.set(y, a.length), c.fill(0), p)
+            h = new Uint8Array(a.length + o)
+          vt(c, !1, u, a, h)
+          let y = s(l, f, h.subarray(0, h.length - o))
+          return (h.set(y, a.length), c.fill(0), h)
         },
         decrypt: a => {
           if ((R(a), a.length < o)) throw new Error(`aes/gcm: ciphertext less than tagLen (${o})`)
           let { xk: c, authKey: l, counter: u, tagMask: f } = i(),
-            p = a.subarray(0, -o),
+            h = a.subarray(0, -o),
             y = a.subarray(-o),
-            g = s(l, f, p)
+            g = s(l, f, h)
           if (!Ye(g, y)) throw new Error('aes/gcm: invalid ghash tag')
-          let d = xt(c, !1, u, p)
+          let d = vt(c, !1, u, h)
           return (l.fill(0), f.fill(0), c.fill(0), d)
         },
       }
     }),
-    Yt = (t, e, n) => r => {
+    Qt = (t, e, n) => r => {
       if (!Number.isSafeInteger(r) || e > r || r > n)
         throw new Error(`${t}: invalid value=${r}, must be [${e}..${n}]`)
     },
     Xf = we({ blockSize: 16, nonceLength: 12, tagLength: 16 }, function (e, n, r) {
-      let s = Yt('AAD', 0, 68719476736),
-        i = Yt('plaintext', 0, 2 ** 36),
-        a = Yt('nonce', 12, 12),
-        c = Yt('ciphertext', 16, 2 ** 36 + 16)
+      let s = Qt('AAD', 0, 68719476736),
+        i = Qt('plaintext', 0, 2 ** 36),
+        a = Qt('nonce', 12, 12),
+        c = Qt('ciphertext', 16, 2 ** 36 + 16)
       ;(R(n), a(n.length), r && (R(r), s(r.length)))
       function l() {
-        let p = e.length
-        if (p !== 16 && p !== 24 && p !== 32)
-          throw new Error(`key length must be 16, 24 or 32 bytes, got: ${p} bytes`)
+        let h = e.length
+        if (h !== 16 && h !== 24 && h !== 32)
+          throw new Error(`key length must be 16, 24 or 32 bytes, got: ${h} bytes`)
         let y = Ke(e),
-          g = new Uint8Array(p),
+          g = new Uint8Array(h),
           d = new Uint8Array(16),
-          h = P(n),
+          p = P(n),
           m = 0,
-          w = h[0],
-          b = h[1],
-          v = h[2],
+          w = p[0],
+          b = p[1],
+          v = p[2],
           S = 0
         for (let E of [d, g].map(P)) {
           let L = P(E)
           for (let B = 0; B < L.length; B += 2) {
-            let { s0: U, s1: I } = ue(y, m, w, b, v)
-            ;((L[B + 0] = U), (L[B + 1] = I), (m = ++S))
+            let { s0: N, s1: I } = ue(y, m, w, b, v)
+            ;((L[B + 0] = N), (L[B + 1] = I), (m = ++S))
           }
         }
         return (y.fill(0), { authKey: d, encKey: Ke(g) })
       }
-      function u(p, y, g) {
+      function u(h, y, g) {
         let d = $o(_o, !0, y, g, r)
         for (let S = 0; S < 12; S++) d[S] ^= n[S]
         d[15] &= 127
-        let h = P(d),
-          m = h[0],
-          w = h[1],
-          b = h[2],
-          v = h[3]
+        let p = P(d),
+          m = p[0],
+          w = p[1],
+          b = p[2],
+          v = p[3]
         return (
-          ({ s0: m, s1: w, s2: b, s3: v } = ue(p, m, w, b, v)),
-          (h[0] = m),
-          (h[1] = w),
-          (h[2] = b),
-          (h[3] = v),
+          ({ s0: m, s1: w, s2: b, s3: v } = ue(h, m, w, b, v)),
+          (p[0] = m),
+          (p[1] = w),
+          (p[2] = b),
+          (p[3] = v),
           d
         )
       }
-      function f(p, y, g) {
+      function f(h, y, g) {
         let d = y.slice()
-        return ((d[15] |= 128), xt(p, !0, d, g))
+        return ((d[15] |= 128), vt(h, !0, d, g))
       }
       return {
-        encrypt: p => {
-          ;(R(p), i(p.length))
+        encrypt: h => {
+          ;(R(h), i(h.length))
           let { encKey: y, authKey: g } = l(),
-            d = u(y, g, p),
-            h = new Uint8Array(p.length + 16)
-          return (h.set(d, p.length), h.set(f(y, d, p)), y.fill(0), g.fill(0), h)
+            d = u(y, g, h),
+            p = new Uint8Array(h.length + 16)
+          return (p.set(d, h.length), p.set(f(y, d, h)), y.fill(0), g.fill(0), p)
         },
-        decrypt: p => {
-          ;(R(p), c(p.length))
-          let y = p.subarray(-16),
+        decrypt: h => {
+          ;(R(h), c(h.length))
+          let y = h.subarray(-16),
             { encKey: g, authKey: d } = l(),
-            h = f(g, y, p.subarray(0, -16)),
-            m = u(g, d, h)
+            p = f(g, y, h.subarray(0, -16)),
+            m = u(g, d, p)
           if ((g.fill(0), d.fill(0), !Ye(y, m))) throw new Error('invalid polyval tag')
-          return h
+          return p
         },
       }
     })
   var X = (t, e) => (t[e++] & 255) | ((t[e++] & 255) << 8),
-    or = class {
+    sr = class {
       constructor(e) {
         ;((this.blockLen = 16),
           (this.outputLen = 16),
@@ -2927,11 +2927,11 @@
           l = i[2],
           u = i[3],
           f = i[4],
-          p = i[5],
+          h = i[5],
           y = i[6],
           g = i[7],
           d = i[8],
-          h = i[9],
+          p = i[9],
           m = X(e, n + 0),
           w = X(e, n + 2),
           b = X(e, n + 4),
@@ -2940,75 +2940,75 @@
           E = X(e, n + 10),
           L = X(e, n + 12),
           B = X(e, n + 14),
-          U = s[0] + (m & 8191),
+          N = s[0] + (m & 8191),
           I = s[1] + (((m >>> 13) | (w << 3)) & 8191),
-          k = s[2] + (((w >>> 10) | (b << 6)) & 8191),
+          C = s[2] + (((w >>> 10) | (b << 6)) & 8191),
           $ = s[3] + (((b >>> 7) | (v << 9)) & 8191),
           H = s[4] + (((v >>> 4) | (S << 12)) & 8191),
           V = s[5] + ((S >>> 1) & 8191),
           x = s[6] + (((S >>> 14) | (E << 2)) & 8191),
           T = s[7] + (((E >>> 11) | (L << 5)) & 8191),
-          C = s[8] + (((L >>> 8) | (B << 8)) & 8191),
-          N = s[9] + ((B >>> 5) | o),
+          k = s[8] + (((L >>> 8) | (B << 8)) & 8191),
+          U = s[9] + ((B >>> 5) | o),
           A = 0,
-          O = A + U * a + I * (5 * h) + k * (5 * d) + $ * (5 * g) + H * (5 * y)
+          O = A + N * a + I * (5 * p) + C * (5 * d) + $ * (5 * g) + H * (5 * y)
         ;((A = O >>> 13),
           (O &= 8191),
-          (O += V * (5 * p) + x * (5 * f) + T * (5 * u) + C * (5 * l) + N * (5 * c)),
+          (O += V * (5 * h) + x * (5 * f) + T * (5 * u) + k * (5 * l) + U * (5 * c)),
           (A += O >>> 13),
           (O &= 8191))
-        let q = A + U * c + I * a + k * (5 * h) + $ * (5 * d) + H * (5 * g)
+        let q = A + N * c + I * a + C * (5 * p) + $ * (5 * d) + H * (5 * g)
         ;((A = q >>> 13),
           (q &= 8191),
-          (q += V * (5 * y) + x * (5 * p) + T * (5 * f) + C * (5 * u) + N * (5 * l)),
+          (q += V * (5 * y) + x * (5 * h) + T * (5 * f) + k * (5 * u) + U * (5 * l)),
           (A += q >>> 13),
           (q &= 8191))
-        let M = A + U * l + I * c + k * a + $ * (5 * h) + H * (5 * d)
+        let M = A + N * l + I * c + C * a + $ * (5 * p) + H * (5 * d)
         ;((A = M >>> 13),
           (M &= 8191),
-          (M += V * (5 * g) + x * (5 * y) + T * (5 * p) + C * (5 * f) + N * (5 * u)),
+          (M += V * (5 * g) + x * (5 * y) + T * (5 * h) + k * (5 * f) + U * (5 * u)),
           (A += M >>> 13),
           (M &= 8191))
-        let F = A + U * u + I * l + k * c + $ * a + H * (5 * h)
+        let F = A + N * u + I * l + C * c + $ * a + H * (5 * p)
         ;((A = F >>> 13),
           (F &= 8191),
-          (F += V * (5 * d) + x * (5 * g) + T * (5 * y) + C * (5 * p) + N * (5 * f)),
+          (F += V * (5 * d) + x * (5 * g) + T * (5 * y) + k * (5 * h) + U * (5 * f)),
           (A += F >>> 13),
           (F &= 8191))
-        let Y = A + U * f + I * u + k * l + $ * c + H * a
+        let Y = A + N * f + I * u + C * l + $ * c + H * a
         ;((A = Y >>> 13),
           (Y &= 8191),
-          (Y += V * (5 * h) + x * (5 * d) + T * (5 * g) + C * (5 * y) + N * (5 * p)),
+          (Y += V * (5 * p) + x * (5 * d) + T * (5 * g) + k * (5 * y) + U * (5 * h)),
           (A += Y >>> 13),
           (Y &= 8191))
-        let ne = A + U * p + I * f + k * u + $ * l + H * c
+        let ne = A + N * h + I * f + C * u + $ * l + H * c
         ;((A = ne >>> 13),
           (ne &= 8191),
-          (ne += V * a + x * (5 * h) + T * (5 * d) + C * (5 * g) + N * (5 * y)),
+          (ne += V * a + x * (5 * p) + T * (5 * d) + k * (5 * g) + U * (5 * y)),
           (A += ne >>> 13),
           (ne &= 8191))
-        let se = A + U * y + I * p + k * f + $ * u + H * l
+        let se = A + N * y + I * h + C * f + $ * u + H * l
         ;((A = se >>> 13),
           (se &= 8191),
-          (se += V * c + x * a + T * (5 * h) + C * (5 * d) + N * (5 * g)),
+          (se += V * c + x * a + T * (5 * p) + k * (5 * d) + U * (5 * g)),
           (A += se >>> 13),
           (se &= 8191))
-        let Q = A + U * g + I * y + k * p + $ * f + H * u
+        let Q = A + N * g + I * y + C * h + $ * f + H * u
         ;((A = Q >>> 13),
           (Q &= 8191),
-          (Q += V * l + x * c + T * a + C * (5 * h) + N * (5 * d)),
+          (Q += V * l + x * c + T * a + k * (5 * p) + U * (5 * d)),
           (A += Q >>> 13),
           (Q &= 8191))
-        let ge = A + U * d + I * g + k * y + $ * p + H * f
+        let ge = A + N * d + I * g + C * y + $ * h + H * f
         ;((A = ge >>> 13),
           (ge &= 8191),
-          (ge += V * u + x * l + T * c + C * a + N * (5 * h)),
+          (ge += V * u + x * l + T * c + k * a + U * (5 * p)),
           (A += ge >>> 13),
           (ge &= 8191))
-        let te = A + U * h + I * d + k * g + $ * y + H * p
+        let te = A + N * p + I * d + C * g + $ * y + H * h
         ;((A = te >>> 13),
           (te &= 8191),
-          (te += V * f + x * u + T * l + C * c + N * a),
+          (te += V * f + x * u + T * l + k * c + U * a),
           (A += te >>> 13),
           (te &= 8191),
           (A = ((A << 2) + A) | 0),
@@ -3063,7 +3063,7 @@
           ((i = (((e[a] + n[a]) | 0) + (i >>> 16)) | 0), (e[a] = i & 65535))
       }
       update(e) {
-        ze(this)
+        We(this)
         let { buffer: n, blockLen: r } = this
         e = me(e)
         let o = e.length
@@ -3084,7 +3084,7 @@
         ;(this.h.fill(0), this.r.fill(0), this.buffer.fill(0), this.pad.fill(0))
       }
       digestInto(e) {
-        ;(ze(this), bt(e, this), (this.finished = !0))
+        ;(We(this), xt(e, this), (this.finished = !0))
         let { buffer: n, h: r } = this,
           { pos: o } = this
         if (o) {
@@ -3108,7 +3108,7 @@
       n = t(new Uint8Array(32))
     return ((e.outputLen = n.outputLen), (e.blockLen = n.blockLen), (e.create = r => t(r)), e)
   }
-  var Ho = ya(t => new or(t))
+  var Ho = ya(t => new sr(t))
   var qo = t => Uint8Array.from(t.split('').map(e => e.charCodeAt(0))),
     ma = qo('expand 16-byte k'),
     wa = qo('expand 32-byte k'),
@@ -3118,35 +3118,35 @@
   function _(t, e) {
     return (t << e) | (t >>> (32 - e))
   }
-  function sr(t) {
+  function ir(t) {
     return t.byteOffset % 4 === 0
   }
-  var Qt = 64,
+  var en = 64,
     xa = 16,
     Do = 2 ** 32 - 1,
     Mo = new Uint32Array()
   function va(t, e, n, r, o, s, i, a) {
     let c = o.length,
-      l = new Uint8Array(Qt),
+      l = new Uint8Array(en),
       u = P(l),
-      f = sr(o) && sr(s),
-      p = f ? P(o) : Mo,
+      f = ir(o) && ir(s),
+      h = f ? P(o) : Mo,
       y = f ? P(s) : Mo
     for (let g = 0; g < c; i++) {
       if ((t(e, n, r, u, i, a), i >= Do)) throw new Error('arx: counter overflow')
-      let d = Math.min(Qt, c - g)
-      if (f && d === Qt) {
-        let h = g / 4
+      let d = Math.min(en, c - g)
+      if (f && d === en) {
+        let p = g / 4
         if (g % 4 !== 0) throw new Error('arx: invalid block position')
-        for (let m = 0, w; m < xa; m++) ((w = h + m), (y[w] = p[w] ^ u[m]))
-        g += Qt
+        for (let m = 0, w; m < xa; m++) ((w = p + m), (y[w] = h[w] ^ u[m]))
+        g += en
         continue
       }
-      for (let h = 0, m; h < d; h++) ((m = g + h), (s[m] = o[m] ^ l[h]))
+      for (let p = 0, m; p < d; p++) ((m = g + p), (s[m] = o[m] ^ l[p]))
       g += d
     }
   }
-  function ir(t, e) {
+  function ar(t, e) {
     let {
       allowShortKeys: n,
       extendNonceFn: r,
@@ -3156,29 +3156,29 @@
     } = Lo({ allowShortKeys: !1, counterLength: 8, counterRight: !1, rounds: 20 }, e)
     if (typeof t != 'function') throw new Error('core must be a function')
     return (
-      Gt(o),
-      Gt(i),
-      Kn(s),
-      Kn(n),
+      Ft(o),
+      Ft(i),
+      Zn(s),
+      Zn(n),
       (a, c, l, u, f = 0) => {
         ;(R(a), R(c), R(l))
-        let p = l.length
-        if ((u || (u = new Uint8Array(p)), R(u), Gt(f), f < 0 || f >= Do))
+        let h = l.length
+        if ((u || (u = new Uint8Array(h)), R(u), Ft(f), f < 0 || f >= Do))
           throw new Error('arx: counter overflow')
-        if (u.length < p) throw new Error(`arx: output (${u.length}) is shorter than data (${p})`)
+        if (u.length < h) throw new Error(`arx: output (${u.length}) is shorter than data (${h})`)
         let y = [],
           g = a.length,
           d,
-          h
-        if (g === 32) ((d = a.slice()), y.push(d), (h = Vo))
+          p
+        if (g === 32) ((d = a.slice()), y.push(d), (p = Vo))
         else if (g === 16 && n)
-          ((d = new Uint8Array(32)), d.set(a), d.set(a, 16), (h = ba), y.push(d))
+          ((d = new Uint8Array(32)), d.set(a), d.set(a, 16), (p = ba), y.push(d))
         else throw new Error(`arx: invalid 32-byte key, got length=${g}`)
-        sr(c) || ((c = c.slice()), y.push(c))
+        ir(c) || ((c = c.slice()), y.push(c))
         let m = P(d)
         if (r) {
           if (c.length !== 24) throw new Error('arx: extended nonce must be 24 bytes')
-          ;(r(h, m, P(c.subarray(0, 16)), m), (c = c.subarray(16)))
+          ;(r(p, m, P(c.subarray(0, 16)), m), (c = c.subarray(16)))
         }
         let w = 16 - o
         if (w !== c.length) throw new Error(`arx: nonce must be ${w} or 16 bytes`)
@@ -3187,7 +3187,7 @@
           ;(v.set(c, s ? 0 : 12 - c.length), (c = v), y.push(c))
         }
         let b = P(c)
-        for (va(t, h, m, b, l, u, f, i); y.length > 0; ) y.pop().fill(0)
+        for (va(t, p, m, b, l, u, f, i); y.length > 0; ) y.pop().fill(0)
         return u
       }
     )
@@ -3199,11 +3199,11 @@
       l = t[3],
       u = e[0],
       f = e[1],
-      p = e[2],
+      h = e[2],
       y = e[3],
       g = e[4],
       d = e[5],
-      h = e[6],
+      p = e[6],
       m = e[7],
       w = o,
       b = n[0],
@@ -3212,36 +3212,36 @@
       E = i,
       L = a,
       B = c,
-      U = l,
+      N = l,
       I = u,
-      k = f,
-      $ = p,
+      C = f,
+      $ = h,
       H = y,
       V = g,
       x = d,
-      T = h,
-      C = m,
-      N = w,
+      T = p,
+      k = m,
+      U = w,
       A = b,
       O = v,
       q = S
     for (let F = 0; F < s; F += 2)
       ((E = (E + I) | 0),
-        (N = _(N ^ E, 16)),
-        (V = (V + N) | 0),
+        (U = _(U ^ E, 16)),
+        (V = (V + U) | 0),
         (I = _(I ^ V, 12)),
         (E = (E + I) | 0),
-        (N = _(N ^ E, 8)),
-        (V = (V + N) | 0),
+        (U = _(U ^ E, 8)),
+        (V = (V + U) | 0),
         (I = _(I ^ V, 7)),
-        (L = (L + k) | 0),
+        (L = (L + C) | 0),
         (A = _(A ^ L, 16)),
         (x = (x + A) | 0),
-        (k = _(k ^ x, 12)),
-        (L = (L + k) | 0),
+        (C = _(C ^ x, 12)),
+        (L = (L + C) | 0),
         (A = _(A ^ L, 8)),
         (x = (x + A) | 0),
-        (k = _(k ^ x, 7)),
+        (C = _(C ^ x, 7)),
         (B = (B + $) | 0),
         (O = _(O ^ B, 16)),
         (T = (T + O) | 0),
@@ -3250,30 +3250,30 @@
         (O = _(O ^ B, 8)),
         (T = (T + O) | 0),
         ($ = _($ ^ T, 7)),
-        (U = (U + H) | 0),
-        (q = _(q ^ U, 16)),
-        (C = (C + q) | 0),
-        (H = _(H ^ C, 12)),
-        (U = (U + H) | 0),
-        (q = _(q ^ U, 8)),
-        (C = (C + q) | 0),
-        (H = _(H ^ C, 7)),
-        (E = (E + k) | 0),
+        (N = (N + H) | 0),
+        (q = _(q ^ N, 16)),
+        (k = (k + q) | 0),
+        (H = _(H ^ k, 12)),
+        (N = (N + H) | 0),
+        (q = _(q ^ N, 8)),
+        (k = (k + q) | 0),
+        (H = _(H ^ k, 7)),
+        (E = (E + C) | 0),
         (q = _(q ^ E, 16)),
         (T = (T + q) | 0),
-        (k = _(k ^ T, 12)),
-        (E = (E + k) | 0),
+        (C = _(C ^ T, 12)),
+        (E = (E + C) | 0),
         (q = _(q ^ E, 8)),
         (T = (T + q) | 0),
-        (k = _(k ^ T, 7)),
+        (C = _(C ^ T, 7)),
         (L = (L + $) | 0),
-        (N = _(N ^ L, 16)),
-        (C = (C + N) | 0),
-        ($ = _($ ^ C, 12)),
+        (U = _(U ^ L, 16)),
+        (k = (k + U) | 0),
+        ($ = _($ ^ k, 12)),
         (L = (L + $) | 0),
-        (N = _(N ^ L, 8)),
-        (C = (C + N) | 0),
-        ($ = _($ ^ C, 7)),
+        (U = _(U ^ L, 8)),
+        (k = (k + U) | 0),
+        ($ = _($ ^ k, 7)),
         (B = (B + H) | 0),
         (A = _(A ^ B, 16)),
         (V = (V + A) | 0),
@@ -3282,28 +3282,28 @@
         (A = _(A ^ B, 8)),
         (V = (V + A) | 0),
         (H = _(H ^ V, 7)),
-        (U = (U + I) | 0),
-        (O = _(O ^ U, 16)),
+        (N = (N + I) | 0),
+        (O = _(O ^ N, 16)),
         (x = (x + O) | 0),
         (I = _(I ^ x, 12)),
-        (U = (U + I) | 0),
-        (O = _(O ^ U, 8)),
+        (N = (N + I) | 0),
+        (O = _(O ^ N, 8)),
         (x = (x + O) | 0),
         (I = _(I ^ x, 7)))
     let M = 0
     ;((r[M++] = (i + E) | 0),
       (r[M++] = (a + L) | 0),
       (r[M++] = (c + B) | 0),
-      (r[M++] = (l + U) | 0),
+      (r[M++] = (l + N) | 0),
       (r[M++] = (u + I) | 0),
-      (r[M++] = (f + k) | 0),
-      (r[M++] = (p + $) | 0),
+      (r[M++] = (f + C) | 0),
+      (r[M++] = (h + $) | 0),
       (r[M++] = (y + H) | 0),
       (r[M++] = (g + V) | 0),
       (r[M++] = (d + x) | 0),
-      (r[M++] = (h + T) | 0),
-      (r[M++] = (m + C) | 0),
-      (r[M++] = (w + N) | 0),
+      (r[M++] = (p + T) | 0),
+      (r[M++] = (m + k) | 0),
+      (r[M++] = (w + U) | 0),
       (r[M++] = (b + A) | 0),
       (r[M++] = (v + O) | 0),
       (r[M++] = (S + q) | 0))
@@ -3317,23 +3317,23 @@
       l = e[1],
       u = e[2],
       f = e[3],
-      p = e[4],
+      h = e[4],
       y = e[5],
       g = e[6],
       d = e[7],
-      h = n[0],
+      p = n[0],
       m = n[1],
       w = n[2],
       b = n[3]
     for (let S = 0; S < 20; S += 2)
       ((o = (o + c) | 0),
-        (h = _(h ^ o, 16)),
-        (p = (p + h) | 0),
-        (c = _(c ^ p, 12)),
+        (p = _(p ^ o, 16)),
+        (h = (h + p) | 0),
+        (c = _(c ^ h, 12)),
         (o = (o + c) | 0),
-        (h = _(h ^ o, 8)),
-        (p = (p + h) | 0),
-        (c = _(c ^ p, 7)),
+        (p = _(p ^ o, 8)),
+        (h = (h + p) | 0),
+        (c = _(c ^ h, 7)),
         (s = (s + l) | 0),
         (m = _(m ^ s, 16)),
         (y = (y + m) | 0),
@@ -3367,21 +3367,21 @@
         (g = (g + b) | 0),
         (l = _(l ^ g, 7)),
         (s = (s + u) | 0),
-        (h = _(h ^ s, 16)),
-        (d = (d + h) | 0),
+        (p = _(p ^ s, 16)),
+        (d = (d + p) | 0),
         (u = _(u ^ d, 12)),
         (s = (s + u) | 0),
-        (h = _(h ^ s, 8)),
-        (d = (d + h) | 0),
+        (p = _(p ^ s, 8)),
+        (d = (d + p) | 0),
         (u = _(u ^ d, 7)),
         (i = (i + f) | 0),
         (m = _(m ^ i, 16)),
-        (p = (p + m) | 0),
-        (f = _(f ^ p, 12)),
+        (h = (h + m) | 0),
+        (f = _(f ^ h, 12)),
         (i = (i + f) | 0),
         (m = _(m ^ i, 8)),
-        (p = (p + m) | 0),
-        (f = _(f ^ p, 7)),
+        (h = (h + m) | 0),
+        (f = _(f ^ h, 7)),
         (a = (a + c) | 0),
         (w = _(w ^ a, 16)),
         (y = (y + w) | 0),
@@ -3395,26 +3395,26 @@
       (r[v++] = s),
       (r[v++] = i),
       (r[v++] = a),
-      (r[v++] = h),
+      (r[v++] = p),
       (r[v++] = m),
       (r[v++] = w),
       (r[v++] = b))
   }
-  var en = ir(jo, { counterRight: !1, counterLength: 4, allowShortKeys: !1 }),
-    Ta = ir(jo, { counterRight: !1, counterLength: 8, extendNonceFn: Ea, allowShortKeys: !1 })
+  var tn = ar(jo, { counterRight: !1, counterLength: 4, allowShortKeys: !1 }),
+    Ta = ar(jo, { counterRight: !1, counterLength: 8, extendNonceFn: Ea, allowShortKeys: !1 })
   var Aa = new Uint8Array(16),
-    zo = (t, e) => {
+    Wo = (t, e) => {
       t.update(e)
       let n = e.length % 16
       n && t.update(Aa.subarray(n))
     },
     Sa = new Uint8Array(32)
-  function Wo(t, e, n, r, o) {
+  function zo(t, e, n, r, o) {
     let s = t(e, n, Sa),
       i = Ho.create(s)
-    ;(o && zo(i, o), zo(i, r))
+    ;(o && Wo(i, o), Wo(i, r))
     let a = new Uint8Array(16),
-      c = We(a)
+      c = ze(a)
     ;(Qe(c, 0, BigInt(o ? o.length : 0), !0), Qe(c, 8, BigInt(r.length), !0), i.update(a))
     let l = i.digest()
     return (s.fill(0), l)
@@ -3427,7 +3427,7 @@
           let a = s.length,
             c = a + 16
           ;(i ? R(i, c) : (i = new Uint8Array(c)), t(e, n, s, i, 1))
-          let l = Wo(t, e, n, i.subarray(0, -16), r)
+          let l = zo(t, e, n, i.subarray(0, -16), r)
           return (i.set(l, a), i)
         },
         decrypt: (s, i) => {
@@ -3437,15 +3437,15 @@
           i ? R(i, c) : (i = new Uint8Array(c))
           let l = s.subarray(0, -16),
             u = s.subarray(-16),
-            f = Wo(t, e, n, l, r)
+            f = zo(t, e, n, l, r)
           if (!Ye(u, f)) throw new Error('invalid tag')
           return (t(e, n, l, i, 1), i)
         },
       }
     ),
-    ud = we({ blockSize: 64, nonceLength: 12, tagLength: 16 }, Ko(en)),
+    ud = we({ blockSize: 64, nonceLength: 12, tagLength: 16 }, Ko(tn)),
     fd = we({ blockSize: 64, nonceLength: 24, tagLength: 16 }, Ko(Ta))
-  var tn = class extends at {
+  var nn = class extends at {
       constructor(e, n) {
         ;(super(), (this.finished = !1), (this.destroyed = !1), oe.hash(e))
         let r = He(n)
@@ -3494,12 +3494,12 @@
         ;((this.destroyed = !0), this.oHash.destroy(), this.iHash.destroy())
       }
     },
-    dt = (t, e, n) => new tn(t, e).update(n).digest()
-  dt.create = (t, e) => new tn(t, e)
+    dt = (t, e, n) => new nn(t, e).update(n).digest()
+  dt.create = (t, e) => new nn(t, e)
   function Go(t, e, n) {
     return (oe.hash(t), n === void 0 && (n = new Uint8Array(t.outputLen)), dt(t, He(n), He(e)))
   }
-  var ar = new Uint8Array([0]),
+  var cr = new Uint8Array([0]),
     Zo = new Uint8Array()
   function Fo(t, e, n, r = 32) {
     if ((oe.hash(t), oe.number(r), r > 255 * t.outputLen))
@@ -3511,15 +3511,15 @@
       a = i._cloneInto(),
       c = new Uint8Array(i.outputLen)
     for (let l = 0; l < o; l++)
-      ((ar[0] = l + 1),
+      ((cr[0] = l + 1),
         a
           .update(l === 0 ? Zo : c)
           .update(n)
-          .update(ar)
+          .update(cr)
           .digestInto(c),
         s.set(c, t.outputLen * l),
         i._cloneInto(a))
-    return (i.destroy(), a.destroy(), c.fill(0), ar.fill(0), s.slice(0, r))
+    return (i.destroy(), a.destroy(), c.fill(0), cr.fill(0), s.slice(0, r))
   }
   var La = Object.defineProperty,
     D = (t, e) => {
@@ -3527,7 +3527,7 @@
     },
     ht = Symbol('verified'),
     Ba = t => t instanceof Object
-  function fr(t) {
+  function dr(t) {
     if (
       !Ba(t) ||
       typeof t.kind != 'number' ||
@@ -3547,20 +3547,20 @@
   }
   var _a = {}
   D(_a, {
-    Queue: () => Na,
+    Queue: () => Ua,
     QueueNode: () => Qo,
-    binarySearch: () => dr,
+    binarySearch: () => hr,
     bytesToHex: () => j,
     hexToBytes: () => Ae,
     insertEventIntoAscendingList: () => Ia,
-    insertEventIntoDescendingList: () => ka,
-    normalizeURL: () => Ca,
-    utf8Decoder: () => Ne,
+    insertEventIntoDescendingList: () => Ca,
+    normalizeURL: () => ka,
+    utf8Decoder: () => Ue,
     utf8Encoder: () => pe,
   })
-  var Ne = new TextDecoder('utf-8'),
+  var Ue = new TextDecoder('utf-8'),
     pe = new TextEncoder()
-  function Ca(t) {
+  function ka(t) {
     try {
       t.indexOf('://') === -1 && (t = 'wss://' + t)
       let e = new URL(t)
@@ -3581,19 +3581,19 @@
       throw new Error(`Invalid URL: ${t}`)
     }
   }
-  function ka(t, e) {
-    let [n, r] = dr(t, o =>
+  function Ca(t, e) {
+    let [n, r] = hr(t, o =>
       e.id === o.id ? 0 : e.created_at === o.created_at ? -1 : o.created_at - e.created_at
     )
     return (r || t.splice(n, 0, e), t)
   }
   function Ia(t, e) {
-    let [n, r] = dr(t, o =>
+    let [n, r] = hr(t, o =>
       e.id === o.id ? 0 : e.created_at === o.created_at ? -1 : e.created_at - o.created_at
     )
     return (r || t.splice(n, 0, e), t)
   }
-  function dr(t, e) {
+  function hr(t, e) {
     let n = 0,
       r = t.length - 1
     for (; n <= r; ) {
@@ -3606,16 +3606,16 @@
   }
   var Qo = class {
       constructor(t) {
-        z(this, 'value')
-        z(this, 'next', null)
-        z(this, 'prev', null)
+        W(this, 'value')
+        W(this, 'next', null)
+        W(this, 'prev', null)
         this.value = t
       }
     },
-    Na = class {
+    Ua = class {
       constructor() {
-        z(this, 'first')
-        z(this, 'last')
+        W(this, 'first')
+        W(this, 'last')
         ;((this.first = null), (this.last = null))
       }
       enqueue(t) {
@@ -3639,7 +3639,7 @@
         return ((this.first = t.next), this.first && (this.first.prev = null), t.value)
       }
     },
-    Ua = class {
+    Na = class {
       generateSecretKey() {
         return it.utils.randomPrivateKey()
       }
@@ -3650,15 +3650,15 @@
         let n = t
         return (
           (n.pubkey = j(it.getPublicKey(e))),
-          (n.id = rn(n)),
-          (n.sig = j(it.sign(rn(n), e))),
+          (n.id = on(n)),
+          (n.sig = j(it.sign(on(n), e))),
           (n[ht] = !0),
           n
         )
       }
       verifyEvent(t) {
         if (typeof t[ht] == 'boolean') return t[ht]
-        let e = rn(t)
+        let e = on(t)
         if (e !== t.id) return ((t[ht] = !1), !1)
         try {
           let n = it.verify(t.sig, e, t.pubkey)
@@ -3669,28 +3669,28 @@
       }
     }
   function Oa(t) {
-    if (!fr(t)) throw new Error("can't serialize event with wrong or missing properties")
+    if (!dr(t)) throw new Error("can't serialize event with wrong or missing properties")
     return JSON.stringify([0, t.pubkey, t.created_at, t.kind, t.tags, t.content])
   }
-  function rn(t) {
+  function on(t) {
     let e = ae(pe.encode(Oa(t)))
     return j(e)
   }
-  var an = new Ua(),
-    Ra = an.generateSecretKey,
-    hr = an.getPublicKey,
-    ve = an.finalizeEvent,
-    pr = an.verifyEvent,
+  var cn = new Na(),
+    Ra = cn.generateSecretKey,
+    pr = cn.getPublicKey,
+    ve = cn.finalizeEvent,
+    gr = cn.verifyEvent,
     Pa = {}
   D(Pa, {
     Application: () => Rc,
-    BadgeAward: () => Wa,
+    BadgeAward: () => za,
     BadgeDefinition: () => _c,
     BlockedRelaysList: () => dc,
     BookmarkList: () => lc,
     Bookmarksets: () => Sc,
     Calendar: () => Dc,
-    CalendarEventRSVP: () => zc,
+    CalendarEventRSVP: () => Wc,
     ChannelCreation: () => ss,
     ChannelHideMessage: () => cs,
     ChannelMessage: () => as,
@@ -3703,27 +3703,27 @@
     CommunityPostApproval: () => Ya,
     Contacts: () => Va,
     CreateOrUpdateProduct: () => Ic,
-    CreateOrUpdateStall: () => kc,
+    CreateOrUpdateStall: () => Cc,
     Curationsets: () => Lc,
     Date: () => qc,
     DirectMessageRelaysList: () => yc,
     DraftClassifiedListing: () => Mc,
-    DraftLong: () => Uc,
+    DraftLong: () => Nc,
     Emojisets: () => Oc,
     EncryptedDirectMessage: () => Da,
-    EventDeletion: () => za,
+    EventDeletion: () => Wa,
     FileMetadata: () => Ka,
     FileServerPreference: () => mc,
     Followsets: () => Ec,
-    GenericRepost: () => br,
+    GenericRepost: () => xr,
     Genericlists: () => Tc,
     GiftWrap: () => us,
-    HTTPAuth: () => xr,
+    HTTPAuth: () => vr,
     Handlerinformation: () => jc,
-    Handlerrecommendation: () => Wc,
+    Handlerrecommendation: () => zc,
     Highlights: () => sc,
     InterestsList: () => pc,
-    Interestsets: () => Cc,
+    Interestsets: () => kc,
     JobFeedback: () => tc,
     JobRequest: () => Qa,
     JobResult: () => ec,
@@ -3731,7 +3731,7 @@
     LightningPubRPC: () => bc,
     LiveChatMessage: () => Za,
     LiveEvent: () => Pc,
-    LongFormArticle: () => Nc,
+    LongFormArticle: () => Uc,
     Metadata: () => Ma,
     Mutelist: () => ic,
     NWCWalletInfo: () => wc,
@@ -3744,13 +3744,13 @@
     ProblemTracker: () => Ga,
     ProfileBadges: () => Bc,
     PublicChatsList: () => fc,
-    Reaction: () => wr,
+    Reaction: () => br,
     RecommendRelay: () => qa,
     RelayList: () => cc,
     Relaysets: () => Ac,
     Report: () => Fa,
     Reporting: () => Ja,
-    Repost: () => mr,
+    Repost: () => wr,
     Seal: () => rs,
     SearchRelaysList: () => hc,
     ShortTextNote: () => ns,
@@ -3761,51 +3761,51 @@
     ZapGoal: () => nc,
     ZapRequest: () => rc,
     classifyKind: () => $a,
-    isAddressableKind: () => yr,
+    isAddressableKind: () => mr,
     isEphemeralKind: () => ts,
     isKind: () => Ha,
     isRegularKind: () => es,
-    isReplaceableKind: () => gr,
+    isReplaceableKind: () => yr,
   })
   function es(t) {
     return t < 1e4 && t !== 0 && t !== 3
   }
-  function gr(t) {
+  function yr(t) {
     return t === 0 || t === 3 || (1e4 <= t && t < 2e4)
   }
   function ts(t) {
     return 2e4 <= t && t < 3e4
   }
-  function yr(t) {
+  function mr(t) {
     return 3e4 <= t && t < 4e4
   }
   function $a(t) {
     return es(t)
       ? 'regular'
-      : gr(t)
+      : yr(t)
         ? 'replaceable'
         : ts(t)
           ? 'ephemeral'
-          : yr(t)
+          : mr(t)
             ? 'parameterized'
             : 'unknown'
   }
   function Ha(t, e) {
     let n = e instanceof Array ? e : [e]
-    return (fr(t) && n.includes(t.kind)) || !1
+    return (dr(t) && n.includes(t.kind)) || !1
   }
   var Ma = 0,
     ns = 1,
     qa = 2,
     Va = 3,
     Da = 4,
-    za = 5,
-    mr = 6,
-    wr = 7,
-    Wa = 8,
+    Wa = 5,
+    wr = 6,
+    br = 7,
+    za = 8,
     rs = 13,
     os = 14,
-    br = 16,
+    xr = 16,
     ss = 40,
     is = 41,
     as = 42,
@@ -3845,7 +3845,7 @@
     ds = 23194,
     xc = 23195,
     vc = 24133,
-    xr = 27235,
+    vr = 27235,
     Ec = 3e4,
     Tc = 30001,
     Ac = 30002,
@@ -3853,11 +3853,11 @@
     Lc = 30004,
     Bc = 30008,
     _c = 30009,
-    Cc = 30015,
-    kc = 30017,
+    kc = 30015,
+    Cc = 30017,
     Ic = 30018,
-    Nc = 30023,
-    Uc = 30024,
+    Uc = 30023,
+    Nc = 30024,
     Oc = 30030,
     Rc = 30078,
     Pc = 30311,
@@ -3867,20 +3867,20 @@
     qc = 31922,
     Vc = 31923,
     Dc = 31924,
-    zc = 31925,
-    Wc = 31989,
+    Wc = 31925,
+    zc = 31989,
     jc = 31990,
     Kc = 34550
   var Zc = {}
   D(Zc, {
-    getHex64: () => vr,
+    getHex64: () => Er,
     getInt: () => hs,
     getSubscriptionId: () => Gc,
     matchEventId: () => Fc,
     matchEventKind: () => Xc,
     matchEventPubkey: () => Jc,
   })
-  function vr(t, e) {
+  function Er(t, e) {
     let n = e.length + 3,
       r = t.indexOf(`"${e}":`) + n,
       o = t.slice(r).indexOf('"') + r + 1
@@ -3905,10 +3905,10 @@
     return t.slice(r + 1, s)
   }
   function Fc(t, e) {
-    return e === vr(t, 'id')
+    return e === Er(t, 'id')
   }
   function Jc(t, e) {
-    return e === vr(t, 'pubkey')
+    return e === Er(t, 'pubkey')
   }
   function Xc(t, e) {
     return e === hs(t, 'kind')
@@ -3934,14 +3934,14 @@
   try {
     tl = WebSocket
   } catch {}
-  var Er = {}
-  D(Er, {
+  var gt = {}
+  D(gt, {
     BECH32_REGEX: () => ps,
     Bech32MaxSize: () => Tr,
     NostrTypeGuard: () => nl,
-    decode: () => cn,
+    decode: () => ln,
     decodeNostrURI: () => ol,
-    encodeBytes: () => un,
+    encodeBytes: () => fn,
     naddrEncode: () => ul,
     neventEncode: () => ll,
     noteEncode: () => al,
@@ -3972,26 +3972,26 @@
   }
   function ol(t) {
     try {
-      return (t.startsWith('nostr:') && (t = t.substring(6)), cn(t))
+      return (t.startsWith('nostr:') && (t = t.substring(6)), ln(t))
     } catch {
       return { type: 'invalid', data: null }
     }
   }
-  function cn(t) {
+  function ln(t) {
     let { prefix: e, words: n } = De.decode(t, Tr),
       r = new Uint8Array(De.fromWords(n))
     switch (e) {
       case 'nprofile': {
-        let o = cr(r)
+        let o = lr(r)
         if (!o[0]?.[0]) throw new Error('missing TLV 0 for nprofile')
         if (o[0][0].length !== 32) throw new Error('TLV 0 should be 32 bytes')
         return {
           type: 'nprofile',
-          data: { pubkey: j(o[0][0]), relays: o[1] ? o[1].map(s => Ne.decode(s)) : [] },
+          data: { pubkey: j(o[0][0]), relays: o[1] ? o[1].map(s => Ue.decode(s)) : [] },
         }
       }
       case 'nevent': {
-        let o = cr(r)
+        let o = lr(r)
         if (!o[0]?.[0]) throw new Error('missing TLV 0 for nevent')
         if (o[0][0].length !== 32) throw new Error('TLV 0 should be 32 bytes')
         if (o[2] && o[2][0].length !== 32) throw new Error('TLV 2 should be 32 bytes')
@@ -4000,14 +4000,14 @@
           type: 'nevent',
           data: {
             id: j(o[0][0]),
-            relays: o[1] ? o[1].map(s => Ne.decode(s)) : [],
+            relays: o[1] ? o[1].map(s => Ue.decode(s)) : [],
             author: o[2]?.[0] ? j(o[2][0]) : void 0,
             kind: o[3]?.[0] ? parseInt(j(o[3][0]), 16) : void 0,
           },
         }
       }
       case 'naddr': {
-        let o = cr(r)
+        let o = lr(r)
         if (!o[0]?.[0]) throw new Error('missing TLV 0 for naddr')
         if (!o[2]?.[0]) throw new Error('missing TLV 2 for naddr')
         if (o[2][0].length !== 32) throw new Error('TLV 2 should be 32 bytes')
@@ -4016,10 +4016,10 @@
         return {
           type: 'naddr',
           data: {
-            identifier: Ne.decode(o[0][0]),
+            identifier: Ue.decode(o[0][0]),
             pubkey: j(o[2][0]),
             kind: parseInt(j(o[3][0]), 16),
-            relays: o[1] ? o[1].map(s => Ne.decode(s)) : [],
+            relays: o[1] ? o[1].map(s => Ue.decode(s)) : [],
           },
         }
       }
@@ -4032,7 +4032,7 @@
         throw new Error(`unknown prefix ${e}`)
     }
   }
-  function cr(t) {
+  function lr(t) {
     let e = {},
       n = t
     for (; n.length > 0; ) {
@@ -4046,24 +4046,24 @@
     return e
   }
   function sl(t) {
-    return un('nsec', t)
+    return fn('nsec', t)
   }
   function il(t) {
-    return un('npub', Ae(t))
+    return fn('npub', Ae(t))
   }
   function al(t) {
-    return un('note', Ae(t))
+    return fn('note', Ae(t))
   }
-  function ln(t, e) {
+  function un(t, e) {
     let n = De.toWords(e)
     return De.encode(t, n, Tr)
   }
-  function un(t, e) {
-    return ln(t, e)
+  function fn(t, e) {
+    return un(t, e)
   }
   function cl(t) {
     let e = Ar({ 0: [Ae(t.pubkey)], 1: (t.relays || []).map(n => pe.encode(n)) })
-    return ln('nprofile', e)
+    return un('nprofile', e)
   }
   function ll(t) {
     let e
@@ -4074,7 +4074,7 @@
       2: t.author ? [Ae(t.author)] : [],
       3: e ? [new Uint8Array(e)] : [],
     })
-    return ln('nevent', n)
+    return un('nevent', n)
   }
   function ul(t) {
     let e = new ArrayBuffer(4)
@@ -4085,7 +4085,7 @@
       2: [Ae(t.pubkey)],
       3: [new Uint8Array(e)],
     })
-    return ln('naddr', n)
+    return un('naddr', n)
   }
   function Ar(t) {
     let e = []
@@ -4109,7 +4109,7 @@
       s = ys(o),
       i = Uint8Array.from(zt(16)),
       a = pe.encode(n),
-      c = rr(s, i).encrypt(a),
+      c = or(s, i).encrypt(a),
       l = ce.encode(new Uint8Array(c)),
       u = ce.encode(new Uint8Array(i.buffer))
     return `${l}?iv=${u}`
@@ -4121,8 +4121,8 @@
       a = ys(i),
       c = ce.decode(s),
       l = ce.decode(o),
-      u = rr(a, c).decrypt(l)
-    return Ne.decode(u)
+      u = or(a, c).decrypt(l)
+    return Ue.decode(u)
   }
   function ys(t) {
     return t.slice(1, 33)
@@ -4138,17 +4138,17 @@
   })
   var Sr = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/,
     pl = t => Sr.test(t || ''),
-    fn
+    dn
   try {
-    fn = fetch
+    dn = fetch
   } catch {}
   function gl(t) {
-    fn = t
+    dn = t
   }
   async function yl(t, e = '') {
     try {
       let n = `https://${t}/.well-known/nostr.json?name=${e}`,
-        r = await fn(n, { redirect: 'manual' })
+        r = await dn(n, { redirect: 'manual' })
       if (r.status !== 200) throw Error('Wrong response code')
       return (await r.json()).names
     } catch {
@@ -4161,7 +4161,7 @@
     let [, n = '_', r] = e
     try {
       let o = `https://${r}/.well-known/nostr.json?name=${n}`,
-        s = await fn(o, { redirect: 'manual' })
+        s = await dn(o, { redirect: 'manual' })
       if (s.status !== 200) throw Error('Wrong response code')
       let i = await s.json(),
         a = i.names[n]
@@ -4294,21 +4294,21 @@
   D(Sl, {
     unwrapEvent: () => $l,
     unwrapManyEvents: () => Hl,
-    wrapEvent: () => Us,
+    wrapEvent: () => Ns,
     wrapManyEvents: () => Pl,
   })
   var Ll = {}
   D(Ll, {
-    createRumor: () => Cs,
-    createSeal: () => ks,
+    createRumor: () => ks,
+    createSeal: () => Cs,
     createWrap: () => Is,
-    unwrapEvent: () => kr,
-    unwrapManyEvents: () => Ns,
-    wrapEvent: () => sn,
+    unwrapEvent: () => Cr,
+    unwrapManyEvents: () => Us,
+    wrapEvent: () => an,
     wrapManyEvents: () => Ol,
   })
   var Bl = {}
-  D(Bl, { decrypt: () => Cr, encrypt: () => _r, getConversationKey: () => Lr, v2: () => Nl })
+  D(Bl, { decrypt: () => kr, encrypt: () => _r, getConversationKey: () => Lr, v2: () => Ul })
   var vs = 1,
     Es = 65535
   function Lr(t, e) {
@@ -4336,19 +4336,19 @@
     let e = new Uint8Array(2)
     return (new DataView(e.buffer).setUint16(0, t, !1), e)
   }
-  function Cl(t) {
+  function kl(t) {
     let e = pe.encode(t),
       n = e.length,
       r = _l(n),
       o = new Uint8Array(Br(n) - n)
     return ct(r, e, o)
   }
-  function kl(t) {
+  function Cl(t) {
     let e = new DataView(t.buffer).getUint16(0),
       n = t.subarray(2, 2 + e)
     if (e < vs || e > Es || n.length !== e || t.length !== 2 + Br(e))
       throw new Error('invalid padding')
-    return Ne.decode(n)
+    return Ue.decode(n)
   }
   function As(t, e, n) {
     if (n.length !== 32) throw new Error('AAD associated data must be 32 bytes')
@@ -4374,62 +4374,62 @@
   }
   function _r(t, e, n = zt(32)) {
     let { chacha_key: r, chacha_nonce: o, hmac_key: s } = Ts(e, n),
-      i = Cl(t),
-      a = en(r, o, i),
+      i = kl(t),
+      a = tn(r, o, i),
       c = As(s, a, n)
     return ce.encode(ct(new Uint8Array([2]), n, a, c))
   }
-  function Cr(t, e) {
+  function kr(t, e) {
     let { nonce: n, ciphertext: r, mac: o } = Il(t),
       { chacha_key: s, chacha_nonce: i, hmac_key: a } = Ts(e, n),
       c = As(a, r, n)
     if (!Ye(c, o)) throw new Error('invalid MAC')
-    let l = en(s, i, r)
-    return kl(l)
+    let l = tn(s, i, r)
+    return Cl(l)
   }
-  var Nl = { utils: { getConversationKey: Lr, calcPaddedLen: Br }, encrypt: _r, decrypt: Cr },
-    Ul = 2880 * 60,
+  var Ul = { utils: { getConversationKey: Lr, calcPaddedLen: Br }, encrypt: _r, decrypt: kr },
+    Nl = 2880 * 60,
     Ss = () => Math.round(Date.now() / 1e3),
-    Ls = () => Math.round(Ss() - Math.random() * Ul),
+    Ls = () => Math.round(Ss() - Math.random() * Nl),
     Bs = (t, e) => Lr(t, e),
     _s = (t, e, n) => _r(JSON.stringify(t), Bs(e, n)),
-    Jo = (t, e) => JSON.parse(Cr(t.content, Bs(e, t.pubkey)))
-  function Cs(t, e) {
-    let n = { created_at: Ss(), content: '', tags: [], ...t, pubkey: hr(e) }
-    return ((n.id = rn(n)), n)
+    Jo = (t, e) => JSON.parse(kr(t.content, Bs(e, t.pubkey)))
+  function ks(t, e) {
+    let n = { created_at: Ss(), content: '', tags: [], ...t, pubkey: pr(e) }
+    return ((n.id = on(n)), n)
   }
-  function ks(t, e, n) {
+  function Cs(t, e, n) {
     return ve({ kind: rs, content: _s(t, e, n), created_at: Ls(), tags: [] }, e)
   }
   function Is(t, e) {
     let n = Ra()
     return ve({ kind: us, content: _s(t, n, e), created_at: Ls(), tags: [['p', e]] }, n)
   }
-  function sn(t, e, n) {
-    let r = Cs(t, e),
-      o = ks(r, e, n)
+  function an(t, e, n) {
+    let r = ks(t, e),
+      o = Cs(r, e, n)
     return Is(o, n)
   }
   function Ol(t, e, n) {
     if (!n || n.length === 0) throw new Error('At least one recipient is required.')
-    let r = hr(e),
-      o = [sn(t, e, r)]
+    let r = pr(e),
+      o = [an(t, e, r)]
     return (
       n.forEach(s => {
-        o.push(sn(t, e, s))
+        o.push(an(t, e, s))
       }),
       o
     )
   }
-  function kr(t, e) {
+  function Cr(t, e) {
     let n = Jo(t, e)
     return Jo(n, e)
   }
-  function Ns(t, e) {
+  function Us(t, e) {
     let n = []
     return (
       t.forEach(r => {
-        n.push(kr(r, e))
+        n.push(Cr(r, e))
       }),
       n.sort((r, o) => r.created_at - o.created_at),
       n
@@ -4446,16 +4446,16 @@
       o
     )
   }
-  function Us(t, e, n, r, o) {
+  function Ns(t, e, n, r, o) {
     let s = Rl(e, n, r, o)
-    return sn(s, t, e.publicKey)
+    return an(s, t, e.publicKey)
   }
   function Pl(t, e, n, r, o) {
     if (!e || e.length === 0) throw new Error('At least one recipient is required.')
-    return [{ publicKey: hr(t) }, ...e].map(i => Us(t, i, n, r, o))
+    return [{ publicKey: pr(t) }, ...e].map(i => Ns(t, i, n, r, o))
   }
-  var $l = kr,
-    Hl = Ns,
+  var $l = Cr,
+    Hl = Us,
     Ml = {}
   D(Ml, {
     finishRepostEvent: () => ql,
@@ -4466,7 +4466,7 @@
     let o,
       s = [...(t.tags ?? []), ['e', e.id, n], ['p', e.pubkey]]
     return (
-      e.kind === ns ? (o = mr) : ((o = br), s.push(['k', String(e.kind)])),
+      e.kind === ns ? (o = wr) : ((o = xr), s.push(['k', String(e.kind)])),
       ve(
         {
           kind: o,
@@ -4479,7 +4479,7 @@
     )
   }
   function Os(t) {
-    if (![mr, br].includes(t.kind)) return
+    if (![wr, xr].includes(t.kind)) return
     let e, n
     for (let r = t.tags.length - 1; r >= 0 && (e === void 0 || n === void 0); r--) {
       let o = t.tags[r]
@@ -4498,18 +4498,18 @@
     } catch {
       return
     }
-    if (r.id === n.id && !(!e && !pr(r))) return r
+    if (r.id === n.id && !(!e && !gr(r))) return r
   }
   var Dl = {}
-  D(Dl, { NOSTR_URI_REGEX: () => Ir, parse: () => Wl, test: () => zl })
+  D(Dl, { NOSTR_URI_REGEX: () => Ir, parse: () => zl, test: () => Wl })
   var Ir = new RegExp(`nostr:(${ps.source})`)
-  function zl(t) {
+  function Wl(t) {
     return typeof t == 'string' && new RegExp(`^${Ir.source}$`).test(t)
   }
-  function Wl(t) {
+  function zl(t) {
     let e = t.match(new RegExp(`^${Ir.source}$`))
     if (!e) throw new Error(`Invalid Nostr URI: ${t}`)
-    return { uri: e[0], value: e[1], decoded: cn(e[1]) }
+    return { uri: e[0], value: e[1], decoded: ln(e[1]) }
   }
   var jl = {}
   D(jl, { finishReactionEvent: () => Kl, getReactedEventPointer: () => Zl })
@@ -4518,7 +4518,7 @@
     return ve(
       {
         ...t,
-        kind: wr,
+        kind: br,
         tags: [...(t.tags ?? []), ...r, ['e', e.id], ['p', e.pubkey]],
         content: t.content ?? '+',
       },
@@ -4526,7 +4526,7 @@
     )
   }
   function Zl(t) {
-    if (t.kind !== wr) return
+    if (t.kind !== br) return
     let e, n
     for (let r = t.tags.length - 1; r >= 0 && (e === void 0 || n === void 0); r--) {
       let o = t.tags[r]
@@ -4575,7 +4575,7 @@
           c = a ? s + 60 + a.index : n
         try {
           let l,
-            { data: u, type: f } = cn(t.slice(s + 1, c))
+            { data: u, type: f } = ln(t.slice(s + 1, c))
           switch (f) {
             case 'npub':
               l = { pubkey: u }
@@ -4740,13 +4740,13 @@
   D(ru, {
     EMOJI_SHORTCODE_REGEX: () => Rs,
     matchAll: () => ou,
-    regex: () => Nr,
+    regex: () => Ur,
     replaceAll: () => su,
   })
   var Rs = /:(\w+):/,
-    Nr = () => new RegExp(`\\B${Rs.source}\\B`, 'g')
+    Ur = () => new RegExp(`\\B${Rs.source}\\B`, 'g')
   function* ou(t) {
-    let e = t.matchAll(Nr())
+    let e = t.matchAll(Ur())
     for (let n of e)
       try {
         let [r, o] = n
@@ -4754,21 +4754,21 @@
       } catch {}
   }
   function su(t, e) {
-    return t.replaceAll(Nr(), (n, r) => e({ shortcode: n, name: r }))
+    return t.replaceAll(Ur(), (n, r) => e({ shortcode: n, name: r }))
   }
   var iu = {}
   D(iu, { useFetchImplementation: () => au, validateGithub: () => cu })
-  var Ur
+  var Nr
   try {
-    Ur = fetch
+    Nr = fetch
   } catch {}
   function au(t) {
-    Ur = t
+    Nr = t
   }
   async function cu(t, e, n) {
     try {
       return (
-        (await (await Ur(`https://gist.github.com/${e}/${n}/raw`)).text()) ===
+        (await (await Nr(`https://gist.github.com/${e}/${n}/raw`)).text()) ===
         `Verifying that I control the following Nostr public key: ${t}`
       )
     } catch {
@@ -4827,7 +4827,7 @@
       } else if (n) {
         let { words: i } = De.decode(n, 1e3),
           a = De.fromWords(i)
-        e = Ne.decode(a)
+        e = Ue.decode(a)
       } else return null
       let s = await (await Or(e)).json()
       if (s.allowsNostr && s.nostrPubkey) return s.callback
@@ -4846,10 +4846,10 @@
       ],
     }
     if ('event' in t) {
-      if ((e.tags.push(['e', t.event.id]), gr(t.event.kind))) {
+      if ((e.tags.push(['e', t.event.id]), yr(t.event.kind))) {
         let n = ['a', `${t.event.kind}:${t.event.pubkey}:`]
         e.tags.push(n)
-      } else if (yr(t.event.kind)) {
+      } else if (mr(t.event.kind)) {
         let n = t.event.tags.find(([o, s]) => o === 'd' && s)
         if (!n) throw new Error('d tag not found or is empty')
         let r = ['a', `${t.event.kind}:${t.event.pubkey}:${n[1]}`]
@@ -4866,8 +4866,8 @@
     } catch {
       return 'Invalid zap request JSON.'
     }
-    if (!fr(e)) return 'Zap request is not a valid Nostr event.'
-    if (!pr(e)) return 'Invalid signature on zap request.'
+    if (!dr(e)) return 'Zap request is not a valid Nostr event.'
+    if (!gr(e)) return 'Invalid signature on zap request.'
     let n = e.tags.find(([s, i]) => s === 'p' && i)
     if (!n) return "Zap request doesn't have a 'p' tag."
     if (!n[1].match(/^[a-f0-9]{64}$/)) return "Zap request 'p' tag is not valid hex."
@@ -4919,14 +4919,14 @@
   }
   var vu = {}
   D(vu, { Negentropy: () => $s, NegentropyStorageVector: () => Au, NegentropySync: () => Su })
-  var lr = 97,
+  var ur = 97,
     pt = 32,
     Ps = 16,
     et = { Skip: 0, Fingerprint: 1, IdList: 2 },
     Ie = class {
       constructor(t) {
-        z(this, '_raw')
-        z(this, 'length')
+        W(this, '_raw')
+        W(this, 'length')
         typeof t == 'number'
           ? ((this._raw = new Uint8Array(t)), (this.length = 0))
           : t instanceof Uint8Array
@@ -4959,7 +4959,7 @@
         return ((this._raw = this._raw.subarray(t)), (this.length -= t), e)
       }
     }
-  function nn(t) {
+  function rn(t) {
     let e = 0
     for (;;) {
       if (t.length === 0) throw Error('parse ends prematurely')
@@ -4968,7 +4968,7 @@
     }
     return e
   }
-  function ke(t) {
+  function Ce(t) {
     if (t === 0) return new Ie(new Uint8Array([0]))
     let e = []
     for (; t !== 0; ) (e.push(t & 127), (t >>>= 7))
@@ -4977,15 +4977,15 @@
     return new Ie(new Uint8Array(e))
   }
   function Eu(t) {
-    return on(t, 1)[0]
+    return sn(t, 1)[0]
   }
-  function on(t, e) {
+  function sn(t, e) {
     if (t.length < e) throw Error('parse ends prematurely')
     return t.shiftN(e)
   }
   var Tu = class {
       constructor() {
-        z(this, 'buf')
+        W(this, 'buf')
         this.setToZero()
       }
       setToZero() {
@@ -5020,26 +5020,26 @@
       }
       getFingerprint(t) {
         let e = new Ie()
-        return (e.extend(this.buf), e.extend(ke(t)), ae(e.unwrap()).subarray(0, Ps))
+        return (e.extend(this.buf), e.extend(Ce(t)), ae(e.unwrap()).subarray(0, Ps))
       }
     },
     Au = class {
       constructor() {
-        z(this, 'items')
-        z(this, 'sealed')
+        W(this, 'items')
+        W(this, 'sealed')
         ;((this.items = []), (this.sealed = !1))
       }
       insert(t, e) {
         if (this.sealed) throw Error('already sealed')
-        let n = Gn(e)
+        let n = Fn(e)
         if (n.byteLength !== pt) throw Error('bad id size for added item')
         this.items.push({ timestamp: t, id: n })
       }
       seal() {
         if (this.sealed) throw Error('already sealed')
-        ;((this.sealed = !0), this.items.sort(ur))
+        ;((this.sealed = !0), this.items.sort(fr))
         for (let t = 1; t < this.items.length; t++)
-          if (ur(this.items[t - 1], this.items[t]) === 0) throw Error('duplicate item inserted')
+          if (fr(this.items[t - 1], this.items[t]) === 0) throw Error('duplicate item inserted')
       }
       unseal() {
         this.sealed = !1
@@ -5059,7 +5059,7 @@
         return (
           this._checkSealed(),
           this._checkBounds(t, e),
-          this._binarySearch(this.items, t, e, r => ur(r, n) < 0)
+          this._binarySearch(this.items, t, e, r => fr(r, n) < 0)
         )
       }
       fingerprint(t, e) {
@@ -5084,10 +5084,10 @@
     },
     $s = class {
       constructor(t, e = 6e4) {
-        z(this, 'storage')
-        z(this, 'frameSizeLimit')
-        z(this, 'lastTimestampIn')
-        z(this, 'lastTimestampOut')
+        W(this, 'storage')
+        W(this, 'frameSizeLimit')
+        W(this, 'lastTimestampIn')
+        W(this, 'lastTimestampOut')
         if (e < 4096) throw Error('frameSizeLimit too small')
         ;((this.storage = t),
           (this.frameSizeLimit = e),
@@ -5100,19 +5100,19 @@
       initiate() {
         let t = new Ie()
         return (
-          t.extend(new Uint8Array([lr])),
+          t.extend(new Uint8Array([ur])),
           this.splitRange(0, this.storage.size(), this._bound(Number.MAX_VALUE), t),
           Xe(t.unwrap())
         )
       }
       reconcile(t, e, n) {
-        let r = new Ie(Gn(t))
+        let r = new Ie(Fn(t))
         this.lastTimestampIn = this.lastTimestampOut = 0
         let o = new Ie()
-        o.extend(new Uint8Array([lr]))
+        o.extend(new Uint8Array([ur]))
         let s = Eu(r)
         if (s < 96 || s > 111) throw Error('invalid negentropy protocol version byte')
-        if (s !== lr) throw Error('unsupported negentropy protocol version requested: ' + (s - 96))
+        if (s !== ur) throw Error('unsupported negentropy protocol version requested: ' + (s - 96))
         let i = this.storage.size(),
           a = this._bound(0),
           c = 0,
@@ -5120,22 +5120,22 @@
         for (; r.length !== 0; ) {
           let u = new Ie(),
             f = () => {
-              l && ((l = !1), u.extend(this.encodeBound(a)), u.extend(ke(et.Skip)))
+              l && ((l = !1), u.extend(this.encodeBound(a)), u.extend(Ce(et.Skip)))
             },
-            p = this.decodeBound(r),
-            y = nn(r),
+            h = this.decodeBound(r),
+            y = rn(r),
             g = c,
-            d = this.storage.findLowerBound(c, i, p)
+            d = this.storage.findLowerBound(c, i, h)
           if (y === et.Skip) l = !0
           else if (y === et.Fingerprint) {
-            let h = on(r, Ps),
+            let p = sn(r, Ps),
               m = this.storage.fingerprint(g, d)
-            Hs(h, m) !== 0 ? (f(), this.splitRange(g, d, p, u)) : (l = !0)
+            Hs(p, m) !== 0 ? (f(), this.splitRange(g, d, h, u)) : (l = !0)
           } else if (y === et.IdList) {
-            let h = nn(r),
+            let p = rn(r),
               m = {}
-            for (let w = 0; w < h; w++) {
-              let b = on(r, pt)
+            for (let w = 0; w < p; w++) {
+              let b = sn(r, pt)
               m[Xe(b)] = b
             }
             if (
@@ -5150,13 +5150,13 @@
               for (let w of Object.values(m)) n(Xe(w))
           } else throw Error('unexpected mode')
           if (this.exceededFrameSizeLimit(o.length + u.length)) {
-            let h = this.storage.fingerprint(d, i)
+            let p = this.storage.fingerprint(d, i)
             ;(o.extend(this.encodeBound(this._bound(Number.MAX_VALUE))),
-              o.extend(ke(et.Fingerprint)),
-              o.extend(h))
+              o.extend(Ce(et.Fingerprint)),
+              o.extend(p))
             break
           } else o.extend(u)
-          ;((c = d), (a = p))
+          ;((c = d), (a = h))
         }
         return o.length === 1 ? null : Xe(o.unwrap())
       }
@@ -5165,8 +5165,8 @@
           s = 16
         if (o < s * 2)
           (r.extend(this.encodeBound(n)),
-            r.extend(ke(et.IdList)),
-            r.extend(ke(o)),
+            r.extend(Ce(et.IdList)),
+            r.extend(Ce(o)),
             this.storage.iterate(t, e, i => (r.extend(i.id), !0)))
         else {
           let i = Math.floor(o / s),
@@ -5176,14 +5176,14 @@
             let u = i + (l < a ? 1 : 0),
               f = this.storage.fingerprint(c, c + u)
             c += u
-            let p
-            if (c === e) p = n
+            let h
+            if (c === e) h = n
             else {
               let y, g
-              ;(this.storage.iterate(c - 1, c + 1, (d, h) => (h === c - 1 ? (y = d) : (g = d), !0)),
-                (p = this.getMinimalBound(y, g)))
+              ;(this.storage.iterate(c - 1, c + 1, (d, p) => (p === c - 1 ? (y = d) : (g = d), !0)),
+                (h = this.getMinimalBound(y, g)))
             }
-            ;(r.extend(this.encodeBound(p)), r.extend(ke(et.Fingerprint)), r.extend(f))
+            ;(r.extend(this.encodeBound(h)), r.extend(Ce(et.Fingerprint)), r.extend(f))
           }
         }
       }
@@ -5191,7 +5191,7 @@
         return t > this.frameSizeLimit - 200
       }
       decodeTimestampIn(t) {
-        let e = nn(t)
+        let e = rn(t)
         return (
           (e = e === 0 ? Number.MAX_VALUE : e - 1),
           this.lastTimestampIn === Number.MAX_VALUE || e === Number.MAX_VALUE
@@ -5201,21 +5201,21 @@
       }
       decodeBound(t) {
         let e = this.decodeTimestampIn(t),
-          n = nn(t)
+          n = rn(t)
         if (n > pt) throw Error('bound key too long')
-        let r = on(t, n)
+        let r = sn(t, n)
         return { timestamp: e, id: r }
       }
       encodeTimestampOut(t) {
-        if (t === Number.MAX_VALUE) return ((this.lastTimestampOut = Number.MAX_VALUE), ke(0))
+        if (t === Number.MAX_VALUE) return ((this.lastTimestampOut = Number.MAX_VALUE), Ce(0))
         let e = t
-        return ((t -= this.lastTimestampOut), (this.lastTimestampOut = e), ke(t + 1))
+        return ((t -= this.lastTimestampOut), (this.lastTimestampOut = e), Ce(t + 1))
       }
       encodeBound(t) {
         let e = new Ie()
         return (
           e.extend(this.encodeTimestampOut(t.timestamp)),
-          e.extend(ke(t.id.length)),
+          e.extend(Ce(t.id.length)),
           e.extend(t.id),
           e
         )
@@ -5238,18 +5238,18 @@
     }
     return t.byteLength > e.byteLength ? 1 : t.byteLength < e.byteLength ? -1 : 0
   }
-  function ur(t, e) {
+  function fr(t, e) {
     return t.timestamp === e.timestamp ? Hs(t.id, e.id) : t.timestamp - e.timestamp
   }
   var Su = class {
       constructor(t, e, n, r = {}) {
-        z(this, 'relay')
-        z(this, 'storage')
-        z(this, 'neg')
-        z(this, 'filter')
-        z(this, 'subscription')
-        z(this, 'onhave')
-        z(this, 'onneed')
+        W(this, 'relay')
+        W(this, 'storage')
+        W(this, 'neg')
+        W(this, 'filter')
+        W(this, 'subscription')
+        W(this, 'onhave')
+        W(this, 'onneed')
         ;((this.relay = t),
           (this.storage = e),
           (this.neg = new $s(e)),
@@ -5301,16 +5301,16 @@
     unpackEventFromToken: () => qs,
     validateEvent: () => Ks,
     validateEventKind: () => Ds,
-    validateEventMethodTag: () => Ws,
+    validateEventMethodTag: () => zs,
     validateEventPayloadTag: () => js,
     validateEventTimestamp: () => Vs,
-    validateEventUrlTag: () => zs,
+    validateEventUrlTag: () => Ws,
     validateToken: () => _u,
   })
   var Ms = 'Nostr '
   async function Bu(t, e, n, r = !1, o) {
     let s = {
-      kind: xr,
+      kind: vr,
       tags: [
         ['u', t],
         ['method', e],
@@ -5333,7 +5333,7 @@
   async function qs(t) {
     if (!t) throw new Error('Missing token')
     t = t.replace(Ms, '')
-    let e = Ne.decode(ce.decode(t))
+    let e = Ue.decode(ce.decode(t))
     if (!e || e.length === 0 || !e.startsWith('{')) throw new Error('Invalid token')
     return JSON.parse(e)
   }
@@ -5341,13 +5341,13 @@
     return t.created_at ? Math.round(new Date().getTime() / 1e3) - t.created_at < 60 : !1
   }
   function Ds(t) {
-    return t.kind === xr
+    return t.kind === vr
   }
-  function zs(t, e) {
+  function Ws(t, e) {
     let n = t.tags.find(r => r[0] === 'u')
     return n ? n.length > 0 && n[1] === e : !1
   }
-  function Ws(t, e) {
+  function zs(t, e) {
     let n = t.tags.find(r => r[0] === 'method')
     return n ? n.length > 0 && n[1].toLowerCase() === e.toLowerCase() : !1
   }
@@ -5362,18 +5362,18 @@
     return n.length > 0 && n[1] === r
   }
   async function Ks(t, e, n, r) {
-    if (!pr(t)) throw new Error('Invalid nostr event, signature invalid')
+    if (!gr(t)) throw new Error('Invalid nostr event, signature invalid')
     if (!Ds(t)) throw new Error('Invalid nostr event, kind invalid')
     if (!Vs(t)) throw new Error('Invalid nostr event, created_at timestamp invalid')
-    if (!zs(t, e)) throw new Error('Invalid nostr event, url tag invalid')
-    if (!Ws(t, n)) throw new Error('Invalid nostr event, method tag invalid')
+    if (!Ws(t, e)) throw new Error('Invalid nostr event, url tag invalid')
+    if (!zs(t, n)) throw new Error('Invalid nostr event, method tag invalid')
     if (r && typeof r == 'object' && Object.keys(r).length > 0 && !js(t, r))
       throw new Error('Invalid nostr event, payload tag does not match request body hash')
     return !0
   }
   function Zs(t) {
     try {
-      let e = Er.decode(t)
+      let e = gt.decode(t)
       return e.type === 'nevent'
         ? { type: 'event', data: { id: e.data.id, relays: e.data.relays || [] } }
         : e.type === 'note'
@@ -5393,18 +5393,18 @@
       return (console.error('[Nostr Decoder] Failed to decode identifier:', e), null)
     }
   }
-  function Cu() {
+  function ku() {
     return ['wss://relay.divine.video', 'wss://relay.nostr.band']
   }
   function Gs(t = [], e = []) {
-    let n = [...e, ...t, ...Cu()]
+    let n = [...e, ...t, ...ku()]
     return [...new Set(n)]
   }
-  var dn = 'nostube-embed-event-'
-  var Ue = class t {
+  var hn = 'nostube-embed-event-'
+  var Ne = class t {
     static getCachedEvent(e) {
       try {
-        let n = dn + e,
+        let n = hn + e,
           r = localStorage.getItem(n)
         if (!r) return null
         let o = JSON.parse(r)
@@ -5415,7 +5415,7 @@
     }
     static setCachedEvent(e, n) {
       try {
-        let r = dn + e,
+        let r = hn + e,
           o = { event: n, fetchedAt: Date.now() }
         ;(localStorage.setItem(r, JSON.stringify(o)),
           console.log(`[EventCache] Cached event ${e.substring(0, 8)}...`))
@@ -5434,7 +5434,7 @@
         let e = []
         for (let n = 0; n < localStorage.length; n++) {
           let r = localStorage.key(n)
-          r && r.startsWith(dn) && e.push(r)
+          r && r.startsWith(hn) && e.push(r)
         }
         ;(e.forEach(n => localStorage.removeItem(n)),
           console.log(`[EventCache] Cleared ${e.length} cached events`))
@@ -5449,7 +5449,7 @@
           r = 0
         for (let o = 0; o < localStorage.length; o++) {
           let s = localStorage.key(o)
-          if (s && s.startsWith(dn)) {
+          if (s && s.startsWith(hn)) {
             e++
             let i = localStorage.getItem(s)
             if (i) {
@@ -5476,7 +5476,7 @@
       }
     }
   }
-  var hn = class {
+  var pn = class {
     constructor(e) {
       ;((this.relays = e), (this.connections = new Map()), (this.subscriptions = new Map()))
     }
@@ -5508,9 +5508,9 @@
       let n
       if (e.type === 'event') n = e.data.id
       else if (e.type === 'address')
-        n = Ue.getAddressableKey(e.data.kind, e.data.pubkey, e.data.identifier)
+        n = Ne.getAddressableKey(e.data.kind, e.data.pubkey, e.data.identifier)
       else throw new Error('Invalid identifier type')
-      let r = Ue.getCachedEvent(n)
+      let r = Ne.getCachedEvent(n)
       if (r) return (console.log(`[Nostr Client] Cache hit for event ${n.substring(0, 16)}...`), r)
       console.log(`[Nostr Client] Cache miss for event ${n.substring(0, 16)}...`)
       let o = `embed-${Date.now()}`,
@@ -5525,18 +5525,18 @@
         let l = !1,
           u = [],
           f = 0,
-          p = 0,
+          h = 0,
           y = 0,
           g = this.relays.length,
           d = null,
-          h = setTimeout(() => {
+          p = setTimeout(() => {
             if (!l)
               if (((l = !0), clearTimeout(d), this.closeSubscription(o), u.length > 0)) {
                 let b = u.reduce((v, S) => (S.created_at > v.created_at ? S : v))
                 ;(console.log(
                   `[Nostr Client] Timeout - returning best event (created_at: ${b.created_at})`
                 ),
-                  Ue.setCachedEvent(n, b),
+                  Ne.setCachedEvent(n, b),
                   a(b))
               } else c(new Error('Event not found (timeout)'))
           }, 6e3),
@@ -5555,38 +5555,38 @@
                         u.length === 1 &&
                         (d = setTimeout(() => {
                           if (!l && u.length > 0) {
-                            ;((l = !0), clearTimeout(h), this.closeSubscription(o))
-                            let L = u.reduce((B, U) => (U.created_at > B.created_at ? U : B))
+                            ;((l = !0), clearTimeout(p), this.closeSubscription(o))
+                            let L = u.reduce((B, N) => (N.created_at > B.created_at ? N : B))
                             ;(console.log(
                               '[Nostr Client] Early return - got event after 200ms wait'
                             ),
-                              Ue.setCachedEvent(n, L),
+                              Ne.setCachedEvent(n, L),
                               a(L))
                           }
                         }, 200)))
                     : ((l = !0),
-                      clearTimeout(h),
+                      clearTimeout(p),
                       clearTimeout(d),
                       console.log('[Nostr Client] Regular event received, returning immediately'),
                       this.closeSubscription(o),
-                      Ue.setCachedEvent(n, E),
+                      Ne.setCachedEvent(n, E),
                       a(E))
                 }
                 if (
                   S[0] === 'EOSE' &&
                   S[1] === o &&
-                  (f++, console.log(`[Nostr Client] EOSE received (${f}/${p})`), i && !l)
+                  (f++, console.log(`[Nostr Client] EOSE received (${f}/${h})`), i && !l)
                 )
                   if (u.length > 0) {
-                    ;((l = !0), clearTimeout(h), clearTimeout(d), this.closeSubscription(o))
+                    ;((l = !0), clearTimeout(p), clearTimeout(d), this.closeSubscription(o))
                     let E = u.reduce((L, B) => (B.created_at > L.created_at ? B : L))
                     ;(console.log(`[Nostr Client] EOSE-triggered return with ${u.length} events`),
-                      Ue.setCachedEvent(n, E),
+                      Ne.setCachedEvent(n, E),
                       a(E))
                   } else
-                    f === p &&
+                    f === h &&
                       ((l = !0),
-                      clearTimeout(h),
+                      clearTimeout(p),
                       clearTimeout(d),
                       this.closeSubscription(o),
                       c(new Error('Addressable event not found on any relay')))
@@ -5605,7 +5605,7 @@
         this.relays.forEach(b => {
           this.connectRelay(b)
             .then(v => {
-              l || (p++, console.log(`[Nostr Client] Connected ${p}/${g}`), w(v))
+              l || (h++, console.log(`[Nostr Client] Connected ${h}/${g}`), w(v))
             })
             .catch(v => {
               ;(y++,
@@ -5613,7 +5613,7 @@
                 y === g &&
                   !l &&
                   ((l = !0),
-                  clearTimeout(h),
+                  clearTimeout(p),
                   clearTimeout(d),
                   c(new Error('Failed to connect to any relay'))))
             })
@@ -5644,7 +5644,7 @@
         console.log('[Nostr Client] All connections closed'))
     }
   }
-  function ku() {
+  function Cu() {
     if (typeof navigator > 'u') return !1
     let t = navigator.userAgent || navigator.vendor || window.opera || ''
     return (
@@ -5653,10 +5653,10 @@
     )
   }
   var Iu = ['hevc', 'h265', 'vp9', 'av01', 'av1']
-  function Nu(t) {
+  function Uu(t) {
     if (!t) return !0
     let e = t.toLowerCase()
-    if (ku()) {
+    if (Cu()) {
       for (let n of Iu)
         if (e.includes(n))
           return (
@@ -5673,7 +5673,7 @@
   }
   function Fs(t) {
     if (!t || t.length === 0) return t
-    let e = t.filter(n => Nu(n.mimeType))
+    let e = t.filter(n => Uu(n.mimeType))
     return e.length === 0
       ? (console.warn(
           '[Nostube Embed] All variants filtered out, returning original variants as fallback'
@@ -5687,34 +5687,34 @@
   }
   function Js(t) {
     let e = t.tags.filter(n => n[0] === 'imeta')
-    return e.length > 0 ? Uu(t, e) : Ou(t)
+    return e.length > 0 ? Nu(t, e) : Ou(t)
   }
-  function Uu(t, e) {
-    let n = e.map(p => Ru(p)).filter(Boolean),
-      r = n.filter(p => p.mimeType?.startsWith('video/')),
+  function Nu(t, e) {
+    let n = e.map(h => Ru(h)).filter(Boolean),
+      r = n.filter(h => h.mimeType?.startsWith('video/')),
       s = Fs(r),
-      i = n.filter(p => p.mimeType?.startsWith('image/'))
-    ;(e.forEach(p => {
-      for (let y = 1; y < p.length; y++) {
-        let g = p[y]
+      i = n.filter(h => h.mimeType?.startsWith('image/'))
+    ;(e.forEach(h => {
+      for (let y = 1; y < h.length; y++) {
+        let g = h[y]
         if (g.startsWith('image ')) {
           let d = g.substring(6).trim()
-          d && !i.some(h => h.url === d) && i.push({ url: d, fallbackUrls: [] })
+          d && !i.some(p => p.url === d) && i.push({ url: d, fallbackUrls: [] })
         }
       }
     }),
-      s.sort((p, y) => {
-        let g = pn(p)
-        return pn(y) - g
+      s.sort((h, y) => {
+        let g = gn(h)
+        return gn(y) - g
       }))
     let a =
-        t.tags.find(p => p[0] === 'title')?.[1] ||
-        t.tags.find(p => p[0] === 'alt')?.[1] ||
+        t.tags.find(h => h[0] === 'title')?.[1] ||
+        t.tags.find(h => h[0] === 'alt')?.[1] ||
         t.content ||
         'Untitled Video',
       c = t.content || '',
-      l = parseInt(t.tags.find(p => p[0] === 'duration')?.[1] || '0', 10),
-      u = t.tags.find(p => p[0] === 'content-warning')?.[1],
+      l = parseInt(t.tags.find(h => h[0] === 'duration')?.[1] || '0', 10),
+      u = t.tags.find(h => h[0] === 'content-warning')?.[1],
       f = t.pubkey
     return {
       id: t.id,
@@ -5776,7 +5776,7 @@
     }
     return e.url ? (e.fallbackUrls || (e.fallbackUrls = []), e) : null
   }
-  function pn(t) {
+  function gn(t) {
     if (t.dimensions) {
       let e = t.dimensions.match(/x(\d+)/)
       if (e) return parseInt(e[1], 10)
@@ -5789,15 +5789,15 @@
     let n = parseInt(e, 10)
     if (isNaN(n)) return t[0]
     let r = t[0],
-      o = Math.abs(pn(r) - n)
+      o = Math.abs(gn(r) - n)
     for (let s of t) {
-      let i = pn(s),
+      let i = gn(s),
         a = Math.abs(i - n)
       a < o && ((r = s), (o = a))
     }
     return r
   }
-  var vt = class {
+  var Et = class {
     static buildVideoPlayer(e, n) {
       console.log('[PlayerUI] Building video player with params:', n)
       let r = this.createVideoElement(n)
@@ -5901,7 +5901,7 @@
       return ((n.className = 'nostube-player-container'), n.appendChild(e), n)
     }
   }
-  var gn = class t {
+  var yn = class t {
     static getWarningMessage(e) {
       return e?.contentWarning
         ? e.contentWarning
@@ -5962,64 +5962,92 @@
         console.log('[ContentWarning] Overlay applied successfully'))
     }
   }
-  var Et = class t {
-    static createOverlay(e) {
-      let n = document.createElement('div')
-      ;((n.className = 'title-overlay'), n.setAttribute('aria-hidden', 'true'))
-      let r = document.createElement('div')
-      r.className = 'title-section'
-      let o = document.createElement('h1')
-      ;((o.className = 'video-title'),
-        (o.textContent = t.truncateTitle(e.title || 'Untitled Video')),
-        r.appendChild(o))
+  var Tt = class t {
+    static generateVideoUrl(e) {
+      return `https://nostu.be/video/${e}`
+    }
+    static generateAuthorUrl(e, n = []) {
+      try {
+        return `https://nostu.be/author/${gt.nprofileEncode({ pubkey: e, relays: n.slice(0, 3) })}`
+      } catch (r) {
+        console.error('[TitleOverlay] Failed to encode nprofile:', r)
+        try {
+          return `https://nostu.be/author/${gt.npubEncode(e)}`
+        } catch {
+          return null
+        }
+      }
+    }
+    static createOverlay(e, n, r = []) {
+      let o = document.createElement('div')
+      ;((o.className = 'title-overlay'), o.setAttribute('aria-hidden', 'true'))
       let s = document.createElement('div')
-      s.className = 'author-section'
-      let i = document.createElement('img')
-      ;((i.className = 'author-avatar'),
-        (i.src = e.authorAvatar || t.getDefaultAvatar()),
-        (i.alt = e.authorName || 'Author'),
-        (i.onerror = () => {
-          i.src = t.getDefaultAvatar()
+      s.className = 'title-section'
+      let i = document.createElement('a')
+      ;((i.className = 'video-title-link'),
+        (i.href = t.generateVideoUrl(n)),
+        (i.target = '_blank'),
+        (i.rel = 'noopener noreferrer'),
+        i.setAttribute('aria-label', 'Watch on Nostube'))
+      let a = document.createElement('h1')
+      ;((a.className = 'video-title'),
+        (a.textContent = t.truncateTitle(e.title || 'Untitled Video')),
+        i.appendChild(a),
+        s.appendChild(i))
+      let c = document.createElement('div')
+      c.className = 'author-section'
+      let l = e.author ? t.generateAuthorUrl(e.author, r) : null,
+        u = document.createElement('a')
+      ;((u.className = 'author-link'),
+        l && ((u.href = l), (u.target = '_blank'), (u.rel = 'noopener noreferrer')),
+        u.setAttribute('aria-label', 'View author profile on Nostube'))
+      let f = document.createElement('img')
+      ;((f.className = 'author-avatar'),
+        (f.src = e.authorAvatar || t.getDefaultAvatar()),
+        (f.alt = e.authorName || 'Author'),
+        (f.onerror = () => {
+          f.src = t.getDefaultAvatar()
         }))
-      let a = document.createElement('p')
+      let h = document.createElement('p')
       return (
-        (a.className = 'author-name'),
-        (a.textContent = e.authorName || t.formatPubkey(e.author)),
-        s.appendChild(i),
-        s.appendChild(a),
-        n.appendChild(r),
-        n.appendChild(s),
-        n
+        (h.className = 'author-name'),
+        (h.textContent = e.authorName || t.formatPubkey(e.author)),
+        u.appendChild(f),
+        u.appendChild(h),
+        c.appendChild(u),
+        o.appendChild(s),
+        o.appendChild(c),
+        o
       )
     }
-    static applyToPlayer(e, n, r, o) {
+    static applyToPlayer(e, n, r, o, s = []) {
       if (!o.showTitle) {
         console.log('[TitleOverlay] Title overlay disabled via title=0 parameter')
         return
       }
       console.log('[TitleOverlay] Applying title overlay')
-      let s = t.createOverlay(r)
-      e.appendChild(s)
-      let i = null,
-        a = () => {
-          ;(clearTimeout(i),
-            (i = setTimeout(() => {
-              n.paused || t.hide(s)
+      let i = t.createOverlay(r, o.videoId, s)
+      e.appendChild(i)
+      let a = null,
+        c = () => {
+          ;(clearTimeout(a),
+            (a = setTimeout(() => {
+              n.paused || t.hide(i)
             }, 3e3)))
         }
       ;(e.addEventListener('mouseenter', () => {
-        ;(clearTimeout(i), t.show(s))
+        ;(clearTimeout(a), t.show(i))
       }),
         e.addEventListener('mouseleave', () => {
-          n.paused || t.hide(s)
+          n.paused || t.hide(i)
         }),
         n.addEventListener('pause', () => {
-          ;(clearTimeout(i), t.show(s))
+          ;(clearTimeout(a), t.show(i))
         }),
         n.addEventListener('play', () => {
-          ;(clearTimeout(i), t.hide(s))
+          ;(clearTimeout(a), t.hide(i))
         }),
-        a(),
+        c(),
         console.log('[TitleOverlay] Overlay applied successfully'))
     }
     static show(e) {
@@ -6067,7 +6095,7 @@
       }
     }
   }
-  var yn = class t {
+  var mn = class t {
     static generateVideoUrl(e) {
       return `https://nostu.be/video/${e}`
     }
@@ -6160,7 +6188,7 @@
     }
   }
   var Ys = 'nostube-embed-profile-'
-  var mn = class t {
+  var wn = class t {
     constructor(e) {
       this.client = e
     }
@@ -6196,7 +6224,7 @@
             let l = !1,
               u = null,
               f = 0,
-              p = i.length,
+              h = i.length,
               y = setTimeout(() => {
                 if (!l)
                   if (((l = !0), this.client.closeSubscription(r), u)) {
@@ -6219,7 +6247,7 @@
                   if (
                     w[0] === 'EOSE' &&
                     w[1] === r &&
-                    (f++, console.log(`[ProfileFetcher] EOSE received (${f}/${p})`), f === p && !l)
+                    (f++, console.log(`[ProfileFetcher] EOSE received (${f}/${h})`), f === h && !l)
                   )
                     if (((l = !0), clearTimeout(y), this.client.closeSubscription(r), u)) {
                       let b = t.parseProfileMetadata(u)
@@ -6233,8 +6261,8 @@
               ;(g.addEventListener('message', d),
                 this.client.subscriptions.has(r) || this.client.subscriptions.set(r, []),
                 this.client.subscriptions.get(r).push({ ws: g, handler: d }))
-              let h = JSON.stringify(['REQ', r, o])
-              ;(g.send(h), console.log('[ProfileFetcher] Sent REQ to relay'))
+              let p = JSON.stringify(['REQ', r, o])
+              ;(g.send(p), console.log('[ProfileFetcher] Sent REQ to relay'))
             })
           }))
     }
@@ -6280,7 +6308,7 @@
       return !e || !e.fetchedAt ? !1 : Date.now() - e.fetchedAt < 864e5
     }
   }
-  var wn = class t {
+  var bn = class t {
     static applyToPlayer(e, n) {
       console.log('[PlayPauseOverlay] Applying play/pause overlay')
       let r = t.createOverlay()
@@ -6376,7 +6404,7 @@
       e.style.display = 'none'
     }
   }
-  var Tt = null,
+  var At = null,
     Pr = null
   async function Qs() {
     console.log('[Nostube Embed] Initializing player...')
@@ -6394,13 +6422,13 @@
         return
       }
       let r = Gs(n.data.relays, t.customRelays)
-      ;((Tt = new hn(r)), (Pr = new mn(Tt)))
+      ;((At = new pn(r)), (Pr = new wn(At)))
       let o = null
       n.type === 'address' &&
         n.data.pubkey &&
         (console.log('[Nostube Embed] Starting parallel profile fetch (naddr)'),
         (o = Pr.fetchProfile(n.data.pubkey, r)))
-      let s = await Tt.fetchEvent(n),
+      let s = await At.fetchEvent(n),
         i = Js(s)
       ;(console.log('[Nostube Embed] Parsed video:', i),
         n.type === 'event' &&
@@ -6414,13 +6442,13 @@
       }
       console.log('[Nostube Embed] Selected variant:', a)
       try {
-        let c = vt.buildVideoPlayer(i, t),
-          l = vt.createPlayerContainer(c)
-        gn.applyToPlayer(l, c, i)
+        let c = Et.buildVideoPlayer(i, t),
+          l = Et.createPlayerContainer(c)
+        yn.applyToPlayer(l, c, i)
         let u = null
-        ;(t.showTitle && (Et.applyToPlayer(l, c, i, t), (u = l.querySelector('.title-overlay'))),
-          yn.applyToPlayer(l, c, t.videoId, t),
-          wn.applyToPlayer(l, c),
+        ;(t.showTitle && (Tt.applyToPlayer(l, c, i, t, r), (u = l.querySelector('.title-overlay'))),
+          mn.applyToPlayer(l, c, t.videoId, t),
+          bn.applyToPlayer(l, c),
           (document.body.innerHTML = ''),
           document.body.appendChild(l),
           o &&
@@ -6429,7 +6457,7 @@
               .then(f => {
                 f
                   ? (console.log('[Nostube Embed] Profile fetched, updating overlay'),
-                    Et.updateProfile(u, f))
+                    Tt.updateProfile(u, f))
                   : console.log('[Nostube Embed] Profile fetch returned null, using fallback')
               })
               .catch(f => {
@@ -6493,7 +6521,7 @@
   `
   }
   window.addEventListener('beforeunload', () => {
-    Tt && Tt.closeAll()
+    At && At.closeAll()
   })
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', Qs) : Qs()
 })()

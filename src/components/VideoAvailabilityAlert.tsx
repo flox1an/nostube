@@ -52,7 +52,7 @@ export function VideoAvailabilityAlert({
       </Button>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{t('video.availability.alertTitle')}</AlertTitle>
-      <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pr-8">
+      <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-muted-foreground">
         <span className="flex-1">
           {t('video.availability.alertDescription', { count: blossomServerCount })}
         </span>

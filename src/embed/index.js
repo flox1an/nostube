@@ -80,7 +80,7 @@ async function initPlayer() {
       // Apply title overlay if enabled (store reference for profile updates)
       let titleOverlay = null
       if (config.showTitle) {
-        TitleOverlay.applyToPlayer(container, videoElement, video, config)
+        TitleOverlay.applyToPlayer(container, videoElement, video, config, relays)
         // Get the overlay element that was just created
         titleOverlay = container.querySelector('.title-overlay')
       }

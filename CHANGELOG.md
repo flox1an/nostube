@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Embed Player Loading Indicator**: Replaced spinning hourglass emoji with pulsating Nostube logo during video loading. Uses the same purple gradient logo as the branding link and reuses the existing CSS pulse animation for consistency
 
+- **Embed Player Title Link**: Video title is now a clickable link to the Nostube video page, matching the logo behavior. Shows underline on hover for visual feedback
+
+- **Embed Player Author Link**: Author avatar and name are now clickable links to the author's Nostube profile using nprofile encoding with relay hints. Hover effects include slight avatar scale and name underline. Reduced bottom positioning for better alignment when native video controls are hidden
+
 - **Embed Player Load Performance**: Significantly improved initial load time with multiple optimizations:
   - Subscribe to relays as each connects (no longer waits for all connections)
   - Early return for addressable events: returns immediately after first EOSE with data

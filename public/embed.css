@@ -336,6 +336,24 @@ body {
   padding: 16px 20px;
 }
 
+/* Title Link (clickable to Nostube) */
+.video-title-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  pointer-events: auto; /* Enable clicks (parent has pointer-events: none) */
+  transition: opacity 200ms ease;
+}
+
+.video-title-link:hover {
+  opacity: 0.85;
+}
+
+.video-title-link:hover .video-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .video-title {
   color: white;
   font-size: 18px;
@@ -351,13 +369,29 @@ body {
 /* Author Section (Bottom-Left) */
 .author-section {
   position: absolute;
-  bottom: 60px; /* Above native controls */
+  bottom: 48px; /* Above native controls, reduced from 60px */
   left: 0;
   padding: 12px 16px;
+}
+
+/* Author Link (clickable to author profile) */
+.author-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 16px;
+  text-decoration: none;
+  color: inherit;
+  pointer-events: auto; /* Enable clicks (parent has pointer-events: none) */
+  transition: opacity 200ms ease;
+}
+
+.author-link:hover {
+  opacity: 0.85;
+}
+
+.author-link:hover .author-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .author-avatar {
@@ -366,6 +400,11 @@ body {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  transition: transform 200ms ease;
+}
+
+.author-link:hover .author-avatar {
+  transform: scale(1.05);
 }
 
 .author-name {
@@ -388,7 +427,7 @@ body {
 
   .author-section {
     padding: 10px 12px;
-    bottom: 50px; /* Slightly lower on mobile */
+    bottom: 40px; /* Lower on mobile */
   }
 
   .author-avatar {

@@ -78,9 +78,9 @@ export function VideoTransformAlert({
       </Button>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{t('video.transform.alertTitle')}</AlertTitle>
-      <AlertDescription className="flex flex-col gap-3 pr-8">
+      <AlertDescription className="flex flex-col gap-3 text-muted-foreground">
         <span>{getAlertDescription()}</span>
-        <Button onClick={onTransform} size="sm" variant="outline" className="w-fit">
+        <Button onClick={onTransform} size="sm" className="w-fit">
           {t('video.transform.contributeButton')}
         </Button>
       </AlertDescription>

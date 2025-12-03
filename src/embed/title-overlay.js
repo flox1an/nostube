@@ -1,3 +1,5 @@
+import { nip19 } from 'nostr-tools'
+
 /**
  * TitleOverlay - Displays video title and author information
  *
@@ -15,11 +17,47 @@
 
 export class TitleOverlay {
   /**
+   * Generate Nostube video URL
+   * @param {string} videoId - Video identifier (nevent/naddr)
+   * @returns {string} Full Nostube URL
+   */
+  static generateVideoUrl(videoId) {
+    return `https://nostu.be/video/${videoId}`
+  }
+
+  /**
+   * Generate Nostube author profile URL using nprofile
+   * @param {string} pubkey - Author's hex pubkey
+   * @param {string[]} relays - Relay hints for the profile
+   * @returns {string} Full Nostube author URL
+   */
+  static generateAuthorUrl(pubkey, relays = []) {
+    try {
+      const nprofile = nip19.nprofileEncode({
+        pubkey,
+        relays: relays.slice(0, 3), // Limit to 3 relays for shorter URL
+      })
+      return `https://nostu.be/author/${nprofile}`
+    } catch (error) {
+      console.error('[TitleOverlay] Failed to encode nprofile:', error)
+      // Fallback to npub if nprofile fails
+      try {
+        const npub = nip19.npubEncode(pubkey)
+        return `https://nostu.be/author/${npub}`
+      } catch {
+        return null
+      }
+    }
+  }
+
+  /**
    * Create title overlay element with video metadata
    * @param {Object} videoMetadata - Parsed video event from parseVideoEvent()
+   * @param {string} videoId - Video identifier for link
+   * @param {string[]} relays - Relay hints for author profile link
    * @returns {HTMLElement} Overlay element
    */
-  static createOverlay(videoMetadata) {
+  static createOverlay(videoMetadata, videoId, relays = []) {
     // Main overlay container
     const overlay = document.createElement('div')
     overlay.className = 'title-overlay'
@@ -29,15 +67,38 @@ export class TitleOverlay {
     const titleSection = document.createElement('div')
     titleSection.className = 'title-section'
 
+    // Title as link to Nostube
+    const titleLink = document.createElement('a')
+    titleLink.className = 'video-title-link'
+    titleLink.href = TitleOverlay.generateVideoUrl(videoId)
+    titleLink.target = '_blank'
+    titleLink.rel = 'noopener noreferrer'
+    titleLink.setAttribute('aria-label', 'Watch on Nostube')
+
     const titleEl = document.createElement('h1')
     titleEl.className = 'video-title'
     titleEl.textContent = TitleOverlay.truncateTitle(videoMetadata.title || 'Untitled Video')
 
-    titleSection.appendChild(titleEl)
+    titleLink.appendChild(titleEl)
+    titleSection.appendChild(titleLink)
 
-    // Author section (bottom-left)
+    // Author section (bottom-left) - wrapped in link to author profile
     const authorSection = document.createElement('div')
     authorSection.className = 'author-section'
+
+    // Author link wrapper
+    const authorUrl = videoMetadata.author
+      ? TitleOverlay.generateAuthorUrl(videoMetadata.author, relays)
+      : null
+
+    const authorLink = document.createElement('a')
+    authorLink.className = 'author-link'
+    if (authorUrl) {
+      authorLink.href = authorUrl
+      authorLink.target = '_blank'
+      authorLink.rel = 'noopener noreferrer'
+    }
+    authorLink.setAttribute('aria-label', 'View author profile on Nostube')
 
     // Author avatar
     const avatar = document.createElement('img')
@@ -55,8 +116,9 @@ export class TitleOverlay {
     authorName.textContent =
       videoMetadata.authorName || TitleOverlay.formatPubkey(videoMetadata.author)
 
-    authorSection.appendChild(avatar)
-    authorSection.appendChild(authorName)
+    authorLink.appendChild(avatar)
+    authorLink.appendChild(authorName)
+    authorSection.appendChild(authorLink)
 
     // Assemble overlay
     overlay.appendChild(titleSection)
@@ -71,8 +133,9 @@ export class TitleOverlay {
    * @param {HTMLVideoElement} videoElement - Video element
    * @param {Object} videoMetadata - Parsed video metadata
    * @param {Object} params - URL parameters from parseURLParams()
+   * @param {string[]} relays - Relay hints for author profile link
    */
-  static applyToPlayer(container, videoElement, videoMetadata, params) {
+  static applyToPlayer(container, videoElement, videoMetadata, params, relays = []) {
     // Check if title overlay should be shown
     if (!params.showTitle) {
       console.log('[TitleOverlay] Title overlay disabled via title=0 parameter')
@@ -81,8 +144,8 @@ export class TitleOverlay {
 
     console.log('[TitleOverlay] Applying title overlay')
 
-    // Create overlay
-    const overlay = TitleOverlay.createOverlay(videoMetadata)
+    // Create overlay with videoId and relays for links
+    const overlay = TitleOverlay.createOverlay(videoMetadata, params.videoId, relays)
     container.appendChild(overlay)
 
     // Auto-hide timer

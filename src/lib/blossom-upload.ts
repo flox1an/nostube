@@ -20,9 +20,15 @@ async function customMirrorBlob(
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
-  if (import.meta.env.DEV) {
-    console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
-  }
+  console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
+  console.log(
+    `[MIRROR] Auth token received:`,
+    authToken ? 'YES' : 'NO',
+    'Length:',
+    authToken?.length || 0,
+    'First 50:',
+    authToken?.substring(0, 50) || 'EMPTY'
+  )
 
   const response = await fetch(`${normalizedServer}/mirror`, {
     method: 'PUT',
@@ -55,8 +61,20 @@ export async function mirrorBlobsToServers({
 }): Promise<BlobDescriptor[]> {
   if (import.meta.env.DEV) console.log('Mirroring blobs to servers', mirrorServers, blob)
 
+  // Create auth token ONCE and reuse for all servers
+  // This prevents concurrent signing requests from producing duplicate event IDs with different signatures
+  console.log(`[MIRROR] Creating single auth token for all servers`)
+  const auth = await BlossomClient.createUploadAuth(signer, blob.sha256)
+  console.log(`[MIRROR] Auth event created:`, auth ? 'YES' : 'NO', auth)
+
+  const authString = JSON.stringify(auth)
+  const authBase64 = btoa(authString)
+  console.log(`[MIRROR] Auth token will be reused for ${mirrorServers.length} servers`)
+
   const results = await Promise.allSettled(
-    mirrorServers.map(async server => {
+    mirrorServers.map(async (server, index) => {
+      console.log(`[MIRROR ${index + 1}/${mirrorServers.length}] Processing server: ${server}`)
+
       // Check if file already exists on this server
       const fileExists = await checkFileExists(server, blob.sha256)
       if (fileExists) {
@@ -70,9 +88,6 @@ export async function mirrorBlobsToServers({
       }
 
       console.debug(`File does not exist on ${server}, proceeding with mirror`)
-      const auth = await BlossomClient.createUploadAuth(signer, blob.sha256)
-      const authString = JSON.stringify(auth)
-      const authBase64 = btoa(authString)
       return await customMirrorBlob(server, blob, authBase64)
     })
   )

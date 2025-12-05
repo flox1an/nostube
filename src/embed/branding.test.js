@@ -54,6 +54,38 @@ describe('BrandingLink', () => {
 
       expect(url).toBe('https://nostu.be/video/nevent1qqsxyz_123-abc')
     })
+
+    it('should generate video URL with timestamp when provided', () => {
+      const videoId = 'nevent1qqsxyz123abc'
+      const timestamp = 125.5
+      const url = BrandingLink.generateVideoUrl(videoId, timestamp)
+
+      expect(url).toBe('https://nostu.be/video/nevent1qqsxyz123abc?t=126')
+    })
+
+    it('should round timestamp to nearest integer', () => {
+      const videoId = 'nevent1qqsxyz123abc'
+      const timestamp = 42.8
+      const url = BrandingLink.generateVideoUrl(videoId, timestamp)
+
+      expect(url).toBe('https://nostu.be/video/nevent1qqsxyz123abc?t=43')
+    })
+
+    it('should handle zero timestamp', () => {
+      const videoId = 'nevent1qqsxyz123abc'
+      const timestamp = 0
+      const url = BrandingLink.generateVideoUrl(videoId, timestamp)
+
+      expect(url).toBe('https://nostu.be/video/nevent1qqsxyz123abc')
+    })
+
+    it('should handle negative timestamp as zero', () => {
+      const videoId = 'nevent1qqsxyz123abc'
+      const timestamp = -10
+      const url = BrandingLink.generateVideoUrl(videoId, timestamp)
+
+      expect(url).toBe('https://nostu.be/video/nevent1qqsxyz123abc')
+    })
   })
 
   describe('createLogoSvg', () => {

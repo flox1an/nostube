@@ -11,7 +11,14 @@ import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { Reply } from 'lucide-react'
+import { Reply, MoreVertical, Flag } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { ReportDialog } from '@/components/ReportDialog'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -146,6 +153,7 @@ const CommentItem = React.memo(function CommentItem({
   const isExpanded = expandedComments.has(comment.id)
   const hasReplies = comment.replies && comment.replies.length > 0
   const isHighlighted = highlightedCommentId === comment.id
+  const [showReportDialog, setShowReportDialog] = useState(false)
 
   // Focus textarea when replying to this comment
   useEffect(() => {
@@ -172,6 +180,26 @@ const CommentItem = React.memo(function CommentItem({
                 addSuffix: true,
                 locale: dateLocale,
               })}
+            </div>
+            <div className="ml-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-muted"
+                    aria-label="More actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
+                    <Flag className="w-4 h-4 mr-2" />
+                    {t('video.comments.reportComment')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <RichTextContent
@@ -278,6 +306,13 @@ const CommentItem = React.memo(function CommentItem({
           )}
         </div>
       </div>
+      <ReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        reportType="comment"
+        contentId={comment.id}
+        contentAuthor={comment.pubkey}
+      />
     </div>
   )
 })

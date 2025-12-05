@@ -102,10 +102,43 @@ const localStorageMock = (() => {
     clear: () => {
       store = {}
     },
+    get length() {
+      return Object.keys(store).length
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store)
+      return keys[index] || null
+    },
+    // Expose stored keys for iteration (needed for Object.getOwnPropertyNames)
+    _getStore: () => store,
   }
 })()
 
+// Make the mock behave like real localStorage by exposing stored keys as properties
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
+  get() {
+    // Return a proxy that exposes stored keys as properties
+    const store = localStorageMock._getStore()
+    return new Proxy(localStorageMock, {
+      ownKeys: () => Object.keys(store),
+      has: (_target, prop) => typeof prop === 'string' && prop in store,
+      get: (target, prop) => {
+        if (typeof prop === 'string' && prop in store) {
+          return store[prop]
+        }
+        return (target as any)[prop]
+      },
+      getOwnPropertyDescriptor: (_target, prop) => {
+        if (typeof prop === 'string' && prop in store) {
+          return {
+            enumerable: true,
+            configurable: true,
+            value: store[prop],
+          }
+        }
+        return undefined
+      },
+    })
+  },
+  configurable: true,
 })

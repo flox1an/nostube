@@ -17,12 +17,21 @@ export class BrandingLink {
   /**
    * Generate full Nostube URL for video
    * @param {string} videoId - Original video identifier (nevent/naddr/note)
+   * @param {number} [timestamp] - Optional timestamp in seconds to jump to
    * @returns {string} Full Nostube URL
    */
-  static generateVideoUrl(videoId) {
+  static generateVideoUrl(videoId, timestamp) {
     // Base URL for Nostube video pages
     const baseUrl = 'https://nostu.be/video'
-    return `${baseUrl}/${videoId}`
+    const fullUrl = `${baseUrl}/${videoId}`
+
+    // Only add timestamp if it's a valid positive number
+    if (timestamp && timestamp > 0) {
+      const roundedTimestamp = Math.round(timestamp)
+      return `${fullUrl}?t=${roundedTimestamp}`
+    }
+
+    return fullUrl
   }
 
   /**
@@ -84,9 +93,10 @@ export class BrandingLink {
   /**
    * Create branding link element
    * @param {string} videoId - Video identifier
+   * @param {HTMLVideoElement} videoElement - Video element to get current time from
    * @returns {HTMLElement} Branding link element
    */
-  static createLink(videoId) {
+  static createLink(videoId, videoElement = null) {
     // Create anchor element
     const link = document.createElement('a')
     link.className = 'branding-link'
@@ -94,6 +104,14 @@ export class BrandingLink {
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
     link.setAttribute('aria-label', 'Watch on Nostube')
+
+    // Update href with current timestamp when clicked
+    if (videoElement) {
+      link.addEventListener('click', e => {
+        const currentTime = videoElement.currentTime
+        link.href = BrandingLink.generateVideoUrl(videoId, currentTime)
+      })
+    }
 
     // Add logo SVG
     const logo = BrandingLink.createLogoSvg()
@@ -134,8 +152,8 @@ export class BrandingLink {
 
     console.log('[BrandingLink] Applying branding link')
 
-    // Create branding link
-    const brandingLink = BrandingLink.createLink(videoId)
+    // Create branding link with videoElement for timestamp support
+    const brandingLink = BrandingLink.createLink(videoId, videoElement)
 
     // Add to container
     container.appendChild(brandingLink)

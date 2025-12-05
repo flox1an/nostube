@@ -107,6 +107,7 @@
     "notFoundDescription": "Cette vidéo n'a pas pu être trouvée. Elle a peut-être été supprimée ou l'ID de l'événement est incorrect.",
     "watchThisVideo": "Regarder cette vidéo",
     "mirrorVideo": "Dupliquer la vidéo",
+    "reportVideo": "Signaler la vidéo",
     "deleteVideo": "Supprimer la vidéo",
     "deleteConfirmTitle": "Supprimer la vidéo ?",
     "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette vidéo ? Cette action ne peut pas être annulée. Un événement de suppression sera publié sur tous les relais.",
@@ -128,7 +129,8 @@
       "replies": "réponses",
       "reply": "réponse",
       "loadMore": "Charger plus de commentaires",
-      "remaining": "restants"
+      "remaining": "restants",
+      "reportComment": "Signaler le commentaire"
     },
     "share": {
       "title": "Partager cette vidéo",
@@ -468,6 +470,22 @@
   "notifications": {
     "commentedOnYourVideo": "a commenté votre vidéo",
     "noNotifications": "Aucune nouvelle notification"
+  },
+  "report": {
+    "titleVideo": "Signaler la vidéo",
+    "titleComment": "Signaler le commentaire",
+    "description": "Aidez-nous à comprendre ce qui ne va pas avec ce contenu.",
+    "reasonLabel": "Raison du signalement",
+    "reasons": {
+      "spam": "Spam ou trompeur",
+      "illegal": "Contenu illégal",
+      "nsfw": "Inapproprié ou NSFW",
+      "impersonation": "Usurpation d'identité",
+      "other": "Autre"
+    },
+    "detailsLabel": "Détails supplémentaires (optionnel)",
+    "detailsPlaceholder": "Veuillez fournir plus d'informations sur les raisons pour lesquelles vous signalez ce contenu...",
+    "submit": "Envoyer le signalement"
   },
   "errors": {
     "connectionError": "Erreur de connexion",

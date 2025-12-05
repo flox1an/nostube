@@ -91,13 +91,10 @@ export class EventCache {
    */
   static clearAll() {
     try {
-      const keys = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith(CACHE_PREFIX)) {
-          keys.push(key)
-        }
-      }
+      // Get keys using Object.getOwnPropertyNames which works in both browser and jsdom
+      const keys = Object.getOwnPropertyNames(localStorage).filter(
+        key => typeof localStorage[key] === 'string' && key.startsWith(CACHE_PREFIX)
+      )
 
       keys.forEach(key => localStorage.removeItem(key))
       console.log(`[EventCache] Cleared ${keys.length} cached events`)
@@ -116,25 +113,27 @@ export class EventCache {
       let validCount = 0
       let totalSize = 0
 
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith(CACHE_PREFIX)) {
-          count++
-          const value = localStorage.getItem(key)
-          if (value) {
-            totalSize += value.length
+      // Get keys using Object.getOwnPropertyNames which works in both browser and jsdom
+      const keys = Object.getOwnPropertyNames(localStorage).filter(
+        key => typeof localStorage[key] === 'string' && key.startsWith(CACHE_PREFIX)
+      )
 
-            try {
-              const data = JSON.parse(value)
-              if (EventCache.isCacheValid(data)) {
-                validCount++
-              }
-            } catch (e) {
-              // Ignore parse errors
+      keys.forEach(key => {
+        count++
+        const value = localStorage.getItem(key)
+        if (value) {
+          totalSize += value.length
+
+          try {
+            const data = JSON.parse(value)
+            if (EventCache.isCacheValid(data)) {
+              validCount++
             }
+          } catch (e) {
+            // Ignore parse errors
           }
         }
-      }
+      })
 
       return {
         totalCached: count,

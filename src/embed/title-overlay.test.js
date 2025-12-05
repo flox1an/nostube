@@ -405,4 +405,45 @@ describe('TitleOverlay', () => {
       expect(result).toMatch(/%3Csvg|<svg/)
     })
   })
+
+  describe('generateVideoUrl', () => {
+    it('should generate video URL without timestamp when not provided', () => {
+      const videoId = 'nevent1qqstest123'
+      const result = TitleOverlay.generateVideoUrl(videoId)
+
+      expect(result).toBe('https://nostu.be/video/nevent1qqstest123')
+    })
+
+    it('should generate video URL with timestamp when provided', () => {
+      const videoId = 'nevent1qqstest123'
+      const timestamp = 125.5 // 2 minutes 5.5 seconds
+      const result = TitleOverlay.generateVideoUrl(videoId, timestamp)
+
+      expect(result).toBe('https://nostu.be/video/nevent1qqstest123?t=126')
+    })
+
+    it('should round timestamp to nearest integer', () => {
+      const videoId = 'nevent1qqstest123'
+      const timestamp = 42.8
+      const result = TitleOverlay.generateVideoUrl(videoId, timestamp)
+
+      expect(result).toBe('https://nostu.be/video/nevent1qqstest123?t=43')
+    })
+
+    it('should handle zero timestamp', () => {
+      const videoId = 'nevent1qqstest123'
+      const timestamp = 0
+      const result = TitleOverlay.generateVideoUrl(videoId, timestamp)
+
+      expect(result).toBe('https://nostu.be/video/nevent1qqstest123')
+    })
+
+    it('should handle negative timestamp as zero', () => {
+      const videoId = 'nevent1qqstest123'
+      const timestamp = -10
+      const result = TitleOverlay.generateVideoUrl(videoId, timestamp)
+
+      expect(result).toBe('https://nostu.be/video/nevent1qqstest123')
+    })
+  })
 })

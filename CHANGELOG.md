@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Embed Player Author Link**: Author avatar and name are now clickable links to the author's Nostube profile using nprofile encoding with relay hints. Hover effects include slight avatar scale and name underline. Reduced bottom positioning for better alignment when native video controls are hidden
 
+- **Embed Player Timestamp Links**: Video title and branding logo links in the embed player now include the current video timestamp in the URL (`?t=<seconds>`). When users click these links, the main Nostube page opens at the same playback position. Timestamp is rounded to the nearest second and only added when greater than zero. Includes 10 unit tests (5 in `title-overlay.test.js`, 5 in `branding.test.js`)
+
 - **Embed Player Load Performance**: Significantly improved initial load time with multiple optimizations:
   - Subscribe to relays as each connects (no longer waits for all connections)
   - Early return for addressable events: returns immediately after first EOSE with data
@@ -40,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Label Video Button UX**: Moved label video button from standalone position to burger menu (three-dot menu) in VideoInfoSection. Updated LabelVideoDialog component to support controlled open state via optional `open` and `onOpenChange` props while maintaining backward compatibility with uncontrolled mode. Menu item only appears for beta users when logged in
 
 - **Shorts Page Clickable Hashtags**: Hashtags displayed on short videos are now clickable links that navigate to the hashtag page (`/tag/:tag`). Added hover underline effect for visual feedback
+
+- **Video Page Authentication Requirements**: Report and Mirror functionality now restricted to logged-in users only. Both menu items in VideoInfoSection require `userPubkey` to be present, following the same authentication pattern as reactions and playlist features (VideoInfoSection.tsx:217,227)
 
 ### Fixed
 

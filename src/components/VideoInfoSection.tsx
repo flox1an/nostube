@@ -24,7 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -33,6 +33,7 @@ import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
+import { ReportDialog } from '@/components/ReportDialog'
 import { type VideoEvent } from '../utils/video-event'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -94,6 +95,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
   const [showLabelDialog, setShowLabelDialog] = useState(false)
+  const [showReportDialog, setShowReportDialog] = useState(false)
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
@@ -212,7 +214,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     &nbsp; {t('labelVideo.button')}
                   </DropdownMenuItem>
                 )}
-                {onMirror && (
+                {onMirror && userPubkey && (
                   <DropdownMenuItem onSelect={onMirror}>
                     <Copy className="w-5 h-5" />
                     &nbsp; {t('video.mirrorVideo')}
@@ -222,6 +224,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                   <Bug className="w-5 h-5" />
                   &nbsp; Debug Info
                 </DropdownMenuItem>
+                {userPubkey && (
+                  <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
+                    <Flag className="w-5 h-5" />
+                    &nbsp; {t('video.reportVideo')}
+                  </DropdownMenuItem>
+                )}
                 {userPubkey === video.pubkey && (
                   <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
                     <TrashIcon className="w-5 h-5" />
@@ -324,6 +332,15 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           videoEvent={videoEvent}
           open={showLabelDialog}
           onOpenChange={setShowLabelDialog}
+        />
+      )}
+      {video && (
+        <ReportDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          reportType="video"
+          contentId={video.id}
+          contentAuthor={video.pubkey}
         />
       )}
       {video && (

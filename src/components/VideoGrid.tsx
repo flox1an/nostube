@@ -211,7 +211,7 @@ export function VideoGrid({
     }
 
     // Add skeleton rows when loading more videos (pagination)
-    if (isLoading && filteredVideos.length > 0) {
+    if (isLoading && showSkeletons && filteredVideos.length > 0) {
       const wideCols = getCols('horizontal')
       const portraitCols = getCols('vertical')
 

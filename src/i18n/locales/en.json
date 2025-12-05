@@ -107,6 +107,7 @@
     "notFoundDescription": "This video could not be found. It may have been deleted or the event ID is incorrect.",
     "watchThisVideo": "Watch this video",
     "mirrorVideo": "Mirror Video",
+    "reportVideo": "Report Video",
     "deleteVideo": "Delete Video",
     "deleteConfirmTitle": "Delete Video?",
     "deleteConfirmMessage": "Are you sure you want to delete this video? This action cannot be undone. A deletion event will be published to all relays.",
@@ -128,7 +129,8 @@
       "replies": "replies",
       "reply": "reply",
       "loadMore": "Load more comments",
-      "remaining": "remaining"
+      "remaining": "remaining",
+      "reportComment": "Report comment"
     },
     "share": {
       "title": "Share this video",
@@ -468,6 +470,22 @@
   "notifications": {
     "commentedOnYourVideo": "commented on your video",
     "noNotifications": "No new notifications"
+  },
+  "report": {
+    "titleVideo": "Report Video",
+    "titleComment": "Report Comment",
+    "description": "Help us understand what's wrong with this content.",
+    "reasonLabel": "Reason for report",
+    "reasons": {
+      "spam": "Spam or misleading",
+      "illegal": "Illegal content",
+      "nsfw": "Inappropriate or NSFW",
+      "impersonation": "Impersonation",
+      "other": "Other"
+    },
+    "detailsLabel": "Additional details (optional)",
+    "detailsPlaceholder": "Please provide more information about why you're reporting this content...",
+    "submit": "Submit Report"
   },
   "errors": {
     "connectionError": "Connection Error",

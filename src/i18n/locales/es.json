@@ -107,6 +107,7 @@
     "notFoundDescription": "No se pudo encontrar este video. Puede haber sido eliminado o el ID del evento es incorrecto.",
     "watchThisVideo": "Ver este video",
     "mirrorVideo": "Replicar Video",
+    "reportVideo": "Reportar Video",
     "deleteVideo": "Eliminar Video",
     "deleteConfirmTitle": "¿Eliminar Video?",
     "deleteConfirmMessage": "¿Está seguro de que desea eliminar este video? Esta acción no se puede deshacer. Se publicará un evento de eliminación en todos los relays.",
@@ -128,7 +129,8 @@
       "replies": "respuestas",
       "reply": "respuesta",
       "loadMore": "Cargar más comentarios",
-      "remaining": "restantes"
+      "remaining": "restantes",
+      "reportComment": "Reportar comentario"
     },
     "share": {
       "title": "Compartir este video",
@@ -468,6 +470,22 @@
   "notifications": {
     "commentedOnYourVideo": "comentó en tu video",
     "noNotifications": "No hay notificaciones nuevas"
+  },
+  "report": {
+    "titleVideo": "Reportar video",
+    "titleComment": "Reportar comentario",
+    "description": "Ayúdanos a entender qué está mal con este contenido.",
+    "reasonLabel": "Motivo del reporte",
+    "reasons": {
+      "spam": "Spam o engañoso",
+      "illegal": "Contenido ilegal",
+      "nsfw": "Inapropiado o NSFW",
+      "impersonation": "Suplantación de identidad",
+      "other": "Otro"
+    },
+    "detailsLabel": "Detalles adicionales (opcional)",
+    "detailsPlaceholder": "Por favor proporcione más información sobre por qué está reportando este contenido...",
+    "submit": "Enviar reporte"
   },
   "errors": {
     "connectionError": "Error de Conexión",

@@ -107,6 +107,7 @@
     "notFoundDescription": "Dieses Video konnte nicht gefunden werden. Es wurde möglicherweise gelöscht oder die Event-ID ist falsch.",
     "watchThisVideo": "Dieses Video ansehen",
     "mirrorVideo": "Video spiegeln",
+    "reportVideo": "Video melden",
     "deleteVideo": "Video löschen",
     "deleteConfirmTitle": "Video löschen?",
     "deleteConfirmMessage": "Bist du sicher, dass du dieses Video löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden. Ein Löschereignis wird an alle Relays veröffentlicht.",
@@ -128,7 +129,8 @@
       "replies": "Antworten",
       "reply": "Antwort",
       "loadMore": "Mehr Kommentare laden",
-      "remaining": "verbleibend"
+      "remaining": "verbleibend",
+      "reportComment": "Kommentar melden"
     },
     "share": {
       "title": "Dieses Video teilen",
@@ -468,6 +470,22 @@
   "notifications": {
     "commentedOnYourVideo": "hat Ihr Video kommentiert",
     "noNotifications": "Keine neuen Benachrichtigungen"
+  },
+  "report": {
+    "titleVideo": "Video melden",
+    "titleComment": "Kommentar melden",
+    "description": "Helfen Sie uns zu verstehen, was mit diesem Inhalt nicht stimmt.",
+    "reasonLabel": "Grund für die Meldung",
+    "reasons": {
+      "spam": "Spam oder irreführend",
+      "illegal": "Illegaler Inhalt",
+      "nsfw": "Unangemessen oder NSFW",
+      "impersonation": "Identitätsmissbrauch",
+      "other": "Sonstiges"
+    },
+    "detailsLabel": "Zusätzliche Details (optional)",
+    "detailsPlaceholder": "Bitte geben Sie weitere Informationen darüber an, warum Sie diesen Inhalt melden...",
+    "submit": "Meldung absenden"
   },
   "errors": {
     "connectionError": "Verbindungsfehler",

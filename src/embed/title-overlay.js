@@ -19,10 +19,19 @@ export class TitleOverlay {
   /**
    * Generate Nostube video URL
    * @param {string} videoId - Video identifier (nevent/naddr)
+   * @param {number} [timestamp] - Optional timestamp in seconds to jump to
    * @returns {string} Full Nostube URL
    */
-  static generateVideoUrl(videoId) {
-    return `https://nostu.be/video/${videoId}`
+  static generateVideoUrl(videoId, timestamp) {
+    const baseUrl = `https://nostu.be/video/${videoId}`
+
+    // Only add timestamp if it's a valid positive number
+    if (timestamp && timestamp > 0) {
+      const roundedTimestamp = Math.round(timestamp)
+      return `${baseUrl}?t=${roundedTimestamp}`
+    }
+
+    return baseUrl
   }
 
   /**
@@ -55,9 +64,10 @@ export class TitleOverlay {
    * @param {Object} videoMetadata - Parsed video event from parseVideoEvent()
    * @param {string} videoId - Video identifier for link
    * @param {string[]} relays - Relay hints for author profile link
+   * @param {HTMLVideoElement} videoElement - Video element to get current time from
    * @returns {HTMLElement} Overlay element
    */
-  static createOverlay(videoMetadata, videoId, relays = []) {
+  static createOverlay(videoMetadata, videoId, relays = [], videoElement = null) {
     // Main overlay container
     const overlay = document.createElement('div')
     overlay.className = 'title-overlay'
@@ -74,6 +84,14 @@ export class TitleOverlay {
     titleLink.target = '_blank'
     titleLink.rel = 'noopener noreferrer'
     titleLink.setAttribute('aria-label', 'Watch on Nostube')
+
+    // Update href with current timestamp when clicked
+    if (videoElement) {
+      titleLink.addEventListener('click', e => {
+        const currentTime = videoElement.currentTime
+        titleLink.href = TitleOverlay.generateVideoUrl(videoId, currentTime)
+      })
+    }
 
     const titleEl = document.createElement('h1')
     titleEl.className = 'video-title'
@@ -144,8 +162,8 @@ export class TitleOverlay {
 
     console.log('[TitleOverlay] Applying title overlay')
 
-    // Create overlay with videoId and relays for links
-    const overlay = TitleOverlay.createOverlay(videoMetadata, params.videoId, relays)
+    // Create overlay with videoId, relays, and videoElement for links
+    const overlay = TitleOverlay.createOverlay(videoMetadata, params.videoId, relays, videoElement)
     container.appendChild(overlay)
 
     // Auto-hide timer

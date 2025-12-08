@@ -1,5 +1,5 @@
 import { processEvents } from '@/utils/video-event'
-import { useReportedPubkeys, useAppContext, useMissingVideos } from '@/hooks'
+import { useReportedPubkeys, useAppContext, useMissingVideos, useUnavailableVideosFilter } from '@/hooks'
 import { type TimelineLoader } from 'applesauce-loaders/loaders'
 import { type NostrEvent } from 'nostr-tools'
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
@@ -9,6 +9,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   const blockedPubkeys = useReportedPubkeys()
   const { config } = useAppContext()
   const { getAllMissingVideos } = useMissingVideos()
+  const { isVideoUnavailable } = useUnavailableVideosFilter()
 
   const [events, setEvents] = useState<NostrEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,8 +132,8 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
 
   // Process events to VideoEvent format
   const videos = useMemo(() => {
-    return processEvents(events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds)
-  }, [events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds])
+    return processEvents(events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds, isVideoUnavailable)
+  }, [events, readRelays, blockedPubkeys, config.blossomServers, missingVideoIds, isVideoUnavailable])
   /*
   const videos = useObservableMemo(
     () =>

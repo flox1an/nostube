@@ -3,7 +3,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
-import { useAppContext, useReportedPubkeys } from '@/hooks'
+import { useAppContext, useReportedPubkeys, useMissingVideos, useUnavailableVideosFilter } from '@/hooks'
 import { of } from 'rxjs'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
@@ -56,6 +56,8 @@ export function useTimelineLoader({
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
   const blockedPubkeys = useReportedPubkeys()
+  const { getAllMissingVideos } = useMissingVideos()
+  const { isVideoUnavailable } = useUnavailableVideosFilter()
   const [loading, setLoading] = useState(true) // Start true to show skeletons instead of empty state
   const [hasLoaded, setHasLoaded] = useState(false)
 
@@ -71,10 +73,16 @@ export function useTimelineLoader({
   // Subscribe to timeline with default empty array
   const events = useObservableState(timeline$, [])
 
+  // Create missing videos Set for filtering
+  const missingVideoIds = useMemo(() => {
+    const missingMap = getAllMissingVideos()
+    return new Set(Object.keys(missingMap))
+  }, [getAllMissingVideos])
+
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
   const videos = useMemo(() => {
-    return processEvents(events, relays, blockedPubkeys, config.blossomServers)
-  }, [events, relays, blockedPubkeys, config.blossomServers])
+    return processEvents(events, relays, blockedPubkeys, config.blossomServers, missingVideoIds, isVideoUnavailable)
+  }, [events, relays, blockedPubkeys, config.blossomServers, missingVideoIds, isVideoUnavailable])
 
   // Load initial events from relays
   useEffect(() => {

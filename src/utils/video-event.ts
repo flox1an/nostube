@@ -223,7 +223,8 @@ export function processEvents(
   relays: string[],
   blockPubkeys?: ReportedPubkeys,
   blossomServers?: BlossomServer[],
-  missingVideoIds?: Set<string>
+  missingVideoIds?: Set<string>,
+  filterFn?: (videoId: string) => boolean
 ): VideoEvent[] {
   return events
     .filter((event): event is Event => event !== undefined)
@@ -236,7 +237,8 @@ export function processEvents(
         video?.urls !== undefined &&
         video.urls[0]?.indexOf('youtube.com') < 0 &&
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
-        (!missingVideoIds || !missingVideoIds.has(video.id))
+        (!missingVideoIds || !missingVideoIds.has(video.id)) &&
+        (!filterFn || !filterFn(video.id))
     )
 }
 

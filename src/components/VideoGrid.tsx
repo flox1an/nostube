@@ -191,7 +191,7 @@ export function VideoGrid({
       }
       if (portraitRows[i]) {
         rows.push(
-          <div key={'portrait-' + i} className={`grid gap-4 ${gridColsClass(getCols('vertical'))}`}>
+          <div key={'portrait-' + i} className={`grid gap-2 ${gridColsClass(getCols('vertical'))}`}>
             {portraitRows[i].map(video => {
               const videoIndex = portraitVideos.findIndex(v => v.id === video.id)
               return (
@@ -248,7 +248,7 @@ export function VideoGrid({
         rows.push(
           <div
             key={`loading-portrait-fill`}
-            className={`grid gap-4 ${gridColsClass(portraitCols)}`}
+            className={`grid gap-2 ${gridColsClass(portraitCols)}`}
           >
             {Array.from({ length: skeletonsNeeded }).map((_, j) => (
               <VideoCardSkeleton key={j} format="vertical" />
@@ -262,7 +262,7 @@ export function VideoGrid({
         rows.push(
           <div
             key={`loading-portrait-${i}`}
-            className={`grid gap-4 ${gridColsClass(portraitCols)}`}
+            className={`grid gap-2 ${gridColsClass(portraitCols)}`}
           >
             {Array.from({ length: portraitCols }).map((_, j) => (
               <VideoCardSkeleton key={j} format="vertical" />
@@ -307,12 +307,12 @@ export function VideoGrid({
   return (
     <div
       className={cn(
-        'grid gap-4',
+        'grid',
         isShort
-          ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
+          ? 'gap-2 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
           : isHorizontal
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
+            ? 'gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+            : 'gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
       )}
     >
       {filteredVideos.map((video, index) => (

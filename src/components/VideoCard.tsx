@@ -15,6 +15,7 @@ import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
+import { formatDate } from 'date-fns'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -263,21 +264,29 @@ export const VideoCard = React.memo(function VideoCard({
               <Link to={to}>
                 <h3 className="font-medium line-clamp-2 break-all">{video.title}</h3>
               </Link>
-
-              {!hideAuthor && (
-                <Link
-                  to={`/author/${authorNprofile}`}
-                  className="block text-sm mt-1 text-muted-foreground hover:text-primary"
+              <div className="flex items-center text-xs">
+                {!hideAuthor && (
+                  <>
+                    <Link
+                      to={`/author/${authorNprofile}`}
+                      className="block text-muted-foreground hover:text-primary"
+                    >
+                      {name}
+                    </Link>
+                  </>
+                )}
+                {name && <>&nbsp;•&nbsp;</>}
+                <div
+                  className="text-muted-foreground"
+                  title={formatDate(new Date(video.created_at * 1000), 'PPpp', {
+                    locale: dateLocale,
+                  })}
                 >
-                  {name}
-                </Link>
-              )}
-
-              <div className="text-xs text-muted-foreground">
-                {formatDistance(new Date(video.created_at * 1000), new Date(), {
-                  addSuffix: true,
-                  locale: dateLocale,
-                })}
+                  {formatDistance(new Date(video.created_at * 1000), new Date(), {
+                    addSuffix: true,
+                    locale: dateLocale,
+                  })}
+                </div>
               </div>
             </div>
           </div>

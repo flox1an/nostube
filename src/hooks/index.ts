@@ -20,6 +20,7 @@ export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './use
 export { useCurrentUser } from './useCurrentUser'
 export { useDebounce } from './useDebounce'
 export { useFollowedAuthors } from './useFollowedAuthors'
+export { useFollowSet } from './useFollowSet'
 export { useFormDialog } from './useFormDialog'
 export { useInfiniteScroll } from './useInfiniteScroll'
 export { useIsMobile } from './useIsMobile'

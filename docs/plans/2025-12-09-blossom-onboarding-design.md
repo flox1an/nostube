@@ -87,7 +87,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     status: 'ok',
     supportsMirror: true,
     payment: 'free',
-    notes: 'Supports chunked upload'
+    notes: 'Supports chunked upload',
   },
   {
     url: 'https://blossom.primal.net',
@@ -95,7 +95,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     status: 'ok',
     cdnProvider: 'Bunny Net',
     supportsMirror: false,
-    payment: 'free'
+    payment: 'free',
   },
   {
     url: 'https://24242.io',
@@ -105,7 +105,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     supportsMirror: false,
     maxFileSize: '100MB',
     retention: '60 days',
-    payment: 'free'
+    payment: 'free',
   },
   {
     url: 'https://blossom.band',
@@ -115,14 +115,14 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     supportsMirror: true,
     payment: 'paid',
     price: '$0.05/GB/Month',
-    notes: 'Lightning payment. Extension: X-Moderation'
+    notes: 'Lightning payment. Extension: X-Moderation',
   },
   {
     url: 'https://blossom.sector01.com',
     name: 'blossom.sector01.com',
     status: 'ok',
     supportsMirror: false,
-    payment: 'free'
+    payment: 'free',
   },
   {
     url: 'https://cdn.satellite.earth',
@@ -132,8 +132,8 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     supportsMirror: true,
     payment: 'paid',
     price: '$0.05/GB/Month',
-    notes: 'Lightning payment'
-  }
+    notes: 'Lightning payment',
+  },
   // Note: cdn.nostrcheck.me and nostr.download are intentionally excluded (blocked/errored)
 ]
 ```
@@ -144,6 +144,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
 - **Mirror**: `['https://blossom.primal.net', 'https://24242.io']` (2 servers)
 
 Rationale:
+
 - almond.slidestr.net: Supports chunked upload and mirroring, reliable
 - blossom.primal.net: CDN-backed, good global coverage
 - 24242.io: BunnyCDN for additional redundancy
@@ -213,6 +214,7 @@ Rationale:
 ### Server Information Display
 
 Display moderate level of detail:
+
 - Server name
 - Status (icon only, no text for OK status)
 - Payment tier (Free/Paid badge)
@@ -235,11 +237,11 @@ Display moderate level of detail:
 
 ```typescript
 const [selectedUploadServers, setSelectedUploadServers] = useState<string[]>([
-  'https://almond.slidestr.net'
+  'https://almond.slidestr.net',
 ])
 const [selectedMirrorServers, setSelectedMirrorServers] = useState<string[]>([
   'https://blossom.primal.net',
-  'https://24242.io'
+  'https://24242.io',
 ])
 ```
 
@@ -260,19 +262,19 @@ const handleContinue = () => {
     ...selectedUploadServers.map(url => ({
       url,
       name: deriveServerName(url),
-      tags: ['initial upload'] as BlossomServerTag[]
+      tags: ['initial upload'] as BlossomServerTag[],
     })),
     ...selectedMirrorServers.map(url => ({
       url,
       name: deriveServerName(url),
-      tags: ['mirror'] as BlossomServerTag[]
-    }))
+      tags: ['mirror'] as BlossomServerTag[],
+    })),
   ]
 
   // Save to config
   updateConfig(current => ({
     ...current,
-    blossomServers
+    blossomServers,
   }))
 
   // Mark onboarding complete
@@ -466,6 +468,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 ### Unit Tests
 
 **`src/lib/blossom-servers.test.ts`:**
+
 - Parse server data correctly
 - Filter blocked servers (cdn.nostrcheck.me, nostr.download)
 - Derive server names from URLs
@@ -473,6 +476,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 - Handle edge cases (missing fields, invalid URLs)
 
 **`src/components/onboarding/BlossomServerConfigStep.test.tsx`:**
+
 - ✓ Pre-selects default servers on mount (1 upload, 2 mirror)
 - ✓ Toggles server selection for upload section
 - ✓ Toggles server selection for mirror section
@@ -486,6 +490,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 - ✓ Shows validation message when no upload servers
 
 **`src/components/OnboardingDialog.test.tsx`:**
+
 - ✓ Shows Step 1 for users with kind 3 but no kind 30000
 - ✓ Advances to Step 2 after Step 1 "Import"
 - ✓ Advances to Step 2 after Step 1 "Skip"
@@ -498,6 +503,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 - ✓ Step indicator shows "Step 1 of 2" and "Step 2 of 2"
 
 **`src/components/onboarding/ServerCard.test.tsx`:**
+
 - ✓ Renders server name and payment badge
 - ✓ Shows "Supports mirroring" for capable servers
 - ✓ Shows CDN provider when available
@@ -511,6 +517,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 ### Integration Tests
 
 **Full onboarding flow:**
+
 1. New user logs in → sees Step 1 (follow import)
 2. User imports follows → advances to Step 2 (Blossom config)
 3. Sees pre-selected servers (1 upload, 2 mirror)
@@ -519,6 +526,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 6. User re-logs in → onboarding doesn't show again
 
 **Settings integration:**
+
 1. Complete onboarding with default servers
 2. Navigate to Settings → Blossom Servers Section
 3. Verify servers appear with correct tags
@@ -527,6 +535,7 @@ Add translation keys to all 4 languages: EN, DE, FR, ES
 6. Verify changes persist
 
 **Edge case: Existing server config:**
+
 1. User already has blossom servers configured
 2. Logs in → onboarding shows Step 1 only (if needed)
 3. Step 2 is automatically skipped
@@ -543,7 +552,7 @@ const mockBlossomServers: BlossomServerInfo[] = [
     name: 'test-upload.example.com',
     status: 'ok',
     supportsMirror: true,
-    payment: 'free'
+    payment: 'free',
   },
   {
     url: 'https://test-mirror1.example.com',
@@ -552,7 +561,7 @@ const mockBlossomServers: BlossomServerInfo[] = [
     supportsMirror: false,
     payment: 'free',
     maxFileSize: '100MB',
-    retention: '30 days'
+    retention: '30 days',
   },
   {
     url: 'https://test-mirror2.example.com',
@@ -560,8 +569,8 @@ const mockBlossomServers: BlossomServerInfo[] = [
     status: 'ok',
     supportsMirror: false,
     payment: 'paid',
-    price: '$0.10/GB/Month'
-  }
+    price: '$0.10/GB/Month',
+  },
 ]
 ```
 

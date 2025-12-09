@@ -505,6 +505,29 @@
       "import": "Folge-Liste importieren",
       "skip": "Vorerst überspringen",
       "success": "Folge-Liste erfolgreich importiert!"
+    },
+    "blossom": {
+      "title": "Upload-Server konfigurieren",
+      "uploadSection": {
+        "title": "Upload-Server",
+        "description": "Wählen Sie, wo Sie Ihre Videos hochladen möchten. Mindestens einen Server auswählen.",
+        "required": "Mindestens ein Upload-Server ist erforderlich"
+      },
+      "mirrorSection": {
+        "title": "Mirror-Server (Optional)",
+        "description": "Backup-Server für Redundanz und schnelleren globalen Zugriff hinzufügen."
+      },
+      "serverInfo": {
+        "free": "Kostenlos",
+        "paid": "Bezahlt",
+        "supportsMirror": "Unterstützt Spiegelung",
+        "maxSize": "Max. Größe",
+        "retention": "Aufbewahrung",
+        "unlimited": "Unbegrenzt",
+        "noLimit": "Kein Limit"
+      },
+      "continue": "Weiter",
+      "stepIndicator": "Schritt {{current}} von {{total}}"
     }
   },
   "languages": {

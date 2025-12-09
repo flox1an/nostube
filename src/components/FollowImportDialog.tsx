@@ -35,10 +35,9 @@ export function FollowImportDialog() {
     // Show dialog if user has kind 3 but no kind 30000
     if (!hasFollowSet && hasKind3Contacts) {
       setIsOpen(true)
-    } else if (!hasKind3Contacts) {
-      // User has no follows to import, mark as completed
-      localStorage.setItem(STORAGE_KEY, 'skipped')
     }
+    // Note: We don't auto-skip for users without kind 3 contacts to avoid race condition
+    // where localStorage gets set before kind 3 data loads from relays
   }, [user?.pubkey, hasFollowSet, hasKind3Contacts])
 
   // Get follow count from kind 3

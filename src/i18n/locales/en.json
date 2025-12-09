@@ -505,6 +505,29 @@
       "import": "Import Follows",
       "skip": "Skip for Now",
       "success": "Follows imported successfully!"
+    },
+    "blossom": {
+      "title": "Configure Upload Servers",
+      "uploadSection": {
+        "title": "Upload Servers",
+        "description": "Choose where to upload your videos. Select at least one server.",
+        "required": "At least one upload server is required"
+      },
+      "mirrorSection": {
+        "title": "Mirror Servers (Optional)",
+        "description": "Add backup servers for redundancy and faster global access."
+      },
+      "serverInfo": {
+        "free": "Free",
+        "paid": "Paid",
+        "supportsMirror": "Supports mirroring",
+        "maxSize": "Max size",
+        "retention": "Retention",
+        "unlimited": "Unlimited",
+        "noLimit": "No limit"
+      },
+      "continue": "Continue",
+      "stepIndicator": "Step {{current}} of {{total}}"
     }
   },
   "languages": {

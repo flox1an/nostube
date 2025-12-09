@@ -505,6 +505,29 @@
       "import": "Importar Seguidos",
       "skip": "Omitir por Ahora",
       "success": "¡Seguidos importados exitosamente!"
+    },
+    "blossom": {
+      "title": "Configurar servidores de carga",
+      "uploadSection": {
+        "title": "Servidores de carga",
+        "description": "Elija dónde cargar sus videos. Seleccione al menos un servidor.",
+        "required": "Se requiere al menos un servidor de carga"
+      },
+      "mirrorSection": {
+        "title": "Servidores espejo (Opcional)",
+        "description": "Agregue servidores de respaldo para redundancia y acceso global más rápido."
+      },
+      "serverInfo": {
+        "free": "Gratis",
+        "paid": "De pago",
+        "supportsMirror": "Admite duplicación",
+        "maxSize": "Tamaño máx",
+        "retention": "Retención",
+        "unlimited": "Ilimitado",
+        "noLimit": "Sin límite"
+      },
+      "continue": "Continuar",
+      "stepIndicator": "Paso {{current}} de {{total}}"
     }
   },
   "languages": {

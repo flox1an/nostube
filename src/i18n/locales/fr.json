@@ -505,6 +505,29 @@
       "import": "Importer les abonnements",
       "skip": "Ignorer pour l'instant",
       "success": "Abonnements importés avec succès !"
+    },
+    "blossom": {
+      "title": "Configurer les serveurs de téléchargement",
+      "uploadSection": {
+        "title": "Serveurs de téléchargement",
+        "description": "Choisissez où télécharger vos vidéos. Sélectionnez au moins un serveur.",
+        "required": "Au moins un serveur de téléchargement est requis"
+      },
+      "mirrorSection": {
+        "title": "Serveurs miroirs (Optionnel)",
+        "description": "Ajoutez des serveurs de sauvegarde pour la redondance et un accès mondial plus rapide."
+      },
+      "serverInfo": {
+        "free": "Gratuit",
+        "paid": "Payant",
+        "supportsMirror": "Supporte la mise en miroir",
+        "maxSize": "Taille max",
+        "retention": "Rétention",
+        "unlimited": "Illimité",
+        "noLimit": "Aucune limite"
+      },
+      "continue": "Continuer",
+      "stepIndicator": "Étape {{current}} sur {{total}}"
     }
   },
   "languages": {

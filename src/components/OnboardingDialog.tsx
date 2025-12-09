@@ -15,7 +15,13 @@ import { BlossomServerConfigStep } from './onboarding/BlossomServerConfigStep'
 const FOLLOW_IMPORT_STORAGE_KEY = 'nostube_onboarding_follow_import'
 const BLOSSOM_CONFIG_STORAGE_KEY = 'nostube_onboarding_blossom_config'
 
-function OnboardingDialogContent({ initialStep }: { initialStep: 1 | 2 }) {
+function OnboardingDialogContent({
+  initialStep,
+  onComplete,
+}: {
+  initialStep: 1 | 2
+  onComplete: () => void
+}) {
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState<1 | 2>(initialStep)
 
@@ -28,7 +34,7 @@ function OnboardingDialogContent({ initialStep }: { initialStep: 1 | 2 }) {
   }
 
   const handleBlossomConfigComplete = () => {
-    // Dialog will close automatically when localStorage is set
+    onComplete()
   }
 
   const getDialogTitle = () => {
@@ -72,10 +78,11 @@ function OnboardingDialogContent({ initialStep }: { initialStep: 1 | 2 }) {
 export function OnboardingDialog() {
   const { user } = useCurrentUser()
   const { hasFollowSet, hasKind3Contacts } = useFollowSet()
+  const [isCompleted, setIsCompleted] = useState(false)
 
   // Compute dialog state based on conditions
   const dialogState = useMemo(() => {
-    if (!user?.pubkey) return { shouldShow: false, initialStep: 1 as const }
+    if (!user?.pubkey || isCompleted) return { shouldShow: false, initialStep: 1 as const }
 
     const followImportCompleted = localStorage.getItem(FOLLOW_IMPORT_STORAGE_KEY)
     const blossomConfigCompleted = localStorage.getItem(BLOSSOM_CONFIG_STORAGE_KEY)
@@ -97,7 +104,11 @@ export function OnboardingDialog() {
 
     // Default: show step 2 (blossom config)
     return { shouldShow: true, initialStep: 2 as const }
-  }, [user?.pubkey, hasFollowSet, hasKind3Contacts])
+  }, [user?.pubkey, hasFollowSet, hasKind3Contacts, isCompleted])
+
+  const handleComplete = () => {
+    setIsCompleted(true)
+  }
 
   return (
     <Dialog open={dialogState.shouldShow} onOpenChange={() => {}}>
@@ -105,6 +116,7 @@ export function OnboardingDialog() {
         <OnboardingDialogContent
           key={dialogState.initialStep}
           initialStep={dialogState.initialStep}
+          onComplete={handleComplete}
         />
       </DialogContent>
     </Dialog>

@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Onboarding Dialog Not Showing for Existing Users**: Fixed logic bug where users with existing follow sets or default Blossom servers would never see the onboarding dialog. Dialog now prioritizes localStorage completion keys over presence of servers, ensuring Step 2 (Blossom configuration) displays until explicitly completed. Simplified logic removes `hasBlossomServers` check and uses only completion flags and follow set status (OnboardingDialog.tsx:78-102)
 - **Vercel Deployment Build Failure**: Fixed `Cannot find module '@rollup/rollup-linux-x64-gnu'` error on Vercel by removing platform-specific `optionalDependencies` that locked macOS ARM64 bindings. Rollup now auto-installs correct platform bindings during npm install
 - **Build Errors**: Fixed ESLint build errors by renaming unused `eoseCount` variable to `_eoseCount` in `useNotifications.ts:114` and fixing `prefer-const` error for `lang` variable in `video-event.ts:357`
 - **Video Availability Alert for Non-Blossom Videos**: Fixed "Limited Availability" alert appearing for videos hosted on non-Blossom servers. Alert now only shows when the video has at least one Blossom URL (blossomServerCount > 0) and fewer than 2 servers, preventing false warnings for videos hosted on traditional CDNs (VideoAvailabilityAlert.tsx:23)

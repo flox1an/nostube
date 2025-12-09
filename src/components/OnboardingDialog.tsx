@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useAppContext } from '@/hooks'
 import {
   Dialog,
   DialogContent,
@@ -73,7 +72,6 @@ function OnboardingDialogContent({ initialStep }: { initialStep: 1 | 2 }) {
 export function OnboardingDialog() {
   const { user } = useCurrentUser()
   const { hasFollowSet, hasKind3Contacts } = useFollowSet()
-  const { config } = useAppContext()
 
   // Compute dialog state based on conditions
   const dialogState = useMemo(() => {
@@ -81,24 +79,25 @@ export function OnboardingDialog() {
 
     const followImportCompleted = localStorage.getItem(FOLLOW_IMPORT_STORAGE_KEY)
     const blossomConfigCompleted = localStorage.getItem(BLOSSOM_CONFIG_STORAGE_KEY)
-    const hasBlossomServers = (config.blossomServers?.length ?? 0) > 0
 
-    // If both steps are completed or blossom is already configured, don't show dialog
-    if (blossomConfigCompleted || (followImportCompleted && hasBlossomServers)) {
+    // If blossom config was explicitly completed, don't show
+    if (blossomConfigCompleted) {
       return { shouldShow: false, initialStep: 1 as const }
     }
 
-    // Determine which step to show
+    // If follow import not completed and user has kind 3 contacts but no follow set, show step 1
     if (!followImportCompleted && !hasFollowSet && hasKind3Contacts) {
       return { shouldShow: true, initialStep: 1 as const }
-    } else if (followImportCompleted && !blossomConfigCompleted && !hasBlossomServers) {
-      return { shouldShow: true, initialStep: 2 as const }
-    } else if (!blossomConfigCompleted && !hasBlossomServers) {
+    }
+
+    // If follow import completed or user already has follow set, show step 2
+    if (followImportCompleted || hasFollowSet) {
       return { shouldShow: true, initialStep: 2 as const }
     }
 
-    return { shouldShow: false, initialStep: 1 as const }
-  }, [user?.pubkey, hasFollowSet, hasKind3Contacts, config.blossomServers])
+    // Default: show step 2 (blossom config)
+    return { shouldShow: true, initialStep: 2 as const }
+  }, [user?.pubkey, hasFollowSet, hasKind3Contacts])
 
   return (
     <Dialog open={dialogState.shouldShow} onOpenChange={() => {}}>

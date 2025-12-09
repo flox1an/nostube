@@ -497,6 +497,16 @@
     "tryAgain": "Réessayer",
     "debugInfo": "Informations de débogage"
   },
+  "onboarding": {
+    "followImport": {
+      "title": "Importer vos abonnements",
+      "description": "Importez votre liste d'abonnements Nostr en tant qu'abonnements Nostube pour voir les vidéos des créateurs que vous suivez.",
+      "count": "{{count}} abonnements prêts à être importés",
+      "import": "Importer les abonnements",
+      "skip": "Ignorer pour l'instant",
+      "success": "Abonnements importés avec succès !"
+    }
+  },
   "languages": {
     "en": "Anglais",
     "es": "Espagnol",

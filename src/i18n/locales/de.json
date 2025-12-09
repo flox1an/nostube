@@ -497,6 +497,16 @@
     "tryAgain": "Erneut versuchen",
     "debugInfo": "Debug-Info"
   },
+  "onboarding": {
+    "followImport": {
+      "title": "Folge-Liste importieren",
+      "description": "Importieren Sie Ihre Nostr-Folgeliste als Nostube-Abonnements, um Videos von Ihren gefolgten Erstellern zu sehen.",
+      "count": "{{count}} Folge-Kontakte bereit zum Importieren",
+      "import": "Folge-Liste importieren",
+      "skip": "Vorerst überspringen",
+      "success": "Folge-Liste erfolgreich importiert!"
+    }
+  },
   "languages": {
     "en": "Englisch",
     "es": "Spanisch",

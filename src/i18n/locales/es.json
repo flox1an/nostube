@@ -497,6 +497,16 @@
     "tryAgain": "Intentar de Nuevo",
     "debugInfo": "Información de Depuración"
   },
+  "onboarding": {
+    "followImport": {
+      "title": "Importar tus Seguidos",
+      "description": "Importa tu lista de seguidos de Nostr como suscripciones de Nostube para ver videos de los creadores que sigues.",
+      "count": "{{count}} seguidos listos para importar",
+      "import": "Importar Seguidos",
+      "skip": "Omitir por Ahora",
+      "success": "¡Seguidos importados exitosamente!"
+    }
+  },
   "languages": {
     "en": "Inglés",
     "es": "Español",

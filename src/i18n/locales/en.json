@@ -497,6 +497,16 @@
     "tryAgain": "Try Again",
     "debugInfo": "Debug Info"
   },
+  "onboarding": {
+    "followImport": {
+      "title": "Import Your Follows",
+      "description": "Import your Nostr follow list as Nostube subscriptions to see videos from creators you follow.",
+      "count": "{{count}} follows ready to import",
+      "import": "Import Follows",
+      "skip": "Skip for Now",
+      "success": "Follows imported successfully!"
+    }
+  },
   "languages": {
     "en": "English",
     "es": "Spanish",

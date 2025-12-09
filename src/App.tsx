@@ -17,6 +17,7 @@ import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
 import { useAppContext } from '@/hooks'
 import { UserRelaySync } from '@/components/UserRelaySync'
+import { FollowImportDialog } from '@/components/FollowImportDialog'
 
 export const defaultResizeServer = 'https://imgproxy.nostu.be/'
 
@@ -118,6 +119,7 @@ export function App() {
                   <BatchedProfileLoaderInit />
                   <LoginTimeTrackingInit />
                   <BlossomServerSync />
+                  <FollowImportDialog />
                   <Suspense>
                     <AppRouter />
                   </Suspense>

@@ -1,10 +1,9 @@
-import { useCurrentUser, useNostrPublish, useAppContext } from '@/hooks'
-import { useEventStore, useEventModel } from 'applesauce-react/hooks'
-import { ContactsModel } from 'applesauce-core/models'
+import { useCurrentUser } from '@/hooks'
+import { useFollowSet } from '@/hooks/useFollowSet'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { UserPlusIcon, UserCheckIcon } from 'lucide-react'
-import { cn, nowInSecs } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface FollowButtonProps {
   pubkey: string
@@ -13,49 +12,20 @@ interface FollowButtonProps {
 
 export function FollowButton({ pubkey, className }: FollowButtonProps) {
   const { user } = useCurrentUser()
-  const eventStore = useEventStore()
-  const { config } = useAppContext()
-  const { publish, isPending } = useNostrPublish()
-
-  // Use ContactsModel to get user's contact list
-  const contacts = useEventModel(ContactsModel, user?.pubkey ? [user.pubkey] : null) || []
+  const { followedPubkeys, addFollow, removeFollow, isLoading } = useFollowSet()
 
   // Check if we're following this pubkey
-  const isFollowing = contacts.some(contact => contact.pubkey === pubkey)
+  const isFollowing = followedPubkeys.includes(pubkey)
 
   const handleFollow = async () => {
     if (!user) return
 
-    // Get the current contact list event from EventStore
-    const currentContactEvent = eventStore.getReplaceable(3, user.pubkey)
-
-    // Prepare the new contact list
-    let tags: string[][] = []
-
-    if (currentContactEvent) {
-      // Start with existing tags, excluding the target pubkey
-      tags = currentContactEvent.tags.filter(tag => tag[0] === 'p' && tag[1] !== pubkey)
-    }
-
-    // Add the new pubkey if we're following (toggle behavior)
-    if (!isFollowing) {
-      tags.push(['p', pubkey])
-    }
-
     try {
-      // Publish the new contact list
-      const signedEvent = await publish({
-        event: {
-          kind: 3,
-          created_at: nowInSecs(),
-          content: currentContactEvent?.content || '', // Preserve existing content
-          tags,
-        },
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-      })
-
-      // Add the contact list to the event store immediately for instant feedback
-      eventStore.add(signedEvent)
+      if (isFollowing) {
+        await removeFollow(pubkey)
+      } else {
+        await addFollow(pubkey)
+      }
     } catch (error) {
       console.error('Failed to publish follow/unfollow:', error)
     }
@@ -73,7 +43,7 @@ export function FollowButton({ pubkey, className }: FollowButtonProps) {
           size="sm"
           className={cn('space-x-2', className)}
           onClick={handleFollow}
-          disabled={isPending}
+          disabled={isLoading}
         >
           {isFollowing ? (
             <>

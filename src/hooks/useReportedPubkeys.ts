@@ -10,6 +10,7 @@ const blockPubkeys: Record<string, boolean> = [
   'npub1rk27vy78zk8kszeyauu560xadd3vzh5dltgg0wd2vpsjujyvquws4rzulu',
   'npub1ulafm4d3n7ukl7yzg4hfnhfjut74nym5p83e3d67l3j62yc6ysqqrancw2',
   'npub1yzey60g2ge3jr9nwr2ktrk0ngllp38hs635m48f72f7mal0dd7ss6wercd',
+  'npub16w7wnp0jn447ysdaclq9d8n5k8p5ekcqw09z9jd3necyvrej7jeqf983wv',
 ]
   .map(p => nip19.decode(p).data as string)
   .reduce((prev, cur) => ({ ...prev, [cur]: true }), {})

@@ -24,3 +24,6 @@ dist-ssr
 
 # ChatGPT exports that may contain personal info
 *ChatGPT*.md
+
+# Git worktrees
+.worktrees/

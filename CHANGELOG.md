@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Onboarding Separation**: Moved Blossom server configuration from login modal to upload page as full-screen prerequisite step. Login modal now only shows Follow Import. Upload page checks `nostube_upload_onboarding_complete` localStorage key and displays server configuration before first upload. Components: `BlossomOnboardingStep` (full-screen card with upload/mirror sections), `BlossomServerPicker` (unified dialog with single-select and custom URL support). ServerCard updated with `selectable` and `onRemove` props. Validation requires ≥1 upload server, mirrors optional. i18n support for EN/DE/FR/ES. Design document: `docs/plans/2025-12-10-upload-page-blossom-onboarding.md`
+
 - **Embed Player Loading Indicator**: Replaced spinning hourglass emoji with pulsating Nostube logo during video loading. Uses the same purple gradient logo as the branding link and reuses the existing CSS pulse animation for consistency
 
 - **Embed Player Title Link**: Video title is now a clickable link to the Nostube video page, matching the logo behavior. Shows underline on hover for visual feedback

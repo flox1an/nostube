@@ -1,34 +1,51 @@
 import { useTranslation } from 'react-i18next'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { BlossomServerInfo } from '@/lib/blossom-servers'
-import { Check } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 interface ServerCardProps {
   server: BlossomServerInfo
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
+
+  // Existing (keep for backward compatibility)
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+
+  // New modes
+  selectable?: boolean // Shows hover effect, for picker (click handled by parent)
+  onRemove?: () => void // Shows remove button, for onboarding step list
 }
 
-export function ServerCard({ server, checked, onCheckedChange }: ServerCardProps) {
+export function ServerCard({
+  server,
+  checked,
+  onCheckedChange,
+  selectable,
+  onRemove,
+}: ServerCardProps) {
   const { t } = useTranslation()
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer',
-        checked && 'border-purple-500 bg-purple-500/5'
+        'flex items-start gap-3 p-3 rounded-lg border bg-card transition-colors relative',
+        onCheckedChange && 'cursor-pointer hover:bg-accent/50',
+        checked && 'border-purple-500 bg-purple-500/5',
+        selectable && 'hover:bg-accent'
       )}
-      onClick={() => onCheckedChange(!checked)}
+      onClick={() => onCheckedChange && onCheckedChange(!checked)}
     >
-      <Checkbox
-        id={server.url}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className="mt-0.5"
-        onClick={e => e.stopPropagation()}
-      />
+      {onCheckedChange && (
+        <Checkbox
+          id={server.url}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          className="mt-0.5"
+          onClick={e => e.stopPropagation()}
+        />
+      )}
       <div className="flex-1 space-y-1.5">
         <div className="flex items-center gap-2 flex-wrap">
           <label htmlFor={server.url} className="font-medium text-sm cursor-pointer">
@@ -71,6 +88,19 @@ export function ServerCard({ server, checked, onCheckedChange }: ServerCardProps
           </div>
         </div>
       </div>
+      {onRemove && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={e => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="absolute top-2 right-2"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 }

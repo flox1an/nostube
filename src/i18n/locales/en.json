@@ -530,6 +530,41 @@
       "stepIndicator": "Step {{current}} of {{total}}"
     }
   },
+  "uploadOnboarding": {
+    "title": "Configure Upload Servers",
+    "description": "Before uploading videos, you need to configure at least one upload server. You can also add optional mirror servers for redundancy.",
+    "uploadServers": {
+      "title": "Upload Servers",
+      "description": "Choose where your videos will be uploaded. At least one server is required.",
+      "empty": "No upload servers configured yet. Click 'Add Upload Server' to get started.",
+      "addServer": "Add Upload Server",
+      "required": "At least one upload server is required"
+    },
+    "mirrorServers": {
+      "title": "Mirror Servers (Optional)",
+      "description": "Mirror servers create backup copies of your videos for better availability.",
+      "empty": "No mirror servers configured. This is optional.",
+      "addServer": "Add Mirror Server"
+    },
+    "continue": "Continue to Upload"
+  },
+  "blossomPicker": {
+    "upload": {
+      "title": "Select Upload Server",
+      "description": "Choose a server from the recommended list or add a custom URL."
+    },
+    "mirror": {
+      "title": "Select Mirror Server",
+      "description": "Choose a server to create backup copies of your videos."
+    },
+    "noServersAvailable": "All available servers have been added.",
+    "customUrl": {
+      "label": "Custom Server URL",
+      "placeholder": "https://your-blossom-server.com",
+      "add": "Add",
+      "hint": "Enter the full URL of a Blossom-compatible server"
+    }
+  },
   "languages": {
     "en": "English",
     "es": "Spanish",

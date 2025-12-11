@@ -10,7 +10,7 @@ export interface BlossomServerInfo {
   supportsMirror: boolean
   maxFileSize?: string
   retention?: string
-  payment: 'free' | 'paid'
+  payment: 'free' | 'paid' | 'freemium'
   price?: string
   notes?: string
 }
@@ -40,7 +40,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     url: 'https://24242.io',
     name: '24242.io',
     status: 'ok',
-    cdnProvider: 'BunnyCDN',
+    cdnProvider: 'Bunny Net',
     supportsMirror: false,
     maxFileSize: '100MB',
     retention: '60 days',
@@ -57,13 +57,6 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     notes: 'Lightning payment',
   },
   {
-    url: 'https://blossom.sector01.com',
-    name: 'blossom.sector01.com',
-    status: 'ok',
-    supportsMirror: false,
-    payment: 'free',
-  },
-  {
     url: 'https://cdn.satellite.earth',
     name: 'cdn.satellite.earth',
     status: 'ok',
@@ -72,6 +65,47 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     payment: 'paid',
     price: '$0.05/GB/Month',
     notes: 'Lightning payment',
+  },
+  {
+    url: 'https://nostr.download',
+    name: 'nostr.download',
+    status: 'ok',
+    supportsMirror: true,
+    payment: 'free',
+    notes: '',
+  },
+  {
+    url: 'https://blossom-01.uid.ovh',
+    name: 'blossom-01.uid.ovh',
+    supportsMirror: true,
+    status: 'ok',
+    payment: 'free',
+    notes: '',
+  },
+  {
+    url: 'https://blossom-02.uid.ovh',
+    name: 'blossom-02.uid.ovh',
+    supportsMirror: true,
+
+    status: 'ok',
+    payment: 'free',
+    notes: '',
+  },
+  {
+    url: 'https://blossom.yakihonne.com',
+    name: 'blossom.yakihonne.com',
+    supportsMirror: true,
+    status: 'ok',
+    payment: 'free',
+    notes: '',
+  },
+  {
+    url: 'https://loratu.bitcointxoko.com',
+    name: 'loratu.bitcointxoko.com',
+    supportsMirror: true,
+    status: 'ok',
+    payment: 'free',
+    notes: '',
   },
 ]
 

@@ -530,6 +530,41 @@
       "stepIndicator": "Schritt {{current}} von {{total}}"
     }
   },
+  "uploadOnboarding": {
+    "title": "Upload-Server konfigurieren",
+    "description": "Bevor Sie Videos hochladen können, müssen Sie mindestens einen Upload-Server konfigurieren. Sie können auch optionale Mirror-Server für Redundanz hinzufügen.",
+    "uploadServers": {
+      "title": "Upload-Server",
+      "description": "Wählen Sie, wohin Ihre Videos hochgeladen werden. Mindestens ein Server ist erforderlich.",
+      "empty": "Noch keine Upload-Server konfiguriert. Klicken Sie auf 'Upload-Server hinzufügen', um zu beginnen.",
+      "addServer": "Upload-Server hinzufügen",
+      "required": "Mindestens ein Upload-Server ist erforderlich"
+    },
+    "mirrorServers": {
+      "title": "Mirror-Server (Optional)",
+      "description": "Mirror-Server erstellen Sicherungskopien Ihrer Videos für bessere Verfügbarkeit.",
+      "empty": "Keine Mirror-Server konfiguriert. Dies ist optional.",
+      "addServer": "Mirror-Server hinzufügen"
+    },
+    "continue": "Weiter zum Upload"
+  },
+  "blossomPicker": {
+    "upload": {
+      "title": "Upload-Server auswählen",
+      "description": "Wählen Sie einen Server aus der empfohlenen Liste oder fügen Sie eine benutzerdefinierte URL hinzu."
+    },
+    "mirror": {
+      "title": "Mirror-Server auswählen",
+      "description": "Wählen Sie einen Server, um Sicherungskopien Ihrer Videos zu erstellen."
+    },
+    "noServersAvailable": "Alle verfügbaren Server wurden hinzugefügt.",
+    "customUrl": {
+      "label": "Benutzerdefinierte Server-URL",
+      "placeholder": "https://ihr-blossom-server.de",
+      "add": "Hinzufügen",
+      "hint": "Geben Sie die vollständige URL eines Blossom-kompatiblen Servers ein"
+    }
+  },
   "languages": {
     "en": "Englisch",
     "es": "Spanisch",

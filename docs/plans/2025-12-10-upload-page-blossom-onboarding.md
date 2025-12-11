@@ -10,19 +10,23 @@ Move Blossom server configuration from the login modal to the upload page as a f
 ## Current State
 
 **OnboardingDialog (login modal):**
+
 - Step 1: Follow Import (optional)
 - Step 2: Blossom Server Config (combined upload + mirror with checkboxes)
 
 **UploadPage:**
+
 - Always shows VideoUpload form
 - Assumes servers are already configured
 
 ## Proposed State
 
 **OnboardingDialog (login modal):**
+
 - Only Step 1: Follow Import (no Blossom step)
 
 **UploadPage:**
+
 - First visit: Shows full-screen Blossom onboarding step
 - Subsequent visits: Shows normal VideoUpload form
 - Tracks completion via `nostube_upload_onboarding_complete` localStorage key
@@ -30,30 +34,35 @@ Move Blossom server configuration from the login modal to the upload page as a f
 ## Key Design Decisions
 
 ### 1. Storage Strategy
+
 - **New key:** `nostube_upload_onboarding_complete`
 - Tracks whether user has completed upload page onboarding
 - Checked on every `/upload` page load
 - Independent from login-time follow import
 
 ### 2. Server Display Pattern
+
 - **Not chips/tags** - show full ServerCard components with all details
 - Display: payment tier, free quota, CDN provider, status, etc.
 - Same rich information as in the picker dialog
 - Allows informed decisions without reopening picker
 
 ### 3. Picker Dialog Pattern
+
 - **Single-select:** Click a server → adds immediately → closes dialog
 - **Unified component:** One `BlossomServerPicker` serves both upload and mirror
 - **Filtering:** Only shows servers not already added to current list
 - **Custom URL support:** Input field at bottom for non-recommended servers
 
 ### 4. Upload vs Mirror Separation
+
 - Two separate sections in onboarding step
 - Upload Servers: Requires ≥1 server (validation)
 - Mirror Servers: Optional, can skip entirely
 - Each section has its own "Add Server" button
 
 ### 5. Visual Layout
+
 - Centered card layout (max-w-4xl, matching upload form)
 - Same container styling as rest of app
 - Not true full-screen, maintains app chrome
@@ -65,6 +74,7 @@ Move Blossom server configuration from the login modal to the upload page as a f
 **File:** `src/pages/UploadPage.tsx`
 
 **Logic:**
+
 ```typescript
 export function UploadPage() {
   const [onboardingComplete, setOnboardingComplete] = useState(
@@ -94,6 +104,7 @@ export function UploadPage() {
 ```
 
 **Key points:**
+
 - Check localStorage on mount
 - Conditional rendering based on completion state
 - Same container/max-width styling for consistency
@@ -104,6 +115,7 @@ export function UploadPage() {
 **File:** `src/components/onboarding/BlossomOnboardingStep.tsx`
 
 **Props:**
+
 ```typescript
 interface BlossomOnboardingStepProps {
   onComplete: () => void
@@ -111,6 +123,7 @@ interface BlossomOnboardingStepProps {
 ```
 
 **State:**
+
 ```typescript
 const [uploadServers, setUploadServers] = useState<string[]>([])
 const [mirrorServers, setMirrorServers] = useState<string[]>([])
@@ -119,6 +132,7 @@ const [showMirrorPicker, setShowMirrorPicker] = useState(false)
 ```
 
 **Structure:**
+
 ```
 Card
 ├── CardHeader
@@ -139,11 +153,13 @@ Card
 ```
 
 **Validation:**
+
 - `isValid = uploadServers.length > 0`
 - Continue button disabled when invalid
 - Error message shown when invalid
 
 **Configuration Save:**
+
 ```typescript
 const handleContinue = () => {
   const blossomServers = [
@@ -169,17 +185,19 @@ const handleContinue = () => {
 **File:** `src/components/onboarding/BlossomServerPicker.tsx`
 
 **Props:**
+
 ```typescript
 interface BlossomServerPickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  excludeServers: string[]  // Already-added servers to filter out
+  excludeServers: string[] // Already-added servers to filter out
   onSelect: (url: string) => void
-  type: 'upload' | 'mirror'  // For i18n context
+  type: 'upload' | 'mirror' // For i18n context
 }
 ```
 
 **Structure:**
+
 ```
 Dialog
 ├── DialogHeader
@@ -197,6 +215,7 @@ Dialog
 ```
 
 **Filtering Logic:**
+
 ```typescript
 const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(
   server => !excludeServers.includes(server.url)
@@ -204,11 +223,13 @@ const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(
 ```
 
 **Interaction:**
+
 - Click ServerCard → calls `onSelect(url)` → parent closes dialog
 - Custom URL: Enter key or click "Add" → calls `onSelect(customUrl)`
 - Dialog close handled by parent via `onOpenChange`
 
 **i18n keys:**
+
 - `blossomPicker.upload.title` / `blossomPicker.mirror.title`
 - `blossomPicker.upload.description` / `blossomPicker.mirror.description`
 - Shared: `blossomPicker.noServersAvailable`, `blossomPicker.customUrl.*`
@@ -218,6 +239,7 @@ const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(
 **File:** `src/components/onboarding/ServerCard.tsx`
 
 **New Props:**
+
 ```typescript
 interface ServerCardProps {
   server: BlossomServerInfo
@@ -227,18 +249,20 @@ interface ServerCardProps {
   onCheckedChange?: (checked: boolean) => void
 
   // New modes
-  selectable?: boolean  // Shows hover effect, for picker (click handled by parent)
+  selectable?: boolean // Shows hover effect, for picker (click handled by parent)
   onRemove?: () => void // Shows remove button, for onboarding step list
 }
 ```
 
 **Behavior:**
+
 1. If `onCheckedChange` exists → Checkbox mode (old behavior)
 2. If `onRemove` exists → Removable mode (show X button)
 3. If `selectable` → Clickable mode (hover effect, no controls)
 4. Else → Display-only mode (fallback)
 
 **Styling notes:**
+
 - Selectable: Add `hover:bg-accent` class (applied by parent wrapper)
 - Removable: Add X button in top-right or right side
 - Keep existing layout for server details (payment, quota, CDN, etc.)
@@ -248,6 +272,7 @@ interface ServerCardProps {
 **File:** `src/components/OnboardingDialog.tsx`
 
 **Changes:**
+
 1. Remove `BlossomServerConfigStep` import
 2. Remove `BLOSSOM_CONFIG_STORAGE_KEY` constant
 3. Simplify `OnboardingDialogContent` to only render `FollowImportStep`
@@ -255,6 +280,7 @@ interface ServerCardProps {
 5. Simplify `dialogState` logic to only check follow import conditions
 
 **New structure:**
+
 ```typescript
 function OnboardingDialogContent({ onComplete }: { onComplete: () => void }) {
   const { t } = useTranslation()
@@ -495,10 +521,12 @@ export function OnboardingDialog() {
 ## File Changes Summary
 
 ### Files to Create
+
 - `src/components/onboarding/BlossomOnboardingStep.tsx` - Full-screen onboarding step
 - `src/components/onboarding/BlossomServerPicker.tsx` - Unified picker dialog
 
 ### Files to Modify
+
 - `src/pages/UploadPage.tsx` - Add conditional rendering for onboarding
 - `src/components/onboarding/ServerCard.tsx` - Add `selectable` and `onRemove` props
 - `src/components/OnboardingDialog.tsx` - Remove Blossom step, keep only Follow Import
@@ -508,9 +536,11 @@ export function OnboardingDialog() {
 - `src/locales/es.json` - Add Spanish translations
 
 ### Files to Delete
+
 - `src/components/onboarding/BlossomServerConfigStep.tsx` - No longer needed
 
 ### localStorage Keys
+
 - **Keep:** `nostube_onboarding_follow_import` (login modal)
 - **Remove usage:** `nostube_onboarding_blossom_config` (no longer checked)
 - **Add:** `nostube_upload_onboarding_complete` (upload page)
@@ -520,6 +550,7 @@ export function OnboardingDialog() {
 ### Manual Testing Checklist
 
 **First-time upload flow:**
+
 1. Clear `nostube_upload_onboarding_complete` from localStorage
 2. Visit `/upload` → should see onboarding step (not upload form)
 3. Verify "Continue" button is disabled
@@ -540,6 +571,7 @@ export function OnboardingDialog() {
 18. Verify upload form appears
 
 **Return visit:**
+
 1. Refresh `/upload` page
 2. Verify goes directly to upload form (no onboarding)
 3. Verify Settings > Blossom Servers shows correct tags:
@@ -547,6 +579,7 @@ export function OnboardingDialog() {
    - Mirror servers have tag "mirror"
 
 **Login modal:**
+
 1. Clear `nostube_onboarding_follow_import` from localStorage
 2. Ensure user has kind 3 contacts but no follow set
 3. Login → verify dialog shows only Follow Import step
@@ -554,12 +587,14 @@ export function OnboardingDialog() {
 5. Complete follow import → dialog closes
 
 **Edge cases:**
+
 1. Try to add same server twice → picker should filter it out
 2. Add all recommended servers → picker should show "All servers added"
 3. Remove all upload servers → validation error reappears
 4. Custom URL with trailing slash → should normalize correctly
 
 ### Language Testing
+
 1. Change language to German → verify all text appears in German
 2. Repeat for French and Spanish
 3. Verify picker dialog text changes based on `type` prop
@@ -567,12 +602,14 @@ export function OnboardingDialog() {
 ## Migration Strategy
 
 No data migration needed. Existing users:
+
 - Already have `nostube_onboarding_blossom_config` set (ignored)
 - May or may not have servers configured
 - Will see upload onboarding on first `/upload` visit if no servers configured
 - Will skip directly to upload form if servers already configured
 
 New users:
+
 - See follow import on first login
 - See Blossom onboarding on first upload attempt
 - Clean separation of concerns
@@ -597,23 +634,27 @@ New users:
 ## Architecture Notes
 
 **Why separate onboarding?**
+
 - Login modal: Critical path for authentication and social graph setup
 - Upload page: Feature-specific configuration, only needed when uploading
 - Better separation of concerns, less overwhelming for new users
 
 **Why single-select picker?**
+
 - Simpler interaction model (click = add)
 - Clearer user intent per action
 - Easier to implement and maintain
 - Can still add multiple servers (just open picker multiple times)
 
 **Why show full ServerCard details?**
+
 - Informed decision-making without reopening picker
 - Consistency between picker and onboarding list
 - Visual confirmation of what was selected
 - No surprises about server capabilities
 
 **Why unified picker component?**
+
 - DRY principle - one implementation for both use cases
 - Easier to maintain and update
 - Consistent UX between upload and mirror selection

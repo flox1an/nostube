@@ -17,9 +17,9 @@ import { RECOMMENDED_BLOSSOM_SERVERS } from '@/lib/blossom-servers'
 interface BlossomServerPickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  excludeServers: string[]  // Already-added servers to filter out
+  excludeServers: string[] // Already-added servers to filter out
   onSelect: (url: string) => void
-  type: 'upload' | 'mirror'  // For i18n context
+  type: 'upload' | 'mirror' // For i18n context
 }
 
 export function BlossomServerPicker({
@@ -48,12 +48,8 @@ export function BlossomServerPicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {t(`blossomPicker.${type}.title`)}
-          </DialogTitle>
-          <DialogDescription>
-            {t(`blossomPicker.${type}.description`)}
-          </DialogDescription>
+          <DialogTitle>{t(`blossomPicker.${type}.title`)}</DialogTitle>
+          <DialogDescription>{t(`blossomPicker.${type}.description`)}</DialogDescription>
         </DialogHeader>
 
         {/* Recommended Servers List */}
@@ -84,16 +80,14 @@ export function BlossomServerPicker({
             <Input
               placeholder={t('blossomPicker.customUrl.placeholder')}
               value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCustomAdd()}
+              onChange={e => setCustomUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCustomAdd()}
             />
             <Button onClick={handleCustomAdd} disabled={!customUrl.trim()}>
               {t('blossomPicker.customUrl.add')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t('blossomPicker.customUrl.hint')}
-          </p>
+          <p className="text-xs text-muted-foreground">{t('blossomPicker.customUrl.hint')}</p>
         </div>
       </DialogContent>
     </Dialog>

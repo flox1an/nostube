@@ -69,9 +69,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
           {/* Upload Servers Section */}
           <div className="space-y-3">
             <div>
-              <h3 className="text-lg font-semibold">
-                {t('uploadOnboarding.uploadServers.title')}
-              </h3>
+              <h3 className="text-lg font-semibold">{t('uploadOnboarding.uploadServers.title')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {t('uploadOnboarding.uploadServers.description')}
               </p>
@@ -101,9 +99,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
           {/* Mirror Servers Section */}
           <div className="space-y-3">
             <div>
-              <h3 className="text-lg font-semibold">
-                {t('uploadOnboarding.mirrorServers.title')}
-              </h3>
+              <h3 className="text-lg font-semibold">{t('uploadOnboarding.mirrorServers.title')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {t('uploadOnboarding.mirrorServers.description')}
               </p>
@@ -151,7 +147,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
         open={showUploadPicker}
         onOpenChange={setShowUploadPicker}
         excludeServers={uploadServers}
-        onSelect={(url) => {
+        onSelect={url => {
           setUploadServers(prev => [...prev, url])
           setShowUploadPicker(false)
         }}
@@ -162,7 +158,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
         open={showMirrorPicker}
         onOpenChange={setShowMirrorPicker}
         excludeServers={mirrorServers}
-        onSelect={(url) => {
+        onSelect={url => {
           setMirrorServers(prev => [...prev, url])
           setShowMirrorPicker(false)
         }}

@@ -13,6 +13,7 @@
 ## Task 1: Update ServerCard Component for New Modes
 
 **Files:**
+
 - Modify: `src/components/onboarding/ServerCard.tsx`
 
 **Step 1: Read the current ServerCard implementation**
@@ -33,7 +34,7 @@ interface ServerCardProps {
   onCheckedChange?: (checked: boolean) => void
 
   // New modes
-  selectable?: boolean  // Shows hover effect, for picker (click handled by parent)
+  selectable?: boolean // Shows hover effect, for picker (click handled by parent)
   onRemove?: () => void // Shows remove button, for onboarding step list
 }
 ```
@@ -77,6 +78,7 @@ git commit -m "feat: add selectable and onRemove props to ServerCard"
 ## Task 2: Create BlossomServerPicker Dialog
 
 **Files:**
+
 - Create: `src/components/onboarding/BlossomServerPicker.tsx`
 
 **Step 1: Create the file with imports and interface**
@@ -202,6 +204,7 @@ git commit -m "feat: add BlossomServerPicker dialog component"
 ## Task 3: Create BlossomOnboardingStep Component
 
 **Files:**
+
 - Create: `src/components/onboarding/BlossomOnboardingStep.tsx`
 
 **Step 1: Create the file with imports and interface**
@@ -389,6 +392,7 @@ git commit -m "feat: add BlossomOnboardingStep component"
 ## Task 4: Update UploadPage for Conditional Rendering
 
 **Files:**
+
 - Modify: `src/pages/UploadPage.tsx`
 
 **Step 1: Read current UploadPage**
@@ -455,6 +459,7 @@ git commit -m "feat: add conditional rendering for Blossom onboarding in UploadP
 ## Task 5: Update OnboardingDialog to Remove Blossom Step
 
 **Files:**
+
 - Modify: `src/components/OnboardingDialog.tsx`
 
 **Step 1: Read current OnboardingDialog**
@@ -465,6 +470,7 @@ Expected: See 2-step dialog with Follow Import and Blossom Config
 **Step 2: Remove Blossom imports and constants**
 
 Remove these lines:
+
 ```typescript
 import { BlossomServerConfigStep } from './onboarding/BlossomServerConfigStep'
 const BLOSSOM_CONFIG_STORAGE_KEY = 'nostube_onboarding_blossom_config'
@@ -511,11 +517,13 @@ const shouldShow = useMemo(() => {
 **Step 5: Update Dialog open prop**
 
 Change line ~114 from:
+
 ```typescript
 <Dialog open={dialogState.shouldShow} onOpenChange={() => {}}>
 ```
 
 To:
+
 ```typescript
 <Dialog open={shouldShow} onOpenChange={() => {}}>
 ```
@@ -523,6 +531,7 @@ To:
 **Step 6: Remove key prop from OnboardingDialogContent**
 
 Change line ~116-119 from:
+
 ```typescript
 <OnboardingDialogContent
   key={dialogState.initialStep}
@@ -532,6 +541,7 @@ Change line ~116-119 from:
 ```
 
 To:
+
 ```typescript
 <OnboardingDialogContent onComplete={handleComplete} />
 ```
@@ -553,6 +563,7 @@ git commit -m "refactor: remove Blossom step from OnboardingDialog, keep only Fo
 ## Task 6: Delete BlossomServerConfigStep
 
 **Files:**
+
 - Delete: `src/components/onboarding/BlossomServerConfigStep.tsx`
 
 **Step 1: Remove the file**
@@ -576,6 +587,7 @@ git commit -m "chore: delete unused BlossomServerConfigStep component"
 ## Task 7: Add English Translation Keys
 
 **Files:**
+
 - Modify: `src/locales/en.json`
 
 **Step 1: Read current translations structure**
@@ -642,6 +654,7 @@ git commit -m "feat: add English translations for upload onboarding"
 ## Task 8: Add German Translation Keys
 
 **Files:**
+
 - Modify: `src/locales/de.json`
 
 **Step 1: Add uploadOnboarding section in same location as English**
@@ -701,6 +714,7 @@ git commit -m "feat: add German translations for upload onboarding"
 ## Task 9: Add French Translation Keys
 
 **Files:**
+
 - Modify: `src/locales/fr.json`
 
 **Step 1: Add uploadOnboarding section**
@@ -760,6 +774,7 @@ git commit -m "feat: add French translations for upload onboarding"
 ## Task 10: Add Spanish Translation Keys
 
 **Files:**
+
 - Modify: `src/locales/es.json`
 
 **Step 1: Add uploadOnboarding section**
@@ -819,6 +834,7 @@ git commit -m "feat: add Spanish translations for upload onboarding"
 ## Task 11: Run Full Build and Test
 
 **Files:**
+
 - None (verification only)
 
 **Step 1: Run TypeScript type check**
@@ -851,11 +867,13 @@ Expected: Clean working tree (all changes committed)
 ## Task 12: Manual Testing and Verification
 
 **Files:**
+
 - None (manual testing)
 
 **Step 1: Clear onboarding state**
 
 Run in browser console:
+
 ```javascript
 localStorage.removeItem('nostube_upload_onboarding_complete')
 ```
@@ -867,6 +885,7 @@ Run: `npm run dev`
 **Step 3: Test first-time upload flow**
 
 Manual steps:
+
 1. Navigate to `/upload`
 2. Verify Blossom onboarding step appears (not upload form)
 3. Verify "Continue" button is disabled
@@ -888,6 +907,7 @@ Manual steps:
 **Step 4: Test login modal**
 
 Manual steps:
+
 1. Clear `nostube_onboarding_follow_import` from localStorage
 2. Reload page while logged in
 3. Verify dialog shows only Follow Import step (no Blossom)
@@ -896,6 +916,7 @@ Manual steps:
 **Step 5: Test all languages**
 
 Manual steps:
+
 1. Change language to German in Settings
 2. Clear `nostube_upload_onboarding_complete`
 3. Visit `/upload` → verify all text in German
@@ -910,6 +931,7 @@ Expected: All manual tests pass, no console errors
 ## Task 13: Update CHANGELOG
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
 **Step 1: Add entry under ## [Unreleased] → ### Changed**
@@ -932,6 +954,7 @@ git commit -m "docs: update CHANGELOG for upload page Blossom onboarding"
 ## Task 14: Run Formatter and Final Verification
 
 **Files:**
+
 - All modified files
 
 **Step 1: Run Prettier**
@@ -994,12 +1017,14 @@ Expected: See all commits from this implementation
 ## Notes for Engineer
 
 **Key Principles:**
+
 - **DRY:** Reuse ServerCard component, unified BlossomServerPicker for both upload/mirror
 - **YAGNI:** No back navigation, no pre-selection, minimal state management
 - **Clear separation:** Upload vs Mirror concerns fully separated, login modal vs upload page separated
 - **User choice:** No defaults, users make conscious decisions
 
 **Common Pitfalls:**
+
 - Don't forget to import X icon from lucide-react for remove button
 - ServerCard `onRemove` must stop propagation to avoid parent click handlers
 - Picker dialog `onSelect` closes dialog in parent component, not in picker itself
@@ -1007,12 +1032,14 @@ Expected: See all commits from this implementation
 - Remember to filter already-added servers in picker: `excludeServers` prop
 
 **Testing Notes:**
+
 - No unit tests required for these components (following project pattern)
 - Manual testing is critical - verify full flow in all languages
 - Pay special attention to validation behavior and localStorage flags
 - Test custom URL input with various formats (with/without trailing slash)
 
 **Architecture Notes:**
+
 - State flows one way: User adds servers → saves to config → onComplete callback
 - Only final "Continue" button saves to localStorage and triggers completion
 - Dialog visibility logic in UploadPage is simple: check localStorage flag

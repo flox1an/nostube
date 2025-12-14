@@ -532,19 +532,17 @@
   },
   "uploadOnboarding": {
     "title": "Configure Upload Servers",
-    "description": "Before uploading videos, you need to configure at least one upload server. You can also add optional mirror servers for redundancy.",
+    "description": "Choose where to upload and store your videos.",
     "uploadServers": {
       "title": "Upload Servers",
-      "description": "Choose where your videos will be uploaded. At least one server is required.",
-      "empty": "No upload servers configured yet. Click 'Add Upload Server' to get started.",
-      "addServer": "Add Upload Server",
+      "description": "Required - At least one server needed",
+      "emptyState": "Click + to add server",
       "required": "At least one upload server is required"
     },
     "mirrorServers": {
-      "title": "Mirror Servers (Optional)",
-      "description": "Mirror servers create backup copies of your videos for better availability.",
-      "empty": "No mirror servers configured. This is optional.",
-      "addServer": "Add Mirror Server"
+      "title": "Mirror Servers",
+      "description": "Optional - Backup copies for redundancy",
+      "emptyState": "Click + to add server"
     },
     "continue": "Continue to Upload"
   },

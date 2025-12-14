@@ -532,19 +532,17 @@
   },
   "uploadOnboarding": {
     "title": "Configurer les serveurs de téléchargement",
-    "description": "Avant de télécharger des vidéos, vous devez configurer au moins un serveur de téléchargement. Vous pouvez également ajouter des serveurs miroirs optionnels pour la redondance.",
+    "description": "Choisissez où télécharger et stocker vos vidéos.",
     "uploadServers": {
       "title": "Serveurs de téléchargement",
-      "description": "Choisissez où vos vidéos seront téléchargées. Au moins un serveur est requis.",
-      "empty": "Aucun serveur de téléchargement configuré. Cliquez sur 'Ajouter un serveur de téléchargement' pour commencer.",
-      "addServer": "Ajouter un serveur de téléchargement",
+      "description": "Requis - Au moins un serveur nécessaire",
+      "emptyState": "Cliquez sur + pour ajouter un serveur",
       "required": "Au moins un serveur de téléchargement est requis"
     },
     "mirrorServers": {
-      "title": "Serveurs miroirs (Optionnel)",
-      "description": "Les serveurs miroirs créent des copies de sauvegarde de vos vidéos pour une meilleure disponibilité.",
-      "empty": "Aucun serveur miroir configuré. Ceci est optionnel.",
-      "addServer": "Ajouter un serveur miroir"
+      "title": "Serveurs miroir",
+      "description": "Optionnel - Copies de sauvegarde pour la redondance",
+      "emptyState": "Cliquez sur + pour ajouter un serveur"
     },
     "continue": "Continuer vers le téléchargement"
   },

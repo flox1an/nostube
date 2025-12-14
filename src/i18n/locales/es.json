@@ -531,22 +531,20 @@
     }
   },
   "uploadOnboarding": {
-    "title": "Configurar servidores de carga",
-    "description": "Antes de subir videos, necesita configurar al menos un servidor de carga. También puede agregar servidores espejo opcionales para redundancia.",
+    "title": "Configurar servidores de subida",
+    "description": "Elija dónde subir y almacenar sus videos.",
     "uploadServers": {
-      "title": "Servidores de carga",
-      "description": "Elija dónde se subirán sus videos. Se requiere al menos un servidor.",
-      "empty": "No hay servidores de carga configurados aún. Haga clic en 'Agregar servidor de carga' para comenzar.",
-      "addServer": "Agregar servidor de carga",
-      "required": "Se requiere al menos un servidor de carga"
+      "title": "Servidores de subida",
+      "description": "Requerido - Se necesita al menos un servidor",
+      "emptyState": "Haga clic en + para agregar servidor",
+      "required": "Se requiere al menos un servidor de subida"
     },
     "mirrorServers": {
-      "title": "Servidores espejo (Opcional)",
-      "description": "Los servidores espejo crean copias de respaldo de sus videos para mejor disponibilidad.",
-      "empty": "No hay servidores espejo configurados. Esto es opcional.",
-      "addServer": "Agregar servidor espejo"
+      "title": "Servidores espejo",
+      "description": "Opcional - Copias de respaldo para redundancia",
+      "emptyState": "Haga clic en + para agregar servidor"
     },
-    "continue": "Continuar a la carga"
+    "continue": "Continuar a la subida"
   },
   "blossomPicker": {
     "upload": {

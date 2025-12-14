@@ -42,6 +42,7 @@ export function BlossomServerPicker({
     if (customUrl.trim()) {
       onSelect(customUrl.trim())
       setCustomUrl('')
+      setShowCustomInput(false)
     }
   }
 
@@ -97,6 +98,15 @@ export function BlossomServerPicker({
                 />
                 <Button onClick={handleCustomAdd} disabled={!customUrl.trim()}>
                   {t('blossomPicker.customUrl.add')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCustomInput(false)
+                    setCustomUrl('')
+                  }}
+                >
+                  {t('common.cancel')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">{t('blossomPicker.customUrl.hint')}</p>

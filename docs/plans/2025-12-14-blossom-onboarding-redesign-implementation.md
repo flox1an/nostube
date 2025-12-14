@@ -13,6 +13,7 @@
 ## Task 1: Update ServerCard with Progressive Disclosure Mode
 
 **Files:**
+
 - Modify: `src/components/onboarding/ServerCard.tsx:1-107`
 
 **Step 1: Add showDetailsOnHover prop to ServerCard**
@@ -216,6 +217,7 @@ git commit -m "feat: add progressive disclosure mode to ServerCard
 ## Task 2: Update BlossomServerPicker Modal Styling
 
 **Files:**
+
 - Modify: `src/components/onboarding/BlossomServerPicker.tsx:1-96`
 
 **Step 1: Update DialogContent max-width**
@@ -309,6 +311,7 @@ git commit -m "feat: update BlossomServerPicker modal styling
 ## Task 3: Add Translation Keys
 
 **Files:**
+
 - Modify: `src/i18n/locales/en.json` (uploadOnboarding section)
 - Modify: `src/i18n/locales/de.json` (uploadOnboarding section)
 - Modify: `src/i18n/locales/fr.json` (uploadOnboarding section)
@@ -435,6 +438,7 @@ git commit -m "feat: update onboarding translations for cleaner UI
 ## Task 4: Redesign BlossomOnboardingStep Layout
 
 **Files:**
+
 - Modify: `src/components/onboarding/BlossomOnboardingStep.tsx:1-169`
 
 **Step 1: Add lucide-react icon imports**
@@ -591,6 +595,7 @@ git commit -m "feat: redesign BlossomOnboardingStep with two-column layout
 ## Task 5: Update CHANGELOG
 
 **Files:**
+
 - Modify: `CHANGELOG.md` (Unreleased section)
 
 **Step 1: Add changelog entry**
@@ -613,6 +618,7 @@ git commit -m "docs: update CHANGELOG for blossom onboarding redesign"
 ## Task 6: Final Verification and Formatting
 
 **Files:**
+
 - All modified files
 
 **Step 1: Run full build**
@@ -635,6 +641,7 @@ Expected: All tests pass
 Run: `npm run dev`
 
 Test scenarios:
+
 1. Navigate to /upload (not logged in or onboarding not complete)
 2. Verify two-column layout appears on desktop
 3. Verify single column stacks on mobile (resize browser)
@@ -671,6 +678,7 @@ git commit -m "chore: run prettier formatting"
 ## Testing Strategy
 
 **Manual Testing:**
+
 - Test on desktop (≥768px width)
 - Test on mobile (<768px width)
 - Test all user interactions (add/remove servers, hover states, modal)
@@ -678,12 +686,14 @@ git commit -m "chore: run prettier formatting"
 - Test all four languages (EN/DE/FR/ES)
 
 **Visual Regression:**
+
 - Compare before/after screenshots
 - Verify dashed borders render correctly
 - Verify icons are properly sized and aligned
 - Verify hover effects are smooth
 
 **Accessibility:**
+
 - Verify keyboard navigation works
 - Verify screen reader announcements
 - Verify color contrast meets WCAG standards
@@ -719,6 +729,7 @@ git commit -m "chore: run prettier formatting"
 ## Rollback Plan
 
 If issues arise:
+
 1. Check git log: `git log --oneline`
 2. Identify last good commit before changes
 3. Revert: `git revert <commit-sha>` for each commit in reverse order

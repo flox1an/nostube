@@ -7,6 +7,7 @@ import { ServerCard } from './ServerCard'
 import { BlossomServerPicker } from './BlossomServerPicker'
 import { RECOMMENDED_BLOSSOM_SERVERS, deriveServerName } from '@/lib/blossom-servers'
 import type { BlossomServerTag } from '@/contexts/AppContext'
+import { Upload, RefreshCw, Plus } from 'lucide-react'
 
 interface BlossomOnboardingStepProps {
   onComplete: () => void
@@ -66,64 +67,91 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Upload Servers Section */}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">{t('uploadOnboarding.uploadServers.title')}</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('uploadOnboarding.uploadServers.description')}
-              </p>
+          {/* Two-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Upload Servers Column */}
+            <div className="space-y-3">
+              {/* Section Header */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">{t('uploadOnboarding.uploadServers.title')}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('uploadOnboarding.uploadServers.description')}
+                </p>
+              </div>
+
+              {/* Empty State or Server List */}
+              {uploadServers.length === 0 ? (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{t('uploadOnboarding.uploadServers.emptyState')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {uploadServers.map(url => (
+                    <ServerCard
+                      key={url}
+                      server={getServerInfo(url)}
+                      onRemove={() => setUploadServers(prev => prev.filter(s => s !== url))}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Add Button */}
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setShowUploadPicker(true)}
+                className="w-10 h-10"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
 
-            {uploadServers.length === 0 ? (
-              <div className="text-sm text-muted-foreground border rounded p-4">
-                {t('uploadOnboarding.uploadServers.empty')}
+            {/* Mirror Servers Column */}
+            <div className="space-y-3">
+              {/* Section Header */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">{t('uploadOnboarding.mirrorServers.title')}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('uploadOnboarding.mirrorServers.description')}
+                </p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {uploadServers.map(url => (
-                  <ServerCard
-                    key={url}
-                    server={getServerInfo(url)}
-                    onRemove={() => setUploadServers(prev => prev.filter(s => s !== url))}
-                  />
-                ))}
-              </div>
-            )}
 
-            <Button onClick={() => setShowUploadPicker(true)}>
-              {t('uploadOnboarding.uploadServers.addServer')}
-            </Button>
-          </div>
+              {/* Empty State or Server List */}
+              {mirrorServers.length === 0 ? (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{t('uploadOnboarding.mirrorServers.emptyState')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {mirrorServers.map(url => (
+                    <ServerCard
+                      key={url}
+                      server={getServerInfo(url)}
+                      onRemove={() => setMirrorServers(prev => prev.filter(s => s !== url))}
+                    />
+                  ))}
+                </div>
+              )}
 
-          {/* Mirror Servers Section */}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">{t('uploadOnboarding.mirrorServers.title')}</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('uploadOnboarding.mirrorServers.description')}
-              </p>
+              {/* Add Button */}
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setShowMirrorPicker(true)}
+                className="w-10 h-10"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
-
-            {mirrorServers.length === 0 ? (
-              <div className="text-sm text-muted-foreground border rounded p-4">
-                {t('uploadOnboarding.mirrorServers.empty')}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {mirrorServers.map(url => (
-                  <ServerCard
-                    key={url}
-                    server={getServerInfo(url)}
-                    onRemove={() => setMirrorServers(prev => prev.filter(s => s !== url))}
-                  />
-                ))}
-              </div>
-            )}
-
-            <Button onClick={() => setShowMirrorPicker(true)}>
-              {t('uploadOnboarding.mirrorServers.addServer')}
-            </Button>
           </div>
 
           {/* Validation Error */}

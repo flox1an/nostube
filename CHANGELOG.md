@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Video Page Authentication Requirements**: Report and Mirror functionality now restricted to logged-in users only. Both menu items in VideoInfoSection require `userPubkey` to be present, following the same authentication pattern as reactions and playlist features (VideoInfoSection.tsx:217,227)
 
+- **Blossom Onboarding Redesign**: Redesigned upload page Blossom server configuration with cleaner, more beginner-friendly UI. Two-column layout (upload/mirror servers side-by-side on desktop), icon-only + buttons, dashed border empty states, hover-based X buttons on server cards, progressive disclosure in server picker modal (minimal info by default, details on hover), non-fullscreen modal with single-click selection, collapsible custom URL input. Components: `BlossomOnboardingStep`, `BlossomServerPicker`, `ServerCard`. i18n support for EN/DE/FR/ES. Design document: `docs/plans/2025-12-14-blossom-onboarding-redesign.md`
+
 ### Fixed
 
 - **Onboarding Dialog Not Closing**: Fixed issue where clicking the "Continue" button in Blossom server configuration step (Step 2) would not close the dialog. Added state management to trigger re-render when onboarding is completed, allowing the dialog to properly detect the localStorage flag and close automatically (OnboardingDialog.tsx:75,79,103-105)

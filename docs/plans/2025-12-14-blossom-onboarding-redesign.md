@@ -28,6 +28,7 @@ The current Blossom onboarding step (`BlossomOnboardingStep.tsx`) requires newco
 **Mobile (<768px):** Stacked vertically
 
 **Card Structure:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  Configure Upload Servers                       │
@@ -50,6 +51,7 @@ The current Blossom onboarding step (`BlossomOnboardingStep.tsx`) requires newco
 ### Section Headers
 
 Each column has a header with:
+
 - **Icon:** `Upload` (lucide-react) for upload servers, `RefreshCw` for mirror servers
 - **Title:** "Upload Servers" / "Mirror Servers (Optional)"
 - **Brief description:** One-line explanation below title
@@ -57,6 +59,7 @@ Each column has a header with:
 ### Empty State
 
 When no servers are configured:
+
 ```
 ┌──────────────────────────┐
 │    ╭ ─ ─ ─ ─ ─ ─ ─ ╮    │
@@ -76,6 +79,7 @@ When no servers are configured:
 ### Server List (After Adding)
 
 Compact server cards stacked vertically:
+
 - Server name (bold)
 - Payment badge (Free/Paid)
 - X button appears only on hover (top-right corner)
@@ -106,6 +110,7 @@ Compact server cards stacked vertically:
 ### Server Cards in Modal
 
 **Default State (Minimal):**
+
 - Server name (bold, prominent)
 - Payment badge (Free with secondary variant, Paid with orange background)
 - Hover cursor indicating clickability
@@ -113,6 +118,7 @@ Compact server cards stacked vertically:
 
 **Hover State (Progressive Disclosure):**
 Card expands to reveal:
+
 - CDN provider (if available)
 - File size limits with `HardDrive` icon
 - Retention policy
@@ -122,6 +128,7 @@ Card expands to reveal:
 - Smooth transition animation
 
 **Interaction:**
+
 - **Single click anywhere on card** → Adds server and closes modal immediately
 - No confirm button needed (instant feedback)
 - Modal closes automatically after selection
@@ -136,27 +143,29 @@ Card expands to reveal:
 
 ## Icon Reference (lucide-react)
 
-| Element | Icon | Purpose |
-|---------|------|---------|
-| Upload servers header | `Upload` | Indicates upload functionality |
-| Mirror servers header | `RefreshCw` | Indicates mirroring/redundancy |
-| Empty state placeholder | `Plus` | Add action affordance |
-| Add server buttons | `Plus` | Primary action |
-| Remove button (hover) | `X` | Delete/remove action |
-| Server features | `Check` | Indicates supported features |
-| Storage info | `HardDrive` | File size/storage context |
-| Custom URL button | `Link` | External/custom URL |
+| Element                 | Icon        | Purpose                        |
+| ----------------------- | ----------- | ------------------------------ |
+| Upload servers header   | `Upload`    | Indicates upload functionality |
+| Mirror servers header   | `RefreshCw` | Indicates mirroring/redundancy |
+| Empty state placeholder | `Plus`      | Add action affordance          |
+| Add server buttons      | `Plus`      | Primary action                 |
+| Remove button (hover)   | `X`         | Delete/remove action           |
+| Server features         | `Check`     | Indicates supported features   |
+| Storage info            | `HardDrive` | File size/storage context      |
+| Custom URL button       | `Link`      | External/custom URL            |
 
 ## Component Changes
 
 ### BlossomOnboardingStep.tsx
 
 **Layout Changes:**
+
 - Add two-column grid: `grid grid-cols-1 md:grid-cols-2 gap-6`
 - Each column wrapped in `<div className="space-y-3">`
 - Section headers include icon + title in flex row
 
 **Empty State:**
+
 ```tsx
 <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
   <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -165,6 +174,7 @@ Card expands to reveal:
 ```
 
 **Add Button:**
+
 ```tsx
 <Button size="icon" variant="outline" onClick={() => setShowUploadPicker(true)}>
   <Plus className="h-4 w-4" />
@@ -172,6 +182,7 @@ Card expands to reveal:
 ```
 
 **Server Cards:**
+
 - Map over selected servers
 - Pass `onRemove` callback to ServerCard
 - Hover-based X button handled in ServerCard component
@@ -179,6 +190,7 @@ Card expands to reveal:
 ### ServerCard.tsx
 
 **New Props:**
+
 ```tsx
 interface ServerCardProps {
   server: BlossomServerInfo
@@ -195,6 +207,7 @@ interface ServerCardProps {
 ```
 
 **Hover-Based Remove Button:**
+
 ```tsx
 <div className="group relative ...">
   {/* Card content */}
@@ -212,6 +225,7 @@ interface ServerCardProps {
 ```
 
 **Progressive Disclosure (Modal Mode):**
+
 ```tsx
 {showDetailsOnHover ? (
   <>
@@ -233,6 +247,7 @@ interface ServerCardProps {
 ### BlossomServerPicker.tsx
 
 **Dialog Changes:**
+
 - Remove full-screen mode
 - Add `className="max-w-2xl"` to Dialog content
 - Server cards use `showDetailsOnHover={true}` mode
@@ -240,6 +255,7 @@ interface ServerCardProps {
 - Cards are directly clickable → call `onSelect(url)` immediately
 
 **Custom URL Section:**
+
 ```tsx
 <div className="border-t pt-4 mt-4">
   <Button variant="ghost" size="sm" onClick={() => setShowCustomInput(true)}>
@@ -255,7 +271,9 @@ interface ServerCardProps {
         onChange={e => setCustomUrl(e.target.value)}
       />
       <Button onClick={handleAddCustom}>OK</Button>
-      <Button variant="outline" onClick={() => setShowCustomInput(false)}>Cancel</Button>
+      <Button variant="outline" onClick={() => setShowCustomInput(false)}>
+        Cancel
+      </Button>
     </div>
   )}
 </div>
@@ -330,12 +348,14 @@ Update `en.json` (and other locales):
 ## Success Metrics
 
 **User Experience:**
+
 - Newcomers can configure servers without reading documentation
 - Clear visual distinction between required (upload) and optional (mirror) servers
 - Reduced time to complete onboarding
 - Less confusion about what each server type does
 
 **Technical:**
+
 - No breaking changes to existing functionality
 - Backward compatible with existing ServerCard usage
 - Maintains all validation logic

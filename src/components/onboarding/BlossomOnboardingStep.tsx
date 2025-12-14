@@ -75,7 +75,9 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Upload className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">{t('uploadOnboarding.uploadServers.title')}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('uploadOnboarding.uploadServers.title')}
+                  </h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {t('uploadOnboarding.uploadServers.description')}
@@ -117,7 +119,9 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <RefreshCw className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">{t('uploadOnboarding.mirrorServers.title')}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t('uploadOnboarding.mirrorServers.title')}
+                  </h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {t('uploadOnboarding.mirrorServers.description')}

@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Link } from 'lucide-react'
 import { ServerCard } from './ServerCard'
 import { RECOMMENDED_BLOSSOM_SERVERS } from '@/lib/blossom-servers'
 
@@ -31,6 +31,7 @@ export function BlossomServerPicker({
 }: BlossomServerPickerProps) {
   const { t } = useTranslation()
   const [customUrl, setCustomUrl] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
 
   // Filter out already-added servers
   const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(
@@ -46,7 +47,7 @@ export function BlossomServerPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t(`blossomPicker.${type}.title`)}</DialogTitle>
           <DialogDescription>{t(`blossomPicker.${type}.description`)}</DialogDescription>
@@ -66,7 +67,7 @@ export function BlossomServerPicker({
                   onClick={() => onSelect(server.url)}
                   className="cursor-pointer hover:bg-accent rounded transition-colors"
                 >
-                  <ServerCard server={server} selectable />
+                  <ServerCard server={server} selectable showDetailsOnHover />
                 </div>
               ))
             )}
@@ -75,19 +76,32 @@ export function BlossomServerPicker({
 
         {/* Custom URL Input */}
         <div className="space-y-2 pt-4 border-t">
-          <Label>{t('blossomPicker.customUrl.label')}</Label>
-          <div className="flex gap-2">
-            <Input
-              placeholder={t('blossomPicker.customUrl.placeholder')}
-              value={customUrl}
-              onChange={e => setCustomUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleCustomAdd()}
-            />
-            <Button onClick={handleCustomAdd} disabled={!customUrl.trim()}>
-              {t('blossomPicker.customUrl.add')}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">{t('blossomPicker.customUrl.hint')}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCustomInput(!showCustomInput)}
+            className="gap-2"
+          >
+            <Link className="h-4 w-4" />
+            {t('blossomPicker.customUrl.label')}
+          </Button>
+
+          {showCustomInput && (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={t('blossomPicker.customUrl.placeholder')}
+                  value={customUrl}
+                  onChange={e => setCustomUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCustomAdd()}
+                />
+                <Button onClick={handleCustomAdd} disabled={!customUrl.trim()}>
+                  {t('blossomPicker.customUrl.add')}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t('blossomPicker.customUrl.hint')}</p>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

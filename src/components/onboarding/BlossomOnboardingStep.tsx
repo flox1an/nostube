@@ -15,10 +15,17 @@ interface BlossomOnboardingStepProps {
 
 export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps) {
   const { t } = useTranslation()
-  const { updateConfig } = useAppContext()
+  const { config, updateConfig } = useAppContext()
 
-  const [uploadServers, setUploadServers] = useState<string[]>([])
-  const [mirrorServers, setMirrorServers] = useState<string[]>([])
+  // Initialize with existing configured servers
+  const [uploadServers, setUploadServers] = useState<string[]>(() => {
+    return (
+      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
+    )
+  })
+  const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
+    return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+  })
   const [showUploadPicker, setShowUploadPicker] = useState(false)
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
 

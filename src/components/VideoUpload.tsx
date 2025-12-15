@@ -2,7 +2,7 @@ import { useCurrentUser, useVideoUpload } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   InputMethodSelector,
   UrlInputSection,
@@ -13,8 +13,10 @@ import {
   VideoVariantsTable,
 } from './video-upload'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 
 export function VideoUpload() {
   const { t } = useTranslation()
@@ -81,7 +83,7 @@ export function VideoUpload() {
     })
 
   const { user } = useCurrentUser()
-  const navigate = useNavigate()
+  const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
 
   // Handle URL and description prefilling from query params (e.g., /upload?url=...&description=...)
   useEffect(() => {
@@ -139,7 +141,7 @@ export function VideoUpload() {
               </Button>
             )}
             <Button
-              onClick={() => navigate('/settings')}
+              onClick={() => setShowBlossomOnboarding(true)}
               variant={'outline'}
               className=" cursor-pointer"
             >
@@ -271,6 +273,13 @@ export function VideoUpload() {
           </CardContent>
         </form>
       </Card>
+
+      {/* Blossom Server Configuration Dialog */}
+      <Dialog open={showBlossomOnboarding} onOpenChange={setShowBlossomOnboarding}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <BlossomOnboardingStep onComplete={() => setShowBlossomOnboarding(false)} />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

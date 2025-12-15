@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Upload Page Advanced Button**: Changed "Advanced" button in VideoUpload component to open Blossom onboarding dialog instead of navigating to settings page. Users can now configure upload and mirror servers directly from the upload page via a modal dialog. The dialog displays the full `BlossomOnboardingStep` component with server selection and validation. Improves UX by keeping users on the upload page while configuring Blossom servers (VideoUpload.tsx)
+
 - **Onboarding Separation**: Moved Blossom server configuration from login modal to upload page as full-screen prerequisite step. Login modal now only shows Follow Import. Upload page checks `nostube_upload_onboarding_complete` localStorage key and displays server configuration before first upload. Components: `BlossomOnboardingStep` (full-screen card with upload/mirror sections), `BlossomServerPicker` (unified dialog with single-select and custom URL support). ServerCard updated with `selectable` and `onRemove` props. Validation requires ≥1 upload server, mirrors optional. i18n support for EN/DE/FR/ES. Design document: `docs/plans/2025-12-10-upload-page-blossom-onboarding.md`
 
 - **Embed Player Loading Indicator**: Replaced spinning hourglass emoji with pulsating Nostube logo during video loading. Uses the same purple gradient logo as the branding link and reuses the existing CSS pulse animation for consistency
@@ -51,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Video Page Authentication Requirements**: Report and Mirror functionality now restricted to logged-in users only. Both menu items in VideoInfoSection require `userPubkey` to be present, following the same authentication pattern as reactions and playlist features (VideoInfoSection.tsx:217,227)
 
-- **Blossom Onboarding Redesign**: Redesigned upload page Blossom server configuration with cleaner, more beginner-friendly UI. Two-column layout (upload/mirror servers side-by-side on desktop), icon-only + buttons, dashed border empty states, hover-based X buttons on server cards, progressive disclosure in server picker modal (minimal info by default, details on hover), non-fullscreen modal with single-click selection, collapsible custom URL input. Components: `BlossomOnboardingStep`, `BlossomServerPicker`, `ServerCard`. i18n support for EN/DE/FR/ES. Design document: `docs/plans/2025-12-14-blossom-onboarding-redesign.md`
+- **Blossom Onboarding Redesign**: Redesigned upload page Blossom server configuration with cleaner, more beginner-friendly UI. Two-column layout (upload/mirror servers side-by-side on desktop), centered primary-style plus buttons for adding additional servers (only visible after first server is added), clickable empty states with dashed borders, hover-based X buttons on server cards, mirror server picker now only shows servers that support mirroring, server picker modal shows all details immediately (removed hover reveal for clarity), non-fullscreen modal with single-click selection, collapsible custom URL input. Components: `BlossomOnboardingStep`, `BlossomServerPicker`, `ServerCard`. i18n support for EN/DE/FR/ES. Design document: `docs/plans/2025-12-14-blossom-onboarding-redesign.md`
 
 ### Fixed
 

@@ -86,7 +86,10 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
 
               {/* Empty State or Server List */}
               {uploadServers.length === 0 ? (
-                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                <div
+                  onClick={() => setShowUploadPicker(true)}
+                  className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">{t('uploadOnboarding.uploadServers.emptyState')}</p>
                 </div>
@@ -103,14 +106,18 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
               )}
 
               {/* Add Button */}
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => setShowUploadPicker(true)}
-                className="w-10 h-10"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              {uploadServers.length > 0 && (
+                <div className="flex justify-center">
+                  <Button
+                    size="icon"
+                    variant="default"
+                    onClick={() => setShowUploadPicker(true)}
+                    className="w-10 h-10"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Mirror Servers Column */}
@@ -130,7 +137,10 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
 
               {/* Empty State or Server List */}
               {mirrorServers.length === 0 ? (
-                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                <div
+                  onClick={() => setShowMirrorPicker(true)}
+                  className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">{t('uploadOnboarding.mirrorServers.emptyState')}</p>
                 </div>
@@ -147,14 +157,18 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
               )}
 
               {/* Add Button */}
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => setShowMirrorPicker(true)}
-                className="w-10 h-10"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              {mirrorServers.length > 0 && (
+                <div className="flex justify-center">
+                  <Button
+                    size="icon"
+                    variant="default"
+                    onClick={() => setShowMirrorPicker(true)}
+                    className="w-10 h-10"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 

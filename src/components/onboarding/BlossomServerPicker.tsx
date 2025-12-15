@@ -33,10 +33,12 @@ export function BlossomServerPicker({
   const [customUrl, setCustomUrl] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
 
-  // Filter out already-added servers
-  const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(
-    server => !excludeServers.includes(server.url)
-  )
+  // Filter out already-added servers and apply mirror filter if needed
+  const availableServers = RECOMMENDED_BLOSSOM_SERVERS.filter(server => {
+    if (excludeServers.includes(server.url)) return false
+    if (type === 'mirror' && !server.supportsMirror) return false
+    return true
+  })
 
   const handleCustomAdd = () => {
     if (customUrl.trim()) {
@@ -68,7 +70,7 @@ export function BlossomServerPicker({
                   onClick={() => onSelect(server.url)}
                   className="cursor-pointer hover:bg-accent rounded transition-colors"
                 >
-                  <ServerCard server={server} selectable showDetailsOnHover />
+                  <ServerCard server={server} selectable />
                 </div>
               ))
             )}

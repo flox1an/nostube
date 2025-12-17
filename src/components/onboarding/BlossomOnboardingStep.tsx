@@ -1,52 +1,30 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
-import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ServerCard } from './ServerCard'
-import { BlossomServerPicker } from './BlossomServerPicker'
 import { RECOMMENDED_BLOSSOM_SERVERS, deriveServerName } from '@/lib/blossom-servers'
-import type { BlossomServerTag } from '@/contexts/AppContext'
 import { Upload, RefreshCw, Plus } from 'lucide-react'
 
 interface BlossomOnboardingStepProps {
+  uploadServers: string[]
+  mirrorServers: string[]
+  onRemoveUploadServer: (url: string) => void
+  onRemoveMirrorServer: (url: string) => void
   onComplete: () => void
+  onOpenUploadPicker: () => void
+  onOpenMirrorPicker: () => void
 }
 
-export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps) {
+export function BlossomOnboardingStep({
+  uploadServers,
+  mirrorServers,
+  onRemoveUploadServer,
+  onRemoveMirrorServer,
+  onComplete,
+  onOpenUploadPicker,
+  onOpenMirrorPicker,
+}: BlossomOnboardingStepProps) {
   const { t } = useTranslation()
-  const { config, updateConfig } = useAppContext()
-
-  // Initialize with existing configured servers
-  const [uploadServers, setUploadServers] = useState<string[]>(() => {
-    return (
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-    )
-  })
-  const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
-    return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-  })
-  const [showUploadPicker, setShowUploadPicker] = useState(false)
-  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
-
-  const handleContinue = () => {
-    // Save to config
-    const blossomServers = [
-      ...uploadServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['initial upload'] as BlossomServerTag[],
-      })),
-      ...mirrorServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['mirror'] as BlossomServerTag[],
-      })),
-    ]
-
-    updateConfig(current => ({ ...current, blossomServers }))
-    onComplete()
-  }
 
   const isValid = uploadServers.length > 0
 
@@ -67,10 +45,10 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t('uploadOnboarding.title')}</DialogTitle>
-        <DialogDescription>{t('uploadOnboarding.description')}</DialogDescription>
-      </DialogHeader>
+      <CardHeader>
+        <CardTitle>{t('uploadOnboarding.title')}</CardTitle>
+        <CardDescription>{t('uploadOnboarding.description')}</CardDescription>
+      </CardHeader>
 
       <div className="space-y-6">
         {/* Two-column grid */}
@@ -93,7 +71,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
             {/* Empty State or Server List */}
             {uploadServers.length === 0 ? (
               <div
-                onClick={() => setShowUploadPicker(true)}
+                onClick={onOpenUploadPicker}
                 className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
               >
                 <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -105,7 +83,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
                   <ServerCard
                     key={url}
                     server={getServerInfo(url)}
-                    onRemove={() => setUploadServers(prev => prev.filter(s => s !== url))}
+                    onRemove={() => onRemoveUploadServer(url)}
                   />
                 ))}
               </div>
@@ -117,7 +95,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
                 <Button
                   size="icon"
                   variant="secondary"
-                  onClick={() => setShowUploadPicker(true)}
+                  onClick={onOpenUploadPicker}
                   className="w-10 h-10"
                 >
                   <Plus className="h-4 w-4" />
@@ -144,7 +122,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
             {/* Empty State or Server List */}
             {mirrorServers.length === 0 ? (
               <div
-                onClick={() => setShowMirrorPicker(true)}
+                onClick={onOpenMirrorPicker}
                 className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
               >
                 <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -156,7 +134,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
                   <ServerCard
                     key={url}
                     server={getServerInfo(url)}
-                    onRemove={() => setMirrorServers(prev => prev.filter(s => s !== url))}
+                    onRemove={() => onRemoveMirrorServer(url)}
                   />
                 ))}
               </div>
@@ -168,7 +146,7 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
                 <Button
                   size="icon"
                   variant="secondary"
-                  onClick={() => setShowMirrorPicker(true)}
+                  onClick={onOpenMirrorPicker}
                   className="w-10 h-10"
                 >
                   <Plus className="h-4 w-4" />
@@ -185,34 +163,11 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
 
         {/* Continue Button */}
         <div className="flex justify-end pt-2">
-          <Button onClick={handleContinue} disabled={!isValid} className="min-w-32">
+          <Button onClick={onComplete} disabled={!isValid} className="min-w-32">
             {t('uploadOnboarding.continue')}
           </Button>
         </div>
       </div>
-
-      {/* Picker Dialogs */}
-      <BlossomServerPicker
-        open={showUploadPicker}
-        onOpenChange={setShowUploadPicker}
-        excludeServers={uploadServers}
-        onSelect={url => {
-          setUploadServers(prev => [...prev, url])
-          setShowUploadPicker(false)
-        }}
-        type="upload"
-      />
-
-      <BlossomServerPicker
-        open={showMirrorPicker}
-        onOpenChange={setShowMirrorPicker}
-        excludeServers={mirrorServers}
-        onSelect={url => {
-          setMirrorServers(prev => [...prev, url])
-          setShowMirrorPicker(false)
-        }}
-        type="mirror"
-      />
     </>
   )
 }

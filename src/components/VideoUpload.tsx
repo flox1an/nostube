@@ -1,4 +1,4 @@
-import { useCurrentUser, useVideoUpload } from '@/hooks'
+import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -17,6 +17,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
+import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
+import { deriveServerName } from '@/lib/blossom-servers'
+import type { BlossomServerTag } from '@/contexts/AppContext'
 
 export function VideoUpload() {
   const { t } = useTranslation()
@@ -83,7 +86,58 @@ export function VideoUpload() {
     })
 
   const { user } = useCurrentUser()
+  const { config, updateConfig } = useAppContext()
   const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
+  const [showUploadPicker, setShowUploadPicker] = useState(false)
+  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
+
+  // Initialize with existing configured servers
+  const [uploadServers, setUploadServers] = useState<string[]>(() => {
+    return (
+      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
+    )
+  })
+  const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
+    return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+  })
+
+  // Handlers for server management
+  const handleBlossomOnboardingComplete = () => {
+    // Save to config
+    const blossomServers = [
+      ...uploadServers.map(url => ({
+        url,
+        name: deriveServerName(url),
+        tags: ['initial upload'] as BlossomServerTag[],
+      })),
+      ...mirrorServers.map(url => ({
+        url,
+        name: deriveServerName(url),
+        tags: ['mirror'] as BlossomServerTag[],
+      })),
+    ]
+
+    updateConfig(current => ({ ...current, blossomServers }))
+    setShowBlossomOnboarding(false)
+  }
+
+  const handleAddUploadServer = (url: string) => {
+    setUploadServers(prev => [...prev, url])
+    setShowUploadPicker(false)
+  }
+
+  const handleAddMirrorServer = (url: string) => {
+    setMirrorServers(prev => [...prev, url])
+    setShowMirrorPicker(false)
+  }
+
+  const handleRemoveUploadServer = (url: string) => {
+    setUploadServers(prev => prev.filter(s => s !== url))
+  }
+
+  const handleRemoveMirrorServer = (url: string) => {
+    setMirrorServers(prev => prev.filter(s => s !== url))
+  }
 
   // Handle URL and description prefilling from query params (e.g., /upload?url=...&description=...)
   useEffect(() => {
@@ -277,9 +331,34 @@ export function VideoUpload() {
       {/* Blossom Server Configuration Dialog */}
       <Dialog open={showBlossomOnboarding} onOpenChange={setShowBlossomOnboarding}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <BlossomOnboardingStep onComplete={() => setShowBlossomOnboarding(false)} />
+          <BlossomOnboardingStep
+            uploadServers={uploadServers}
+            mirrorServers={mirrorServers}
+            onRemoveUploadServer={handleRemoveUploadServer}
+            onRemoveMirrorServer={handleRemoveMirrorServer}
+            onComplete={handleBlossomOnboardingComplete}
+            onOpenUploadPicker={() => setShowUploadPicker(true)}
+            onOpenMirrorPicker={() => setShowMirrorPicker(true)}
+          />
         </DialogContent>
       </Dialog>
+
+      {/* Blossom Server Picker Dialogs (as siblings to main dialog) */}
+      <BlossomServerPicker
+        open={showUploadPicker}
+        onOpenChange={setShowUploadPicker}
+        excludeServers={uploadServers}
+        onSelect={handleAddUploadServer}
+        type="upload"
+      />
+
+      <BlossomServerPicker
+        open={showMirrorPicker}
+        onOpenChange={setShowMirrorPicker}
+        excludeServers={mirrorServers}
+        onSelect={handleAddMirrorServer}
+        type="mirror"
+      />
     </>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ServerCard } from './ServerCard'
 import { BlossomServerPicker } from './BlossomServerPicker'
 import { RECOMMENDED_BLOSSOM_SERVERS, deriveServerName } from '@/lib/blossom-servers'
@@ -67,133 +67,129 @@ export function BlossomOnboardingStep({ onComplete }: BlossomOnboardingStepProps
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('uploadOnboarding.title')}</CardTitle>
-          <CardDescription>{t('uploadOnboarding.description')}</CardDescription>
-        </CardHeader>
+      <DialogHeader>
+        <DialogTitle>{t('uploadOnboarding.title')}</DialogTitle>
+        <DialogDescription>{t('uploadOnboarding.description')}</DialogDescription>
+      </DialogHeader>
 
-        <CardContent className="space-y-6">
-          {/* Two-column grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Upload Servers Column */}
-            <div className="space-y-3">
-              {/* Section Header */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">
-                    {t('uploadOnboarding.uploadServers.title')}
-                  </h3>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('uploadOnboarding.uploadServers.description')}
-                </p>
+      <div className="space-y-6">
+        {/* Two-column grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Upload Servers Column */}
+          <div className="space-y-3">
+            {/* Section Header */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">
+                  {t('uploadOnboarding.uploadServers.title')}
+                </h3>
               </div>
+              <p className="text-sm text-muted-foreground">
+                {t('uploadOnboarding.uploadServers.description')}
+              </p>
+            </div>
 
-              {/* Empty State or Server List */}
-              {uploadServers.length === 0 ? (
-                <div
+            {/* Empty State or Server List */}
+            {uploadServers.length === 0 ? (
+              <div
+                onClick={() => setShowUploadPicker(true)}
+                className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+              >
+                <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{t('uploadOnboarding.uploadServers.emptyState')}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {uploadServers.map(url => (
+                  <ServerCard
+                    key={url}
+                    server={getServerInfo(url)}
+                    onRemove={() => setUploadServers(prev => prev.filter(s => s !== url))}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Add Button */}
+            {uploadServers.length > 0 && (
+              <div className="flex justify-center">
+                <Button
+                  size="icon"
+                  variant="secondary"
                   onClick={() => setShowUploadPicker(true)}
-                  className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="w-10 h-10"
                 >
-                  <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{t('uploadOnboarding.uploadServers.emptyState')}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {uploadServers.map(url => (
-                    <ServerCard
-                      key={url}
-                      server={getServerInfo(url)}
-                      onRemove={() => setUploadServers(prev => prev.filter(s => s !== url))}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Add Button */}
-              {uploadServers.length > 0 && (
-                <div className="flex justify-center">
-                  <Button
-                    size="icon"
-                    variant="default"
-                    onClick={() => setShowUploadPicker(true)}
-                    className="w-10 h-10"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Mirror Servers Column */}
-            <div className="space-y-3">
-              {/* Section Header */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <RefreshCw className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">
-                    {t('uploadOnboarding.mirrorServers.title')}
-                  </h3>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('uploadOnboarding.mirrorServers.description')}
-                </p>
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
+            )}
+          </div>
 
-              {/* Empty State or Server List */}
-              {mirrorServers.length === 0 ? (
-                <div
-                  onClick={() => setShowMirrorPicker(true)}
-                  className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{t('uploadOnboarding.mirrorServers.emptyState')}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {mirrorServers.map(url => (
-                    <ServerCard
-                      key={url}
-                      server={getServerInfo(url)}
-                      onRemove={() => setMirrorServers(prev => prev.filter(s => s !== url))}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Add Button */}
-              {mirrorServers.length > 0 && (
-                <div className="flex justify-center">
-                  <Button
-                    size="icon"
-                    variant="default"
-                    onClick={() => setShowMirrorPicker(true)}
-                    className="w-10 h-10"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+          {/* Mirror Servers Column */}
+          <div className="space-y-3">
+            {/* Section Header */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">
+                  {t('uploadOnboarding.mirrorServers.title')}
+                </h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t('uploadOnboarding.mirrorServers.description')}
+              </p>
             </div>
-          </div>
 
-          {/* Validation Error */}
-          {!isValid && (
-            <p className="text-sm text-destructive">
-              {t('uploadOnboarding.uploadServers.required')}
-            </p>
-          )}
+            {/* Empty State or Server List */}
+            {mirrorServers.length === 0 ? (
+              <div
+                onClick={() => setShowMirrorPicker(true)}
+                className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+              >
+                <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{t('uploadOnboarding.mirrorServers.emptyState')}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {mirrorServers.map(url => (
+                  <ServerCard
+                    key={url}
+                    server={getServerInfo(url)}
+                    onRemove={() => setMirrorServers(prev => prev.filter(s => s !== url))}
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* Continue Button */}
-          <div className="flex justify-end pt-2">
-            <Button onClick={handleContinue} disabled={!isValid} className="min-w-32">
-              {t('uploadOnboarding.continue')}
-            </Button>
+            {/* Add Button */}
+            {mirrorServers.length > 0 && (
+              <div className="flex justify-center">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={() => setShowMirrorPicker(true)}
+                  className="w-10 h-10"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Validation Error */}
+        {!isValid && (
+          <p className="text-sm text-destructive">{t('uploadOnboarding.uploadServers.required')}</p>
+        )}
+
+        {/* Continue Button */}
+        <div className="flex justify-end pt-2">
+          <Button onClick={handleContinue} disabled={!isValid} className="min-w-32">
+            {t('uploadOnboarding.continue')}
+          </Button>
+        </div>
+      </div>
 
       {/* Picker Dialogs */}
       <BlossomServerPicker

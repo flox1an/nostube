@@ -27,7 +27,7 @@ const defaultConfig: AppConfig = {
   videoType: 'videos',
   blossomServers: [...presetBlossomServers],
   cachingServers: [...presetCachingServers],
-  nsfwFilter: 'warning',
+  nsfwFilter: 'hide',
   thumbResizeServerUrl: defaultResizeServer,
   media: {
     failover: {

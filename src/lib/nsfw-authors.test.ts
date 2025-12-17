@@ -7,11 +7,12 @@ describe('nsfw-authors', () => {
       expect(NSFW_AUTHORS).toEqual([
         'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400',
         'f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0',
+        '0c9fb0a86f622b23e7802fbccf3c676cd4562ba267df4b3048f7dc77e9124a90',
       ])
     })
 
-    it('should have 2 NSFW authors', () => {
-      expect(NSFW_AUTHORS).toHaveLength(2)
+    it('should have 3 NSFW authors', () => {
+      expect(NSFW_AUTHORS).toHaveLength(3)
     })
   })
 
@@ -24,6 +25,12 @@ describe('nsfw-authors', () => {
 
     it('should return true for second NSFW author pubkey', () => {
       expect(isNSFWAuthor('f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0')).toBe(
+        true
+      )
+    })
+
+    it('should return true for third NSFW author pubkey', () => {
+      expect(isNSFWAuthor('0c9fb0a86f622b23e7802fbccf3c676cd4562ba267df4b3048f7dc77e9124a90')).toBe(
         true
       )
     })

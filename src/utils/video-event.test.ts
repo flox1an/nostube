@@ -497,6 +497,17 @@ describe('processEvent', () => {
       expect(result?.contentWarning).toBe('NSFW')
     })
 
+    it('should mark videos from third NSFW author as NSFW', () => {
+      const nsfwAuthorEvent = {
+        ...nostubeEvent,
+        pubkey: '0c9fb0a86f622b23e7802fbccf3c676cd4562ba267df4b3048f7dc77e9124a90', // NSFW author
+      }
+
+      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+
+      expect(result?.contentWarning).toBe('NSFW')
+    })
+
     it('should preserve existing content-warning tag for NSFW authors', () => {
       const nsfwAuthorWithWarning = {
         ...nostubeEvent,

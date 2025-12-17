@@ -50,3 +50,8 @@ export function getRelativeTime(timestamp: number): string | [string, { count: n
   if (days < 30) return ['upload.draft.time.daysAgo', { count: days }]
   return ['upload.draft.time.monthsAgo', { count: Math.floor(days / 30) }]
 }
+
+export function removeOldDrafts(drafts: UploadDraft[], maxAgeDays = 30): UploadDraft[] {
+  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000)
+  return drafts.filter(d => d.createdAt > cutoffTime)
+}

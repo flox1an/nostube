@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from './upload-draft-utils'
+import { getSmartStatus, getVideoQualityInfo, getRelativeTime, removeOldDrafts } from './upload-draft-utils'
 import type { UploadDraft } from '@/types/upload-draft'
 
 describe('getSmartStatus', () => {
@@ -242,5 +242,80 @@ describe('getRelativeTime', () => {
     const timestamp = Date.now() - 60 * 86400000 // 60 days ago
     const result = getRelativeTime(timestamp)
     expect(result).toEqual(['upload.draft.time.monthsAgo', { count: 2 }])
+  })
+})
+
+describe('removeOldDrafts', () => {
+  it('removes drafts older than 30 days', () => {
+    const now = Date.now()
+    const drafts: UploadDraft[] = [
+      {
+        id: '1',
+        createdAt: now - 31 * 86400000, // 31 days ago
+        updatedAt: now,
+        title: 'Old',
+        description: '',
+        tags: [],
+        language: 'en',
+        contentWarning: { enabled: false, reason: '' },
+        inputMethod: 'file',
+        uploadInfo: { videos: [] },
+        thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        thumbnailSource: 'generated'
+      },
+      {
+        id: '2',
+        createdAt: now - 5 * 86400000, // 5 days ago
+        updatedAt: now,
+        title: 'Recent',
+        description: '',
+        tags: [],
+        language: 'en',
+        contentWarning: { enabled: false, reason: '' },
+        inputMethod: 'file',
+        uploadInfo: { videos: [] },
+        thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        thumbnailSource: 'generated'
+      }
+    ]
+    const result = removeOldDrafts(drafts, 30)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('2')
+  })
+
+  it('keeps all recent drafts', () => {
+    const now = Date.now()
+    const drafts: UploadDraft[] = [
+      {
+        id: '1',
+        createdAt: now - 1 * 86400000,
+        updatedAt: now,
+        title: 'Draft 1',
+        description: '',
+        tags: [],
+        language: 'en',
+        contentWarning: { enabled: false, reason: '' },
+        inputMethod: 'file',
+        uploadInfo: { videos: [] },
+        thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        thumbnailSource: 'generated'
+      },
+      {
+        id: '2',
+        createdAt: now - 2 * 86400000,
+        updatedAt: now,
+        title: 'Draft 2',
+        description: '',
+        tags: [],
+        language: 'en',
+        contentWarning: { enabled: false, reason: '' },
+        inputMethod: 'file',
+        uploadInfo: { videos: [] },
+        thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        thumbnailSource: 'generated'
+      }
+    ]
+    const result = removeOldDrafts(drafts, 30)
+    expect(result).toHaveLength(2)
   })
 })

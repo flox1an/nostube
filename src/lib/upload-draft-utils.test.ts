@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSmartStatus, getVideoQualityInfo } from './upload-draft-utils'
+import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from './upload-draft-utils'
 import type { UploadDraft } from '@/types/upload-draft'
 
 describe('getSmartStatus', () => {
@@ -211,5 +211,36 @@ describe('getVideoQualityInfo', () => {
       thumbnailSource: 'generated'
     }
     expect(getVideoQualityInfo(draft)).toBe('4K • 2.0 GB')
+  })
+})
+
+describe('getRelativeTime', () => {
+  it('returns justNow for < 1 minute', () => {
+    const timestamp = Date.now() - 30000 // 30 seconds ago
+    expect(getRelativeTime(timestamp)).toBe('upload.draft.time.justNow')
+  })
+
+  it('returns minutes ago for < 1 hour', () => {
+    const timestamp = Date.now() - 5 * 60000 // 5 minutes ago
+    const result = getRelativeTime(timestamp)
+    expect(result).toEqual(['upload.draft.time.minutesAgo', { count: 5 }])
+  })
+
+  it('returns hours ago for < 24 hours', () => {
+    const timestamp = Date.now() - 3 * 3600000 // 3 hours ago
+    const result = getRelativeTime(timestamp)
+    expect(result).toEqual(['upload.draft.time.hoursAgo', { count: 3 }])
+  })
+
+  it('returns days ago for < 30 days', () => {
+    const timestamp = Date.now() - 5 * 86400000 // 5 days ago
+    const result = getRelativeTime(timestamp)
+    expect(result).toEqual(['upload.draft.time.daysAgo', { count: 5 }])
+  })
+
+  it('returns months ago for >= 30 days', () => {
+    const timestamp = Date.now() - 60 * 86400000 // 60 days ago
+    const result = getRelativeTime(timestamp)
+    expect(result).toEqual(['upload.draft.time.monthsAgo', { count: 2 }])
   })
 })

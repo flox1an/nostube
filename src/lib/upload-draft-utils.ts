@@ -36,3 +36,17 @@ export function getVideoQualityInfo(draft: UploadDraft): string {
 
   return `${qualities.join(', ')} • ${sizeStr}`
 }
+
+export function getRelativeTime(timestamp: number): string | [string, { count: number }] {
+  const now = Date.now()
+  const diff = now - timestamp
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return 'upload.draft.time.justNow'
+  if (minutes < 60) return ['upload.draft.time.minutesAgo', { count: minutes }]
+  if (hours < 24) return ['upload.draft.time.hoursAgo', { count: hours }]
+  if (days < 30) return ['upload.draft.time.daysAgo', { count: days }]
+  return ['upload.draft.time.monthsAgo', { count: Math.floor(days / 30) }]
+}

@@ -268,7 +268,40 @@
     "addAnotherQuality": "Add Another Quality/Resolution",
     "addAnotherQualityHint": "Upload the same video in a different resolution (e.g., 1080p, 720p, 480p)",
     "uploadingVideo": "Uploading video...",
-    "processingVideo": "Processing video..."
+    "processingVideo": "Processing video...",
+    "draft": {
+      "newUpload": "New Upload",
+      "yourDrafts": "Your Drafts ({{count}})",
+      "untitled": "Untitled",
+      "backToDrafts": "Back to Drafts",
+      "status": {
+        "addVideo": "Add video to start",
+        "addTitle": "Add title to publish",
+        "addThumbnail": "Add thumbnail to publish",
+        "ready": "Ready to publish"
+      },
+      "delete": "Delete",
+      "deleted": "Draft deleted",
+      "deletedDescription": "Draft will be permanently deleted in 5 seconds",
+      "undo": "Undo",
+      "maxDraftsReached": "Maximum 10 drafts reached. Please complete or delete existing drafts.",
+      "time": {
+        "justNow": "Just now",
+        "minutesAgo": "{{count}} minute ago",
+        "minutesAgo_other": "{{count}} minutes ago",
+        "hoursAgo": "{{count}} hour ago",
+        "hoursAgo_other": "{{count}} hours ago",
+        "daysAgo": "{{count}} day ago",
+        "daysAgo_other": "{{count}} days ago",
+        "monthsAgo": "{{count}} month ago",
+        "monthsAgo_other": "{{count}} months ago"
+      },
+      "loadFailed": "Failed to load drafts. Using local drafts only.",
+      "saveFailed": "Failed to sync draft to Nostr. Changes saved locally.",
+      "syncFailed": "Draft sync failed. Your work is safe locally.",
+      "notFound": "Draft not found",
+      "notFoundDescription": "This draft may have been deleted or expired."
+    }
   },
   "settings": {
     "title": "Settings",

@@ -9,6 +9,7 @@ import { type BlobDescriptor } from 'blossom-client-sdk'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { presetBlossomServers } from '@/constants/relays'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
+import type { UploadDraft } from '@/types/upload-draft'
 
 export interface UploadInfo {
   videos: VideoVariant[]
@@ -27,27 +28,30 @@ export interface PublishSummary {
   fallbackUrls: string[]
 }
 
-export function useVideoUpload() {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [tags, setTags] = useState<string[]>([])
+export function useVideoUpload(
+  initialDraft?: UploadDraft,
+  onDraftChange?: (updates: Partial<UploadDraft>) => void
+) {
+  const [title, setTitle] = useState(initialDraft?.title || '')
+  const [description, setDescription] = useState(initialDraft?.description || '')
+  const [tags, setTags] = useState<string[]>(initialDraft?.tags || [])
   const [tagInput, setTagInput] = useState('')
-  const [language, setLanguage] = useState('en')
-  const [inputMethod, setInputMethod] = useState<'file' | 'url'>('file')
-  const [videoUrl, setVideoUrl] = useState('')
+  const [language, setLanguage] = useState(initialDraft?.language || 'en')
+  const [inputMethod, setInputMethod] = useState<'file' | 'url'>(initialDraft?.inputMethod || 'file')
+  const [videoUrl, setVideoUrl] = useState(initialDraft?.videoUrl || '')
   const [file, setFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
-  const [uploadInfo, setUploadInfo] = useState<UploadInfo>({ videos: [] })
+  const [uploadInfo, setUploadInfo] = useState<UploadInfo>(initialDraft?.uploadInfo || { videos: [] })
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
-  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated')
+  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(initialDraft?.thumbnailSource || 'generated')
   const [thumbnailUploadInfo, setThumbnailUploadInfo] = useState<ThumbnailUploadInfo>({
-    uploadedBlobs: [],
-    mirroredBlobs: [],
+    uploadedBlobs: initialDraft?.thumbnailUploadInfo.uploadedBlobs || [],
+    mirroredBlobs: initialDraft?.thumbnailUploadInfo.mirroredBlobs || [],
     uploading: false,
   })
-  const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
-  const [contentWarningReason, setContentWarningReason] = useState('')
+  const [contentWarningEnabled, setContentWarningEnabled] = useState(initialDraft?.contentWarning.enabled || false)
+  const [contentWarningReason, setContentWarningReason] = useState(initialDraft?.contentWarning.reason || '')
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
 
@@ -655,6 +659,41 @@ export function useVideoUpload() {
       // Upload failed
     }
   }
+
+  // Sync changes back to draft
+  useEffect(() => {
+    if (onDraftChange) {
+      onDraftChange({
+        title,
+        description,
+        tags,
+        language,
+        inputMethod,
+        videoUrl,
+        uploadInfo,
+        thumbnailUploadInfo: {
+          uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
+          mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
+        },
+        contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+        thumbnailSource,
+        updatedAt: Date.now(),
+      })
+    }
+  }, [
+    title,
+    description,
+    tags,
+    language,
+    inputMethod,
+    videoUrl,
+    uploadInfo,
+    thumbnailUploadInfo,
+    contentWarningEnabled,
+    contentWarningReason,
+    thumbnailSource,
+    onDraftChange,
+  ])
 
   return {
     // State

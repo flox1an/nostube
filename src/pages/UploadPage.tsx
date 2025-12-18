@@ -26,8 +26,8 @@ export function UploadPage() {
   }, [currentDraft, refreshDrafts])
 
   // Handle back navigation with Nostr sync flush
-  const handleBack = useCallback(() => {
-    flushNostrSync() // Flush any pending Nostr saves
+  const handleBack = useCallback(async () => {
+    await flushNostrSync() // Wait for pending Nostr saves to complete
     setCurrentDraft(null)
   }, [flushNostrSync, setCurrentDraft])
 

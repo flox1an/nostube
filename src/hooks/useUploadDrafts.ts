@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { UploadDraft, UploadDraftsData } from '@/types/upload-draft'
 import { removeOldDrafts } from '@/lib/upload-draft-utils'
 import { useCurrentUser } from './useCurrentUser'
@@ -100,6 +100,9 @@ export function useUploadDrafts() {
   const { publish } = useNostrPublish()
   const { config, pool } = useAppContext()
 
+  // Track in-flight Nostr saves so we can wait for them
+  const inflightSaveRef = useRef<Promise<void> | null>(null)
+
   const saveToLocalStorage = useCallback(
     (draftsToSave: UploadDraft[]) => {
       const data: UploadDraftsData = {
@@ -167,42 +170,53 @@ export function useUploadDrafts() {
         return
       }
 
-      try {
-        const plaintext = JSON.stringify({
-          version: '1',
-          lastModified: Date.now(),
-          drafts: draftsToSave,
-        })
+      // Create async operation to save to Nostr
+      const saveOperation = async () => {
+        try {
+          const plaintext = JSON.stringify({
+            version: '1',
+            lastModified: Date.now(),
+            drafts: draftsToSave,
+          })
 
-        if (import.meta.env.DEV) {
-          console.log('[useUploadDrafts] saveToNostr - encrypting draft data')
+          if (import.meta.env.DEV) {
+            console.log('[useUploadDrafts] saveToNostr - encrypting draft data')
+          }
+
+          // Encrypt with user's own key for privacy
+          const content = await user.signer.nip44!.encrypt(user.pubkey, plaintext)
+
+          const event = {
+            kind: 30078,
+            content,
+            created_at: nowInSecs(),
+            tags: [['d', 'nostube-uploads']],
+          }
+
+          const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+
+          if (import.meta.env.DEV) {
+            console.log('[useUploadDrafts] saveToNostr - publishing to write relays:', writeRelays)
+          }
+
+          await publish({ event, relays: writeRelays })
+
+          if (import.meta.env.DEV) {
+            console.log('[useUploadDrafts] saveToNostr - publish successful')
+          }
+        } catch (error) {
+          console.error('[useUploadDrafts] Failed to sync to Nostr:', error)
+          // Silent failure - localStorage has the data
+        } finally {
+          // Clear the inflight ref when done
+          inflightSaveRef.current = null
         }
-
-        // Encrypt with user's own key for privacy
-        const content = await user.signer.nip44.encrypt(user.pubkey, plaintext)
-
-        const event = {
-          kind: 30078,
-          content,
-          created_at: nowInSecs(),
-          tags: [['d', 'nostube-uploads']],
-        }
-
-        const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-
-        if (import.meta.env.DEV) {
-          console.log('[useUploadDrafts] saveToNostr - publishing to write relays:', writeRelays)
-        }
-
-        await publish({ event, relays: writeRelays })
-
-        if (import.meta.env.DEV) {
-          console.log('[useUploadDrafts] saveToNostr - publish successful')
-        }
-      } catch (error) {
-        console.error('[useUploadDrafts] Failed to sync to Nostr:', error)
-        // Silent failure - localStorage has the data
       }
+
+      // Start the operation and track it
+      const promise = saveOperation()
+      inflightSaveRef.current = promise
+      return promise
     },
     [user, publish, config.relays]
   )
@@ -334,11 +348,24 @@ export function useUploadDrafts() {
     setVersion(v => v + 1)
   }, [])
 
-  const flushNostrSync = useCallback(() => {
+  const flushNostrSync = useCallback(async () => {
     if (import.meta.env.DEV) {
       console.log('[useUploadDrafts] flushNostrSync - forcing pending Nostr sync')
     }
+
+    // First, flush any debounced saves (triggers the async saveToNostr)
     debouncedSaveToNostr.flush()
+
+    // Then wait for any in-flight saves to complete
+    if (inflightSaveRef.current) {
+      if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] flushNostrSync - waiting for in-flight save to complete')
+      }
+      await inflightSaveRef.current
+      if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] flushNostrSync - in-flight save completed')
+      }
+    }
   }, [debouncedSaveToNostr])
 
   return {

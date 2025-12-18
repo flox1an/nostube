@@ -268,7 +268,39 @@
     "addAnotherQuality": "Ajouter une autre qualité/résolution",
     "addAnotherQualityHint": "Téléchargez la même vidéo dans une résolution différente (par ex. 1080p, 720p, 480p)",
     "uploadingVideo": "Téléchargement de la vidéo...",
-    "processingVideo": "Traitement de la vidéo..."
+    "processingVideo": "Traitement de la vidéo...",
+    "draft": {
+      "newUpload": "Nouveau téléchargement",
+      "yourDrafts": "Vos brouillons ({{count}})",
+      "untitled": "Sans titre",
+      "backToDrafts": "Retour aux brouillons",
+      "status": {
+        "addVideo": "Ajouter une vidéo pour commencer",
+        "addTitle": "Ajouter un titre pour publier",
+        "addThumbnail": "Ajouter une miniature pour publier",
+        "ready": "Prêt à publier"
+      },
+      "delete": "Supprimer",
+      "deleted": "Brouillon supprimé",
+      "deletedDescription": "Le brouillon sera définitivement supprimé dans 5 secondes",
+      "undo": "Annuler",
+      "maxDraftsReached": "Maximum de 10 brouillons atteint. Veuillez terminer ou supprimer les brouillons existants.",
+      "time": {
+        "justNow": "À l'instant",
+        "minutesAgo": "il y a {{count}} minute",
+        "minutesAgo_other": "il y a {{count}} minutes",
+        "hoursAgo": "il y a {{count}} heure",
+        "hoursAgo_other": "il y a {{count}} heures",
+        "daysAgo": "il y a {{count}} jour",
+        "daysAgo_other": "il y a {{count}} jours",
+        "monthsAgo": "il y a {{count}} mois"
+      },
+      "loadFailed": "Échec du chargement des brouillons. Utilisation des brouillons locaux uniquement.",
+      "saveFailed": "Échec de la synchronisation du brouillon avec Nostr. Modifications enregistrées localement.",
+      "syncFailed": "Échec de la synchronisation du brouillon. Votre travail est en sécurité localement.",
+      "notFound": "Brouillon non trouvé",
+      "notFoundDescription": "Ce brouillon a peut-être été supprimé ou a expiré."
+    }
   },
   "settings": {
     "title": "Paramètres",

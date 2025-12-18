@@ -268,7 +268,40 @@
     "addAnotherQuality": "Weitere Qualität/Auflösung hinzufügen",
     "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z.B. 1080p, 720p, 480p)",
     "uploadingVideo": "Video wird hochgeladen...",
-    "processingVideo": "Video wird verarbeitet..."
+    "processingVideo": "Video wird verarbeitet...",
+    "draft": {
+      "newUpload": "Neuer Upload",
+      "yourDrafts": "Ihre Entwürfe ({{count}})",
+      "untitled": "Ohne Titel",
+      "backToDrafts": "Zurück zu Entwürfen",
+      "status": {
+        "addVideo": "Video hinzufügen zum Starten",
+        "addTitle": "Titel hinzufügen zum Veröffentlichen",
+        "addThumbnail": "Miniaturansicht hinzufügen zum Veröffentlichen",
+        "ready": "Bereit zum Veröffentlichen"
+      },
+      "delete": "Löschen",
+      "deleted": "Entwurf gelöscht",
+      "deletedDescription": "Entwurf wird in 5 Sekunden dauerhaft gelöscht",
+      "undo": "Rückgängig",
+      "maxDraftsReached": "Maximal 10 Entwürfe erreicht. Bitte vorhandene Entwürfe abschließen oder löschen.",
+      "time": {
+        "justNow": "Gerade eben",
+        "minutesAgo": "vor {{count}} Minute",
+        "minutesAgo_other": "vor {{count}} Minuten",
+        "hoursAgo": "vor {{count}} Stunde",
+        "hoursAgo_other": "vor {{count}} Stunden",
+        "daysAgo": "vor {{count}} Tag",
+        "daysAgo_other": "vor {{count}} Tagen",
+        "monthsAgo": "vor {{count}} Monat",
+        "monthsAgo_other": "vor {{count}} Monaten"
+      },
+      "loadFailed": "Entwürfe konnten nicht geladen werden. Nur lokale Entwürfe werden verwendet.",
+      "saveFailed": "Entwurf konnte nicht mit Nostr synchronisiert werden. Änderungen lokal gespeichert.",
+      "syncFailed": "Entwurf-Synchronisierung fehlgeschlagen. Ihre Arbeit ist lokal sicher.",
+      "notFound": "Entwurf nicht gefunden",
+      "notFoundDescription": "Dieser Entwurf wurde möglicherweise gelöscht oder ist abgelaufen."
+    }
   },
   "settings": {
     "title": "Einstellungen",

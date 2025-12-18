@@ -268,7 +268,40 @@
     "addAnotherQuality": "Añadir otra calidad/resolución",
     "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
     "uploadingVideo": "Subiendo vídeo...",
-    "processingVideo": "Procesando vídeo..."
+    "processingVideo": "Procesando vídeo...",
+    "draft": {
+      "newUpload": "Nueva subida",
+      "yourDrafts": "Tus borradores ({{count}})",
+      "untitled": "Sin título",
+      "backToDrafts": "Volver a borradores",
+      "status": {
+        "addVideo": "Agregar video para comenzar",
+        "addTitle": "Agregar título para publicar",
+        "addThumbnail": "Agregar miniatura para publicar",
+        "ready": "Listo para publicar"
+      },
+      "delete": "Eliminar",
+      "deleted": "Borrador eliminado",
+      "deletedDescription": "El borrador se eliminará permanentemente en 5 segundos",
+      "undo": "Deshacer",
+      "maxDraftsReached": "Máximo de 10 borradores alcanzado. Por favor complete o elimine los borradores existentes.",
+      "time": {
+        "justNow": "Justo ahora",
+        "minutesAgo": "hace {{count}} minuto",
+        "minutesAgo_other": "hace {{count}} minutos",
+        "hoursAgo": "hace {{count}} hora",
+        "hoursAgo_other": "hace {{count}} horas",
+        "daysAgo": "hace {{count}} día",
+        "daysAgo_other": "hace {{count}} días",
+        "monthsAgo": "hace {{count}} mes",
+        "monthsAgo_other": "hace {{count}} meses"
+      },
+      "loadFailed": "Error al cargar borradores. Usando solo borradores locales.",
+      "saveFailed": "Error al sincronizar borrador con Nostr. Cambios guardados localmente.",
+      "syncFailed": "Falló la sincronización del borrador. Tu trabajo está seguro localmente.",
+      "notFound": "Borrador no encontrado",
+      "notFoundDescription": "Este borrador puede haber sido eliminado o ha expirado."
+    }
   },
   "settings": {
     "title": "Ajustes",

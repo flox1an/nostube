@@ -274,9 +274,11 @@ export function useUploadDrafts() {
     (draftId: string) => {
       const currentDrafts = getDraftsFromStorage()
       const updated = currentDrafts.filter(d => d.id !== draftId)
+      // Immediately save to both localStorage and Nostr
       saveToLocalStorage(updated)
+      saveToNostr(updated)
     },
-    [saveToLocalStorage]
+    [saveToLocalStorage, saveToNostr]
   )
 
   const mergeDraftsFromNostr = useCallback(

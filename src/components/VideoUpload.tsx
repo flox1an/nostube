@@ -315,7 +315,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                         mirror: blossomMirrorServers?.length ?? 0,
                       })}
                     </span>
-                    <span className="text-xs">{t('upload.tip')}</span>
                   </div>
                   <div className="flex gap-2">
                     {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
@@ -340,10 +339,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
                 {/* Input method selection */}
                 {uploadState === 'initial' && (
-                  <div className="space-y-1">
-                    <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
-                    <p className="text-xs text-muted-foreground">{t('upload.quickStart')}</p>
-                  </div>
+                  <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
                 )}
 
                 {/* URL input field */}

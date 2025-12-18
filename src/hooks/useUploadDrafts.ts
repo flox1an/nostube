@@ -83,7 +83,18 @@ export function useUploadDrafts() {
   const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
 
   // Always read from localStorage (source of truth)
-  const drafts = useMemo(() => getDraftsFromStorage(), [version])
+  const drafts = useMemo(() => {
+    const freshDrafts = getDraftsFromStorage()
+    if (import.meta.env.DEV) {
+      console.log(
+        '[useUploadDrafts] useMemo re-running with version:',
+        version,
+        'drafts:',
+        freshDrafts
+      )
+    }
+    return freshDrafts
+  }, [version])
 
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
@@ -97,8 +108,16 @@ export function useUploadDrafts() {
         drafts: draftsToSave,
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] saveToLocalStorage - saved drafts:', draftsToSave)
+      }
       // Trigger re-render to read fresh data
-      setVersion(v => v + 1)
+      setVersion(v => {
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] incrementing version from', v, 'to', v + 1)
+        }
+        return v + 1
+      })
     },
     [setVersion]
   )

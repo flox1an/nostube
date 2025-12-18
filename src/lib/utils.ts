@@ -170,6 +170,40 @@ export const imageProxy = (url?: string, proxyBaseUrl?: string) => {
   return `${cleanBaseUrl}/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
 }
 
+/**
+ * Add file extension to URL based on MIME type if missing
+ * This is needed for image proxies that detect file type from extension
+ */
+export function ensureFileExtension(url: string, mimeType?: string): string {
+  if (!url || !mimeType) return url
+
+  // Check if URL already has an extension
+  const urlObj = new URL(url)
+  const pathname = urlObj.pathname
+  const hasExtension = /\.\w+$/.test(pathname)
+
+  if (hasExtension) return url
+
+  // Map MIME types to extensions
+  const extensionMap: Record<string, string> = {
+    'image/jpeg': '.jpg',
+    'image/jpg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/quicktime': '.mov',
+  }
+
+  const extension = extensionMap[mimeType.toLowerCase()]
+  if (!extension) return url
+
+  // Append extension to the pathname
+  urlObj.pathname += extension
+  return urlObj.toString()
+}
+
 export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately

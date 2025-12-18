@@ -5,6 +5,7 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
 import { Toaster } from '@/components/ui/toaster'
+import { AppProvider } from '@/components/AppProvider'
 
 const mockDrafts: UploadDraft[] = [
   {
@@ -38,10 +39,21 @@ const mockDrafts: UploadDraft[] = [
 ]
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nextProvider i18n={i18n}>
-    {children}
-    <Toaster />
-  </I18nextProvider>
+  <AppProvider
+    storageKey="test-draft-picker"
+    defaultConfig={{
+      theme: 'light',
+      relays: [],
+      videoType: 'videos',
+      nsfwFilter: 'warning',
+      thumbResizeServerUrl: 'https://almond.slidestr.net',
+    }}
+  >
+    <I18nextProvider i18n={i18n}>
+      {children}
+      <Toaster />
+    </I18nextProvider>
+  </AppProvider>
 )
 
 describe('DraftPicker', () => {

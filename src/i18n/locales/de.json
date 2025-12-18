@@ -282,9 +282,22 @@
       },
       "delete": "Löschen",
       "deleted": "Entwurf gelöscht",
-      "deletedDescription": "Entwurf wird in 5 Sekunden dauerhaft gelöscht",
+      "deletedDescription": "Entwurf wurde gelöscht",
       "undo": "Rückgängig",
       "maxDraftsReached": "Maximal 10 Entwürfe erreicht. Bitte vorhandene Entwürfe abschließen oder löschen.",
+      "deleteDialog": {
+        "title": "Entwurf löschen",
+        "descriptionWithMedia": "Dieser Entwurf enthält hochgeladene Videos und Miniaturansichten. Was möchten Sie tun?",
+        "descriptionNoMedia": "Möchten Sie diesen Entwurf wirklich löschen?",
+        "deleteDraftOnly": "Nur Entwurf löschen",
+        "deleteVideoAndThumbnails": "Entwurf + Medien löschen"
+      },
+      "deletedWithMedia": "Entwurf und Medien gelöscht",
+      "deletedWithMediaDescription": "{{count}} Dateien erfolgreich von Servern gelöscht",
+      "deletedPartial": "Entwurf gelöscht, einige Mediendateien fehlgeschlagen",
+      "deletedPartialDescription": "{{successful}} Dateien gelöscht, {{failed}} Dateien konnten nicht gelöscht werden",
+      "deletedMediaFailed": "Entwurf gelöscht, Medienlöschung fehlgeschlagen",
+      "deletedMediaFailedDescription": "Mediendateien konnten nicht von Servern gelöscht werden. Entwurf wurde entfernt.",
       "time": {
         "justNow": "Gerade eben",
         "minutesAgo": "vor {{count}} Minute",

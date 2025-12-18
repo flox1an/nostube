@@ -282,9 +282,22 @@
       },
       "delete": "Eliminar",
       "deleted": "Borrador eliminado",
-      "deletedDescription": "El borrador se eliminará permanentemente en 5 segundos",
+      "deletedDescription": "El borrador ha sido eliminado",
       "undo": "Deshacer",
       "maxDraftsReached": "Máximo de 10 borradores alcanzado. Por favor complete o elimine los borradores existentes.",
+      "deleteDialog": {
+        "title": "Eliminar borrador",
+        "descriptionWithMedia": "Este borrador contiene videos y miniaturas subidas. ¿Qué desea hacer?",
+        "descriptionNoMedia": "¿Está seguro de que desea eliminar este borrador?",
+        "deleteDraftOnly": "Eliminar solo el borrador",
+        "deleteVideoAndThumbnails": "Eliminar borrador + medios"
+      },
+      "deletedWithMedia": "Borrador y medios eliminados",
+      "deletedWithMediaDescription": "{{count}} archivos eliminados exitosamente de los servidores",
+      "deletedPartial": "Borrador eliminado, algunos medios fallaron",
+      "deletedPartialDescription": "{{successful}} archivos eliminados, {{failed}} archivos no pudieron ser eliminados",
+      "deletedMediaFailed": "Borrador eliminado, eliminación de medios falló",
+      "deletedMediaFailedDescription": "No se pudieron eliminar los archivos multimedia de los servidores. El borrador ha sido eliminado.",
       "time": {
         "justNow": "Justo ahora",
         "minutesAgo": "hace {{count}} minuto",

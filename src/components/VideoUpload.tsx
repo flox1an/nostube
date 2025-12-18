@@ -10,7 +10,7 @@ import {
   FormFields,
   ContentWarning,
   ThumbnailSection,
-  VideoVariantsTable,
+  VideoVariantsSummary,
 } from './video-upload'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useState } from 'react'
@@ -310,28 +310,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               />
             )}
 
-            {/* Video variants table */}
-            {uploadInfo.videos.length > 0 ? (
-              <div className="space-y-4">
-                <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
-                {inputMethod === 'file' && uploadState === 'finished' && (
-                  <div className="border-2 border-dashed rounded-lg p-4">
-                    <div
-                      {...getRootPropsAdditional()}
-                      className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
-                    >
-                      <input {...getInputPropsAdditional()} />
-                      <Button type="button" variant="outline" className="cursor-pointer">
-                        {t('upload.addAnotherQuality')}
-                      </Button>
-                      <p className="text-xs text-muted-foreground text-center">
-                        {t('upload.addAnotherQualityHint')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : inputMethod === 'file' &&
+            {/* Video upload / processing section */}
+            {uploadInfo.videos.length > 0 ? null : inputMethod === 'file' &&
               blossomInitalUploadServers &&
               blossomInitalUploadServers.length > 0 ? (
               <FileDropzone
@@ -339,9 +319,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 accept={{ 'video/*': [] }}
                 selectedFile={file}
                 className="mb-4"
-                style={{
-                  display: uploadInfo.videos.length > 0 ? 'none' : undefined,
-                }}
               />
             ) : inputMethod === 'file' ? (
               <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
@@ -363,56 +340,89 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               </div>
             )}
 
-            {/* Metadata fields - show only after video is processed/uploaded */}
+            {/* Two-column layout - show only after video is processed/uploaded */}
             {(uploadState === 'finished' || uploadInfo.videos.length > 0) && (
-              <>
-                <FormFields
-                  title={title}
-                  onTitleChange={setTitle}
-                  description={description}
-                  onDescriptionChange={setDescription}
-                  tags={tags}
-                  tagInput={tagInput}
-                  onTagInputChange={setTagInput}
-                  onAddTag={handleAddTag}
-                  onPaste={handlePaste}
-                  onRemoveTag={removeTag}
-                  onTagInputBlur={() => {}}
-                  language={language}
-                  onLanguageChange={setLanguage}
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6">
+                {/* Left column: Video info & Thumbnail */}
+                <div className="space-y-4">
+                  {/* Video summary */}
+                  <VideoVariantsSummary videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
 
-                <ThumbnailSection
-                  thumbnailSource={thumbnailSource}
-                  onThumbnailSourceChange={handleThumbnailSourceChange}
-                  thumbnailUrl={thumbnailUrl}
-                  onThumbnailDrop={handleThumbnailDrop}
-                  thumbnailUploadInfo={thumbnailUploadInfo}
-                  thumbnailBlob={thumbnailBlob}
-                  isThumbDragActive={false}
-                />
+                  {/* Add another quality button */}
+                  {inputMethod === 'file' && uploadState === 'finished' && (
+                    <div className="border-2 border-dashed rounded-lg p-4">
+                      <div
+                        {...getRootPropsAdditional()}
+                        className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+                      >
+                        <input {...getInputPropsAdditional()} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="cursor-pointer"
+                        >
+                          {t('upload.addAnotherQuality')}
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          {t('upload.addAnotherQualityHint')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-                <ContentWarning
-                  enabled={contentWarningEnabled}
-                  onEnabledChange={setContentWarningEnabled}
-                  reason={contentWarningReason}
-                  onReasonChange={setContentWarningReason}
-                />
-
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button
-                    type="submit"
-                    disabled={
-                      isPublishing ||
-                      !title ||
-                      (thumbnailSource === 'generated' ? !thumbnailBlob : !thumbnail) ||
-                      uploadInfo.videos.length === 0
-                    }
-                  >
-                    {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
-                  </Button>
+                  {/* Thumbnail section */}
+                  <ThumbnailSection
+                    thumbnailSource={thumbnailSource}
+                    onThumbnailSourceChange={handleThumbnailSourceChange}
+                    thumbnailUrl={thumbnailUrl}
+                    onThumbnailDrop={handleThumbnailDrop}
+                    thumbnailUploadInfo={thumbnailUploadInfo}
+                    thumbnailBlob={thumbnailBlob}
+                    isThumbDragActive={false}
+                  />
                 </div>
-              </>
+
+                {/* Right column: Form fields */}
+                <div className="space-y-4">
+                  <FormFields
+                    title={title}
+                    onTitleChange={setTitle}
+                    description={description}
+                    onDescriptionChange={setDescription}
+                    tags={tags}
+                    tagInput={tagInput}
+                    onTagInputChange={setTagInput}
+                    onAddTag={handleAddTag}
+                    onPaste={handlePaste}
+                    onRemoveTag={removeTag}
+                    onTagInputBlur={() => {}}
+                    language={language}
+                    onLanguageChange={setLanguage}
+                  />
+
+                  <ContentWarning
+                    enabled={contentWarningEnabled}
+                    onEnabledChange={setContentWarningEnabled}
+                    reason={contentWarningReason}
+                    onReasonChange={setContentWarningReason}
+                  />
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button
+                      type="submit"
+                      disabled={
+                        isPublishing ||
+                        !title ||
+                        (thumbnailSource === 'generated' ? !thumbnailBlob : !thumbnail) ||
+                        uploadInfo.videos.length === 0
+                      }
+                    >
+                      {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </form>

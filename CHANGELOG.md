@@ -49,8 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag Normalization**: All hashtags lowercase
 - **Default Config**: relay.divine.video relay, almond.slidestr.net Blossom server
 
+### Changed
+
+- **Draft Deletion UX**: Replaced 5-second undo toast with confirmation dialog offering three options: Cancel, Delete draft only, or Delete draft + media files from Blossom servers. Dialog shows context-aware descriptions based on whether draft contains uploaded media. Includes real-time deletion progress feedback and partial success/failure reporting (DeleteDraftDialog.tsx, DraftPicker.tsx)
+- **Draft Picker Layout**: Moved "New Upload" button below draft list, centered with secondary styling for better visual hierarchy
+- **Upload Dialog Layout**: Redesigned with responsive two-column layout. Left column (350px) shows video quality summary and thumbnail section. Right column shows form fields (title, description, tags, language, content warning). Single column on mobile (VideoUpload.tsx:343-424)
+- **Video Quality Display**: Simplified video quality display with expandable details. Shows quality badges, dimensions, duration, total size, upload/mirror counts, and codec warnings in collapsed state. Click "Show Details" to expand full VideoVariantsTable with all technical details (VideoVariantsSummary.tsx)
+
 ### Fixed
 
+- **Draft Generated Thumbnails**: Drafts with generated thumbnails now show video thumbnail in draft list using image proxy
+- **Draft Thumbnail Extensions**: Fixed image proxy failing to load thumbnails from Blossom blob URLs without file extensions. Added `ensureFileExtension()` helper that appends appropriate extensions (.jpg, .png, .mp4, etc.) based on MIME types before passing URLs to image proxy (utils.ts:177-205, DraftCard.tsx:23-47)
 - **Publish Button**: Now works with generated thumbnails after draft restore
 - **Upload Draft Loop**: Fixed infinite re-render in draft persistence
 - **Draft Title Persistence**: Draft changes now appear immediately in picker

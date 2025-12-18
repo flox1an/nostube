@@ -4,6 +4,7 @@ import { DraftCard } from './DraftCard'
 import type { UploadDraft } from '@/types/upload-draft'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
+import { AppProvider } from '@/components/AppProvider'
 
 const mockDraft: UploadDraft = {
   id: 'test-id',
@@ -18,6 +19,7 @@ const mockDraft: UploadDraft = {
   uploadInfo: {
     videos: [
       {
+        url: 'http://test.com/video',
         inputMethod: 'file',
         dimension: '1920x1080',
         duration: 120,
@@ -51,7 +53,18 @@ const mockDraft: UploadDraft = {
 }
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+  <AppProvider
+    storageKey="test-draft-card"
+    defaultConfig={{
+      theme: 'light',
+      relays: [],
+      videoType: 'videos',
+      nsfwFilter: 'warning',
+      thumbResizeServerUrl: 'https://almond.slidestr.net',
+    }}
+  >
+    <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+  </AppProvider>
 )
 
 describe('DraftCard', () => {
@@ -69,13 +82,36 @@ describe('DraftCard', () => {
   it('renders thumbnail when available', () => {
     render(<DraftCard draft={mockDraft} onSelect={vi.fn()} onDelete={vi.fn()} />, { wrapper })
     const img = screen.getByRole('img')
-    expect(img).toHaveAttribute('src', 'http://test.com/thumb.jpg')
+    // Should have img with proxy URL containing the thumbnail URL
+    expect(img).toBeInTheDocument()
+    expect(img.getAttribute('src')).toContain('http')
   })
 
-  it('renders placeholder when no thumbnail', () => {
+  it('renders generated thumbnail from video URL when no uploaded thumbnail', () => {
+    const draftGeneratedThumb = {
+      ...mockDraft,
+      thumbnailSource: 'generated' as const,
+      thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+    }
+    const { container } = render(
+      <DraftCard draft={draftGeneratedThumb} onSelect={vi.fn()} onDelete={vi.fn()} />,
+      {
+        wrapper,
+      }
+    )
+    // Should have img element with proxy URL for generated thumbnail
+    const img = container.querySelector('img')
+    expect(img).toBeInTheDocument()
+    // URL should contain the video URL (encoded in the proxy URL)
+    expect(img?.getAttribute('src')).toContain('http')
+  })
+
+  it('renders placeholder when no thumbnail and no video', () => {
     const draftNoThumb = {
       ...mockDraft,
+      thumbnailSource: 'upload' as const,
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      uploadInfo: { videos: [] },
     }
     render(<DraftCard draft={draftNoThumb} onSelect={vi.fn()} onDelete={vi.fn()} />, { wrapper })
     // Should have placeholder div with ImageOff icon

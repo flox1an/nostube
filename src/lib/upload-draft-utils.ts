@@ -9,7 +9,8 @@ export function getSmartStatus(draft: UploadDraft): string {
     return 'upload.draft.status.addTitle'
   }
 
-  if (draft.thumbnailUploadInfo.uploadedBlobs.length === 0) {
+  // For generated thumbnails, we don't need an uploaded thumbnail
+  if (draft.thumbnailSource === 'upload' && draft.thumbnailUploadInfo.uploadedBlobs.length === 0) {
     return 'upload.draft.status.addThumbnail'
   }
 

@@ -776,3 +776,80 @@ async function uploadFileToSingleServer(
   console.log(`[UPLOAD] Regular upload completed successfully to ${normalizedServer}`)
   return blobData as BlobDescriptor
 }
+
+/**
+ * Delete a blob from a Blossom server using DELETE method with Nostr auth
+ */
+export async function deleteBlobFromServer(
+  server: string,
+  blobHash: string,
+  signer: Signer
+): Promise<boolean> {
+  const normalizedServer = normalizeServerUrl(server)
+
+  if (import.meta.env.DEV) {
+    console.log(`[DELETE] Deleting blob ${blobHash.substring(0, 16)}... from ${normalizedServer}`)
+  }
+
+  try {
+    // Create deletion auth event
+    const authEvent = await BlossomClient.createDeleteAuth(signer, blobHash)
+    const authString = JSON.stringify(authEvent)
+    const authBase64 = btoa(authString)
+
+    const response = await fetch(`${normalizedServer}/${blobHash}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Nostr ${authBase64}`,
+      },
+    })
+
+    if (!response.ok) {
+      console.warn(
+        `[DELETE] Failed to delete blob from ${normalizedServer}: ${response.status} ${response.statusText}`
+      )
+      return false
+    }
+
+    if (import.meta.env.DEV) {
+      console.log(`[DELETE] Successfully deleted blob from ${normalizedServer}`)
+    }
+    return true
+  } catch (error) {
+    console.error(`[DELETE] Error deleting blob from ${normalizedServer}:`, error)
+    return false
+  }
+}
+
+/**
+ * Delete a blob from multiple servers
+ * Returns an object with successful and failed deletions
+ */
+export async function deleteBlobFromMultipleServers(
+  servers: string[],
+  blobHash: string,
+  signer: Signer
+): Promise<{ successful: string[]; failed: string[] }> {
+  const results = await Promise.allSettled(
+    servers.map(server => deleteBlobFromServer(server, blobHash, signer))
+  )
+
+  const successful: string[] = []
+  const failed: string[] = []
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value) {
+      successful.push(servers[index])
+    } else {
+      failed.push(servers[index])
+    }
+  })
+
+  if (import.meta.env.DEV) {
+    console.log(
+      `[DELETE] Deletion results: ${successful.length} successful, ${failed.length} failed`
+    )
+  }
+
+  return { successful, failed }
+}

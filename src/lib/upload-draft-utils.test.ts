@@ -108,7 +108,8 @@ describe('getSmartStatus', () => {
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
       thumbnailSource: 'generated',
     }
-    expect(getSmartStatus(draft)).toBe('upload.draft.status.addThumbnail')
+    // For generated thumbnails, we don't need an uploaded thumbnail
+    expect(getSmartStatus(draft)).toBe('upload.draft.status.ready')
   })
 
   it('returns ready when complete', () => {

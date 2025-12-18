@@ -4,6 +4,8 @@ import { ImageOff, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { UploadDraft } from '@/types/upload-draft'
 import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from '@/lib/upload-draft-utils'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail, ensureFileExtension } from '@/lib/utils'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface DraftCardProps {
   draft: UploadDraft
@@ -13,13 +15,32 @@ interface DraftCardProps {
 
 export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const { t } = useTranslation()
-  const thumbnailUrl = draft.thumbnailUploadInfo.uploadedBlobs[0]?.url
+  const { config } = useAppContext()
+  const uploadedThumbnailBlob = draft.thumbnailUploadInfo.uploadedBlobs[0]
+  const uploadedThumbnailUrl = uploadedThumbnailBlob?.url
+  const uploadedThumbnailType = uploadedThumbnailBlob?.type
+  const videoUrl = draft.uploadInfo.videos[0]?.url
+  const videoType = draft.uploadInfo.videos[0]?.uploadedBlobs[0]?.type
   const smartStatus = getSmartStatus(draft)
   const qualityInfo = getVideoQualityInfo(draft)
   const relativeTime = getRelativeTime(draft.updatedAt)
 
   const timeText =
     typeof relativeTime === 'string' ? t(relativeTime) : t(relativeTime[0], relativeTime[1])
+
+  // Generate thumbnail URL using image proxy
+  // Ensure URLs have file extensions for the image proxy to detect file types
+  const thumbnailUrl = uploadedThumbnailUrl
+    ? imageProxyVideoPreview(
+        ensureFileExtension(uploadedThumbnailUrl, uploadedThumbnailType),
+        config.thumbResizeServerUrl
+      )
+    : draft.thumbnailSource === 'generated' && videoUrl
+      ? imageProxyVideoThumbnail(
+          ensureFileExtension(videoUrl, videoType),
+          config.thumbResizeServerUrl
+        )
+      : ''
 
   return (
     <Card

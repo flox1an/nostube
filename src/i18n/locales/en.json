@@ -263,8 +263,13 @@
       "closePreview": "Close",
       "uploadedTo": "Uploaded to",
       "mirroredTo": "Mirrored to",
-      "servers": "server(s)"
+      "servers": "server(s)",
+      "qualities": "qualities",
+      "uploaded": "uploaded",
+      "mirrored": "mirrored"
     },
+    "showDetails": "Show Details",
+    "codecWarning": "Codec compatibility warning",
     "addAnotherQuality": "Add Another Quality/Resolution",
     "addAnotherQualityHint": "Upload the same video in a different resolution (e.g., 1080p, 720p, 480p)",
     "uploadingVideo": "Uploading video...",
@@ -282,9 +287,22 @@
       },
       "delete": "Delete",
       "deleted": "Draft deleted",
-      "deletedDescription": "Draft will be permanently deleted in 5 seconds",
+      "deletedDescription": "Draft has been deleted",
       "undo": "Undo",
       "maxDraftsReached": "Maximum 10 drafts reached. Please complete or delete existing drafts.",
+      "deleteDialog": {
+        "title": "Delete Draft",
+        "descriptionWithMedia": "This draft contains uploaded videos and thumbnails. What would you like to do?",
+        "descriptionNoMedia": "Are you sure you want to delete this draft?",
+        "deleteDraftOnly": "Delete Draft Only",
+        "deleteVideoAndThumbnails": "Delete Draft + Media"
+      },
+      "deletedWithMedia": "Draft and media deleted",
+      "deletedWithMediaDescription": "Successfully deleted {{count}} files from servers",
+      "deletedPartial": "Draft deleted, some media files failed",
+      "deletedPartialDescription": "Deleted {{successful}} files, failed to delete {{failed}} files",
+      "deletedMediaFailed": "Draft deleted, media deletion failed",
+      "deletedMediaFailedDescription": "Could not delete media files from servers. Draft has been removed.",
       "time": {
         "justNow": "Just now",
         "minutesAgo": "{{count}} minute ago",

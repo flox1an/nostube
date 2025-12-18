@@ -282,9 +282,22 @@
       },
       "delete": "Supprimer",
       "deleted": "Brouillon supprimé",
-      "deletedDescription": "Le brouillon sera définitivement supprimé dans 5 secondes",
+      "deletedDescription": "Le brouillon a été supprimé",
       "undo": "Annuler",
       "maxDraftsReached": "Maximum de 10 brouillons atteint. Veuillez terminer ou supprimer les brouillons existants.",
+      "deleteDialog": {
+        "title": "Supprimer le brouillon",
+        "descriptionWithMedia": "Ce brouillon contient des vidéos et des miniatures téléchargées. Que souhaitez-vous faire?",
+        "descriptionNoMedia": "Êtes-vous sûr de vouloir supprimer ce brouillon?",
+        "deleteDraftOnly": "Supprimer le brouillon uniquement",
+        "deleteVideoAndThumbnails": "Supprimer brouillon + médias"
+      },
+      "deletedWithMedia": "Brouillon et médias supprimés",
+      "deletedWithMediaDescription": "{{count}} fichiers supprimés avec succès des serveurs",
+      "deletedPartial": "Brouillon supprimé, certains médias ont échoué",
+      "deletedPartialDescription": "{{successful}} fichiers supprimés, {{failed}} fichiers n'ont pas pu être supprimés",
+      "deletedMediaFailed": "Brouillon supprimé, échec de suppression des médias",
+      "deletedMediaFailedDescription": "Impossible de supprimer les fichiers multimédias des serveurs. Le brouillon a été supprimé.",
       "time": {
         "justNow": "À l'instant",
         "minutesAgo": "il y a {{count}} minute",

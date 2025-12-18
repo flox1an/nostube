@@ -100,16 +100,21 @@ export function useUploadDrafts() {
 
   const saveToNostr = useCallback(
     async (draftsToSave: UploadDraft[]) => {
-      if (!user) return
+      if (!user || !user.signer.nip44) return
 
       try {
+        const plainContent = JSON.stringify({
+          version: '1',
+          lastModified: Date.now(),
+          drafts: draftsToSave,
+        })
+
+        // Encrypt content using NIP-44 to user's own pubkey
+        const encryptedContent = await user.signer.nip44.encrypt(user.pubkey, plainContent)
+
         const event = {
           kind: 30078,
-          content: JSON.stringify({
-            version: '1',
-            lastModified: Date.now(),
-            drafts: draftsToSave,
-          }),
+          content: encryptedContent,
           created_at: nowInSecs(),
           tags: [['d', 'nostube-uploads']],
         }
@@ -213,10 +218,22 @@ export function useUploadDrafts() {
       pubkey: user.pubkey,
       identifier: 'nostube-uploads',
       relays: readRelays,
-    }).subscribe(event => {
+    }).subscribe(async event => {
       if (event) {
         try {
-          const parsed = JSON.parse(event.content)
+          let contentStr = event.content
+
+          // Try to decrypt using NIP-44 (for new encrypted drafts)
+          if (user.signer.nip44) {
+            try {
+              contentStr = await user.signer.nip44.decrypt(user.pubkey, event.content)
+            } catch {
+              // If decryption fails, assume it's unencrypted (backward compatibility)
+              // contentStr is already set to event.content
+            }
+          }
+
+          const parsed = JSON.parse(contentStr)
           const nostrDrafts = parsed.drafts || []
           mergeDraftsFromNostr(nostrDrafts)
         } catch (error) {
@@ -226,7 +243,7 @@ export function useUploadDrafts() {
     })
 
     return () => sub.unsubscribe()
-  }, [user?.pubkey, pool, config.relays, mergeDraftsFromNostr])
+  }, [user?.pubkey, user?.signer, pool, config.relays, mergeDraftsFromNostr])
 
   return {
     drafts,

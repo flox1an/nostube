@@ -241,7 +241,7 @@ export function useUploadDrafts() {
       debounce((draftsToSave: UploadDraft[]) => {
         // Always call the latest version via ref
         saveToNostrRef.current(draftsToSave)
-      }, 3000),
+      }, 5000),
     [] // Empty deps - created once and never recreated
   )
 

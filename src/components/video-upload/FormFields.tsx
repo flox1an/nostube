@@ -42,7 +42,9 @@ export function FormFields({
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="title">{t('upload.form.title')}</Label>
+        <Label htmlFor="title">
+          {t('upload.form.title')} <span className="text-destructive">*</span>
+        </Label>
         <Input id="title" value={title} onChange={e => onTitleChange(e.target.value)} required />
       </div>
 

@@ -32,7 +32,9 @@ export function ThumbnailSection({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="thumbnail">{t('upload.thumbnail.title')}</Label>
+      <Label htmlFor="thumbnail">
+        {t('upload.thumbnail.title')} <span className="text-destructive">*</span>
+      </Label>
       <RadioGroup
         value={thumbnailSource}
         onValueChange={onThumbnailSourceChange}

@@ -273,6 +273,20 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               {t('upload.stepIndicator', { current: currentStep, total: 3 })}
             </span>
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            {currentStep === 1 &&
+              t('upload.step1.description', {
+                defaultValue: 'Upload at least one video to continue',
+              })}
+            {currentStep === 2 &&
+              t('upload.step2.description', {
+                defaultValue: 'Fill in the required fields (* indicates required)',
+              })}
+            {currentStep === 3 &&
+              t('upload.step3.description', {
+                defaultValue: 'Select or upload a thumbnail for your video',
+              })}
+          </p>
         </CardHeader>
 
         <form onSubmit={handleSubmit} noValidate>

@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Upload Form Wizard**: Redesigned upload form as 3-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language, content warning), Step 3: Thumbnail selection. Validation prevents proceeding without required fields (video for step 2, title for step 3). "Save Draft" button on lower right instead of top "Back to Drafts" button
+- **Upload Form Wizard**: Redesigned upload form as 3-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language, content warning), Step 3: Thumbnail selection. Validation prevents proceeding without required fields (video for step 2, title for step 3). "Save Draft" button on lower right instead of top "Back to Drafts" button. Required fields marked with asterisk (*) and each step shows description explaining requirements
 - **Upload Page Advanced Button**: Opens Blossom dialog instead of navigating to settings
 - **Onboarding Separation**: Moved Blossom config from login to upload page
 - **Embed Player Performance**: Faster load times, reduced timeouts, fewer relays

@@ -209,13 +209,16 @@
     "previous": "Previous",
     "next": "Next",
     "step1": {
-      "title": "Upload Video"
+      "title": "Upload Video",
+      "description": "Upload at least one video to continue"
     },
     "step2": {
-      "title": "Video Details"
+      "title": "Video Details",
+      "description": "Fill in the required fields (* indicates required)"
     },
     "step3": {
-      "title": "Thumbnail"
+      "title": "Thumbnail",
+      "description": "Select or upload a thumbnail for your video"
     },
     "loginRequired": "Please log in to upload videos",
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",

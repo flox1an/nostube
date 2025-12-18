@@ -262,14 +262,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   return (
     <>
       <Card className="max-w-6xl mx-auto">
-        {onBack && (
-          <div className="p-4 border-b">
-            <Button onClick={handleBack} variant="ghost">
-              ← {t('upload.draft.backToDrafts')}
-            </Button>
-          </div>
-        )}
-
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>
@@ -451,23 +443,31 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 {t('upload.previous', { defaultValue: 'Previous' })}
               </Button>
 
-              {currentStep < 3 ? (
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep(prev => Math.min(3, prev + 1))}
-                  disabled={
-                    (currentStep === 1 && !canProceedToStep2) ||
-                    (currentStep === 2 && !canProceedToStep3)
-                  }
-                >
-                  {t('upload.next', { defaultValue: 'Next' })}
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button type="submit" disabled={isPublishing || !canPublish}>
-                  {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {onBack && (
+                  <Button type="button" variant="secondary" onClick={handleBack}>
+                    {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
+                  </Button>
+                )}
+
+                {currentStep < 3 ? (
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentStep(prev => Math.min(3, prev + 1))}
+                    disabled={
+                      (currentStep === 1 && !canProceedToStep2) ||
+                      (currentStep === 2 && !canProceedToStep3)
+                    }
+                  >
+                    {t('upload.next', { defaultValue: 'Next' })}
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isPublishing || !canPublish}>
+                    {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </form>

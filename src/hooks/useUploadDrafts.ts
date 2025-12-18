@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { UploadDraft, UploadDraftsData } from '@/types/upload-draft'
 import { removeOldDrafts } from '@/lib/upload-draft-utils'
+import { useCurrentUser } from './useCurrentUser'
+import { useNostrPublish } from './useNostrPublish'
+import { useAppContext } from './useAppContext'
+import { nowInSecs } from '@/lib/utils'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
@@ -28,6 +32,10 @@ export function useUploadDrafts() {
   const [drafts, setDrafts] = useState<UploadDraft[]>([])
   const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  const { user } = useCurrentUser()
+  const { publish } = useNostrPublish()
+  const { config } = useAppContext()
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -87,15 +95,43 @@ export function useUploadDrafts() {
     return newDraft
   }, [saveToLocalStorage])
 
+  const saveToNostr = useCallback(async (draftsToSave: UploadDraft[]) => {
+    if (!user) return
+
+    try {
+      const event = {
+        kind: 30078,
+        content: JSON.stringify({
+          version: '1',
+          lastModified: Date.now(),
+          drafts: draftsToSave
+        }),
+        created_at: nowInSecs(),
+        tags: [['d', 'nostube-uploads']]
+      }
+
+      const writeRelays = config.relays
+        .filter(r => r.tags.includes('write'))
+        .map(r => r.url)
+
+      await publish({ event, relays: writeRelays })
+    } catch (error) {
+      console.error('Failed to sync to Nostr:', error)
+      // Silent failure - localStorage has the data
+    }
+  }, [user, publish, config.relays])
+
   const saveDraftsImmediate = useCallback((draftsToSave: UploadDraft[]) => {
     saveToLocalStorage(draftsToSave)
-  }, [saveToLocalStorage])
+    saveToNostr(draftsToSave)
+  }, [saveToLocalStorage, saveToNostr])
 
   const debouncedSaveDrafts = useCallback(
     debounce((draftsToSave: UploadDraft[]) => {
       saveToLocalStorage(draftsToSave)
+      saveToNostr(draftsToSave)
     }, 3000),
-    [saveToLocalStorage]
+    [saveToLocalStorage, saveToNostr]
   )
 
   const updateDraft = useCallback((draftId: string, updates: Partial<UploadDraft>) => {

@@ -229,9 +229,20 @@ export function useUploadDrafts() {
     [saveToLocalStorage, saveToNostr]
   )
 
+  // Keep a ref to the latest saveToNostr function so debounced function doesn't need to be recreated
+  const saveToNostrRef = useRef(saveToNostr)
+  useEffect(() => {
+    saveToNostrRef.current = saveToNostr
+  }, [saveToNostr])
+
+  // Create debounced function once and keep it stable
   const debouncedSaveToNostr = useMemo(
-    () => debounce((draftsToSave: UploadDraft[]) => saveToNostr(draftsToSave), 3000),
-    [saveToNostr]
+    () =>
+      debounce((draftsToSave: UploadDraft[]) => {
+        // Always call the latest version via ref
+        saveToNostrRef.current(draftsToSave)
+      }, 3000),
+    [] // Empty deps - created once and never recreated
   )
 
   const saveDraftsDebounced = useCallback(

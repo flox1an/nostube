@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
@@ -64,6 +64,14 @@ export function useVideoUpload(
   )
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
+
+  // Use ref to store callback to prevent infinite loop
+  const onDraftChangeRef = useRef(onDraftChange)
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onDraftChangeRef.current = onDraftChange
+  }, [onDraftChange])
 
   const { user } = useCurrentUser()
   const { config, updateConfig } = useAppContext()
@@ -672,8 +680,8 @@ export function useVideoUpload(
 
   // Sync changes back to draft
   useEffect(() => {
-    if (onDraftChange) {
-      onDraftChange({
+    if (onDraftChangeRef.current) {
+      onDraftChangeRef.current({
         title,
         description,
         tags,
@@ -690,6 +698,8 @@ export function useVideoUpload(
         updatedAt: Date.now(),
       })
     }
+    // Note: onDraftChange intentionally not in deps to prevent infinite loop
+    // The ref is updated separately when the callback changes
   }, [
     title,
     description,
@@ -702,7 +712,6 @@ export function useVideoUpload(
     contentWarningEnabled,
     contentWarningReason,
     thumbnailSource,
-    onDraftChange,
   ])
 
   return {

@@ -291,6 +291,7 @@
       "yourDrafts": "Your Drafts ({{count}})",
       "untitled": "Untitled",
       "backToDrafts": "Back to Drafts",
+      "saveDraft": "Save Draft",
       "status": {
         "addVideo": "Add video to start",
         "addTitle": "Add title to publish",

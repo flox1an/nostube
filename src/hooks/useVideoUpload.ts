@@ -678,7 +678,7 @@ export function useVideoUpload(
     }
   }
 
-  // Sync changes back to draft
+  // Sync form field changes back to draft (debounced in useUploadDrafts)
   useEffect(() => {
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
@@ -688,18 +688,11 @@ export function useVideoUpload(
         language,
         inputMethod,
         videoUrl,
-        uploadInfo,
-        thumbnailUploadInfo: {
-          uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
-          mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
-        },
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
         thumbnailSource,
         updatedAt: Date.now(),
       })
     }
-    // Note: onDraftChange intentionally not in deps to prevent infinite loop
-    // The ref is updated separately when the callback changes
   }, [
     title,
     description,
@@ -707,12 +700,24 @@ export function useVideoUpload(
     language,
     inputMethod,
     videoUrl,
-    uploadInfo,
-    thumbnailUploadInfo,
     contentWarningEnabled,
     contentWarningReason,
     thumbnailSource,
   ])
+
+  // Sync upload milestone changes separately (immediate in useUploadDrafts)
+  useEffect(() => {
+    if (onDraftChangeRef.current) {
+      onDraftChangeRef.current({
+        uploadInfo,
+        thumbnailUploadInfo: {
+          uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
+          mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
+        },
+        updatedAt: Date.now(),
+      })
+    }
+  }, [uploadInfo, thumbnailUploadInfo])
 
   return {
     // State

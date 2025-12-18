@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Draft Nostr Sync Debouncing**: Fixed draft changes publishing to Nostr on every form field change. The debounced function is now stable across renders using a ref pattern, ensuring form field changes are properly debounced (3-second delay) while video/thumbnail upload milestones remain immediate (useUploadDrafts.ts:232-261)
+- **Draft Nostr Sync Debouncing**: Fixed draft changes publishing to Nostr on every form field change. Split useVideoUpload's useEffect into two separate hooks: one for form fields (title, description, tags, etc.) that triggers debounced sync, and one for upload milestones (uploadInfo, thumbnailUploadInfo) that triggers immediate sync. Previously, all changes included uploadInfo which triggered immediate sync (useVideoUpload.ts:681-720, useUploadDrafts.ts:232-261)
 - **Draft Generated Thumbnails**: Drafts with generated thumbnails now show video thumbnail in draft list using image proxy
 - **Draft Thumbnail Extensions**: Fixed image proxy failing to load thumbnails from Blossom blob URLs without file extensions. Added `ensureFileExtension()` helper that appends appropriate extensions (.jpg, .png, .mp4, etc.) based on MIME types before passing URLs to image proxy (utils.ts:177-205, DraftCard.tsx:23-47)
 - **Publish Button**: Now works with generated thumbnails after draft restore

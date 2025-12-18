@@ -1904,7 +1904,7 @@ git commit -m "feat: add debounced auto-save for form fields and immediate save 
 
 ## Phase 4: Nostr Sync (Optional for MVP)
 
-### Task 14: Add NIP-78 Event Publishing
+### Task 14: Add NIP-78 Event Publishing with Encryption
 
 **Files:**
 
@@ -1914,8 +1914,11 @@ git commit -m "feat: add debounced auto-save for form fields and immediate save 
 
 ```typescript
 import { useCurrentUser } from './useCurrentUser'
+
 import { useNostrPublish } from './useNostrPublish'
+
 import { useAppContext } from './useAppContext'
+
 import { nowInSecs } from '@/lib/utils'
 ```
 
@@ -1925,26 +1928,39 @@ At the start of useUploadDrafts:
 
 ```typescript
 const { user } = useCurrentUser()
+
 const { publish } = useNostrPublish()
+
 const { config } = useAppContext()
 ```
 
-**Step 3: Implement saveToNostr**
+**Step 3: Implement saveToNostr with NIP-44 Encryption**
 
 ```typescript
 const saveToNostr = useCallback(
   async (draftsToSave: UploadDraft[]) => {
-    if (!user) return
+    if (!user?.signer) return
 
     try {
+      const plaintext = JSON.stringify({
+        version: '1',
+
+        lastModified: Date.now(),
+
+        drafts: draftsToSave,
+      })
+
+      // Encrypt with user's own key for privacy
+
+      const content = await user.signer.nip44.encrypt(user.pubkey, plaintext)
+
       const event = {
         kind: 30078,
-        content: JSON.stringify({
-          version: '1',
-          lastModified: Date.now(),
-          drafts: draftsToSave,
-        }),
+
+        content,
+
         created_at: nowInSecs(),
+
         tags: [['d', 'nostube-uploads']],
       }
 
@@ -1953,9 +1969,11 @@ const saveToNostr = useCallback(
       await publish({ event, relays: writeRelays })
     } catch (error) {
       console.error('Failed to sync to Nostr:', error)
+
       // Silent failure - localStorage has the data
     }
   },
+
   [user, publish, config.relays]
 )
 ```
@@ -1966,16 +1984,20 @@ const saveToNostr = useCallback(
 const saveDraftsImmediate = useCallback(
   (draftsToSave: UploadDraft[]) => {
     saveToLocalStorage(draftsToSave)
+
     saveToNostr(draftsToSave)
   },
+
   [saveToLocalStorage, saveToNostr]
 )
 
 const debouncedSaveDrafts = useCallback(
   debounce((draftsToSave: UploadDraft[]) => {
     saveToLocalStorage(draftsToSave)
+
     saveToNostr(draftsToSave)
   }, 3000),
+
   [saveToLocalStorage, saveToNostr]
 )
 ```
@@ -1983,18 +2005,22 @@ const debouncedSaveDrafts = useCallback(
 **Step 5: Verify compiles**
 
 Run: `npm run typecheck`
+
 Expected: No errors
 
 **Step 6: Commit**
 
 ```bash
+
 git add src/hooks/useUploadDrafts.ts
-git commit -m "feat: add NIP-78 Nostr event publishing for drafts"
+
+git commit -m "feat: add NIP-78 Nostr event publishing with NIP-44 encryption"
+
 ```
 
 ---
 
-### Task 15: Add NIP-78 Event Loading and Subscription
+### Task 15: Add NIP-78 Event Loading and Decryption
 
 **Files:**
 
@@ -2004,7 +2030,9 @@ git commit -m "feat: add NIP-78 Nostr event publishing for drafts"
 
 ```typescript
 import { useEventStore } from 'applesauce-react/hooks'
+
 import { createAddressLoader } from 'applesauce-loaders/loaders'
+
 import { useAppContext } from './useAppContext'
 ```
 
@@ -2012,29 +2040,49 @@ import { useAppContext } from './useAppContext'
 
 ```typescript
 const eventStore = useEventStore()
+
 const { pool } = useAppContext()
 ```
 
-**Step 3: Add subscription effect**
+**Step 3: Add subscription effect with decryption**
 
 ```typescript
 // Subscribe to NIP-78 event changes
+
 useEffect(() => {
-  if (!user?.pubkey) return
+  if (!user?.pubkey || !user.signer) return
 
   const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
   const loader = createAddressLoader(pool)
+
   const sub = loader({
     kind: 30078,
+
     pubkey: user.pubkey,
+
     identifier: 'nostube-uploads',
+
     relays: readRelays,
-  }).subscribe(event => {
+  }).subscribe(async event => {
     if (event) {
       try {
-        const parsed = JSON.parse(event.content)
+        let plaintext = event.content
+
+        // Try to decrypt using NIP-44 (for new encrypted drafts)
+
+        try {
+          plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
+        } catch (e) {
+          // Ignore decryption error, assume it's a legacy unencrypted draft
+
+          console.log('Could not decrypt draft, assuming plaintext.', e)
+        }
+
+        const parsed = JSON.parse(plaintext)
+
         const nostrDrafts = parsed.drafts || []
+
         mergeDraftsFromNostr(nostrDrafts)
       } catch (error) {
         console.error('Failed to parse NIP-78 event:', error)
@@ -2043,7 +2091,7 @@ useEffect(() => {
   })
 
   return () => sub.unsubscribe()
-}, [user?.pubkey, pool, config.relays])
+}, [user?.pubkey, user?.signer, pool, config.relays])
 ```
 
 **Step 4: Implement merge function**
@@ -2055,25 +2103,31 @@ const mergeDraftsFromNostr = useCallback(
       const draftMap = new Map<string, UploadDraft>()
 
       // Add local drafts first
+
       prevLocal.forEach(d => draftMap.set(d.id, d))
 
       // Nostr drafts win on conflict (newer updatedAt)
+
       nostrDrafts.forEach(d => {
         const existing = draftMap.get(d.id)
+
         if (!existing || d.updatedAt > existing.updatedAt) {
           draftMap.set(d.id, d)
         }
       })
 
       // Sort by updatedAt descending
+
       const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
 
       // Save merged result to localStorage
+
       saveToLocalStorage(merged)
 
       return merged
     })
   },
+
   [saveToLocalStorage]
 )
 ```
@@ -2081,13 +2135,17 @@ const mergeDraftsFromNostr = useCallback(
 **Step 5: Verify compiles**
 
 Run: `npm run typecheck`
+
 Expected: No errors
 
 **Step 6: Commit**
 
 ```bash
+
 git add src/hooks/useUploadDrafts.ts
-git commit -m "feat: add NIP-78 event subscription and merge logic"
+
+git commit -m "feat: add NIP-78 event subscription with NIP-44 decryption"
+
 ```
 
 ---

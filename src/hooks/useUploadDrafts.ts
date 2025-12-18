@@ -13,12 +13,34 @@ const MAX_DRAFTS = 10
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
+): {
+  (...args: Parameters<T>): void
+  flush: () => void
+} {
   let timeout: NodeJS.Timeout | null = null
-  return (...args: Parameters<T>) => {
+  let lastArgs: Parameters<T> | null = null
+
+  const debounced = (...args: Parameters<T>) => {
+    lastArgs = args
     if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
+    timeout = setTimeout(() => {
+      func(...args)
+      lastArgs = null
+    }, wait)
   }
+
+  debounced.flush = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
+    if (lastArgs) {
+      func(...lastArgs)
+      lastArgs = null
+    }
+  }
+
+  return debounced
 }
 
 function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
@@ -100,21 +122,21 @@ export function useUploadDrafts() {
 
   const saveToNostr = useCallback(
     async (draftsToSave: UploadDraft[]) => {
-      if (!user || !user.signer.nip44) return
+      if (!user?.signer?.nip44) return
 
       try {
-        const plainContent = JSON.stringify({
+        const plaintext = JSON.stringify({
           version: '1',
           lastModified: Date.now(),
           drafts: draftsToSave,
         })
 
-        // Encrypt content using NIP-44 to user's own pubkey
-        const encryptedContent = await user.signer.nip44.encrypt(user.pubkey, plainContent)
+        // Encrypt with user's own key for privacy
+        const content = await user.signer.nip44.encrypt(user.pubkey, plaintext)
 
         const event = {
           kind: 30078,
-          content: encryptedContent,
+          content,
           created_at: nowInSecs(),
           tags: [['d', 'nostube-uploads']],
         }
@@ -138,14 +160,25 @@ export function useUploadDrafts() {
     [saveToLocalStorage, saveToNostr]
   )
 
-  const debouncedSaveDrafts = useMemo(
-    () =>
-      debounce((draftsToSave: UploadDraft[]) => {
-        saveToLocalStorage(draftsToSave)
-        saveToNostr(draftsToSave)
-      }, 3000),
-    [saveToLocalStorage, saveToNostr]
+  const debouncedSaveToNostr = useMemo(
+    () => debounce((draftsToSave: UploadDraft[]) => saveToNostr(draftsToSave), 3000),
+    [saveToNostr]
   )
+
+  const saveDraftsDebounced = useCallback(
+    (draftsToSave: UploadDraft[]) => {
+      saveToLocalStorage(draftsToSave) // Immediate
+      debouncedSaveToNostr(draftsToSave) // Debounced
+    },
+    [saveToLocalStorage, debouncedSaveToNostr]
+  )
+
+  // Flush pending Nostr sync on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSaveToNostr.flush()
+    }
+  }, [debouncedSaveToNostr])
 
   const updateDraft = useCallback(
     (draftId: string, updates: Partial<UploadDraft>) => {
@@ -154,17 +187,17 @@ export function useUploadDrafts() {
           d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
         )
 
-        // Immediate save for milestones, debounced for form fields
+        // Immediate save for milestones, debounced Nostr sync for form fields
         if (isMilestoneUpdate(updates)) {
           saveDraftsImmediate(updated)
         } else {
-          debouncedSaveDrafts(updated)
+          saveDraftsDebounced(updated)
         }
 
         return updated
       })
     },
-    [saveDraftsImmediate, debouncedSaveDrafts]
+    [saveDraftsImmediate, saveDraftsDebounced]
   )
 
   const deleteDraft = useCallback(
@@ -208,7 +241,7 @@ export function useUploadDrafts() {
 
   // Subscribe to NIP-78 event changes
   useEffect(() => {
-    if (!user?.pubkey) return
+    if (!user?.pubkey || !user.signer?.nip44) return
 
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
@@ -221,19 +254,17 @@ export function useUploadDrafts() {
     }).subscribe(async event => {
       if (event) {
         try {
-          let contentStr = event.content
-
-          // Try to decrypt using NIP-44 (for new encrypted drafts)
+          let plaintext = event.content
           if (user.signer.nip44) {
+            // Try to decrypt using NIP-44 (for new encrypted drafts)
             try {
-              contentStr = await user.signer.nip44.decrypt(user.pubkey, event.content)
+              plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
             } catch {
-              // If decryption fails, assume it's unencrypted (backward compatibility)
-              // contentStr is already set to event.content
+              // Ignore decryption error, assume it's a legacy unencrypted draft
             }
           }
 
-          const parsed = JSON.parse(contentStr)
+          const parsed = JSON.parse(plaintext)
           const nostrDrafts = parsed.drafts || []
           mergeDraftsFromNostr(nostrDrafts)
         } catch (error) {

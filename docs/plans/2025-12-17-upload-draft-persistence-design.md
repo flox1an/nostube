@@ -62,6 +62,12 @@ On load:
   → Save cleaned result back to both stores
 ```
 
+### Privacy and Encryption
+
+To protect user privacy, the `content` of the NIP-78 event is encrypted using NIP-44. The encryption is done using the user's own public key, ensuring that only the user who created the draft can decrypt and read it. This prevents relay operators or other users from accessing potentially sensitive draft information.
+
+The decryption process will attempt to decrypt the content using the user's NIP-44 key. If decryption fails, it will gracefully fall back to treating the content as plaintext, ensuring backward compatibility with older, unencrypted drafts.
+
 ## Data Schema
 
 ### NIP-78 Event Structure
@@ -69,50 +75,56 @@ On load:
 ```typescript
 {
   kind: 30078,
-  content: JSON.stringify({
-    version: "1",
-    lastModified: 1734567890,
-    drafts: [
-      {
-        id: "uuid-string",
-        createdAt: 1734567890,
-        updatedAt: 1734567890,
-
-        // Form fields
-        title: string,
-        description: string,
-        tags: string[],
-        language: string,
-
-        // Content warning
-        contentWarning: {
-          enabled: boolean,
-          reason: string
-        },
-
-        // Input method
-        inputMethod: "file" | "url",
-        videoUrl?: string,
-
-        // Uploaded content (blob descriptors only)
-        uploadInfo: {
-          videos: VideoVariant[] // includes uploadedBlobs, mirroredBlobs
-        },
-
-        thumbnailUploadInfo: {
-          uploadedBlobs: BlobDescriptor[],
-          mirroredBlobs: BlobDescriptor[]
-        },
-
-        // Metadata
-        thumbnailSource: "generated" | "upload"
-      }
-    ]
-  }),
+  content: "<NIP-44 encrypted JSON string>", // Encrypted with user's own pubkey
   tags: [["d", "nostube-uploads"]],
   created_at: timestamp,
   pubkey: user.pubkey
 }
+```
+
+**Decrypted Content:**
+
+```typescript
+JSON.stringify({
+  version: "1",
+  lastModified: 1734567890,
+  drafts: [
+    {
+      id: "uuid-string",
+      createdAt: 1734567890,
+      updatedAt: 1734567890,
+
+      // Form fields
+      title: string,
+      description: string,
+      tags: string[],
+      language: string,
+
+      // Content warning
+      contentWarning: {
+        enabled: boolean,
+        reason: string
+      },
+
+      // Input method
+      inputMethod: "file" | "url",
+      videoUrl?: string,
+
+      // Uploaded content (blob descriptors only)
+      uploadInfo: {
+        videos: VideoVariant[] // includes uploadedBlobs, mirroredBlobs
+      },
+
+      thumbnailUploadInfo: {
+        uploadedBlobs: BlobDescriptor[],
+        mirroredBlobs: BlobDescriptor[]
+      },
+
+      // Metadata
+      thumbnailSource: "generated" | "upload"
+    }
+  ]
+})
 ```
 
 ### localStorage Schema

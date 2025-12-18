@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { DraftPicker } from './DraftPicker'
 import type { UploadDraft } from '@/types/upload-draft'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
+import { Toaster } from '@/components/ui/toaster'
 
 const mockDrafts: UploadDraft[] = [
   {
@@ -37,10 +38,34 @@ const mockDrafts: UploadDraft[] = [
 ]
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+  <I18nextProvider i18n={i18n}>
+    {children}
+    <Toaster />
+  </I18nextProvider>
 )
 
 describe('DraftPicker', () => {
+  beforeEach(() => {
+    // Add required translations
+    i18n.addResourceBundle(
+      'en',
+      'translation',
+      {
+        upload: {
+          draft: {
+            deleted: 'Draft deleted',
+            deletedDescription: 'Draft will be permanently deleted in 5 seconds',
+            undo: 'Undo',
+            newUpload: 'New Upload',
+            yourDrafts: 'Your Drafts ({{count}})',
+          },
+        },
+      },
+      true,
+      true
+    )
+  })
+
   it('renders "New Upload" button', () => {
     render(
       <DraftPicker

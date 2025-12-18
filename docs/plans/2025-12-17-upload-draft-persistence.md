@@ -15,6 +15,7 @@
 ### Task 1: Create TypeScript Interfaces
 
 **Files:**
+
 - Create: `src/types/upload-draft.ts`
 
 **Step 1: Create UploadDraft interface**
@@ -86,6 +87,7 @@ git commit -m "feat: add UploadDraft TypeScript interfaces"
 ### Task 2: Create Utility Functions with Tests
 
 **Files:**
+
 - Create: `src/lib/upload-draft-utils.ts`
 - Create: `src/lib/upload-draft-utils.test.ts`
 
@@ -110,7 +112,7 @@ describe('getSmartStatus', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addVideo')
   })
@@ -127,17 +129,38 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
-      thumbnailUploadInfo: { uploadedBlobs: [{ url: 'http://test.com/thumb', sha256: 'def', size: 10, type: 'image/jpeg', uploaded: Date.now() }], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailUploadInfo: {
+        uploadedBlobs: [
+          {
+            url: 'http://test.com/thumb',
+            sha256: 'def',
+            size: 10,
+            type: 'image/jpeg',
+            uploaded: Date.now(),
+          },
+        ],
+        mirroredBlobs: [],
+      },
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addTitle')
   })
@@ -154,17 +177,27 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addThumbnail')
   })
@@ -181,17 +214,38 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
-      thumbnailUploadInfo: { uploadedBlobs: [{ url: 'http://test.com/thumb', sha256: 'def', size: 10, type: 'image/jpeg', uploaded: Date.now() }], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailUploadInfo: {
+        uploadedBlobs: [
+          {
+            url: 'http://test.com/thumb',
+            sha256: 'def',
+            size: 10,
+            type: 'image/jpeg',
+            uploaded: Date.now(),
+          },
+        ],
+        mirroredBlobs: [],
+      },
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.ready')
   })
@@ -244,6 +298,7 @@ git commit -m "feat: add getSmartStatus utility with tests"
 ### Task 3: Add Video Quality Info Utility
 
 **Files:**
+
 - Modify: `src/lib/upload-draft-utils.ts`
 - Modify: `src/lib/upload-draft-utils.test.ts`
 
@@ -266,7 +321,7 @@ describe('getVideoQualityInfo', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('')
   })
@@ -283,17 +338,19 @@ describe('getVideoQualityInfo', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 450,
-          uploadedBlobs: [],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 450,
+            uploadedBlobs: [],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('1080p • 450 MB')
   })
@@ -317,7 +374,7 @@ describe('getVideoQualityInfo', () => {
             duration: 120,
             sizeMB: 200,
             uploadedBlobs: [],
-            mirroredBlobs: []
+            mirroredBlobs: [],
           },
           {
             inputMethod: 'file',
@@ -325,12 +382,12 @@ describe('getVideoQualityInfo', () => {
             duration: 120,
             sizeMB: 450,
             uploadedBlobs: [],
-            mirroredBlobs: []
-          }
-        ]
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('720p, 1080p • 650 MB')
   })
@@ -347,17 +404,19 @@ describe('getVideoQualityInfo', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '3840x2160',
-          duration: 120,
-          sizeMB: 2048,
-          uploadedBlobs: [],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '3840x2160',
+            duration: 120,
+            sizeMB: 2048,
+            uploadedBlobs: [],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('4K • 2.0 GB')
   })
@@ -388,9 +447,8 @@ export function getVideoQualityInfo(draft: UploadDraft): string {
   })
 
   const totalSizeMB = draft.uploadInfo.videos.reduce((sum, v) => sum + (v.sizeMB || 0), 0)
-  const sizeStr = totalSizeMB > 1024
-    ? `${(totalSizeMB / 1024).toFixed(1)} GB`
-    : `${Math.round(totalSizeMB)} MB`
+  const sizeStr =
+    totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)} GB` : `${Math.round(totalSizeMB)} MB`
 
   return `${qualities.join(', ')} • ${sizeStr}`
 }
@@ -413,6 +471,7 @@ git commit -m "feat: add getVideoQualityInfo utility with tests"
 ### Task 4: Add Relative Time Utility
 
 **Files:**
+
 - Modify: `src/lib/upload-draft-utils.ts`
 - Modify: `src/lib/upload-draft-utils.test.ts`
 
@@ -495,6 +554,7 @@ git commit -m "feat: add getRelativeTime utility with tests"
 ### Task 5: Add Draft Cleanup Utility
 
 **Files:**
+
 - Modify: `src/lib/upload-draft-utils.ts`
 - Modify: `src/lib/upload-draft-utils.test.ts`
 
@@ -519,7 +579,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
+        thumbnailSource: 'generated',
       },
       {
         id: '2',
@@ -533,8 +593,8 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
-      }
+        thumbnailSource: 'generated',
+      },
     ]
     const result = removeOldDrafts(drafts, 30)
     expect(result).toHaveLength(1)
@@ -556,7 +616,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
+        thumbnailSource: 'generated',
       },
       {
         id: '2',
@@ -570,8 +630,8 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
-      }
+        thumbnailSource: 'generated',
+      },
     ]
     const result = removeOldDrafts(drafts, 30)
     expect(result).toHaveLength(2)
@@ -590,7 +650,7 @@ Add to `src/lib/upload-draft-utils.ts`:
 
 ```typescript
 export function removeOldDrafts(drafts: UploadDraft[], maxAgeDays = 30): UploadDraft[] {
-  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000)
+  const cutoffTime = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
   return drafts.filter(d => d.createdAt > cutoffTime)
 }
 ```
@@ -612,6 +672,7 @@ git commit -m "feat: add removeOldDrafts utility with tests"
 ### Task 6: Create useUploadDrafts Hook (localStorage only)
 
 **Files:**
+
 - Create: `src/hooks/useUploadDrafts.ts`
 - Create: `src/hooks/useUploadDrafts.test.tsx`
 
@@ -629,13 +690,17 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => { store[key] = value },
-    clear: () => { store = {} }
+    setItem: (key: string, value: string) => {
+      store[key] = value
+    },
+    clear: () => {
+      store = {}
+    },
   }
 })()
 
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+  value: localStorageMock,
 })
 
 describe('useUploadDrafts', () => {
@@ -753,13 +818,16 @@ describe('useUploadDrafts', () => {
       inputMethod: 'file' as const,
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated' as const
+      thumbnailSource: 'generated' as const,
     }
-    localStorage.setItem('nostube_upload_drafts', JSON.stringify({
-      version: '1',
-      lastModified: Date.now(),
-      drafts: [draft]
-    }))
+    localStorage.setItem(
+      'nostube_upload_drafts',
+      JSON.stringify({
+        version: '1',
+        lastModified: Date.now(),
+        drafts: [draft],
+      })
+    )
 
     const { result } = renderHook(() => useUploadDrafts())
 
@@ -815,7 +883,7 @@ export function useUploadDrafts() {
     const data: UploadDraftsData = {
       version: '1',
       lastModified: Date.now(),
-      drafts: draftsToSave
+      drafts: draftsToSave,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }, [])
@@ -837,7 +905,7 @@ export function useUploadDrafts() {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
 
     const updated = [...drafts, newDraft]
@@ -847,25 +915,29 @@ export function useUploadDrafts() {
     return newDraft
   }, [drafts, saveToLocalStorage])
 
-  const updateDraft = useCallback((draftId: string, updates: Partial<UploadDraft>) => {
-    setDrafts(prev => {
-      const updated = prev.map(d =>
-        d.id === draftId
-          ? { ...d, ...updates, updatedAt: Date.now() }
-          : d
-      )
-      saveToLocalStorage(updated)
-      return updated
-    })
-  }, [saveToLocalStorage])
+  const updateDraft = useCallback(
+    (draftId: string, updates: Partial<UploadDraft>) => {
+      setDrafts(prev => {
+        const updated = prev.map(d =>
+          d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
+        )
+        saveToLocalStorage(updated)
+        return updated
+      })
+    },
+    [saveToLocalStorage]
+  )
 
-  const deleteDraft = useCallback((draftId: string) => {
-    setDrafts(prev => {
-      const updated = prev.filter(d => d.id !== draftId)
-      saveToLocalStorage(updated)
-      return updated
-    })
-  }, [saveToLocalStorage])
+  const deleteDraft = useCallback(
+    (draftId: string) => {
+      setDrafts(prev => {
+        const updated = prev.filter(d => d.id !== draftId)
+        saveToLocalStorage(updated)
+        return updated
+      })
+    },
+    [saveToLocalStorage]
+  )
 
   return {
     drafts,
@@ -874,7 +946,7 @@ export function useUploadDrafts() {
     createDraft,
     updateDraft,
     deleteDraft,
-    isLoading
+    isLoading,
   }
 }
 ```
@@ -898,6 +970,7 @@ git commit -m "feat: add useUploadDrafts hook with localStorage persistence"
 ### Task 7: Add Translation Keys (EN only)
 
 **Files:**
+
 - Modify: `public/locales/en/translation.json`
 
 **Step 1: Add draft-related translation keys**
@@ -962,6 +1035,7 @@ git commit -m "feat: add English translations for draft feature"
 ### Task 8: Create DraftCard Component
 
 **Files:**
+
 - Create: `src/components/upload/DraftCard.tsx`
 - Create: `src/components/upload/DraftCard.test.tsx`
 
@@ -1184,6 +1258,7 @@ git commit -m "feat: add DraftCard component with tests"
 ### Task 9: Create DraftPicker Component
 
 **Files:**
+
 - Create: `src/components/upload/DraftPicker.tsx`
 - Create: `src/components/upload/DraftPicker.test.tsx`
 
@@ -1437,6 +1512,7 @@ git commit -m "feat: add DraftPicker component with delete undo"
 ### Task 10: Refactor useVideoUpload to Accept Draft
 
 **Files:**
+
 - Modify: `src/hooks/useVideoUpload.ts`
 
 **Step 1: Update useVideoUpload signature**
@@ -1470,37 +1546,37 @@ export function useVideoUpload(
 Add near the end of the hook, before the return statement:
 
 ```typescript
-  // Sync changes back to draft
-  useEffect(() => {
-    if (onDraftChange) {
-      onDraftChange({
-        title,
-        description,
-        tags,
-        language,
-        inputMethod,
-        videoUrl,
-        uploadInfo,
-        thumbnailUploadInfo,
-        contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
-        thumbnailSource,
-        updatedAt: Date.now()
-      })
-    }
-  }, [
-    title,
-    description,
-    tags,
-    language,
-    inputMethod,
-    videoUrl,
-    uploadInfo,
-    thumbnailUploadInfo,
-    contentWarningEnabled,
-    contentWarningReason,
-    thumbnailSource,
-    onDraftChange
-  ])
+// Sync changes back to draft
+useEffect(() => {
+  if (onDraftChange) {
+    onDraftChange({
+      title,
+      description,
+      tags,
+      language,
+      inputMethod,
+      videoUrl,
+      uploadInfo,
+      thumbnailUploadInfo,
+      contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+      thumbnailSource,
+      updatedAt: Date.now(),
+    })
+  }
+}, [
+  title,
+  description,
+  tags,
+  language,
+  inputMethod,
+  videoUrl,
+  uploadInfo,
+  thumbnailUploadInfo,
+  contentWarningEnabled,
+  contentWarningReason,
+  thumbnailSource,
+  onDraftChange,
+])
 ```
 
 **Step 3: Add import at top of file**
@@ -1526,6 +1602,7 @@ git commit -m "refactor: add draft initialization and sync to useVideoUpload"
 ### Task 11: Refactor VideoUpload to UploadForm Component
 
 **Files:**
+
 - Modify: `src/components/VideoUpload.tsx`
 
 **Step 1: Add imports and props interface**
@@ -1562,14 +1639,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 Add after the existing hook calls:
 
 ```typescript
-  const { updateDraft, deleteDraft } = useUploadDrafts()
+const { updateDraft, deleteDraft } = useUploadDrafts()
 
-  const handleDraftChange = useCallback(
-    (updates: Partial<UploadDraft>) => {
-      updateDraft(draft.id, updates)
-    },
-    [draft.id, updateDraft]
-  )
+const handleDraftChange = useCallback(
+  (updates: Partial<UploadDraft>) => {
+    updateDraft(draft.id, updates)
+  },
+  [draft.id, updateDraft]
+)
 ```
 
 **Step 4: Update useVideoUpload call**
@@ -1577,18 +1654,18 @@ Add after the existing hook calls:
 Change from:
 
 ```typescript
-  const {
-    // ... destructured values
-  } = useVideoUpload()
+const {
+  // ... destructured values
+} = useVideoUpload()
 ```
 
 To:
 
 ```typescript
-  const videoUploadState = useVideoUpload(draft, handleDraftChange)
-  const {
-    // ... destructured values
-  } = videoUploadState
+const videoUploadState = useVideoUpload(draft, handleDraftChange)
+const {
+  // ... destructured values
+} = videoUploadState
 ```
 
 **Step 5: Wrap handleSubmit to delete draft on success**
@@ -1596,19 +1673,19 @@ To:
 After the existing handleSubmit, wrap it:
 
 ```typescript
-  const originalHandleSubmit = handleSubmit
+const originalHandleSubmit = handleSubmit
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await originalHandleSubmit(e)
-      // On success, delete the draft
-      deleteDraft(draft.id)
-    } catch (error) {
-      // Keep draft on error
-      console.error('Publish failed:', error)
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  try {
+    await originalHandleSubmit(e)
+    // On success, delete the draft
+    deleteDraft(draft.id)
+  } catch (error) {
+    // Keep draft on error
+    console.error('Publish failed:', error)
   }
+}
 ```
 
 **Step 6: Add back button to UI**
@@ -1648,6 +1725,7 @@ git commit -m "refactor: convert VideoUpload to accept draft prop and integrate 
 ### Task 12: Create UploadPage with Conditional Rendering
 
 **Files:**
+
 - Modify: `src/pages/UploadPage.tsx` (if exists, otherwise create it)
 - Modify: `src/AppRouter.tsx`
 
@@ -1738,6 +1816,7 @@ git commit -m "feat: add conditional rendering logic to UploadPage"
 ### Task 13: Add Debounced Auto-Save Logic
 
 **Files:**
+
 - Modify: `src/hooks/useUploadDrafts.ts`
 
 **Step 1: Add debounce utility**
@@ -1774,23 +1853,25 @@ function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
 Create separate functions:
 
 ```typescript
-  const saveDraftsImmediate = useCallback((draftsToSave: UploadDraft[]) => {
+const saveDraftsImmediate = useCallback(
+  (draftsToSave: UploadDraft[]) => {
     saveToLocalStorage(draftsToSave)
-  }, [saveToLocalStorage])
+  },
+  [saveToLocalStorage]
+)
 
-  const debouncedSaveDrafts = useCallback(
-    debounce((draftsToSave: UploadDraft[]) => {
-      saveToLocalStorage(draftsToSave)
-    }, 3000),
-    [saveToLocalStorage]
-  )
+const debouncedSaveDrafts = useCallback(
+  debounce((draftsToSave: UploadDraft[]) => {
+    saveToLocalStorage(draftsToSave)
+  }, 3000),
+  [saveToLocalStorage]
+)
 
-  const updateDraft = useCallback((draftId: string, updates: Partial<UploadDraft>) => {
+const updateDraft = useCallback(
+  (draftId: string, updates: Partial<UploadDraft>) => {
     setDrafts(prev => {
       const updated = prev.map(d =>
-        d.id === draftId
-          ? { ...d, ...updates, updatedAt: Date.now() }
-          : d
+        d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
       )
 
       // Immediate save for milestones, debounced for form fields
@@ -1802,7 +1883,9 @@ Create separate functions:
 
       return updated
     })
-  }, [saveDraftsImmediate, debouncedSaveDrafts])
+  },
+  [saveDraftsImmediate, debouncedSaveDrafts]
+)
 ```
 
 **Step 4: Verify types compile**
@@ -1824,6 +1907,7 @@ git commit -m "feat: add debounced auto-save for form fields and immediate save 
 ### Task 14: Add NIP-78 Event Publishing
 
 **Files:**
+
 - Modify: `src/hooks/useUploadDrafts.ts`
 
 **Step 1: Add imports**
@@ -1840,15 +1924,16 @@ import { nowInSecs } from '@/lib/utils'
 At the start of useUploadDrafts:
 
 ```typescript
-  const { user } = useCurrentUser()
-  const { publish } = useNostrPublish()
-  const { config } = useAppContext()
+const { user } = useCurrentUser()
+const { publish } = useNostrPublish()
+const { config } = useAppContext()
 ```
 
 **Step 3: Implement saveToNostr**
 
 ```typescript
-  const saveToNostr = useCallback(async (draftsToSave: UploadDraft[]) => {
+const saveToNostr = useCallback(
+  async (draftsToSave: UploadDraft[]) => {
     if (!user) return
 
     try {
@@ -1857,39 +1942,42 @@ At the start of useUploadDrafts:
         content: JSON.stringify({
           version: '1',
           lastModified: Date.now(),
-          drafts: draftsToSave
+          drafts: draftsToSave,
         }),
         created_at: nowInSecs(),
-        tags: [['d', 'nostube-uploads']]
+        tags: [['d', 'nostube-uploads']],
       }
 
-      const writeRelays = config.relays
-        .filter(r => r.tags.includes('write'))
-        .map(r => r.url)
+      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
       await publish({ event, relays: writeRelays })
     } catch (error) {
       console.error('Failed to sync to Nostr:', error)
       // Silent failure - localStorage has the data
     }
-  }, [user, publish, config.relays])
+  },
+  [user, publish, config.relays]
+)
 ```
 
 **Step 4: Update save functions to sync to Nostr**
 
 ```typescript
-  const saveDraftsImmediate = useCallback((draftsToSave: UploadDraft[]) => {
+const saveDraftsImmediate = useCallback(
+  (draftsToSave: UploadDraft[]) => {
     saveToLocalStorage(draftsToSave)
     saveToNostr(draftsToSave)
-  }, [saveToLocalStorage, saveToNostr])
+  },
+  [saveToLocalStorage, saveToNostr]
+)
 
-  const debouncedSaveDrafts = useCallback(
-    debounce((draftsToSave: UploadDraft[]) => {
-      saveToLocalStorage(draftsToSave)
-      saveToNostr(draftsToSave)
-    }, 3000),
-    [saveToLocalStorage, saveToNostr]
-  )
+const debouncedSaveDrafts = useCallback(
+  debounce((draftsToSave: UploadDraft[]) => {
+    saveToLocalStorage(draftsToSave)
+    saveToNostr(draftsToSave)
+  }, 3000),
+  [saveToLocalStorage, saveToNostr]
+)
 ```
 
 **Step 5: Verify compiles**
@@ -1909,6 +1997,7 @@ git commit -m "feat: add NIP-78 Nostr event publishing for drafts"
 ### Task 15: Add NIP-78 Event Loading and Subscription
 
 **Files:**
+
 - Modify: `src/hooks/useUploadDrafts.ts`
 
 **Step 1: Add more imports**
@@ -1922,47 +2011,46 @@ import { useAppContext } from './useAppContext'
 **Step 2: Add EventStore hook**
 
 ```typescript
-  const eventStore = useEventStore()
-  const { pool } = useAppContext()
+const eventStore = useEventStore()
+const { pool } = useAppContext()
 ```
 
 **Step 3: Add subscription effect**
 
 ```typescript
-  // Subscribe to NIP-78 event changes
-  useEffect(() => {
-    if (!user?.pubkey) return
+// Subscribe to NIP-78 event changes
+useEffect(() => {
+  if (!user?.pubkey) return
 
-    const readRelays = config.relays
-      .filter(r => r.tags.includes('read'))
-      .map(r => r.url)
+  const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
-    const loader = createAddressLoader(pool)
-    const sub = loader({
-      kind: 30078,
-      pubkey: user.pubkey,
-      identifier: 'nostube-uploads',
-      relays: readRelays
-    }).subscribe(event => {
-      if (event) {
-        try {
-          const parsed = JSON.parse(event.content)
-          const nostrDrafts = parsed.drafts || []
-          mergeDraftsFromNostr(nostrDrafts)
-        } catch (error) {
-          console.error('Failed to parse NIP-78 event:', error)
-        }
+  const loader = createAddressLoader(pool)
+  const sub = loader({
+    kind: 30078,
+    pubkey: user.pubkey,
+    identifier: 'nostube-uploads',
+    relays: readRelays,
+  }).subscribe(event => {
+    if (event) {
+      try {
+        const parsed = JSON.parse(event.content)
+        const nostrDrafts = parsed.drafts || []
+        mergeDraftsFromNostr(nostrDrafts)
+      } catch (error) {
+        console.error('Failed to parse NIP-78 event:', error)
       }
-    })
+    }
+  })
 
-    return () => sub.unsubscribe()
-  }, [user?.pubkey, pool, config.relays])
+  return () => sub.unsubscribe()
+}, [user?.pubkey, pool, config.relays])
 ```
 
 **Step 4: Implement merge function**
 
 ```typescript
-  const mergeDraftsFromNostr = useCallback((nostrDrafts: UploadDraft[]) => {
+const mergeDraftsFromNostr = useCallback(
+  (nostrDrafts: UploadDraft[]) => {
     setDrafts(prevLocal => {
       const draftMap = new Map<string, UploadDraft>()
 
@@ -1978,16 +2066,16 @@ import { useAppContext } from './useAppContext'
       })
 
       // Sort by updatedAt descending
-      const merged = Array.from(draftMap.values()).sort(
-        (a, b) => b.updatedAt - a.updatedAt
-      )
+      const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
 
       // Save merged result to localStorage
       saveToLocalStorage(merged)
 
       return merged
     })
-  }, [saveToLocalStorage])
+  },
+  [saveToLocalStorage]
+)
 ```
 
 **Step 5: Verify compiles**
@@ -2009,6 +2097,7 @@ git commit -m "feat: add NIP-78 event subscription and merge logic"
 ### Task 16: Add Translations for DE/FR/ES
 
 **Files:**
+
 - Modify: `public/locales/de/translation.json`
 - Modify: `public/locales/fr/translation.json`
 - Modify: `public/locales/es/translation.json`
@@ -2149,6 +2238,7 @@ git commit -m "feat: add DE/FR/ES translations for draft feature"
 ### Task 17: Update CHANGELOG
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
 **Step 1: Add entry to Unreleased section**
@@ -2173,6 +2263,7 @@ git commit -m "docs: update CHANGELOG for upload draft persistence feature"
 ### Task 18: Final Testing and Verification
 
 **Files:**
+
 - None (testing only)
 
 **Step 1: Run all tests**
@@ -2200,6 +2291,7 @@ Expected: Build succeeds
 Start dev server: `npm run dev`
 
 Test the following:
+
 - [ ] Navigate to /upload with no drafts → creates new draft, shows form
 - [ ] Upload a video → auto-saves immediately
 - [ ] Type in title field → auto-saves after 3 seconds
@@ -2235,6 +2327,7 @@ The upload draft persistence feature is complete and ready for deployment.
 **Estimated Time:** 4-6 hours (with testing)
 
 **Key Files Created:**
+
 - `src/types/upload-draft.ts`
 - `src/lib/upload-draft-utils.ts` + tests
 - `src/hooks/useUploadDrafts.ts` + tests
@@ -2243,6 +2336,7 @@ The upload draft persistence feature is complete and ready for deployment.
 - `src/pages/UploadPage.tsx`
 
 **Key Files Modified:**
+
 - `src/hooks/useVideoUpload.ts`
 - `src/components/VideoUpload.tsx`
 - `src/AppRouter.tsx`
@@ -2250,6 +2344,7 @@ The upload draft persistence feature is complete and ready for deployment.
 - `CHANGELOG.md`
 
 **Testing Coverage:**
+
 - 15 utility function tests
 - 8 hook tests
 - 7 DraftCard tests
@@ -2257,6 +2352,7 @@ The upload draft persistence feature is complete and ready for deployment.
 - Manual integration testing
 
 **Architecture Highlights:**
+
 - Dual persistence: localStorage (primary) + NIP-78 (sync)
 - Debounced auto-save (3s) for form fields
 - Immediate save for upload milestones

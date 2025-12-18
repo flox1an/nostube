@@ -18,9 +18,8 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const qualityInfo = getVideoQualityInfo(draft)
   const relativeTime = getRelativeTime(draft.updatedAt)
 
-  const timeText = typeof relativeTime === 'string'
-    ? t(relativeTime)
-    : t(relativeTime[0], relativeTime[1])
+  const timeText =
+    typeof relativeTime === 'string' ? t(relativeTime) : t(relativeTime[0], relativeTime[1])
 
   return (
     <Card
@@ -45,18 +44,10 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium truncate">
-            {draft.title || t('upload.draft.untitled')}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {qualityInfo || '—'}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t(smartStatus)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {timeText}
-          </p>
+          <h3 className="font-medium truncate">{draft.title || t('upload.draft.untitled')}</h3>
+          <p className="text-sm text-muted-foreground mt-1">{qualityInfo || '—'}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t(smartStatus)}</p>
+          <p className="text-xs text-muted-foreground mt-2">{timeText}</p>
         </div>
 
         {/* Delete button */}
@@ -64,7 +55,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation()
               onDelete()
             }}

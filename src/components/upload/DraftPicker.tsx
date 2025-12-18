@@ -12,11 +12,27 @@ interface DraftPickerProps {
   onDeleteDraft: (draftId: string) => void
 }
 
-export function DraftPicker({ drafts, onSelectDraft, onNewUpload, onDeleteDraft }: DraftPickerProps) {
+export function DraftPicker({
+  drafts,
+  onSelectDraft,
+  onNewUpload,
+  onDeleteDraft,
+}: DraftPickerProps) {
   const { t } = useTranslation()
   const { toast, dismiss } = useToast()
   const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null)
   const deleteTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const currentToastIdRef = useRef<string | undefined>(undefined)
+
+  const handleUndo = () => {
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current)
+    }
+    setDeletingDraftId(null)
+    if (currentToastIdRef.current) {
+      dismiss(currentToastIdRef.current)
+    }
+  }
 
   const handleDelete = (draftId: string) => {
     setDeletingDraftId(draftId)
@@ -25,29 +41,19 @@ export function DraftPicker({ drafts, onSelectDraft, onNewUpload, onDeleteDraft 
       title: t('upload.draft.deleted'),
       description: t('upload.draft.deletedDescription'),
       action: (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleUndo(id)}
-        >
+        <Button variant="outline" size="sm" onClick={handleUndo}>
           {t('upload.draft.undo')}
         </Button>
       ),
-      duration: 5000
+      duration: 5000,
     })
+
+    currentToastIdRef.current = id
 
     deleteTimeoutRef.current = setTimeout(() => {
       onDeleteDraft(draftId)
       setDeletingDraftId(null)
     }, 5000)
-  }
-
-  const handleUndo = (toastId: string) => {
-    if (deleteTimeoutRef.current) {
-      clearTimeout(deleteTimeoutRef.current)
-    }
-    setDeletingDraftId(null)
-    dismiss(toastId)
   }
 
   const visibleDrafts = drafts.filter(d => d.id !== deletingDraftId)

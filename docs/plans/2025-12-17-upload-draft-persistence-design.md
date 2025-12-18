@@ -143,11 +143,13 @@ Videos and thumbnails are uploaded immediately to Blossom servers, so only BlobD
 **When:** User enters `/upload` page
 
 **Logic:**
+
 - 0 drafts → Create new empty draft, show upload form
 - 1 draft → Auto-load that draft in upload form
 - 2+ drafts → Show draft picker
 
 **Draft Initialization:**
+
 ```typescript
 {
   id: crypto.randomUUID(),
@@ -168,6 +170,7 @@ Videos and thumbnails are uploaded immediately to Blossom servers, so only BlobD
 ### Auto-Save Behavior
 
 **Immediate saves** (no debounce):
+
 - Video upload completes
 - Video mirroring completes
 - Thumbnail upload completes
@@ -176,6 +179,7 @@ Videos and thumbnails are uploaded immediately to Blossom servers, so only BlobD
 - Video variant removed
 
 **Debounced saves** (3 seconds):
+
 - Title changed
 - Description changed
 - Tag added/removed
@@ -184,22 +188,26 @@ Videos and thumbnails are uploaded immediately to Blossom servers, so only BlobD
 - Input method changed
 
 **Page unload save:**
+
 - `beforeunload` event triggers final save if dirty
 
 ### Publish and Cleanup
 
 **On successful publish:**
+
 1. Delete draft from list
 2. Save updated list to localStorage
 3. Sync to Nostr (without published draft)
 4. Redirect to video page
 
 **30-day auto-cleanup:**
+
 - Applied on load
 - Removes drafts where `createdAt < (now - 30 days)`
 - Syncs cleaned list to both stores
 
 **Hard limit:**
+
 - Maximum 10 concurrent drafts
 - Shows error toast if user tries to create 11th
 
@@ -208,6 +216,7 @@ Videos and thumbnails are uploaded immediately to Blossom servers, so only BlobD
 ### Draft Picker (2+ drafts)
 
 **Layout:**
+
 ```
 ┌─────────────────────────────────────┐
 │ [+] New Upload                      │
@@ -236,6 +245,7 @@ Your Drafts (3)
 ```
 
 **Draft Card Content:**
+
 - Thumbnail preview (or placeholder with ImageOff icon)
 - Title (or "Untitled")
 - Video quality info: "1080p • 450 MB" or "720p, 1080p • 1.2 GB"
@@ -249,10 +259,12 @@ Your Drafts (3)
 ### Upload Form
 
 **Back Button:**
+
 - Shows "← Back to Drafts" when opened from picker (2+ drafts scenario)
 - Hidden when 0 or 1 draft (no picker shown)
 
 **Form State:**
+
 - Loads all persisted state from draft
 - Auto-saves on changes
 - Shows unsaved indicator if dirty
@@ -262,21 +274,21 @@ Your Drafts (3)
 ```typescript
 // No videos yet
 if (draft.uploadInfo.videos.length === 0) {
-  return "Add video to start"
+  return 'Add video to start'
 }
 
 // Has videos but no title
 if (!draft.title || draft.title.trim() === '') {
-  return "Add title to publish"
+  return 'Add title to publish'
 }
 
 // Has videos and title but no thumbnail
 if (draft.thumbnailUploadInfo.uploadedBlobs.length === 0) {
-  return "Add thumbnail to publish"
+  return 'Add thumbnail to publish'
 }
 
 // Ready to publish
-return "Ready to publish"
+return 'Ready to publish'
 ```
 
 ### Delete with Undo
@@ -295,6 +307,7 @@ return "Ready to publish"
 **Location:** `src/hooks/useUploadDrafts.ts`
 
 **Responsibilities:**
+
 - Load drafts on mount (merge localStorage + Nostr)
 - CRUD operations (create, update, delete)
 - Persistence (localStorage + Nostr sync)
@@ -302,6 +315,7 @@ return "Ready to publish"
 - Conflict resolution (Nostr wins)
 
 **API:**
+
 ```typescript
 interface UseUploadDraftsReturn {
   drafts: UploadDraft[]
@@ -373,6 +387,7 @@ interface DraftPickerProps {
 ```
 
 **Features:**
+
 - "New Upload" prominent button at top
 - "Your Drafts (N)" heading
 - List of DraftCard components
@@ -392,6 +407,7 @@ interface DraftCardProps {
 ```
 
 **Features:**
+
 - Thumbnail or placeholder
 - Title or "Untitled"
 - Video quality + size
@@ -441,6 +457,7 @@ export default function UploadPage() {
 **Location:** `src/components/VideoUpload.tsx` (refactored)
 
 **Changes:**
+
 1. Accept `draft` and `onBack` props
 2. Initialize state from draft
 3. Sync changes back to draft via callback
@@ -522,10 +539,10 @@ export function useVideoUpload(
         thumbnailUploadInfo,
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
         thumbnailSource,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       })
     }
-  }, [title, description, tags, /* ... all dependencies */])
+  }, [title, description, tags /* ... all dependencies */])
 
   // Existing upload logic unchanged
 }
@@ -591,9 +608,8 @@ export function getVideoQualityInfo(draft: UploadDraft): string {
   })
 
   const totalSizeMB = draft.uploadInfo.videos.reduce((sum, v) => sum + (v.sizeMB || 0), 0)
-  const sizeStr = totalSizeMB > 1024
-    ? `${(totalSizeMB / 1024).toFixed(1)} GB`
-    : `${Math.round(totalSizeMB)} MB`
+  const sizeStr =
+    totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)} GB` : `${Math.round(totalSizeMB)} MB`
 
   return `${qualities.join(', ')} • ${sizeStr}`
 }
@@ -621,7 +637,7 @@ export function getRelativeTime(timestamp: number): string {
 
 ```typescript
 export function removeOldDrafts(drafts: UploadDraft[], maxAgeDays = 30): UploadDraft[] {
-  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000)
+  const cutoffTime = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
   return drafts.filter(d => d.createdAt > cutoffTime)
 }
 ```
@@ -635,8 +651,8 @@ const createDraft = (): UploadDraft => {
   if (drafts.length >= 10) {
     toast({
       title: t('upload.draft.maxDraftsReached'),
-      variant: "destructive",
-      duration: 5000
+      variant: 'destructive',
+      duration: 5000,
     })
     throw new Error('Maximum 10 drafts allowed')
   }
@@ -655,8 +671,8 @@ const saveToNostr = async (drafts: UploadDraft[]) => {
     // Silent failure - localStorage has the data
     toast({
       title: t('upload.draft.syncFailed'),
-      variant: "default",
-      duration: 3000
+      variant: 'default',
+      duration: 3000,
     })
   }
 }
@@ -688,7 +704,7 @@ if (draftFromParam) {
   if (!found) {
     toast({
       title: t('upload.draft.notFound'),
-      variant: "destructive"
+      variant: 'destructive',
     })
     // Fall back to picker or new draft
   }
@@ -756,6 +772,7 @@ if (draftFromParam) {
 ### Unit Tests
 
 **useUploadDrafts Hook** (`src/hooks/useUploadDrafts.test.ts`):
+
 - ✓ Create draft increments count and assigns UUID
 - ✓ Max 10 drafts enforcement shows error
 - ✓ Update draft modifies updatedAt timestamp
@@ -766,6 +783,7 @@ if (draftFromParam) {
 - ✓ Sort by updatedAt descending
 
 **Draft Utilities** (`src/lib/upload-draft-utils.test.ts`):
+
 - ✓ `getSmartStatus()` returns "Add video" when empty
 - ✓ `getSmartStatus()` returns "Add title" when video but no title
 - ✓ `getSmartStatus()` returns "Add thumbnail" when video+title but no thumb
@@ -778,6 +796,7 @@ if (draftFromParam) {
 - ✓ `removeOldDrafts()` keeps recent drafts
 
 **DraftPicker Component** (`src/components/upload/DraftPicker.test.tsx`):
+
 - ✓ Renders "New Upload" button
 - ✓ Displays correct draft count in heading
 - ✓ Shows draft cards in correct order (updatedAt desc)
@@ -787,6 +806,7 @@ if (draftFromParam) {
 - ✓ Calls onSelectDraft when card clicked
 
 **DraftCard Component** (`src/components/upload/DraftCard.test.tsx`):
+
 - ✓ Displays thumbnail when available
 - ✓ Shows placeholder when no thumbnail
 - ✓ Shows title or "Untitled"
@@ -798,6 +818,7 @@ if (draftFromParam) {
 ### Integration Tests
 
 **Upload Flow with Drafts** (`src/test/upload-draft-flow.test.tsx`):
+
 - ✓ Create new draft → upload video → saves draft → resume from picker
 - ✓ Draft auto-saves immediately on video upload complete
 - ✓ Draft auto-saves debounced on title change
@@ -807,6 +828,7 @@ if (draftFromParam) {
 - ✓ 0 drafts create new and show form
 
 **Persistence Tests** (`src/test/upload-draft-persistence.test.ts`):
+
 - ✓ Save to localStorage works
 - ✓ Load from localStorage works
 - ✓ Save to Nostr publishes kind 30078 with correct tags

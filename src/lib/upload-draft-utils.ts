@@ -30,9 +30,8 @@ export function getVideoQualityInfo(draft: UploadDraft): string {
   })
 
   const totalSizeMB = draft.uploadInfo.videos.reduce((sum, v) => sum + (v.sizeMB || 0), 0)
-  const sizeStr = totalSizeMB > 1024
-    ? `${(totalSizeMB / 1024).toFixed(1)} GB`
-    : `${Math.round(totalSizeMB)} MB`
+  const sizeStr =
+    totalSizeMB > 1024 ? `${(totalSizeMB / 1024).toFixed(1)} GB` : `${Math.round(totalSizeMB)} MB`
 
   return `${qualities.join(', ')} • ${sizeStr}`
 }
@@ -52,6 +51,6 @@ export function getRelativeTime(timestamp: number): string | [string, { count: n
 }
 
 export function removeOldDrafts(drafts: UploadDraft[], maxAgeDays = 30): UploadDraft[] {
-  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000)
+  const cutoffTime = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
   return drafts.filter(d => d.createdAt > cutoffTime)
 }

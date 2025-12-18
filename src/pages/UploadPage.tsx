@@ -14,11 +14,11 @@ export function UploadPage() {
     try {
       const newDraft = createDraft()
       setCurrentDraft(newDraft)
-    } catch (error) {
+    } catch {
       toast({
         title: t('upload.draft.maxDraftsReached'),
         variant: 'destructive',
-        duration: 5000
+        duration: 5000,
       })
     }
   }
@@ -46,10 +46,5 @@ export function UploadPage() {
     )
   }
 
-  return (
-    <VideoUpload
-      draft={currentDraft}
-      onBack={() => setCurrentDraft(null)}
-    />
-  )
+  return <VideoUpload draft={currentDraft} onBack={() => setCurrentDraft(null)} />
 }

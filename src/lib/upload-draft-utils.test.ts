@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { getSmartStatus, getVideoQualityInfo, getRelativeTime, removeOldDrafts } from './upload-draft-utils'
+import {
+  getSmartStatus,
+  getVideoQualityInfo,
+  getRelativeTime,
+  removeOldDrafts,
+} from './upload-draft-utils'
 import type { UploadDraft } from '@/types/upload-draft'
 
 describe('getSmartStatus', () => {
@@ -16,7 +21,7 @@ describe('getSmartStatus', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addVideo')
   })
@@ -33,17 +38,38 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
-      thumbnailUploadInfo: { uploadedBlobs: [{ url: 'http://test.com/thumb', sha256: 'def', size: 10, type: 'image/jpeg', uploaded: Date.now() }], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailUploadInfo: {
+        uploadedBlobs: [
+          {
+            url: 'http://test.com/thumb',
+            sha256: 'def',
+            size: 10,
+            type: 'image/jpeg',
+            uploaded: Date.now(),
+          },
+        ],
+        mirroredBlobs: [],
+      },
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addTitle')
   })
@@ -60,17 +86,27 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addThumbnail')
   })
@@ -87,17 +123,38 @@ describe('getSmartStatus', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 100,
-          uploadedBlobs: [{ url: 'http://test.com/video', sha256: 'abc', size: 100, type: 'video/mp4', uploaded: Date.now() }],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 100,
+            uploadedBlobs: [
+              {
+                url: 'http://test.com/video',
+                sha256: 'abc',
+                size: 100,
+                type: 'video/mp4',
+                uploaded: Date.now(),
+              },
+            ],
+            mirroredBlobs: [],
+          },
+        ],
       },
-      thumbnailUploadInfo: { uploadedBlobs: [{ url: 'http://test.com/thumb', sha256: 'def', size: 10, type: 'image/jpeg', uploaded: Date.now() }], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailUploadInfo: {
+        uploadedBlobs: [
+          {
+            url: 'http://test.com/thumb',
+            sha256: 'def',
+            size: 10,
+            type: 'image/jpeg',
+            uploaded: Date.now(),
+          },
+        ],
+        mirroredBlobs: [],
+      },
+      thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.ready')
   })
@@ -117,7 +174,7 @@ describe('getVideoQualityInfo', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('')
   })
@@ -134,17 +191,19 @@ describe('getVideoQualityInfo', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '1920x1080',
-          duration: 120,
-          sizeMB: 450,
-          uploadedBlobs: [],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '1920x1080',
+            duration: 120,
+            sizeMB: 450,
+            uploadedBlobs: [],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('1080p • 450 MB')
   })
@@ -168,7 +227,7 @@ describe('getVideoQualityInfo', () => {
             duration: 120,
             sizeMB: 200,
             uploadedBlobs: [],
-            mirroredBlobs: []
+            mirroredBlobs: [],
           },
           {
             inputMethod: 'file',
@@ -176,12 +235,12 @@ describe('getVideoQualityInfo', () => {
             duration: 120,
             sizeMB: 450,
             uploadedBlobs: [],
-            mirroredBlobs: []
-          }
-        ]
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('720p, 1080p • 650 MB')
   })
@@ -198,17 +257,19 @@ describe('getVideoQualityInfo', () => {
       contentWarning: { enabled: false, reason: '' },
       inputMethod: 'file',
       uploadInfo: {
-        videos: [{
-          inputMethod: 'file',
-          dimension: '3840x2160',
-          duration: 120,
-          sizeMB: 2048,
-          uploadedBlobs: [],
-          mirroredBlobs: []
-        }]
+        videos: [
+          {
+            inputMethod: 'file',
+            dimension: '3840x2160',
+            duration: 120,
+            sizeMB: 2048,
+            uploadedBlobs: [],
+            mirroredBlobs: [],
+          },
+        ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('4K • 2.0 GB')
   })
@@ -261,7 +322,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
+        thumbnailSource: 'generated',
       },
       {
         id: '2',
@@ -275,8 +336,8 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
-      }
+        thumbnailSource: 'generated',
+      },
     ]
     const result = removeOldDrafts(drafts, 30)
     expect(result).toHaveLength(1)
@@ -298,7 +359,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
+        thumbnailSource: 'generated',
       },
       {
         id: '2',
@@ -312,8 +373,8 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-        thumbnailSource: 'generated'
-      }
+        thumbnailSource: 'generated',
+      },
     ]
     const result = removeOldDrafts(drafts, 30)
     expect(result).toHaveLength(2)

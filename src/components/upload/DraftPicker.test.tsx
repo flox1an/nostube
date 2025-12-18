@@ -18,7 +18,7 @@ const mockDrafts: UploadDraft[] = [
     inputMethod: 'file',
     uploadInfo: { videos: [] },
     thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-    thumbnailSource: 'generated'
+    thumbnailSource: 'generated',
   },
   {
     id: 'draft-2',
@@ -32,8 +32,8 @@ const mockDrafts: UploadDraft[] = [
     inputMethod: 'file',
     uploadInfo: { videos: [] },
     thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-    thumbnailSource: 'generated'
-  }
+    thumbnailSource: 'generated',
+  },
 ]
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

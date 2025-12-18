@@ -37,21 +37,31 @@ export function useVideoUpload(
   const [tags, setTags] = useState<string[]>(initialDraft?.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [language, setLanguage] = useState(initialDraft?.language || 'en')
-  const [inputMethod, setInputMethod] = useState<'file' | 'url'>(initialDraft?.inputMethod || 'file')
+  const [inputMethod, setInputMethod] = useState<'file' | 'url'>(
+    initialDraft?.inputMethod || 'file'
+  )
   const [videoUrl, setVideoUrl] = useState(initialDraft?.videoUrl || '')
   const [file, setFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
-  const [uploadInfo, setUploadInfo] = useState<UploadInfo>(initialDraft?.uploadInfo || { videos: [] })
+  const [uploadInfo, setUploadInfo] = useState<UploadInfo>(
+    initialDraft?.uploadInfo || { videos: [] }
+  )
   const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
-  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(initialDraft?.thumbnailSource || 'generated')
+  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(
+    initialDraft?.thumbnailSource || 'generated'
+  )
   const [thumbnailUploadInfo, setThumbnailUploadInfo] = useState<ThumbnailUploadInfo>({
     uploadedBlobs: initialDraft?.thumbnailUploadInfo.uploadedBlobs || [],
     mirroredBlobs: initialDraft?.thumbnailUploadInfo.mirroredBlobs || [],
     uploading: false,
   })
-  const [contentWarningEnabled, setContentWarningEnabled] = useState(initialDraft?.contentWarning.enabled || false)
-  const [contentWarningReason, setContentWarningReason] = useState(initialDraft?.contentWarning.reason || '')
+  const [contentWarningEnabled, setContentWarningEnabled] = useState(
+    initialDraft?.contentWarning.enabled || false
+  )
+  const [contentWarningReason, setContentWarningReason] = useState(
+    initialDraft?.contentWarning.reason || ''
+  )
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
 

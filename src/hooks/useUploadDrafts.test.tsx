@@ -7,13 +7,17 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => { store[key] = value },
-    clear: () => { store = {} }
+    setItem: (key: string, value: string) => {
+      store[key] = value
+    },
+    clear: () => {
+      store = {}
+    },
   }
 })()
 
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+  value: localStorageMock,
 })
 
 describe('useUploadDrafts', () => {
@@ -131,13 +135,16 @@ describe('useUploadDrafts', () => {
       inputMethod: 'file' as const,
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated' as const
+      thumbnailSource: 'generated' as const,
     }
-    localStorage.setItem('nostube_upload_drafts', JSON.stringify({
-      version: '1',
-      lastModified: Date.now(),
-      drafts: [draft]
-    }))
+    localStorage.setItem(
+      'nostube_upload_drafts',
+      JSON.stringify({
+        version: '1',
+        lastModified: Date.now(),
+        drafts: [draft],
+      })
+    )
 
     const { result } = renderHook(() => useUploadDrafts())
 

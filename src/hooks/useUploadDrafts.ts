@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { UploadDraft, UploadDraftsData } from '@/types/upload-draft'
 import { removeOldDrafts } from '@/lib/upload-draft-utils'
 import { useCurrentUser } from './useCurrentUser'
@@ -30,39 +30,41 @@ function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
 }
 
 export function useUploadDrafts() {
-  const [drafts, setDrafts] = useState<UploadDraft[]>([])
-  const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  const { user } = useCurrentUser()
-  const { publish } = useNostrPublish()
-  const { config, pool } = useAppContext()
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  const [drafts, setDrafts] = useState<UploadDraft[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
         const parsed: UploadDraftsData = JSON.parse(stored)
         const cleaned = removeOldDrafts(parsed.drafts, 30)
-        setDrafts(cleaned)
 
         // Save cleaned version if we removed any
         if (cleaned.length !== parsed.drafts.length) {
-          saveToLocalStorage(cleaned)
+          const data: UploadDraftsData = {
+            version: '1',
+            lastModified: Date.now(),
+            drafts: cleaned,
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
         }
+
+        return cleaned
       } catch (error) {
         console.error('Failed to load drafts from localStorage:', error)
       }
     }
-    setIsLoading(false)
-  }, [])
+    return []
+  })
+  const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
+
+  const { user } = useCurrentUser()
+  const { publish } = useNostrPublish()
+  const { config, pool } = useAppContext()
 
   const saveToLocalStorage = useCallback((draftsToSave: UploadDraft[]) => {
     const data: UploadDraftsData = {
       version: '1',
       lastModified: Date.now(),
-      drafts: draftsToSave
+      drafts: draftsToSave,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }, [])
@@ -80,7 +82,7 @@ export function useUploadDrafts() {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-      thumbnailSource: 'generated'
+      thumbnailSource: 'generated',
     }
 
     setDrafts(prev => {
@@ -96,113 +98,121 @@ export function useUploadDrafts() {
     return newDraft
   }, [saveToLocalStorage])
 
-  const saveToNostr = useCallback(async (draftsToSave: UploadDraft[]) => {
-    if (!user) return
+  const saveToNostr = useCallback(
+    async (draftsToSave: UploadDraft[]) => {
+      if (!user) return
 
-    try {
-      const event = {
-        kind: 30078,
-        content: JSON.stringify({
-          version: '1',
-          lastModified: Date.now(),
-          drafts: draftsToSave
-        }),
-        created_at: nowInSecs(),
-        tags: [['d', 'nostube-uploads']]
+      try {
+        const event = {
+          kind: 30078,
+          content: JSON.stringify({
+            version: '1',
+            lastModified: Date.now(),
+            drafts: draftsToSave,
+          }),
+          created_at: nowInSecs(),
+          tags: [['d', 'nostube-uploads']],
+        }
+
+        const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+
+        await publish({ event, relays: writeRelays })
+      } catch (error) {
+        console.error('Failed to sync to Nostr:', error)
+        // Silent failure - localStorage has the data
       }
+    },
+    [user, publish, config.relays]
+  )
 
-      const writeRelays = config.relays
-        .filter(r => r.tags.includes('write'))
-        .map(r => r.url)
-
-      await publish({ event, relays: writeRelays })
-    } catch (error) {
-      console.error('Failed to sync to Nostr:', error)
-      // Silent failure - localStorage has the data
-    }
-  }, [user, publish, config.relays])
-
-  const saveDraftsImmediate = useCallback((draftsToSave: UploadDraft[]) => {
-    saveToLocalStorage(draftsToSave)
-    saveToNostr(draftsToSave)
-  }, [saveToLocalStorage, saveToNostr])
-
-  const debouncedSaveDrafts = useCallback(
-    debounce((draftsToSave: UploadDraft[]) => {
+  const saveDraftsImmediate = useCallback(
+    (draftsToSave: UploadDraft[]) => {
       saveToLocalStorage(draftsToSave)
       saveToNostr(draftsToSave)
-    }, 3000),
+    },
     [saveToLocalStorage, saveToNostr]
   )
 
-  const updateDraft = useCallback((draftId: string, updates: Partial<UploadDraft>) => {
-    setDrafts(prev => {
-      const updated = prev.map(d =>
-        d.id === draftId
-          ? { ...d, ...updates, updatedAt: Date.now() }
-          : d
-      )
+  const debouncedSaveDrafts = useMemo(
+    () =>
+      debounce((draftsToSave: UploadDraft[]) => {
+        saveToLocalStorage(draftsToSave)
+        saveToNostr(draftsToSave)
+      }, 3000),
+    [saveToLocalStorage, saveToNostr]
+  )
 
-      // Immediate save for milestones, debounced for form fields
-      if (isMilestoneUpdate(updates)) {
-        saveDraftsImmediate(updated)
-      } else {
-        debouncedSaveDrafts(updated)
-      }
+  const updateDraft = useCallback(
+    (draftId: string, updates: Partial<UploadDraft>) => {
+      setDrafts(prev => {
+        const updated = prev.map(d =>
+          d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
+        )
 
-      return updated
-    })
-  }, [saveDraftsImmediate, debouncedSaveDrafts])
-
-  const deleteDraft = useCallback((draftId: string) => {
-    setDrafts(prev => {
-      const updated = prev.filter(d => d.id !== draftId)
-      saveToLocalStorage(updated)
-      return updated
-    })
-  }, [saveToLocalStorage])
-
-  const mergeDraftsFromNostr = useCallback((nostrDrafts: UploadDraft[]) => {
-    setDrafts(prevLocal => {
-      const draftMap = new Map<string, UploadDraft>()
-
-      // Add local drafts first
-      prevLocal.forEach(d => draftMap.set(d.id, d))
-
-      // Nostr drafts win on conflict (newer updatedAt)
-      nostrDrafts.forEach(d => {
-        const existing = draftMap.get(d.id)
-        if (!existing || d.updatedAt > existing.updatedAt) {
-          draftMap.set(d.id, d)
+        // Immediate save for milestones, debounced for form fields
+        if (isMilestoneUpdate(updates)) {
+          saveDraftsImmediate(updated)
+        } else {
+          debouncedSaveDrafts(updated)
         }
+
+        return updated
       })
+    },
+    [saveDraftsImmediate, debouncedSaveDrafts]
+  )
 
-      // Sort by updatedAt descending
-      const merged = Array.from(draftMap.values()).sort(
-        (a, b) => b.updatedAt - a.updatedAt
-      )
+  const deleteDraft = useCallback(
+    (draftId: string) => {
+      setDrafts(prev => {
+        const updated = prev.filter(d => d.id !== draftId)
+        saveToLocalStorage(updated)
+        return updated
+      })
+    },
+    [saveToLocalStorage]
+  )
 
-      // Save merged result to localStorage
-      saveToLocalStorage(merged)
+  const mergeDraftsFromNostr = useCallback(
+    (nostrDrafts: UploadDraft[]) => {
+      setDrafts(prevLocal => {
+        const draftMap = new Map<string, UploadDraft>()
 
-      return merged
-    })
-  }, [saveToLocalStorage])
+        // Add local drafts first
+        prevLocal.forEach(d => draftMap.set(d.id, d))
+
+        // Nostr drafts win on conflict (newer updatedAt)
+        nostrDrafts.forEach(d => {
+          const existing = draftMap.get(d.id)
+          if (!existing || d.updatedAt > existing.updatedAt) {
+            draftMap.set(d.id, d)
+          }
+        })
+
+        // Sort by updatedAt descending
+        const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
+
+        // Save merged result to localStorage
+        saveToLocalStorage(merged)
+
+        return merged
+      })
+    },
+    [saveToLocalStorage]
+  )
 
   // Subscribe to NIP-78 event changes
   useEffect(() => {
     if (!user?.pubkey) return
 
-    const readRelays = config.relays
-      .filter(r => r.tags.includes('read'))
-      .map(r => r.url)
+    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
     const loader = createAddressLoader(pool)
     const sub = loader({
       kind: 30078,
       pubkey: user.pubkey,
       identifier: 'nostube-uploads',
-      relays: readRelays
+      relays: readRelays,
     }).subscribe(event => {
       if (event) {
         try {
@@ -225,6 +235,6 @@ export function useUploadDrafts() {
     createDraft,
     updateDraft,
     deleteDraft,
-    isLoading
+    isLoading: false,
   }
 }

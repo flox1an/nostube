@@ -46,7 +46,9 @@ export function useVideoUpload(
   const [uploadInfo, setUploadInfo] = useState<UploadInfo>(
     initialDraft?.uploadInfo || { videos: [] }
   )
-  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>('initial')
+  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>(
+    initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial'
+  )
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(
     initialDraft?.thumbnailSource || 'generated'

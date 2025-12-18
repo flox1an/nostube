@@ -301,6 +301,20 @@ export function useUploadDrafts() {
     return () => sub.unsubscribe()
   }, [user?.pubkey, user?.signer, pool, config.relays, mergeDraftsFromNostr])
 
+  const refreshDrafts = useCallback(() => {
+    if (import.meta.env.DEV) {
+      console.log('[useUploadDrafts] refreshDrafts - forcing re-fetch from localStorage')
+    }
+    setVersion(v => v + 1)
+  }, [])
+
+  const flushNostrSync = useCallback(() => {
+    if (import.meta.env.DEV) {
+      console.log('[useUploadDrafts] flushNostrSync - forcing pending Nostr sync')
+    }
+    debouncedSaveToNostr.flush()
+  }, [debouncedSaveToNostr])
+
   return {
     drafts,
     currentDraft,
@@ -308,6 +322,8 @@ export function useUploadDrafts() {
     createDraft,
     updateDraft,
     deleteDraft,
+    refreshDrafts,
+    flushNostrSync,
     isLoading: false,
   }
 }

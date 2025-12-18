@@ -151,7 +151,21 @@ export function useUploadDrafts() {
 
   const saveToNostr = useCallback(
     async (draftsToSave: UploadDraft[]) => {
-      if (!user?.signer?.nip44) return
+      if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] saveToNostr called with', draftsToSave.length, 'drafts')
+        console.log('[useUploadDrafts] user:', user?.pubkey ? 'logged in' : 'not logged in')
+        console.log(
+          '[useUploadDrafts] signer.nip44:',
+          user?.signer?.nip44 ? 'available' : 'not available'
+        )
+      }
+
+      if (!user?.signer?.nip44) {
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] saveToNostr - early return (no signer or nip44)')
+        }
+        return
+      }
 
       try {
         const plaintext = JSON.stringify({
@@ -159,6 +173,10 @@ export function useUploadDrafts() {
           lastModified: Date.now(),
           drafts: draftsToSave,
         })
+
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] saveToNostr - encrypting draft data')
+        }
 
         // Encrypt with user's own key for privacy
         const content = await user.signer.nip44.encrypt(user.pubkey, plaintext)
@@ -172,9 +190,17 @@ export function useUploadDrafts() {
 
         const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] saveToNostr - publishing to write relays:', writeRelays)
+        }
+
         await publish({ event, relays: writeRelays })
+
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] saveToNostr - publish successful')
+        }
       } catch (error) {
-        console.error('Failed to sync to Nostr:', error)
+        console.error('[useUploadDrafts] Failed to sync to Nostr:', error)
         // Silent failure - localStorage has the data
       }
     },

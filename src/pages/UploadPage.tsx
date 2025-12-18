@@ -30,9 +30,9 @@ export function UploadPage() {
   }
 
   // 1 draft → auto-resume
-  if (drafts.length === 1) {
-    return <VideoUpload draft={drafts[0]} />
-  }
+  //if (drafts.length === 1) {
+  //    return <VideoUpload draft={drafts[0]} />
+  //  }
 
   // 2+ drafts → picker or form
   if (!currentDraft) {

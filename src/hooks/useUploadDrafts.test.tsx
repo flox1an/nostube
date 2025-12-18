@@ -1,39 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useUploadDrafts } from './useUploadDrafts'
+import { TestApp } from '@/test/TestApp'
+import type { ReactNode } from 'react'
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value
-    },
-    clear: () => {
-      store = {}
-    },
-  }
-})()
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-})
+const wrapper = ({ children }: { children: ReactNode }) => <TestApp>{children}</TestApp>
 
 describe('useUploadDrafts', () => {
   beforeEach(() => {
-    localStorageMock.clear()
+    localStorage.clear()
     vi.clearAllMocks()
   })
 
   it('starts with empty drafts', () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
     expect(result.current.drafts).toEqual([])
     expect(result.current.isLoading).toBe(false)
   })
 
   it('creates a new draft with UUID', () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     act(() => {
       const draft = result.current.createDraft()
@@ -48,7 +34,7 @@ describe('useUploadDrafts', () => {
   })
 
   it('enforces max 10 drafts', () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     // Create 10 drafts
     act(() => {
@@ -68,7 +54,7 @@ describe('useUploadDrafts', () => {
   })
 
   it('updates draft and modifies updatedAt', async () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     let draftId: string
     act(() => {
@@ -90,7 +76,7 @@ describe('useUploadDrafts', () => {
   })
 
   it('deletes draft', () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     let draftId: string
     act(() => {
@@ -108,7 +94,7 @@ describe('useUploadDrafts', () => {
   })
 
   it('persists to localStorage on create', () => {
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     act(() => {
       result.current.createDraft()
@@ -146,9 +132,33 @@ describe('useUploadDrafts', () => {
       })
     )
 
-    const { result } = renderHook(() => useUploadDrafts())
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
 
     expect(result.current.drafts).toHaveLength(1)
     expect(result.current.drafts[0].title).toBe('Stored Draft')
+  })
+
+  it('saves to localStorage immediately while debouncing Nostr sync', () => {
+    const { result } = renderHook(() => useUploadDrafts(), { wrapper })
+
+    let draftId: string
+    act(() => {
+      const draft = result.current.createDraft()
+      draftId = draft.id
+    })
+
+    // Update with a title change (localStorage immediate, Nostr debounced)
+    act(() => {
+      result.current.updateDraft(draftId, { title: 'Changed Title' })
+    })
+
+    // Verify the change is in memory
+    expect(result.current.drafts[0].title).toBe('Changed Title')
+
+    // Verify the change was saved to localStorage immediately
+    const stored = localStorage.getItem('nostube_upload_drafts')
+    expect(stored).toBeTruthy()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.drafts[0].title).toBe('Changed Title')
   })
 })

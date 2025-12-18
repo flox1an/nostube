@@ -1,130 +1,55 @@
-import { useState, useMemo } from 'react'
+import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { VideoUpload } from '@/components/VideoUpload'
-import { BlossomOnboardingStep } from '@/components/onboarding/BlossomOnboardingStep'
-import { BlossomServerPicker } from '@/components/onboarding/BlossomServerPicker'
-import { useAppContext } from '@/hooks'
-import { deriveServerName } from '@/lib/blossom-servers'
-import type { BlossomServerTag } from '@/contexts/AppContext'
-import { Card, CardContent } from '@/components/ui/card'
-import type { UploadDraft } from '@/types/upload-draft'
+import { DraftPicker } from '@/components/upload/DraftPicker'
+import { useToast } from '@/hooks/useToast'
+import { useTranslation } from 'react-i18next'
 
 export function UploadPage() {
-  const { config, updateConfig } = useAppContext()
+  const { t } = useTranslation()
+  const { toast } = useToast()
+  const { drafts, currentDraft, setCurrentDraft, createDraft, deleteDraft } = useUploadDrafts()
 
-  // Temporary: Create a simple draft for VideoUpload (will be replaced in Task 12)
-  const tempDraft = useMemo<UploadDraft>(() => ({
-    id: crypto.randomUUID(),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    title: '',
-    description: '',
-    tags: [],
-    language: 'en',
-    contentWarning: { enabled: false, reason: '' },
-    inputMethod: 'file',
-    uploadInfo: { videos: [] },
-    thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
-    thumbnailSource: 'generated'
-  }), [])
-  const [onboardingComplete, setOnboardingComplete] = useState(
-    () => localStorage.getItem('nostube_upload_onboarding_complete') === 'true'
-  )
+  // Handle max drafts error
+  const handleNewUpload = () => {
+    try {
+      const newDraft = createDraft()
+      setCurrentDraft(newDraft)
+    } catch (error) {
+      toast({
+        title: t('upload.draft.maxDraftsReached'),
+        variant: 'destructive',
+        duration: 5000
+      })
+    }
+  }
 
-  const [showUploadPicker, setShowUploadPicker] = useState(false)
-  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
+  // 0 drafts → new empty form
+  if (drafts.length === 0) {
+    const newDraft = createDraft()
+    return <VideoUpload draft={newDraft} />
+  }
 
-  // Initialize with existing configured servers
-  const [uploadServers, setUploadServers] = useState<string[]>(() => {
+  // 1 draft → auto-resume
+  if (drafts.length === 1) {
+    return <VideoUpload draft={drafts[0]} />
+  }
+
+  // 2+ drafts → picker or form
+  if (!currentDraft) {
     return (
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-    )
-  })
-  const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
-    return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-  })
-
-  const handleOnboardingComplete = () => {
-    // Save to config
-    const blossomServers = [
-      ...uploadServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['initial upload'] as BlossomServerTag[],
-      })),
-      ...mirrorServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['mirror'] as BlossomServerTag[],
-      })),
-    ]
-
-    updateConfig(current => ({ ...current, blossomServers }))
-    localStorage.setItem('nostube_upload_onboarding_complete', 'true')
-    setOnboardingComplete(true)
-  }
-
-  const handleAddUploadServer = (url: string) => {
-    setUploadServers(prev => [...prev, url])
-    setShowUploadPicker(false)
-  }
-
-  const handleAddMirrorServer = (url: string) => {
-    setMirrorServers(prev => [...prev, url])
-    setShowMirrorPicker(false)
-  }
-
-  const handleRemoveUploadServer = (url: string) => {
-    setUploadServers(prev => prev.filter(s => s !== url))
-  }
-
-  const handleRemoveMirrorServer = (url: string) => {
-    setMirrorServers(prev => prev.filter(s => s !== url))
-  }
-
-  if (!onboardingComplete) {
-    return (
-      <>
-        <div className="container mx-auto py-6 max-w-4xl">
-          <h1 className="text-3xl font-bold mb-6 pl-4 md:pl-0">Upload Video</h1>
-          <Card>
-            <CardContent className="pt-6">
-              <BlossomOnboardingStep
-                uploadServers={uploadServers}
-                mirrorServers={mirrorServers}
-                onRemoveUploadServer={handleRemoveUploadServer}
-                onRemoveMirrorServer={handleRemoveMirrorServer}
-                onComplete={handleOnboardingComplete}
-                onOpenUploadPicker={() => setShowUploadPicker(true)}
-                onOpenMirrorPicker={() => setShowMirrorPicker(true)}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Blossom Server Picker Dialogs */}
-        <BlossomServerPicker
-          open={showUploadPicker}
-          onOpenChange={setShowUploadPicker}
-          excludeServers={uploadServers}
-          onSelect={handleAddUploadServer}
-          type="upload"
-        />
-
-        <BlossomServerPicker
-          open={showMirrorPicker}
-          onOpenChange={setShowMirrorPicker}
-          excludeServers={mirrorServers}
-          onSelect={handleAddMirrorServer}
-          type="mirror"
-        />
-      </>
+      <DraftPicker
+        drafts={drafts}
+        onSelectDraft={setCurrentDraft}
+        onNewUpload={handleNewUpload}
+        onDeleteDraft={deleteDraft}
+      />
     )
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-3xl">
-      <h1 className="text-3xl font-bold mb-6 pl-4 md:pl-0">Upload Video</h1>
-      <VideoUpload draft={tempDraft} />
-    </div>
+    <VideoUpload
+      draft={currentDraft}
+      onBack={() => setCurrentDraft(null)}
+    />
   )
 }

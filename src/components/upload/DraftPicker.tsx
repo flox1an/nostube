@@ -16,7 +16,7 @@ export function DraftPicker({ drafts, onSelectDraft, onNewUpload, onDeleteDraft 
   const { t } = useTranslation()
   const { toast, dismiss } = useToast()
   const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null)
-  const deleteTimeoutRef = useRef<NodeJS.Timeout>()
+  const deleteTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const handleDelete = (draftId: string) => {
     setDeletingDraftId(draftId)

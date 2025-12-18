@@ -20,10 +20,28 @@ import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { deriveServerName } from '@/lib/blossom-servers'
 import type { BlossomServerTag } from '@/contexts/AppContext'
+import type { UploadDraft } from '@/types/upload-draft'
+import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 
-export function VideoUpload() {
+interface UploadFormProps {
+  draft: UploadDraft
+  onBack?: () => void
+}
+
+export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
+
+  const { updateDraft, deleteDraft } = useUploadDrafts()
+
+  const handleDraftChange = useCallback(
+    (updates: Partial<UploadDraft>) => {
+      updateDraft(draft.id, updates)
+    },
+    [draft.id, updateDraft]
+  )
+
+  const videoUploadState = useVideoUpload(draft, handleDraftChange)
   const {
     // State
     title,
@@ -65,10 +83,23 @@ export function VideoUpload() {
     handleThumbnailDrop,
     handleThumbnailSourceChange,
     onDrop,
-    handleSubmit,
+    handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
-  } = useVideoUpload()
+  } = videoUploadState
+
+  // Wrap handleSubmit to delete draft on success
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await originalHandleSubmit(e)
+      // On success, delete the draft
+      deleteDraft(draft.id)
+    } catch (error) {
+      // Keep draft on error
+      console.error('Publish failed:', error)
+    }
+  }
 
   // Dropzone for adding additional videos
   const onDropAdditional = useCallback(
@@ -172,6 +203,13 @@ export function VideoUpload() {
   return (
     <>
       <Card className="max-w-4xl mx-auto">
+        {onBack && (
+          <div className="p-4 border-b">
+            <Button onClick={onBack} variant="ghost">
+              ← {t('upload.draft.backToDrafts')}
+            </Button>
+          </div>
+        )}
         {/* Info bar above drop zone */}
         <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
           <div className="text-sm text-muted-foreground flex flex-col gap-1">

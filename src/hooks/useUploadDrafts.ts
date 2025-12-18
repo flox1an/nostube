@@ -51,47 +51,64 @@ function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
   )
 }
 
-export function useUploadDrafts() {
-  const [drafts, setDrafts] = useState<UploadDraft[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed: UploadDraftsData = JSON.parse(stored)
-        const cleaned = removeOldDrafts(parsed.drafts, 30)
+// Read drafts from localStorage
+function getDraftsFromStorage(): UploadDraft[] {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    try {
+      const parsed: UploadDraftsData = JSON.parse(stored)
+      const cleaned = removeOldDrafts(parsed.drafts, 30)
 
-        // Save cleaned version if we removed any
-        if (cleaned.length !== parsed.drafts.length) {
-          const data: UploadDraftsData = {
-            version: '1',
-            lastModified: Date.now(),
-            drafts: cleaned,
-          }
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      // Save cleaned version if we removed any
+      if (cleaned.length !== parsed.drafts.length) {
+        const data: UploadDraftsData = {
+          version: '1',
+          lastModified: Date.now(),
+          drafts: cleaned,
         }
-
-        return cleaned
-      } catch (error) {
-        console.error('Failed to load drafts from localStorage:', error)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
       }
+
+      return cleaned
+    } catch (error) {
+      console.error('Failed to load drafts from localStorage:', error)
     }
-    return []
-  })
+  }
+  return []
+}
+
+export function useUploadDrafts() {
+  // Use a counter to trigger re-renders when localStorage changes
+  const [version, setVersion] = useState(0)
   const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
+
+  // Always read from localStorage (source of truth)
+  const drafts = useMemo(() => getDraftsFromStorage(), [version])
 
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
   const { config, pool } = useAppContext()
 
-  const saveToLocalStorage = useCallback((draftsToSave: UploadDraft[]) => {
-    const data: UploadDraftsData = {
-      version: '1',
-      lastModified: Date.now(),
-      drafts: draftsToSave,
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  }, [])
+  const saveToLocalStorage = useCallback(
+    (draftsToSave: UploadDraft[]) => {
+      const data: UploadDraftsData = {
+        version: '1',
+        lastModified: Date.now(),
+        drafts: draftsToSave,
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      // Trigger re-render to read fresh data
+      setVersion(v => v + 1)
+    },
+    [setVersion]
+  )
 
   const createDraft = useCallback((): UploadDraft => {
+    const currentDrafts = getDraftsFromStorage()
+    if (currentDrafts.length >= MAX_DRAFTS) {
+      throw new Error('Maximum 10 drafts allowed')
+    }
+
     const newDraft: UploadDraft = {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
@@ -107,15 +124,8 @@ export function useUploadDrafts() {
       thumbnailSource: 'generated',
     }
 
-    setDrafts(prev => {
-      if (prev.length >= MAX_DRAFTS) {
-        throw new Error('Maximum 10 drafts allowed')
-      }
-
-      const updated = [...prev, newDraft]
-      saveToLocalStorage(updated)
-      return updated
-    })
+    const updated = [...currentDrafts, newDraft]
+    saveToLocalStorage(updated)
 
     return newDraft
   }, [saveToLocalStorage])
@@ -182,59 +192,55 @@ export function useUploadDrafts() {
 
   const updateDraft = useCallback(
     (draftId: string, updates: Partial<UploadDraft>) => {
-      setDrafts(prev => {
-        const updated = prev.map(d =>
-          d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
-        )
+      const currentDrafts = getDraftsFromStorage()
+      const updated = currentDrafts.map(d =>
+        d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
+      )
 
-        // Immediate save for milestones, debounced Nostr sync for form fields
-        if (isMilestoneUpdate(updates)) {
-          saveDraftsImmediate(updated)
-        } else {
-          saveDraftsDebounced(updated)
-        }
+      if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] updateDraft:', { draftId, updates, updated })
+      }
 
-        return updated
-      })
+      // Immediate save for milestones, debounced Nostr sync for form fields
+      if (isMilestoneUpdate(updates)) {
+        saveDraftsImmediate(updated)
+      } else {
+        saveDraftsDebounced(updated)
+      }
     },
     [saveDraftsImmediate, saveDraftsDebounced]
   )
 
   const deleteDraft = useCallback(
     (draftId: string) => {
-      setDrafts(prev => {
-        const updated = prev.filter(d => d.id !== draftId)
-        saveToLocalStorage(updated)
-        return updated
-      })
+      const currentDrafts = getDraftsFromStorage()
+      const updated = currentDrafts.filter(d => d.id !== draftId)
+      saveToLocalStorage(updated)
     },
     [saveToLocalStorage]
   )
 
   const mergeDraftsFromNostr = useCallback(
     (nostrDrafts: UploadDraft[]) => {
-      setDrafts(prevLocal => {
-        const draftMap = new Map<string, UploadDraft>()
+      const localDrafts = getDraftsFromStorage()
+      const draftMap = new Map<string, UploadDraft>()
 
-        // Add local drafts first
-        prevLocal.forEach(d => draftMap.set(d.id, d))
+      // Add local drafts first
+      localDrafts.forEach(d => draftMap.set(d.id, d))
 
-        // Nostr drafts win on conflict (newer updatedAt)
-        nostrDrafts.forEach(d => {
-          const existing = draftMap.get(d.id)
-          if (!existing || d.updatedAt > existing.updatedAt) {
-            draftMap.set(d.id, d)
-          }
-        })
-
-        // Sort by updatedAt descending
-        const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
-
-        // Save merged result to localStorage
-        saveToLocalStorage(merged)
-
-        return merged
+      // Nostr drafts win on conflict (newer updatedAt)
+      nostrDrafts.forEach(d => {
+        const existing = draftMap.get(d.id)
+        if (!existing || d.updatedAt > existing.updatedAt) {
+          draftMap.set(d.id, d)
+        }
       })
+
+      // Sort by updatedAt descending
+      const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
+
+      // Save merged result to localStorage
+      saveToLocalStorage(merged)
     },
     [saveToLocalStorage]
   )

@@ -205,6 +205,18 @@
   },
   "upload": {
     "title": "Upload Video",
+    "stepIndicator": "Step {{current}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next",
+    "step1": {
+      "title": "Upload Video"
+    },
+    "step2": {
+      "title": "Video Details"
+    },
+    "step3": {
+      "title": "Thumbnail"
+    },
     "loginRequired": "Please log in to upload videos",
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",
     "tip": "Tip: MP4 (H.264) under 2GB uploads fastest and plays everywhere. We'll retry on backup servers automatically.",

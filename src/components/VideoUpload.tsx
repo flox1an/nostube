@@ -1,6 +1,6 @@
 import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -10,8 +10,8 @@ import {
   FormFields,
   ContentWarning,
   ThumbnailSection,
-  VideoVariantsSummary,
 } from './video-upload'
+import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -22,6 +22,7 @@ import { deriveServerName } from '@/lib/blossom-servers'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface UploadFormProps {
   draft: UploadDraft
@@ -170,6 +171,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
   const [showUploadPicker, setShowUploadPicker] = useState(false)
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1) // 1: Video Upload, 2: Form, 3: Thumbnail
 
   // Initialize with existing configured servers
   const [uploadServers, setUploadServers] = useState<string[]>(() => {
@@ -249,9 +251,17 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     return <div>{t('upload.loginRequired')}</div>
   }
 
+  // Validation for each step
+  const canProceedToStep2 = uploadInfo.videos.length > 0
+  const canProceedToStep3 = title.trim().length > 0
+  const canPublish =
+    uploadInfo.videos.length > 0 &&
+    title.trim().length > 0 &&
+    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail)
+
   return (
     <>
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-6xl mx-auto">
         {onBack && (
           <div className="p-4 border-b">
             <Button onClick={handleBack} variant="ghost">
@@ -259,171 +269,206 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
             </Button>
           </div>
         )}
-        {/* Info bar above drop zone */}
-        <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2 mb-4">
-          <div className="text-sm text-muted-foreground flex flex-col gap-1">
+
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
             <span>
-              {t('upload.uploadInfo', {
-                upload: blossomInitalUploadServers?.length ?? 0,
-                mirror: blossomMirrorServers?.length ?? 0,
-              })}
+              {currentStep === 1 && t('upload.step1.title', { defaultValue: 'Upload Video' })}
+              {currentStep === 2 && t('upload.step2.title', { defaultValue: 'Video Details' })}
+              {currentStep === 3 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
             </span>
-            <span className="text-xs">{t('upload.tip')}</span>
-          </div>
-          <div className="flex gap-2">
-            {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleUseRecommendedServers}
-                className="cursor-pointer"
-              >
-                {t('upload.useRecommended')}
-              </Button>
-            )}
-            <Button
-              onClick={() => setShowBlossomOnboarding(true)}
-              variant={'outline'}
-              className=" cursor-pointer"
-            >
-              {t('upload.advanced')}
-            </Button>
-          </div>
-        </div>
+            <span className="text-sm text-muted-foreground font-normal">
+              {t('upload.stepIndicator', { current: currentStep, total: 3 })}
+            </span>
+          </CardTitle>
+        </CardHeader>
+
         <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="flex flex-col gap-4">
-            {/* Input method selection - hide after processing */}
-            {uploadState === 'initial' && (
-              <div className="space-y-1">
-                <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
-                <p className="text-xs text-muted-foreground">{t('upload.quickStart')}</p>
-              </div>
-            )}
-
-            {/* URL input field - hide after processing */}
-            {inputMethod === 'url' && uploadState !== 'finished' && (
-              <UrlInputSection
-                videoUrl={videoUrl}
-                onVideoUrlChange={setVideoUrl}
-                onProcess={() => handleUrlVideoProcessing(videoUrl)}
-                isProcessing={uploadState === 'uploading'}
-              />
-            )}
-
-            {/* Video upload / processing section */}
-            {uploadInfo.videos.length > 0 ? null : inputMethod === 'file' &&
-              blossomInitalUploadServers &&
-              blossomInitalUploadServers.length > 0 ? (
-              <FileDropzone
-                onDrop={onDrop}
-                accept={{ 'video/*': [] }}
-                selectedFile={file}
-                className="mb-4"
-              />
-            ) : inputMethod === 'file' ? (
-              <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
-                <span>
-                  {t('upload.noUploadServers')}
-                  <br />
-                  {t('upload.configureServers')}
-                </span>
-              </div>
-            ) : null}
-
-            {uploadProgress && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{t('upload.uploading')}</span>
-                  <span>{Math.round(uploadProgress.percentage)}%</span>
-                </div>
-                <Progress value={uploadProgress.percentage} />
-              </div>
-            )}
-
-            {/* Two-column layout - show only after video is processed/uploaded */}
-            {(uploadState === 'finished' || uploadInfo.videos.length > 0) && (
-              <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6">
-                {/* Left column: Video info & Thumbnail */}
-                <div className="space-y-4">
-                  {/* Video summary */}
-                  <VideoVariantsSummary videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
-
-                  {/* Add another quality button */}
-                  {inputMethod === 'file' && uploadState === 'finished' && (
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                      <div
-                        {...getRootPropsAdditional()}
-                        className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+          <CardContent className="space-y-4">
+            {/* Step 1: Video Upload */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                {/* Info bar */}
+                <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2">
+                  <div className="text-sm text-muted-foreground flex flex-col gap-1">
+                    <span>
+                      {t('upload.uploadInfo', {
+                        upload: blossomInitalUploadServers?.length ?? 0,
+                        mirror: blossomMirrorServers?.length ?? 0,
+                      })}
+                    </span>
+                    <span className="text-xs">{t('upload.tip')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleUseRecommendedServers}
+                        className="cursor-pointer"
                       >
-                        <input {...getInputPropsAdditional()} />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="cursor-pointer"
-                        >
-                          {t('upload.addAnotherQuality')}
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center">
-                          {t('upload.addAnotherQualityHint')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Thumbnail section */}
-                  <ThumbnailSection
-                    thumbnailSource={thumbnailSource}
-                    onThumbnailSourceChange={handleThumbnailSourceChange}
-                    thumbnailUrl={thumbnailUrl}
-                    onThumbnailDrop={handleThumbnailDrop}
-                    thumbnailUploadInfo={thumbnailUploadInfo}
-                    thumbnailBlob={thumbnailBlob}
-                    isThumbDragActive={false}
-                  />
-                </div>
-
-                {/* Right column: Form fields */}
-                <div className="space-y-4">
-                  <FormFields
-                    title={title}
-                    onTitleChange={setTitle}
-                    description={description}
-                    onDescriptionChange={setDescription}
-                    tags={tags}
-                    tagInput={tagInput}
-                    onTagInputChange={setTagInput}
-                    onAddTag={handleAddTag}
-                    onPaste={handlePaste}
-                    onRemoveTag={removeTag}
-                    onTagInputBlur={() => {}}
-                    language={language}
-                    onLanguageChange={setLanguage}
-                  />
-
-                  <ContentWarning
-                    enabled={contentWarningEnabled}
-                    onEnabledChange={setContentWarningEnabled}
-                    reason={contentWarningReason}
-                    onReasonChange={setContentWarningReason}
-                  />
-
-                  <div className="flex justify-end gap-2 mt-4">
+                        {t('upload.useRecommended')}
+                      </Button>
+                    )}
                     <Button
-                      type="submit"
-                      disabled={
-                        isPublishing ||
-                        !title ||
-                        (thumbnailSource === 'generated' ? !thumbnailBlob : !thumbnail) ||
-                        uploadInfo.videos.length === 0
-                      }
+                      onClick={() => setShowBlossomOnboarding(true)}
+                      variant={'outline'}
+                      className="cursor-pointer"
                     >
-                      {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
+                      {t('upload.advanced')}
                     </Button>
                   </div>
                 </div>
+
+                {/* Input method selection */}
+                {uploadState === 'initial' && (
+                  <div className="space-y-1">
+                    <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
+                    <p className="text-xs text-muted-foreground">{t('upload.quickStart')}</p>
+                  </div>
+                )}
+
+                {/* URL input field */}
+                {inputMethod === 'url' && uploadState !== 'finished' && (
+                  <UrlInputSection
+                    videoUrl={videoUrl}
+                    onVideoUrlChange={setVideoUrl}
+                    onProcess={() => handleUrlVideoProcessing(videoUrl)}
+                    isProcessing={uploadState === 'uploading'}
+                  />
+                )}
+
+                {/* File upload */}
+                {uploadInfo.videos.length > 0 ? null : inputMethod === 'file' &&
+                  blossomInitalUploadServers &&
+                  blossomInitalUploadServers.length > 0 ? (
+                  <FileDropzone
+                    onDrop={onDrop}
+                    accept={{ 'video/*': [] }}
+                    selectedFile={file}
+                    className="mb-4"
+                  />
+                ) : inputMethod === 'file' ? (
+                  <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
+                    <span>
+                      {t('upload.noUploadServers')}
+                      <br />
+                      {t('upload.configureServers')}
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Upload progress */}
+                {uploadProgress && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>{t('upload.uploading')}</span>
+                      <span>{Math.round(uploadProgress.percentage)}%</span>
+                    </div>
+                    <Progress value={uploadProgress.percentage} />
+                  </div>
+                )}
+
+                {/* Video variants table */}
+                {uploadInfo.videos.length > 0 && (
+                  <div className="space-y-4">
+                    <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
+
+                    {/* Add another quality button */}
+                    {uploadState === 'finished' && (
+                      <div className="border-2 border-dashed rounded-lg p-4">
+                        <div
+                          {...getRootPropsAdditional()}
+                          className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+                        >
+                          <input {...getInputPropsAdditional()} />
+                          <Button type="button" variant="outline" className="cursor-pointer">
+                            {t('upload.addAnotherQuality')}
+                          </Button>
+                          <p className="text-xs text-muted-foreground text-center">
+                            {t('upload.addAnotherQualityHint')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Step 2: Form Fields */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <FormFields
+                  title={title}
+                  onTitleChange={setTitle}
+                  description={description}
+                  onDescriptionChange={setDescription}
+                  tags={tags}
+                  tagInput={tagInput}
+                  onTagInputChange={setTagInput}
+                  onAddTag={handleAddTag}
+                  onPaste={handlePaste}
+                  onRemoveTag={removeTag}
+                  onTagInputBlur={() => {}}
+                  language={language}
+                  onLanguageChange={setLanguage}
+                />
+
+                <ContentWarning
+                  enabled={contentWarningEnabled}
+                  onEnabledChange={setContentWarningEnabled}
+                  reason={contentWarningReason}
+                  onReasonChange={setContentWarningReason}
+                />
+              </div>
+            )}
+
+            {/* Step 3: Thumbnail */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <ThumbnailSection
+                  thumbnailSource={thumbnailSource}
+                  onThumbnailSourceChange={handleThumbnailSourceChange}
+                  thumbnailUrl={thumbnailUrl}
+                  onThumbnailDrop={handleThumbnailDrop}
+                  thumbnailUploadInfo={thumbnailUploadInfo}
+                  thumbnailBlob={thumbnailBlob}
+                  isThumbDragActive={false}
+                />
+              </div>
+            )}
+
+            {/* Navigation buttons */}
+            <div className="flex justify-between pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+                disabled={currentStep === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                {t('upload.previous', { defaultValue: 'Previous' })}
+              </Button>
+
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep(prev => Math.min(3, prev + 1))}
+                  disabled={
+                    (currentStep === 1 && !canProceedToStep2) ||
+                    (currentStep === 2 && !canProceedToStep3)
+                  }
+                >
+                  {t('upload.next', { defaultValue: 'Next' })}
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button type="submit" disabled={isPublishing || !canPublish}>
+                  {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </form>
       </Card>
@@ -443,7 +488,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Blossom Server Picker Dialogs (as siblings to main dialog) */}
+      {/* Blossom Server Picker Dialogs */}
       <BlossomServerPicker
         open={showUploadPicker}
         onOpenChange={setShowUploadPicker}

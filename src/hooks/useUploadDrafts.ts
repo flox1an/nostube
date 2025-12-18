@@ -5,6 +5,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useNostrPublish } from './useNostrPublish'
 import { useAppContext } from './useAppContext'
 import { nowInSecs } from '@/lib/utils'
+import { createAddressLoader } from 'applesauce-loaders/loaders'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
@@ -35,7 +36,7 @@ export function useUploadDrafts() {
 
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
-  const { config } = useAppContext()
+  const { config, pool } = useAppContext()
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -160,6 +161,62 @@ export function useUploadDrafts() {
       return updated
     })
   }, [saveToLocalStorage])
+
+  const mergeDraftsFromNostr = useCallback((nostrDrafts: UploadDraft[]) => {
+    setDrafts(prevLocal => {
+      const draftMap = new Map<string, UploadDraft>()
+
+      // Add local drafts first
+      prevLocal.forEach(d => draftMap.set(d.id, d))
+
+      // Nostr drafts win on conflict (newer updatedAt)
+      nostrDrafts.forEach(d => {
+        const existing = draftMap.get(d.id)
+        if (!existing || d.updatedAt > existing.updatedAt) {
+          draftMap.set(d.id, d)
+        }
+      })
+
+      // Sort by updatedAt descending
+      const merged = Array.from(draftMap.values()).sort(
+        (a, b) => b.updatedAt - a.updatedAt
+      )
+
+      // Save merged result to localStorage
+      saveToLocalStorage(merged)
+
+      return merged
+    })
+  }, [saveToLocalStorage])
+
+  // Subscribe to NIP-78 event changes
+  useEffect(() => {
+    if (!user?.pubkey) return
+
+    const readRelays = config.relays
+      .filter(r => r.tags.includes('read'))
+      .map(r => r.url)
+
+    const loader = createAddressLoader(pool)
+    const sub = loader({
+      kind: 30078,
+      pubkey: user.pubkey,
+      identifier: 'nostube-uploads',
+      relays: readRelays
+    }).subscribe(event => {
+      if (event) {
+        try {
+          const parsed = JSON.parse(event.content)
+          const nostrDrafts = parsed.drafts || []
+          mergeDraftsFromNostr(nostrDrafts)
+        } catch (error) {
+          console.error('Failed to parse NIP-78 event:', error)
+        }
+      }
+    })
+
+    return () => sub.unsubscribe()
+  }, [user?.pubkey, pool, config.relays, mergeDraftsFromNostr])
 
   return {
     drafts,

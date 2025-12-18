@@ -88,6 +88,45 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     handleRemoveVideo,
   } = videoUploadState
 
+  // Handle back button - save current state before navigating
+  const handleBack = useCallback(() => {
+    // Explicitly save current form state
+    handleDraftChange({
+      title,
+      description,
+      tags,
+      language,
+      inputMethod,
+      videoUrl,
+      uploadInfo,
+      thumbnailUploadInfo: {
+        uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
+        mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
+      },
+      contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+      thumbnailSource,
+      updatedAt: Date.now(),
+    })
+    // Navigate back
+    if (onBack) {
+      onBack()
+    }
+  }, [
+    handleDraftChange,
+    title,
+    description,
+    tags,
+    language,
+    inputMethod,
+    videoUrl,
+    uploadInfo,
+    thumbnailUploadInfo,
+    contentWarningEnabled,
+    contentWarningReason,
+    thumbnailSource,
+    onBack,
+  ])
+
   // Wrap handleSubmit to delete draft on success
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -205,7 +244,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       <Card className="max-w-4xl mx-auto">
         {onBack && (
           <div className="p-4 border-b">
-            <Button onClick={onBack} variant="ghost">
+            <Button onClick={handleBack} variant="ghost">
               ← {t('upload.draft.backToDrafts')}
             </Button>
           </div>

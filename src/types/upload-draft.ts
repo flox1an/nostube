@@ -20,6 +20,9 @@ export interface UploadDraft {
     reason: string
   }
 
+  // Expiration
+  expiration: 'none' | '1day' | '7days' | '1month' | '1year'
+
   // Input method
   inputMethod: 'file' | 'url'
   videoUrl?: string

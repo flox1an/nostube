@@ -62,6 +62,9 @@ export function useVideoUpload(
   const [contentWarningReason, setContentWarningReason] = useState(
     initialDraft?.contentWarning.reason || ''
   )
+  const [expiration, setExpiration] = useState<'none' | '1day' | '7days' | '1month' | '1year'>(
+    initialDraft?.expiration || 'none'
+  )
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
 
@@ -565,6 +568,21 @@ export function useVideoUpload(
 
     if (!thumbnailFile) throw new Error('No valid thumbnail file selected')
 
+    // Calculate expiration timestamp
+    const getExpirationTimestamp = (): string | null => {
+      if (expiration === 'none') return null
+
+      const now = Math.floor(Date.now() / 1000) // Current time in seconds
+      const durations = {
+        '1day': 24 * 60 * 60,
+        '7days': 7 * 24 * 60 * 60,
+        '1month': 30 * 24 * 60 * 60,
+        '1year': 365 * 24 * 60 * 60,
+      }
+
+      return (now + durations[expiration]).toString()
+    }
+
     try {
       // Determine video kind based on first video's dimensions
       const firstVideo = uploadInfo.videos[0]
@@ -645,6 +663,7 @@ export function useVideoUpload(
           ...(contentWarningEnabled
             ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
             : []),
+          ...(getExpirationTimestamp() ? [['expiration', getExpirationTimestamp()!]] : []),
           ...tags.map(tag => ['t', tag]),
           ['L', 'ISO-639-1'],
           ['l', language, 'ISO-639-1'],
@@ -689,6 +708,7 @@ export function useVideoUpload(
         inputMethod,
         videoUrl,
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+        expiration,
         thumbnailSource,
         updatedAt: Date.now(),
       })
@@ -702,6 +722,7 @@ export function useVideoUpload(
     videoUrl,
     contentWarningEnabled,
     contentWarningReason,
+    expiration,
     thumbnailSource,
   ])
 
@@ -746,6 +767,8 @@ export function useVideoUpload(
     setContentWarningEnabled,
     contentWarningReason,
     setContentWarningReason,
+    expiration,
+    setExpiration,
     uploadProgress,
     publishSummary,
     blossomInitalUploadServers,

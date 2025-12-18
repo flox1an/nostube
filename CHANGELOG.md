@@ -28,10 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hashtag Search**: `/tag/:tag` routes with clickable hashtags
 - **Video Notes Page**: View and repost videos from Kind 1 notes
 - **Docker Deployment**: Multi-stage Dockerfile with runtime env vars
+- **NIP-40 Video Expiration**: Optional expiration setting in upload wizard (1 day, 7 days, 1 month, 1 year). Videos expire at specified time and are deleted by relays
 
 ### Changed
 
-- **Upload Form Wizard**: Redesigned upload form as 3-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language, content warning), Step 3: Thumbnail selection. Validation prevents proceeding without required fields (video for step 2, title for step 3). "Save Draft" button on lower right instead of top "Back to Drafts" button. Required fields marked with asterisk (*) and each step shows description explaining requirements
+- **Upload Form Wizard**: Redesigned upload form as 4-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language), Step 3: Thumbnail selection, Step 4: Additional settings (content warning, expiration). Validation prevents proceeding without required fields (video for step 2, title for step 3, thumbnail for step 4). "Save Draft" button on lower right instead of top "Back to Drafts" button. Required fields marked with asterisk (\*) and each step shows description explaining requirements
 - **Upload Page Advanced Button**: Opens Blossom dialog instead of navigating to settings
 - **Onboarding Separation**: Moved Blossom config from login to upload page
 - **Embed Player Performance**: Faster load times, reduced timeouts, fewer relays

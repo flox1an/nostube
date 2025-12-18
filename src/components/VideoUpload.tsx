@@ -10,6 +10,7 @@ import {
   FormFields,
   ContentWarning,
   ThumbnailSection,
+  ExpirationSection,
 } from './video-upload'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
@@ -69,6 +70,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     setContentWarningEnabled,
     contentWarningReason,
     setContentWarningReason,
+    expiration,
+    setExpiration,
     uploadProgress,
     blossomInitalUploadServers,
     blossomMirrorServers,
@@ -108,6 +111,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
       },
       contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+      expiration,
       thumbnailSource,
       updatedAt: Date.now(),
     })
@@ -134,6 +138,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     thumbnailUploadInfo,
     contentWarningEnabled,
     contentWarningReason,
+    expiration,
     thumbnailSource,
     onBack,
   ])
@@ -254,6 +259,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   // Validation for each step
   const canProceedToStep2 = uploadInfo.videos.length > 0
   const canProceedToStep3 = title.trim().length > 0
+  const canProceedToStep4 = thumbnailSource === 'generated' ? thumbnailBlob : thumbnail
   const canPublish =
     uploadInfo.videos.length > 0 &&
     title.trim().length > 0 &&
@@ -268,9 +274,11 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               {currentStep === 1 && t('upload.step1.title', { defaultValue: 'Upload Video' })}
               {currentStep === 2 && t('upload.step2.title', { defaultValue: 'Video Details' })}
               {currentStep === 3 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
+              {currentStep === 4 &&
+                t('upload.step4.title', { defaultValue: 'Additional Settings' })}
             </span>
             <span className="text-sm text-muted-foreground font-normal">
-              {t('upload.stepIndicator', { current: currentStep, total: 3 })}
+              {t('upload.stepIndicator', { current: currentStep, total: 4 })}
             </span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
@@ -285,6 +293,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
             {currentStep === 3 &&
               t('upload.step3.description', {
                 defaultValue: 'Select or upload a thumbnail for your video',
+              })}
+            {currentStep === 4 &&
+              t('upload.step4.description', {
+                defaultValue: 'Configure optional settings for your video',
               })}
           </p>
         </CardHeader>
@@ -420,13 +432,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   language={language}
                   onLanguageChange={setLanguage}
                 />
-
-                <ContentWarning
-                  enabled={contentWarningEnabled}
-                  onEnabledChange={setContentWarningEnabled}
-                  reason={contentWarningReason}
-                  onReasonChange={setContentWarningReason}
-                />
               </div>
             )}
 
@@ -442,6 +447,20 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   thumbnailBlob={thumbnailBlob}
                   isThumbDragActive={false}
                 />
+              </div>
+            )}
+
+            {/* Step 4: Additional Settings */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <ContentWarning
+                  enabled={contentWarningEnabled}
+                  onEnabledChange={setContentWarningEnabled}
+                  reason={contentWarningReason}
+                  onReasonChange={setContentWarningReason}
+                />
+
+                <ExpirationSection value={expiration} onChange={setExpiration} />
               </div>
             )}
 
@@ -464,13 +483,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   </Button>
                 )}
 
-                {currentStep < 3 ? (
+                {currentStep < 4 ? (
                   <Button
                     type="button"
-                    onClick={() => setCurrentStep(prev => Math.min(3, prev + 1))}
+                    onClick={() => setCurrentStep(prev => Math.min(4, prev + 1))}
                     disabled={
                       (currentStep === 1 && !canProceedToStep2) ||
-                      (currentStep === 2 && !canProceedToStep3)
+                      (currentStep === 2 && !canProceedToStep3) ||
+                      (currentStep === 3 && !canProceedToStep4)
                     }
                   >
                     {t('upload.next', { defaultValue: 'Next' })}

@@ -15,6 +15,7 @@ const mockDraft: UploadDraft = {
   tags: ['test'],
   language: 'en',
   contentWarning: { enabled: false, reason: '' },
+  expiration: 'none',
   inputMethod: 'file',
   uploadInfo: {
     videos: [

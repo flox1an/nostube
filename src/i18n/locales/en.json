@@ -220,6 +220,20 @@
       "title": "Thumbnail",
       "description": "Select or upload a thumbnail for your video"
     },
+    "step4": {
+      "title": "Additional Settings",
+      "description": "Configure optional settings for your video"
+    },
+    "expiration": {
+      "title": "Video Expiration",
+      "selectDuration": "Select expiration time",
+      "none": "Never expires",
+      "1day": "1 day",
+      "7days": "7 days",
+      "1month": "1 month",
+      "1year": "1 year",
+      "description": "Set when this video should expire and be deleted by relays. This is not a security feature."
+    },
     "loginRequired": "Please log in to upload videos",
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",
     "tip": "Tip: MP4 (H.264) under 2GB uploads fastest and plays everywhere. We'll retry on backup servers automatically.",

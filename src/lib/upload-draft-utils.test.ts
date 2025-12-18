@@ -18,6 +18,7 @@ describe('getSmartStatus', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
@@ -36,6 +37,7 @@ describe('getSmartStatus', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -84,6 +86,7 @@ describe('getSmartStatus', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -122,6 +125,7 @@ describe('getSmartStatus', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -172,6 +176,7 @@ describe('getVideoQualityInfo', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
@@ -190,6 +195,7 @@ describe('getVideoQualityInfo', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -219,6 +225,7 @@ describe('getVideoQualityInfo', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -256,6 +263,7 @@ describe('getVideoQualityInfo', () => {
       tags: [],
       language: 'en',
       contentWarning: { enabled: false, reason: '' },
+      expiration: 'none',
       inputMethod: 'file',
       uploadInfo: {
         videos: [
@@ -320,6 +328,7 @@ describe('removeOldDrafts', () => {
         tags: [],
         language: 'en',
         contentWarning: { enabled: false, reason: '' },
+        expiration: 'none',
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
@@ -334,6 +343,7 @@ describe('removeOldDrafts', () => {
         tags: [],
         language: 'en',
         contentWarning: { enabled: false, reason: '' },
+        expiration: 'none',
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
@@ -357,6 +367,7 @@ describe('removeOldDrafts', () => {
         tags: [],
         language: 'en',
         contentWarning: { enabled: false, reason: '' },
+        expiration: 'none',
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
@@ -371,6 +382,7 @@ describe('removeOldDrafts', () => {
         tags: [],
         language: 'en',
         contentWarning: { enabled: false, reason: '' },
+        expiration: 'none',
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },

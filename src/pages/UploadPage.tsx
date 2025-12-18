@@ -3,11 +3,33 @@ import { VideoUpload } from '@/components/VideoUpload'
 import { DraftPicker } from '@/components/upload/DraftPicker'
 import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
+import { useEffect, useCallback } from 'react'
 
 export function UploadPage() {
   const { t } = useTranslation()
   const { toast } = useToast()
-  const { drafts, currentDraft, setCurrentDraft, createDraft, deleteDraft } = useUploadDrafts()
+  const {
+    drafts,
+    currentDraft,
+    setCurrentDraft,
+    createDraft,
+    deleteDraft,
+    refreshDrafts,
+    flushNostrSync,
+  } = useUploadDrafts()
+
+  // When navigating back to draft picker, force a refresh to get latest data
+  useEffect(() => {
+    if (!currentDraft) {
+      refreshDrafts()
+    }
+  }, [currentDraft, refreshDrafts])
+
+  // Handle back navigation with Nostr sync flush
+  const handleBack = useCallback(() => {
+    flushNostrSync() // Flush any pending Nostr saves
+    setCurrentDraft(null)
+  }, [flushNostrSync, setCurrentDraft])
 
   // Handle max drafts error
   const handleNewUpload = () => {
@@ -46,5 +68,5 @@ export function UploadPage() {
     )
   }
 
-  return <VideoUpload draft={currentDraft} onBack={() => setCurrentDraft(null)} />
+  return <VideoUpload draft={currentDraft} onBack={handleBack} />
 }

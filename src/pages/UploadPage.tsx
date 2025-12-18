@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { VideoUpload } from '@/components/VideoUpload'
 import { BlossomOnboardingStep } from '@/components/onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from '@/components/onboarding/BlossomServerPicker'
@@ -6,9 +6,26 @@ import { useAppContext } from '@/hooks'
 import { deriveServerName } from '@/lib/blossom-servers'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
+import type { UploadDraft } from '@/types/upload-draft'
 
 export function UploadPage() {
   const { config, updateConfig } = useAppContext()
+
+  // Temporary: Create a simple draft for VideoUpload (will be replaced in Task 12)
+  const tempDraft = useMemo<UploadDraft>(() => ({
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    title: '',
+    description: '',
+    tags: [],
+    language: 'en',
+    contentWarning: { enabled: false, reason: '' },
+    inputMethod: 'file',
+    uploadInfo: { videos: [] },
+    thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+    thumbnailSource: 'generated'
+  }), [])
   const [onboardingComplete, setOnboardingComplete] = useState(
     () => localStorage.getItem('nostube_upload_onboarding_complete') === 'true'
   )
@@ -107,7 +124,7 @@ export function UploadPage() {
   return (
     <div className="container mx-auto py-6 max-w-3xl">
       <h1 className="text-3xl font-bold mb-6 pl-4 md:pl-0">Upload Video</h1>
-      <VideoUpload />
+      <VideoUpload draft={tempDraft} />
     </div>
   )
 }

@@ -354,7 +354,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   <Button
                     type="submit"
                     disabled={
-                      isPublishing || !title || !thumbnail || uploadInfo.videos.length === 0
+                      isPublishing ||
+                      !title ||
+                      (thumbnailSource === 'generated' ? !thumbnailBlob : !thumbnail) ||
+                      uploadInfo.videos.length === 0
                     }
                   >
                     {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}

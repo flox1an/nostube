@@ -24,6 +24,10 @@ export function DraftPicker({
   const deleteTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const currentToastIdRef = useRef<string | undefined>(undefined)
 
+  if (import.meta.env.DEV) {
+    console.log('[DraftPicker] Rendering with drafts:', drafts)
+  }
+
   const handleUndo = () => {
     if (deleteTimeoutRef.current) {
       clearTimeout(deleteTimeoutRef.current)

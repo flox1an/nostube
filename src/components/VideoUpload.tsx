@@ -90,6 +90,9 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
   // Handle back button - save current state before navigating
   const handleBack = useCallback(() => {
+    if (import.meta.env.DEV) {
+      console.log('[VideoUpload] handleBack - saving draft with title:', title)
+    }
     // Explicitly save current form state
     handleDraftChange({
       title,
@@ -107,9 +110,16 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       thumbnailSource,
       updatedAt: Date.now(),
     })
-    // Navigate back
+    // Navigate back after microtask to ensure state updates propagate
     if (onBack) {
-      onBack()
+      // Use queueMicrotask to ensure the save completes and version increments
+      // before we navigate away
+      queueMicrotask(() => {
+        if (import.meta.env.DEV) {
+          console.log('[VideoUpload] handleBack - navigating back')
+        }
+        onBack()
+      })
     }
   }, [
     handleDraftChange,

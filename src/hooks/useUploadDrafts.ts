@@ -5,6 +5,25 @@ import { removeOldDrafts } from '@/lib/upload-draft-utils'
 const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
 
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
+function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
+  return !!(
+    updates.uploadInfo?.videos ||
+    updates.thumbnailUploadInfo?.uploadedBlobs ||
+    updates.thumbnailUploadInfo?.mirroredBlobs
+  )
+}
+
 export function useUploadDrafts() {
   const [drafts, setDrafts] = useState<UploadDraft[]>([])
   const [currentDraft, setCurrentDraft] = useState<UploadDraft | null>(null)
@@ -68,6 +87,17 @@ export function useUploadDrafts() {
     return newDraft
   }, [saveToLocalStorage])
 
+  const saveDraftsImmediate = useCallback((draftsToSave: UploadDraft[]) => {
+    saveToLocalStorage(draftsToSave)
+  }, [saveToLocalStorage])
+
+  const debouncedSaveDrafts = useCallback(
+    debounce((draftsToSave: UploadDraft[]) => {
+      saveToLocalStorage(draftsToSave)
+    }, 3000),
+    [saveToLocalStorage]
+  )
+
   const updateDraft = useCallback((draftId: string, updates: Partial<UploadDraft>) => {
     setDrafts(prev => {
       const updated = prev.map(d =>
@@ -75,10 +105,17 @@ export function useUploadDrafts() {
           ? { ...d, ...updates, updatedAt: Date.now() }
           : d
       )
-      saveToLocalStorage(updated)
+
+      // Immediate save for milestones, debounced for form fields
+      if (isMilestoneUpdate(updates)) {
+        saveDraftsImmediate(updated)
+      } else {
+        debouncedSaveDrafts(updated)
+      }
+
       return updated
     })
-  }, [saveToLocalStorage])
+  }, [saveDraftsImmediate, debouncedSaveDrafts])
 
   const deleteDraft = useCallback((draftId: string) => {
     setDrafts(prev => {

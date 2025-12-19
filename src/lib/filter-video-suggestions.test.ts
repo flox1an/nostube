@@ -104,6 +104,75 @@ describe('filterVideoSuggestions', () => {
     expect(result[1].id).toBe('video2')
   })
 
+  it('deduplicates videos by pubkey + identifier, preferring addressable events', () => {
+    const videos = [
+      createMockVideo({
+        id: 'regular-event',
+        kind: 21,
+        pubkey: 'author1',
+        identifier: 'my-video',
+        created_at: 1000,
+      }),
+      createMockVideo({
+        id: 'addressable-event',
+        kind: 34235,
+        pubkey: 'author1',
+        identifier: 'my-video',
+        created_at: 900, // older but addressable
+      }),
+    ]
+
+    const result = filterVideoSuggestions(videos, {})
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('addressable-event') // addressable preferred over regular
+  })
+
+  it('deduplicates videos by pubkey + identifier, preferring newer when same kind type', () => {
+    const videos = [
+      createMockVideo({
+        id: 'older-event',
+        kind: 34235,
+        pubkey: 'author1',
+        identifier: 'my-video',
+        created_at: 1000,
+      }),
+      createMockVideo({
+        id: 'newer-event',
+        kind: 34235,
+        pubkey: 'author1',
+        identifier: 'my-video',
+        created_at: 2000, // newer
+      }),
+    ]
+
+    const result = filterVideoSuggestions(videos, {})
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('newer-event') // newer preferred
+  })
+
+  it('keeps videos without identifier as separate entries', () => {
+    const videos = [
+      createMockVideo({
+        id: 'video1',
+        kind: 21,
+        pubkey: 'author1',
+        identifier: undefined,
+      }),
+      createMockVideo({
+        id: 'video2',
+        kind: 21,
+        pubkey: 'author1',
+        identifier: undefined,
+      }),
+    ]
+
+    const result = filterVideoSuggestions(videos, {})
+
+    expect(result).toHaveLength(2)
+  })
+
   it('applies all filters together', () => {
     const videos = [
       createMockVideo({ id: 'video1', pubkey: 'pubkey1' }),

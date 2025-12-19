@@ -220,7 +220,7 @@ function generateEventLink(event: Event, identifier: string | undefined, relays:
 /**
  * Check if a video event kind is addressable (NIP-71 addressable events)
  */
-function isAddressableKind(kind: number): boolean {
+export function isAddressableKind(kind: number): boolean {
   return kind === 34235 || kind === 34236
 }
 
@@ -229,7 +229,7 @@ function isAddressableKind(kind: number): boolean {
  * When the same video is posted as both kind 21 and 34235 (or 22 and 34236),
  * prefer the addressable event. If same kind type, prefer newer.
  */
-function deduplicateByIdentifier(videos: VideoEvent[]): VideoEvent[] {
+export function deduplicateByIdentifier(videos: VideoEvent[]): VideoEvent[] {
   const seen = new Map<string, VideoEvent>()
 
   for (const video of videos) {

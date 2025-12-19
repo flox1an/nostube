@@ -82,7 +82,6 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
               <TableHead className="w-12">#</TableHead>
               <TableHead>{t('upload.videoTable.quality')}</TableHead>
               <TableHead>{t('upload.videoTable.dimensions')}</TableHead>
-              <TableHead>{t('upload.videoTable.duration')}</TableHead>
               <TableHead>{t('upload.videoTable.size')}</TableHead>
               <TableHead>{t('upload.videoTable.codec')}</TableHead>
               <TableHead className="w-28">{t('upload.videoTable.status')}</TableHead>
@@ -103,9 +102,8 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                       </span>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{video.dimension}</TableCell>
-                    <TableCell className="font-mono text-sm">{video.duration}s</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {video.sizeMB ? `${video.sizeMB} MB` : '-'}
+                      {video.sizeMB ? `${video.sizeMB.toFixed(2)} MB` : '-'}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
                       <div className="space-y-1">
@@ -230,7 +228,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                   {codecWarning && (
                     <TableRow key={`${index}-warning`}>
                       <TableCell className="p-0"></TableCell>
-                      <TableCell colSpan={7} className="p-0">
+                      <TableCell colSpan={6} className="p-0">
                         <Alert
                           variant={
                             codecWarning.type === 'error' || codecWarning.type === 'warning'

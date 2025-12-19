@@ -18,9 +18,8 @@ export function EventPreview({ event }: EventPreviewProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  if (!event) return null
-
   const handleCopy = async () => {
+    if (!event) return
     try {
       await navigator.clipboard.writeText(JSON.stringify(event, null, 2))
       setCopied(true)
@@ -37,10 +36,12 @@ export function EventPreview({ event }: EventPreviewProps) {
           <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {t('upload.eventPreview.title', { defaultValue: 'Event Preview' })}
-            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">kind:{event.kind}</span>
+            {event && (
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded">kind:{event.kind}</span>
+            )}
           </Button>
         </CollapsibleTrigger>
-        {isOpen && (
+        {isOpen && event && (
           <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-2">
             {copied ? (
               <>
@@ -58,9 +59,17 @@ export function EventPreview({ event }: EventPreviewProps) {
       </div>
       <CollapsibleContent>
         <div className="mt-2 bg-muted rounded-lg p-4 overflow-x-auto">
-          <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-            {JSON.stringify(event, null, 2)}
-          </pre>
+          {event ? (
+            <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+              {JSON.stringify(event, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              {t('upload.eventPreview.noVideo', {
+                defaultValue: 'Upload a video to see the event preview',
+              })}
+            </p>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
           {t('upload.eventPreview.description', {

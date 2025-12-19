@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **DVM Video Transcoding**: Automatic 720p transcoding for high-resolution (1080p+) or incompatible codec videos using NIP-90 Data Vending Machines. Shows alert in upload wizard Step 1 with Create/Skip options. Supports progress tracking, cancellation, and automatic Blossom mirroring of transcoded videos. Blocks publish button during transcoding/mirroring
 - **Upload Draft Persistence**: NIP-78 based draft system with localStorage + Nostr sync. Up to 10 drafts, auto-save, 30-day cleanup, NIP-44 encryption
 - **Upload Draft Encryption**: Drafts encrypted with NIP-44 for privacy. Backward compatible with unencrypted drafts
 - **NIP-51 Follow Sets**: Migrated from NIP-2 contact lists to NIP-51 follow sets with auto-import dialog

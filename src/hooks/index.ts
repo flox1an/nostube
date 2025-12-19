@@ -65,6 +65,8 @@ export type { VideoHistoryEntry } from './useVideoHistory'
 export { useVideoUpload } from './useVideoUpload'
 export { useVideoNotes } from './useVideoNotes'
 export type { VideoNote } from './useVideoNotes'
+export { useDvmTranscode } from './useDvmTranscode'
+export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

@@ -11,7 +11,9 @@ import {
   ContentWarning,
   ThumbnailSection,
   ExpirationSection,
+  DvmTranscodeAlert,
 } from './video-upload'
+import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useState } from 'react'
@@ -177,6 +179,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const [showUploadPicker, setShowUploadPicker] = useState(false)
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
   const [currentStep, setCurrentStep] = useState(1) // 1: Video Upload, 2: Form, 3: Thumbnail
+  const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
 
   // Initialize with existing configured servers
   const [uploadServers, setUploadServers] = useState<string[]>(() => {
@@ -260,10 +263,12 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const canProceedToStep2 = uploadInfo.videos.length > 0
   const canProceedToStep3 = title.trim().length > 0
   const canProceedToStep4 = thumbnailSource === 'generated' ? thumbnailBlob : thumbnail
+  const isTranscoding = transcodeStatus === 'transcoding' || transcodeStatus === 'mirroring'
   const canPublish =
     uploadInfo.videos.length > 0 &&
     title.trim().length > 0 &&
-    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail)
+    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail) &&
+    !isTranscoding
 
   return (
     <>
@@ -387,6 +392,15 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 {uploadInfo.videos.length > 0 && (
                   <div className="space-y-4">
                     <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
+
+                    {/* DVM Transcode Alert - shown for high-res or incompatible videos */}
+                    {uploadState === 'finished' && uploadInfo.videos[0] && (
+                      <DvmTranscodeAlert
+                        video={uploadInfo.videos[0]}
+                        onComplete={videoUploadState.handleAddTranscodedVideo}
+                        onStatusChange={setTranscodeStatus}
+                      />
+                    )}
 
                     {/* Add another quality button */}
                     {uploadState === 'finished' && (

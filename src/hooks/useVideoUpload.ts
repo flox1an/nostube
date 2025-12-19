@@ -523,6 +523,13 @@ export function useVideoUpload(
     }))
   }
 
+  // Handler to add a transcoded video variant (from DVM)
+  const handleAddTranscodedVideo = (transcodedVideo: VideoVariant) => {
+    setUploadInfo(ui => ({
+      videos: [...ui.videos, transcodedVideo],
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
@@ -791,5 +798,6 @@ export function useVideoUpload(
     handleSubmit,
     handleAddVideo,
     handleRemoveVideo,
+    handleAddTranscodedVideo,
   }
 }

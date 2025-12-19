@@ -84,14 +84,9 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     }
 
     // Add MIME type with codecs
-    if (video.inputMethod === 'file' && video.file) {
-      imetaTag.push(
-        `m ${buildAdvancedMimeType(video.file.type, video.videoCodec, video.audioCodec)}`
-      )
-    } else if (video.inputMethod === 'url') {
-      // Use codecs if available (e.g., from DVM transcode)
-      imetaTag.push(`m ${buildAdvancedMimeType('video/mp4', video.videoCodec, video.audioCodec)}`)
-    }
+    // Note: video.file may be undefined when loading from draft (File objects can't be serialized)
+    const fileType = video.file?.type
+    imetaTag.push(`m ${buildAdvancedMimeType(fileType, video.videoCodec, video.audioCodec)}`)
 
     // Add bitrate if available
     if (video.bitrate) {

@@ -83,12 +83,15 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
     }
 
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        sub.unsubscribe()
-        reject(new Error('DVM discovery timed out'))
-      }, 10000)
+      let resolved = false
 
-      let foundHandler: DvmHandlerInfo | null = null
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          sub.unsubscribe()
+          reject(new Error('DVM discovery timed out'))
+        }
+      }, 10000)
 
       const sub = relayPool
         .request(readRelays, [
@@ -102,29 +105,54 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         .subscribe({
           next: event => {
             if (typeof event === 'string') return // EOSE
+            if (resolved) return // Already resolved
 
             const nostrEvent = event as NostrEvent
+
+            // Parse name/about from content (JSON) or tags
+            let name: string | undefined
+            let about: string | undefined
+
             try {
               const content = JSON.parse(nostrEvent.content || '{}')
-              foundHandler = {
-                pubkey: nostrEvent.pubkey,
-                name: content.name,
-                about: content.about,
-              }
+              name = content.name
+              about = content.about
             } catch {
-              foundHandler = {
-                pubkey: nostrEvent.pubkey,
-              }
+              // Content is not JSON, check tags
             }
-          },
-          error: err => {
+
+            // Also check tags for name/about (NIP-89 allows both)
+            const nameTag = nostrEvent.tags.find(t => t[0] === 'name')
+            const aboutTag = nostrEvent.tags.find(t => t[0] === 'about')
+            if (nameTag?.[1]) name = nameTag[1]
+            if (aboutTag?.[1]) about = aboutTag[1]
+
+            const handler: DvmHandlerInfo = {
+              pubkey: nostrEvent.pubkey,
+              name,
+              about,
+            }
+
+            // Resolve immediately when we find a handler (don't wait for complete)
+            resolved = true
             clearTimeout(timeout)
             sub.unsubscribe()
-            reject(err)
+            resolve(handler)
+          },
+          error: err => {
+            if (!resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              reject(err)
+            }
           },
           complete: () => {
-            clearTimeout(timeout)
-            resolve(foundHandler)
+            // If we reach complete without finding a handler, resolve with null
+            if (!resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              resolve(null)
+            }
           },
         })
     })

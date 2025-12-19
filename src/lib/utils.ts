@@ -88,13 +88,16 @@ export const formatBlobUrl = (url: string) => {
 }
 
 export function buildAdvancedMimeType(
-  baseMimetype: string,
+  baseMimetype: string | undefined,
   videoCodec?: string,
   audioCodec?: string
 ): string {
+  // Handle undefined/null baseMimetype
+  const mimeType = baseMimetype || 'video/mp4'
+
   // If baseMimetype already contains a codecs parameter, return as is
-  if (/codecs\s*=/.test(baseMimetype)) {
-    return baseMimetype
+  if (/codecs\s*=/.test(mimeType)) {
+    return mimeType
   }
 
   const codecs: string[] = []
@@ -108,12 +111,12 @@ export function buildAdvancedMimeType(
 
   if (codecs.length === 0) {
     // Remove any trailing semicolons or whitespace
-    return baseMimetype.replace(/;\s*$/, '').trim()
+    return mimeType.replace(/;\s*$/, '').trim()
   }
 
   const codecParam = `codecs="${codecs.join(',')}"`
   // Ensure no trailing semicolon before appending
-  const cleanBase = baseMimetype.replace(/;\s*$/, '').trim()
+  const cleanBase = mimeType.replace(/;\s*$/, '').trim()
   return `${cleanBase}; ${codecParam}`
 }
 

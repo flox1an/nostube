@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Duplicate Video Deduplication**: Videos posted as both kind 21 and kind 34235 (or 22 and 34236) with the same `d` tag are now deduplicated in timelines. Prefers addressable events (34235/34236) over regular events (21/22). Same-kind duplicates keep the newer event (video-event.ts:220-268)
 - **Draft Upload State Initialization**: Fixed "Add another quality" button not appearing when opening a draft with existing videos. The uploadState now correctly initializes to 'finished' when a draft contains videos, ensuring the additional variant upload UI is visible. Also fixes unnecessary input method selector and URL input showing when videos already exist (useVideoUpload.ts:49-51)
 - **Draft Nostr Sync Debouncing**: Fixed draft changes publishing to Nostr on every form field change. Split useVideoUpload's useEffect into two separate hooks: one for form fields (title, description, tags, etc.) that triggers debounced sync (5-second delay), and one for upload milestones (uploadInfo, thumbnailUploadInfo) that triggers immediate sync. Previously, all changes included uploadInfo which triggered immediate sync (useVideoUpload.ts:681-720, useUploadDrafts.ts:244)
 - **Draft Generated Thumbnails**: Drafts with generated thumbnails now show video thumbnail in draft list using image proxy

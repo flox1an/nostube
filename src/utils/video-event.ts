@@ -217,6 +217,56 @@ function generateEventLink(event: Event, identifier: string | undefined, relays:
 }
 
 // Deprecated functions removed - use generateMediaUrls from @/lib/media-url-generator instead
+/**
+ * Check if a video event kind is addressable (NIP-71 addressable events)
+ */
+function isAddressableKind(kind: number): boolean {
+  return kind === 34235 || kind === 34236
+}
+
+/**
+ * Deduplicate videos by pubkey + identifier (d tag)
+ * When the same video is posted as both kind 21 and 34235 (or 22 and 34236),
+ * prefer the addressable event. If same kind type, prefer newer.
+ */
+function deduplicateByIdentifier(videos: VideoEvent[]): VideoEvent[] {
+  const seen = new Map<string, VideoEvent>()
+
+  for (const video of videos) {
+    // Only deduplicate if identifier (d tag) exists
+    if (!video.identifier) {
+      // No d tag - can't deduplicate, keep it using event id as key
+      seen.set(video.id, video)
+      continue
+    }
+
+    const key = `${video.pubkey}:${video.identifier}`
+    const existing = seen.get(key)
+
+    if (!existing) {
+      seen.set(key, video)
+      continue
+    }
+
+    // Prefer addressable events (34235, 34236) over regular events (21, 22)
+    const existingIsAddressable = isAddressableKind(existing.kind)
+    const currentIsAddressable = isAddressableKind(video.kind)
+
+    if (currentIsAddressable && !existingIsAddressable) {
+      // Current is addressable, existing is not - replace
+      seen.set(key, video)
+    } else if (!currentIsAddressable && existingIsAddressable) {
+      // Existing is addressable, current is not - keep existing
+      continue
+    } else if (video.created_at > existing.created_at) {
+      // Same addressable status - prefer newer
+      seen.set(key, video)
+    }
+  }
+
+  return Array.from(seen.values())
+}
+
 // Process Nostr events into cache entries
 export function processEvents(
   events: (Event | undefined)[],
@@ -225,7 +275,7 @@ export function processEvents(
   blossomServers?: BlossomServer[],
   missingVideoIds?: Set<string>
 ): VideoEvent[] {
-  return events
+  const processed = events
     .filter((event): event is Event => event !== undefined)
     .map(event => processEvent(event, relays, blossomServers))
     .filter(
@@ -238,6 +288,9 @@ export function processEvents(
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
         (!missingVideoIds || !missingVideoIds.has(video.id))
     )
+
+  // Deduplicate videos posted as both addressable (34235/34236) and regular (21/22) events
+  return deduplicateByIdentifier(processed)
 }
 
 export function processEvent(

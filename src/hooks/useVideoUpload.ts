@@ -68,15 +68,19 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
   for (const video of videos) {
     const imetaTag = ['imeta', `dim ${video.dimension}`]
 
+    // Ensure arrays exist (might be undefined when loading from draft)
+    const uploadedBlobs = video.uploadedBlobs || []
+    const mirroredBlobs = video.mirroredBlobs || []
+
     // Add primary URL
-    const primaryUrl = video.inputMethod === 'url' ? video.url : video.uploadedBlobs[0]?.url
+    const primaryUrl = video.inputMethod === 'url' ? video.url : uploadedBlobs[0]?.url
     if (primaryUrl) {
       imetaTag.push(`url ${primaryUrl}`)
     }
 
     // Add SHA256 hash for uploaded files
-    if (video.inputMethod === 'file' && video.uploadedBlobs[0]?.sha256) {
-      imetaTag.push(`x ${video.uploadedBlobs[0].sha256}`)
+    if (video.inputMethod === 'file' && uploadedBlobs[0]?.sha256) {
+      imetaTag.push(`x ${uploadedBlobs[0].sha256}`)
     }
 
     // Add MIME type with codecs
@@ -110,14 +114,14 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
 
     // Add fallback URLs from multiple upload servers
     if (video.inputMethod === 'file') {
-      if (video.uploadedBlobs.length > 1) {
-        for (const blob of video.uploadedBlobs.slice(1)) {
+      if (uploadedBlobs.length > 1) {
+        for (const blob of uploadedBlobs.slice(1)) {
           imetaTag.push(`fallback ${blob.url}`)
           allFallbackUrls.push(blob.url)
         }
       }
-      if (video.mirroredBlobs.length > 0) {
-        for (const blob of video.mirroredBlobs) {
+      if (mirroredBlobs.length > 0) {
+        for (const blob of mirroredBlobs) {
           imetaTag.push(`fallback ${blob.url}`)
           allFallbackUrls.push(blob.url)
         }
@@ -166,8 +170,9 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     ],
   }
 
+  const firstVideoBlobs = firstVideo.uploadedBlobs || []
   const primaryVideoUrl =
-    firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideo.uploadedBlobs[0]?.url
+    firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideoBlobs[0]?.url
 
   return { event, allFallbackUrls, primaryVideoUrl }
 }

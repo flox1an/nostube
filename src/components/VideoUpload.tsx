@@ -12,6 +12,7 @@ import {
   ThumbnailSection,
   ExpirationSection,
   DvmTranscodeAlert,
+  EventPreview,
 } from './video-upload'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
@@ -79,6 +80,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     blossomMirrorServers,
     isPublishing,
     thumbnailUrl,
+    previewEvent,
 
     // Handlers
     handleUseRecommendedServers,
@@ -516,6 +518,11 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
           </CardContent>
         </form>
       </Card>
+
+      {/* Event Preview - collapsible section showing the generated Nostr event */}
+      <div className="max-w-6xl mx-auto">
+        <EventPreview event={previewEvent} />
+      </div>
 
       {/* Blossom Server Configuration Dialog */}
       <Dialog open={showBlossomOnboarding} onOpenChange={setShowBlossomOnboarding}>

@@ -11,6 +11,167 @@ import { presetBlossomServers } from '@/constants/relays'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
 import type { UploadDraft } from '@/types/upload-draft'
 
+interface BuildVideoEventParams {
+  videos: VideoVariant[]
+  title: string
+  description: string
+  tags: string[]
+  language: string
+  contentWarningEnabled: boolean
+  contentWarningReason: string
+  expiration: 'none' | '1day' | '7days' | '1month' | '1year'
+  thumbnailUploadedBlobs: BlobDescriptor[]
+  thumbnailMirroredBlobs: BlobDescriptor[]
+  isPreview?: boolean
+  hasPendingThumbnail?: boolean
+}
+
+interface BuildVideoEventResult {
+  event: {
+    kind: number
+    content: string
+    created_at: number | string
+    tags: string[][]
+  }
+  allFallbackUrls: string[]
+  primaryVideoUrl: string | undefined
+}
+
+/**
+ * Builds a video event from the provided parameters.
+ * Used for both preview and actual publishing.
+ */
+function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
+  const {
+    videos,
+    title,
+    description,
+    tags,
+    language,
+    contentWarningEnabled,
+    contentWarningReason,
+    expiration,
+    thumbnailUploadedBlobs,
+    thumbnailMirroredBlobs,
+    isPreview = false,
+    hasPendingThumbnail = false,
+  } = params
+
+  const firstVideo = videos[0]
+  const [width, height] = firstVideo.dimension.split('x').map(Number)
+  const kind = height > width ? 22 : 21
+
+  // Create multiple imeta tags - one for each video variant
+  const imetaTags: string[][] = []
+  const allFallbackUrls: string[] = []
+
+  for (const video of videos) {
+    const imetaTag = ['imeta', `dim ${video.dimension}`]
+
+    // Add primary URL
+    const primaryUrl = video.inputMethod === 'url' ? video.url : video.uploadedBlobs[0]?.url
+    if (primaryUrl) {
+      imetaTag.push(`url ${primaryUrl}`)
+    }
+
+    // Add SHA256 hash for uploaded files
+    if (video.inputMethod === 'file' && video.uploadedBlobs[0]?.sha256) {
+      imetaTag.push(`x ${video.uploadedBlobs[0].sha256}`)
+    }
+
+    // Add MIME type with codecs
+    if (video.inputMethod === 'file' && video.file) {
+      imetaTag.push(
+        `m ${buildAdvancedMimeType(video.file.type, video.videoCodec, video.audioCodec)}`
+      )
+    } else if (video.inputMethod === 'url') {
+      imetaTag.push(`m video/mp4`)
+    }
+
+    // Add bitrate if available
+    if (video.bitrate) {
+      imetaTag.push(`bitrate ${video.bitrate}`)
+    }
+
+    // Add size if available (in bytes)
+    if (video.sizeMB) {
+      const sizeBytes = Math.round(video.sizeMB * 1024 * 1024)
+      imetaTag.push(`size ${sizeBytes}`)
+    }
+
+    // Add thumbnail URLs (shared across all videos)
+    thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+    thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+
+    // For preview mode, show placeholder for pending thumbnail
+    if (isPreview && hasPendingThumbnail && thumbnailUploadedBlobs.length === 0) {
+      imetaTag.push(`image <will be uploaded on publish>`)
+    }
+
+    // Add fallback URLs from multiple upload servers
+    if (video.inputMethod === 'file') {
+      if (video.uploadedBlobs.length > 1) {
+        for (const blob of video.uploadedBlobs.slice(1)) {
+          imetaTag.push(`fallback ${blob.url}`)
+          allFallbackUrls.push(blob.url)
+        }
+      }
+      if (video.mirroredBlobs.length > 0) {
+        for (const blob of video.mirroredBlobs) {
+          imetaTag.push(`fallback ${blob.url}`)
+          allFallbackUrls.push(blob.url)
+        }
+      }
+    }
+
+    imetaTags.push(imetaTag)
+  }
+
+  // Calculate expiration timestamp
+  const getExpirationTimestamp = (): string | null => {
+    if (expiration === 'none') return null
+
+    const now = Math.floor(Date.now() / 1000)
+    const durations = {
+      '1day': 24 * 60 * 60,
+      '7days': 7 * 24 * 60 * 60,
+      '1month': 30 * 24 * 60 * 60,
+      '1year': 365 * 24 * 60 * 60,
+    }
+
+    return (now + durations[expiration]).toString()
+  }
+
+  const createdAt = isPreview ? '<generated on publish>' : nowInSecs()
+  const publishedAt = isPreview ? '<generated on publish>' : nowInSecs().toString()
+
+  const event = {
+    kind,
+    content: description,
+    created_at: createdAt,
+    tags: [
+      ['title', title],
+      ['alt', description],
+      ['published_at', publishedAt],
+      ['duration', firstVideo.duration.toString()],
+      ...imetaTags,
+      ...(contentWarningEnabled
+        ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
+        : []),
+      ...(getExpirationTimestamp() ? [['expiration', getExpirationTimestamp()!]] : []),
+      ...tags.map(tag => ['t', tag]),
+      ['L', 'ISO-639-1'],
+      ['l', language, 'ISO-639-1'],
+      ['client', 'nostube'],
+    ],
+  }
+
+  const primaryVideoUrl =
+    firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideo.uploadedBlobs[0]?.url
+
+  return { event, allFallbackUrls, primaryVideoUrl }
+}
+
 export interface UploadInfo {
   videos: VideoVariant[]
 }
@@ -577,116 +738,26 @@ export function useVideoUpload(
 
     if (!thumbnailFile) throw new Error('No valid thumbnail file selected')
 
-    // Calculate expiration timestamp
-    const getExpirationTimestamp = (): string | null => {
-      if (expiration === 'none') return null
-
-      const now = Math.floor(Date.now() / 1000) // Current time in seconds
-      const durations = {
-        '1day': 24 * 60 * 60,
-        '7days': 7 * 24 * 60 * 60,
-        '1month': 30 * 24 * 60 * 60,
-        '1year': 365 * 24 * 60 * 60,
-      }
-
-      return (now + durations[expiration]).toString()
-    }
-
     try {
-      // Determine video kind based on first video's dimensions
-      const firstVideo = uploadInfo.videos[0]
-      const [width, height] = firstVideo.dimension.split('x').map(Number)
-      const kind = height > width ? 22 : 21
-
-      // Create multiple imeta tags - one for each video variant
-      const imetaTags: string[][] = []
-      const allFallbackUrls: string[] = []
-
-      for (const video of uploadInfo.videos) {
-        const imetaTag = ['imeta', `dim ${video.dimension}`]
-
-        // Add primary URL
-        const primaryUrl = video.inputMethod === 'url' ? video.url : video.uploadedBlobs[0]?.url
-        if (primaryUrl) {
-          imetaTag.push(`url ${primaryUrl}`)
-        }
-
-        // Add SHA256 hash for uploaded files
-        if (video.inputMethod === 'file' && video.uploadedBlobs[0]?.sha256) {
-          imetaTag.push(`x ${video.uploadedBlobs[0].sha256}`)
-        }
-
-        // Add MIME type with codecs
-        if (video.inputMethod === 'file' && video.file) {
-          imetaTag.push(
-            `m ${buildAdvancedMimeType(video.file.type, video.videoCodec, video.audioCodec)}`
-          )
-        } else if (video.inputMethod === 'url') {
-          imetaTag.push(`m video/mp4`)
-        }
-
-        // Add bitrate if available
-        if (video.bitrate) {
-          imetaTag.push(`bitrate ${video.bitrate}`)
-        }
-
-        // Add size if available (in bytes)
-        if (video.sizeMB) {
-          const sizeBytes = Math.round(video.sizeMB * 1024 * 1024)
-          imetaTag.push(`size ${sizeBytes}`)
-        }
-
-        // Add thumbnail URLs (shared across all videos)
-        thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
-        thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
-
-        // Add fallback URLs from multiple upload servers
-        if (video.inputMethod === 'file') {
-          if (video.uploadedBlobs.length > 1) {
-            for (const blob of video.uploadedBlobs.slice(1)) {
-              imetaTag.push(`fallback ${blob.url}`)
-              allFallbackUrls.push(blob.url)
-            }
-          }
-          if (video.mirroredBlobs.length > 0) {
-            for (const blob of video.mirroredBlobs) {
-              imetaTag.push(`fallback ${blob.url}`)
-              allFallbackUrls.push(blob.url)
-            }
-          }
-        }
-
-        imetaTags.push(imetaTag)
-      }
-
-      const event = {
-        kind,
-        content: description,
-        created_at: nowInSecs(),
-        tags: [
-          ['title', title],
-          ['alt', description],
-          ['published_at', nowInSecs().toString()],
-          ['duration', firstVideo.duration.toString()],
-          ...imetaTags, // Multiple imeta tags, one per video variant
-          ...(contentWarningEnabled
-            ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
-            : []),
-          ...(getExpirationTimestamp() ? [['expiration', getExpirationTimestamp()!]] : []),
-          ...tags.map(tag => ['t', tag]),
-          ['L', 'ISO-639-1'],
-          ['l', language, 'ISO-639-1'],
-          ['client', 'nostube'],
-        ],
-      }
-
-      const publishedEvent = await publish({
-        event,
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+      // Build the event using the shared function
+      const { event, allFallbackUrls, primaryVideoUrl } = buildVideoEvent({
+        videos: uploadInfo.videos,
+        title,
+        description,
+        tags,
+        language,
+        contentWarningEnabled,
+        contentWarningReason,
+        expiration,
+        thumbnailUploadedBlobs,
+        thumbnailMirroredBlobs,
+        isPreview: false,
       })
 
-      const primaryVideoUrl =
-        firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideo.uploadedBlobs[0]?.url
+      const publishedEvent = await publish({
+        event: event as { kind: number; content: string; created_at: number; tags: string[][] },
+        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+      })
 
       setPublishSummary({
         eventId: publishedEvent.id,
@@ -749,6 +820,44 @@ export function useVideoUpload(
     }
   }, [uploadInfo, thumbnailUploadInfo])
 
+  // Build preview event from current form state (reuses buildVideoEvent logic)
+  const previewEvent = useMemo(() => {
+    if (uploadInfo.videos.length === 0) return null
+
+    // For preview, use existing thumbnail blobs if available, or placeholder
+    const thumbUploadedBlobs = thumbnailSource === 'upload' ? thumbnailUploadInfo.uploadedBlobs : []
+    const thumbMirroredBlobs = thumbnailSource === 'upload' ? thumbnailUploadInfo.mirroredBlobs : []
+
+    const result = buildVideoEvent({
+      videos: uploadInfo.videos,
+      title: title || '<untitled>',
+      description,
+      tags,
+      language,
+      contentWarningEnabled,
+      contentWarningReason,
+      expiration,
+      thumbnailUploadedBlobs: thumbUploadedBlobs,
+      thumbnailMirroredBlobs: thumbMirroredBlobs,
+      isPreview: true,
+      hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
+    })
+
+    return result.event
+  }, [
+    uploadInfo.videos,
+    title,
+    description,
+    tags,
+    language,
+    contentWarningEnabled,
+    contentWarningReason,
+    expiration,
+    thumbnailSource,
+    thumbnailUploadInfo,
+    thumbnailBlob,
+  ])
+
   return {
     // State
     title,
@@ -784,6 +893,7 @@ export function useVideoUpload(
     blossomMirrorServers,
     isPublishing,
     thumbnailUrl,
+    previewEvent,
 
     // Handlers
     handleUseRecommendedServers,

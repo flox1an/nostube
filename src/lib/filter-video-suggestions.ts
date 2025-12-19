@@ -1,4 +1,4 @@
-import type { VideoEvent } from '@/utils/video-event'
+import { deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
 
 export interface FilterOptions {
   currentVideoId?: string
@@ -10,14 +10,17 @@ export interface FilterOptions {
  * - Remove videos with content warnings (NSFW, etc.)
  * - Remove current video
  * - Remove videos from blocked authors
- * - Remove duplicate videos
+ * - Deduplicate by pubkey + identifier (prefers addressable events, then newer)
  */
 export function filterVideoSuggestions(videos: VideoEvent[], options: FilterOptions): VideoEvent[] {
   const { currentVideoId, blockedPubkeys } = options
-  const seenIds = new Set<string>()
+
+  // First deduplicate by pubkey + identifier (same logic as main timelines)
+  const deduplicated = deduplicateByIdentifier(videos)
+
   const filtered: VideoEvent[] = []
 
-  for (const video of videos) {
+  for (const video of deduplicated) {
     // Skip videos with content warnings
     if (video.contentWarning) continue
 
@@ -27,11 +30,7 @@ export function filterVideoSuggestions(videos: VideoEvent[], options: FilterOpti
     // Skip blocked authors
     if (blockedPubkeys && blockedPubkeys[video.pubkey]) continue
 
-    // Skip duplicates
-    if (seenIds.has(video.id)) continue
-
     filtered.push(video)
-    seenIds.add(video.id)
   }
 
   return filtered

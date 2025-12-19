@@ -89,7 +89,8 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
         `m ${buildAdvancedMimeType(video.file.type, video.videoCodec, video.audioCodec)}`
       )
     } else if (video.inputMethod === 'url') {
-      imetaTag.push(`m video/mp4`)
+      // Use codecs if available (e.g., from DVM transcode)
+      imetaTag.push(`m ${buildAdvancedMimeType('video/mp4', video.videoCodec, video.audioCodec)}`)
     }
 
     // Add bitrate if available

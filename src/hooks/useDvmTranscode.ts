@@ -11,6 +11,7 @@ import {
   parseCodecsFromMimetype,
   type DvmHandlerInfo,
 } from '@/lib/dvm-utils'
+import { extractBlossomHash } from '@/utils/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
 import { Subscription } from 'rxjs'
 
@@ -240,26 +241,47 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
       if (uploadServers.length === 0 && mirrorServers.length === 0) {
         // No servers configured, return video as-is with DVM URL
+        console.warn('[DVM] No Blossom servers configured, using temp DVM URL')
         return video
       }
 
+      // Try to extract SHA256 from Blossom URL first (format: /sha256.ext)
+      const { sha256: urlHash } = extractBlossomHash(video.url!)
+
       // Create a BlobDescriptor from the DVM result URL
-      // We need to fetch HEAD to get the SHA256 hash
-      let sha256: string | undefined
+      let sha256: string | undefined = urlHash
       let size: number | undefined
 
-      try {
-        const headResponse = await fetch(video.url!, { method: 'HEAD' })
-        sha256 = headResponse.headers.get('x-sha-256') || undefined
-        const contentLength = headResponse.headers.get('content-length')
-        size = contentLength ? parseInt(contentLength, 10) : undefined
-      } catch {
-        // Continue without hash - mirroring may still work
+      // If not found in URL, try HEAD request
+      if (!sha256) {
+        try {
+          const headResponse = await fetch(video.url!, { method: 'HEAD' })
+          sha256 = headResponse.headers.get('x-sha-256') || undefined
+          const contentLength = headResponse.headers.get('content-length')
+          size = contentLength ? parseInt(contentLength, 10) : undefined
+        } catch {
+          // Continue without hash - mirroring may still work
+        }
+      } else {
+        // We have hash from URL, still try to get size from HEAD
+        try {
+          const headResponse = await fetch(video.url!, { method: 'HEAD' })
+          const contentLength = headResponse.headers.get('content-length')
+          size = contentLength ? parseInt(contentLength, 10) : undefined
+        } catch {
+          // Use size from video if available
+          size = video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined
+        }
+      }
+
+      if (!sha256) {
+        console.warn('[DVM] Could not get SHA256 hash, cannot mirror to user servers')
+        return video
       }
 
       const sourceBlob: BlobDescriptor = {
         url: video.url!,
-        sha256: sha256 || '',
+        sha256,
         size: size || 0,
         type: 'video/mp4',
         uploaded: Date.now(),
@@ -267,8 +289,8 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
       const updatedVideo = { ...video }
 
-      // Mirror to upload servers first
-      if (uploadServers.length > 0 && sha256) {
+      // Mirror to upload servers first (these become the primary URL)
+      if (uploadServers.length > 0) {
         try {
           const uploadedBlobs = await mirrorBlobsToServers({
             mirrorServers: uploadServers,
@@ -279,14 +301,17 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
           // Use the first uploaded blob URL as primary
           if (uploadedBlobs.length > 0) {
             updatedVideo.url = uploadedBlobs[0].url
+            if (import.meta.env.DEV) {
+              console.log('[DVM] Mirrored to upload server:', uploadedBlobs[0].url)
+            }
           }
         } catch (err) {
-          console.warn('Failed to mirror to upload servers:', err)
+          console.warn('[DVM] Failed to mirror to upload servers:', err)
         }
       }
 
-      // Mirror to mirror servers
-      if (mirrorServers.length > 0 && sha256) {
+      // Mirror to mirror servers (these become fallbacks)
+      if (mirrorServers.length > 0) {
         try {
           const mirroredBlobs = await mirrorBlobsToServers({
             mirrorServers,
@@ -294,8 +319,11 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
             signer: async draft => await user.signer.signEvent(draft),
           })
           updatedVideo.mirroredBlobs = mirroredBlobs
+          if (import.meta.env.DEV) {
+            console.log('[DVM] Mirrored to', mirroredBlobs.length, 'mirror servers')
+          }
         } catch (err) {
-          console.warn('Failed to mirror to mirror servers:', err)
+          console.warn('[DVM] Failed to mirror to mirror servers:', err)
         }
       }
 

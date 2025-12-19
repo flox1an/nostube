@@ -78,6 +78,8 @@ export interface DvmResultContent {
   resolution: string
   size_bytes: number
   mimetype: string
+  duration?: number // Duration in seconds (if returned by DVM)
+  bitrate?: number // Bitrate in bits per second (if returned by DVM)
 }
 
 /**

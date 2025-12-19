@@ -56,7 +56,7 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
   const handleStartTranscode = () => {
     const inputUrl = getInputVideoUrl()
     if (inputUrl) {
-      startTranscode(inputUrl)
+      startTranscode(inputUrl, video.duration)
     }
   }
 

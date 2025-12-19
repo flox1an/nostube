@@ -42,7 +42,7 @@ export interface UseDvmTranscodeResult {
   status: TranscodeStatus
   progress: TranscodeProgress
   error: string | null
-  startTranscode: (inputVideoUrl: string) => Promise<void>
+  startTranscode: (inputVideoUrl: string, originalDuration?: number) => Promise<void>
   cancel: () => void
   transcodedVideo: VideoVariant | null
 }
@@ -134,7 +134,11 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
    * Subscribe to DVM responses for a job request
    */
   const subscribeToDvmResponses = useCallback(
-    (requestEventId: string, dvmPubkey: string): Promise<VideoVariant> => {
+    (
+      requestEventId: string,
+      dvmPubkey: string,
+      originalDuration?: number
+    ): Promise<VideoVariant> => {
       const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
       return new Promise((resolve, reject) => {
@@ -200,12 +204,23 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
                 // Parse codecs from mimetype
                 const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
 
+                // Use duration from DVM result, or fall back to original video duration
+                const duration = result.duration || originalDuration || 0
+
+                // Calculate bitrate if we have size and duration
+                // Bitrate = (size in bytes * 8) / duration in seconds
+                let bitrate = result.bitrate
+                if (!bitrate && result.size_bytes && duration > 0) {
+                  bitrate = Math.round((result.size_bytes * 8) / duration)
+                }
+
                 // Build VideoVariant from DVM result
                 const videoVariant: VideoVariant = {
                   url: result.urls[0],
                   dimension: result.resolution === '720p' ? '1280x720' : '1280x720',
                   sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
-                  duration: 0, // Will be updated when mirroring
+                  duration,
+                  bitrate,
                   videoCodec,
                   audioCodec,
                   uploadedBlobs: [],
@@ -336,7 +351,7 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
    * Start the transcode workflow
    */
   const startTranscode = useCallback(
-    async (inputVideoUrl: string) => {
+    async (inputVideoUrl: string, originalDuration?: number) => {
       if (!user) {
         setError('User not logged in')
         return
@@ -404,7 +419,11 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         // Step 3: Subscribe and wait for result
         setProgress({ status: 'transcoding', message: 'Waiting for transcode to complete...' })
 
-        const transcodedResult = await subscribeToDvmResponses(signedRequest.id, dvm.pubkey)
+        const transcodedResult = await subscribeToDvmResponses(
+          signedRequest.id,
+          dvm.pubkey,
+          originalDuration
+        )
 
         // Check if cancelled
         if (abortControllerRef.current?.signal.aborted) {

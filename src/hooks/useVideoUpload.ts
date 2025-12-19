@@ -78,8 +78,8 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
       imetaTag.push(`url ${primaryUrl}`)
     }
 
-    // Add SHA256 hash for uploaded files
-    if (video.inputMethod === 'file' && uploadedBlobs[0]?.sha256) {
+    // Add SHA256 hash from uploaded/mirrored blobs
+    if (uploadedBlobs[0]?.sha256) {
       imetaTag.push(`x ${uploadedBlobs[0].sha256}`)
     }
 

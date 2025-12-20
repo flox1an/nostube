@@ -263,6 +263,17 @@
       "mirroredTo": "Mis en miroir sur",
       "servers": "serveur(s)"
     },
+    "deleteVideoDialog": {
+      "title": "Supprimer la variante vidéo",
+      "descriptionWithBlobs": "Cette vidéo ({{quality}}) a été téléchargée sur {{count}} serveur(s). Que souhaitez-vous faire ?",
+      "descriptionNoBlobs": "Êtes-vous sûr de vouloir retirer cette vidéo ({{quality}}) de votre téléchargement ?",
+      "removeFromForm": "Retirer du formulaire uniquement",
+      "deleteFromServers": "Supprimer des serveurs",
+      "remove": "Retirer",
+      "deletedSuccess": "Vidéo supprimée de {{count}} serveur(s)",
+      "deletedPartial": "Supprimé de {{successful}} serveur(s), échec sur {{failed}} serveur(s)",
+      "deletedFailed": "Échec de la suppression des serveurs"
+    },
     "addAnotherQuality": "Ajouter une autre qualité/résolution",
     "addAnotherQualityHint": "Téléchargez la même vidéo dans une résolution différente (par ex. 1080p, 720p, 480p)",
     "uploadingVideo": "Téléchargement de la vidéo...",

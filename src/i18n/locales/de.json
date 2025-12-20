@@ -263,6 +263,17 @@
       "mirroredTo": "Gespiegelt auf",
       "servers": "Server"
     },
+    "deleteVideoDialog": {
+      "title": "Video-Variante löschen",
+      "descriptionWithBlobs": "Dieses Video ({{quality}}) wurde auf {{count}} Server hochgeladen. Was möchten Sie tun?",
+      "descriptionNoBlobs": "Möchten Sie dieses Video ({{quality}}) wirklich aus Ihrem Upload entfernen?",
+      "removeFromForm": "Nur aus Formular entfernen",
+      "deleteFromServers": "Von Servern löschen",
+      "remove": "Entfernen",
+      "deletedSuccess": "Video von {{count}} Server(n) gelöscht",
+      "deletedPartial": "Von {{successful}} Server(n) gelöscht, bei {{failed}} Server(n) fehlgeschlagen",
+      "deletedFailed": "Löschen von Servern fehlgeschlagen"
+    },
     "addAnotherQuality": "Weitere Qualität/Auflösung hinzufügen",
     "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z.B. 1080p, 720p, 480p)",
     "uploadingVideo": "Video wird hochgeladen...",

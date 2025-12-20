@@ -48,7 +48,7 @@ function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
     updates.uploadInfo?.videos ||
     updates.thumbnailUploadInfo?.uploadedBlobs ||
     updates.thumbnailUploadInfo?.mirroredBlobs ||
-    updates.dvmTranscodeState !== undefined // DVM state changes need immediate persistence
+    'dvmTranscodeState' in updates // DVM state changes need immediate persistence (including clearing)
   )
 }
 

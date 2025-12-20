@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Upload Wizard Form Submission**: Fixed videos publishing from step 1 when pressing Enter in input fields. Form submission now only works on step 4 (VideoUpload.tsx:handleSubmit)
 - **DVM Transcode Mirroring**: Fixed transcoded videos using temp DVM URL instead of user's Blossom servers. Now extracts SHA256 from Blossom URL format and mirrors to configured upload/mirror servers. Includes full codec information, size, bitrate, duration, and SHA256 hash in the imeta tag for transcoded videos (useDvmTranscode.ts, useVideoUpload.ts)
 - **Duplicate Video Deduplication**: Videos posted as both kind 21 and kind 34235 (or 22 and 34236) with the same `d` tag are now deduplicated in timelines and suggestions. Prefers addressable events (34235/34236) over regular events (21/22). Same-kind duplicates keep the newer event (video-event.ts:220-268, filter-video-suggestions.ts)
 - **Draft Upload State Initialization**: Fixed "Add another quality" button not appearing when opening a draft with existing videos. The uploadState now correctly initializes to 'finished' when a draft contains videos, ensuring the additional variant upload UI is visible. Also fixes unnecessary input method selector and URL input showing when videos already exist (useVideoUpload.ts:49-51)

@@ -166,6 +166,12 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   // Wrap handleSubmit to delete draft on success
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Only allow publishing from step 4
+    if (currentStep !== 4) {
+      return
+    }
+
     try {
       await originalHandleSubmit(e)
       // On success, delete the draft

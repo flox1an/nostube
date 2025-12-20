@@ -78,6 +78,20 @@ function getDraftsFromStorage(): UploadDraft[] {
   return []
 }
 
+// Get the lastModified timestamp from localStorage
+function getLocalStorageLastModified(): number {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    try {
+      const parsed: UploadDraftsData = JSON.parse(stored)
+      return parsed.lastModified || 0
+    } catch {
+      return 0
+    }
+  }
+  return 0
+}
+
 export function useUploadDrafts() {
   // Use a counter to trigger re-renders when localStorage changes
   const [version, setVersion] = useState(0)
@@ -295,17 +309,29 @@ export function useUploadDrafts() {
   )
 
   const mergeDraftsFromNostr = useCallback(
-    (nostrDrafts: UploadDraft[]) => {
+    (nostrDrafts: UploadDraft[], nostrEventTimestamp: number) => {
       const localDrafts = getDraftsFromStorage()
+      const localLastModified = getLocalStorageLastModified()
       const draftMap = new Map<string, UploadDraft>()
 
       // Add local drafts first
       localDrafts.forEach(d => draftMap.set(d.id, d))
 
-      // Nostr drafts win on conflict (newer updatedAt)
+      // Only merge Nostr drafts if the Nostr event is newer than local storage
+      // This prevents deleted drafts from being restored
+      const nostrEventMs = nostrEventTimestamp * 1000 // Convert seconds to milliseconds
+      const shouldRestoreFromNostr = nostrEventMs > localLastModified
+
       nostrDrafts.forEach(d => {
         const existing = draftMap.get(d.id)
-        if (!existing || d.updatedAt > existing.updatedAt) {
+        if (existing) {
+          // Draft exists locally - update if Nostr version is newer
+          if (d.updatedAt > existing.updatedAt) {
+            draftMap.set(d.id, d)
+          }
+        } else if (shouldRestoreFromNostr) {
+          // Draft doesn't exist locally - only add if Nostr event is newer than local storage
+          // This prevents adding back drafts that were deleted locally
           draftMap.set(d.id, d)
         }
       })
@@ -346,7 +372,7 @@ export function useUploadDrafts() {
 
           const parsed = JSON.parse(plaintext)
           const nostrDrafts = parsed.drafts || []
-          mergeDraftsFromNostr(nostrDrafts)
+          mergeDraftsFromNostr(nostrDrafts, event.created_at)
         } catch (error) {
           console.error('Failed to parse NIP-78 event:', error)
         }

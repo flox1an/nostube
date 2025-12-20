@@ -24,7 +24,7 @@ import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { deriveServerName } from '@/lib/blossom-servers'
 import type { BlossomServerTag } from '@/contexts/AppContext'
-import type { UploadDraft } from '@/types/upload-draft'
+import type { UploadDraft, DvmTranscodeState } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -44,6 +44,17 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       updateDraft(draft.id, updates)
     },
     [draft.id, updateDraft]
+  )
+
+  // Handle DVM transcode state changes for persistence
+  const handleTranscodeStateChange = useCallback(
+    (state: DvmTranscodeState | null) => {
+      handleDraftChange({
+        dvmTranscodeState: state ?? undefined,
+        updatedAt: Date.now(),
+      })
+    },
+    [handleDraftChange]
   )
 
   const videoUploadState = useVideoUpload(draft, handleDraftChange)
@@ -396,13 +407,16 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                     <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
 
                     {/* DVM Transcode Alert - shown for high-res or incompatible videos */}
-                    {uploadState === 'finished' && uploadInfo.videos[0] && (
+                    {(uploadState === 'finished' && uploadInfo.videos[0]) ||
+                    draft.dvmTranscodeState ? (
                       <DvmTranscodeAlert
                         video={uploadInfo.videos[0]}
                         onComplete={videoUploadState.handleAddTranscodedVideo}
                         onStatusChange={setTranscodeStatus}
+                        initialTranscodeState={draft.dvmTranscodeState}
+                        onTranscodeStateChange={handleTranscodeStateChange}
                       />
-                    )}
+                    ) : null}
 
                     {/* Add another quality button */}
                     {uploadState === 'finished' && (

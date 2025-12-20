@@ -3,6 +3,21 @@ import type { BlobDescriptor } from 'blossom-client-sdk'
 // Import VideoVariant from existing type
 import type { VideoVariant } from '@/lib/video-processing'
 
+/**
+ * State for persisting DVM transcode jobs across navigation.
+ * Allows users to leave the upload dialog and resume when they return.
+ */
+export interface DvmTranscodeState {
+  requestEventId: string // kind:5207 event id we published
+  dvmPubkey: string // DVM handler pubkey
+  inputVideoUrl: string // URL sent to DVM
+  originalDuration?: number // For result parsing
+  startedAt: number // For timeout detection (12h limit)
+  status: 'transcoding' | 'mirroring' // Active states only
+  lastStatusMessage?: string
+  lastPercentage?: number
+}
+
 export interface UploadDraft {
   id: string
   createdAt: number
@@ -39,6 +54,9 @@ export interface UploadDraft {
 
   // Metadata
   thumbnailSource: 'generated' | 'upload'
+
+  // DVM Transcode state (only present during active transcode)
+  dvmTranscodeState?: DvmTranscodeState
 }
 
 export interface UploadDraftsData {

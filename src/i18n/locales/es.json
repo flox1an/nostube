@@ -263,6 +263,17 @@
       "mirroredTo": "Replicado en",
       "servers": "servidor(es)"
     },
+    "deleteVideoDialog": {
+      "title": "Eliminar variante de vídeo",
+      "descriptionWithBlobs": "Este vídeo ({{quality}}) ha sido subido a {{count}} servidor(es). ¿Qué desea hacer?",
+      "descriptionNoBlobs": "¿Está seguro de que desea eliminar este vídeo ({{quality}}) de su subida?",
+      "removeFromForm": "Eliminar solo del formulario",
+      "deleteFromServers": "Eliminar de los servidores",
+      "remove": "Eliminar",
+      "deletedSuccess": "Vídeo eliminado de {{count}} servidor(es)",
+      "deletedPartial": "Eliminado de {{successful}} servidor(es), falló en {{failed}} servidor(es)",
+      "deletedFailed": "Error al eliminar de los servidores"
+    },
     "addAnotherQuality": "Añadir otra calidad/resolución",
     "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
     "uploadingVideo": "Subiendo vídeo...",

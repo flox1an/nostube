@@ -231,11 +231,21 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                 // Handle feedback
                 const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
                 if (statusTag) {
-                  const [, feedbackStatus, extraInfo] = statusTag
+                  const [, feedbackStatus, statusExtraInfo] = statusTag
+
+                  // Check for content tag (preferred) or fall back to status tag extra info
+                  const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
                   const message =
-                    extraInfo ||
+                    contentTag?.[1] ||
+                    statusExtraInfo ||
                     (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
-                  const percentMatch = extraInfo?.match(/(\d+)%/)
+
+                  // Check for eta tag
+                  const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
+                  const eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+
+                  // Extract percentage from message if present
+                  const percentMatch = message?.match(/(\d+)%/)
                   const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
 
                   if (feedbackStatus === 'processing') {
@@ -243,11 +253,12 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
                       if (lastMsg?.message === message) {
-                        return { ...prev, status: 'transcoding', message }
+                        return { ...prev, status: 'transcoding', message, eta }
                       }
                       return {
                         status: 'transcoding',
                         message,
+                        eta,
                         statusMessages: [
                           ...prev.statusMessages,
                           { timestamp: Date.now(), message },
@@ -257,18 +268,19 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
                     subscriptionRef.current?.unsubscribe()
-                    reject(new Error(extraInfo || 'DVM processing error'))
+                    reject(new Error(contentTag?.[1] || statusExtraInfo || 'DVM processing error'))
                   } else if (feedbackStatus === 'partial') {
                     setProgress(prev => {
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
                       if (lastMsg?.message === message) {
-                        return { ...prev, status: 'transcoding', message, percentage }
+                        return { ...prev, status: 'transcoding', message, percentage, eta }
                       }
                       return {
                         status: 'transcoding',
                         message,
                         percentage,
+                        eta,
                         statusMessages: [
                           ...prev.statusMessages,
                           { timestamp: Date.now(), message, percentage },

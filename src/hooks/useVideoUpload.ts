@@ -3,6 +3,7 @@ import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
+  deleteBlobFromMultipleServers,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from 'blossom-client-sdk'
@@ -231,6 +232,12 @@ export function useVideoUpload(
   )
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
+
+  // State for video deletion dialog
+  const [videoToDelete, setVideoToDelete] = useState<{
+    index: number
+    video: VideoVariant
+  } | null>(null)
 
   // Use ref to store callback to prevent infinite loop
   const onDraftChangeRef = useRef(onDraftChange)
@@ -678,11 +685,98 @@ export function useVideoUpload(
     }
   }
 
-  // Handler to remove a video variant
+  // Handler to initiate video variant removal (opens dialog)
   const handleRemoveVideo = (index: number) => {
+    const video = uploadInfo.videos[index]
+    if (video) {
+      setVideoToDelete({ index, video })
+    }
+  }
+
+  // Handler to remove video from form only (without deleting blobs)
+  const handleRemoveVideoFromFormOnly = () => {
+    if (videoToDelete === null) return
+    setUploadInfo(ui => ({
+      videos: ui.videos.filter((_, i) => i !== videoToDelete.index),
+    }))
+    setVideoToDelete(null)
+  }
+
+  // Handler to remove video and delete blobs from all servers
+  const handleRemoveVideoWithBlobs = async () => {
+    if (videoToDelete === null || !user) return
+
+    const { video, index } = videoToDelete
+
+    // Collect all blob hashes and their server URLs
+    const blobsToDelete: { hash: string; servers: string[] }[] = []
+
+    // Add uploaded blobs
+    for (const blob of video.uploadedBlobs) {
+      try {
+        const url = new URL(blob.url)
+        const serverUrl = `${url.protocol}//${url.host}`
+        blobsToDelete.push({
+          hash: blob.sha256,
+          servers: [serverUrl],
+        })
+      } catch {
+        // Skip invalid URLs
+      }
+    }
+
+    // Add mirrored blobs
+    for (const blob of video.mirroredBlobs) {
+      try {
+        const url = new URL(blob.url)
+        const serverUrl = `${url.protocol}//${url.host}`
+        blobsToDelete.push({
+          hash: blob.sha256,
+          servers: [serverUrl],
+        })
+      } catch {
+        // Skip invalid URLs
+      }
+    }
+
+    // Delete all blobs from their servers
+    let totalSuccessful = 0
+    let totalFailed = 0
+
+    if (blobsToDelete.length > 0) {
+      const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
+        deleteBlobFromMultipleServers(
+          servers,
+          hash,
+          async draft => await user.signer.signEvent(draft)
+        )
+      )
+
+      const results = await Promise.allSettled(deletionPromises)
+
+      results.forEach(result => {
+        if (result.status === 'fulfilled') {
+          totalSuccessful += result.value.successful.length
+          totalFailed += result.value.failed.length
+        } else {
+          totalFailed++
+        }
+      })
+
+      if (import.meta.env.DEV) {
+        console.log(
+          `[DELETE VIDEO] Deleted from ${totalSuccessful} server(s), failed on ${totalFailed} server(s)`
+        )
+      }
+    }
+
+    // Remove video from form state
     setUploadInfo(ui => ({
       videos: ui.videos.filter((_, i) => i !== index),
     }))
+    setVideoToDelete(null)
+
+    return { successful: totalSuccessful, failed: totalFailed }
   }
 
   // Handler to add a transcoded video variant (from DVM)
@@ -895,6 +989,8 @@ export function useVideoUpload(
     isPublishing,
     thumbnailUrl,
     previewEvent,
+    videoToDelete,
+    setVideoToDelete,
 
     // Handlers
     handleUseRecommendedServers,
@@ -909,6 +1005,8 @@ export function useVideoUpload(
     handleSubmit,
     handleAddVideo,
     handleRemoveVideo,
+    handleRemoveVideoFromFormOnly,
+    handleRemoveVideoWithBlobs,
     handleAddTranscodedVideo,
   }
 }

@@ -14,6 +14,7 @@ import {
   DvmTranscodeAlert,
   EventPreview,
 } from './video-upload'
+import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
@@ -92,6 +93,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     isPublishing,
     thumbnailUrl,
     previewEvent,
+    videoToDelete,
+    setVideoToDelete,
 
     // Handlers
     handleUseRecommendedServers,
@@ -105,6 +108,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
+    handleRemoveVideoFromFormOnly,
+    handleRemoveVideoWithBlobs,
   } = videoUploadState
 
   // Handle back button - save current state before navigating
@@ -568,6 +573,17 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         excludeServers={mirrorServers}
         onSelect={handleAddMirrorServer}
         type="mirror"
+      />
+
+      {/* Delete Video Dialog */}
+      <DeleteVideoDialog
+        open={videoToDelete !== null}
+        onOpenChange={open => {
+          if (!open) setVideoToDelete(null)
+        }}
+        video={videoToDelete?.video ?? null}
+        onDeleteFromFormOnly={handleRemoveVideoFromFormOnly}
+        onDeleteWithBlobs={handleRemoveVideoWithBlobs}
       />
     </>
   )

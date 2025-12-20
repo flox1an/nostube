@@ -295,6 +295,17 @@
       "uploaded": "uploaded",
       "mirrored": "mirrored"
     },
+    "deleteVideoDialog": {
+      "title": "Delete Video Variant",
+      "descriptionWithBlobs": "This video ({{quality}}) has been uploaded to {{count}} server(s). What would you like to do?",
+      "descriptionNoBlobs": "Are you sure you want to remove this video ({{quality}}) from your upload?",
+      "removeFromForm": "Remove from Form Only",
+      "deleteFromServers": "Delete from Servers",
+      "remove": "Remove",
+      "deletedSuccess": "Video deleted from {{count}} server(s)",
+      "deletedPartial": "Deleted from {{successful}} server(s), failed on {{failed}} server(s)",
+      "deletedFailed": "Failed to delete from servers"
+    },
     "showDetails": "Show Details",
     "codecWarning": "Codec compatibility warning",
     "addAnotherQuality": "Add Another Quality/Resolution",

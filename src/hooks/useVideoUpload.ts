@@ -273,11 +273,15 @@ export function useVideoUpload(
       .split(/\s+/)
       .filter(tag => tag.trim().length > 0)
       .map(tag => tag.trim().replace(/^#/, '').toLowerCase())
-    // Deduplicate within pasted text and filter out existing tags
-    const uniqueNewTags = [...new Set(newTags)].filter(tag => !tags.includes(tag))
+    // Deduplicate within pasted text
+    const deduplicatedNewTags = [...new Set(newTags)]
 
-    if (uniqueNewTags.length > 0) {
-      setTags([...tags, ...uniqueNewTags])
+    if (deduplicatedNewTags.length > 0) {
+      setTags(prevTags => {
+        // Filter out tags that already exist
+        const uniqueNewTags = deduplicatedNewTags.filter(tag => !prevTags.includes(tag))
+        return uniqueNewTags.length > 0 ? [...prevTags, ...uniqueNewTags] : prevTags
+      })
     }
   }
 
@@ -302,7 +306,7 @@ export function useVideoUpload(
   }
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove))
+    setTags(prevTags => prevTags.filter(tag => tag !== tagToRemove))
   }
 
   const parseBlossomUrl = (

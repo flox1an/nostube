@@ -273,7 +273,8 @@ export function useVideoUpload(
       .split(/\s+/)
       .filter(tag => tag.trim().length > 0)
       .map(tag => tag.trim().replace(/^#/, '').toLowerCase())
-    const uniqueNewTags = newTags.filter(tag => !tags.includes(tag))
+    // Deduplicate within pasted text and filter out existing tags
+    const uniqueNewTags = [...new Set(newTags)].filter(tag => !tags.includes(tag))
 
     if (uniqueNewTags.length > 0) {
       setTags([...tags, ...uniqueNewTags])

@@ -212,25 +212,42 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
                   const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
 
                   if (feedbackStatus === 'processing') {
-                    setProgress(prev => ({
-                      status: 'transcoding',
-                      message,
-                      statusMessages: [...prev.statusMessages, { timestamp: Date.now(), message }],
-                    }))
+                    setProgress(prev => {
+                      // Skip duplicate consecutive messages
+                      const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
+                      if (lastMsg?.message === message) {
+                        return { ...prev, status: 'transcoding', message }
+                      }
+                      return {
+                        status: 'transcoding',
+                        message,
+                        statusMessages: [
+                          ...prev.statusMessages,
+                          { timestamp: Date.now(), message },
+                        ],
+                      }
+                    })
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
                     subscriptionRef.current?.unsubscribe()
                     reject(new Error(extraInfo || 'DVM processing error'))
                   } else if (feedbackStatus === 'partial') {
-                    setProgress(prev => ({
-                      status: 'transcoding',
-                      message,
-                      percentage,
-                      statusMessages: [
-                        ...prev.statusMessages,
-                        { timestamp: Date.now(), message, percentage },
-                      ],
-                    }))
+                    setProgress(prev => {
+                      // Skip duplicate consecutive messages
+                      const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
+                      if (lastMsg?.message === message) {
+                        return { ...prev, status: 'transcoding', message, percentage }
+                      }
+                      return {
+                        status: 'transcoding',
+                        message,
+                        percentage,
+                        statusMessages: [
+                          ...prev.statusMessages,
+                          { timestamp: Date.now(), message, percentage },
+                        ],
+                      }
+                    })
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {

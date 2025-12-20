@@ -80,8 +80,12 @@ export function FormFields({
         />
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
-            {tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+            {tags.map((tag, index) => (
+              <Badge
+                key={`${tag}-${index}`}
+                variant="secondary"
+                className="flex items-center gap-1"
+              >
                 {tag}
                 <button
                   type="button"

@@ -1,43 +1,75 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { useDvmTranscode, type TranscodeStatus, type StatusMessage } from '@/hooks/useDvmTranscode'
+import {
+  useDvmTranscode,
+  type TranscodeStatus,
+  type StatusMessage,
+  type PersistableTranscodeState,
+} from '@/hooks/useDvmTranscode'
 import type { VideoVariant } from '@/lib/video-processing'
+import type { DvmTranscodeState } from '@/types/upload-draft'
 import { shouldOfferTranscode } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 interface DvmTranscodeAlertProps {
   video: VideoVariant
   onComplete: (transcodedVideo: VideoVariant) => void
   onStatusChange?: (status: TranscodeStatus) => void
+  initialTranscodeState?: DvmTranscodeState
+  onTranscodeStateChange?: (state: DvmTranscodeState | null) => void
 }
 
 /**
  * Alert component that offers DVM transcoding for high-resolution or incompatible videos.
  * Shown in Step 1 of the upload wizard below VideoVariantsTable.
  */
-export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTranscodeAlertProps) {
+export function DvmTranscodeAlert({
+  video,
+  onComplete,
+  onStatusChange,
+  initialTranscodeState,
+  onTranscodeStateChange,
+}: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
+  const hasResumedRef = useRef(false)
 
-  const { status, progress, error, startTranscode, cancel, transcodedVideo } = useDvmTranscode(
-    transcodedVideo => {
-      onComplete(transcodedVideo)
-    }
+  // Handle state changes for persistence
+  const handleStateChange = useCallback(
+    (state: PersistableTranscodeState | null) => {
+      onTranscodeStateChange?.(state as DvmTranscodeState | null)
+    },
+    [onTranscodeStateChange]
   )
+
+  const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
+    useDvmTranscode({
+      onComplete,
+      onStateChange: handleStateChange,
+    })
+
+  // Auto-resume if we have initial state
+  useEffect(() => {
+    if (initialTranscodeState && !hasResumedRef.current && status === 'idle') {
+      hasResumedRef.current = true
+      resumeTranscode(initialTranscodeState)
+    }
+  }, [initialTranscodeState, status, resumeTranscode])
 
   // Notify parent of status changes
   useEffect(() => {
     onStatusChange?.(status)
   }, [status, onStatusChange])
 
-  // Check if transcode should be offered
+  // Check if transcode should be offered (skip check if resuming)
   const transcodeCheck = shouldOfferTranscode(video)
+  const isResuming = !!initialTranscodeState
 
-  // Don't show if not needed or dismissed
-  if (!transcodeCheck.needed || dismissed) {
+  // Don't show if not needed or dismissed (unless we're resuming)
+  if ((!transcodeCheck.needed && !isResuming) || dismissed) {
     return null
   }
 
@@ -108,6 +140,21 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.message}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  // Resuming state
+  if (status === 'resuming') {
+    return (
+      <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+        <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+        <AlertTitle className="text-blue-800 dark:text-blue-200">
+          {t('upload.transcode.resuming', { defaultValue: 'Reconnecting to transcode...' })}
+        </AlertTitle>
+        <AlertDescription className="text-blue-700 dark:text-blue-300">
+          <StatusLog messages={progress.statusMessages} />
         </AlertDescription>
       </Alert>
     )

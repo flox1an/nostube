@@ -27,9 +27,24 @@ export type TranscodeStatus =
   | 'idle'
   | 'discovering'
   | 'transcoding'
+  | 'resuming'
   | 'mirroring'
   | 'complete'
   | 'error'
+
+/**
+ * State that can be persisted to allow resuming a transcode job
+ */
+export interface PersistableTranscodeState {
+  requestEventId: string
+  dvmPubkey: string
+  inputVideoUrl: string
+  originalDuration?: number
+  startedAt: number
+  status: 'transcoding' | 'mirroring'
+  lastStatusMessage?: string
+  lastPercentage?: number
+}
 
 export interface StatusMessage {
   timestamp: number
@@ -45,19 +60,30 @@ export interface TranscodeProgress {
   statusMessages: StatusMessage[]
 }
 
+export interface UseDvmTranscodeOptions {
+  onComplete?: (video: VideoVariant) => void
+  onStateChange?: (state: PersistableTranscodeState | null) => void
+}
+
 export interface UseDvmTranscodeResult {
   status: TranscodeStatus
   progress: TranscodeProgress
   error: string | null
   startTranscode: (inputVideoUrl: string, originalDuration?: number) => Promise<void>
+  resumeTranscode: (state: PersistableTranscodeState) => Promise<void>
   cancel: () => void
   transcodedVideo: VideoVariant | null
 }
 
+// 12 hour timeout for resumable jobs
+const TRANSCODE_JOB_TIMEOUT_MS = 12 * 60 * 60 * 1000
+
 /**
  * Hook for managing DVM video transcoding workflow
+ * Supports resuming transcodes after navigation away
  */
-export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): UseDvmTranscodeResult {
+export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTranscodeResult {
+  const { onComplete, onStateChange } = options
   const { user } = useCurrentUser()
   const { config } = useAppContext()
   const [status, setStatus] = useState<TranscodeStatus>('idle')
@@ -72,6 +98,7 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
   const abortControllerRef = useRef<AbortController | null>(null)
   const subscriptionRef = useRef<Subscription | null>(null)
   const requestEventIdRef = useRef<string | null>(null)
+  const currentStateRef = useRef<PersistableTranscodeState | null>(null)
 
   // Cleanup subscriptions on unmount
   useEffect(() => {
@@ -303,6 +330,85 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
   )
 
   /**
+   * Query for an existing DVM result event (for resuming)
+   */
+  const queryForExistingResult = useCallback(
+    async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
+      const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+
+      return new Promise(resolve => {
+        let found = false
+        const timeout = setTimeout(() => {
+          if (!found) {
+            sub.unsubscribe()
+            resolve(null)
+          }
+        }, 5000)
+
+        const sub = relayPool
+          .request(readRelays, [
+            {
+              kinds: [DVM_RESULT_KIND],
+              authors: [dvmPubkey],
+              '#e': [requestEventId],
+              limit: 1,
+            },
+          ])
+          .subscribe({
+            next: event => {
+              if (typeof event === 'string') return // EOSE
+              found = true
+              clearTimeout(timeout)
+              sub.unsubscribe()
+              resolve(event as NostrEvent)
+            },
+            complete: () => {
+              if (!found) {
+                clearTimeout(timeout)
+                resolve(null)
+              }
+            },
+          })
+      })
+    },
+    [config.relays]
+  )
+
+  /**
+   * Build VideoVariant from DVM result content
+   */
+  const buildVideoVariantFromResult = useCallback(
+    (result: ReturnType<typeof parseDvmResultContent>, originalDuration?: number): VideoVariant => {
+      if (!result || !result.urls || result.urls.length === 0) {
+        throw new Error('Invalid DVM result: no URLs returned')
+      }
+
+      const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
+      const duration = result.duration || originalDuration || 0
+
+      let bitrate = result.bitrate
+      if (!bitrate && result.size_bytes && duration > 0) {
+        bitrate = Math.round((result.size_bytes * 8) / duration)
+      }
+
+      return {
+        url: result.urls[0],
+        dimension: result.resolution === '720p' ? '1280x720' : '1280x720',
+        sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
+        duration,
+        bitrate,
+        videoCodec,
+        audioCodec,
+        uploadedBlobs: [],
+        mirroredBlobs: [],
+        inputMethod: 'url',
+        qualityLabel: result.resolution || '720p',
+      }
+    },
+    []
+  )
+
+  /**
    * Mirror transcoded video to user's Blossom servers
    */
   const mirrorTranscodedVideo = useCallback(
@@ -408,6 +514,173 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
   )
 
   /**
+   * Resume a transcode from persisted state
+   */
+  const resumeTranscode = useCallback(
+    async (persistedState: PersistableTranscodeState) => {
+      if (!user) {
+        setError('User not logged in')
+        return
+      }
+
+      // Check for timeout (12 hour limit)
+      if (Date.now() - persistedState.startedAt > TRANSCODE_JOB_TIMEOUT_MS) {
+        setStatus('error')
+        setError('Transcode job expired (started over 12 hours ago)')
+        onStateChange?.(null)
+        return
+      }
+
+      setStatus('resuming')
+      setProgress({
+        status: 'resuming',
+        message: 'Checking transcode status...',
+        statusMessages: [{ timestamp: Date.now(), message: 'Reconnecting to transcode job...' }],
+      })
+
+      abortControllerRef.current = new AbortController()
+      currentStateRef.current = persistedState
+
+      try {
+        // Check if result already exists (DVM finished while we were away)
+        const existingResult = await queryForExistingResult(
+          persistedState.requestEventId,
+          persistedState.dvmPubkey
+        )
+
+        if (existingResult) {
+          // DVM finished - start mirroring
+          const result = parseDvmResultContent(existingResult.content)
+          const videoVariant = buildVideoVariantFromResult(result, persistedState.originalDuration)
+
+          // Update state to mirroring
+          const mirroringState: PersistableTranscodeState = {
+            ...persistedState,
+            status: 'mirroring',
+          }
+          currentStateRef.current = mirroringState
+          onStateChange?.(mirroringState)
+
+          setStatus('mirroring')
+          setProgress(prev => ({
+            status: 'mirroring',
+            message: 'Copying to your servers...',
+            statusMessages: [
+              ...prev.statusMessages,
+              { timestamp: Date.now(), message: 'Transcode complete! Copying to your servers...' },
+            ],
+          }))
+
+          const mirroredVideo = await mirrorTranscodedVideo(videoVariant)
+
+          // Complete - clear persisted state
+          currentStateRef.current = null
+          onStateChange?.(null)
+
+          setStatus('complete')
+          setProgress(prev => ({
+            status: 'complete',
+            message: 'Transcode complete!',
+            statusMessages: [
+              ...prev.statusMessages,
+              { timestamp: Date.now(), message: 'Transcode complete!' },
+            ],
+          }))
+          setTranscodedVideo(mirroredVideo)
+
+          onComplete?.(mirroredVideo)
+        } else {
+          // DVM still processing - resubscribe
+          setStatus('transcoding')
+          setProgress(prev => ({
+            status: 'transcoding',
+            message: persistedState.lastStatusMessage || 'Transcode in progress...',
+            percentage: persistedState.lastPercentage,
+            statusMessages: [
+              ...prev.statusMessages,
+              { timestamp: Date.now(), message: 'Reconnected - waiting for completion...' },
+            ],
+          }))
+
+          requestEventIdRef.current = persistedState.requestEventId
+
+          const transcodedResult = await subscribeToDvmResponses(
+            persistedState.requestEventId,
+            persistedState.dvmPubkey,
+            persistedState.originalDuration
+          )
+
+          // Check if cancelled
+          if (abortControllerRef.current?.signal.aborted) {
+            setStatus('idle')
+            return
+          }
+
+          // Update state to mirroring
+          const mirroringState: PersistableTranscodeState = {
+            ...persistedState,
+            status: 'mirroring',
+          }
+          currentStateRef.current = mirroringState
+          onStateChange?.(mirroringState)
+
+          setStatus('mirroring')
+          setProgress(prev => ({
+            status: 'mirroring',
+            message: 'Copying to your servers...',
+            statusMessages: [
+              ...prev.statusMessages,
+              { timestamp: Date.now(), message: 'Copying to your servers...' },
+            ],
+          }))
+
+          const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
+
+          // Complete - clear persisted state
+          currentStateRef.current = null
+          onStateChange?.(null)
+
+          setStatus('complete')
+          setProgress(prev => ({
+            status: 'complete',
+            message: 'Transcode complete!',
+            statusMessages: [
+              ...prev.statusMessages,
+              { timestamp: Date.now(), message: 'Transcode complete!' },
+            ],
+          }))
+          setTranscodedVideo(mirroredVideo)
+
+          onComplete?.(mirroredVideo)
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        setStatus('error')
+        setError(errorMessage)
+        currentStateRef.current = null
+        onStateChange?.(null)
+        setProgress(prev => ({
+          status: 'error',
+          message: errorMessage,
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: `Error: ${errorMessage}` },
+          ],
+        }))
+      }
+    },
+    [
+      user,
+      onStateChange,
+      onComplete,
+      queryForExistingResult,
+      buildVideoVariantFromResult,
+      subscribeToDvmResponses,
+      mirrorTranscodedVideo,
+    ]
+  )
+
+  /**
    * Start the transcode workflow
    */
   const startTranscode = useCallback(
@@ -477,12 +750,26 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
         requestEventIdRef.current = signedRequest.id
 
+        // Persist state after successful publish
+        const persistedState: PersistableTranscodeState = {
+          requestEventId: signedRequest.id,
+          dvmPubkey: dvm.pubkey,
+          inputVideoUrl,
+          originalDuration,
+          startedAt: Date.now(),
+          status: 'transcoding',
+        }
+        currentStateRef.current = persistedState
+        onStateChange?.(persistedState)
+
         if (import.meta.env.DEV) {
           console.log('[DVM] Published job request:', signedRequest.id)
         }
 
         // Check if cancelled
         if (abortControllerRef.current?.signal.aborted) {
+          currentStateRef.current = null
+          onStateChange?.(null)
           setStatus('idle')
           return
         }
@@ -505,11 +792,22 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
         // Check if cancelled
         if (abortControllerRef.current?.signal.aborted) {
+          currentStateRef.current = null
+          onStateChange?.(null)
           setStatus('idle')
           return
         }
 
-        // Step 4: Mirror to user's servers
+        // Step 4: Mirror to user's servers - update persisted state
+        if (currentStateRef.current) {
+          const mirroringState: PersistableTranscodeState = {
+            ...currentStateRef.current,
+            status: 'mirroring',
+          }
+          currentStateRef.current = mirroringState
+          onStateChange?.(mirroringState)
+        }
+
         setStatus('mirroring')
         setProgress(prev => ({
           status: 'mirroring',
@@ -522,7 +820,10 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
         const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
 
-        // Complete
+        // Complete - clear persisted state
+        currentStateRef.current = null
+        onStateChange?.(null)
+
         setStatus('complete')
         setProgress(prev => ({
           status: 'complete',
@@ -541,6 +842,8 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         setStatus('error')
         setError(errorMessage)
+        currentStateRef.current = null
+        onStateChange?.(null)
         setProgress(prev => ({
           status: 'error',
           message: errorMessage,
@@ -551,7 +854,15 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         }))
       }
     },
-    [user, config.relays, discoverDvm, subscribeToDvmResponses, mirrorTranscodedVideo, onComplete]
+    [
+      user,
+      config.relays,
+      discoverDvm,
+      subscribeToDvmResponses,
+      mirrorTranscodedVideo,
+      onComplete,
+      onStateChange,
+    ]
   )
 
   /**
@@ -561,19 +872,21 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
     abortControllerRef.current?.abort()
     subscriptionRef.current?.unsubscribe()
 
-    // Optionally publish delete request for the job
-    // (not implemented yet - would require kind:5 event)
+    // Clear persisted state
+    currentStateRef.current = null
+    onStateChange?.(null)
 
     setStatus('idle')
     setProgress({ status: 'idle', message: '', statusMessages: [] })
     setError(null)
-  }, [])
+  }, [onStateChange])
 
   return {
     status,
     progress,
     error,
     startTranscode,
+    resumeTranscode,
     cancel,
     transcodedVideo,
   }

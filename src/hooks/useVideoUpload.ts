@@ -197,7 +197,11 @@ export function useVideoUpload(
 ) {
   const [title, setTitle] = useState(initialDraft?.title || '')
   const [description, setDescription] = useState(initialDraft?.description || '')
-  const [tags, setTags] = useState<string[]>(initialDraft?.tags || [])
+  const [tags, setTags] = useState<string[]>(() => {
+    // Deduplicate tags when loading from draft
+    const draftTags = initialDraft?.tags || []
+    return [...new Set(draftTags)]
+  })
   const [tagInput, setTagInput] = useState('')
   const [language, setLanguage] = useState(initialDraft?.language || 'en')
   const [inputMethod, setInputMethod] = useState<'file' | 'url'>(

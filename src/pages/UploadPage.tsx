@@ -25,6 +25,14 @@ export function UploadPage() {
     }
   }, [currentDraft, refreshDrafts])
 
+  // Auto-create and select a draft when there are no drafts
+  useEffect(() => {
+    if (drafts.length === 0 && !currentDraft) {
+      const newDraft = createDraft()
+      setCurrentDraft(newDraft)
+    }
+  }, [drafts.length, currentDraft, createDraft, setCurrentDraft])
+
   // Handle back navigation with Nostr sync flush
   const handleBack = useCallback(async () => {
     await flushNostrSync() // Wait for pending Nostr saves to complete
@@ -45,18 +53,12 @@ export function UploadPage() {
     }
   }
 
-  // 0 drafts → new empty form
-  if (drafts.length === 0) {
-    const newDraft = createDraft()
-    return <VideoUpload draft={newDraft} />
+  // Show loading state while auto-creating draft
+  if (drafts.length === 0 && !currentDraft) {
+    return null
   }
 
-  // 1 draft → auto-resume
-  //if (drafts.length === 1) {
-  //    return <VideoUpload draft={drafts[0]} />
-  //  }
-
-  // 2+ drafts → picker or form
+  // Show draft picker if no draft is selected
   if (!currentDraft) {
     return (
       <DraftPicker

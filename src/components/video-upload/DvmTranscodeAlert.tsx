@@ -7,6 +7,7 @@ import {
   type StatusMessage,
   type PersistableTranscodeState,
 } from '@/hooks/useDvmTranscode'
+import { useDvmAvailability } from '@/hooks/useDvmAvailability'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
 import { shouldOfferTranscode } from '@/lib/dvm-utils'
@@ -36,6 +37,9 @@ export function DvmTranscodeAlert({
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
   const hasResumedRef = useRef(false)
+
+  // Check if a DVM is available (only check if not resuming)
+  const { isAvailable: isDvmAvailable, isLoading: isDvmLoading } = useDvmAvailability()
 
   // Handle state changes for persistence
   const handleStateChange = useCallback(
@@ -70,6 +74,16 @@ export function DvmTranscodeAlert({
 
   // Don't show if not needed or dismissed (unless we're resuming)
   if ((!transcodeCheck.needed && !isResuming) || dismissed) {
+    return null
+  }
+
+  // Don't show if still checking for DVM availability (unless resuming)
+  if (!isResuming && isDvmLoading) {
+    return null
+  }
+
+  // Don't show if no DVM is available (unless resuming an active transcode)
+  if (!isResuming && !isDvmAvailable) {
     return null
   }
 

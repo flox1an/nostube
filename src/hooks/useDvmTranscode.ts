@@ -31,11 +31,18 @@ export type TranscodeStatus =
   | 'complete'
   | 'error'
 
+export interface StatusMessage {
+  timestamp: number
+  message: string
+  percentage?: number
+}
+
 export interface TranscodeProgress {
   status: TranscodeStatus
   message: string
   eta?: number // seconds remaining
   percentage?: number
+  statusMessages: StatusMessage[]
 }
 
 export interface UseDvmTranscodeResult {
@@ -57,6 +64,7 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
   const [progress, setProgress] = useState<TranscodeProgress>({
     status: 'idle',
     message: '',
+    statusMessages: [],
   })
   const [error, setError] = useState<string | null>(null)
   const [transcodedVideo, setTranscodedVideo] = useState<VideoVariant | null>(null)
@@ -197,25 +205,32 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
                 const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
                 if (statusTag) {
                   const [, feedbackStatus, extraInfo] = statusTag
+                  const message =
+                    extraInfo ||
+                    (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+                  const percentMatch = extraInfo?.match(/(\d+)%/)
+                  const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
 
                   if (feedbackStatus === 'processing') {
-                    setProgress({
+                    setProgress(prev => ({
                       status: 'transcoding',
-                      message: extraInfo || 'Processing video...',
-                    })
+                      message,
+                      statusMessages: [...prev.statusMessages, { timestamp: Date.now(), message }],
+                    }))
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
                     subscriptionRef.current?.unsubscribe()
                     reject(new Error(extraInfo || 'DVM processing error'))
                   } else if (feedbackStatus === 'partial') {
-                    // Parse percentage from extra info if available
-                    const percentMatch = extraInfo?.match(/(\d+)%/)
-                    const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
-                    setProgress({
+                    setProgress(prev => ({
                       status: 'transcoding',
-                      message: extraInfo || 'Processing...',
+                      message,
                       percentage,
-                    })
+                      statusMessages: [
+                        ...prev.statusMessages,
+                        { timestamp: Date.now(), message, percentage },
+                      ],
+                    }))
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {
@@ -393,7 +408,11 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
       try {
         // Step 1: Discover DVM
         setStatus('discovering')
-        setProgress({ status: 'discovering', message: 'Finding transcoding service...' })
+        setProgress({
+          status: 'discovering',
+          message: 'Finding transcoding service...',
+          statusMessages: [],
+        })
 
         const dvm = await discoverDvm()
         if (!dvm) {
@@ -412,7 +431,14 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
         // Step 2: Publish job request
         setStatus('transcoding')
-        setProgress({ status: 'transcoding', message: 'Submitting transcode job...' })
+        setProgress(prev => ({
+          status: 'transcoding',
+          message: 'Submitting transcode job...',
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: 'Submitting transcode job...' },
+          ],
+        }))
 
         const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
@@ -445,7 +471,14 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         }
 
         // Step 3: Subscribe and wait for result
-        setProgress({ status: 'transcoding', message: 'Waiting for transcode to complete...' })
+        setProgress(prev => ({
+          status: 'transcoding',
+          message: 'Waiting for transcode to complete...',
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: 'Waiting for transcode to complete...' },
+          ],
+        }))
 
         const transcodedResult = await subscribeToDvmResponses(
           signedRequest.id,
@@ -461,13 +494,27 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
 
         // Step 4: Mirror to user's servers
         setStatus('mirroring')
-        setProgress({ status: 'mirroring', message: 'Copying to your servers...' })
+        setProgress(prev => ({
+          status: 'mirroring',
+          message: 'Copying to your servers...',
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: 'Copying to your servers...' },
+          ],
+        }))
 
         const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
 
         // Complete
         setStatus('complete')
-        setProgress({ status: 'complete', message: 'Transcode complete!' })
+        setProgress(prev => ({
+          status: 'complete',
+          message: 'Transcode complete!',
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: 'Transcode complete!' },
+          ],
+        }))
         setTranscodedVideo(mirroredVideo)
 
         if (onComplete) {
@@ -477,7 +524,14 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         setStatus('error')
         setError(errorMessage)
-        setProgress({ status: 'error', message: errorMessage })
+        setProgress(prev => ({
+          status: 'error',
+          message: errorMessage,
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: `Error: ${errorMessage}` },
+          ],
+        }))
       }
     },
     [user, config.relays, discoverDvm, subscribeToDvmResponses, mirrorTranscodedVideo, onComplete]
@@ -494,7 +548,7 @@ export function useDvmTranscode(onComplete?: (video: VideoVariant) => void): Use
     // (not implemented yet - would require kind:5 event)
 
     setStatus('idle')
-    setProgress({ status: 'idle', message: '' })
+    setProgress({ status: 'idle', message: '', statusMessages: [] })
     setError(null)
   }, [])
 

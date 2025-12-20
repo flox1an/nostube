@@ -1,12 +1,12 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { useDvmTranscode, type TranscodeStatus } from '@/hooks/useDvmTranscode'
+import { useDvmTranscode, type TranscodeStatus, type StatusMessage } from '@/hooks/useDvmTranscode'
 import type { VideoVariant } from '@/lib/video-processing'
 import { shouldOfferTranscode } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface DvmTranscodeAlertProps {
   video: VideoVariant
@@ -122,7 +122,6 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
           {t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
-          <p className="mb-2">{progress.message}</p>
           {progress.percentage !== undefined && (
             <div className="space-y-1 mb-3">
               <Progress value={progress.percentage} className="h-2" />
@@ -137,10 +136,13 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
               })}
             </p>
           )}
-          <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
-            <X className="h-4 w-4 mr-2" />
-            {t('upload.transcode.cancel', { defaultValue: 'Cancel' })}
-          </Button>
+          <StatusLog messages={progress.statusMessages} />
+          <div className="mt-3">
+            <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
+              <X className="h-4 w-4 mr-2" />
+              {t('upload.transcode.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+          </div>
         </AlertDescription>
       </Alert>
     )
@@ -155,11 +157,13 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
           {t('upload.transcode.mirroring', { defaultValue: 'Copying to your servers...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
-          <p className="mb-3">{progress.message}</p>
-          <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
-            <X className="h-4 w-4 mr-2" />
-            {t('upload.transcode.cancel', { defaultValue: 'Cancel' })}
-          </Button>
+          <StatusLog messages={progress.statusMessages} />
+          <div className="mt-3">
+            <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
+              <X className="h-4 w-4 mr-2" />
+              {t('upload.transcode.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+          </div>
         </AlertDescription>
       </Alert>
     )
@@ -220,8 +224,39 @@ export function DvmTranscodeAlert({ video, onComplete, onStatusChange }: DvmTran
 }
 
 /**
- * Format ETA in human-readable format
+ * Component to display scrollable status message log
  */
+function StatusLog({ messages }: { messages: StatusMessage[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages.length])
+
+  if (messages.length === 0) {
+    return null
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      className="mt-2 max-h-24 overflow-y-auto rounded bg-blue-100/50 dark:bg-blue-900/30 p-2 font-mono text-xs"
+    >
+      {messages.map((msg, index) => (
+        <div key={index} className="flex gap-2 py-0.5">
+          <span className="text-blue-500/70 dark:text-blue-400/70 shrink-0">
+            {new Date(msg.timestamp).toLocaleTimeString()}
+          </span>
+          <span className="text-blue-800 dark:text-blue-200">{msg.message}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function formatEta(seconds: number): string {
   if (seconds < 60) {
     return `${Math.round(seconds)}s`

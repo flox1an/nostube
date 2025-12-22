@@ -4,6 +4,9 @@ import { useEventModel } from 'applesauce-react/hooks'
 import { UserBlossomServersModel } from 'applesauce-core/models'
 import { isBlossomServerBlocked } from '@/constants/relays'
 
+// Stable empty array to prevent infinite re-renders when user is not logged in
+const EMPTY_ARRAY: URL[] = []
+
 export function useUserBlossomServers() {
   const { user } = useCurrentUser()
 
@@ -11,8 +14,8 @@ export function useUserBlossomServers() {
   const lastLogRef = useRef({ time: 0, serverCount: 0, pubkey: '' })
 
   // Use UserBlossomServersModel to get user's blossom servers
-  const blossomServers =
-    useEventModel(UserBlossomServersModel, user?.pubkey ? [user.pubkey] : null) || []
+  const blossomServersRaw = useEventModel(UserBlossomServersModel, user?.pubkey ? [user.pubkey] : null)
+  const blossomServers = blossomServersRaw ?? EMPTY_ARRAY
 
   // Convert URL objects to strings and filter out blocked servers - memoized to prevent infinite loops
   const serverUrls = useMemo(

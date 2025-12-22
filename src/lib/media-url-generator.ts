@@ -7,6 +7,10 @@
 
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { normalizeServerUrl } from './blossom-utils'
+import { extractBlossomHash, isBlossomUrl } from './blossom-url'
+
+// Re-export for backwards compatibility
+export { extractBlossomHash, isBlossomUrl }
 
 export type MediaType = 'video' | 'image' | 'vtt' | 'audio'
 
@@ -35,41 +39,6 @@ export interface UrlMetadata {
 export interface GeneratedUrls {
   urls: string[] // All URLs in priority order
   metadata: UrlMetadata[]
-}
-
-/**
- * Extract SHA256 hash and file extension from a Blossom URL
- * Blossom URLs have format: https://server.com/{sha256}.{ext}
- */
-export function extractBlossomHash(url: string): { sha256?: string; ext?: string } {
-  try {
-    const urlObj = new URL(url)
-    const pathname = urlObj.pathname
-
-    // Extract filename from path
-    const filename = pathname.split('/').pop() || ''
-
-    // Check if it looks like a Blossom URL (64 char hex hash + extension)
-    const match = filename.match(/^([a-f0-9]{64})\.([^.]+)$/i)
-    if (match) {
-      return {
-        sha256: match[1],
-        ext: match[2],
-      }
-    }
-
-    return {}
-  } catch {
-    return {}
-  }
-}
-
-/**
- * Check if a URL is a valid Blossom URL
- */
-export function isBlossomUrl(url: string): boolean {
-  const { sha256 } = extractBlossomHash(url)
-  return Boolean(sha256)
 }
 
 /**

@@ -11,6 +11,7 @@ import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { presetBlossomServers } from '@/constants/relays'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
 import type { UploadDraft } from '@/types/upload-draft'
+import { parseBlossomUrl } from '@/lib/blossom-url'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -311,29 +312,6 @@ export function useVideoUpload(
 
   const removeTag = (tagToRemove: string) => {
     setTags(prevTags => prevTags.filter(tag => tag !== tagToRemove))
-  }
-
-  const parseBlossomUrl = (
-    url: string
-  ): { isBlossomUrl: boolean; sha256?: string; blossomServer?: string } => {
-    try {
-      const urlObj = new URL(url)
-      const pathname = urlObj.pathname
-      const match = pathname.match(/\/([a-f0-9]{64})(?:\.[^/]*)?$/i)
-
-      if (match) {
-        const sha256 = match[1]
-        const blossomServer = `${urlObj.protocol}//${urlObj.host}`
-        return {
-          isBlossomUrl: true,
-          sha256,
-          blossomServer,
-        }
-      }
-      return { isBlossomUrl: false }
-    } catch {
-      return { isBlossomUrl: false }
-    }
   }
 
   const handleUrlVideoProcessing = async (url: string) => {

@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Play/Pause Overlay**: Smaller icon, faster fade
 - **Button Standardization**: Using shadcn/ui components
 - **Upload Button**: Only shows when logged in
-- **Package Updates**: React 19.2.0, Applesauce 4.4.2, Vitest 4.0.10
+- **Package Updates**: React 19.2.3, React Router 7.11.0, Vite 7.3.0, Vitest 4.0.16, nostr-tools 2.19.4, lucide-react 0.562.0, media-chrome 4.17.2, tailwindcss 4.1.18, zod 4.2.1, i18next 25.7.3, react-i18next 16.5.0, react-hook-form 7.69.0, recharts 3.6.0, TypeScript ESLint 8.50.1, ESLint 9.39.2, @html-eslint 0.52.0, Prettier 3.7.4
 - **Tag Normalization**: All hashtags lowercase
 - **Default Config**: relay.divine.video relay, almond.slidestr.net Blossom server
 

@@ -87,8 +87,9 @@ export function VideoDebugInfo({
   userServers,
 }: VideoDebugInfoProps) {
   // Use multi-variant availability hook
+  // Use allVideoVariants to show ALL variants including incompatible codecs for debugging
   const { allVariants, checkAllAvailability } = useMultiVideoServerAvailability({
-    videoVariants: video?.videoVariants || [],
+    videoVariants: video?.allVideoVariants || [],
     thumbnailVariants: video?.thumbnailVariants || [],
     configServers: blossomServers,
     userServers,

@@ -65,8 +65,9 @@ export interface VideoEvent {
   x?: string
   origin?: VideoOrigin
   // New fields for multi-video support
-  videoVariants: VideoVariant[] // All video variants (different qualities)
+  videoVariants: VideoVariant[] // Compatible video variants (filtered for current platform)
   thumbnailVariants: VideoVariant[] // All thumbnail variants
+  allVideoVariants?: VideoVariant[] // All video variants including incompatible codecs (for debugging)
 }
 
 // Create an in-memory index for fast text search
@@ -340,7 +341,9 @@ export function processEvent(
     }
 
     // Separate video variants from thumbnail variants
-    const allVideoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+    const parsedVideoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+    // Sort all variants by quality (highest first) - keep unfiltered for debugging
+    const allVideoVariants = sortVideoVariantsByQuality(parsedVideoVariants)
     // Filter out incompatible codecs for current platform (e.g., HEVC on iOS)
     const compatibleVideoVariants = filterCompatibleVariants(allVideoVariants)
     const videoVariants = sortVideoVariantsByQuality(compatibleVideoVariants)
@@ -472,6 +475,7 @@ export function processEvent(
       origin,
       videoVariants,
       thumbnailVariants,
+      allVideoVariants,
     }
 
     // Create search index
@@ -561,6 +565,7 @@ export function processEvent(
       origin,
       videoVariants,
       thumbnailVariants,
+      allVideoVariants: videoVariants, // In old format, all variants are the same
     }
 
     // Create search index

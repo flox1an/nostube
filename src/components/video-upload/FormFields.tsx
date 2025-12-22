@@ -22,6 +22,13 @@ interface FormFieldsProps {
   onLanguageChange: (language: string) => void
 }
 
+// Prevent Enter key from submitting the form
+const preventEnterSubmit = (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+  }
+}
+
 export function FormFields({
   title,
   onTitleChange,
@@ -45,7 +52,13 @@ export function FormFields({
         <Label htmlFor="title">
           {t('upload.form.title')} <span className="text-destructive">*</span>
         </Label>
-        <Input id="title" value={title} onChange={e => onTitleChange(e.target.value)} required />
+        <Input
+          id="title"
+          value={title}
+          onChange={e => onTitleChange(e.target.value)}
+          onKeyDown={preventEnterSubmit}
+          required
+        />
       </div>
 
       <div className="flex flex-col gap-2">

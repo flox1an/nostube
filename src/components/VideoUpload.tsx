@@ -170,7 +170,18 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
     // Only allow publishing from step 4
     if (currentStep !== 4) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[VideoUpload] Form submission blocked: currentStep is',
+          currentStep,
+          'but must be 4 to publish. This may indicate an unexpected Enter key press or HMR issue.'
+        )
+      }
       return
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('[VideoUpload] Publishing video from step 4, title:', title)
     }
 
     try {

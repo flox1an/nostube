@@ -114,50 +114,72 @@ export function useNotifications() {
       await new Promise<void>(resolve => {
         let timeoutId: NodeJS.Timeout | undefined
         let _eoseCount = 0
+        let resolved = false
 
-        // Create subscription using RxJS observable pattern
-        const subscription = relayPool.subscription(relays, filters).subscribe({
-          next: msg => {
-            // Filter out EOSE messages
-            if (typeof msg !== 'string' && 'kind' in msg) {
-              // Deduplicate events by ID (same event from multiple relays or filters)
-              if (seenEventIds.has(msg.id)) {
-                return
-              }
-              seenEventIds.add(msg.id)
-
-              comments.push(msg)
-            } else if (msg === 'EOSE') {
-              _eoseCount++
-              // End of stored events - wait a bit more for any late arrivals
-              if (!timeoutId) {
-                timeoutId = setTimeout(() => {
-                  subscription.unsubscribe()
-                  resolve()
-                }, 1000)
-              }
-            }
-          },
-          error: err => {
-            console.error('[useNotifications] Subscription error:', err)
-            subscription.unsubscribe()
+        const safeResolve = () => {
+          if (!resolved) {
+            resolved = true
             resolve()
-          },
-          complete: () => {
-            resolve()
-          },
-        })
+          }
+        }
 
-        // Set overall timeout
+        // Set overall timeout FIRST to ensure it's always active
         const overallTimeout = setTimeout(() => {
-          subscription.unsubscribe()
-          resolve()
+          if (subscription) {
+            subscription.unsubscribe()
+          }
+          safeResolve()
         }, 15000) // 15 second overall timeout for slow relays
 
-        // Cleanup
-        return () => {
+        let subscription: { unsubscribe: () => void } | undefined
+
+        try {
+          // Create subscription using RxJS observable pattern
+          subscription = relayPool.subscription(relays, filters).subscribe({
+            next: msg => {
+              // Filter out EOSE messages
+              if (typeof msg !== 'string' && 'kind' in msg) {
+                // Deduplicate events by ID (same event from multiple relays or filters)
+                if (seenEventIds.has(msg.id)) {
+                  return
+                }
+                seenEventIds.add(msg.id)
+
+                comments.push(msg)
+              } else if (msg === 'EOSE') {
+                _eoseCount++
+                // End of stored events - wait a bit more for any late arrivals
+                if (!timeoutId) {
+                  timeoutId = setTimeout(() => {
+                    clearTimeout(overallTimeout)
+                    if (subscription) {
+                      subscription.unsubscribe()
+                    }
+                    safeResolve()
+                  }, 1000)
+                }
+              }
+            },
+            error: err => {
+              console.error('[useNotifications] Subscription error:', err)
+              clearTimeout(overallTimeout)
+              if (timeoutId) clearTimeout(timeoutId)
+              if (subscription) {
+                subscription.unsubscribe()
+              }
+              safeResolve()
+            },
+            complete: () => {
+              clearTimeout(overallTimeout)
+              if (timeoutId) clearTimeout(timeoutId)
+              safeResolve()
+            },
+          })
+        } catch (err) {
+          // If subscription setup fails, clean up and resolve
+          console.error('[useNotifications] Failed to create subscription:', err)
           clearTimeout(overallTimeout)
-          if (timeoutId) clearTimeout(timeoutId)
+          safeResolve()
         }
       })
 

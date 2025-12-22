@@ -1,5 +1,5 @@
 import type { NostrEvent } from 'nostr-tools'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@/lib/blossom-url'
 
 /**
  * Format bytes to human-readable size (MB or GB)

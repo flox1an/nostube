@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useAppContext, useReadRelays } from '@/hooks'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@/lib/blossom-url'
 import type { NostrEvent } from 'nostr-tools'
 
 // Test npub: npub1cj8znuztfqkvq89pl8hceph0svvvqk0qay6nydgk9uyq7fhpfsgsqwrz4u

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { extractBlossomHash, processEvent, processEvents } from './video-event'
+import { processEvent, processEvents } from './video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
 
 // Mock dependencies
@@ -285,60 +285,6 @@ const eventWithOriginOldFormat = {
     ['origin', 'vimeo', '123456789', 'https://vimeo.com/123456789'],
   ],
 }
-
-describe('extractBlossomHash', () => {
-  it('should extract hash and extension from valid Blossom URL', () => {
-    const url =
-      'https://almond.slidestr.net/0d1991b81fae8148cebdedbd4658c5d0873871620c248f1df60dda5b24e0999e.mp4'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBe('0d1991b81fae8148cebdedbd4658c5d0873871620c248f1df60dda5b24e0999e')
-    expect(result.ext).toBe('mp4')
-  })
-
-  it('should extract hash and extension from another valid Blossom URL', () => {
-    const url =
-      'https://blossom.primal.net/cf5a5ff1dddc3b97d8938f33d1088c9e5babcdc3f94c5178112392e9b3a36d27.mp4'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBe('cf5a5ff1dddc3b97d8938f33d1088c9e5babcdc3f94c5178112392e9b3a36d27')
-    expect(result.ext).toBe('mp4')
-  })
-
-  it('should handle URLs with .webp extension', () => {
-    const url =
-      'https://nostr.download/thumb/f6551d07b3ad65b6137780a68b5492ea541182fc16717d21b18cedfb8d6ef4d0.webp'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBe('f6551d07b3ad65b6137780a68b5492ea541182fc16717d21b18cedfb8d6ef4d0')
-    expect(result.ext).toBe('webp')
-  })
-
-  it('should return empty object for non-Blossom URL', () => {
-    const url = 'https://v.nostr.build/RIbToHsVig5gjGLf.mp4'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBeUndefined()
-    expect(result.ext).toBeUndefined()
-  })
-
-  it('should return empty object for invalid URL', () => {
-    const url = 'not-a-valid-url'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBeUndefined()
-    expect(result.ext).toBeUndefined()
-  })
-
-  it('should handle URLs with paths containing multiple segments', () => {
-    const url =
-      'https://example.com/path/to/a3a9cb9757f48dd7279cdd0473934ee1799f3a3e969b391f6e16d746b0c43057.png'
-    const result = extractBlossomHash(url)
-
-    expect(result.sha256).toBe('a3a9cb9757f48dd7279cdd0473934ee1799f3a3e969b391f6e16d746b0c43057')
-    expect(result.ext).toBe('png')
-  })
-})
 
 describe('processEvent', () => {
   const defaultRelays = ['wss://relay.example.com']

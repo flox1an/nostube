@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, Copy, Check, Server } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@/lib/blossom-url'
 import {
   formatFileSize,
   getSizeFromVideoEvent,

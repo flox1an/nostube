@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@/lib/blossom-url'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { Check, Circle, Loader2, X, Video, Image } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'

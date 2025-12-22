@@ -11,7 +11,7 @@ import {
   parseCodecsFromMimetype,
   type DvmHandlerInfo,
 } from '@/lib/dvm-utils'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@/lib/blossom-url'
 import type { VideoVariant } from '@/lib/video-processing'
 import { Subscription } from 'rxjs'
 

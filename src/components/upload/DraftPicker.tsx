@@ -6,7 +6,7 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { DraftCard } from './DraftCard'
 import { DeleteDraftDialog } from './DeleteDraftDialog'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { deleteBlobFromMultipleServers } from '@/lib/blossom-upload'
+import { deleteBlobsFromServers } from '@/lib/blossom-upload'
 
 interface DraftPickerProps {
   drafts: UploadDraft[]
@@ -52,104 +52,18 @@ export function DraftPicker({
       throw new Error('No draft to delete or user not logged in')
     }
 
-    // Collect all blob hashes and their server URLs
-    const blobsToDelete: { hash: string; servers: string[] }[] = []
-
-    // Add video blobs
-    for (const video of draftToDelete.uploadInfo.videos) {
-      for (const blob of video.uploadedBlobs) {
-        // Extract server URL from blob URL
-        const url = new URL(blob.url)
-        const serverUrl = `${url.protocol}//${url.host}`
-
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      }
-
-      // Add mirrored blobs
-      for (const blob of video.mirroredBlobs) {
-        const url = new URL(blob.url)
-        const serverUrl = `${url.protocol}//${url.host}`
-
-        // Check if we already have this hash
-        const existing = blobsToDelete.find(b => b.hash === blob.sha256)
-        if (existing) {
-          if (!existing.servers.includes(serverUrl)) {
-            existing.servers.push(serverUrl)
-          }
-        } else {
-          blobsToDelete.push({
-            hash: blob.sha256,
-            servers: [serverUrl],
-          })
-        }
-      }
-    }
-
-    // Add thumbnail blobs
-    for (const blob of draftToDelete.thumbnailUploadInfo.uploadedBlobs) {
-      const url = new URL(blob.url)
-      const serverUrl = `${url.protocol}//${url.host}`
-
-      const existing = blobsToDelete.find(b => b.hash === blob.sha256)
-      if (existing) {
-        if (!existing.servers.includes(serverUrl)) {
-          existing.servers.push(serverUrl)
-        }
-      } else {
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      }
-    }
-
-    for (const blob of draftToDelete.thumbnailUploadInfo.mirroredBlobs) {
-      const url = new URL(blob.url)
-      const serverUrl = `${url.protocol}//${url.host}`
-
-      const existing = blobsToDelete.find(b => b.hash === blob.sha256)
-      if (existing) {
-        if (!existing.servers.includes(serverUrl)) {
-          existing.servers.push(serverUrl)
-        }
-      } else {
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      }
-    }
-
-    if (import.meta.env.DEV) {
-      console.log('[DraftPicker] Deleting blobs:', blobsToDelete)
-    }
+    // Collect all blobs from videos and thumbnails
+    const allBlobs = [
+      ...draftToDelete.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
+      ...draftToDelete.thumbnailUploadInfo.uploadedBlobs,
+      ...draftToDelete.thumbnailUploadInfo.mirroredBlobs,
+    ]
 
     // Delete all blobs from their servers
-    const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
-      deleteBlobFromMultipleServers(
-        servers,
-        hash,
-        async draft => await user.signer.signEvent(draft)
-      )
+    const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+      allBlobs,
+      async draft => await user.signer.signEvent(draft)
     )
-
-    const results = await Promise.allSettled(deletionPromises)
-
-    // Count successful deletions
-    let totalSuccessful = 0
-    let totalFailed = 0
-
-    results.forEach(result => {
-      if (result.status === 'fulfilled') {
-        totalSuccessful += result.value.successful.length
-        totalFailed += result.value.failed.length
-      } else {
-        totalFailed++
-      }
-    })
 
     // Delete the draft
     onDeleteDraft(draftToDelete.id)

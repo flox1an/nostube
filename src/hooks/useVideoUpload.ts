@@ -3,7 +3,7 @@ import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
-  deleteBlobFromMultipleServers,
+  deleteBlobsFromServers,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from 'blossom-client-sdk'
@@ -429,33 +429,7 @@ export function useVideoUpload(
     const allBlobs = [...thumbnailUploadInfo.uploadedBlobs, ...thumbnailUploadInfo.mirroredBlobs]
 
     if (allBlobs.length > 0) {
-      // Collect unique blob hashes and their server URLs
-      const blobsToDelete: { hash: string; servers: string[] }[] = []
-
-      for (const blob of allBlobs) {
-        try {
-          const url = new URL(blob.url)
-          const serverUrl = `${url.protocol}//${url.host}`
-          blobsToDelete.push({
-            hash: blob.sha256,
-            servers: [serverUrl],
-          })
-        } catch {
-          // Skip invalid URLs
-        }
-      }
-
-      // Delete all blobs from their servers
-      if (blobsToDelete.length > 0) {
-        const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
-          deleteBlobFromMultipleServers(
-            servers,
-            hash,
-            async draft => await user.signer.signEvent(draft)
-          )
-        )
-        await Promise.allSettled(deletionPromises)
-      }
+      await deleteBlobsFromServers(allBlobs, async draft => await user.signer.signEvent(draft))
     }
 
     // Reset thumbnail state
@@ -770,67 +744,12 @@ export function useVideoUpload(
       onDraftChangeRef.current({ dvmTranscodeState: undefined })
     }
 
-    // Collect all blob hashes and their server URLs
-    const blobsToDelete: { hash: string; servers: string[] }[] = []
-
-    // Add uploaded blobs
-    for (const blob of video.uploadedBlobs) {
-      try {
-        const url = new URL(blob.url)
-        const serverUrl = `${url.protocol}//${url.host}`
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      } catch {
-        // Skip invalid URLs
-      }
-    }
-
-    // Add mirrored blobs
-    for (const blob of video.mirroredBlobs) {
-      try {
-        const url = new URL(blob.url)
-        const serverUrl = `${url.protocol}//${url.host}`
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      } catch {
-        // Skip invalid URLs
-      }
-    }
-
     // Delete all blobs from their servers
-    let totalSuccessful = 0
-    let totalFailed = 0
-
-    if (blobsToDelete.length > 0) {
-      const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
-        deleteBlobFromMultipleServers(
-          servers,
-          hash,
-          async draft => await user.signer.signEvent(draft)
-        )
-      )
-
-      const results = await Promise.allSettled(deletionPromises)
-
-      results.forEach(result => {
-        if (result.status === 'fulfilled') {
-          totalSuccessful += result.value.successful.length
-          totalFailed += result.value.failed.length
-        } else {
-          totalFailed++
-        }
-      })
-
-      if (import.meta.env.DEV) {
-        console.log(
-          `[DELETE VIDEO] Deleted from ${totalSuccessful} server(s), failed on ${totalFailed} server(s)`
-        )
-      }
-    }
+    const allBlobs = [...video.uploadedBlobs, ...video.mirroredBlobs]
+    const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+      allBlobs,
+      async draft => await user.signer.signEvent(draft)
+    )
 
     // Remove video from form state
     setUploadInfo(ui => ({

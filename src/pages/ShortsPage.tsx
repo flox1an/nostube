@@ -15,16 +15,18 @@ export function ShortsPage() {
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
   return (
-    <VideoTimelinePage
-      videos={videos}
-      loading={loading}
-      exhausted={exhausted}
-      onLoadMore={loadMore}
-      layoutMode="vertical"
-      emptyMessage={t('pages.shorts.noShorts')}
-      loadingMessage={t('pages.shorts.loadingMore')}
-      exhaustedMessage={t('pages.shorts.noMore')}
-      className="sm:px-4 sm:py-4"
-    />
+    <div className="max-w-560 mx-auto">
+      <VideoTimelinePage
+        videos={videos}
+        loading={loading}
+        exhausted={exhausted}
+        onLoadMore={loadMore}
+        layoutMode="vertical"
+        emptyMessage={t('pages.shorts.noShorts')}
+        loadingMessage={t('pages.shorts.loadingMore')}
+        exhaustedMessage={t('pages.shorts.noMore')}
+        className="sm:px-4 sm:py-4"
+      />
+    </div>
   )
 }

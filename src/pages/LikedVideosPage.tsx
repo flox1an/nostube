@@ -131,7 +131,7 @@ export function LikedVideosPage() {
   const isLoading = isLoadingReactions || loadingVideos
 
   return (
-    <div className="sm:p-4">
+    <div className="max-w-560 mx-auto sm:p-4">
       <div className="text-2xl font-semibold mb-4">{t('pages.likedVideos.title')}</div>
 
       {isLoading && videos.length === 0 ? (

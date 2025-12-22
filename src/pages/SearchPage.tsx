@@ -40,7 +40,7 @@ export function SearchPage() {
   }
 
   return (
-    <div className="sm:p-4">
+    <div className="max-w-560 mx-auto sm:p-4">
       <div className="p-2">
         <h1 className="text-2xl font-bold mb-4">{t('pages.search.resultsFor', { query })}</h1>
       </div>

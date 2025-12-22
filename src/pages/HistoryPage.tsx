@@ -55,7 +55,7 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="sm:p-4">
+    <div className="max-w-560 mx-auto sm:p-4">
       <div className="p-2 flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">{t('pages.history.title')}</h1>
         {history.length > 0 && (

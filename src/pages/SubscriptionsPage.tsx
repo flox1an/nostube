@@ -32,19 +32,21 @@ export function SubscriptionsPage() {
   })
 
   return (
-    <VideoTimelinePage
-      videos={videos}
-      loading={loading}
-      exhausted={false}
-      onLoadMore={loadMore}
-      layoutMode="auto"
-      emptyMessage={
-        followedPubkeys.length === 0
-          ? t('pages.subscriptions.emptyState')
-          : t('pages.subscriptions.noVideos')
-      }
-      exhaustedMessage=""
-      className="sm:p-4"
-    />
+    <div className="max-w-560 mx-auto">
+      <VideoTimelinePage
+        videos={videos}
+        loading={loading}
+        exhausted={false}
+        onLoadMore={loadMore}
+        layoutMode="auto"
+        emptyMessage={
+          followedPubkeys.length === 0
+            ? t('pages.subscriptions.emptyState')
+            : t('pages.subscriptions.noVideos')
+        }
+        exhaustedMessage=""
+        className="sm:p-4"
+      />
+    </div>
   )
 }

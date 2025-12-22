@@ -5,6 +5,7 @@
 A comprehensive gamification system for Nostube to improve user-generated content quality, community moderation, metadata enrichment, 720p video uploads, and Blossom server distribution.
 
 **Key Principles:**
+
 - Fully decentralized communication via Nostr events (no direct API)
 - Hybrid verification: automatic for verifiable actions, Oracle for subjective
 - NIP-58 Badges for achievements and roles
@@ -41,14 +42,14 @@ A comprehensive gamification system for Nostube to improve user-generated conten
 
 All events use NIP-78 App-specific Data (kinds 30078-30081) plus NIP-58 Badges:
 
-| Kind | Name | Direction | Description |
-|------|------|-----------|-------------|
-| `30078` | Action Claim | User → Oracle | "I mirrored video X to server Y" |
-| `30079` | Score Update | Oracle → User | "User now has 1250 points, Level 4" |
-| `30080` | Quest Definition | Oracle → All | "Weekly: Mirror 3 videos → 50 points" |
-| `30081` | Quest Progress | Oracle → User | "Quest 'Mirror 3': 2/3 complete" |
-| `30009` | Badge Definition | Oracle → All | NIP-58 Badge "Trusted Moderator" |
-| `8` | Badge Award | Oracle → User | NIP-58 "User X receives Badge Y" |
+| Kind    | Name             | Direction     | Description                           |
+| ------- | ---------------- | ------------- | ------------------------------------- |
+| `30078` | Action Claim     | User → Oracle | "I mirrored video X to server Y"      |
+| `30079` | Score Update     | Oracle → User | "User now has 1250 points, Level 4"   |
+| `30080` | Quest Definition | Oracle → All  | "Weekly: Mirror 3 videos → 50 points" |
+| `30081` | Quest Progress   | Oracle → User | "Quest 'Mirror 3': 2/3 complete"      |
+| `30009` | Badge Definition | Oracle → All  | NIP-58 Badge "Trusted Moderator"      |
+| `8`     | Badge Award      | Oracle → User | NIP-58 "User X receives Badge Y"      |
 
 ### Action Claim Flow (Example: Mirror)
 
@@ -64,19 +65,19 @@ All events use NIP-78 App-specific Data (kinds 30078-30081) plus NIP-58 Badges:
 
 ### Point Sources
 
-| Category | Action | Points | Verification |
-|----------|--------|--------|---------------|
-| **Content** | Upload video (first) | +100 | Blob exists |
-| | Add 720p variant | +50 | Blob + dimension check |
-| | Upload thumbnail | +10 | Blob exists |
-| | Good metadata | +5 to +30 | Oracle algorithm |
-| **Distribution** | Mirror to 1 additional server | +20 | HEAD request |
-| | Mirror to 3+ servers | +50 bonus | HEAD requests |
-| **Moderation** | NSFW correctly marked | +15 | Community consensus |
-| | Spam reported (confirmed) | +25 | Moderator review |
-| | False report | **-50** | Moderator review |
-| **Engagement** | Zaps received | +0.01/Sat | Zap events (capped: max 100/day) |
-| | Video reposted | +5 | Repost events |
+| Category         | Action                        | Points    | Verification                     |
+| ---------------- | ----------------------------- | --------- | -------------------------------- |
+| **Content**      | Upload video (first)          | +100      | Blob exists                      |
+|                  | Add 720p variant              | +50       | Blob + dimension check           |
+|                  | Upload thumbnail              | +10       | Blob exists                      |
+|                  | Good metadata                 | +5 to +30 | Oracle algorithm                 |
+| **Distribution** | Mirror to 1 additional server | +20       | HEAD request                     |
+|                  | Mirror to 3+ servers          | +50 bonus | HEAD requests                    |
+| **Moderation**   | NSFW correctly marked         | +15       | Community consensus              |
+|                  | Spam reported (confirmed)     | +25       | Moderator review                 |
+|                  | False report                  | **-50**   | Moderator review                 |
+| **Engagement**   | Zaps received                 | +0.01/Sat | Zap events (capped: max 100/day) |
+|                  | Video reposted                | +5        | Repost events                    |
 
 ### Negative Point Decay
 
@@ -86,15 +87,15 @@ All events use NIP-78 App-specific Data (kinds 30078-30081) plus NIP-58 Badges:
 
 ## Level System
 
-| Level | Points | Name | Unlocked Features |
-|-------|--------|------|-------------------|
-| 0 | 0 | Newcomer | Only watch videos |
-| 1 | 50 | Viewer | Comment, Like |
-| 2 | 200 | Contributor | Upload videos |
-| 3 | 500 | Creator | Advanced upload features |
-| 4 | 1,500 | Trusted | Moderation reports count more |
-| 5 | 5,000 | Veteran | Can qualify for Moderator badge |
-| 6 | 15,000 | Legend | Community highlight, special badges |
+| Level | Points | Name        | Unlocked Features                   |
+| ----- | ------ | ----------- | ----------------------------------- |
+| 0     | 0      | Newcomer    | Only watch videos                   |
+| 1     | 50     | Viewer      | Comment, Like                       |
+| 2     | 200    | Contributor | Upload videos                       |
+| 3     | 500    | Creator     | Advanced upload features            |
+| 4     | 1,500  | Trusted     | Moderation reports count more       |
+| 5     | 5,000  | Veteran     | Can qualify for Moderator badge     |
+| 6     | 15,000 | Legend      | Community highlight, special badges |
 
 ### Level Requirements (not just points)
 
@@ -105,19 +106,19 @@ All events use NIP-78 App-specific Data (kinds 30078-30081) plus NIP-58 Badges:
 
 ### Badge Categories
 
-| Category | Badge | Requirements | Effect |
-|----------|-------|--------------|--------|
-| **Level Badges** | Bronze, Silver, Gold, Platinum, Diamond | Reach Level 2, 3, 4, 5, 6 | Visual status |
-| **Role Badges** | | | |
-| | Creator | 10+ videos, 500+ points | Upload priority at DVMs |
-| | Curator | 50+ correct tag/metadata edits | Can suggest tags |
-| | Moderator | Level 5 + 20 confirmed reports + quiz | Reports have higher weight |
-| | Archivar | 100+ mirrors to 3+ servers | Access to archive tools |
-| **Achievement Badges** | | | |
-| | Early Adopter | Account before date X | Exclusive, no longer available |
-| | Trending | Video in top 10 of the week | Temporary (1 week visible) |
-| | Whale | 100k+ sats zapped | Visual flex |
-| | Event Champion | Won community event | Event-specific |
+| Category               | Badge                                   | Requirements                          | Effect                         |
+| ---------------------- | --------------------------------------- | ------------------------------------- | ------------------------------ |
+| **Level Badges**       | Bronze, Silver, Gold, Platinum, Diamond | Reach Level 2, 3, 4, 5, 6             | Visual status                  |
+| **Role Badges**        |                                         |                                       |                                |
+|                        | Creator                                 | 10+ videos, 500+ points               | Upload priority at DVMs        |
+|                        | Curator                                 | 50+ correct tag/metadata edits        | Can suggest tags               |
+|                        | Moderator                               | Level 5 + 20 confirmed reports + quiz | Reports have higher weight     |
+|                        | Archivar                                | 100+ mirrors to 3+ servers            | Access to archive tools        |
+| **Achievement Badges** |                                         |                                       |                                |
+|                        | Early Adopter                           | Account before date X                 | Exclusive, no longer available |
+|                        | Trending                                | Video in top 10 of the week           | Temporary (1 week visible)     |
+|                        | Whale                                   | 100k+ sats zapped                     | Visual flex                    |
+|                        | Event Champion                          | Won community event                   | Event-specific                 |
 
 ### Moderation Hierarchy
 
@@ -148,13 +149,13 @@ Oracle Admin (manually assigned)
 
 ### Quest Types
 
-| Type | Duration | Examples | Reset |
-|------|----------|----------|-------|
-| **Onboarding** | One-time | "Complete profile", "Upload first video" | Never |
-| **Daily** | 24h | "Rate 1 video", "Write 1 comment" | Midnight UTC |
-| **Weekly** | 7 days | "Mirror 3 videos", "Create 720p for 2 videos" | Monday 00:00 UTC |
-| **Milestone** | One-time | "100 videos mirrored", "Reached Level 5" | Never |
-| **Event** | Limited | "Archive 50 videos from Creator X" | Event end |
+| Type           | Duration | Examples                                      | Reset            |
+| -------------- | -------- | --------------------------------------------- | ---------------- |
+| **Onboarding** | One-time | "Complete profile", "Upload first video"      | Never            |
+| **Daily**      | 24h      | "Rate 1 video", "Write 1 comment"             | Midnight UTC     |
+| **Weekly**     | 7 days   | "Mirror 3 videos", "Create 720p for 2 videos" | Monday 00:00 UTC |
+| **Milestone**  | One-time | "100 videos mirrored", "Reached Level 5"      | Never            |
+| **Event**      | Limited  | "Archive 50 videos from Creator X"            | Event end        |
 
 ### Quest Definition Event (kind 30080)
 
@@ -204,34 +205,34 @@ Oracle Admin (manually assigned)
 
 ### Level-scaled Rewards
 
-| Quest | Level 0-2 | Level 3-4 | Level 5-6 |
-|-------|-----------|-----------|-----------|
-| Daily | 5 points | 8 points | 12 points |
+| Quest  | Level 0-2 | Level 3-4 | Level 5-6 |
+| ------ | --------- | --------- | --------- |
+| Daily  | 5 points  | 8 points  | 12 points |
 | Weekly | 30 points | 50 points | 75 points |
 
 ## Anti-Spam & Anti-Gaming
 
 ### Attack Scenarios and Countermeasures
 
-| Attack | Example | Countermeasure |
-|--------|---------|----------------|
-| **Spam Uploads** | 100 empty videos | Min. file size (1MB), rate limit (5/day for Level 0-2) |
-| **Self-Mirroring** | Mirror own videos to own servers | Only "foreign" videos count (different pubkey) |
-| **Mirror-Farming** | Mirror same file 100x | Max 5 mirrors per video rewarded |
-| **Sybil Attack** | Create many fake accounts | Level 0-1 get minimal points; Web-of-Trust (NIP-51 Follows) as multiplier |
-| **Zap-Washing** | Zap yourself | Ignore self-zaps; only zaps from Level 2+ count |
-| **False Reports** | Mass false reports | Decay + temporary report ban after 3+ strikes |
-| **Metadata Spam** | Copy-paste descriptions | Similarity check; identical texts → 0 points |
-| **Colluding Rings** | Group zaps each other | Graph analysis; closed zap circles → reduced value |
+| Attack              | Example                          | Countermeasure                                                            |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------------- |
+| **Spam Uploads**    | 100 empty videos                 | Min. file size (1MB), rate limit (5/day for Level 0-2)                    |
+| **Self-Mirroring**  | Mirror own videos to own servers | Only "foreign" videos count (different pubkey)                            |
+| **Mirror-Farming**  | Mirror same file 100x            | Max 5 mirrors per video rewarded                                          |
+| **Sybil Attack**    | Create many fake accounts        | Level 0-1 get minimal points; Web-of-Trust (NIP-51 Follows) as multiplier |
+| **Zap-Washing**     | Zap yourself                     | Ignore self-zaps; only zaps from Level 2+ count                           |
+| **False Reports**   | Mass false reports               | Decay + temporary report ban after 3+ strikes                             |
+| **Metadata Spam**   | Copy-paste descriptions          | Similarity check; identical texts → 0 points                              |
+| **Colluding Rings** | Group zaps each other            | Graph analysis; closed zap circles → reduced value                        |
 
 ### Rate Limits (per 24h)
 
 | Level | Uploads | Mirrors | Reports | Zap Points Cap |
-|-------|---------|---------|---------|----------------|
-| 0-1 | 1 | 5 | 2 | 10 |
-| 2-3 | 5 | 20 | 10 | 50 |
-| 4-5 | 20 | 100 | 50 | 100 |
-| 6 | ∞ | ∞ | ∞ | 200 |
+| ----- | ------- | ------- | ------- | -------------- |
+| 0-1   | 1       | 5       | 2       | 10             |
+| 2-3   | 5       | 20      | 10      | 50             |
+| 4-5   | 20      | 100     | 50      | 100            |
+| 6     | ∞       | ∞       | ∞       | 200            |
 
 ### Web-of-Trust Multiplier
 
@@ -317,6 +318,7 @@ WoT Factor:
 ### New UI Components
 
 **1. Profile Header Extension:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Header                                          [🔔] [👤]  │
@@ -327,6 +329,7 @@ WoT Factor:
 ```
 
 **2. Quest Widget:**
+
 ```
 ┌──────────────────────────┐
 │ 📋 Active Quests         │
@@ -342,11 +345,13 @@ WoT Factor:
 ```
 
 **3. Action Feedback:**
+
 - After mirror: "+20 XP" animation
 - After level-up: Confetti + modal
 - After badge unlock: Badge reveal animation
 
 **4. Gamification Profile Page (`/profile/gamification`):**
+
 - Complete statistics
 - All badges (earned + locked)
 - Quest history
@@ -354,6 +359,7 @@ WoT Factor:
 - Activity graph (like GitHub Contributions)
 
 **5. Leaderboard Page (`/leaderboard`):**
+
 - Filter: All-time / Month / Week
 - Categories: Overall / Creators / Moderators / Archivars
 
@@ -361,10 +367,10 @@ WoT Factor:
 
 ```typescript
 const filters = [
-  { kinds: [30079], '#p': [userPubkey] },  // Score updates
-  { kinds: [30081], '#p': [userPubkey] },  // Quest progress
-  { kinds: [8], '#p': [userPubkey] },      // Badge awards
-  { kinds: [30080], authors: [oraclePubkey] }  // Quest definitions
+  { kinds: [30079], '#p': [userPubkey] }, // Score updates
+  { kinds: [30081], '#p': [userPubkey] }, // Quest progress
+  { kinds: [8], '#p': [userPubkey] }, // Badge awards
+  { kinds: [30080], authors: [oraclePubkey] }, // Quest definitions
 ]
 ```
 
@@ -372,37 +378,37 @@ const filters = [
 
 ### Phase 1: MVP (4-6 weeks)
 
-| Component | Scope |
-|-----------|-------|
-| **Oracle** | Base service: Event Ingester, Score calculation, Nostr publisher |
-| **Verification** | Only automatically verifiable actions (Mirror, Upload, Zaps) |
-| **Points** | Simple point system without WoT multiplier |
-| **Levels** | 6 level tiers, points-only (no extra requirements) |
-| **Quests** | 3 onboarding quests, 1 daily, 1 weekly |
-| **Badges** | Level badges + 2 role badges (Creator, Archivar) |
-| **Client** | Header integration, simple quest widget, toast feedback |
-| **Anti-Gaming** | Rate limits, self-mirror block |
+| Component        | Scope                                                            |
+| ---------------- | ---------------------------------------------------------------- |
+| **Oracle**       | Base service: Event Ingester, Score calculation, Nostr publisher |
+| **Verification** | Only automatically verifiable actions (Mirror, Upload, Zaps)     |
+| **Points**       | Simple point system without WoT multiplier                       |
+| **Levels**       | 6 level tiers, points-only (no extra requirements)               |
+| **Quests**       | 3 onboarding quests, 1 daily, 1 weekly                           |
+| **Badges**       | Level badges + 2 role badges (Creator, Archivar)                 |
+| **Client**       | Header integration, simple quest widget, toast feedback          |
+| **Anti-Gaming**  | Rate limits, self-mirror block                                   |
 
 ### Phase 2: Moderation (3-4 weeks)
 
-| Component | Scope |
-|-----------|-------|
-| **Reports** | NSFW/Spam reports with consensus mechanism |
-| **Moderator Badge** | Quiz system for unlock |
-| **Weighting** | Reports weighted by level/badge |
-| **Penalties** | Negative points with decay |
-| **Anti-Gaming** | False report detection, cooling-off periods |
+| Component           | Scope                                       |
+| ------------------- | ------------------------------------------- |
+| **Reports**         | NSFW/Spam reports with consensus mechanism  |
+| **Moderator Badge** | Quiz system for unlock                      |
+| **Weighting**       | Reports weighted by level/badge             |
+| **Penalties**       | Negative points with decay                  |
+| **Anti-Gaming**     | False report detection, cooling-off periods |
 
 ### Phase 3: Social & Polish (3-4 weeks)
 
-| Component | Scope |
-|-----------|-------|
-| **WoT** | Web-of-Trust multiplier based on follows |
-| **Leaderboards** | Global + categorized |
-| **Streak System** | Daily/Weekly streaks with bonus |
-| **Event Quests** | Community events with temporary quests |
-| **UI Polish** | Animations, gamification profile page, activity graph |
-| **Anti-Gaming** | Graph analysis for colluding rings |
+| Component         | Scope                                                 |
+| ----------------- | ----------------------------------------------------- |
+| **WoT**           | Web-of-Trust multiplier based on follows              |
+| **Leaderboards**  | Global + categorized                                  |
+| **Streak System** | Daily/Weekly streaks with bonus                       |
+| **Event Quests**  | Community events with temporary quests                |
+| **UI Polish**     | Animations, gamification profile page, activity graph |
+| **Anti-Gaming**   | Graph analysis for colluding rings                    |
 
 ### Phase 4: Extensions (ongoing)
 
@@ -413,18 +419,19 @@ const filters = [
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Oracle Service | Node.js/TypeScript or Rust |
-| Database | PostgreSQL |
-| Cache | Redis |
-| Nostr Library | nostr-tools (JS) or nostr-sdk (Rust) |
-| Job Queue | BullMQ (Redis-based) |
-| Hosting | VPS or Container (Docker/Kubernetes) |
+| Component      | Technology                           |
+| -------------- | ------------------------------------ |
+| Oracle Service | Node.js/TypeScript or Rust           |
+| Database       | PostgreSQL                           |
+| Cache          | Redis                                |
+| Nostr Library  | nostr-tools (JS) or nostr-sdk (Rust) |
+| Job Queue      | BullMQ (Redis-based)                 |
+| Hosting        | VPS or Container (Docker/Kubernetes) |
 
 ## Inspiration
 
 This design incorporates concepts from Bilibili's gamification system:
+
 - Level system (LV0-LV6)
 - Virtual currency integration (Zaps as B-Coins equivalent)
 - Fandom/role badges

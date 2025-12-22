@@ -44,7 +44,7 @@ export function CategoryPage() {
   // Show error if category not found
   if (categorySlug && !category) {
     return (
-      <div className="px-4">
+      <div className="max-w-560 mx-auto px-4">
         <CategoryButtonBar activeSlug={categorySlug} />
         <div className="p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Category not found</h1>
@@ -61,7 +61,7 @@ export function CategoryPage() {
   }
 
   return (
-    <div className="px-4">
+    <div className="max-w-560 mx-auto px-4">
       <CategoryButtonBar activeSlug={categorySlug} />
 
       <VideoTimelinePage

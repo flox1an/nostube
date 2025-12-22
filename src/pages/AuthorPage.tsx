@@ -284,7 +284,7 @@ export function AuthorPage() {
   if (!pubkey) return null
 
   return (
-    <div className="sm:p-4">
+    <div className="max-w-560 mx-auto sm:p-4">
       <AuthorProfile className="p-2" pubkey={pubkey} joinedDate={stats.joinedDate} />
 
       <Tabs className="p-2" value={activeTab} onValueChange={v => setActiveTab(v as Tabs)}>

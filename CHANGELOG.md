@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Draft Picker Layout**: Moved "New Upload" button below draft list, centered with secondary styling for better visual hierarchy
 - **Upload Dialog Layout**: Redesigned with responsive two-column layout. Left column (350px) shows video quality summary and thumbnail section. Right column shows form fields (title, description, tags, language, content warning). Single column on mobile (VideoUpload.tsx:343-424)
 - **Video Quality Display**: Simplified video quality display with expandable details. Shows quality badges, dimensions, duration, total size, upload/mirror counts, and codec warnings in collapsed state. Click "Show Details" to expand full VideoVariantsTable with all technical details (VideoVariantsSummary.tsx)
+- **Blossom Blob Deletion Consolidation**: Refactored blob deletion code into common `deleteBlobsFromServers` utility function in blossom-upload.ts. Eliminates duplicate deletion logic across thumbnail deletion, video variant deletion, and draft cleanup. Groups blobs by hash to avoid duplicate server requests (blossom-upload.ts, useVideoUpload.ts, DraftPicker.tsx)
 
 ### Fixed
 

@@ -299,7 +299,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
   return (
     <>
-      <Card className="max-w-6xl mx-auto">
+      <Card className="mt-4 max-w-6xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>

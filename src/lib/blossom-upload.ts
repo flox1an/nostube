@@ -853,3 +853,79 @@ export async function deleteBlobFromMultipleServers(
 
   return { successful, failed }
 }
+
+/**
+ * Delete blobs from their servers based on BlobDescriptor arrays
+ * Groups blobs by hash to avoid duplicate deletions
+ * @param blobs - Array of BlobDescriptor objects to delete
+ * @param signer - Function to sign the delete authorization
+ * @returns Object with totalSuccessful and totalFailed counts
+ */
+export async function deleteBlobsFromServers(
+  blobs: BlobDescriptor[],
+  signer: Signer
+): Promise<{ totalSuccessful: number; totalFailed: number }> {
+  if (blobs.length === 0) {
+    return { totalSuccessful: 0, totalFailed: 0 }
+  }
+
+  // Group blobs by hash and collect unique servers for each
+  const blobsToDelete: { hash: string; servers: string[] }[] = []
+
+  for (const blob of blobs) {
+    try {
+      const url = new URL(blob.url)
+      const serverUrl = `${url.protocol}//${url.host}`
+
+      const existing = blobsToDelete.find(b => b.hash === blob.sha256)
+      if (existing) {
+        if (!existing.servers.includes(serverUrl)) {
+          existing.servers.push(serverUrl)
+        }
+      } else {
+        blobsToDelete.push({
+          hash: blob.sha256,
+          servers: [serverUrl],
+        })
+      }
+    } catch {
+      // Skip invalid URLs
+    }
+  }
+
+  if (blobsToDelete.length === 0) {
+    return { totalSuccessful: 0, totalFailed: 0 }
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[DELETE BLOBS] Deleting blobs:', blobsToDelete)
+  }
+
+  // Delete all blobs from their servers
+  const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
+    deleteBlobFromMultipleServers(servers, hash, signer)
+  )
+
+  const results = await Promise.allSettled(deletionPromises)
+
+  // Count successful deletions
+  let totalSuccessful = 0
+  let totalFailed = 0
+
+  results.forEach(result => {
+    if (result.status === 'fulfilled') {
+      totalSuccessful += result.value.successful.length
+      totalFailed += result.value.failed.length
+    } else {
+      totalFailed++
+    }
+  })
+
+  if (import.meta.env.DEV) {
+    console.log(
+      `[DELETE BLOBS] Deleted from ${totalSuccessful} server(s), failed on ${totalFailed} server(s)`
+    )
+  }
+
+  return { totalSuccessful, totalFailed }
+}

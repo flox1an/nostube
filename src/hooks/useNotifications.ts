@@ -85,6 +85,8 @@ export function useNotifications() {
         if (import.meta.env.DEV) {
           console.warn('[useNotifications] No read relays configured, skipping fetch')
         }
+        setIsLoading(false)
+        isFetchingRef.current = false
         return
       }
 
@@ -150,7 +152,7 @@ export function useNotifications() {
         const overallTimeout = setTimeout(() => {
           subscription.unsubscribe()
           resolve()
-        }, 5000) // 5 second overall timeout
+        }, 15000) // 15 second overall timeout for slow relays
 
         // Cleanup
         return () => {

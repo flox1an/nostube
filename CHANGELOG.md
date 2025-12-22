@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Notifications Infinite Loading Spinner**: Fixed notification bell showing infinite loading spinner when no read relays are configured. Now properly sets `isLoading` to `false` when returning early due to empty relay list. Also increased relay query timeout from 5s to 15s for better reliability with slow relays (useNotifications.ts:84-91)
 - **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)
 - **Category/Tag Page Duplicate Videos**: Fixed duplicate videos appearing on category and hashtag pages when the same video is posted as both addressable (kind 34235/34236) and regular (kind 21/22) events. Now uses `deduplicateByIdentifier` to prefer addressable events (useCategoryVideos.ts, useHashtagVideos.ts)
 - **Upload Wizard Form Submission**: Fixed videos publishing from step 1 when pressing Enter in input fields. Form submission now only works on step 4 (VideoUpload.tsx:handleSubmit)

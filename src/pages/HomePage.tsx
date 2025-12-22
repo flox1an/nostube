@@ -18,7 +18,7 @@ export function HomePage() {
   if (!videos) return null
 
   return (
-    <>
+    <div className="max-w-560 mx-auto">
       <div className="px-4">
         <CategoryButtonBar />
       </div>
@@ -32,6 +32,6 @@ export function HomePage() {
         exhaustedMessage={t('pages.home.noMore')}
         className="sm:px-4"
       />
-    </>
+    </div>
   )
 }

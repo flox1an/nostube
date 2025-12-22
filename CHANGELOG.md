@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Page Max-Width Consistency**: All pages now have consistent `max-w-560` max-width constraint for better readability on ultra-wide displays. Applies to HomePage, SearchPage, ShortsPage, CategoryPage, HashtagPage, AuthorPage, SubscriptionsPage, LikedVideosPage, HistoryPage, SinglePlaylistPage, and VideoPageLayout
 - **Upload Form Wizard**: Redesigned upload form as 4-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language), Step 3: Thumbnail selection, Step 4: Additional settings (content warning, expiration). Validation prevents proceeding without required fields (video for step 2, title for step 3, thumbnail for step 4). "Save Draft" button on lower right instead of top "Back to Drafts" button. Required fields marked with asterisk (\*) and each step shows description explaining requirements
 - **Upload Hints Removed**: Removed tip text about MP4/H.264 and quick start hint about input method selection from upload wizard for cleaner UI
 - **Upload Description Textarea**: Increased height from default to 10 rows for better visibility when entering longer descriptions
@@ -70,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **DVM Availability Hook Rendering**: Fixed synchronous setState within useEffect causing potential cascading renders in DVM availability check. Now uses queueMicrotask to defer state updates (useDvmAvailability.ts)
 - **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)
 - **Category/Tag Page Duplicate Videos**: Fixed duplicate videos appearing on category and hashtag pages when the same video is posted as both addressable (kind 34235/34236) and regular (kind 21/22) events. Now uses `deduplicateByIdentifier` to prefer addressable events (useCategoryVideos.ts, useHashtagVideos.ts)
 - **Upload Wizard Form Submission**: Fixed videos publishing from step 1 when pressing Enter in input fields. Form submission now only works on step 4 (VideoUpload.tsx:handleSubmit)

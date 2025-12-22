@@ -65,9 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Upload Dialog Layout**: Redesigned with responsive two-column layout. Left column (350px) shows video quality summary and thumbnail section. Right column shows form fields (title, description, tags, language, content warning). Single column on mobile (VideoUpload.tsx:343-424)
 - **Video Quality Display**: Simplified video quality display with expandable details. Shows quality badges, dimensions, duration, total size, upload/mirror counts, and codec warnings in collapsed state. Click "Show Details" to expand full VideoVariantsTable with all technical details (VideoVariantsSummary.tsx)
 - **Blossom Blob Deletion Consolidation**: Refactored blob deletion code into common `deleteBlobsFromServers` utility function in blossom-upload.ts. Eliminates duplicate deletion logic across thumbnail deletion, video variant deletion, and draft cleanup. Groups blobs by hash to avoid duplicate server requests (blossom-upload.ts, useVideoUpload.ts, DraftPicker.tsx)
+- **Ultra-Wide Video Detection Threshold**: Increased cinema mode auto-trigger threshold from 5% to 10% above 16:9 aspect ratio. Videos now need to be at least ~1.96:1 to trigger automatic cinema mode (useUltraWideVideo.ts)
 
 ### Fixed
 
+- **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)
 - **Upload Wizard Form Submission**: Fixed videos publishing from step 1 when pressing Enter in input fields. Form submission now only works on step 4 (VideoUpload.tsx:handleSubmit)
 - **DVM Progress Messages**: Fixed DVM feedback parsing to read status from `content` tag and ETA from `eta` tag. Now shows actual transcode progress like "Transcoding to 720p MP4 (~3m 23s remaining)" instead of generic "Processing video..." (useDvmTranscode.ts)
 - **DVM Transcode Mirroring**: Fixed transcoded videos using temp DVM URL instead of user's Blossom servers. Now extracts SHA256 from Blossom URL format and mirrors to configured upload/mirror servers. Includes full codec information, size, bitrate, duration, and SHA256 hash in the imeta tag for transcoded videos (useDvmTranscode.ts, useVideoUpload.ts)

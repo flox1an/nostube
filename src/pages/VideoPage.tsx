@@ -567,10 +567,10 @@ export function VideoPage() {
                 onMirror={handleMirror}
               />
             )}
-            {video?.id && video?.videoVariants && blossomServerCount !== 1 && (
+            {video?.id && video?.allVideoVariants && blossomServerCount !== 1 && (
               <VideoTransformAlert
                 videoId={video.id}
-                videoVariants={video.videoVariants}
+                videoVariants={video.allVideoVariants}
                 onTransform={handleTransform}
               />
             )}

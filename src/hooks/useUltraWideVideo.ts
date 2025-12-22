@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 
 // Constants for ultra-wide video detection
 const SIXTEEN_NINE_RATIO = 16 / 9
-const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.05
+const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.1
 
 interface UseUltraWideVideoProps {
   videoDimensions: string | undefined

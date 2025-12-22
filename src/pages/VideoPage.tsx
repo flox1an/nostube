@@ -282,10 +282,21 @@ export function VideoPage() {
       userServers: userBlossomServers,
     })
 
-  // Count servers that currently host the video (from video URLs)
+  // Check availability on mount to find other servers
+  useEffect(() => {
+    if (video?.id) {
+      checkAvailability()
+    }
+  }, [video?.id, checkAvailability])
+
+  // Count servers that currently host the video (from video URLs + verified others)
   const blossomServerCount = useMemo(() => {
-    return serverList.filter(s => s.source === 'video-url').length
-  }, [serverList])
+    const videoUrlCount = serverList.filter(s => s.source === 'video-url').length
+    const otherAvailableCount = serverList.filter(
+      s => s.source !== 'video-url' && serverAvailability.get(s.url)?.status === 'available'
+    ).length
+    return videoUrlCount + otherAvailableCount
+  }, [serverList, serverAvailability])
 
   // Use ultra-wide video detection hook
   const { tempCinemaModeForWideVideo, setTempCinemaModeForWideVideo, handleVideoDimensionsLoaded } =
@@ -560,7 +571,7 @@ export function VideoPage() {
         }
         sidebar={
           <>
-            {video?.id && (
+            {video?.id && !isChecking && (
               <VideoAvailabilityAlert
                 videoId={video.id}
                 blossomServerCount={blossomServerCount}

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { processEvent, deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 
@@ -293,7 +293,7 @@ export function useHashtagVideos({
 
   // Merge and deduplicate videos
   const mergedVideos = useMemo(() => {
-    // Use Map for O(1) deduplication
+    // Use Map for O(1) deduplication by event ID
     const videoMap = new Map<string, VideoEvent>()
 
     // Add native videos first
@@ -301,15 +301,18 @@ export function useHashtagVideos({
       videoMap.set(video.id, video)
     })
 
-    // Add labeled videos (skip if already exists)
+    // Add labeled videos (skip if already exists by ID)
     labeledVideos.forEach(video => {
       if (!videoMap.has(video.id)) {
         videoMap.set(video.id, video)
       }
     })
 
+    // Deduplicate by identifier (same video posted as both addressable and regular events)
+    const deduplicated = deduplicateByIdentifier(Array.from(videoMap.values()))
+
     // Sort by timestamp descending (newest first)
-    return Array.from(videoMap.values()).sort((a, b) => b.created_at - a.created_at)
+    return deduplicated.sort((a, b) => b.created_at - a.created_at)
   }, [nativeVideos, labeledVideos])
 
   // Load more function (currently no-op, can be extended for pagination)

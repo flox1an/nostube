@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)
+- **Category/Tag Page Duplicate Videos**: Fixed duplicate videos appearing on category and hashtag pages when the same video is posted as both addressable (kind 34235/34236) and regular (kind 21/22) events. Now uses `deduplicateByIdentifier` to prefer addressable events (useCategoryVideos.ts, useHashtagVideos.ts)
 - **Upload Wizard Form Submission**: Fixed videos publishing from step 1 when pressing Enter in input fields. Form submission now only works on step 4 (VideoUpload.tsx:handleSubmit)
 - **DVM Progress Messages**: Fixed DVM feedback parsing to read status from `content` tag and ETA from `eta` tag. Now shows actual transcode progress like "Transcoding to 720p MP4 (~3m 23s remaining)" instead of generic "Processing video..." (useDvmTranscode.ts)
 - **DVM Transcode Mirroring**: Fixed transcoded videos using temp DVM URL instead of user's Blossom servers. Now extracts SHA256 from Blossom URL format and mirrors to configured upload/mirror servers. Includes full codec information, size, bitrate, duration, and SHA256 hash in the imeta tag for transcoded videos (useDvmTranscode.ts, useVideoUpload.ts)

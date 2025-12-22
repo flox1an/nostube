@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { processEvent, deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 
@@ -83,7 +83,8 @@ export function useCategoryVideos({
 
     // Wait for initial batch to load
     const timeout = setTimeout(() => {
-      setVideos(processedVideos)
+      // Deduplicate videos (same video posted as both addressable and regular events)
+      setVideos(deduplicateByIdentifier(processedVideos))
       queueMicrotask(() => setLoading(false))
     }, 2000)
 

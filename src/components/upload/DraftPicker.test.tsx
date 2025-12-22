@@ -6,6 +6,9 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
 import { Toaster } from '@/components/ui/toaster'
 import { AppProvider } from '@/components/AppProvider'
+import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
+import { AccountManager } from 'applesauce-accounts'
+import { eventStore } from '@/nostr/core'
 
 const mockDrafts: UploadDraft[] = [
   {
@@ -40,6 +43,8 @@ const mockDrafts: UploadDraft[] = [
   },
 ]
 
+const accountManager = new AccountManager()
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AppProvider
     storageKey="test-draft-picker"
@@ -51,10 +56,14 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       thumbResizeServerUrl: 'https://almond.slidestr.net',
     }}
   >
-    <I18nextProvider i18n={i18n}>
-      {children}
-      <Toaster />
-    </I18nextProvider>
+    <AccountsProvider manager={accountManager}>
+      <EventStoreProvider eventStore={eventStore}>
+        <I18nextProvider i18n={i18n}>
+          {children}
+          <Toaster />
+        </I18nextProvider>
+      </EventStoreProvider>
+    </AccountsProvider>
   </AppProvider>
 )
 
@@ -68,11 +77,24 @@ describe('DraftPicker', () => {
         upload: {
           draft: {
             deleted: 'Draft deleted',
-            deletedDescription: 'Draft will be permanently deleted in 5 seconds',
+            deletedDescription: 'Draft was deleted',
             undo: 'Undo',
             newUpload: 'New Upload',
             yourDrafts: 'Your Drafts ({{count}})',
+            untitled: 'Untitled',
+            addVideoToStart: 'Add video to start',
+            deleteDialog: {
+              title: 'Delete Draft',
+              descriptionWithMedia: 'This draft has uploaded media files.',
+              descriptionNoMedia: 'This will permanently delete this draft.',
+              deleteDraftOnly: 'Delete draft only',
+              deleteVideoAndThumbnails: 'Delete draft and files',
+            },
           },
+        },
+        common: {
+          cancel: 'Cancel',
+          deleting: 'Deleting...',
         },
       },
       true,
@@ -90,7 +112,8 @@ describe('DraftPicker', () => {
       />,
       { wrapper }
     )
-    expect(screen.getByText('New Upload')).toBeInTheDocument()
+    // Button text is split: "+ " and "New Upload" are separate text nodes
+    expect(screen.getByRole('button', { name: /New Upload/i })).toBeInTheDocument()
   })
 
   it('displays correct draft count', () => {
@@ -131,7 +154,8 @@ describe('DraftPicker', () => {
       />,
       { wrapper }
     )
-    fireEvent.click(screen.getByText('New Upload'))
+    // Button text is split: "+ " and "New Upload" are separate text nodes
+    fireEvent.click(screen.getByRole('button', { name: /New Upload/i }))
     expect(onNewUpload).toHaveBeenCalledTimes(1)
   })
 
@@ -150,7 +174,7 @@ describe('DraftPicker', () => {
     expect(onSelectDraft).toHaveBeenCalledWith(mockDrafts[0])
   })
 
-  it('shows undo toast on delete', async () => {
+  it('shows delete confirmation dialog on delete', async () => {
     const onDeleteDraft = vi.fn()
     render(
       <DraftPicker
@@ -162,14 +186,18 @@ describe('DraftPicker', () => {
       { wrapper }
     )
 
-    // Find delete button (first one)
+    // Find delete button by looking for the trash icon (lucide-trash2 class)
     const deleteButtons = screen.getAllByRole('button')
-    const firstDeleteBtn = deleteButtons.find(btn => btn.querySelector('svg'))
+    const firstDeleteBtn = deleteButtons.find(
+      btn => btn.querySelector('svg.lucide-trash-2') || btn.querySelector('svg.lucide-trash2')
+    )
 
+    expect(firstDeleteBtn).toBeTruthy()
     if (firstDeleteBtn) {
       fireEvent.click(firstDeleteBtn)
+      // The new flow shows a confirmation dialog with alertdialog role
       await waitFor(() => {
-        expect(screen.getByText('Draft deleted')).toBeInTheDocument()
+        expect(screen.getByRole('alertdialog')).toBeInTheDocument()
       })
     }
   })

@@ -54,6 +54,7 @@ export function FormFields({
           id="description"
           value={description}
           onChange={e => onDescriptionChange(e.target.value)}
+          rows={10}
         />
       </div>
 

@@ -21,9 +21,12 @@ export function useDvmAvailability(): {
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
     if (readRelays.length === 0) {
-      setIsAvailable(false)
-      setIsLoading(false)
-      return
+      // Defer state updates to avoid synchronous setState in effect body
+      const timer = setTimeout(() => {
+        setIsAvailable(false)
+        setIsLoading(false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
 
     let resolved = false

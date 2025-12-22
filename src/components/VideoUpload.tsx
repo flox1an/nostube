@@ -287,12 +287,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   // Validation for each step
   const canProceedToStep2 = uploadInfo.videos.length > 0
   const canProceedToStep3 = title.trim().length > 0
-  const canProceedToStep4 = thumbnailSource === 'generated' ? thumbnailBlob : thumbnail
+  const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
+  const canProceedToStep4 =
+    thumbnailSource === 'generated' ? thumbnailBlob : thumbnail || hasUploadedThumbnail
   const isTranscoding = transcodeStatus === 'transcoding' || transcodeStatus === 'mirroring'
   const canPublish =
     uploadInfo.videos.length > 0 &&
     title.trim().length > 0 &&
-    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail) &&
+    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail || hasUploadedThumbnail) &&
     !isTranscoding
 
   return (

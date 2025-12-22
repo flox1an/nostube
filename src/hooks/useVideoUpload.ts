@@ -887,13 +887,19 @@ export function useVideoUpload(
         throw new Error('Failed to upload generated thumbnail')
       }
     } else {
-      if (!thumbnail) return
-      thumbnailFile = thumbnail
-      thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
-      thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
+      // For upload source, use already uploaded blobs
+      if (thumbnailUploadInfo.uploadedBlobs.length > 0) {
+        thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
+        thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
+      } else {
+        // No thumbnail available
+        return
+      }
     }
 
-    if (!thumbnailFile) throw new Error('No valid thumbnail file selected')
+    if (thumbnailUploadedBlobs.length === 0) {
+      throw new Error('No valid thumbnail available')
+    }
 
     try {
       // Build the event using the shared function

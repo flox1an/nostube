@@ -160,6 +160,33 @@ export function useMultiVideoServerAvailability(
   )
   const [checkingStates, setCheckingStates] = useState<Map<number, boolean>>(new Map())
 
+  // Helper to generate a descriptive label for a variant
+  const getVariantLabel = (
+    variant: VideoVariant,
+    index: number,
+    total: number,
+    type: 'Video' | 'Thumbnail'
+  ) => {
+    // Build quality/dimension string
+    let qualityStr = ''
+    if (variant.quality) {
+      qualityStr = variant.quality
+    } else if (variant.dimensions) {
+      // Extract height from dimensions (e.g., "1920x1080" -> "1080p")
+      const match = variant.dimensions.match(/x(\d+)/)
+      if (match) {
+        qualityStr = `${match[1]}p`
+      } else {
+        qualityStr = variant.dimensions
+      }
+    }
+
+    if (total === 1) {
+      return qualityStr ? `${type} (${qualityStr})` : type
+    }
+    return qualityStr ? `${type} ${index + 1} (${qualityStr})` : `${type} ${index + 1}`
+  }
+
   // Combine all variants with metadata
   const allVariantsMetadata = useMemo(() => {
     const result: Array<{
@@ -172,10 +199,7 @@ export function useMultiVideoServerAvailability(
     videoVariants.forEach((variant, index) => {
       result.push({
         variant,
-        label:
-          videoVariants.length > 1
-            ? `Video ${index + 1}${variant.quality ? ` (${variant.quality})` : ''}`
-            : 'Video',
+        label: getVariantLabel(variant, index, videoVariants.length, 'Video'),
         index: result.length,
         isVideo: true,
       })
@@ -184,7 +208,7 @@ export function useMultiVideoServerAvailability(
     thumbnailVariants.forEach((variant, index) => {
       result.push({
         variant,
-        label: thumbnailVariants.length > 1 ? `Thumbnail ${index + 1}` : 'Thumbnail',
+        label: getVariantLabel(variant, index, thumbnailVariants.length, 'Thumbnail'),
         index: result.length,
         isVideo: false,
       })

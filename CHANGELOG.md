@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Upload Hints Removed**: Removed tip text about MP4/H.264 and quick start hint about input method selection from upload wizard for cleaner UI
 - **Upload Description Textarea**: Increased height from default to 10 rows for better visibility when entering longer descriptions
 - **Upload Thumbnail UX**: When a custom thumbnail is uploaded, shows the image preview with a delete button (trashcan icon) instead of the drop area. Deleting removes blobs from Blossom servers and shows the drop area again
+- **Debug Dialog Multi-Variant Support**: Improved video debug dialog to better distinguish multiple video variants. Tab labels now show quality/dimensions (e.g., "Video 1 (1080p)", "Video 2 (720p)"). Variant details show full SHA256 hash, quality, dimensions, size, MIME type with codec info, and hash from x tag
 - **Upload Page Advanced Button**: Opens Blossom dialog instead of navigating to settings
 - **Onboarding Separation**: Moved Blossom config from login to upload page
 - **Embed Player Performance**: Faster load times, reduced timeouts, fewer relays

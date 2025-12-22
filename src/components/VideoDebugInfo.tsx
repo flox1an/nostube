@@ -130,7 +130,13 @@ export function VideoDebugInfo({
             {sha256 && (
               <div>
                 <span className="font-medium">SHA256: </span>
-                <code className="text-xs">{sha256.slice(0, 16)}...</code>
+                <code className="text-xs">{sha256}</code>
+              </div>
+            )}
+            {variant.quality && (
+              <div>
+                <span className="font-medium">Quality: </span>
+                <span className="text-xs">{variant.quality}</span>
               </div>
             )}
             {variant.dimensions && (
@@ -148,7 +154,13 @@ export function VideoDebugInfo({
             {variant.mimeType && (
               <div>
                 <span className="font-medium">MIME Type: </span>
-                <span className="text-xs">{variant.mimeType}</span>
+                <span className="text-xs font-mono">{variant.mimeType}</span>
+              </div>
+            )}
+            {variant.hash && (
+              <div>
+                <span className="font-medium">Hash (x tag): </span>
+                <code className="text-xs">{variant.hash}</code>
               </div>
             )}
           </div>

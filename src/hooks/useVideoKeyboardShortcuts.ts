@@ -31,31 +31,33 @@ export function useVideoKeyboardShortcuts({
     activeVideoElement.current = videoElement
   }, [videoElement])
 
-  // Global keyboard shortcuts (cinema mode, mute, play/pause, playlist navigation)
+  // Unified keyboard shortcuts handler
+  // Handles all keyboard shortcuts globally, regardless of which element is focused
   useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       // Ignore if user is typing in an input, textarea, or contenteditable element
       const target = event.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return
-      }
-
-      // Ignore if the video element itself is focused (let native controls handle it)
-      if (target.tagName === 'VIDEO' || target.tagName === 'HLS-VIDEO') {
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
         return
       }
 
       const videoEl = activeVideoElement.current
+      const key = event.key
 
       // Toggle cinema mode on "T" key press
-      if (event.key === 't' || event.key === 'T') {
+      if (key === 't' || key === 'T') {
         event.preventDefault()
         toggleCinemaMode()
         return
       }
 
       // Mute/unmute on "M" key press
-      if (event.key === 'm' || event.key === 'M') {
+      if (key === 'm' || key === 'M') {
         event.preventDefault()
         if (videoEl) {
           videoEl.muted = !videoEl.muted
@@ -64,7 +66,7 @@ export function useVideoKeyboardShortcuts({
       }
 
       // Play/pause on Space key press
-      if (event.key === ' ') {
+      if (key === ' ') {
         event.preventDefault()
         if (videoEl) {
           if (videoEl.paused) {
@@ -76,28 +78,53 @@ export function useVideoKeyboardShortcuts({
         return
       }
 
-      // Previous video on comma key press (only in playlist mode)
-      if (event.key === ',' && isPlaylistMode) {
+      // Frame step or playlist navigation on comma/period keys
+      if (key === ',' || key === '.') {
         event.preventDefault()
-        if (onPreviousVideo) {
-          onPreviousVideo()
+
+        // In playlist mode, navigate between videos
+        if (isPlaylistMode) {
+          if (key === ',' && onPreviousVideo) {
+            onPreviousVideo()
+          } else if (key === '.' && onNextVideo) {
+            onNextVideo()
+          }
+          return
+        }
+
+        // When not in playlist mode and video is paused, frame step
+        if (videoEl && videoEl.paused) {
+          const frameStep = 1 / 30
+          if (key === '.') {
+            const nextTime = videoEl.currentTime + frameStep
+            videoEl.currentTime = Number.isFinite(videoEl.duration)
+              ? Math.min(videoEl.duration, nextTime)
+              : nextTime
+          } else {
+            videoEl.currentTime = Math.max(0, videoEl.currentTime - frameStep)
+          }
         }
         return
       }
 
-      // Next video on period key press (only in playlist mode)
-      if (event.key === '.' && isPlaylistMode) {
+      // Arrow keys: Seek forward/backward 5 seconds
+      if (key === 'ArrowRight' || key === 'ArrowLeft') {
         event.preventDefault()
-        if (onNextVideo) {
-          onNextVideo()
+        if (videoEl) {
+          const delta = key === 'ArrowRight' ? 5 : -5
+          const targetTime = videoEl.currentTime + delta
+          const clampedTime =
+            delta > 0 && Number.isFinite(videoEl.duration)
+              ? Math.min(videoEl.duration, targetTime)
+              : Math.max(0, targetTime)
+          videoEl.currentTime = clampedTime
         }
         return
       }
 
       // Fullscreen on "F" key press
-      if (event.key === 'f' || event.key === 'F') {
+      if (key === 'f' || key === 'F') {
         event.preventDefault()
-        const videoEl = activeVideoElement.current
         if (videoEl) {
           // Try to find the media-controller parent for fullscreen
           const fullscreenTarget =
@@ -117,64 +144,9 @@ export function useVideoKeyboardShortcuts({
       }
     }
 
-    window.addEventListener('keydown', handleKeyPress)
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress)
-    }
-  }, [toggleCinemaMode, onPreviousVideo, onNextVideo, isPlaylistMode])
-
-  // Video element-specific keyboard shortcuts (seek, frame step, fullscreen)
-  useEffect(() => {
-    const el = activeVideoElement.current
-    if (!el) return
-
-    function handleKeyDown(event: KeyboardEvent) {
-      const activeElement = document.activeElement as HTMLElement | null
-      if (
-        activeElement &&
-        (activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.tagName === 'SELECT' ||
-          activeElement.isContentEditable)
-      ) {
-        return
-      }
-
-      const key = event.key
-
-      // Frame step forward/backward (when paused, and not in playlist mode)
-      if ((key === '.' || key === ',') && !isPlaylistMode) {
-        if (!el!.paused) return
-        const frameStep = 1 / 30
-        if (key === '.') {
-          const nextTime = el!.currentTime + frameStep
-          el!.currentTime = Number.isFinite(el!.duration)
-            ? Math.min(el!.duration, nextTime)
-            : nextTime
-        } else {
-          el!.currentTime = Math.max(0, el!.currentTime - frameStep)
-        }
-        event.preventDefault()
-        return
-      }
-
-      // Arrow keys: Seek forward/backward 5 seconds
-      if (key === 'ArrowRight' || key === 'ArrowLeft') {
-        const delta = key === 'ArrowRight' ? 5 : -5
-        const targetTime = el!.currentTime + delta
-        const clampedTime =
-          delta > 0 && Number.isFinite(el!.duration)
-            ? Math.min(el!.duration, targetTime)
-            : Math.max(0, targetTime)
-        el!.currentTime = clampedTime
-        event.preventDefault()
-        return
-      }
-    }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isPlaylistMode])
+  }, [toggleCinemaMode, onPreviousVideo, onNextVideo, isPlaylistMode])
 }

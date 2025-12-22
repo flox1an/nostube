@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Video Player Keyboard Shortcuts**: Fixed keyboard shortcuts not working consistently regardless of focus state. Consolidated all keyboard handling into a single global handler and disabled media-chrome's built-in hotkeys to prevent double-triggering of play/pause when pressing spacebar. Now Space, M, T, F, arrow keys, and comma/period work reliably regardless of which element has focus (useVideoKeyboardShortcuts.ts, VideoPlayer.tsx)
 - **DraftPicker Test Missing Provider**: Fixed DraftPicker tests failing due to missing `AccountsProvider` context. Added `AccountsProvider` and `EventStoreProvider` to test wrapper, updated delete test to use new confirmation dialog flow with `DeleteDraftDialog`, and switched button queries to use role-based selectors for more robust matching (DraftPicker.test.tsx)
 - **DVM Availability Hook State Initialization**: Fixed React compiler error about calling setState synchronously within useEffect. Now initializes state based on relay availability at component mount instead of setting state in effect body (useDvmAvailability.ts)
 - **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)

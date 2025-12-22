@@ -394,7 +394,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }
 
   return (
-    <media-controller className={className}>
+    <media-controller className={className} {...{ nohotkeys: true }}>
       {isHls ? (
         <Suspense
           fallback={

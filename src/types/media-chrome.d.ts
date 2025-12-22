@@ -1,3 +1,24 @@
+// Media-chrome controller attributes
+interface MediaControllerAttributes {
+  nohotkeys?: boolean
+  audio?: boolean
+  autohide?: number | string
+  defaultsubtitles?: boolean
+  defaultstreamtype?: string
+  defaultduration?: number | string
+  fullscreenelement?: string
+  hotkeys?: string
+  keysused?: string
+  liveedgeoffset?: number | string
+  seektoliveoffset?: number | string
+  noautoseektolive?: boolean
+  novolumepref?: boolean
+  nomutedpref?: boolean
+  nosubtitleslangpref?: boolean
+  nodefaultstore?: boolean
+  lang?: string
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     'media-controller': HTMLElement
@@ -28,7 +49,10 @@ declare global {
 
   namespace JSX {
     interface IntrinsicElements {
-      'media-controller': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>
+      'media-controller': React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & MediaControllerAttributes,
+        HTMLElement
+      >
       'media-video': React.DetailedHTMLProps<
         React.VideoHTMLAttributes<HTMLVideoElement>,
         HTMLVideoElement

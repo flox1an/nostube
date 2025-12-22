@@ -14,18 +14,14 @@ export function useDvmAvailability(): {
   isLoading: boolean
 } {
   const { config } = useAppContext()
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+  const hasRelays = readRelays.length > 0
+
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(() => (hasRelays ? null : false))
+  const [isLoading, setIsLoading] = useState(() => hasRelays)
 
   useEffect(() => {
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
-    if (readRelays.length === 0) {
-      // Defer setState to avoid synchronous state updates within effect
-      queueMicrotask(() => {
-        setIsAvailable(false)
-        setIsLoading(false)
-      })
+    if (!hasRelays) {
       return
     }
 

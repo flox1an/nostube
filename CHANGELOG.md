@@ -66,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Video Quality Display**: Simplified video quality display with expandable details. Shows quality badges, dimensions, duration, total size, upload/mirror counts, and codec warnings in collapsed state. Click "Show Details" to expand full VideoVariantsTable with all technical details (VideoVariantsSummary.tsx)
 - **Blossom Blob Deletion Consolidation**: Refactored blob deletion code into common `deleteBlobsFromServers` utility function in blossom-upload.ts. Eliminates duplicate deletion logic across thumbnail deletion, video variant deletion, and draft cleanup. Groups blobs by hash to avoid duplicate server requests (blossom-upload.ts, useVideoUpload.ts, DraftPicker.tsx)
 - **Ultra-Wide Video Detection Threshold**: Increased cinema mode auto-trigger threshold from 5% to 10% above 16:9 aspect ratio. Videos now need to be at least ~1.96:1 to trigger automatic cinema mode (useUltraWideVideo.ts)
+- **Blossom URL Utilities Consolidation**: Unified all Blossom URL detection, parsing, and validation into `src/lib/blossom-url.ts`. Added `NON_BLOSSOM_SERVERS` list (video.nostr.build, cdn.nostrcheck.me) for servers that resize/re-encode videos and don't preserve SHA256 hashes. These URLs are no longer treated as Blossom URLs for mirroring purposes (blossom-url.ts, media-url-generator.ts, useVideoUpload.ts, constants/relays.ts)
 
 ### Fixed
 

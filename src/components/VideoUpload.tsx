@@ -104,6 +104,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,
+    handleDeleteThumbnail,
     onDrop,
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
@@ -482,6 +483,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   onThumbnailSourceChange={handleThumbnailSourceChange}
                   thumbnailUrl={thumbnailUrl}
                   onThumbnailDrop={handleThumbnailDrop}
+                  onDeleteThumbnail={handleDeleteThumbnail}
                   thumbnailUploadInfo={thumbnailUploadInfo}
                   thumbnailBlob={thumbnailBlob}
                   isThumbDragActive={false}

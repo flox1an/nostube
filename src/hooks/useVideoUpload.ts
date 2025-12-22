@@ -422,6 +422,47 @@ export function useVideoUpload(
     }
   }
 
+  // Handler to delete uploaded thumbnail and remove blobs from servers
+  const handleDeleteThumbnail = async () => {
+    if (!user) return
+
+    const allBlobs = [...thumbnailUploadInfo.uploadedBlobs, ...thumbnailUploadInfo.mirroredBlobs]
+
+    if (allBlobs.length > 0) {
+      // Collect unique blob hashes and their server URLs
+      const blobsToDelete: { hash: string; servers: string[] }[] = []
+
+      for (const blob of allBlobs) {
+        try {
+          const url = new URL(blob.url)
+          const serverUrl = `${url.protocol}//${url.host}`
+          blobsToDelete.push({
+            hash: blob.sha256,
+            servers: [serverUrl],
+          })
+        } catch {
+          // Skip invalid URLs
+        }
+      }
+
+      // Delete all blobs from their servers
+      if (blobsToDelete.length > 0) {
+        const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
+          deleteBlobFromMultipleServers(
+            servers,
+            hash,
+            async draft => await user.signer.signEvent(draft)
+          )
+        )
+        await Promise.allSettled(deletionPromises)
+      }
+    }
+
+    // Reset thumbnail state
+    setThumbnail(null)
+    setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
+  }
+
   const onDrop = async (acceptedFiles: File[]) => {
     if (
       acceptedFiles &&
@@ -1021,6 +1062,7 @@ export function useVideoUpload(
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,
+    handleDeleteThumbnail,
     onDrop,
     handleReset,
     handleSubmit,

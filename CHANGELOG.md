@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **DraftPicker Test Missing Provider**: Fixed DraftPicker tests failing due to missing `AccountsProvider` context. Added `AccountsProvider` and `EventStoreProvider` to test wrapper, updated delete test to use new confirmation dialog flow with `DeleteDraftDialog`, and switched button queries to use role-based selectors for more robust matching (DraftPicker.test.tsx)
 - **DVM Availability Hook State Initialization**: Fixed React compiler error about calling setState synchronously within useEffect. Now initializes state based on relay availability at component mount instead of setting state in effect body (useDvmAvailability.ts)
 - **Video Transform Alert False Positive**: Fixed "Video Transformation Needed" alert incorrectly showing when a 720p variant exists but uses an incompatible codec (e.g., HEVC). Now uses `allVideoVariants` instead of filtered variants to check transformation needs (VideoPage.tsx:570-574)
 - **Category/Tag Page Duplicate Videos**: Fixed duplicate videos appearing on category and hashtag pages when the same video is posted as both addressable (kind 34235/34236) and regular (kind 21/22) events. Now uses `deduplicateByIdentifier` to prefer addressable events (useCategoryVideos.ts, useHashtagVideos.ts)

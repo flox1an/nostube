@@ -6,6 +6,9 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
 import { Toaster } from '@/components/ui/toaster'
 import { AppProvider } from '@/components/AppProvider'
+import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
+import { AccountManager } from 'applesauce-accounts'
+import { eventStore } from '@/nostr/core'
 
 const mockDrafts: UploadDraft[] = [
   {
@@ -40,6 +43,8 @@ const mockDrafts: UploadDraft[] = [
   },
 ]
 
+const accountManager = new AccountManager()
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AppProvider
     storageKey="test-draft-picker"
@@ -51,10 +56,14 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       thumbResizeServerUrl: 'https://almond.slidestr.net',
     }}
   >
-    <I18nextProvider i18n={i18n}>
-      {children}
-      <Toaster />
-    </I18nextProvider>
+    <AccountsProvider manager={accountManager}>
+      <EventStoreProvider eventStore={eventStore}>
+        <I18nextProvider i18n={i18n}>
+          {children}
+          <Toaster />
+        </I18nextProvider>
+      </EventStoreProvider>
+    </AccountsProvider>
   </AppProvider>
 )
 
@@ -65,13 +74,25 @@ describe('DraftPicker', () => {
       'en',
       'translation',
       {
+        common: {
+          cancel: 'Cancel',
+          deleting: 'Deleting...',
+        },
         upload: {
           draft: {
             deleted: 'Draft deleted',
-            deletedDescription: 'Draft will be permanently deleted in 5 seconds',
-            undo: 'Undo',
+            deletedDescription: 'Draft has been deleted',
             newUpload: 'New Upload',
             yourDrafts: 'Your Drafts ({{count}})',
+            deleteDialog: {
+              title: 'Delete Draft',
+              descriptionNoMedia:
+                'Are you sure you want to delete this draft? This action cannot be undone.',
+              descriptionWithMedia:
+                'This draft has uploaded media files. Do you want to delete just the draft or also remove the media from your Blossom servers?',
+              deleteDraftOnly: 'Delete draft only',
+              deleteVideoAndThumbnails: 'Delete draft and media files',
+            },
           },
         },
       },
@@ -90,7 +111,7 @@ describe('DraftPicker', () => {
       />,
       { wrapper }
     )
-    expect(screen.getByText('New Upload')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /New Upload/i })).toBeInTheDocument()
   })
 
   it('displays correct draft count', () => {
@@ -131,7 +152,7 @@ describe('DraftPicker', () => {
       />,
       { wrapper }
     )
-    fireEvent.click(screen.getByText('New Upload'))
+    fireEvent.click(screen.getByRole('button', { name: /New Upload/i }))
     expect(onNewUpload).toHaveBeenCalledTimes(1)
   })
 
@@ -150,7 +171,7 @@ describe('DraftPicker', () => {
     expect(onSelectDraft).toHaveBeenCalledWith(mockDrafts[0])
   })
 
-  it('shows undo toast on delete', async () => {
+  it('shows confirmation dialog and deletes draft', async () => {
     const onDeleteDraft = vi.fn()
     render(
       <DraftPicker
@@ -162,12 +183,29 @@ describe('DraftPicker', () => {
       { wrapper }
     )
 
-    // Find delete button (first one)
+    // Find delete button (first one - has trash icon)
     const deleteButtons = screen.getAllByRole('button')
-    const firstDeleteBtn = deleteButtons.find(btn => btn.querySelector('svg'))
+    const firstDeleteBtn = deleteButtons.find(btn => btn.querySelector('svg.lucide-trash-2'))
 
+    expect(firstDeleteBtn).toBeTruthy()
     if (firstDeleteBtn) {
       fireEvent.click(firstDeleteBtn)
+
+      // Wait for the confirmation dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Delete Draft')).toBeInTheDocument()
+      })
+
+      // Click "Delete draft only" button in dialog
+      const deleteDraftOnlyBtn = screen.getByText('Delete draft only')
+      fireEvent.click(deleteDraftOnlyBtn)
+
+      // Verify onDeleteDraft was called
+      await waitFor(() => {
+        expect(onDeleteDraft).toHaveBeenCalledWith('draft-1')
+      })
+
+      // Verify toast appears
       await waitFor(() => {
         expect(screen.getByText('Draft deleted')).toBeInTheDocument()
       })

@@ -93,10 +93,36 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const spinnerTimeoutRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
 
-  // Quality selection state
-  const [selectedQualityIndex, setSelectedQualityIndex] = useState(0)
+  // Compute default quality index: prefer 1080p, then 720p, else first
+  const defaultQualityIndex = React.useMemo(() => {
+    if (!videoVariants || videoVariants.length === 0) return 0
+
+    // Look for 1080p first
+    const idx1080 = videoVariants.findIndex(v => v.quality === '1080p')
+    if (idx1080 !== -1) return idx1080
+
+    // Look for 720p as fallback
+    const idx720 = videoVariants.findIndex(v => v.quality === '720p')
+    if (idx720 !== -1) return idx720
+
+    // Default to first variant
+    return 0
+  }, [videoVariants])
+
+  // Quality selection state - null means use default, number means user selected
+  const [userSelectedQualityIndex, setUserSelectedQualityIndex] = useState<number | null>(null)
   const pendingSeekTimeRef = useRef<number | null>(null)
   const wasPlayingRef = useRef(false)
+
+  // Effective quality index: user selection or default (with bounds check)
+  // Note: User selection persists but is ignored if video changes and selection is out of bounds
+  const selectedQualityIndex = React.useMemo(() => {
+    const maxIndex = (videoVariants?.length ?? 1) - 1
+    if (userSelectedQualityIndex !== null && userSelectedQualityIndex <= maxIndex) {
+      return userSelectedQualityIndex
+    }
+    return defaultQualityIndex
+  }, [userSelectedQualityIndex, defaultQualityIndex, videoVariants?.length])
 
   // Debug: log video variants for quality selector
   React.useEffect(() => {
@@ -189,7 +215,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         wasPlayingRef.current = !el.paused
       }
 
-      setSelectedQualityIndex(newIndex)
+      setUserSelectedQualityIndex(newIndex)
     },
     [selectedQualityIndex, isHls]
   )

@@ -129,11 +129,18 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
             Quality
           </div>
           {variants.map((variant, index) => (
-            <button
+            <div
               key={variant.url}
               role="menuitemradio"
               aria-checked={index === selectedIndex}
+              tabIndex={0}
               onClick={() => handleSelect(index)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleSelect(index)
+                }
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -141,7 +148,6 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
                 width: '100%',
                 padding: '10px 14px',
                 background: index === selectedIndex ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                border: 'none',
                 color: 'white',
                 fontSize: '14px',
                 cursor: 'pointer',
@@ -172,7 +178,7 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
-            </button>
+            </div>
           ))}
         </div>
       )}

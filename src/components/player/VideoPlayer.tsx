@@ -9,6 +9,7 @@ import { useHls } from './hooks/useHls'
 import { usePlayerState } from './hooks/usePlayerState'
 import { useControlsVisibility } from './hooks/useControlsVisibility'
 import { useSeekAccumulator } from './hooks/useSeekAccumulator'
+import { useAdaptiveQuality } from './hooks/useAdaptiveQuality'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
@@ -212,6 +213,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     el.addEventListener('canplay', handleCanPlay, { once: true })
     return () => el.removeEventListener('canplay', handleCanPlay)
   }, [selectedVariantIndex])
+
+  // Adaptive quality - auto-downgrade on buffering/slow network (only for non-HLS)
+  useAdaptiveQuality({
+    videoRef,
+    videoVariants,
+    selectedVariantIndex,
+    onVariantChange: handleVariantChange,
+    enabled: !isHls && (videoVariants?.length ?? 0) > 1,
+  })
 
   // Set initial play position - must wait for video to be ready before seeking
   const hasSetInitialPos = useRef(false)

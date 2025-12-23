@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Adaptive Quality Switching**: Automatically downgrades video quality on slow networks. Triggers when 3+ buffering events occur within 30 seconds or buffer drops below 2 seconds while playing. Only applies to non-HLS videos with multiple quality variants. Includes 10-second cooldown between downgrades (useAdaptiveQuality.ts)
 - **Accumulating Seek with Visual Feedback**: Arrow keys and touch gestures now accumulate seek time within 1 second window. Fast consecutive presses show "+5s", "+10s", "+15s" etc. with indicator positioned on right for forward seek, left for backward seek. Actual seek is debounced until input stops (useSeekAccumulator.ts, SeekIndicator.tsx)
 - **Custom YouTube-Style Video Player**: Complete rewrite of the video player, replacing media-chrome and hls-video-element with a custom implementation. Features YouTube-inspired design with:
   - Auto-hiding controls with gradient overlay (3 second timeout while playing)

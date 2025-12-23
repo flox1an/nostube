@@ -320,7 +320,7 @@ export function VideoPage() {
   }, [persistedCinemaMode, setCinemaMode, setTempCinemaModeForWideVideo])
 
   // Use video play position hook
-  const { currentPlayPos, setCurrentPlayPos, initialPlayPos, videoElementRef } =
+  const { currentPlayPos, setCurrentPlayPos, initialPlayPos, setVideoElement } =
     useVideoPlayPosition({
       user,
       videoId: video?.id,
@@ -420,10 +420,10 @@ export function VideoPage() {
   // Handle video element ready callback (stable reference)
   const handleVideoElementReady = useCallback(
     (element: HTMLVideoElement | null) => {
-      videoElementRef.current = element
+      setVideoElement(element)
       setActiveVideoElement(element)
     },
-    [videoElementRef]
+    [setVideoElement]
   )
 
   // Stable callback for video failed (memoized)

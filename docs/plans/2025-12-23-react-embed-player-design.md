@@ -9,14 +9,14 @@ Replace the current vanilla JavaScript embed with a React-based embed that reuse
 
 ## Decisions
 
-| Decision | Choice |
-|----------|--------|
-| Scope | Feature parity with VideoPlayer |
-| Coexistence | Replace vanilla embed entirely |
-| URL Parameters | Full compatibility with existing API |
-| Nostr fetching | Lightweight client (not Applesauce) |
-| Providers | None - direct props to VideoPlayer |
-| Build output | Single JS bundle (vite-plugin-singlefile) |
+| Decision       | Choice                                    |
+| -------------- | ----------------------------------------- |
+| Scope          | Feature parity with VideoPlayer           |
+| Coexistence    | Replace vanilla embed entirely            |
+| URL Parameters | Full compatibility with existing API      |
+| Nostr fetching | Lightweight client (not Applesauce)       |
+| Providers      | None - direct props to VideoPlayer        |
+| Build output   | Single JS bundle (vite-plugin-singlefile) |
 
 ## Architecture
 
@@ -143,18 +143,15 @@ Use `vite-plugin-singlefile` or custom script to inline embed assets into single
   videoVariants={videoVariants}
   mime={videoVariants[0]?.mime || 'video/mp4'}
   poster={poster}
-
   // URL params
   loop={params.loop}
   initialPlayPos={params.t}
-
   // Metadata
   contentWarning={contentWarning}
   authorPubkey={authorPubkey}
   sha256={extractedHash}
-
   // Callbacks
-  onAllSourcesFailed={(urls) => setError('unavailable')}
+  onAllSourcesFailed={urls => setError('unavailable')}
   onVideoDimensionsLoaded={(w, h) => updateAspectRatio(w, h)}
 />
 ```
@@ -222,7 +219,7 @@ interface ContentWarningProps {
 ### CSS Strategy
 
 ```tsx
-import './embed.css'  // Tailwind base + embed-specific styles
+import './embed.css' // Tailwind base + embed-specific styles
 ```
 
 ### Accent Color
@@ -241,7 +238,9 @@ import './embed.css'  // Tailwind base + embed-specific styles
   font-family: system-ui, sans-serif;
 }
 
-#nostube-embed *, #nostube-embed *::before, #nostube-embed *::after {
+#nostube-embed *,
+#nostube-embed *::before,
+#nostube-embed *::after {
   box-sizing: border-box;
 }
 ```
@@ -289,16 +288,16 @@ Increase is acceptable for feature parity with main app player.
 
 ## URL Parameters (Unchanged)
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `v` | string | required | Video ID (nevent1/naddr1/note1) |
-| `autoplay` | 0/1 | 0 | Auto-play video |
-| `muted` | 0/1 | 0 | Start muted |
-| `loop` | 0/1 | 0 | Loop playback |
-| `t` | number | 0 | Start time (seconds) |
-| `controls` | 0/1 | 1 | Show controls |
-| `title` | 0/1 | 1 | Show title overlay |
-| `branding` | 0/1 | 1 | Show nostube branding |
-| `quality` | string | auto | Preferred quality |
-| `color` | hex | 8b5cf6 | Accent color |
-| `relays` | string | - | Custom relays (comma-sep) |
+| Param      | Type   | Default  | Description                     |
+| ---------- | ------ | -------- | ------------------------------- |
+| `v`        | string | required | Video ID (nevent1/naddr1/note1) |
+| `autoplay` | 0/1    | 0        | Auto-play video                 |
+| `muted`    | 0/1    | 0        | Start muted                     |
+| `loop`     | 0/1    | 0        | Loop playback                   |
+| `t`        | number | 0        | Start time (seconds)            |
+| `controls` | 0/1    | 1        | Show controls                   |
+| `title`    | 0/1    | 1        | Show title overlay              |
+| `branding` | 0/1    | 1        | Show nostube branding           |
+| `quality`  | string | auto     | Preferred quality               |
+| `color`    | hex    | 8b5cf6   | Accent color                    |
+| `relays`   | string | -        | Custom relays (comma-sep)       |

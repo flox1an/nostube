@@ -15,6 +15,7 @@
 ### Task 1: Install vite-plugin-singlefile
 
 **Files:**
+
 - Modify: `package.json`
 
 **Step 1: Add the dependency**
@@ -43,6 +44,7 @@ git commit -m "chore: add vite-plugin-singlefile for embed bundling"
 ### Task 2: Create embed.html entry point
 
 **Files:**
+
 - Create: `embed.html`
 
 **Step 1: Create the file**
@@ -56,8 +58,18 @@ git commit -m "chore: add vite-plugin-singlefile for embed bundling"
     <meta name="description" content="Nostube embeddable video player for Nostr video content" />
     <title>Nostube Embed Player</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
     </style>
   </head>
   <body>
@@ -79,11 +91,13 @@ git commit -m "feat(embed): add React embed HTML entry point"
 ### Task 3: Configure Vite for multi-entry build
 
 **Files:**
+
 - Modify: `vite.config.ts`
 
 **Step 1: Update vite.config.ts**
 
 Add the multi-entry configuration. The key changes:
+
 1. Import `resolve` from path
 2. Import `viteSingleFile`
 3. Add conditional plugin application
@@ -177,6 +191,7 @@ git commit -m "feat(embed): configure Vite multi-entry build with singlefile plu
 ### Task 4: Create embed directory structure
 
 **Files:**
+
 - Create: `src/embed-react/` directory
 
 **Step 1: Create directories**
@@ -198,6 +213,7 @@ git commit --allow-empty -m "chore(embed): create React embed directory structur
 ### Task 5: Port url-params.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/url-params.ts`
 
 **Step 1: Create the file**
@@ -237,7 +253,10 @@ export function parseURLParams(): EmbedParams {
     showBranding: params.get('branding') !== '0',
     preferredQuality: params.get('quality') || 'auto',
     customRelays: params.get('relays')
-      ? params.get('relays')!.split(',').map(r => r.trim())
+      ? params
+          .get('relays')!
+          .split(',')
+          .map(r => r.trim())
       : [],
     accentColor: params.get('color') || '8b5cf6',
   }
@@ -278,6 +297,7 @@ git commit -m "feat(embed): add URL params parser"
 ### Task 6: Port nostr-decoder.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/nostr-decoder.ts`
 
 **Step 1: Create the file**
@@ -379,6 +399,7 @@ git commit -m "feat(embed): add Nostr decoder for NIP-19 identifiers"
 ### Task 7: Port event-cache.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/event-cache.ts`
 
 **Step 1: Create the file**
@@ -472,6 +493,7 @@ git commit -m "feat(embed): add event cache with localStorage"
 ### Task 8: Port nostr-client.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/nostr-client.ts`
 
 **Step 1: Create the file**
@@ -752,6 +774,7 @@ git commit -m "feat(embed): add lightweight Nostr relay client"
 ### Task 9: Port profile-fetcher.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/profile-fetcher.ts`
 
 **Step 1: Create the file**
@@ -961,6 +984,7 @@ git commit -m "feat(embed): add profile fetcher with caching"
 ### Task 10: Port video-parser.ts
 
 **Files:**
+
 - Create: `src/embed-react/lib/video-parser.ts`
 
 **Step 1: Create the file**
@@ -1075,9 +1099,7 @@ function parseLegacyFormat(event: NostrEvent): ParsedVideo {
   const contentWarning = event.tags.find(t => t[0] === 'content-warning')?.[1]
   const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
 
-  const videoVariants: VideoVariant[] = url
-    ? [{ url, mimeType, dimensions, fallbackUrls: [] }]
-    : []
+  const videoVariants: VideoVariant[] = url ? [{ url, mimeType, dimensions, fallbackUrls: [] }] : []
 
   const thumbnails = thumb ? [{ url: thumb, fallbackUrls: [] }] : []
 
@@ -1172,6 +1194,7 @@ git commit -m "feat(embed): add video event parser"
 ### Task 11: Create EmbedApp component
 
 **Files:**
+
 - Create: `src/embed-react/EmbedApp.tsx`
 
 **Step 1: Create the file**
@@ -1320,6 +1343,7 @@ git commit -m "feat(embed): add main EmbedApp component"
 ### Task 12: Create TitleOverlay component
 
 **Files:**
+
 - Create: `src/embed-react/components/TitleOverlay.tsx`
 
 **Step 1: Create the file**
@@ -1383,6 +1407,7 @@ git commit -m "feat(embed): add TitleOverlay component"
 ### Task 13: Create Branding component
 
 **Files:**
+
 - Create: `src/embed-react/components/Branding.tsx`
 
 **Step 1: Create the file**
@@ -1428,6 +1453,7 @@ git commit -m "feat(embed): add Branding component"
 ### Task 14: Create ContentWarning component
 
 **Files:**
+
 - Create: `src/embed-react/components/ContentWarning.tsx`
 
 **Step 1: Create the file**
@@ -1483,6 +1509,7 @@ git commit -m "feat(embed): add ContentWarning component"
 ### Task 15: Create ErrorMessage and LoadingState components
 
 **Files:**
+
 - Create: `src/embed-react/components/ErrorMessage.tsx`
 - Create: `src/embed-react/components/LoadingState.tsx`
 
@@ -1529,6 +1556,7 @@ git commit -m "feat(embed): add ErrorMessage and LoadingState components"
 ### Task 16: Create embed entry point
 
 **Files:**
+
 - Create: `src/embed-react/index.tsx`
 
 **Step 1: Create the file**
@@ -1567,7 +1595,12 @@ async function initEmbed(): Promise<void> {
   const validation = validateParams(params)
 
   if (!validation.valid) {
-    renderApp(reactRoot, params, { video: null, profile: null, error: validation.error!, isLoading: false })
+    renderApp(reactRoot, params, {
+      video: null,
+      profile: null,
+      error: validation.error!,
+      isLoading: false,
+    })
     return
   }
 
@@ -1578,7 +1611,12 @@ async function initEmbed(): Promise<void> {
     // Decode video identifier
     const identifier = decodeVideoIdentifier(params.videoId)
     if (!identifier) {
-      renderApp(reactRoot, params, { video: null, profile: null, error: 'Invalid video ID', isLoading: false })
+      renderApp(reactRoot, params, {
+        video: null,
+        profile: null,
+        error: 'Invalid video ID',
+        isLoading: false,
+      })
       return
     }
 
@@ -1650,6 +1688,7 @@ git commit -m "feat(embed): add React embed entry point"
 ### Task 17: Create embed CSS
 
 **Files:**
+
 - Create: `src/embed-react/embed.css`
 
 **Step 1: Create the file**
@@ -1660,7 +1699,13 @@ git commit -m "feat(embed): add React embed entry point"
 /* Reset for iframe isolation */
 #nostube-embed {
   all: initial;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   box-sizing: border-box;
 }
 
@@ -1731,11 +1776,13 @@ git commit -m "feat(embed): add embed CSS with Tailwind"
 ### Task 18: Update package.json scripts
 
 **Files:**
+
 - Modify: `package.json`
 
 **Step 1: Remove old embed scripts**
 
 Remove these lines from scripts:
+
 ```json
 "build:embed": "node scripts/build-embed.js",
 "build:embed:watch": "node scripts/build-embed.js --watch",
@@ -1753,6 +1800,7 @@ git commit -m "chore: remove old embed build scripts"
 ### Task 19: Remove old vanilla embed files
 
 **Files:**
+
 - Delete: `src/embed/` (entire directory)
 - Delete: `scripts/build-embed.js`
 - Delete: `public/embed.js`
@@ -1779,6 +1827,7 @@ git commit -m "chore: remove vanilla JS embed implementation"
 ### Task 20: Update public/embed.html to redirect
 
 **Files:**
+
 - Modify: `public/embed.html`
 
 **Step 1: Update to redirect to new embed**
@@ -1847,11 +1896,13 @@ If any issues, fix and commit.
 ### Task 22: Update CHANGELOG
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
 **Step 1: Add entry under [Unreleased]**
 
 Add under "### Changed":
+
 ```markdown
 - **Embed Player Rewrite**: Replaced vanilla JS embed with React-based embed using shared VideoPlayer component
 ```
@@ -1895,6 +1946,7 @@ git commit -m "chore: format code"
 **Total tasks:** 23
 
 **Key files created:**
+
 - `embed.html` - Entry point
 - `src/embed-react/index.tsx` - React mount
 - `src/embed-react/EmbedApp.tsx` - Main component
@@ -1903,10 +1955,12 @@ git commit -m "chore: format code"
 - `src/embed-react/embed.css` - Styles
 
 **Key files modified:**
+
 - `vite.config.ts` - Multi-entry build
 - `package.json` - Dependencies and scripts
 
 **Key files removed:**
+
 - `src/embed/` - Old vanilla JS embed
 - `scripts/build-embed.js` - Old build script
 - `public/embed.js`, `public/embed.css` - Old built files

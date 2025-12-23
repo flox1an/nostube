@@ -32,7 +32,10 @@ export function parseURLParams(): EmbedParams {
     showBranding: params.get('branding') !== '0',
     preferredQuality: params.get('quality') || 'auto',
     customRelays: params.get('relays')
-      ? params.get('relays')!.split(',').map(r => r.trim())
+      ? params
+          .get('relays')!
+          .split(',')
+          .map(r => r.trim())
       : [],
     accentColor: params.get('color') || '8b5cf6',
   }

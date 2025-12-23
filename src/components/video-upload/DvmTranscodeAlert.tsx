@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
   useDvmTranscode,
@@ -10,14 +11,16 @@ import {
 import { useDvmAvailability } from '@/hooks/useDvmAvailability'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
-import { shouldOfferTranscode } from '@/lib/dvm-utils'
-import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { shouldOfferTranscode, AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
+import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useRef, useCallback } from 'react'
 
 interface DvmTranscodeAlertProps {
   video: VideoVariant
+  existingResolutions?: string[]
   onComplete: (transcodedVideo: VideoVariant) => void
+  onAllComplete?: () => void
   onStatusChange?: (status: TranscodeStatus) => void
   initialTranscodeState?: DvmTranscodeState
   onTranscodeStateChange?: (state: DvmTranscodeState | null) => void
@@ -29,13 +32,16 @@ interface DvmTranscodeAlertProps {
  */
 export function DvmTranscodeAlert({
   video,
+  existingResolutions = [],
   onComplete,
+  onAllComplete,
   onStatusChange,
   initialTranscodeState,
   onTranscodeStateChange,
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
+  const [selectedResolutions, setSelectedResolutions] = useState<string[]>(['720p'])
   const hasResumedRef = useRef(false)
 
   // Check if a DVM is available (only check if not resuming)
@@ -52,6 +58,7 @@ export function DvmTranscodeAlert({
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
     useDvmTranscode({
       onComplete,
+      onAllComplete,
       onStateChange: handleStateChange,
     })
 
@@ -101,44 +108,110 @@ export function DvmTranscodeAlert({
 
   const handleStartTranscode = () => {
     const inputUrl = getInputVideoUrl()
-    if (inputUrl) {
-      startTranscode(inputUrl, video.duration)
+    if (inputUrl && selectedResolutions.length > 0) {
+      // Sort resolutions high to low
+      const sortedResolutions = [...selectedResolutions].sort((a, b) => {
+        const order = ['1080p', '720p', '480p', '320p']
+        return order.indexOf(a) - order.indexOf(b)
+      })
+      startTranscode(inputUrl, video.duration, sortedResolutions)
     }
   }
 
-  // Idle state: Show prompt with buttons
+  const toggleResolution = (resolution: string) => {
+    setSelectedResolutions(prev =>
+      prev.includes(resolution) ? prev.filter(r => r !== resolution) : [...prev, resolution]
+    )
+  }
+
+  const isResolutionDisabled = (resolution: string) => {
+    return existingResolutions.includes(resolution)
+  }
+
+  const hasSelectableResolutions = AVAILABLE_RESOLUTIONS.some(r => !isResolutionDisabled(r))
+
+  // Idle state: Show prompt with resolution checkboxes
   if (status === 'idle') {
     return (
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
         <Wand2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
-          {t('upload.transcode.title', { defaultValue: 'Create 720p Version?' })}
+          {t('upload.transcode.title', { defaultValue: 'Create Additional Versions?' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           <p className="mb-3">
-            {t('upload.transcode.reason', {
-              defaultValue: transcodeCheck.reason,
-              reason: transcodeCheck.reason,
-            })}{' '}
             {t('upload.transcode.suggestion', {
               defaultValue:
-                'Creating a 720p version improves playback compatibility across all devices.',
+                'Creating smaller versions improves playback compatibility across all devices.',
             })}
           </p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleStartTranscode} className="cursor-pointer">
-              <Wand2 className="h-4 w-4 mr-2" />
-              {t('upload.transcode.create720p', { defaultValue: 'Create 720p Version' })}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setDismissed(true)}
-              className="cursor-pointer"
-            >
-              {t('upload.transcode.skip', { defaultValue: 'Skip' })}
-            </Button>
-          </div>
+          {hasSelectableResolutions ? (
+            <>
+              <div className="flex flex-wrap gap-4 mb-4">
+                {AVAILABLE_RESOLUTIONS.map(resolution => {
+                  const disabled = isResolutionDisabled(resolution)
+                  const checked = selectedResolutions.includes(resolution)
+                  return (
+                    <label
+                      key={resolution}
+                      className={`flex items-center gap-2 ${
+                        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        disabled={disabled}
+                        onCheckedChange={() => !disabled && toggleResolution(resolution)}
+                        className="cursor-pointer"
+                      />
+                      <span className={disabled ? 'line-through' : ''}>
+                        {resolution}
+                        {disabled && (
+                          <span className="text-xs ml-1 text-blue-500 dark:text-blue-400">
+                            (exists)
+                          </span>
+                        )}
+                        {resolution === '720p' && !disabled && (
+                          <span className="text-xs ml-1 text-blue-500 dark:text-blue-400">
+                            (default)
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleStartTranscode}
+                  disabled={selectedResolutions.length === 0}
+                  className="cursor-pointer"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  {t('upload.transcode.createSelected', {
+                    defaultValue: 'Create Selected',
+                    count: selectedResolutions.length,
+                  })}
+                  {selectedResolutions.length > 0 && ` (${selectedResolutions.length})`}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDismissed(true)}
+                  className="cursor-pointer"
+                >
+                  {t('upload.transcode.skip', { defaultValue: 'Skip' })}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm">
+              {t('upload.transcode.allExist', {
+                defaultValue: 'All available resolutions already exist.',
+              })}
+            </p>
+          )}
         </AlertDescription>
       </Alert>
     )
@@ -154,6 +227,7 @@ export function DvmTranscodeAlert({
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.message}
+          {progress.queue && <QueueStatus queue={progress.queue} />}
         </AlertDescription>
       </Alert>
     )
@@ -168,6 +242,7 @@ export function DvmTranscodeAlert({
           {t('upload.transcode.resuming', { defaultValue: 'Reconnecting to transcode...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
+          {progress.queue && <QueueStatus queue={progress.queue} />}
           <StatusLog messages={progress.statusMessages} />
         </AlertDescription>
       </Alert>
@@ -176,11 +251,23 @@ export function DvmTranscodeAlert({
 
   // Transcoding state
   if (status === 'transcoding') {
+    const queue = progress.queue
+    const currentResolution = queue?.resolutions[queue.currentIndex]
+    const totalCount = queue?.resolutions.length || 1
+    const currentNum = (queue?.currentIndex || 0) + 1
+
     return (
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
-          {t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
+          {totalCount > 1
+            ? t('upload.transcode.transcodingMulti', {
+                defaultValue: 'Resolution {{current}} of {{total}}: {{resolution}}',
+                current: currentNum,
+                total: totalCount,
+                resolution: currentResolution,
+              })
+            : t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.percentage !== undefined && (
@@ -197,6 +284,7 @@ export function DvmTranscodeAlert({
               })}
             </p>
           )}
+          {queue && <QueueStatus queue={queue} />}
           <StatusLog messages={progress.statusMessages} />
           <div className="mt-3">
             <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
@@ -218,6 +306,7 @@ export function DvmTranscodeAlert({
           {t('upload.transcode.mirroring', { defaultValue: 'Copying to your servers...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
+          {progress.queue && <QueueStatus queue={progress.queue} />}
           <StatusLog messages={progress.statusMessages} />
           <div className="mt-3">
             <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
@@ -266,6 +355,7 @@ export function DvmTranscodeAlert({
 
   // Complete state (briefly shown before component unmounts)
   if (status === 'complete') {
+    const completedCount = progress.queue?.completed.length || 1
     return (
       <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
         <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -273,15 +363,55 @@ export function DvmTranscodeAlert({
           {t('upload.transcode.complete', { defaultValue: 'Transcode complete!' })}
         </AlertTitle>
         <AlertDescription className="text-green-700 dark:text-green-300">
-          {t('upload.transcode.completeMessage', {
-            defaultValue: '720p version has been added to your video.',
-          })}
+          {completedCount > 1
+            ? t('upload.transcode.completeMessageMulti', {
+                defaultValue: '{{count}} versions have been added to your video.',
+                count: completedCount,
+              })
+            : t('upload.transcode.completeMessage', {
+                defaultValue: 'New version has been added to your video.',
+              })}
         </AlertDescription>
       </Alert>
     )
   }
 
   return null
+}
+
+/**
+ * Component to display queue status with icons
+ */
+function QueueStatus({
+  queue,
+}: {
+  queue: { resolutions: string[]; currentIndex: number; completed: string[] }
+}) {
+  if (queue.resolutions.length <= 1) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-3 text-xs">
+      {queue.resolutions.map((resolution, index) => {
+        const isCompleted = queue.completed.includes(resolution)
+        const isCurrent = index === queue.currentIndex
+        const isWaiting = index > queue.currentIndex
+
+        return (
+          <span key={resolution} className="flex items-center gap-1">
+            {isCompleted && <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />}
+            {isCurrent && <Loader2 className="h-3 w-3 animate-spin" />}
+            {isWaiting && <Circle className="h-3 w-3 opacity-50" />}
+            <span className={isCompleted ? 'text-green-600 dark:text-green-400' : ''}>
+              {resolution}
+            </span>
+            {index < queue.resolutions.length - 1 && <span className="mx-1">•</span>}
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 /**

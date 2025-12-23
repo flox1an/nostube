@@ -16,6 +16,10 @@ export interface DvmTranscodeState {
   status: 'transcoding' | 'mirroring' // Active states only
   lastStatusMessage?: string
   lastPercentage?: number
+  // Multi-resolution support
+  resolutionQueue: string[] // All resolutions to process (e.g., ['1080p', '720p', '480p'])
+  completedResolutions: string[] // Already finished resolutions
+  currentResolution: string // Currently processing resolution
 }
 
 export interface UploadDraft {

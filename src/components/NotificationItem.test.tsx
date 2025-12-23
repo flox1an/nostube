@@ -23,10 +23,10 @@ vi.mock('react-i18next', () => ({
   })),
 }))
 
-vi.mock('@/lib/utils', async importOriginal => {
-  const actual = await importOriginal<typeof import('@/lib/utils')>()
+vi.mock('@/lib/utils', async () => {
+  const actual = await vi.importActual('@/lib/utils')
   return {
-    ...actual,
+    ...(actual as object),
     imageProxy: (url?: string) => url || '',
   }
 })

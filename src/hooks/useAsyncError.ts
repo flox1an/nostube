@@ -15,18 +15,21 @@ interface UseAsyncErrorOptions {
 /**
  * Hook to handle async errors with retry logic
  */
-export function useAsyncError<T extends (...args: any[]) => Promise<any>>(
-  asyncFn: T,
+// Generic function type for async operations with error handling
+type AsyncFunction<TArgs extends unknown[], TReturn> = (...args: TArgs) => Promise<TReturn>
+
+export function useAsyncError<TArgs extends unknown[], TReturn>(
+  asyncFn: AsyncFunction<TArgs, TReturn>,
   options: UseAsyncErrorOptions = {}
-): [(...args: Parameters<T>) => Promise<ReturnType<T> | void>, AsyncErrorState] {
+): [(...args: TArgs) => Promise<TReturn | void>, AsyncErrorState] {
   const { maxRetries = 3, onError } = options
   const [error, setError] = useState<Error | null>(null)
   const [retryCount, setRetryCount] = useState(0)
-  const [lastArgs, setLastArgs] = useState<Parameters<T> | null>(null)
+  const [lastArgs, setLastArgs] = useState<TArgs | null>(null)
 
   const execute = useCallback(
-    async (...args: Parameters<T>): Promise<ReturnType<T> | void> => {
-      setLastArgs(args as Parameters<T>)
+    async (...args: TArgs): Promise<TReturn | void> => {
+      setLastArgs(args)
 
       try {
         const result = await asyncFn(...args)

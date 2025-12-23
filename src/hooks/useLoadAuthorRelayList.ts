@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useAppContext } from './useAppContext'
+import type { NostrEvent } from 'nostr-tools'
 
 /**
  * Hook to load an author's NIP-65 relay list (kind 10002) from the network.
@@ -33,16 +34,21 @@ export function useLoadAuthorRelayList(pubkey: string | undefined, discoveryRela
         },
       ])
       .subscribe({
-        next: (event: any) => {
+        next: (event: unknown) => {
           // Filter out EOSE messages
-          if (typeof event === 'string' || !('kind' in event)) {
+          if (
+            typeof event === 'string' ||
+            typeof event !== 'object' ||
+            event === null ||
+            !('kind' in event)
+          ) {
             return
           }
 
           // Add to EventStore (it will handle deduplication)
-          eventStore.add(event)
+          eventStore.add(event as NostrEvent)
         },
-        error: (err: any) => {
+        error: (err: unknown) => {
           console.warn('[useLoadAuthorRelayList] Failed to load relay list:', err)
         },
       })

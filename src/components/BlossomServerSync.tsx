@@ -69,7 +69,13 @@ export function BlossomServerSync() {
     } else {
       console.log('  ℹ️ No new servers to add')
     }
-  }, [user?.pubkey, userBlossomServers.data, config.blossomServers, updateConfig])
+  }, [
+    user?.pubkey,
+    userBlossomServers.data,
+    userBlossomServers.isLoading,
+    config.blossomServers,
+    updateConfig,
+  ])
 
   // This component doesn't render anything
   return null

@@ -42,7 +42,7 @@ interface UseFormDialogOptions<T> {
  *   validate: (data) => !data.name.trim() ? 'Name is required' : undefined
  * })
  */
-export function useFormDialog<T extends Record<string, any>>({
+export function useFormDialog<T extends Record<string, unknown>>({
   initialData,
   onSubmit,
   onClose,

@@ -5,12 +5,15 @@ import { TestApp } from '../test/TestApp'
 import type { NostrEvent } from 'nostr-tools'
 
 // Mock the relayPool from @/nostr/core
+type NostrCoreModule = typeof import('@/nostr/core')
+
 vi.mock('@/nostr/core', async () => {
-  const actual = await vi.importActual<typeof import('@/nostr/core')>('@/nostr/core')
+  const actual = await vi.importActual('@/nostr/core')
+  const actualTyped = actual as NostrCoreModule
   return {
-    ...actual,
+    ...actualTyped,
     relayPool: {
-      ...actual.relayPool,
+      ...actualTyped.relayPool,
       subscription: vi.fn(),
     },
   }
@@ -139,13 +142,13 @@ describe('useNotifications', () => {
       }
 
       vi.mocked(relayPool.subscription).mockReturnValue({
-        subscribe: (observer: any) => {
+        subscribe: (observer: { next: (value: unknown) => void }) => {
           // Immediately call observer with mock comments and EOSE
           mockComments.forEach(comment => observer.next(comment))
           observer.next('EOSE')
           return mockSubscription
         },
-      } as any)
+      } as unknown as ReturnType<typeof relayPool.subscription>)
 
       // Spy on eventStore.getEvent
       vi.spyOn(eventStore, 'getEvent').mockReturnValue({
@@ -240,7 +243,7 @@ describe('useNotifications', () => {
       // Mock same comment coming from relay
       const mockSubscription = { unsubscribe: vi.fn() }
       vi.mocked(relayPool.subscription).mockReturnValue({
-        subscribe: (observer: any) => {
+        subscribe: (observer: { next: (value: unknown) => void }) => {
           observer.next({
             id: 'comment1',
             pubkey: 'pubkey1',
@@ -253,7 +256,7 @@ describe('useNotifications', () => {
           observer.next('EOSE')
           return mockSubscription
         },
-      } as any)
+      } as unknown as ReturnType<typeof relayPool.subscription>)
 
       vi.spyOn(eventStore, 'getEvent').mockReturnValue({
         id: 'video1',

@@ -46,7 +46,6 @@ export function ReportDialog({
     // TODO: Implement actual report submission (NIP-56 or similar)
     // For now, just close the dialog and reset state
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.log('Report submitted:', {
         type: reportType,
         reason,

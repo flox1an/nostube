@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 interface PlaylistVideo {
   id: string
   link: string
-  [key: string]: any
 }
 
 interface UsePlaylistNavigationProps {

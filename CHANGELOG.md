@@ -157,6 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pagination Loading**: Fixed skeleton display
 - **iOS Autoplay**: Fixed after multiple videos
 - **Mobile Sidebar**: Safe area padding
+- **Build Warnings Cleanup**: Fixed numerous ESLint and TypeScript build warnings including: react-hooks/exhaustive-deps missing dependencies, @typescript-eslint/no-explicit-any types replaced with proper types, @typescript-eslint/consistent-type-imports converted to use `import type`, removed ineffective eslint-disable comments (since noInlineConfig is enabled), and fixed react-hooks/set-state-in-effect errors by wrapping synchronous setState calls in setTimeout
 
 ### Removed
 

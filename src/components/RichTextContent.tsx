@@ -194,7 +194,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
       start: number
       end: number
       type: 'url' | 'npub' | 'nprofile'
-      data: any
+      data: string | { pubkey: string; relays?: string[] }
     }> = []
     let match: RegExpExecArray | null
 
@@ -256,7 +256,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
         const item = matches[i]
 
         if (item.type === 'url') {
-          const url = item.data
+          const url = item.data as string
           const platform = detectSocialMedia(url)
 
           if (platform) {
@@ -295,7 +295,12 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
             )
           }
         } else if (item.type === 'npub' || item.type === 'nprofile') {
-          parts.push(<NostrMention key={`mention-${item.start}`} profilePointer={item.data} />)
+          parts.push(
+            <NostrMention
+              key={`mention-${item.start}`}
+              profilePointer={item.data as { pubkey: string; relays?: string[] }}
+            />
+          )
         }
       }
     }

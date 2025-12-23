@@ -35,20 +35,32 @@ import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
 import { type VideoEvent } from '../utils/video-event'
+import { type BlossomServer } from '@/contexts/AppContext'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
 import { isBetaUser } from '@/lib/beta-users'
 import ngeohash from 'ngeohash'
 
+interface ProfileMetadata {
+  name?: string
+  display_name?: string
+  picture?: string
+  about?: string
+  nip05?: string
+  banner?: string
+  lud06?: string
+  lud16?: string
+}
+
 interface VideoInfoSectionProps {
   video: VideoEvent | null
   isLoading: boolean
-  metadata: any
+  metadata: ProfileMetadata | null | undefined
   authorName: string
   relaysToUse: string[]
   userPubkey: string | undefined
   configRelays: { url: string }[]
-  configBlossomServers: any[]
+  configBlossomServers: BlossomServer[]
   videoEvent: NostrEvent | undefined
   shareOpen: boolean
   setShareOpen: (open: boolean) => void
@@ -277,16 +289,19 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         )}
 
         {/* Display languages from video and labels */}
-        {video && (video as any).languages && (video as any).languages.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm text-muted-foreground">{t('video.languages')}:</span>
-            {(video as any).languages.map((lang: string) => (
-              <Badge key={lang} variant="outline">
-                {lang.toUpperCase()}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {video &&
+          'languages' in video &&
+          Array.isArray(video.languages) &&
+          video.languages.length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm text-muted-foreground">{t('video.languages')}:</span>
+              {(video.languages as string[]).map((lang: string) => (
+                <Badge key={lang} variant="outline">
+                  {lang.toUpperCase()}
+                </Badge>
+              ))}
+            </div>
+          )}
 
         {(video && video.tags.length > 0) || geohash ? (
           <div className="flex flex-wrap gap-2">

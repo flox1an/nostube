@@ -1,4 +1,4 @@
-import { VideoVariant } from '@/lib/video-processing'
+import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, CheckCircle, Copy, AlertTriangle } from 'lucide-react'

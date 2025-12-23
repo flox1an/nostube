@@ -116,8 +116,7 @@ export function usePlaylists() {
       clearTimeout(safetyTimeout)
       subscription.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.pubkey])
+  }, [user?.pubkey, eventStore, loader])
 
   const playlists = playlistEvents.map(event => {
     // Find the title from tags
@@ -352,14 +351,16 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     // Load if we have a pubkey and haven't loaded yet
     // Note: When relays change, hasLoadedOnce is reset to false (see effect above)
     if (!pubkey) {
-      setIsLoading(false)
-      return
+      // Use setTimeout to avoid synchronous setState in effect
+      const timer = setTimeout(() => setIsLoading(false), 0)
+      return () => clearTimeout(timer)
     }
 
     if (hasLoadedOnceRef.current) return
 
     hasLoadedOnceRef.current = true // Set immediately to prevent multiple loads
-    setIsLoading(true)
+    // Use setTimeout to avoid synchronous setState in effect
+    const loadingTimer = setTimeout(() => setIsLoading(true), 0)
     const load$ = loader()
 
     // Show results quickly after first events arrive
@@ -387,12 +388,12 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     })
 
     return () => {
+      clearTimeout(loadingTimer)
       clearTimeout(quickDisplayTimeout)
       clearTimeout(safetyTimeout)
       subscription.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkey, loader])
+  }, [pubkey, loader, eventStore])
 
   const playlists = playlistEvents?.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')

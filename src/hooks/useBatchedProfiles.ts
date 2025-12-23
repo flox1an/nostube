@@ -73,7 +73,9 @@ export function useBatchedProfileLoader() {
     }
 
     // Expose global function to request profiles
-    ;(window as any).__requestProfile = (pubkey: string) => {
+    ;(window as unknown as { __requestProfile: (pubkey: string) => void }).__requestProfile = (
+      pubkey: string
+    ) => {
       if (!pubkey || pubkey.trim() === '') return
       pendingPubkeys.add(pubkey)
       scheduleBatch()
@@ -92,7 +94,8 @@ export function useBatchedProfileLoader() {
  * Request a profile to be loaded (will be batched with other requests)
  */
 export function requestProfile(pubkey: string) {
-  if (typeof window !== 'undefined' && (window as any).__requestProfile) {
-    ;(window as any).__requestProfile(pubkey)
+  const win = window as unknown as { __requestProfile?: (pubkey: string) => void }
+  if (typeof window !== 'undefined' && win.__requestProfile) {
+    win.__requestProfile(pubkey)
   }
 }

@@ -14,7 +14,7 @@ import {
 } from '@/lib/dvm-utils'
 import { extractBlossomHash } from '@/utils/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
-import { Subscription } from 'rxjs'
+import type { Subscription } from 'rxjs'
 
 // DVM kinds for video transform
 const DVM_REQUEST_KIND = 5207

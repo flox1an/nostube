@@ -21,7 +21,7 @@ interface VideoCacheContextType {
   setFollowedPubkeys: (pubkeys: string[]) => void
   isWorkerReady: boolean
   /** Get video observable with fallback to loader */
-  getVideoObservable: (id: string) => any
+  getVideoObservable: (id: string) => unknown
 }
 
 const VideoCacheContext = createContext<VideoCacheContextType | undefined>(undefined)

@@ -10,7 +10,7 @@ import { createAddressLoader } from 'applesauce-loaders/loaders'
 const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
 
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): {

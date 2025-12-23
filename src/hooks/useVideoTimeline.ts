@@ -52,15 +52,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
       })
     )
     return result
-  }, [
-    eventStore,
-    readRelays,
-    blockedPubkeys,
-    type,
-    filters,
-    config.blossomServers,
-    missingVideoIds,
-  ])
+  }, [eventStore, readRelays, blockedPubkeys, filters, config.blossomServers, missingVideoIds])
 
   const videos =
     useObservableMemo(() => {

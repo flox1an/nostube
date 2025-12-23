@@ -164,8 +164,6 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
       setIsLoading(false)
       onErrorRef.current?.(error)
     }
-    // Use serialized keys instead of array references
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     originalUrlsKey,
     mediaType,
@@ -246,8 +244,6 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     return () => {
       cancelled = true
     }
-    // Use serialized key instead of array reference
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, finalDiscoveryEnabled, sha256, discoveryRelaysKey, finalDiscoveryTimeout, mediaType])
 
   // Serialize generated URLs for stable comparison
@@ -305,8 +301,6 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     return () => {
       cancelled = true
     }
-    // Use serialized key instead of array reference
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, finalPreValidate, generatedUrlsKey, mediaType, finalValidationOptions])
 
   // Move to next URL

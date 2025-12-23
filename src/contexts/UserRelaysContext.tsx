@@ -40,7 +40,7 @@ export function UserRelaysProvider({ children }: UserRelaysProviderProps) {
       readRelays: readRelays.length > 0 ? readRelays : null,
       writeRelays: writeRelays.length > 0 ? writeRelays : null,
     }
-  }, [relayList, user?.pubkey])
+  }, [relayList, user])
 
   return <UserRelaysContext.Provider value={value}>{children}</UserRelaysContext.Provider>
 }

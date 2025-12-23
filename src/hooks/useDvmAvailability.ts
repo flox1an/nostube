@@ -83,7 +83,7 @@ export function useDvmAvailability(): {
         sub.unsubscribe()
       }
     }
-  }, [config.relays])
+  }, [hasRelays, readRelays])
 
   return { isAvailable, isLoading }
 }

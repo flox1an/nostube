@@ -112,7 +112,7 @@ export function usePlaylistDetails(
     const pointerRelays = (playlistPointer as { relays?: string[] } | null)?.relays || []
     const videoRelays = videoEventRelays || []
     return combineRelays([videoRelays, pointerRelays, allConfigRelays, videoRelayFallbacks])
-  }, [playlistPointer, allConfigRelays, videoEventRelays])
+  }, [playlistPointer, allConfigRelays, videoEventRelays, videoRelayFallbacks])
 
   const eventLoader = useMemo(
     () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),
@@ -144,7 +144,7 @@ export function usePlaylistDetails(
   useEffect(() => {
     if (!playlistPointer) return
 
-    let sub: any
+    let sub: { unsubscribe: () => void } | undefined
     if (isNeventPointer(playlistPointer)) {
       sub = eventLoader(playlistPointer).subscribe({
         next: event => {

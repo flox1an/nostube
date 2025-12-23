@@ -5,14 +5,14 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
 import { of } from 'rxjs'
-import { type NostrEvent } from 'nostr-tools'
+import { type NostrEvent, type Filter } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 
 interface UseTimelineLoaderOptions {
   /**
    * Nostr filters for the timeline query
    */
-  filters: any | null
+  filters: Filter | null
 
   /**
    * Relays to query (should be stable reference)
@@ -23,7 +23,7 @@ interface UseTimelineLoaderOptions {
    * Optional dependency to trigger reload (e.g., tag, pubkey)
    * When this changes, the timeline will be reloaded
    */
-  reloadDependency?: any
+  reloadDependency?: unknown
 
   /**
    * Optional limit for initial load (default: 50)

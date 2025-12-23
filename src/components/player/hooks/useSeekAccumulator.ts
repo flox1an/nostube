@@ -55,9 +55,12 @@ export function useSeekAccumulator({
   }, [onSeek])
 
   // Add to accumulated seek time
+  // Below 5s: add 1s increments. At 5s or above: add stepSize (5s) increments
   const addSeek = useCallback(
     (dir: 'forward' | 'backward') => {
-      const delta = dir === 'forward' ? stepSize : -stepSize
+      const currentAbs = Math.abs(accumulatedRef.current)
+      const increment = currentAbs < 5 ? 1 : stepSize
+      const delta = dir === 'forward' ? increment : -increment
       accumulatedRef.current += delta
 
       setAccumulatedTime(accumulatedRef.current)

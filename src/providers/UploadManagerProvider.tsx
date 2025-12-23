@@ -781,14 +781,26 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
           completedResolutions.push(resolution)
 
-          // Notify completion for this resolution
-          job.onComplete?.(mirroredVideo)
+          // Store completed video in state for persistence (in case callbacks are stale)
+          const currentState = tasks.get(taskId)?.transcodeState
+          const completedVideos = [...(currentState?.completedVideos || [])]
+          completedVideos.push({
+            url: mirroredVideo.url!,
+            dimension: mirroredVideo.dimension,
+            sizeMB: mirroredVideo.sizeMB,
+            duration: mirroredVideo.duration,
+            bitrate: mirroredVideo.bitrate,
+            videoCodec: mirroredVideo.videoCodec,
+            audioCodec: mirroredVideo.audioCodec,
+            qualityLabel: mirroredVideo.qualityLabel,
+          })
 
-          // Update state
+          // Update state with completed video
           updateTasksState(taskId, {
             transcodeState: {
-              ...tasks.get(taskId)?.transcodeState,
+              ...currentState,
               completedResolutions: [...completedResolutions],
+              completedVideos,
               currentResolution: resolutions[i + 1],
               message:
                 i === resolutions.length - 1
@@ -796,6 +808,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                   : `${resolution} complete, starting next...`,
             } as TranscodeState,
           })
+
+          // Notify completion for this resolution (may be stale callback)
+          job.onComplete?.(mirroredVideo)
         }
 
         // All complete

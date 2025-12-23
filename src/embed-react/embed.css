@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* Reset for iframe isolation */
+#nostube-embed {
+  all: initial;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+#nostube-embed *,
+#nostube-embed *::before,
+#nostube-embed *::after {
+  box-sizing: border-box;
+}
+
+/* Ensure full viewport in iframe */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+#nostube-embed {
+  width: 100%;
+  height: 100%;
+}
+
+/* Dark theme overrides */
+#nostube-embed {
+  --background: #000;
+  --foreground: #fff;
+}
+
+/* Accent color support */
+#nostube-embed {
+  --embed-accent: #8b5cf6;
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Line clamp for title */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

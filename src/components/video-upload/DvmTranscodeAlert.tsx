@@ -249,9 +249,9 @@ export function DvmTranscodeAlert({
   // Transcoding state
   if (status === 'transcoding') {
     const queue = progress.queue
-    const currentResolution = queue?.resolutions[queue.currentIndex]
-    const totalCount = queue?.resolutions.length || 1
-    const currentNum = (queue?.currentIndex || 0) + 1
+    const currentResolution = queue?.resolutions?.[queue?.currentIndex ?? 0]
+    const totalCount = queue?.resolutions?.length || 1
+    const currentNum = (queue?.currentIndex ?? 0) + 1
 
     return (
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
@@ -382,18 +382,18 @@ export function DvmTranscodeAlert({
 function QueueStatus({
   queue,
 }: {
-  queue: { resolutions: string[]; currentIndex: number; completed: string[] }
+  queue: { resolutions?: string[]; currentIndex?: number; completed?: string[] }
 }) {
-  if (queue.resolutions.length <= 1) {
+  if (!queue.resolutions || queue.resolutions.length <= 1) {
     return null
   }
 
   return (
     <div className="flex flex-wrap gap-2 mb-3 text-xs">
       {queue.resolutions.map((resolution, index) => {
-        const isCompleted = queue.completed.includes(resolution)
-        const isCurrent = index === queue.currentIndex
-        const isWaiting = index > queue.currentIndex
+        const isCompleted = queue.completed?.includes(resolution) ?? false
+        const isCurrent = index === (queue.currentIndex ?? 0)
+        const isWaiting = index > (queue.currentIndex ?? 0)
 
         return (
           <span key={resolution} className="flex items-center gap-1">
@@ -403,7 +403,7 @@ function QueueStatus({
             <span className={isCompleted ? 'text-green-600 dark:text-green-400' : ''}>
               {resolution}
             </span>
-            {index < queue.resolutions.length - 1 && <span className="mx-1">•</span>}
+            {index < (queue.resolutions?.length ?? 0) - 1 && <span className="mx-1">•</span>}
           </span>
         )
       })}

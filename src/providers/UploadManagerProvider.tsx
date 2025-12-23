@@ -119,6 +119,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Active transcode jobs (subscriptions + abort controllers)
   const jobsRef = useRef<Map<string, TranscodeJob>>(new Map())
 
+  // Track tasks currently being started to prevent auto-resume conflicts
+  const startingTasksRef = useRef<Set<string>>(new Set())
+
   // Refs for stable access in callbacks
   const userRef = useRef(user)
   const configRef = useRef(config)
@@ -718,6 +721,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         return
       }
 
+      // Mark as starting to prevent auto-resume race condition
+      startingTasksRef.current.add(taskId)
+
       // Create job entry
       const job: TranscodeJob = {
         subscription: null,
@@ -729,6 +735,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       if (import.meta.env.DEV) {
         console.log('[UploadManager] startTranscode - Created job for taskId:', taskId)
+        console.log('[UploadManager] jobsRef now has keys:', Array.from(jobsRef.current.keys()))
       }
 
       const completedResolutions: string[] = []
@@ -802,6 +809,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         failTask(taskId, errorMessage)
+      } finally {
+        // Clear starting flag
+        startingTasksRef.current.delete(taskId)
       }
     },
     [updateTasksState, tasks, discoverDvm, processResolution, completeTask, failTask]
@@ -814,6 +824,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       onComplete?: (video: VideoVariant) => void,
       onAllComplete?: () => void
     ) => {
+      // Skip if job already exists (task is already being processed)
+      if (jobsRef.current.has(taskId)) {
+        if (import.meta.env.DEV) {
+          console.log('[UploadManager] resumeTranscode - job already exists for:', taskId)
+        }
+        return
+      }
+
       const task = tasks.get(taskId)
       if (!task || !task.transcodeState) {
         console.warn('[UploadManager] Cannot resume - no transcode state')
@@ -1058,6 +1076,20 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     // Auto-resume transcoding tasks
     for (const task of resumable) {
       if (task.status === 'transcoding' && task.transcodeState) {
+        // Skip if task is currently being started or already has a job
+        if (startingTasksRef.current.has(task.id)) {
+          if (import.meta.env.DEV) {
+            console.log('[UploadManager] Skipping auto-resume for task being started:', task.id)
+          }
+          continue
+        }
+        if (jobsRef.current.has(task.id)) {
+          if (import.meta.env.DEV) {
+            console.log('[UploadManager] Skipping auto-resume for task with existing job:', task.id)
+          }
+          continue
+        }
+
         if (import.meta.env.DEV) {
           console.log('[UploadManager] Auto-resuming task:', task.id)
         }

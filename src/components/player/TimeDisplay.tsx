@@ -40,7 +40,7 @@ export function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
     <button
       type="button"
       onClick={toggleMode}
-      className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap px-2 rounded-full cursor-pointer transition-all hover:bg-white/20"
+      className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap p-2 rounded-full cursor-pointer transition-all hover:bg-white/20"
       title={showRemaining ? 'Click to show elapsed time' : 'Click to show remaining time'}
     >
       <span>

@@ -278,7 +278,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   // Discover DVM handler
   const discoverDvm = useCallback(async (): Promise<DvmHandlerInfo | null> => {
-    const readRelays = configRef.current.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+    const readRelays = configRef.current.relays
+      .filter(r => r.tags.includes('read') && r.url)
+      .map(r => r.url)
     if (readRelays.length === 0) {
       throw new Error('No read relays configured')
     }
@@ -446,7 +448,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       requestedResolution?: string
     ): Promise<VideoVariant> => {
       const readRelays = configRef.current.relays
-        .filter(r => r.tags.includes('read'))
+        .filter(r => r.tags.includes('read') && r.url)
         .map(r => r.url)
 
       return new Promise((resolve, reject) => {
@@ -577,7 +579,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       if (!currentUser) throw new Error('User not logged in')
 
-      const writeRelays = currentConfig.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+      // Filter relays and ensure no undefined values
+      const writeRelays = currentConfig.relays
+        .filter(r => r.tags.includes('write') && r.url)
+        .map(r => r.url)
+
+      if (writeRelays.length === 0) {
+        throw new Error('No write relays configured')
+      }
 
       // Update state
       updateTasksState(taskId, {
@@ -595,6 +604,17 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         },
       })
 
+      // Validate all tag values are strings
+      if (!inputVideoUrl || typeof inputVideoUrl !== 'string') {
+        throw new Error('Invalid input video URL')
+      }
+      if (!dvm.pubkey || typeof dvm.pubkey !== 'string') {
+        throw new Error('Invalid DVM pubkey')
+      }
+      if (!resolution || typeof resolution !== 'string') {
+        throw new Error('Invalid resolution')
+      }
+
       const jobRequest: EventTemplate = {
         kind: DVM_REQUEST_KIND,
         content: '',
@@ -606,6 +626,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           ['param', 'resolution', resolution],
           ['relays', ...writeRelays],
         ],
+      }
+
+      if (import.meta.env.DEV) {
+        console.log('[UploadManager] Signing job request:', jobRequest)
       }
 
       const signedRequest = await currentUser.signer.signEvent(jobRequest)

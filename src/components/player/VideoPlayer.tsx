@@ -243,7 +243,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       el.addEventListener('loadedmetadata', setInitialPosition, { once: true })
       return () => el.removeEventListener('loadedmetadata', setInitialPosition)
     }
-  }, [initialPlayPos])
+    // Include videoUrl so effect re-runs when video element becomes available after loading
+  }, [initialPlayPos, videoUrl])
 
   useEffect(() => {
     hasSetInitialPos.current = false

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, lazy, Suspense } from 'react'
 import 'media-chrome'
-import { type TextTrack } from '@/utils/video-event'
+import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import { imageProxyVideoPreview } from '@/lib/utils'
 import 'media-chrome/menu'
 import '@/types/media-chrome.d.ts'
@@ -10,6 +10,7 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '../hooks'
 import { NativeVideoPlayer } from './video/NativeVideoPlayer'
 import { PlayPauseOverlay } from './PlayPauseOverlay'
+import { QualityMenu } from './video/QualityMenu'
 
 // Lazy load HLS video player only when needed
 const HLSVideoPlayer = lazy(() =>
@@ -58,6 +59,11 @@ interface VideoPlayerProps {
    * Callback when video element is ready
    */
   onVideoElementReady?: (element: HTMLVideoElement | null) => void
+  /**
+   * Video variants with quality info (for quality selector)
+   * If provided, enables quality switching for non-HLS videos
+   */
+  videoVariants?: VideoVariant[]
 }
 
 export const VideoPlayer = React.memo(function VideoPlayer({
@@ -78,6 +84,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   onVideoDimensionsLoaded,
   onEnded,
   onVideoElementReady,
+  videoVariants,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsElRef = useRef<HTMLVideoElement | null>(null)
@@ -85,6 +92,28 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const [showSpinner, setShowSpinner] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
+
+  // Quality selection state
+  const [selectedQualityIndex, setSelectedQualityIndex] = useState(0)
+  const pendingSeekTimeRef = useRef<number | null>(null)
+  const wasPlayingRef = useRef(false)
+
+  // Compute URLs to use based on selected quality variant (if available)
+  const effectiveUrls = React.useMemo(() => {
+    if (videoVariants && videoVariants.length > 0 && selectedQualityIndex < videoVariants.length) {
+      const variant = videoVariants[selectedQualityIndex]
+      return [variant.url, ...variant.fallbackUrls]
+    }
+    return urls
+  }, [videoVariants, selectedQualityIndex, urls])
+
+  // Get SHA256 from selected variant if available
+  const effectiveSha256 = React.useMemo(() => {
+    if (videoVariants && videoVariants.length > 0 && selectedQualityIndex < videoVariants.length) {
+      return videoVariants[selectedQualityIndex].hash || sha256
+    }
+    return sha256
+  }, [videoVariants, selectedQualityIndex, sha256])
 
   // Memoize proxyConfig to prevent infinite loops
   const proxyConfig = React.useMemo(
@@ -110,15 +139,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   // Use new media URL failover system for video
+  // Use effectiveUrls when videoVariants provided for quality selection
   const {
     currentUrl: videoUrl,
     moveToNext: moveToNextVideo,
     hasMore: hasMoreVideoUrls,
     isLoading: isLoadingVideoUrls,
   } = useMediaUrls({
-    urls,
+    urls: effectiveUrls,
     mediaType: 'video',
-    sha256,
+    sha256: effectiveSha256,
     kind: 34235, // NIP-71 video event kind
     authorPubkey,
     proxyConfig,
@@ -136,6 +166,51 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     () => mime === 'application/vnd.apple.mpegurl' || videoUrl?.endsWith('.m3u8'),
     [mime, videoUrl]
   )
+
+  // Handle quality change with time preservation
+  const handleQualityChange = useCallback(
+    (newIndex: number) => {
+      if (newIndex === selectedQualityIndex) return
+
+      const el = isHls ? hlsElRef.current : videoRef.current
+      if (el) {
+        // Save current time and playing state
+        pendingSeekTimeRef.current = el.currentTime
+        wasPlayingRef.current = !el.paused
+      }
+
+      setSelectedQualityIndex(newIndex)
+    },
+    [selectedQualityIndex, isHls]
+  )
+
+  // Restore playback position after quality change
+  useEffect(() => {
+    if (pendingSeekTimeRef.current === null) return
+
+    const el = isHls ? hlsElRef.current : videoRef.current
+    if (!el) return
+
+    const handleCanPlay = () => {
+      if (pendingSeekTimeRef.current !== null) {
+        el.currentTime = pendingSeekTimeRef.current
+        pendingSeekTimeRef.current = null
+
+        // Resume playback if it was playing before
+        if (wasPlayingRef.current) {
+          el.play().catch(() => {
+            // Ignore autoplay errors
+          })
+        }
+      }
+    }
+
+    el.addEventListener('canplay', handleCanPlay, { once: true })
+
+    return () => {
+      el.removeEventListener('canplay', handleCanPlay)
+    }
+  }, [selectedQualityIndex, isHls, hlsElementVersion])
 
   // Notify parent when video element is ready (only when element actually changes)
   const lastNotifiedElementRef = useRef<HTMLVideoElement | null>(null)
@@ -454,6 +529,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         <media-playback-rate-button></media-playback-rate-button>
         <media-pip-button />
         {hasCaptions && <media-captions-menu-button></media-captions-menu-button>}
+        {/* Quality selector for non-HLS videos with multiple variants */}
+        {!isHls && videoVariants && videoVariants.length > 1 && (
+          <QualityMenu
+            variants={videoVariants}
+            selectedIndex={selectedQualityIndex}
+            onSelectQuality={handleQualityChange}
+          />
+        )}
         {onToggleCinemaMode && (
           <button
             className="media-button"

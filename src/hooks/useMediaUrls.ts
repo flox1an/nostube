@@ -13,7 +13,7 @@ import {
 } from '@/lib/media-url-generator'
 import { discoverUrlsWithCache, type DiscoveryOptions } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
-import { useAppContext } from '@/hooks/useAppContext'
+import { useAppContextSafe } from '@/hooks/useAppContext'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
   enabled?: boolean // Enable auto-discovery (default: true)
@@ -69,8 +69,9 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     onError,
   } = options
 
-  // Get configuration from AppContext
-  const { config } = useAppContext()
+  // Get configuration from AppContext (may be undefined in embed context)
+  const appContext = useAppContextSafe()
+  const config = appContext?.config
 
   // Store onError in ref to avoid it as a dependency
   const onErrorRef = useRef(onError)
@@ -79,13 +80,13 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   }, [onError])
 
   // Memoize blossomServers to prevent unnecessary re-renders
-  const blossomServers = useMemo(() => config.blossomServers || [], [config.blossomServers])
+  const blossomServers = useMemo(() => config?.blossomServers || [], [config?.blossomServers])
 
   // Memoize cachingServers to prevent unnecessary re-renders
-  const cachingServers = useMemo(() => config.cachingServers || [], [config.cachingServers])
+  const cachingServers = useMemo(() => config?.cachingServers || [], [config?.cachingServers])
 
   // Use media config from context if not provided in options
-  const mediaConfig = config.media
+  const mediaConfig = config?.media
 
   // Memoize all computed config values to prevent unnecessary re-renders
   const finalDiscoveryEnabled = useMemo(
@@ -94,8 +95,8 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   )
 
   const finalDiscoveryRelays = useMemo(
-    () => discoveryRelays ?? config.relays.map(r => r.url),
-    [discoveryRelays, config.relays]
+    () => discoveryRelays ?? config?.relays.map(r => r.url) ?? [],
+    [discoveryRelays, config?.relays]
   )
 
   const finalDiscoveryTimeout = useMemo(

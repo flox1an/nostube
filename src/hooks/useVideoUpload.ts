@@ -740,9 +740,17 @@ export function useVideoUpload(
 
   // Handler to add a transcoded video variant (from DVM)
   const handleAddTranscodedVideo = (transcodedVideo: VideoVariant) => {
-    setUploadInfo(ui => ({
-      videos: [...ui.videos, transcodedVideo],
-    }))
+    setUploadInfo(ui => {
+      // Check if video with same URL already exists to prevent duplicates
+      const isDuplicate = ui.videos.some(v => v.url === transcodedVideo.url)
+      if (isDuplicate) {
+        if (import.meta.env.DEV) {
+          console.log('[useVideoUpload] Skipping duplicate video:', transcodedVideo.url)
+        }
+        return ui
+      }
+      return { videos: [...ui.videos, transcodedVideo] }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

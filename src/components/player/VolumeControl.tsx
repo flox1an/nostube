@@ -118,7 +118,7 @@ export function VolumeControl({
       <button
         type="button"
         onClick={onToggleMute}
-        className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-white/20"
+        className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
         aria-label={isMuted ? 'Unmute' : 'Mute'}
       >
         <VolumeIcon className="w-6 h-6" />

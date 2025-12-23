@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import React, { useRef, useState, useMemo } from 'react'
+import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -82,6 +83,12 @@ export const VideoCard = React.memo(function VideoCard({
     // Otherwise use the original image thumbnail
     return imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)
   }, [hasNoThumbnail, thumbnailError, video.images, video.urls, config.thumbResizeServerUrl])
+
+  // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
+  const blurhashPlaceholder = useMemo(() => {
+    const blurhash = video.thumbnailVariants?.[0]?.blurhash
+    return blurHashToDataURL(blurhash)
+  }, [video.thumbnailVariants])
 
   // Determine navigation path based on video type
   const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
@@ -195,8 +202,18 @@ export const VideoCard = React.memo(function VideoCard({
               </div>
             ) : (
               <>
-                {/* Placeholder background shown while thumbnail loads */}
-                {!thumbnailLoaded && <Skeleton className={cn('w-full absolute', aspectRatio)} />}
+                {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
+                {!thumbnailLoaded &&
+                  (blurhashPlaceholder ? (
+                    <img
+                      src={blurhashPlaceholder}
+                      alt=""
+                      aria-hidden="true"
+                      className={cn('w-full object-cover absolute', aspectRatio)}
+                    />
+                  ) : (
+                    <Skeleton className={cn('w-full absolute', aspectRatio)} />
+                  ))}
                 <img
                   src={thumbnailUrl}
                   loading="lazy"

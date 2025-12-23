@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
+import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import {
   imageProxyVideoPreview,
@@ -46,6 +47,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
   const [thumbnailError, setThumbnailError] = useState(false)
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
 
   const thumbnailUrl = useMemo(() => {
     // If thumbnail failed and we have video URLs, try generating thumbnail from video
@@ -56,11 +58,22 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
   }, [thumbnailError, video.images, video.urls, thumbResizeServerUrl])
 
+  // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
+  const blurhashPlaceholder = useMemo(() => {
+    const blurhash = video.thumbnailVariants?.[0]?.blurhash
+    return blurHashToDataURL(blurhash)
+  }, [video.thumbnailVariants])
+
   const handleThumbnailError = () => {
     console.warn('Thumbnail failed to load:', video.images[0])
     if (!thumbnailError) {
       setThumbnailError(true)
+      setThumbnailLoaded(false)
     }
+  }
+
+  const handleThumbnailLoad = () => {
+    setThumbnailLoaded(true)
   }
 
   // Link to shorts page for short videos, video page for regular videos
@@ -70,12 +83,25 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     <Link to={linkTo}>
       <div className="flex p-2 hover:bg-accent rounded-lg transition-colors border-none">
         <div className="relative w-40 h-24 shrink-0">
+          {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
+          {!thumbnailLoaded &&
+            (blurhashPlaceholder ? (
+              <img
+                src={blurhashPlaceholder}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover rounded-md absolute"
+              />
+            ) : (
+              <Skeleton className="w-full h-full rounded-md absolute" />
+            ))}
           <img
             src={thumbnailUrl}
             loading="lazy"
             alt={video.title}
             className="w-full h-full object-cover rounded-md"
             onError={handleThumbnailError}
+            onLoad={handleThumbnailLoad}
           />
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (

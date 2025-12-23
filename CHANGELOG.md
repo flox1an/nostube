@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Embed Player Rewrite**: Replaced vanilla JS embed with React-based embed using shared VideoPlayer component, Vite multi-entry build
 - **Video Player Performance**: React.memo on all components, RAF-only polling, memoized callbacks
 - **Upload Form Wizard**: 4-step wizard with validation, responsive two-column layout
 - **Draft Deletion UX**: Confirmation dialog with option to delete media from Blossom servers

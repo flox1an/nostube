@@ -68,7 +68,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
   return (
     <Link to={linkTo}>
-      <div className="flex mb-3 hover:bg-accent rounded-lg transition-colors border-none ">
+      <div className="flex p-2 hover:bg-accent rounded-lg transition-colors border-none">
         <div className="relative w-40 h-24 shrink-0">
           <img
             src={thumbnailUrl}
@@ -84,7 +84,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             </div>
           )}
         </div>
-        <div className="p-1 pl-3">
+        <div className="pl-3">
           <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
           <div className="flex items-center gap-1.5 mt-1">
             <Avatar className="h-4 w-4">
@@ -107,11 +107,11 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
 function VideoSuggestionItemSkeleton() {
   return (
-    <div className="flex mb-4">
+    <div className="flex p-2">
       <div className="relative w-40 h-24 shrink-0">
         <Skeleton className="w-full h-full rounded-md" />
       </div>
-      <div className="p-1 pl-3 space-y-2 flex-1">
+      <div className="pl-3 space-y-2 flex-1">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-3 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
@@ -254,7 +254,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
-    <div className="sm:grid grid-cols-2 gap-4 lg:block">
+    <div className="sm:grid grid-cols-2 lg:block">
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
         : suggestions.map(video => (

@@ -177,12 +177,12 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className={cn('transition-all duration-200', maxWidth)}
+      className={cn('p-2 hover:bg-accent rounded-lg transition-colors', maxWidth)}
       style={{ contain: 'layout style paint' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="p-0">
+      <div>
         <Link to={to} onClick={handleShortsClick}>
           <div className="w-full overflow-hidden sm:rounded-lg relative">
             {/* Show error state if both thumbnail and fallback failed */}
@@ -306,7 +306,7 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
-    <div className="p-0">
+    <div className="p-2">
       <Skeleton className={cn('w-full', aspectRatio)} />
       <div className="pt-3">
         <div className="flex gap-3">

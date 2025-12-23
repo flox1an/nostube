@@ -104,16 +104,16 @@ export function VideoGrid({
       const wideCols = getCols('horizontal')
       const portraitCols = getCols('vertical')
       return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col">
           {chunk(Array.from({ length: 24 }), wideCols).map((row, i) => (
-            <div key={'wide-skel-' + i} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
+            <div key={'wide-skel-' + i} className={`grid ${gridColsClass(wideCols)}`}>
               {row.map((_, j) => (
                 <VideoCardSkeleton key={j} format="horizontal" />
               ))}
             </div>
           ))}
           {chunk(Array.from({ length: 24 }), portraitCols).map((row, i) => (
-            <div key={'portrait-skel-' + i} className={`grid gap-4 ${gridColsClass(portraitCols)}`}>
+            <div key={'portrait-skel-' + i} className={`grid ${gridColsClass(portraitCols)}`}>
               {row.map((_, j) => (
                 <VideoCardSkeleton key={j} format="vertical" />
               ))}
@@ -129,7 +129,7 @@ export function VideoGrid({
     return (
       <div
         className={cn(
-          'grid gap-4',
+          'grid',
           isShort
             ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
             : isHorizontal
@@ -177,7 +177,7 @@ export function VideoGrid({
     for (let i = 0; i < maxRows; i++) {
       if (wideRows[i]) {
         rows.push(
-          <div key={'wide-' + i} className={`grid gap-4 ${gridColsClass(getCols('horizontal'))}`}>
+          <div key={'wide-' + i} className={`grid ${gridColsClass(getCols('horizontal'))}`}>
             {wideRows[i].map(video => (
               <VideoCard
                 key={video.id}
@@ -191,7 +191,7 @@ export function VideoGrid({
       }
       if (portraitRows[i]) {
         rows.push(
-          <div key={'portrait-' + i} className={`grid gap-2 ${gridColsClass(getCols('vertical'))}`}>
+          <div key={'portrait-' + i} className={`grid ${gridColsClass(getCols('vertical'))}`}>
             {portraitRows[i].map(video => {
               const videoIndex = portraitVideos.findIndex(v => v.id === video.id)
               return (
@@ -223,7 +223,7 @@ export function VideoGrid({
       if (wideItemsInLastRow > 0) {
         const skeletonsNeeded = wideCols - wideItemsInLastRow
         rows.push(
-          <div key={`loading-wide-fill`} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
+          <div key={`loading-wide-fill`} className={`grid ${gridColsClass(wideCols)}`}>
             {Array.from({ length: skeletonsNeeded }).map((_, j) => (
               <VideoCardSkeleton key={j} format="horizontal" />
             ))}
@@ -234,7 +234,7 @@ export function VideoGrid({
       // Add 2 full rows of horizontal skeletons
       for (let i = 0; i < 2; i++) {
         rows.push(
-          <div key={`loading-wide-${i}`} className={`grid gap-4 ${gridColsClass(wideCols)}`}>
+          <div key={`loading-wide-${i}`} className={`grid ${gridColsClass(wideCols)}`}>
             {Array.from({ length: wideCols }).map((_, j) => (
               <VideoCardSkeleton key={j} format="horizontal" />
             ))}
@@ -246,10 +246,7 @@ export function VideoGrid({
       if (portraitItemsInLastRow > 0) {
         const skeletonsNeeded = portraitCols - portraitItemsInLastRow
         rows.push(
-          <div
-            key={`loading-portrait-fill`}
-            className={`grid gap-2 ${gridColsClass(portraitCols)}`}
-          >
+          <div key={`loading-portrait-fill`} className={`grid ${gridColsClass(portraitCols)}`}>
             {Array.from({ length: skeletonsNeeded }).map((_, j) => (
               <VideoCardSkeleton key={j} format="vertical" />
             ))}
@@ -260,10 +257,7 @@ export function VideoGrid({
       // Add 2 full rows of portrait skeletons
       for (let i = 0; i < 2; i++) {
         rows.push(
-          <div
-            key={`loading-portrait-${i}`}
-            className={`grid gap-2 ${gridColsClass(portraitCols)}`}
-          >
+          <div key={`loading-portrait-${i}`} className={`grid ${gridColsClass(portraitCols)}`}>
             {Array.from({ length: portraitCols }).map((_, j) => (
               <VideoCardSkeleton key={j} format="vertical" />
             ))}
@@ -272,7 +266,7 @@ export function VideoGrid({
       }
     }
 
-    return <div className="flex flex-col gap-8">{rows}</div>
+    return <div className="flex flex-col">{rows}</div>
   }
 
   // fallback: old logic for explicit type
@@ -309,10 +303,10 @@ export function VideoGrid({
       className={cn(
         'grid',
         isShort
-          ? 'gap-2 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
+          ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8'
           : isHorizontal
-            ? 'gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-            : 'gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6'
       )}
     >
       {filteredVideos.map((video, index) => (

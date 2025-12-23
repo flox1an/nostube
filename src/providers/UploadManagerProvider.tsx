@@ -3,6 +3,8 @@
  *
  * Global context for managing background uploads and transcoding.
  * Uploads and transcodes continue even when navigating away from the upload page.
+ *
+ * The provider OWNS the DVM subscriptions - they run here, not in component hooks.
  */
 
 import {
@@ -15,7 +17,8 @@ import {
   useMemo,
   type ReactNode,
 } from 'react'
-import type { Subscription } from 'rxjs'
+import { type Subscription } from 'rxjs'
+import { type NostrEvent, type EventTemplate } from 'nostr-tools'
 import type { UploadTask, TranscodeState } from '@/types/upload-manager'
 import {
   getUploadTasks,
@@ -27,6 +30,29 @@ import {
   getResumableTasks,
 } from '@/lib/upload-manager-storage'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useAppContext } from '@/hooks/useAppContext'
+import { relayPool } from '@/nostr/core'
+import { nowInSecs } from '@/lib/utils'
+import {
+  parseDvmResultContent,
+  parseCodecsFromMimetype,
+  RESOLUTION_DIMENSIONS,
+  type DvmHandlerInfo,
+} from '@/lib/dvm-utils'
+import { extractBlossomHash } from '@/utils/video-event'
+import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import type { VideoVariant } from '@/lib/video-processing'
+import type { BlobDescriptor } from 'blossom-client-sdk'
+import { useUploadNotifications } from '@/hooks/useUploadNotifications'
+
+// DVM kinds
+const DVM_REQUEST_KIND = 5207
+const DVM_RESULT_KIND = 6207
+const DVM_FEEDBACK_KIND = 7000
+const HANDLER_INFO_KIND = 31990
+
+// 12 hour timeout for resumable jobs
+const TRANSCODE_JOB_TIMEOUT_MS = 12 * 60 * 60 * 1000
 
 export interface UploadManagerContextType {
   // Task state
@@ -40,10 +66,21 @@ export interface UploadManagerContextType {
   cancelTask(taskId: string): void
   removeTask(taskId: string): void
 
-  // Transcode operations
-  startTranscodeTracking(taskId: string, state: TranscodeState, subscription?: Subscription): void
-  updateTranscodeState(taskId: string, state: Partial<TranscodeState>): void
-  completeTranscode(taskId: string, resolution: string): void
+  // Transcode operations - provider owns the subscriptions
+  startTranscode(
+    taskId: string,
+    inputVideoUrl: string,
+    resolutions: string[],
+    originalDuration?: number,
+    onComplete?: (video: VideoVariant) => void,
+    onAllComplete?: () => void
+  ): Promise<void>
+  resumeTranscode(
+    taskId: string,
+    onComplete?: (video: VideoVariant) => void,
+    onAllComplete?: () => void
+  ): Promise<void>
+  cancelTranscode(taskId: string): void
 
   // Query helpers
   getTask(taskId: string): UploadTask | undefined
@@ -53,10 +90,6 @@ export interface UploadManagerContextType {
   // Global state
   hasActiveUploads: boolean
   activeTaskCount: number
-
-  // Subscription management (for DVM)
-  registerSubscription(taskId: string, subscription: Subscription): void
-  unregisterSubscription(taskId: string): void
 }
 
 const UploadManagerContext = createContext<UploadManagerContextType | undefined>(undefined)
@@ -65,8 +98,17 @@ interface UploadManagerProviderProps {
   children: ReactNode
 }
 
+interface TranscodeJob {
+  subscription: Subscription | null
+  abortController: AbortController
+  onComplete?: (video: VideoVariant) => void
+  onAllComplete?: () => void
+}
+
 export function UploadManagerProvider({ children }: UploadManagerProviderProps) {
   const { user } = useCurrentUser()
+  const { config } = useAppContext()
+  const { addNotification } = useUploadNotifications()
 
   // Task state - Map for O(1) lookups
   const [tasks, setTasks] = useState<Map<string, UploadTask>>(() => {
@@ -74,11 +116,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     return new Map(storedTasks.map(t => [t.id, t]))
   })
 
-  // Subscriptions for DVM transcode (survive re-renders)
-  const subscriptionsRef = useRef<Map<string, Subscription>>(new Map())
+  // Active transcode jobs (subscriptions + abort controllers)
+  const jobsRef = useRef<Map<string, TranscodeJob>>(new Map())
 
-  // Abort controllers for uploads (survive re-renders)
-  const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
+  // Refs for stable access in callbacks
+  const userRef = useRef(user)
+  const configRef = useRef(config)
+  userRef.current = user
+  configRef.current = config
 
   // Cleanup old tasks on mount
   useEffect(() => {
@@ -91,29 +136,16 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     saveUploadTasks(taskArray)
   }, [tasks])
 
-  // Cleanup subscriptions on unmount
+  // Cleanup subscriptions on unmount (only when app closes)
   useEffect(() => {
     return () => {
-      subscriptionsRef.current.forEach(sub => sub.unsubscribe())
-      subscriptionsRef.current.clear()
-      abortControllersRef.current.forEach(ctrl => ctrl.abort())
-      abortControllersRef.current.clear()
+      jobsRef.current.forEach(job => {
+        job.subscription?.unsubscribe()
+        job.abortController.abort()
+      })
+      jobsRef.current.clear()
     }
   }, [])
-
-  // Auto-resume resumable tasks when user logs in
-  useEffect(() => {
-    if (!user) return
-
-    const resumable = getResumableTasks()
-    if (resumable.length > 0 && import.meta.env.DEV) {
-      console.log('[UploadManager] Found resumable tasks:', resumable.length)
-    }
-
-    // Note: Actual resume logic for DVM subscriptions should be triggered
-    // by the component that owns the transcode (e.g., DvmTranscodeAlert)
-    // This provider just maintains the state
-  }, [user])
 
   // Helper to update tasks immutably
   const updateTasksState = useCallback((taskId: string, updates: Partial<UploadTask>) => {
@@ -170,37 +202,45 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Complete a task
   const completeTask = useCallback(
     (taskId: string) => {
+      const task = tasks.get(taskId)
       updateTasksState(taskId, {
         status: 'complete',
         completedAt: Date.now(),
       })
 
-      // Cleanup subscription if exists
-      const sub = subscriptionsRef.current.get(taskId)
-      if (sub) {
-        sub.unsubscribe()
-        subscriptionsRef.current.delete(taskId)
+      // Cleanup job if exists
+      const job = jobsRef.current.get(taskId)
+      if (job) {
+        job.subscription?.unsubscribe()
+        jobsRef.current.delete(taskId)
       }
+
+      // Fire notification
+      addNotification('transcode_complete', taskId, task?.videoTitle)
     },
-    [updateTasksState]
+    [updateTasksState, tasks, addNotification]
   )
 
   // Fail a task
   const failTask = useCallback(
     (taskId: string, error: string, retryable = true) => {
+      const task = tasks.get(taskId)
       updateTasksState(taskId, {
         status: 'error',
         error: { message: error, retryable },
       })
 
-      // Cleanup subscription if exists
-      const sub = subscriptionsRef.current.get(taskId)
-      if (sub) {
-        sub.unsubscribe()
-        subscriptionsRef.current.delete(taskId)
+      // Cleanup job if exists
+      const job = jobsRef.current.get(taskId)
+      if (job) {
+        job.subscription?.unsubscribe()
+        jobsRef.current.delete(taskId)
       }
+
+      // Fire notification
+      addNotification('transcode_error', taskId, task?.videoTitle, undefined, error)
     },
-    [updateTasksState]
+    [updateTasksState, tasks, addNotification]
   )
 
   // Cancel a task
@@ -208,18 +248,12 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     (taskId: string) => {
       updateTasksState(taskId, { status: 'cancelled' })
 
-      // Abort upload if in progress
-      const abortController = abortControllersRef.current.get(taskId)
-      if (abortController) {
-        abortController.abort()
-        abortControllersRef.current.delete(taskId)
-      }
-
-      // Cleanup subscription if exists
-      const sub = subscriptionsRef.current.get(taskId)
-      if (sub) {
-        sub.unsubscribe()
-        subscriptionsRef.current.delete(taskId)
+      // Cleanup job if exists
+      const job = jobsRef.current.get(taskId)
+      if (job) {
+        job.abortController.abort()
+        job.subscription?.unsubscribe()
+        jobsRef.current.delete(taskId)
       }
     },
     [updateTasksState]
@@ -234,90 +268,760 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     })
     removeUploadTask(taskId)
 
-    // Cleanup subscription if exists
-    const sub = subscriptionsRef.current.get(taskId)
-    if (sub) {
-      sub.unsubscribe()
-      subscriptionsRef.current.delete(taskId)
+    // Cleanup job if exists
+    const job = jobsRef.current.get(taskId)
+    if (job) {
+      job.subscription?.unsubscribe()
+      jobsRef.current.delete(taskId)
     }
   }, [])
 
-  // Start tracking a transcode
-  const startTranscodeTracking = useCallback(
-    (taskId: string, state: TranscodeState, subscription?: Subscription) => {
+  // Discover DVM handler
+  const discoverDvm = useCallback(async (): Promise<DvmHandlerInfo | null> => {
+    const readRelays = configRef.current.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+    if (readRelays.length === 0) {
+      throw new Error('No read relays configured')
+    }
+
+    return new Promise((resolve, reject) => {
+      let resolved = false
+
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          sub.unsubscribe()
+          reject(new Error('DVM discovery timed out'))
+        }
+      }, 10000)
+
+      const sub = relayPool
+        .request(readRelays, [
+          {
+            kinds: [HANDLER_INFO_KIND],
+            '#k': ['5207'],
+            '#d': ['video-transform-hls'],
+            limit: 1,
+          },
+        ])
+        .subscribe({
+          next: event => {
+            if (typeof event === 'string') return
+            if (resolved) return
+
+            const nostrEvent = event as NostrEvent
+            let name: string | undefined
+            let about: string | undefined
+
+            try {
+              const content = JSON.parse(nostrEvent.content || '{}')
+              name = content.name
+              about = content.about
+            } catch {
+              // Content is not JSON
+            }
+
+            const nameTag = nostrEvent.tags.find(t => t[0] === 'name')
+            const aboutTag = nostrEvent.tags.find(t => t[0] === 'about')
+            if (nameTag?.[1]) name = nameTag[1]
+            if (aboutTag?.[1]) about = aboutTag[1]
+
+            resolved = true
+            clearTimeout(timeout)
+            sub.unsubscribe()
+            resolve({ pubkey: nostrEvent.pubkey, name, about })
+          },
+          error: err => {
+            if (!resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              reject(err)
+            }
+          },
+          complete: () => {
+            if (!resolved) {
+              resolved = true
+              clearTimeout(timeout)
+              resolve(null)
+            }
+          },
+        })
+    })
+  }, [])
+
+  // Mirror transcoded video to user's servers
+  const mirrorTranscodedVideo = useCallback(async (video: VideoVariant): Promise<VideoVariant> => {
+    const currentUser = userRef.current
+    const currentConfig = configRef.current
+
+    if (!currentUser) throw new Error('User not logged in')
+
+    const uploadServers =
+      currentConfig.blossomServers
+        ?.filter(s => s.tags.includes('initial upload'))
+        .map(s => s.url) || []
+    const mirrorServers =
+      currentConfig.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+
+    if (uploadServers.length === 0 && mirrorServers.length === 0) {
+      return video
+    }
+
+    const { sha256: urlHash } = extractBlossomHash(video.url!)
+    let sha256: string | undefined = urlHash
+    let size: number | undefined
+
+    if (!sha256) {
+      try {
+        const headResponse = await fetch(video.url!, { method: 'HEAD' })
+        sha256 = headResponse.headers.get('x-sha-256') || undefined
+        const contentLength = headResponse.headers.get('content-length')
+        size = contentLength ? parseInt(contentLength, 10) : undefined
+      } catch {
+        // Continue without hash
+      }
+    } else {
+      try {
+        const headResponse = await fetch(video.url!, { method: 'HEAD' })
+        const contentLength = headResponse.headers.get('content-length')
+        size = contentLength ? parseInt(contentLength, 10) : undefined
+      } catch {
+        size = video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined
+      }
+    }
+
+    if (!sha256) {
+      console.warn('[UploadManager] Could not get SHA256 hash, cannot mirror')
+      return video
+    }
+
+    const sourceBlob: BlobDescriptor = {
+      url: video.url!,
+      sha256,
+      size: size || 0,
+      type: 'video/mp4',
+      uploaded: Date.now(),
+    }
+
+    const updatedVideo = { ...video }
+
+    if (uploadServers.length > 0) {
+      try {
+        const uploadedBlobs = await mirrorBlobsToServers({
+          mirrorServers: uploadServers,
+          blob: sourceBlob,
+          signer: async draft => await currentUser.signer.signEvent(draft),
+        })
+        updatedVideo.uploadedBlobs = uploadedBlobs
+        if (uploadedBlobs.length > 0) {
+          updatedVideo.url = uploadedBlobs[0].url
+        }
+      } catch (err) {
+        console.warn('[UploadManager] Failed to mirror to upload servers:', err)
+      }
+    }
+
+    if (mirrorServers.length > 0) {
+      try {
+        const mirroredBlobs = await mirrorBlobsToServers({
+          mirrorServers,
+          blob: sourceBlob,
+          signer: async draft => await currentUser.signer.signEvent(draft),
+        })
+        updatedVideo.mirroredBlobs = mirroredBlobs
+      } catch (err) {
+        console.warn('[UploadManager] Failed to mirror to mirror servers:', err)
+      }
+    }
+
+    return updatedVideo
+  }, [])
+
+  // Subscribe to DVM responses - returns a promise that resolves with the result
+  const subscribeToDvmResponses = useCallback(
+    (
+      taskId: string,
+      requestEventId: string,
+      dvmPubkey: string,
+      originalDuration?: number,
+      requestedResolution?: string
+    ): Promise<VideoVariant> => {
+      const readRelays = configRef.current.relays
+        .filter(r => r.tags.includes('read'))
+        .map(r => r.url)
+
+      return new Promise((resolve, reject) => {
+        const job = jobsRef.current.get(taskId)
+        if (!job) {
+          reject(new Error('Job not found'))
+          return
+        }
+
+        const timeout = setTimeout(
+          () => {
+            job.subscription?.unsubscribe()
+            reject(new Error('DVM job timed out after 10 minutes'))
+          },
+          10 * 60 * 1000
+        )
+
+        const subscription = relayPool
+          .subscription(readRelays, [
+            {
+              kinds: [DVM_FEEDBACK_KIND, DVM_RESULT_KIND],
+              authors: [dvmPubkey],
+              '#e': [requestEventId],
+            },
+          ])
+          .subscribe({
+            next: async event => {
+              if (typeof event === 'string') return
+
+              const nostrEvent = event as NostrEvent
+
+              if (nostrEvent.kind === DVM_FEEDBACK_KIND) {
+                const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
+                if (statusTag) {
+                  const [, feedbackStatus, statusExtraInfo] = statusTag
+                  const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
+                  const message =
+                    contentTag?.[1] ||
+                    statusExtraInfo ||
+                    (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+
+                  const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
+                  const eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+
+                  const percentMatch = message?.match(/(\d+)%/)
+                  const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
+
+                  if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
+                    // Update task state
+                    updateTasksState(taskId, {
+                      transcodeState: {
+                        ...tasks.get(taskId)?.transcodeState,
+                        status: 'transcoding',
+                        message,
+                        percentage,
+                        eta,
+                      } as TranscodeState,
+                    })
+                  } else if (feedbackStatus === 'error') {
+                    clearTimeout(timeout)
+                    subscription.unsubscribe()
+                    reject(new Error(contentTag?.[1] || statusExtraInfo || 'DVM processing error'))
+                  }
+                }
+              } else if (nostrEvent.kind === DVM_RESULT_KIND) {
+                clearTimeout(timeout)
+                subscription.unsubscribe()
+
+                const result = parseDvmResultContent(nostrEvent.content)
+                if (!result || !result.urls || result.urls.length === 0) {
+                  reject(new Error('Invalid DVM result: no URLs returned'))
+                  return
+                }
+
+                const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
+                const duration = result.duration || originalDuration || 0
+
+                let bitrate = result.bitrate
+                if (!bitrate && result.size_bytes && duration > 0) {
+                  bitrate = Math.round((result.size_bytes * 8) / duration)
+                }
+
+                const resolution = result.resolution || requestedResolution || '720p'
+                const dimension = RESOLUTION_DIMENSIONS[resolution] || '1280x720'
+
+                const videoVariant: VideoVariant = {
+                  url: result.urls[0],
+                  dimension,
+                  sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
+                  duration,
+                  bitrate,
+                  videoCodec,
+                  audioCodec,
+                  uploadedBlobs: [],
+                  mirroredBlobs: [],
+                  inputMethod: 'url',
+                  qualityLabel: resolution,
+                }
+
+                resolve(videoVariant)
+              }
+            },
+            error: err => {
+              clearTimeout(timeout)
+              reject(err)
+            },
+          })
+
+        // Store subscription in job
+        job.subscription = subscription
+      })
+    },
+    [updateTasksState, tasks]
+  )
+
+  // Process a single resolution
+  const processResolution = useCallback(
+    async (
+      taskId: string,
+      inputVideoUrl: string,
+      resolution: string,
+      dvm: DvmHandlerInfo,
+      originalDuration?: number,
+      queueInfo?: { resolutions: string[]; currentIndex: number; completed: string[] }
+    ): Promise<VideoVariant> => {
+      const currentUser = userRef.current
+      const currentConfig = configRef.current
+
+      if (!currentUser) throw new Error('User not logged in')
+
+      const writeRelays = currentConfig.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+
+      // Update state
       updateTasksState(taskId, {
         status: 'transcoding',
-        transcodeState: state,
+        transcodeState: {
+          status: 'transcoding',
+          dvmPubkey: dvm.pubkey,
+          inputVideoUrl,
+          originalDuration,
+          startedAt: Date.now(),
+          currentResolution: resolution,
+          resolutionQueue: queueInfo?.resolutions || [resolution],
+          completedResolutions: queueInfo?.completed || [],
+          message: `Submitting ${resolution} transcode job...`,
+        },
       })
 
-      if (subscription) {
-        subscriptionsRef.current.set(taskId, subscription)
+      const jobRequest: EventTemplate = {
+        kind: DVM_REQUEST_KIND,
+        content: '',
+        created_at: nowInSecs(),
+        tags: [
+          ['i', inputVideoUrl, 'url'],
+          ['p', dvm.pubkey],
+          ['param', 'mode', 'mp4'],
+          ['param', 'resolution', resolution],
+          ['relays', ...writeRelays],
+        ],
       }
+
+      const signedRequest = await currentUser.signer.signEvent(jobRequest)
+      await relayPool.publish(writeRelays, signedRequest)
+
+      if (import.meta.env.DEV) {
+        console.log(`[UploadManager] Published ${resolution} job request:`, signedRequest.id)
+      }
+
+      // Check if cancelled
+      const job = jobsRef.current.get(taskId)
+      if (job?.abortController.signal.aborted) {
+        throw new Error('Cancelled')
+      }
+
+      // Update state with request ID
+      updateTasksState(taskId, {
+        transcodeState: {
+          ...tasks.get(taskId)?.transcodeState,
+          requestEventId: signedRequest.id,
+          message: `Transcoding ${resolution}...`,
+        } as TranscodeState,
+      })
+
+      // Subscribe and wait for result
+      const transcodedResult = await subscribeToDvmResponses(
+        taskId,
+        signedRequest.id,
+        dvm.pubkey,
+        originalDuration,
+        resolution
+      )
+
+      // Check if cancelled
+      if (job?.abortController.signal.aborted) {
+        throw new Error('Cancelled')
+      }
+
+      // Mirror to user's servers
+      updateTasksState(taskId, {
+        status: 'mirroring',
+        transcodeState: {
+          ...tasks.get(taskId)?.transcodeState,
+          status: 'mirroring',
+          message: `Copying ${resolution} to your servers...`,
+        } as TranscodeState,
+      })
+
+      const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
+
+      return mirroredVideo
+    },
+    [updateTasksState, tasks, subscribeToDvmResponses, mirrorTranscodedVideo]
+  )
+
+  // Start transcode - the main entry point
+  const startTranscode = useCallback(
+    async (
+      taskId: string,
+      inputVideoUrl: string,
+      resolutions: string[],
+      originalDuration?: number,
+      onComplete?: (video: VideoVariant) => void,
+      onAllComplete?: () => void
+    ) => {
+      if (!userRef.current) {
+        failTask(taskId, 'User not logged in')
+        return
+      }
+
+      // Create job entry
+      const job: TranscodeJob = {
+        subscription: null,
+        abortController: new AbortController(),
+        onComplete,
+        onAllComplete,
+      }
+      jobsRef.current.set(taskId, job)
+
+      const completedResolutions: string[] = []
+
+      try {
+        // Discover DVM
+        updateTasksState(taskId, {
+          status: 'transcoding',
+          transcodeState: {
+            status: 'discovering',
+            resolutionQueue: resolutions,
+            completedResolutions: [],
+            message: 'Finding transcoding service...',
+          },
+        })
+
+        const dvm = await discoverDvm()
+        if (!dvm) {
+          throw new Error('No DVM transcoding service found')
+        }
+
+        if (job.abortController.signal.aborted) {
+          return
+        }
+
+        // Process each resolution
+        for (let i = 0; i < resolutions.length; i++) {
+          const resolution = resolutions[i]
+          const queueInfo = {
+            resolutions,
+            currentIndex: i,
+            completed: [...completedResolutions],
+          }
+
+          const mirroredVideo = await processResolution(
+            taskId,
+            inputVideoUrl,
+            resolution,
+            dvm,
+            originalDuration,
+            queueInfo
+          )
+
+          completedResolutions.push(resolution)
+
+          // Notify completion for this resolution
+          job.onComplete?.(mirroredVideo)
+
+          // Update state
+          updateTasksState(taskId, {
+            transcodeState: {
+              ...tasks.get(taskId)?.transcodeState,
+              completedResolutions: [...completedResolutions],
+              currentResolution: resolutions[i + 1],
+              message:
+                i === resolutions.length - 1
+                  ? 'All transcodes complete!'
+                  : `${resolution} complete, starting next...`,
+            } as TranscodeState,
+          })
+        }
+
+        // All complete
+        completeTask(taskId)
+        job.onAllComplete?.()
+      } catch (err) {
+        if (err instanceof Error && err.message === 'Cancelled') {
+          updateTasksState(taskId, { status: 'cancelled' })
+          return
+        }
+
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        failTask(taskId, errorMessage)
+      }
+    },
+    [updateTasksState, tasks, discoverDvm, processResolution, completeTask, failTask]
+  )
+
+  // Resume transcode from persisted state
+  const resumeTranscode = useCallback(
+    async (
+      taskId: string,
+      onComplete?: (video: VideoVariant) => void,
+      onAllComplete?: () => void
+    ) => {
+      const task = tasks.get(taskId)
+      if (!task || !task.transcodeState) {
+        console.warn('[UploadManager] Cannot resume - no transcode state')
+        return
+      }
+
+      const state = task.transcodeState
+
+      // Check timeout
+      if (state.startedAt && Date.now() - state.startedAt > TRANSCODE_JOB_TIMEOUT_MS) {
+        failTask(taskId, 'Transcode job expired (started over 12 hours ago)')
+        return
+      }
+
+      if (!userRef.current) {
+        failTask(taskId, 'User not logged in')
+        return
+      }
+
+      // Create job entry
+      const job: TranscodeJob = {
+        subscription: null,
+        abortController: new AbortController(),
+        onComplete,
+        onAllComplete,
+      }
+      jobsRef.current.set(taskId, job)
+
+      const resolutionQueue = state.resolutionQueue || ['720p']
+      const completedResolutions = [...(state.completedResolutions || [])]
+      const currentResolution = state.currentResolution || '720p'
+      const currentIndex = resolutionQueue.indexOf(currentResolution)
+
+      try {
+        updateTasksState(taskId, {
+          status: 'transcoding',
+          transcodeState: {
+            ...state,
+            status: 'transcoding',
+            message: `Resuming ${currentResolution} transcode...`,
+          },
+        })
+
+        // Check if we have a pending request to resume
+        if (state.requestEventId && state.dvmPubkey) {
+          // Try to get existing result first
+          const existingResult = await queryForExistingResult(state.requestEventId, state.dvmPubkey)
+
+          if (existingResult) {
+            // DVM finished while we were away
+            const result = parseDvmResultContent(existingResult.content)
+            if (result?.urls?.length) {
+              const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
+              const duration = result.duration || state.originalDuration || 0
+              let bitrate = result.bitrate
+              if (!bitrate && result.size_bytes && duration > 0) {
+                bitrate = Math.round((result.size_bytes * 8) / duration)
+              }
+
+              const videoVariant: VideoVariant = {
+                url: result.urls[0],
+                dimension: RESOLUTION_DIMENSIONS[currentResolution] || '1280x720',
+                sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
+                duration,
+                bitrate,
+                videoCodec,
+                audioCodec,
+                uploadedBlobs: [],
+                mirroredBlobs: [],
+                inputMethod: 'url',
+                qualityLabel: currentResolution,
+              }
+
+              // Mirror it
+              updateTasksState(taskId, {
+                status: 'mirroring',
+                transcodeState: {
+                  ...state,
+                  status: 'mirroring',
+                  message: `Copying ${currentResolution} to your servers...`,
+                },
+              })
+
+              const mirroredVideo = await mirrorTranscodedVideo(videoVariant)
+              completedResolutions.push(currentResolution)
+              job.onComplete?.(mirroredVideo)
+            }
+          } else {
+            // Still processing - resubscribe
+            const transcodedResult = await subscribeToDvmResponses(
+              taskId,
+              state.requestEventId,
+              state.dvmPubkey,
+              state.originalDuration,
+              currentResolution
+            )
+
+            // Mirror
+            updateTasksState(taskId, {
+              status: 'mirroring',
+              transcodeState: {
+                ...state,
+                status: 'mirroring',
+                message: `Copying ${currentResolution} to your servers...`,
+              },
+            })
+
+            const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
+            completedResolutions.push(currentResolution)
+            job.onComplete?.(mirroredVideo)
+          }
+        }
+
+        // Continue with remaining resolutions
+        const remainingResolutions = resolutionQueue.slice(currentIndex >= 0 ? currentIndex + 1 : 0)
+
+        if (remainingResolutions.length > 0) {
+          const dvm = await discoverDvm()
+          if (!dvm) {
+            throw new Error('No DVM transcoding service found')
+          }
+
+          for (let i = 0; i < remainingResolutions.length; i++) {
+            const resolution = remainingResolutions[i]
+            const queueInfo = {
+              resolutions: resolutionQueue,
+              currentIndex: resolutionQueue.indexOf(resolution),
+              completed: [...completedResolutions],
+            }
+
+            const video = await processResolution(
+              taskId,
+              state.inputVideoUrl!,
+              resolution,
+              dvm,
+              state.originalDuration,
+              queueInfo
+            )
+
+            completedResolutions.push(resolution)
+            job.onComplete?.(video)
+          }
+        }
+
+        // All complete
+        completeTask(taskId)
+        job.onAllComplete?.()
+      } catch (err) {
+        if (err instanceof Error && err.message === 'Cancelled') {
+          updateTasksState(taskId, { status: 'cancelled' })
+          return
+        }
+
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        failTask(taskId, errorMessage)
+      }
+    },
+    [
+      tasks,
+      updateTasksState,
+      discoverDvm,
+      processResolution,
+      subscribeToDvmResponses,
+      mirrorTranscodedVideo,
+      completeTask,
+      failTask,
+    ]
+  )
+
+  // Query for existing DVM result
+  const queryForExistingResult = useCallback(
+    async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
+      const readRelays = configRef.current.relays
+        .filter(r => r.tags.includes('read'))
+        .map(r => r.url)
+
+      return new Promise(resolve => {
+        let found = false
+        const timeout = setTimeout(() => {
+          if (!found) {
+            sub.unsubscribe()
+            resolve(null)
+          }
+        }, 5000)
+
+        const sub = relayPool
+          .request(readRelays, [
+            {
+              kinds: [DVM_RESULT_KIND],
+              authors: [dvmPubkey],
+              '#e': [requestEventId],
+              limit: 1,
+            },
+          ])
+          .subscribe({
+            next: event => {
+              if (typeof event === 'string') return
+              found = true
+              clearTimeout(timeout)
+              sub.unsubscribe()
+              resolve(event as NostrEvent)
+            },
+            complete: () => {
+              if (!found) {
+                clearTimeout(timeout)
+                resolve(null)
+              }
+            },
+          })
+      })
+    },
+    []
+  )
+
+  // Cancel transcode
+  const cancelTranscode = useCallback(
+    (taskId: string) => {
+      const job = jobsRef.current.get(taskId)
+      if (job) {
+        job.abortController.abort()
+        job.subscription?.unsubscribe()
+        jobsRef.current.delete(taskId)
+      }
+
+      updateTasksState(taskId, {
+        status: 'cancelled',
+        transcodeState: undefined,
+      })
     },
     [updateTasksState]
   )
 
-  // Update transcode state
-  const updateTranscodeState = useCallback(
-    (taskId: string, state: Partial<TranscodeState>) => {
-      setTasks(prev => {
-        const task = prev.get(taskId)
-        if (!task) return prev
+  // Auto-resume tasks on mount when user is available
+  useEffect(() => {
+    if (!user) return
 
-        const newMap = new Map(prev)
-        newMap.set(taskId, {
-          ...task,
-          transcodeState: {
-            ...task.transcodeState,
-            ...state,
-          } as TranscodeState,
-          updatedAt: Date.now(),
-        })
-        return newMap
-      })
+    const resumable = getResumableTasks()
+    if (resumable.length > 0 && import.meta.env.DEV) {
+      console.log('[UploadManager] Found resumable tasks:', resumable.length)
+    }
 
-      // Update storage
-      const task = tasks.get(taskId)
-      if (task) {
-        updateUploadTask(taskId, {
-          transcodeState: { ...task.transcodeState, ...state } as TranscodeState,
-        })
+    // Auto-resume transcoding tasks
+    for (const task of resumable) {
+      if (task.status === 'transcoding' && task.transcodeState) {
+        if (import.meta.env.DEV) {
+          console.log('[UploadManager] Auto-resuming task:', task.id)
+        }
+        // Resume without callbacks - the upload page will connect when opened
+        resumeTranscode(task.id)
       }
-    },
-    [tasks]
-  )
+    }
+  }, [user, resumeTranscode])
 
-  // Complete a single resolution transcode
-  const completeTranscode = useCallback((taskId: string, resolution: string) => {
-    setTasks(prev => {
-      const task = prev.get(taskId)
-      if (!task || !task.transcodeState) return prev
-
-      const completedResolutions = [...(task.transcodeState.completedResolutions || []), resolution]
-
-      const remainingQueue = task.transcodeState.resolutionQueue.filter(
-        r => !completedResolutions.includes(r)
-      )
-
-      const isAllComplete = remainingQueue.length === 0
-
-      const newMap = new Map(prev)
-      newMap.set(taskId, {
-        ...task,
-        status: isAllComplete ? 'complete' : 'transcoding',
-        completedAt: isAllComplete ? Date.now() : undefined,
-        transcodeState: {
-          ...task.transcodeState,
-          completedResolutions,
-          currentResolution: remainingQueue[0],
-        },
-        updatedAt: Date.now(),
-      })
-      return newMap
-    })
-  }, [])
-
-  // Get a specific task
+  // Query helpers
   const getTask = useCallback(
     (taskId: string): UploadTask | undefined => {
       return tasks.get(taskId)
@@ -325,7 +1029,6 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [tasks]
   )
 
-  // Check if draft has an active task
   const hasActiveTask = useCallback(
     (draftId: string): boolean => {
       const task = tasks.get(draftId)
@@ -335,7 +1038,6 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [tasks]
   )
 
-  // Get all active tasks for a draft
   const getActiveTasksForDraft = useCallback(
     (draftId: string): UploadTask[] => {
       return Array.from(tasks.values()).filter(
@@ -346,25 +1048,6 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     },
     [tasks]
   )
-
-  // Register a subscription
-  const registerSubscription = useCallback((taskId: string, subscription: Subscription) => {
-    // Unsubscribe from existing if any
-    const existing = subscriptionsRef.current.get(taskId)
-    if (existing) {
-      existing.unsubscribe()
-    }
-    subscriptionsRef.current.set(taskId, subscription)
-  }, [])
-
-  // Unregister a subscription
-  const unregisterSubscription = useCallback((taskId: string) => {
-    const sub = subscriptionsRef.current.get(taskId)
-    if (sub) {
-      sub.unsubscribe()
-      subscriptionsRef.current.delete(taskId)
-    }
-  }, [])
 
   // Computed values
   const hasActiveUploads = useMemo(() => {
@@ -388,16 +1071,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       failTask,
       cancelTask,
       removeTask: removeTaskFn,
-      startTranscodeTracking,
-      updateTranscodeState,
-      completeTranscode,
+      startTranscode,
+      resumeTranscode,
+      cancelTranscode,
       getTask,
       hasActiveTask,
       getActiveTasksForDraft,
       hasActiveUploads,
       activeTaskCount,
-      registerSubscription,
-      unregisterSubscription,
     }),
     [
       tasks,
@@ -407,16 +1088,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       failTask,
       cancelTask,
       removeTaskFn,
-      startTranscodeTracking,
-      updateTranscodeState,
-      completeTranscode,
+      startTranscode,
+      resumeTranscode,
+      cancelTranscode,
       getTask,
       hasActiveTask,
       getActiveTasksForDraft,
       hasActiveUploads,
       activeTaskCount,
-      registerSubscription,
-      unregisterSubscription,
     ]
   )
 

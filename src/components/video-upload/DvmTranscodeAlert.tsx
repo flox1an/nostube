@@ -3,20 +3,20 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
-  useDvmTranscode,
+  useDvmTranscodeManager,
   type TranscodeStatus,
   type StatusMessage,
-  type PersistableTranscodeState,
-} from '@/hooks/useDvmTranscode'
+} from '@/hooks/useDvmTranscodeManager'
 import { useDvmAvailability } from '@/hooks/useDvmAvailability'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
 import { shouldOfferTranscode, AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface DvmTranscodeAlertProps {
+  draftId: string
   video: VideoVariant
   existingResolutions?: string[]
   onComplete: (transcodedVideo: VideoVariant) => void
@@ -31,13 +31,13 @@ interface DvmTranscodeAlertProps {
  * Shown in Step 1 of the upload wizard below VideoVariantsTable.
  */
 export function DvmTranscodeAlert({
+  draftId,
   video,
   existingResolutions = [],
   onComplete,
   onAllComplete,
   onStatusChange,
   initialTranscodeState,
-  onTranscodeStateChange,
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
@@ -50,26 +50,19 @@ export function DvmTranscodeAlert({
   // Check if a DVM is available (only check if not resuming)
   const { isAvailable: isDvmAvailable, isLoading: isDvmLoading } = useDvmAvailability()
 
-  // Handle state changes for persistence
-  const handleStateChange = useCallback(
-    (state: PersistableTranscodeState | null) => {
-      onTranscodeStateChange?.(state as DvmTranscodeState | null)
-    },
-    [onTranscodeStateChange]
-  )
-
+  // Use the manager-backed hook for background transcoding
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
-    useDvmTranscode({
+    useDvmTranscodeManager({
+      taskId: draftId,
       onComplete,
       onAllComplete,
-      onStateChange: handleStateChange,
     })
 
-  // Auto-resume if we have initial state
+  // Auto-resume if we have initial state (or if there's an active task in the manager)
   useEffect(() => {
     if (initialTranscodeState && !hasResumedRef.current && status === 'idle') {
       hasResumedRef.current = true
-      resumeTranscode(initialTranscodeState)
+      resumeTranscode()
     }
   }, [initialTranscodeState, status, resumeTranscode])
 

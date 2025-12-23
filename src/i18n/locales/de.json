@@ -118,6 +118,8 @@
     "languages": "Sprachen",
     "location": "Standort",
     "viewLocation": "Standort auf Karte anzeigen",
+    "expiresIn": "Läuft ab in {{time}}",
+    "expired": "Abgelaufen",
     "comments": {
       "title": "Kommentare",
       "addComment": "Kommentar hinzufügen...",

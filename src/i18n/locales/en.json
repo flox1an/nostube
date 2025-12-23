@@ -118,6 +118,8 @@
     "languages": "Languages",
     "location": "Location",
     "viewLocation": "View location on map",
+    "expiresIn": "Expires in {{time}}",
+    "expired": "Expired",
     "comments": {
       "title": "Comments",
       "addComment": "Add a comment...",

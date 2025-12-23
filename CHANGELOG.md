@@ -35,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Play/Pause Overlay Animation**: Play icon now displays 2x longer (800ms) than pause icon (400ms) for better visual feedback. Uses `animationend` event instead of fixed timeout to prevent animation cutoffs. Component is shared between VideoPlayer and ShortsVideoPage (PlayPauseOverlay.tsx)
+- **Video Expiration Badge**: Videos with NIP-40 expiration tags now show an amber "Expires in X" badge next to the title, or a red "Expired" badge if already expired. Uses date-fns formatDistance for human-readable time (VideoInfoSection.tsx)
+- **Play/Pause Overlay Animation**: Play icon now displays 2x longer (800ms) than pause icon (400ms) for better visual feedback. Uses `animation-fill-mode: forwards` to prevent animation cutoffs. Component is shared between VideoPlayer and ShortsVideoPage (PlayPauseOverlay.tsx)
 - **Page Max-Width Consistency**: All pages now have consistent `max-w-560` max-width constraint for better readability on ultra-wide displays. Applies to HomePage, SearchPage, ShortsPage, CategoryPage, HashtagPage, AuthorPage, SubscriptionsPage, LikedVideosPage, HistoryPage, SinglePlaylistPage, and VideoPageLayout
 - **Upload Form Wizard**: Redesigned upload form as 4-step wizard with prev/next navigation. Step 1: Video upload with full VideoVariantsTable, Step 2: Form fields (title, description, tags, language), Step 3: Thumbnail selection, Step 4: Additional settings (content warning, expiration). Validation prevents proceeding without required fields (video for step 2, title for step 3, thumbnail for step 4). "Save Draft" button on lower right instead of top "Back to Drafts" button. Required fields marked with asterisk (\*) and each step shows description explaining requirements
 - **Upload Hints Removed**: Removed tip text about MP4/H.264 and quick start hint about input method selection from upload wizard for cleaner UI

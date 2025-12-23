@@ -24,7 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag, Clock } from 'lucide-react'
 import { imageProxy, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -100,6 +100,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
 
+  // Extract expiration timestamp from video event (NIP-40)
+  // Calculate once - expiration status won't change during component lifetime
+  const expirationTimestamp = videoEvent?.tags.find(tag => tag[0] === 'expiration')?.[1]
+  const expirationDate = expirationTimestamp ? new Date(parseInt(expirationTimestamp) * 1000) : null
+  const isExpired = expirationDate ? expirationDate < new Date() : false
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 pt-^4">
@@ -153,7 +159,26 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   return (
     <>
       <div className="flex flex-col gap-4 p-2 md:px-0">
-        {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
+        <div className="flex flex-wrap items-center gap-2">
+          {video?.title && <h1 className="text-2xl font-bold">{video?.title}</h1>}
+          {expirationDate && !isExpired && (
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
+            >
+              <Clock className="w-3 h-3" />
+              {t('video.expiresIn', {
+                time: formatDistance(expirationDate, new Date()),
+              })}
+            </Badge>
+          )}
+          {isExpired && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {t('video.expired')}
+            </Badge>
+          )}
+        </div>
 
         <div className="flex flex-col md:flex-row items-start justify-between">
           <Link

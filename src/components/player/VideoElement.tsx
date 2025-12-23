@@ -1,67 +1,53 @@
-import { useCallback } from 'react'
-import 'hls-video-element'
+import { forwardRef, useCallback } from 'react'
 import { type TextTrack } from '@/utils/video-event'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getLanguageLabel } from '@/lib/utils'
 
-interface HLSVideoPlayerProps {
-  videoUrl: string
-  posterUrl?: string
-  loop: boolean
-  contentWarning?: string
-  cinemaMode: boolean
-  isMobile: boolean
-  textTracks: TextTrack[]
+interface VideoElementProps {
+  src: string
+  poster?: string
+  loop?: boolean
+  autoPlay?: boolean
+  textTracks?: TextTrack[]
   sha256?: string
-  onTimeUpdate: () => void
-  onVideoError: () => void
-  hlsRef: (node: Element | null) => void
+  className?: string
+  onError?: () => void
 }
 
-export function HLSVideoPlayer({
-  videoUrl,
-  posterUrl,
-  loop,
-  contentWarning,
-  cinemaMode,
-  isMobile,
-  textTracks,
-  sha256,
-  onTimeUpdate,
-  onVideoError,
-  hlsRef,
-}: HLSVideoPlayerProps) {
+/**
+ * Core video element component with caption track support
+ */
+export const VideoElement = forwardRef<HTMLVideoElement, VideoElementProps>(function VideoElement(
+  { src, poster, loop = false, autoPlay = true, textTracks = [], sha256, className = '', onError },
+  ref
+) {
   return (
-    <hls-video
-      src={videoUrl}
-      slot="media"
-      className={cinemaMode || isMobile ? 'cinema' : 'normal'}
-      autoPlay={!contentWarning}
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
       loop={loop}
-      poster={posterUrl}
+      autoPlay={autoPlay}
+      playsInline
       crossOrigin="anonymous"
-      onTimeUpdate={onTimeUpdate}
-      ref={hlsRef}
-      tabIndex={0}
-      onError={onVideoError}
+      className={className}
+      onError={onError}
     >
-      {/* Captions for HLS */}
-      {textTracks.map(vtt => (
-        <CaptionTrack key={vtt.lang} track={vtt} sha256={sha256} />
+      {textTracks.map(track => (
+        <CaptionTrack key={track.lang} track={track} sha256={sha256} />
       ))}
-    </hls-video>
+    </video>
   )
-}
+})
 
 /**
  * Caption Track component with automatic failover using useMediaUrls
  */
 function CaptionTrack({ track, sha256 }: { track: TextTrack; sha256?: string }) {
-  // Use media URL failover for VTT captions
   const { currentUrl, moveToNext, hasMore } = useMediaUrls({
     urls: [track.url],
     mediaType: 'vtt',
-    sha256, // Use video's sha256 to discover caption alternatives
+    sha256,
   })
 
   const handleTrackError = useCallback(() => {

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Custom YouTube-Style Video Player**: Complete rewrite of the video player, replacing media-chrome and hls-video-element with a custom implementation. Features YouTube-inspired design with:
+  - Auto-hiding controls with gradient overlay (3 second timeout while playing)
+  - Progress bar that expands on hover with timestamp tooltip and draggable scrubber
+  - Volume control with expandable slider on hover
+  - Settings menu with nested submenus for quality and playback speed (0.25x to 2x)
+  - Mobile touch gestures: double-tap left/right thirds for -10s/+10s seek with ripple animation
+  - Direct hls.js integration for HLS streams (removes hls-video-element dependency)
+  - PiP, captions, theater mode, and fullscreen controls
+  - Play/pause overlay animation on click
+  - Unified architecture: single video element for both native and HLS playback
+  - New component structure in `src/components/player/` with dedicated hooks (useHls, usePlayerState, useControlsVisibility)
 - **Video Quality Selector**: Quality menu in video player control bar for non-HLS videos with multiple quality variants. Displays available qualities (720p, 1080p, etc.) in a popup menu. Preserves playback position and play state when switching qualities. Only appears when video has 2+ variants (QualityMenu.tsx, VideoPlayer.tsx)
 - **Upload Event Preview**: Collapsible preview below upload wizard showing the generated Nostr event JSON before publishing. Displays kind, content, and all tags with copy-to-clipboard functionality. Updates in real-time as form fields change (EventPreview.tsx, useVideoUpload.ts:buildVideoEvent)
 - **DVM Video Transcoding**: Multi-resolution transcoding (1080p, 720p, 480p, 360p, 240p) for high-resolution or incompatible codec videos using NIP-90 Data Vending Machines. Shows alert in upload wizard with resolution checkboxes (720p selected by default), processing resolutions sequentially. Already-existing resolutions are disabled with "(exists)" label. Progress display shows current resolution, completion status for each, and overall queue progress with icons. Supports cancellation and automatic Blossom mirroring of transcoded videos. Transcode jobs are resumable—users can navigate away and return later; state is persisted to draft and resumes automatically. 12-hour timeout for expired jobs (useDvmTranscode.ts, useDvmAvailability.ts, DvmTranscodeAlert.tsx, upload-draft.ts:DvmTranscodeState, dvm-utils.ts:RESOLUTION_DIMENSIONS)

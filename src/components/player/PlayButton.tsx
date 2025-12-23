@@ -13,7 +13,7 @@ export function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center w-10 h-10 text-white hover:text-white/80 transition-colors"
+      className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-white/20"
       aria-label={isPlaying ? 'Pause' : 'Play'}
     >
       {isPlaying ? (

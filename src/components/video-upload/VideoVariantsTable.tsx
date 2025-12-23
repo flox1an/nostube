@@ -73,6 +73,15 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
     }
   }
 
+  // Collect codec warnings - show error/warning per row, info/success once at end
+  const codecWarnings = videos.map(v => getCodecWarning(v.videoCodec))
+  const uniqueInfoWarnings = new Map<string, { type: 'info' | 'success'; key: string }>()
+  codecWarnings.forEach(w => {
+    if (w && (w.type === 'info' || w.type === 'success')) {
+      uniqueInfoWarnings.set(w.key, w as { type: 'info' | 'success'; key: string })
+    }
+  })
+
   return (
     <div className="space-y-4">
       <div className="border rounded-lg overflow-hidden">
@@ -91,6 +100,9 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
           <TableBody>
             {videos.map((video, index) => {
               const codecWarning = getCodecWarning(video.videoCodec)
+              // Only show error/warning inline, info/success shown once at end
+              const showInlineWarning =
+                codecWarning && (codecWarning.type === 'error' || codecWarning.type === 'warning')
 
               return (
                 <>
@@ -224,31 +236,18 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                       </div>
                     </TableCell>
                   </TableRow>
-                  {/* Codec Warning Row */}
-                  {codecWarning && (
+                  {/* Codec Warning Row - only for error/warning types */}
+                  {showInlineWarning && (
                     <TableRow key={`${index}-warning`}>
                       <TableCell className="p-0"></TableCell>
                       <TableCell colSpan={6} className="p-0">
-                        <Alert
-                          variant={
-                            codecWarning.type === 'error' || codecWarning.type === 'warning'
-                              ? 'destructive'
-                              : 'default'
-                          }
-                          className="rounded-none border-0"
-                        >
+                        <Alert variant="destructive" className="rounded-none border-0">
                           <div className="flex items-start gap-2">
                             {codecWarning.type === 'error' && (
                               <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
                             )}
                             {codecWarning.type === 'warning' && (
                               <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                            )}
-                            {codecWarning.type === 'info' && (
-                              <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                            )}
-                            {codecWarning.type === 'success' && (
-                              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
                             )}
                             <AlertDescription className="text-sm">
                               {t(codecWarning.key)}
@@ -261,6 +260,28 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                 </>
               )
             })}
+            {/* Info/Success messages shown once at end */}
+            {uniqueInfoWarnings.size > 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="p-0">
+                  <Alert variant="default" className="rounded-none border-0">
+                    <div className="space-y-1">
+                      {Array.from(uniqueInfoWarnings.values()).map(warning => (
+                        <div key={warning.key} className="flex items-start gap-2">
+                          {warning.type === 'info' && (
+                            <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          )}
+                          {warning.type === 'success' && (
+                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          )}
+                          <AlertDescription className="text-sm">{t(warning.key)}</AlertDescription>
+                        </div>
+                      ))}
+                    </div>
+                  </Alert>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

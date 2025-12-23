@@ -37,6 +37,9 @@ export function ContentWarning({
             id="content-warning-reason"
             value={reason}
             onChange={e => onReasonChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') e.preventDefault()
+            }}
             placeholder={t('upload.contentWarning.placeholder')}
           />
         </div>

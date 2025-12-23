@@ -180,6 +180,16 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       return
     }
 
+    // Prevent accidental submit right after arriving at step 4
+    if (justArrivedAtStep4) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[VideoUpload] Form submission blocked: just arrived at step 4, preventing double-click publish'
+        )
+      }
+      return
+    }
+
     if (import.meta.env.DEV) {
       console.log('[VideoUpload] Publishing video from step 4, title:', title)
     }
@@ -216,6 +226,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
   const [currentStep, setCurrentStep] = useState(1) // 1: Video Upload, 2: Form, 3: Thumbnail
   const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
+  const [justArrivedAtStep4, setJustArrivedAtStep4] = useState(false)
 
   // Initialize with existing configured servers
   const [uploadServers, setUploadServers] = useState<string[]>(() => {
@@ -371,6 +382,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                       </Button>
                     )}
                     <Button
+                      type="button"
                       onClick={() => setShowBlossomOnboarding(true)}
                       variant={'outline'}
                       className="cursor-pointer"
@@ -541,7 +553,15 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 {currentStep < 4 ? (
                   <Button
                     type="button"
-                    onClick={() => setCurrentStep(prev => Math.min(4, prev + 1))}
+                    onClick={() => {
+                      const nextStep = Math.min(4, currentStep + 1)
+                      if (nextStep === 4) {
+                        // Prevent accidental double-click from triggering publish
+                        setJustArrivedAtStep4(true)
+                        setTimeout(() => setJustArrivedAtStep4(false), 500)
+                      }
+                      setCurrentStep(nextStep)
+                    }}
                     disabled={
                       (currentStep === 1 && !canProceedToStep2) ||
                       (currentStep === 2 && !canProceedToStep3) ||
@@ -552,7 +572,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isPublishing || !canPublish}>
+                  <Button
+                    type="submit"
+                    disabled={isPublishing || !canPublish || justArrivedAtStep4}
+                  >
                     {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
                   </Button>
                 )}

@@ -7,8 +7,6 @@
     "dev": "npm i && vite",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "build": "tsc -p tsconfig.app.json --noEmit && eslint && vite build && cp dist/index.html dist/404.html",
-    "build:embed": "node scripts/build-embed.js",
-    "build:embed:watch": "node scripts/build-embed.js --watch",
     "start": "vite preview --port 8080 --host ::",
     "test": "npm i && tsc -p tsconfig.app.json --noEmit && eslint && vitest run && vite build",
     "deploy": "npm run build && npx -y surge@latest dist",

@@ -1,5 +1,5 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 interface PlayProgressBarProps {
   videoId: string
@@ -42,11 +42,48 @@ function parseStoredPosition(saved: string | null): PlayPositionData | null {
   return null
 }
 
-// Cache to avoid repeated localStorage reads for the same video
+// Cache with invalidation support
 const playPosCache = new Map<string, PlayPositionData | null>()
+let cacheVersion = 0
+
+/**
+ * Clear the play position cache. Call this when positions are updated.
+ */
+export function invalidatePlayPosCache(videoId?: string, pubkey?: string) {
+  if (videoId && pubkey) {
+    // Clear specific entry
+    playPosCache.delete(`playpos:${pubkey}:${videoId}`)
+  } else {
+    // Clear all
+    playPosCache.clear()
+  }
+  cacheVersion++
+}
+
+// Listen for storage events (updates from other tabs or same tab)
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', e => {
+    if (e.key?.startsWith('playpos:')) {
+      const key = e.key
+      playPosCache.delete(key)
+      cacheVersion++
+    }
+  })
+}
 
 export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
   const { user } = useCurrentUser()
+  // Force re-render when cache is invalidated
+  const [, setVersion] = useState(cacheVersion)
+
+  useEffect(() => {
+    // Check for cache invalidation periodically
+    const interval = setInterval(() => {
+      setVersion(v => (v !== cacheVersion ? cacheVersion : v))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   const posData = useMemo(() => {
     const pubkey = user?.pubkey
     if (!pubkey || !videoId) {
@@ -64,7 +101,7 @@ export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
     const data = parseStoredPosition(val)
     playPosCache.set(key, data)
     return data
-  }, [user?.pubkey, videoId])
+  }, [user?.pubkey, videoId, cacheVersion])
 
   // Use stored duration if available, fall back to prop
   const effectiveDuration = posData?.duration || duration

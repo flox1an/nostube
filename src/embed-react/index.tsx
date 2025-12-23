@@ -31,7 +31,12 @@ async function initEmbed(): Promise<void> {
   const validation = validateParams(params)
 
   if (!validation.valid) {
-    renderApp(reactRoot, params, { video: null, profile: null, error: validation.error!, isLoading: false })
+    renderApp(reactRoot, params, {
+      video: null,
+      profile: null,
+      error: validation.error!,
+      isLoading: false,
+    })
     return
   }
 
@@ -42,7 +47,12 @@ async function initEmbed(): Promise<void> {
     // Decode video identifier
     const identifier = decodeVideoIdentifier(params.videoId)
     if (!identifier) {
-      renderApp(reactRoot, params, { video: null, profile: null, error: 'Invalid video ID', isLoading: false })
+      renderApp(reactRoot, params, {
+        video: null,
+        profile: null,
+        error: 'Invalid video ID',
+        isLoading: false,
+      })
       return
     }
 

@@ -107,9 +107,7 @@ function parseLegacyFormat(event: NostrEvent): ParsedVideo {
   const contentWarning = event.tags.find(t => t[0] === 'content-warning')?.[1]
   const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
 
-  const videoVariants: VideoVariant[] = url
-    ? [{ url, mimeType, dimensions, fallbackUrls: [] }]
-    : []
+  const videoVariants: VideoVariant[] = url ? [{ url, mimeType, dimensions, fallbackUrls: [] }] : []
 
   const thumbnails = thumb ? [{ url: thumb, fallbackUrls: [] }] : []
 

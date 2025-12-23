@@ -68,11 +68,13 @@ src/components/player/
 ### Visual States
 
 **Default (not hovering):** 3px height
+
 - Primary color: played portion
 - White/40: buffered portion
 - White/20: remaining track
 
 **Hovering:** 5px height
+
 - Scrubber appears (14px circle, primary color)
 - Timestamp tooltip follows cursor
 
@@ -170,6 +172,7 @@ Playback speed submenu:
 ### Visual Feedback
 
 Ripple circle animation with seek indicator:
+
 - Arrows pointing direction (◀◀ or ▶▶)
 - "10" text below arrows
 
@@ -179,10 +182,10 @@ Ripple circle animation with seek indicator:
 
 ```tsx
 const {
-  levels,           // Available quality levels
-  currentLevel,     // Current quality index (-1 = auto)
-  setLevel,         // Set quality (-1 for auto)
-  isLoading,        // HLS loading state
+  levels, // Available quality levels
+  currentLevel, // Current quality index (-1 = auto)
+  setLevel, // Set quality (-1 for auto)
+  isLoading, // HLS loading state
 } = useHls(videoRef, src, isHlsSource)
 ```
 
@@ -191,13 +194,17 @@ const {
 ```tsx
 const {
   // Playback
-  isPlaying, setIsPlaying,
-  currentTime, setCurrentTime,
+  isPlaying,
+  setIsPlaying,
+  currentTime,
+  setCurrentTime,
   duration,
 
   // Volume
-  volume, setVolume,
-  isMuted, setIsMuted,
+  volume,
+  setVolume,
+  isMuted,
+  setIsMuted,
 
   // Buffering
   buffered,
@@ -218,10 +225,7 @@ const {
 ### useControlsVisibility Hook
 
 ```tsx
-const {
-  isVisible,
-  showControls,
-} = useControlsVisibility({
+const { isVisible, showControls } = useControlsVisibility({
   isPlaying,
   hideDelay: 3000,
 })
@@ -241,6 +245,7 @@ Keep existing shortcuts from `useVideoKeyboardShortcuts`:
 ## Loading State
 
 Center spinner displayed when buffering:
+
 - Appears after 200ms delay (avoid flash for quick loads)
 - White spinner on semi-transparent black background
 - Positioned center of video

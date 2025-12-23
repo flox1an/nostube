@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 interface TimeDisplayProps {
   currentTime: number
   duration: number
@@ -23,14 +25,31 @@ function formatTime(seconds: number): string {
 
 /**
  * Time display showing current time / duration
+ * Click to toggle between elapsed and remaining time
  */
 export function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
+  const [showRemaining, setShowRemaining] = useState(false)
+
+  const toggleMode = () => setShowRemaining(prev => !prev)
+
+  const remainingTime = duration - currentTime
+  const displayTime = showRemaining ? remainingTime : currentTime
+  const prefix = showRemaining ? '-' : ''
+
   return (
-    <div className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap px-2">
-      <span>{formatTime(currentTime)}</span>
+    <button
+      type="button"
+      onClick={toggleMode}
+      className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap px-2 rounded-full cursor-pointer transition-all hover:bg-white/20"
+      title={showRemaining ? 'Click to show elapsed time' : 'Click to show remaining time'}
+    >
+      <span>
+        {prefix}
+        {formatTime(displayTime)}
+      </span>
       <span className="mx-1 text-white/60">/</span>
       <span className="text-white/80">{formatTime(duration)}</span>
-    </div>
+    </button>
   )
 }
 

@@ -8,9 +8,11 @@ import { useIsMobile } from '@/hooks'
 import { useHls } from './hooks/useHls'
 import { usePlayerState } from './hooks/usePlayerState'
 import { useControlsVisibility } from './hooks/useControlsVisibility'
+import { useSeekAccumulator } from './hooks/useSeekAccumulator'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
+import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
 
 interface VideoPlayerProps {
@@ -154,6 +156,25 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const { isVisible: controlsVisible, showControls } = useControlsVisibility({
     isPlaying: playerState.isPlaying,
     hideDelay: 2000,
+  })
+
+  // Seek accumulator for arrow keys and touch
+  const handleAccumulatedSeek = useCallback(
+    (deltaSeconds: number) => {
+      const video = videoRef.current
+      if (video) {
+        const targetTime = video.currentTime + deltaSeconds
+        const clampedTime = Math.max(0, Math.min(video.duration || Infinity, targetTime))
+        playerState.seek(clampedTime)
+      }
+    },
+    [playerState]
+  )
+
+  const { addSeek, accumulatedTime, isAccumulating, direction } = useSeekAccumulator({
+    onSeek: handleAccumulatedSeek,
+    stepSize: 5,
+    debounceMs: 1000,
   })
 
   // Handle quality change
@@ -350,14 +371,67 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     setCaptionsEnabled(!captionsEnabled)
   }, [captionsEnabled])
 
-  // Touch overlay handlers
+  // Touch overlay handlers - use accumulator for seek
   const handleSeekBackward = useCallback(() => {
-    playerState.seek(playerState.currentTime - 10)
-  }, [playerState])
+    showControls()
+    addSeek('backward')
+  }, [showControls, addSeek])
 
   const handleSeekForward = useCallback(() => {
-    playerState.seek(playerState.currentTime + 10)
-  }, [playerState])
+    showControls()
+    addSeek('forward')
+  }, [showControls, addSeek])
+
+  // Keyboard shortcuts for player controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      const target = e.target as HTMLElement
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return
+      }
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault()
+          userInitiatedRef.current = true
+          if (playerState.isPlaying) {
+            playerState.pause()
+          } else {
+            playerState.play()
+          }
+          break
+        case 'm':
+        case 'M':
+          e.preventDefault()
+          playerState.toggleMute()
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          showControls()
+          addSeek('backward')
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          showControls()
+          addSeek('forward')
+          break
+        case 'f':
+        case 'F':
+          e.preventDefault()
+          toggleFullscreen()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [playerState, addSeek, showControls, toggleFullscreen])
 
   const handleTogglePlay = useCallback(() => {
     userInitiatedRef.current = true
@@ -421,6 +495,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
       {/* Play/Pause overlay */}
       <PlayPauseOverlay videoRef={videoRef} userInitiatedRef={userInitiatedRef} />
+
+      {/* Seek indicator for accumulated seeks */}
+      <SeekIndicator
+        accumulatedTime={accumulatedTime}
+        isVisible={isAccumulating}
+        direction={direction}
+      />
 
       {/* Touch overlay for mobile */}
       {isMobile && (

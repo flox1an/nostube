@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Accumulating Seek with Visual Feedback**: Arrow keys and touch gestures now accumulate seek time within 1 second window. Fast consecutive presses show "+5s", "+10s", "+15s" etc. with indicator positioned on right for forward seek, left for backward seek. Actual seek is debounced until input stops (useSeekAccumulator.ts, SeekIndicator.tsx)
 - **Custom YouTube-Style Video Player**: Complete rewrite of the video player, replacing media-chrome and hls-video-element with a custom implementation. Features YouTube-inspired design with:
   - Auto-hiding controls with gradient overlay (3 second timeout while playing)
   - Progress bar that expands on hover with timestamp tooltip and draggable scrubber
@@ -48,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Video Player Settings Menu Alignment**: Changed settings menu selectable items (quality levels, playback speeds) to have check mark on the left side like YouTube. Main menu items now use whitespace-nowrap to prevent "Playback speed" from wrapping. Increased menu min-width from 200px to 240px for better fit (SettingsMenu.tsx)
+- **Touch Overlay Simplified**: Changed from double-tap to single-tap for seeking on mobile. Tap left third to seek backward, right third to seek forward, center to play/pause. Works with seek accumulator for fast consecutive taps (TouchOverlay.tsx)
+- **Player Keyboard Shortcuts Consolidated**: Moved keyboard handling (Space, M, F, arrow keys) into VideoPlayer component for proper integration with seek accumulator. Space toggles play/pause, M toggles mute, F toggles fullscreen, arrow keys seek with accumulation (VideoPlayer.tsx)
 - **Video Player Controls Timing**: Reduced auto-hide delay from 3 seconds to 2 seconds for snappier feel, but increased fade-out animation from 300ms to 500ms for smoother transition (ControlBar.tsx, VideoPlayer.tsx)
 - **Video Expiration Badge**: Videos with NIP-40 expiration tags now show an amber "Expires in X" badge next to the title, or a red "Expired" badge if already expired. Uses date-fns formatDistance for human-readable time (VideoInfoSection.tsx)
 - **Play/Pause Overlay Animation**: Play icon now displays 2x longer (800ms) than pause icon (400ms) for better visual feedback. Uses `animation-fill-mode: forwards` to prevent animation cutoffs. Component is shared between VideoPlayer and ShortsVideoPage (PlayPauseOverlay.tsx)

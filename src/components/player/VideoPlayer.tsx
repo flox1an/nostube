@@ -174,7 +174,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const { addSeek, accumulatedTime, isAccumulating, direction } = useSeekAccumulator({
     onSeek: handleAccumulatedSeek,
     stepSize: 5,
-    debounceMs: 1000,
+    debounceMs: 500,
   })
 
   // Handle quality change

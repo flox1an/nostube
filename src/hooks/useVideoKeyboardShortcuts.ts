@@ -9,12 +9,12 @@ interface UseVideoKeyboardShortcutsProps {
 }
 
 /**
- * Hook that manages keyboard shortcuts for video playback and navigation
- * - Space: Play/pause
- * - M: Mute/unmute
+ * Hook that manages keyboard shortcuts for video page-level actions
+ * Note: Space, M, F, and arrow keys are now handled by VideoPlayer directly
+ * for proper seek accumulator integration.
+ *
+ * This hook handles:
  * - T: Toggle cinema mode
- * - F: Fullscreen
- * - Arrow keys: Seek forward/backward
  * - . / ,: Frame step (when paused) or next/prev video (in playlist mode)
  */
 export function useVideoKeyboardShortcuts({
@@ -56,28 +56,6 @@ export function useVideoKeyboardShortcuts({
         return
       }
 
-      // Mute/unmute on "M" key press
-      if (key === 'm' || key === 'M') {
-        event.preventDefault()
-        if (videoEl) {
-          videoEl.muted = !videoEl.muted
-        }
-        return
-      }
-
-      // Play/pause on Space key press
-      if (key === ' ') {
-        event.preventDefault()
-        if (videoEl) {
-          if (videoEl.paused) {
-            videoEl.play()
-          } else {
-            videoEl.pause()
-          }
-        }
-        return
-      }
-
       // Frame step or playlist navigation on comma/period keys
       if (key === ',' || key === '.') {
         event.preventDefault()
@@ -107,41 +85,8 @@ export function useVideoKeyboardShortcuts({
         return
       }
 
-      // Arrow keys: Seek forward/backward 5 seconds
-      if (key === 'ArrowRight' || key === 'ArrowLeft') {
-        event.preventDefault()
-        if (videoEl) {
-          const delta = key === 'ArrowRight' ? 5 : -5
-          const targetTime = videoEl.currentTime + delta
-          const clampedTime =
-            delta > 0 && Number.isFinite(videoEl.duration)
-              ? Math.min(videoEl.duration, targetTime)
-              : Math.max(0, targetTime)
-          videoEl.currentTime = clampedTime
-        }
-        return
-      }
-
-      // Fullscreen on "F" key press
-      if (key === 'f' || key === 'F') {
-        event.preventDefault()
-        if (videoEl) {
-          // Try to find the media-controller parent for fullscreen
-          const fullscreenTarget =
-            (videoEl.closest('media-controller') as HTMLElement | null) ?? (videoEl as HTMLElement)
-
-          if (!document.fullscreenElement) {
-            fullscreenTarget?.requestFullscreen?.().catch(() => {
-              // Ignore fullscreen errors (e.g., user gesture requirements)
-            })
-          } else {
-            document.exitFullscreen?.().catch(() => {
-              // Ignore exit failures
-            })
-          }
-        }
-        return
-      }
+      // Note: Space, M, F, and arrow keys are handled by VideoPlayer
+      // for proper seek accumulator integration
     }
 
     window.addEventListener('keydown', handleKeyDown)

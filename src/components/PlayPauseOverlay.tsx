@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface PlayPauseOverlayProps {
   /**
@@ -17,27 +17,47 @@ interface PlayPauseOverlayProps {
   userInitiatedRef?: React.MutableRefObject<boolean>
 }
 
+// Display duration for play icon (2x longer than pause)
+const PLAY_DISPLAY_DURATION = 800
+// Display duration for pause icon
+const PAUSE_DISPLAY_DURATION = 400
+// Time to wait after starting fade-out before unmounting (CSS animation is 100ms)
+const FADE_OUT_BUFFER = 250
+
 /**
  * Animated play/pause overlay that appears when video playback state changes.
  * Shows a play or pause icon with fade-in/fade-out animation.
+ * Play icon displays 2x longer than pause icon.
  */
 export function PlayPauseOverlay({
   videoRef,
   className = '',
   userInitiatedRef,
 }: PlayPauseOverlayProps) {
-  const [showPlayPauseIcon, setShowPlayPauseIcon] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isFadingOut, setIsFadingOut] = useState(false)
-  const playPauseTimeoutRef = useRef<number | null>(null)
+  const displayTimeoutRef = useRef<number | null>(null)
   const fadeOutTimeoutRef = useRef<number | null>(null)
+
+  // Clear any pending timeouts
+  const clearTimeouts = useCallback(() => {
+    if (displayTimeoutRef.current !== null) {
+      clearTimeout(displayTimeoutRef.current)
+      displayTimeoutRef.current = null
+    }
+    if (fadeOutTimeoutRef.current !== null) {
+      clearTimeout(fadeOutTimeoutRef.current)
+      fadeOutTimeoutRef.current = null
+    }
+  }, [])
 
   // Handle play/pause events to show animated icon overlay
   useEffect(() => {
     const videoEl = videoRef.current
     if (!videoEl) return
 
-    const handlePlay = () => {
+    const showOverlay = (paused: boolean) => {
       // Only show overlay if this was a user-initiated action
       if (userInitiatedRef && !userInitiatedRef.current) {
         return
@@ -48,62 +68,30 @@ export function PlayPauseOverlay({
         userInitiatedRef.current = false
       }
 
-      setIsPaused(false)
+      setIsPaused(paused)
       setIsFadingOut(false)
-      setShowPlayPauseIcon(true)
-      // Clear existing timeouts
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
-      // Start fade-out after 400ms
-      playPauseTimeoutRef.current = window.setTimeout(() => {
+      setIsVisible(true)
+      clearTimeouts()
+
+      // Play icon shows 2x longer than pause icon
+      const displayDuration = paused ? PAUSE_DISPLAY_DURATION : PLAY_DISPLAY_DURATION
+
+      // Start fade-out after display duration
+      displayTimeoutRef.current = window.setTimeout(() => {
         setIsFadingOut(true)
-        // Hide icon after fade-out completes (100ms)
+        displayTimeoutRef.current = null
+
+        // Unmount after fade-out animation completes
         fadeOutTimeoutRef.current = window.setTimeout(() => {
-          setShowPlayPauseIcon(false)
+          setIsVisible(false)
           setIsFadingOut(false)
-          playPauseTimeoutRef.current = null
           fadeOutTimeoutRef.current = null
-        }, 100)
-      }, 400)
+        }, FADE_OUT_BUFFER)
+      }, displayDuration)
     }
 
-    const handlePause = () => {
-      // Only show overlay if this was a user-initiated action
-      if (userInitiatedRef && !userInitiatedRef.current) {
-        return
-      }
-
-      // Reset the flag after checking
-      if (userInitiatedRef) {
-        userInitiatedRef.current = false
-      }
-
-      setIsPaused(true)
-      setIsFadingOut(false)
-      setShowPlayPauseIcon(true)
-      // Clear existing timeouts
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
-      // Start fade-out after 400ms
-      playPauseTimeoutRef.current = window.setTimeout(() => {
-        setIsFadingOut(true)
-        // Hide icon after fade-out completes (100ms)
-        fadeOutTimeoutRef.current = window.setTimeout(() => {
-          setShowPlayPauseIcon(false)
-          setIsFadingOut(false)
-          playPauseTimeoutRef.current = null
-          fadeOutTimeoutRef.current = null
-        }, 100)
-      }, 400)
-    }
+    const handlePlay = () => showOverlay(false)
+    const handlePause = () => showOverlay(true)
 
     videoEl.addEventListener('play', handlePlay)
     videoEl.addEventListener('pause', handlePause)
@@ -114,16 +102,12 @@ export function PlayPauseOverlay({
     return () => {
       videoEl.removeEventListener('play', handlePlay)
       videoEl.removeEventListener('pause', handlePause)
-      if (playPauseTimeoutRef.current !== null) {
-        clearTimeout(playPauseTimeoutRef.current)
-      }
-      if (fadeOutTimeoutRef.current !== null) {
-        clearTimeout(fadeOutTimeoutRef.current)
-      }
+      clearTimeouts()
     }
-  }, [videoRef, userInitiatedRef])
+  }, [videoRef, userInitiatedRef, clearTimeouts])
 
-  if (!showPlayPauseIcon) {
+  // Don't render anything if not visible
+  if (!isVisible) {
     return null
   }
 
@@ -135,6 +119,7 @@ export function PlayPauseOverlay({
         className={`bg-black/50 rounded-full p-3 ${
           isFadingOut ? 'animate-fade-out' : 'animate-reveal'
         }`}
+        style={{ animationFillMode: 'forwards' }}
       >
         {isPaused ? (
           // Pause icon (two rectangles)

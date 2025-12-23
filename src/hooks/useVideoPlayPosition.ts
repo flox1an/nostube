@@ -83,6 +83,14 @@ export function useVideoPlayPosition({
   const videoElementRef = useRef<HTMLVideoElement | null>(null)
   // Track actual duration from video element (more reliable than event metadata)
   const actualDurationRef = useRef<number>(0)
+  // Track when video element is set so we can attach listeners
+  const [videoElementReady, setVideoElementReady] = useState(false)
+
+  // Wrapper to set videoElementRef and trigger effect
+  const setVideoElement = (el: HTMLVideoElement | null) => {
+    videoElementRef.current = el
+    setVideoElementReady(!!el)
+  }
 
   // Update actual duration when video element reports it
   useEffect(() => {
@@ -104,7 +112,7 @@ export function useVideoPlayPosition({
       videoEl.removeEventListener('durationchange', updateDuration)
       videoEl.removeEventListener('loadedmetadata', updateDuration)
     }
-  }, [])
+  }, [videoElementReady])
 
   // Compute initial play position from ?t=... param or localStorage
   const initialPlayPos = useMemo(() => {
@@ -227,5 +235,6 @@ export function useVideoPlayPosition({
     setCurrentPlayPos,
     initialPlayPos,
     videoElementRef,
+    setVideoElement,
   }
 }

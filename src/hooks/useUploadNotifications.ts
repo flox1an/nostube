@@ -44,7 +44,16 @@ function saveUploadNotificationStorage(storage: UploadNotificationStorage): void
 
 function cleanupOldNotifications(notifications: UploadNotification[]): UploadNotification[] {
   const sevenDaysAgo = Date.now() / 1000 - SEVEN_DAYS_IN_SECONDS
-  return notifications
+
+  // Deduplicate by ID (keep first occurrence which is the newest due to prepending)
+  const seen = new Set<string>()
+  const deduped = notifications.filter(n => {
+    if (seen.has(n.id)) return false
+    seen.add(n.id)
+    return true
+  })
+
+  return deduped
     .filter(n => n.timestamp > sevenDaysAgo)
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 50) // Keep max 50 upload notifications
@@ -87,18 +96,33 @@ export function useUploadNotifications() {
       resolution?: string,
       errorMessage?: string
     ) => {
+      const now = Date.now()
       const newNotification: UploadNotification = {
-        id: `${type}-${draftId}-${Date.now()}`,
+        id: `${type}-${draftId}-${now}`,
         type,
         draftId,
         videoTitle,
-        timestamp: Math.floor(Date.now() / 1000),
+        timestamp: Math.floor(now / 1000),
         read: false,
         resolution,
         errorMessage,
       }
 
+      let result: UploadNotification = newNotification
+
       setNotifications(prev => {
+        // Prevent duplicate notifications for the same draft/type within 10 seconds
+        const recentDuplicate = prev.find(
+          n =>
+            n.type === type &&
+            n.draftId === draftId &&
+            Math.abs(n.timestamp - newNotification.timestamp) < 10
+        )
+        if (recentDuplicate) {
+          result = recentDuplicate
+          return prev // Don't add duplicate
+        }
+
         const updated = [newNotification, ...prev]
         const cleaned = cleanupOldNotifications(updated)
 
@@ -108,7 +132,7 @@ export function useUploadNotifications() {
         return cleaned
       })
 
-      return newNotification
+      return result
     },
     []
   )

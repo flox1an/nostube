@@ -67,51 +67,33 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <button
-        ref={buttonRef}
-        className="media-button"
-        aria-label={`Quality: ${currentQualityLabel}`}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen(!isOpen)}
-        title="Video quality"
-        style={{ position: 'relative' }}
+    <button
+      ref={buttonRef}
+      className="media-button"
+      aria-label={`Quality: ${currentQualityLabel}`}
+      aria-haspopup="true"
+      aria-expanded={isOpen}
+      onClick={() => setIsOpen(!isOpen)}
+      title="Video quality"
+      style={{ position: 'relative' }}
+    >
+      {/* Quality icon (grid/layers) */}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        {/* Settings/gear icon for quality */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>
-        {/* Quality badge overlay */}
-        <span
-          style={{
-            position: 'absolute',
-            bottom: '2px',
-            right: '2px',
-            fontSize: '8px',
-            fontWeight: 700,
-            backgroundColor: 'rgba(255, 255, 255, 0.25)',
-            padding: '1px 3px',
-            borderRadius: '2px',
-            lineHeight: 1,
-          }}
-        >
-          {currentQualityLabel}
-        </span>
-      </button>
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
 
       {isOpen && (
         <div
@@ -125,12 +107,13 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
             marginBottom: '8px',
             background: 'rgba(28, 28, 28, 0.95)',
             borderRadius: '8px',
-            minWidth: '150px',
+            minWidth: '120px',
             overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
             zIndex: 100,
             backdropFilter: 'blur(8px)',
           }}
+          onClick={e => e.stopPropagation()}
         >
           <div
             style={{
@@ -173,20 +156,15 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
               <span style={{ flex: 1, fontWeight: 500 }}>
                 {variant.quality || `Quality ${index + 1}`}
               </span>
-              {variant.dimensions && (
-                <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                  {variant.dimensions}
-                </span>
-              )}
               {index === selectedIndex && (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="22"
+                  height="22"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="#22c55e"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   style={{ flexShrink: 0 }}
@@ -198,6 +176,6 @@ export function QualityMenu({ variants, selectedIndex, onSelectQuality }: Qualit
           ))}
         </div>
       )}
-    </div>
+    </button>
   )
 }

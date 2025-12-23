@@ -112,36 +112,38 @@ export const ProgressBar = memo(function ProgressBar({
         </div>
       )}
 
-      {/* Track container - needs relative positioning for absolute children */}
-      <div
-        className={`relative w-full rounded-full transition-all ${showScrubber ? 'h-1.5' : 'h-1'}`}
-      >
-        {/* Background track */}
-        <div className="absolute inset-0 bg-white/20 rounded-full" />
-
-        {/* Buffered track */}
+      {/* Track wrapper - centers the track vertically so it expands both ways */}
+      <div className="flex items-center h-1">
         <div
-          className="absolute inset-y-0 left-0 bg-white/40 rounded-full"
-          style={{ width: `${bufferedPercentage}%` }}
-        />
+          className={`relative w-full rounded-full transition-all ${showScrubber ? 'h-1.5' : 'h-1'}`}
+        >
+          {/* Background track */}
+          <div className="absolute inset-0 bg-white/20 rounded-full" />
 
-        {/* Progress track (played) */}
-        <div
-          className="absolute inset-y-0 left-0 bg-primary rounded-full"
-          style={{ width: `${progressPercentage}%` }}
-        />
+          {/* Buffered track */}
+          <div
+            className="absolute inset-y-0 left-0 bg-white/40 rounded-full"
+            style={{ width: `${bufferedPercentage}%` }}
+          />
 
-        {/* Scrubber - always visible, grows on hover */}
-        <div
-          className={`absolute bg-primary rounded-full shadow-md transition-all ${
-            showScrubber ? 'w-4 h-4' : 'w-3 h-3'
-          }`}
-          style={{
-            left: `${progressPercentage}%`,
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-          }}
-        />
+          {/* Progress track (played) */}
+          <div
+            className="absolute inset-y-0 left-0 bg-primary rounded-full"
+            style={{ width: `${progressPercentage}%` }}
+          />
+
+          {/* Scrubber - always visible, grows on hover */}
+          <div
+            className={`absolute bg-primary rounded-full shadow-md transition-all ${
+              showScrubber ? 'w-4 h-4' : 'w-3 h-3'
+            }`}
+            style={{
+              left: `${progressPercentage}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        </div>
       </div>
     </div>
   )

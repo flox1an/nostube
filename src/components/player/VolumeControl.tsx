@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { Volume2, Volume1, VolumeX } from 'lucide-react'
 
 interface VolumeControlProps {
@@ -11,7 +11,7 @@ interface VolumeControlProps {
 /**
  * Volume control with icon and expandable slider
  */
-export function VolumeControl({
+export const VolumeControl = memo(function VolumeControl({
   volume,
   isMuted,
   onVolumeChange,
@@ -156,4 +156,4 @@ export function VolumeControl({
       </div>
     </div>
   )
-}
+})

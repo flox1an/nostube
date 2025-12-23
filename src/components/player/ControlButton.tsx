@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, memo } from 'react'
 
 interface ControlButtonProps {
   onClick: () => void
@@ -10,7 +10,12 @@ interface ControlButtonProps {
 /**
  * Reusable control button for video player
  */
-export function ControlButton({ onClick, icon, label, active = false }: ControlButtonProps) {
+export const ControlButton = memo(function ControlButton({
+  onClick,
+  icon,
+  label,
+  active = false,
+}: ControlButtonProps) {
   return (
     <button
       type="button"
@@ -24,4 +29,4 @@ export function ControlButton({ onClick, icon, label, active = false }: ControlB
       {icon}
     </button>
   )
-}
+})

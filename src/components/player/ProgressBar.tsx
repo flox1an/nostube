@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { formatTime } from './TimeDisplay'
 
 interface ProgressBarProps {
@@ -11,7 +11,7 @@ interface ProgressBarProps {
 /**
  * Progress bar with hover preview, scrubber, and buffering indicator
  */
-export function ProgressBar({
+export const ProgressBar = memo(function ProgressBar({
   currentTime,
   duration,
   bufferedPercentage,
@@ -145,4 +145,4 @@ export function ProgressBar({
       </div>
     </div>
   )
-}
+})

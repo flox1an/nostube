@@ -1,8 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { type VideoVariant } from '@/utils/video-event'
 
 // Quality levels in descending order (highest first)
 const QUALITY_ORDER = ['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p']
+
+// Empty array constant to avoid creating new array on every render
+const EMPTY_INDICES: number[] = []
 
 interface UseAdaptiveQualityOptions {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -31,9 +34,9 @@ export function useAdaptiveQuality({
   const lastDowngradeTimeRef = useRef<number>(0)
   const isBufferingRef = useRef(false)
 
-  // Sort variants by quality (highest to lowest) and get their indices
-  const sortedVariantIndices = useCallback(() => {
-    if (!videoVariants || videoVariants.length <= 1) return []
+  // Memoized sorted variant indices (highest to lowest quality)
+  const sortedVariantIndices = useMemo(() => {
+    if (!videoVariants || videoVariants.length <= 1) return EMPTY_INDICES
 
     return videoVariants
       .map((v, index) => ({ variant: v, index }))
@@ -50,17 +53,16 @@ export function useAdaptiveQuality({
 
   // Find the next lower quality variant index
   const getNextLowerQualityIndex = useCallback((): number | null => {
-    const sorted = sortedVariantIndices()
-    if (sorted.length <= 1) return null
+    if (sortedVariantIndices.length <= 1) return null
 
-    const currentPosInSorted = sorted.indexOf(selectedVariantIndex)
+    const currentPosInSorted = sortedVariantIndices.indexOf(selectedVariantIndex)
     if (currentPosInSorted === -1) return null
 
     // Next lower quality is the next item in the sorted array
     const nextPos = currentPosInSorted + 1
-    if (nextPos >= sorted.length) return null // Already at lowest
+    if (nextPos >= sortedVariantIndices.length) return null // Already at lowest
 
-    return sorted[nextPos]
+    return sortedVariantIndices[nextPos]
   }, [sortedVariantIndices, selectedVariantIndex])
 
   // Attempt to downgrade quality

@@ -58,11 +58,14 @@ export function usePlayerState({
   const [videoReady, setVideoReady] = useState(false)
 
   // Poll for video element availability after mount
-  // Also detect when video element is unmounted/remounted
+  // Uses RAF only while waiting, no interval polling when stable
   useEffect(() => {
     let rafId: number
+    let isPolling = true
 
     const checkVideo = () => {
+      if (!isPolling) return
+
       const videoEl = videoRef.current
 
       if (videoEl) {
@@ -72,6 +75,8 @@ export function usePlayerState({
           currentVideoRef.current = videoEl
           setVideoReady(true)
         }
+        // Stop polling once we have a stable video element
+        isPolling = false
       } else {
         // Video element was unmounted
         if (currentVideoRef.current !== null) {
@@ -86,12 +91,9 @@ export function usePlayerState({
     // Start polling
     rafId = requestAnimationFrame(checkVideo)
 
-    // Also monitor periodically in case video element changes
-    const intervalId = setInterval(checkVideo, 100)
-
     return () => {
+      isPolling = false
       cancelAnimationFrame(rafId)
-      clearInterval(intervalId)
     }
   }, [videoRef])
 

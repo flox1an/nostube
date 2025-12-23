@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface UseControlsVisibilityProps {
   isPlaying: boolean
@@ -12,21 +12,17 @@ interface UseControlsVisibilityResult {
 
 /**
  * Hook to manage auto-hiding of video controls
+ * Simplified: single boolean state instead of timestamp comparison
  */
 export function useControlsVisibility({
   isPlaying,
   hideDelay = 3000,
 }: UseControlsVisibilityProps): UseControlsVisibilityResult {
-  // Track when controls were last shown (by user interaction)
-  const [lastInteractionTime, setLastInteractionTime] = useState(() => Date.now())
-  const [currentTime, setCurrentTime] = useState(() => Date.now())
+  const [isInteracting, setIsInteracting] = useState(true)
   const timeoutRef = useRef<number | null>(null)
 
-  // Compute visibility: visible if paused, or if recent interaction
-  const isVisible = useMemo(() => {
-    if (!isPlaying) return true
-    return currentTime - lastInteractionTime < hideDelay
-  }, [isPlaying, currentTime, lastInteractionTime, hideDelay])
+  // Controls are visible when paused OR when user recently interacted
+  const isVisible = !isPlaying || isInteracting
 
   // Clear any pending timeout
   const clearHideTimeout = useCallback(() => {
@@ -36,35 +32,37 @@ export function useControlsVisibility({
     }
   }, [])
 
+  // Schedule hiding controls
+  const scheduleHide = useCallback(() => {
+    clearHideTimeout()
+    if (isPlaying) {
+      timeoutRef.current = window.setTimeout(() => {
+        setIsInteracting(false)
+      }, hideDelay)
+    }
+  }, [isPlaying, hideDelay, clearHideTimeout])
+
   // Show controls and schedule hide
   const showControls = useCallback(() => {
-    const now = Date.now()
-    setLastInteractionTime(now)
-    setCurrentTime(now)
+    setIsInteracting(true)
+    scheduleHide()
+  }, [scheduleHide])
 
-    clearHideTimeout()
-    if (isPlaying) {
-      timeoutRef.current = window.setTimeout(() => {
-        setCurrentTime(Date.now())
-      }, hideDelay)
-    }
-  }, [isPlaying, hideDelay, clearHideTimeout])
-
-  // When isPlaying changes, update timeouts
+  // When isPlaying changes, update visibility
   useEffect(() => {
-    clearHideTimeout()
-
     if (isPlaying) {
-      // Schedule hide after delay
-      timeoutRef.current = window.setTimeout(() => {
-        setCurrentTime(Date.now())
-      }, hideDelay)
+      // When playback starts, show controls briefly then hide
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => setIsInteracting(true), 0)
+      scheduleHide()
+    } else {
+      // When paused, keep controls visible
+      clearHideTimeout()
+      setTimeout(() => setIsInteracting(true), 0)
     }
 
-    return () => {
-      clearHideTimeout()
-    }
-  }, [isPlaying, hideDelay, clearHideTimeout])
+    return clearHideTimeout
+  }, [isPlaying, scheduleHide, clearHideTimeout])
 
   return {
     isVisible,

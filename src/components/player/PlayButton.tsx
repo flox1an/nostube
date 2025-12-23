@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Play, Pause } from 'lucide-react'
 
 interface PlayButtonProps {
@@ -8,7 +9,7 @@ interface PlayButtonProps {
 /**
  * Play/Pause button for video controls
  */
-export function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
+export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
   return (
     <button
       type="button"
@@ -23,4 +24,4 @@ export function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
       )}
     </button>
   )
-}
+})

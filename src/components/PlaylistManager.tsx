@@ -98,7 +98,7 @@ function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
             variant="ghost"
             size="icon"
             onClick={() => onRemove(video.id)}
-            className="ml-2 flex-shrink-0"
+            className="ml-2 shrink-0"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

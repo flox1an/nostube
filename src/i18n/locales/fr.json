@@ -525,7 +525,12 @@
   },
   "notifications": {
     "commentedOnYourVideo": "a commenté votre vidéo",
-    "noNotifications": "Aucune nouvelle notification"
+    "noNotifications": "Aucune nouvelle notification",
+    "uploadComplete": "Téléchargement terminé",
+    "transcodeComplete": "Transcodage terminé",
+    "transcodeCompleteResolution": "Transcodage {{resolution}} terminé",
+    "uploadError": "Échec du téléchargement",
+    "transcodeError": "Échec du transcodage"
   },
   "report": {
     "titleVideo": "Signaler la vidéo",

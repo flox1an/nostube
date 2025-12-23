@@ -1,27 +1,43 @@
 import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useNotifications } from '../hooks/useNotifications'
+import { useAllNotifications } from '../hooks/useAllNotifications'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { NotificationDropdown } from './NotificationDropdown'
-import type { VideoNotification } from '../types/notification'
+import type { Notification } from '../types/notification'
+import { isVideoNotification, isUploadNotification } from '../types/notification'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Button } from './ui/button'
 
 export function NotificationBell() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
-  const { notifications, unreadCount, isLoading, error, markAsRead } = useNotifications()
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    error,
+    markVideoNotificationAsRead,
+    markUploadNotificationAsRead,
+  } = useAllNotifications()
 
   if (!user) {
     return null
   }
 
-  const handleNotificationClick = (notification: VideoNotification) => {
-    // Mark as read
-    markAsRead(notification.id)
+  const handleNotificationClick = (notification: Notification) => {
+    if (isVideoNotification(notification)) {
+      // Mark as read
+      markVideoNotificationAsRead(notification.id)
 
-    // Navigate to video page with comment query parameter
-    navigate(`/video/${notification.videoEventId}?comment=${notification.commentId}`)
+      // Navigate to video page with comment query parameter
+      navigate(`/video/${notification.videoEventId}?comment=${notification.commentId}`)
+    } else if (isUploadNotification(notification)) {
+      // Mark as read
+      markUploadNotificationAsRead(notification.id)
+
+      // Navigate to upload page with the draft
+      navigate(`/upload?draft=${notification.draftId}`)
+    }
   }
 
   // Only disable if there are no notifications AND not loading

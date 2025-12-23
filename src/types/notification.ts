@@ -10,8 +10,46 @@ export interface VideoNotification {
   videoEventId: string // for navigation (nevent or naddr)
 }
 
+export type UploadNotificationType =
+  | 'upload_complete'
+  | 'transcode_complete'
+  | 'upload_error'
+  | 'transcode_error'
+
+export interface UploadNotification {
+  id: string
+  type: UploadNotificationType
+  draftId: string
+  videoTitle?: string
+  timestamp: number // unix timestamp in seconds
+  read: boolean
+  resolution?: string // for transcode notifications
+  errorMessage?: string // for error notifications
+}
+
+export type Notification = VideoNotification | UploadNotification
+
 export interface NotificationStorage {
   lastLoginTime: number
   notifications: VideoNotification[]
   lastFetchTime: number
+}
+
+export interface UploadNotificationStorage {
+  notifications: UploadNotification[]
+  lastUpdated: number
+}
+
+// Type guards
+export function isVideoNotification(n: Notification): n is VideoNotification {
+  return 'commentId' in n
+}
+
+export function isUploadNotification(n: Notification): n is UploadNotification {
+  return (
+    'type' in n &&
+    ['upload_complete', 'transcode_complete', 'upload_error', 'transcode_error'].includes(
+      (n as UploadNotification).type
+    )
+  )
 }

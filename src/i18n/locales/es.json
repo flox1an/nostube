@@ -526,7 +526,12 @@
   },
   "notifications": {
     "commentedOnYourVideo": "comentó en tu video",
-    "noNotifications": "No hay notificaciones nuevas"
+    "noNotifications": "No hay notificaciones nuevas",
+    "uploadComplete": "Carga completada",
+    "transcodeComplete": "Transcodificación completada",
+    "transcodeCompleteResolution": "Transcodificación de {{resolution}} completada",
+    "uploadError": "Error en la carga",
+    "transcodeError": "Error en la transcodificación"
   },
   "report": {
     "titleVideo": "Reportar video",

@@ -1,14 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
-import type { VideoNotification } from '../types/notification'
+import type { Notification } from '../types/notification'
+import { isVideoNotification, isUploadNotification } from '../types/notification'
 import { NotificationItem } from './NotificationItem'
+import { UploadNotificationItem } from './UploadNotificationItem'
 import { ScrollArea } from './ui/scroll-area'
 
 interface NotificationDropdownProps {
-  notifications: VideoNotification[]
+  notifications: Notification[]
   isLoading?: boolean
   error?: string | null
-  onNotificationClick: (notification: VideoNotification) => void
+  onNotificationClick: (notification: Notification) => void
 }
 
 export function NotificationDropdown({
@@ -42,13 +44,27 @@ export function NotificationDropdown({
   return (
     <ScrollArea className="h-[400px] max-h-[80dvh]">
       <div className="py-2">
-        {notifications.map(notification => (
-          <NotificationItem
-            key={notification.id}
-            notification={notification}
-            onClick={onNotificationClick}
-          />
-        ))}
+        {notifications.map(notification => {
+          if (isVideoNotification(notification)) {
+            return (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onClick={() => onNotificationClick(notification)}
+              />
+            )
+          }
+          if (isUploadNotification(notification)) {
+            return (
+              <UploadNotificationItem
+                key={notification.id}
+                notification={notification}
+                onClick={() => onNotificationClick(notification)}
+              />
+            )
+          }
+          return null
+        })}
       </div>
     </ScrollArea>
   )

@@ -526,7 +526,12 @@
   },
   "notifications": {
     "commentedOnYourVideo": "hat Ihr Video kommentiert",
-    "noNotifications": "Keine neuen Benachrichtigungen"
+    "noNotifications": "Keine neuen Benachrichtigungen",
+    "uploadComplete": "Upload abgeschlossen",
+    "transcodeComplete": "Transkodierung abgeschlossen",
+    "transcodeCompleteResolution": "{{resolution}} Transkodierung abgeschlossen",
+    "uploadError": "Upload fehlgeschlagen",
+    "transcodeError": "Transkodierung fehlgeschlagen"
   },
   "report": {
     "titleVideo": "Video melden",

@@ -561,7 +561,12 @@
   },
   "notifications": {
     "commentedOnYourVideo": "commented on your video",
-    "noNotifications": "No new notifications"
+    "noNotifications": "No new notifications",
+    "uploadComplete": "Upload complete",
+    "transcodeComplete": "Transcode complete",
+    "transcodeCompleteResolution": "{{resolution}} transcode complete",
+    "uploadError": "Upload failed",
+    "transcodeError": "Transcode failed"
   },
   "report": {
     "titleVideo": "Report Video",

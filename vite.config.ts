@@ -1,8 +1,9 @@
-import path from 'path'
+import path, { resolve } from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
+import { viteSingleFile } from 'vite-plugin-singlefile'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -18,6 +19,11 @@ export default defineConfig({
       filename: 'dist/stats.html',
       gzipSize: true,
       brotliSize: true,
+    }),
+    viteSingleFile({
+      useRecommendedBuildConfig: false,
+      removeViteModuleLoader: true,
+      inlinePattern: ['embed/**/*'],
     }),
   ],
   resolve: {
@@ -41,6 +47,10 @@ export default defineConfig({
       },
     },
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        embed: resolve(__dirname, 'embed.html'),
+      },
       // Disable native modules for Vercel deployment
       external: ['@rollup/rollup-linux-x64-gnu'],
       output: {

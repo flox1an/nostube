@@ -41,7 +41,10 @@ export function DvmTranscodeAlert({
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
-  const [selectedResolutions, setSelectedResolutions] = useState<string[]>(['720p'])
+  // Default to 720p only if it doesn't already exist
+  const [selectedResolutions, setSelectedResolutions] = useState<string[]>(() =>
+    existingResolutions.includes('720p') ? [] : ['720p']
+  )
   const hasResumedRef = useRef(false)
 
   // Check if a DVM is available (only check if not resuming)

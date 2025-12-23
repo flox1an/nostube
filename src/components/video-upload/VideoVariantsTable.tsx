@@ -1,16 +1,7 @@
 import { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import {
-  Trash2,
-  Play,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  Copy,
-  LucideCircleCheck,
-  LucideBookUp,
-} from 'lucide-react'
+import { Trash2, Play, AlertTriangle, CheckCircle, Info, Copy, LucideBookUp } from 'lucide-react'
 import {
   Table,
   TableBody,

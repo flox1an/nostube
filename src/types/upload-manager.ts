@@ -36,6 +36,17 @@ export interface TranscodeState {
   percentage?: number
   eta?: number
   message?: string
+  // Completed video variants (persisted for delivery on remount)
+  completedVideos?: Array<{
+    url: string
+    dimension: string
+    sizeMB?: number
+    duration?: number
+    bitrate?: number
+    videoCodec?: string
+    audioCodec?: string
+    qualityLabel?: string
+  }>
 }
 
 export interface UploadTaskError {

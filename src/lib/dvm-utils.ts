@@ -1,6 +1,22 @@
 import type { VideoVariant } from './video-processing'
 
 /**
+ * Resolution to dimension mapping for transcoding
+ */
+export const RESOLUTION_DIMENSIONS: Record<string, string> = {
+  '1080p': '1920x1080',
+  '720p': '1280x720',
+  '480p': '854x480',
+  '320p': '568x320',
+}
+
+/**
+ * Available resolutions for transcoding (ordered high to low)
+ */
+export const AVAILABLE_RESOLUTIONS = ['1080p', '720p', '480p', '320p'] as const
+export type TranscodeResolution = (typeof AVAILABLE_RESOLUTIONS)[number]
+
+/**
  * Result of transcode check
  */
 export interface TranscodeCheckResult {

@@ -432,12 +432,13 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                     <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
 
                     {/* DVM Transcode Alert - shown for high-res or incompatible videos */}
-                    {/* Hide if a 720p variant already exists */}
-                    {((uploadState === 'finished' && uploadInfo.videos[0]) ||
-                      draft.dvmTranscodeState) &&
-                    !uploadInfo.videos.some(v => v.qualityLabel === '720p') ? (
+                    {(uploadState === 'finished' && uploadInfo.videos[0]) ||
+                    draft.dvmTranscodeState ? (
                       <DvmTranscodeAlert
                         video={uploadInfo.videos[0]}
+                        existingResolutions={uploadInfo.videos
+                          .map(v => v.qualityLabel)
+                          .filter((label): label is string => !!label)}
                         onComplete={videoUploadState.handleAddTranscodedVideo}
                         onStatusChange={setTranscodeStatus}
                         initialTranscodeState={draft.dvmTranscodeState}

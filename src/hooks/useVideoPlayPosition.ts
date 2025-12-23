@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { invalidatePlayPosCache } from '@/components/PlayProgressBar'
 
 // Utility to parse t= parameter (supports seconds, mm:ss, h:mm:ss)
 function parseTimeParam(t: string | null): number {
@@ -160,6 +161,8 @@ export function useVideoPlayPosition({
       }
       localStorage.setItem(key, JSON.stringify(data))
       lastWriteRef.current = Date.now()
+      // Invalidate cache so PlayProgressBar updates
+      invalidatePlayPosCache(videoId, user.pubkey)
     }
 
     // If last write was more than 3s ago, write immediately

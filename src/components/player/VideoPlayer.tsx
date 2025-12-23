@@ -490,7 +490,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       ref={containerRef}
       className={`relative bg-black overflow-hidden ${className || ''} ${
         !controlsVisible && playerState.isPlaying ? 'cursor-none' : ''
-      }`}
+      } ${cinemaMode ? 'flex items-center justify-center' : ''}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {}}
     >
@@ -503,7 +503,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         autoPlay={!contentWarning}
         playsInline
         crossOrigin="anonymous"
-        className={`w-full h-full ${cinemaMode || isMobile ? 'object-contain' : 'object-contain'}`}
+        className={`w-full object-contain ${cinemaMode ? 'max-h-[85dvh]' : 'h-full'}`}
         onError={handleVideoError}
         onClick={handleTogglePlay}
       >

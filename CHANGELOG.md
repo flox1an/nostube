@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Cinema Mode Aspect Ratio Preservation**: Video player in cinema/theater mode now preserves original aspect ratio with max-height of 85dvh. Container uses `max-h-[85dvh] flex items-center justify-center`, video element uses `max-h-[85dvh]` directly. Shows black bars on sides for tall videos instead of clipping top/bottom (VideoPlayer.tsx, VideoPage.tsx)
 - **Video Player Settings Menu Alignment**: Changed settings menu selectable items (quality levels, playback speeds) to have check mark on the left side like YouTube. Main menu items now use whitespace-nowrap to prevent "Playback speed" from wrapping. Increased menu min-width from 200px to 240px for better fit (SettingsMenu.tsx)
 - **Touch Overlay Simplified**: Changed from double-tap to single-tap for seeking on mobile. Tap left third to seek backward, right third to seek forward, center to play/pause. Works with seek accumulator for fast consecutive taps (TouchOverlay.tsx)
 - **Player Keyboard Shortcuts Consolidated**: Moved keyboard handling (Space, M, F, arrow keys) into VideoPlayer component for proper integration with seek accumulator. Space toggles play/pause, M toggles mute, F toggles fullscreen, arrow keys seek with accumulation (VideoPlayer.tsx)

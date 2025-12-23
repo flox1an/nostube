@@ -62,16 +62,13 @@ export function ProgressBar({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
+      e.stopPropagation()
       setIsDragging(true)
       const time = getTimeFromPosition(e.clientX)
       onSeek(time)
     },
     [getTimeFromPosition, onSeek]
   )
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
 
   // Handle mouse events outside the component while dragging
   useEffect(() => {
@@ -94,38 +91,28 @@ export function ProgressBar({
     }
   }, [isDragging, handleMouseMove])
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      const time = getTimeFromPosition(e.clientX)
-      onSeek(time)
-    },
-    [getTimeFromPosition, onSeek]
-  )
-
   const showScrubber = isHovering || isDragging
 
   return (
     <div
       ref={containerRef}
-      className="group relative w-full cursor-pointer py-2"
+      className="group relative w-full cursor-pointer py-3"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onClick={handleClick}
     >
       {/* Hover timestamp tooltip */}
       {showScrubber && (
         <div
-          className="absolute bottom-full mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded pointer-events-none transform -translate-x-1/2 z-20"
-          style={{ left: `${hoverPosition}%` }}
+          className="absolute bottom-full mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded pointer-events-none z-20"
+          style={{ left: `${hoverPosition}%`, transform: 'translateX(-50%)' }}
         >
           {formatTime(hoverTime)}
         </div>
       )}
 
-      {/* Track container */}
+      {/* Track container - needs relative positioning for absolute children */}
       <div
         className={`relative w-full rounded-full transition-all ${showScrubber ? 'h-1.5' : 'h-1'}`}
       >
@@ -144,12 +131,16 @@ export function ProgressBar({
           style={{ width: `${progressPercentage}%` }}
         />
 
-        {/* Scrubber */}
+        {/* Scrubber - positioned relative to track */}
         <div
-          className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-primary rounded-full shadow-md transition-opacity ${
+          className={`absolute w-3.5 h-3.5 bg-primary rounded-full shadow-md transition-opacity ${
             showScrubber ? 'opacity-100' : 'opacity-0'
           }`}
-          style={{ left: `${progressPercentage}%`, transform: 'translate(-50%, -50%)' }}
+          style={{
+            left: `${progressPercentage}%`,
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
         />
       </div>
     </div>

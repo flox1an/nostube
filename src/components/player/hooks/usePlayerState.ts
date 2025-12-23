@@ -51,8 +51,28 @@ export function usePlayerState({
   // Throttle time updates
   const lastTimeUpdateRef = useRef(0)
 
+  // Track when video element becomes available
+  const [videoReady, setVideoReady] = useState(false)
+
+  // Poll for video element availability after mount
+  useEffect(() => {
+    if (videoReady) return
+
+    const checkVideo = () => {
+      if (videoRef.current) {
+        setVideoReady(true)
+      } else {
+        requestAnimationFrame(checkVideo)
+      }
+    }
+
+    requestAnimationFrame(checkVideo)
+  }, [videoRef, videoReady])
+
   // Sync state with video element
   useEffect(() => {
+    if (!videoReady) return
+
     const video = videoRef.current
     if (!video) return
 
@@ -135,7 +155,7 @@ export function usePlayerState({
       video.removeEventListener('playing', handlePlaying)
       video.removeEventListener('ratechange', handleRateChange)
     }
-  }, [videoRef, onTimeUpdate])
+  }, [videoRef, onTimeUpdate, videoReady])
 
   const play = useCallback(async () => {
     const video = videoRef.current

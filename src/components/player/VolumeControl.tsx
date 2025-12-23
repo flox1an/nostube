@@ -23,7 +23,8 @@ export function VolumeControl({
   const [isDragging, setIsDragging] = useState(false)
   const hideTimeoutRef = useRef<number | null>(null)
 
-  const effectiveVolume = isMuted ? 0 : volume
+  // Show actual volume (not affected by mute for visual feedback)
+  const displayVolume = volume
 
   const clearHideTimeout = useCallback(() => {
     if (hideTimeoutRef.current !== null) {
@@ -52,17 +53,14 @@ export function VolumeControl({
     }
   }, [startHideTimeout, isDragging])
 
-  const getVolumeFromPosition = useCallback(
-    (clientX: number) => {
-      const slider = sliderRef.current
-      if (!slider) return volume
+  const getVolumeFromPosition = useCallback((clientX: number) => {
+    const slider = sliderRef.current
+    if (!slider) return 0.5
 
-      const rect = slider.getBoundingClientRect()
-      const position = (clientX - rect.left) / rect.width
-      return Math.max(0, Math.min(1, position))
-    },
-    [volume]
-  )
+    const rect = slider.getBoundingClientRect()
+    const position = (clientX - rect.left) / rect.width
+    return Math.max(0, Math.min(1, position))
+  }, [])
 
   const handleSliderMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -104,7 +102,8 @@ export function VolumeControl({
     }
   }, [clearHideTimeout])
 
-  // Choose icon based on volume level
+  // Choose icon based on volume level and mute state
+  const effectiveVolume = isMuted ? 0 : volume
   const VolumeIcon =
     isMuted || effectiveVolume === 0 ? VolumeX : effectiveVolume < 0.5 ? Volume1 : Volume2
 
@@ -133,22 +132,25 @@ export function VolumeControl({
       >
         <div
           ref={sliderRef}
-          className="relative h-1 mx-2 cursor-pointer rounded-full"
+          className="relative h-4 mx-2 cursor-pointer flex items-center"
           onMouseDown={handleSliderMouseDown}
         >
           {/* Track background */}
-          <div className="absolute inset-0 bg-white/30 rounded-full" />
+          <div className="absolute left-0 right-0 h-1 bg-white/30 rounded-full" />
 
           {/* Volume fill */}
           <div
-            className="absolute inset-y-0 left-0 bg-white rounded-full"
-            style={{ width: `${effectiveVolume * 100}%` }}
+            className="absolute left-0 h-1 bg-white rounded-full"
+            style={{ width: `${displayVolume * 100}%` }}
           />
 
           {/* Scrubber */}
           <div
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-sm"
-            style={{ left: `${effectiveVolume * 100}%`, transform: 'translate(-50%, -50%)' }}
+            className="absolute w-3 h-3 bg-white rounded-full shadow-sm"
+            style={{
+              left: `${displayVolume * 100}%`,
+              transform: 'translateX(-50%)',
+            }}
           />
         </div>
       </div>

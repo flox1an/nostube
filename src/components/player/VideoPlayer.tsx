@@ -153,7 +153,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Controls visibility
   const { isVisible: controlsVisible, showControls } = useControlsVisibility({
     isPlaying: playerState.isPlaying,
-    hideDelay: 3000,
+    hideDelay: 2000,
   })
 
   // Handle quality change

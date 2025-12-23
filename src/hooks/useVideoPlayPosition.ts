@@ -21,6 +21,42 @@ function parseTimeParam(t: string | null): number {
   return 0
 }
 
+interface PlayPositionData {
+  time: number
+  duration: number
+}
+
+/**
+ * Parse stored play position from localStorage
+ * Handles both new JSON format and legacy string format for backward compatibility
+ */
+function parseStoredPosition(saved: string | null): PlayPositionData | null {
+  if (!saved) return null
+
+  // Try parsing as JSON first (new format)
+  if (saved.startsWith('{')) {
+    try {
+      const data = JSON.parse(saved) as { time?: number; duration?: number }
+      if (typeof data.time === 'number' && !isNaN(data.time)) {
+        return {
+          time: data.time,
+          duration: typeof data.duration === 'number' ? data.duration : 0,
+        }
+      }
+    } catch {
+      // Fall through to legacy parsing
+    }
+  }
+
+  // Legacy format: just a number string
+  const time = parseFloat(saved)
+  if (!isNaN(time) && time > 0) {
+    return { time, duration: 0 }
+  }
+
+  return null
+}
+
 interface UseVideoPlayPositionProps {
   user: { pubkey: string } | undefined
   videoId: string | undefined
@@ -30,7 +66,7 @@ interface UseVideoPlayPositionProps {
 
 /**
  * Hook that manages video play position storage and retrieval
- * - Stores play position in localStorage with debouncing
+ * - Stores play position and duration in localStorage with debouncing
  * - Retrieves initial position from ?t= param or localStorage
  * - Handles seek events
  */
@@ -44,6 +80,30 @@ export function useVideoPlayPosition({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastWriteRef = useRef<number>(0)
   const videoElementRef = useRef<HTMLVideoElement | null>(null)
+  // Track actual duration from video element (more reliable than event metadata)
+  const actualDurationRef = useRef<number>(0)
+
+  // Update actual duration when video element reports it
+  useEffect(() => {
+    const videoEl = videoElementRef.current
+    if (!videoEl) return
+
+    const updateDuration = () => {
+      if (videoEl.duration && isFinite(videoEl.duration)) {
+        actualDurationRef.current = videoEl.duration
+      }
+    }
+
+    // Check immediately and on duration change
+    updateDuration()
+    videoEl.addEventListener('durationchange', updateDuration)
+    videoEl.addEventListener('loadedmetadata', updateDuration)
+
+    return () => {
+      videoEl.removeEventListener('durationchange', updateDuration)
+      videoEl.removeEventListener('loadedmetadata', updateDuration)
+    }
+  }, [])
 
   // Compute initial play position from ?t=... param or localStorage
   const initialPlayPos = useMemo(() => {
@@ -60,36 +120,51 @@ export function useVideoPlayPosition({
     if (user && videoId) {
       const key = `playpos:${user.pubkey}:${videoId}`
       const saved = localStorage.getItem(key)
-      if (saved) {
-        const time = parseFloat(saved)
-        if (!isNaN(time) && time > 0) {
-          // If we know the duration, only restore if more than 5 seconds left
-          // If we don't know the duration, restore anyway (better UX than starting over)
-          if (videoDuration) {
-            if (videoDuration - time > 5 && time < videoDuration - 1) {
-              return time
-            }
-            // Near the end, don't restore
-          } else {
-            // No duration info - restore the position
-            return time
+      const data = parseStoredPosition(saved)
+
+      if (data && data.time > 0) {
+        // Use stored duration if available, fall back to event metadata
+        const duration = data.duration || videoDuration || 0
+
+        if (duration > 0) {
+          // Only restore if more than 5 seconds left and not at the end
+          if (duration - data.time > 5 && data.time < duration - 1) {
+            return data.time
           }
+          // Near the end, don't restore
+          return 0
+        } else {
+          // No duration info at all - restore the position anyway
+          return data.time
         }
       }
     }
     return 0
   }, [user, videoId, videoDuration, locationSearch])
 
-  // Debounced play position storage
+  // Debounced play position storage (includes duration)
   useEffect(() => {
     if (!user || !videoId) return
     if (currentPlayPos < 5) return
+
     const key = `playpos:${user.pubkey}:${videoId}`
     const now = Date.now()
+
+    // Get duration from video element, fall back to prop
+    const duration = actualDurationRef.current || videoDuration || 0
+
+    const savePosition = () => {
+      const data: PlayPositionData = {
+        time: currentPlayPos,
+        duration,
+      }
+      localStorage.setItem(key, JSON.stringify(data))
+      lastWriteRef.current = Date.now()
+    }
+
     // If last write was more than 3s ago, write immediately
     if (now - lastWriteRef.current > 3000) {
-      localStorage.setItem(key, String(currentPlayPos))
-      lastWriteRef.current = now
+      savePosition()
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
         debounceRef.current = null
@@ -99,8 +174,7 @@ export function useVideoPlayPosition({
         clearTimeout(debounceRef.current)
       }
       debounceRef.current = setTimeout(() => {
-        localStorage.setItem(key, String(currentPlayPos))
-        lastWriteRef.current = Date.now()
+        savePosition()
         debounceRef.current = null
       }, 2000)
     }
@@ -110,7 +184,7 @@ export function useVideoPlayPosition({
         debounceRef.current = null
       }
     }
-  }, [currentPlayPos, user, videoId])
+  }, [currentPlayPos, user, videoId, videoDuration])
 
   // When ?t= parameter changes while on the same video, seek to the new timestamp
   useEffect(() => {

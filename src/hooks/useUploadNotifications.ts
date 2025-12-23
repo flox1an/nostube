@@ -173,6 +173,18 @@ export function useUploadNotifications() {
     })
   }, [])
 
+  // Remove all notifications for a specific draft
+  const removeByDraftId = useCallback((draftId: string) => {
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.draftId !== draftId)
+
+      // Save to localStorage
+      saveUploadNotificationStorage({ notifications: updated, lastUpdated: Date.now() })
+
+      return updated
+    })
+  }, [])
+
   // Clear all notifications
   const clearAll = useCallback(() => {
     setNotifications([])
@@ -186,6 +198,7 @@ export function useUploadNotifications() {
     markAsRead,
     markAllAsRead,
     removeNotification,
+    removeByDraftId,
     clearAll,
   }
 }

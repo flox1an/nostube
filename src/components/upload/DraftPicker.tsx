@@ -7,6 +7,7 @@ import { DraftCard } from './DraftCard'
 import { DeleteDraftDialog } from './DeleteDraftDialog'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { deleteBlobsFromServers } from '@/lib/blossom-upload'
+import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 
 interface DraftPickerProps {
   drafts: UploadDraft[]
@@ -24,6 +25,7 @@ export function DraftPicker({
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useCurrentUser()
+  const { removeByDraftId } = useUploadNotifications()
   const [draftToDelete, setDraftToDelete] = useState<UploadDraft | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -39,6 +41,7 @@ export function DraftPicker({
   const handleDeleteDraftOnly = () => {
     if (draftToDelete) {
       onDeleteDraft(draftToDelete.id)
+      removeByDraftId(draftToDelete.id) // Also remove related notifications
       toast({
         title: t('upload.draft.deleted'),
         description: t('upload.draft.deletedDescription'),
@@ -65,8 +68,9 @@ export function DraftPicker({
       async draft => await user.signer.signEvent(draft)
     )
 
-    // Delete the draft
+    // Delete the draft and related notifications
     onDeleteDraft(draftToDelete.id)
+    removeByDraftId(draftToDelete.id)
 
     // Show result toast
     if (totalSuccessful > 0 && totalFailed === 0) {

@@ -150,7 +150,7 @@ export function SettingsMenu({
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-white/20"
+        className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
         aria-label="Settings"
         aria-haspopup="true"
         aria-expanded={isOpen}

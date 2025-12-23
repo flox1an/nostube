@@ -98,6 +98,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const pendingSeekTimeRef = useRef<number | null>(null)
   const wasPlayingRef = useRef(false)
 
+  // Debug: log video variants for quality selector
+  React.useEffect(() => {
+    if (import.meta.env.DEV && videoVariants) {
+      console.log(
+        `[VideoPlayer] Video variants: ${videoVariants.length}`,
+        videoVariants.map(v => `${v.quality || v.dimensions} (${v.mimeType})`)
+      )
+    }
+  }, [videoVariants])
+
   // Compute URLs to use based on selected quality variant (if available)
   const effectiveUrls = React.useMemo(() => {
     if (videoVariants && videoVariants.length > 0 && selectedQualityIndex < videoVariants.length) {

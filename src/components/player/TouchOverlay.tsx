@@ -75,7 +75,11 @@ export function TouchOverlay({
   )
 
   return (
-    <div className="absolute inset-0 z-10" onClick={handleTap} onTouchEnd={handleTap}>
+    <div
+      className="absolute inset-x-0 top-0 bottom-12 z-10"
+      onClick={handleTap}
+      onTouchEnd={handleTap}
+    >
       {/* Ripple animations */}
       {ripples.map(ripple => (
         <SeekRipple key={ripple.id} side={ripple.side} x={ripple.x} y={ripple.y} />

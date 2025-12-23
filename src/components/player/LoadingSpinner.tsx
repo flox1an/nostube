@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Loader2 } from 'lucide-react'
 
 interface LoadingSpinnerProps {
@@ -7,7 +8,7 @@ interface LoadingSpinnerProps {
 /**
  * Center loading spinner overlay for buffering state
  */
-export function LoadingSpinner({ isVisible }: LoadingSpinnerProps) {
+export const LoadingSpinner = memo(function LoadingSpinner({ isVisible }: LoadingSpinnerProps) {
   if (!isVisible) {
     return null
   }
@@ -17,4 +18,4 @@ export function LoadingSpinner({ isVisible }: LoadingSpinnerProps) {
       <Loader2 className="h-16 w-16 animate-spin text-white" />
     </div>
   )
-}
+})

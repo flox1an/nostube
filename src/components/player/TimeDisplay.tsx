@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 
 interface TimeDisplayProps {
   currentTime: number
@@ -27,7 +27,7 @@ function formatTime(seconds: number): string {
  * Time display showing current time / duration
  * Click to toggle between elapsed and remaining time
  */
-export function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
+export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
   const [showRemaining, setShowRemaining] = useState(false)
 
   const toggleMode = () => setShowRemaining(prev => !prev)
@@ -51,7 +51,7 @@ export function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
       <span className="text-white/80">{formatTime(duration)}</span>
     </button>
   )
-}
+})
 
 // Export formatTime for use in other components (e.g., progress bar tooltip)
 export { formatTime }

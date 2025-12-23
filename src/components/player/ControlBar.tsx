@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, memo, useCallback } from 'react'
 import { PictureInPicture2, Subtitles, Maximize, Minimize, MonitorPlay } from 'lucide-react'
 import { PlayButton } from './PlayButton'
 import { VolumeControl } from './VolumeControl'
@@ -69,7 +69,7 @@ interface ControlBarProps {
 /**
  * Control bar container with all video controls
  */
-export function ControlBar({
+export const ControlBar = memo(function ControlBar({
   isVisible,
   isPlaying,
   currentTime,
@@ -102,13 +102,13 @@ export function ControlBar({
   onToggleFullscreen,
   children,
 }: ControlBarProps) {
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       onPause()
     } else {
       onPlay()
     }
-  }
+  }, [isPlaying, onPlay, onPause])
 
   return (
     <div
@@ -198,4 +198,4 @@ export function ControlBar({
       </div>
     </div>
   )
-}
+})

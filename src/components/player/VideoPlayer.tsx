@@ -474,6 +474,17 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [playerState])
 
+  // Memoized play/pause handlers for ControlBar
+  const handlePlay = useCallback(() => {
+    userInitiatedRef.current = true
+    playerState.play()
+  }, [playerState])
+
+  const handlePause = useCallback(() => {
+    userInitiatedRef.current = true
+    playerState.pause()
+  }, [playerState])
+
   // Mouse move handler for showing controls
   const handleMouseMove = useCallback(() => {
     showControls()
@@ -552,14 +563,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         currentTime={playerState.currentTime}
         duration={playerState.duration}
         bufferedPercentage={playerState.bufferedPercentage}
-        onPlay={() => {
-          userInitiatedRef.current = true
-          playerState.play()
-        }}
-        onPause={() => {
-          userInitiatedRef.current = true
-          playerState.pause()
-        }}
+        onPlay={handlePlay}
+        onPause={handlePause}
         onSeek={playerState.seek}
         volume={playerState.volume}
         isMuted={playerState.isMuted}

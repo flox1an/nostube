@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, memo } from 'react'
 
 interface TouchOverlayProps {
   onSeekBackward: () => void
@@ -20,7 +20,7 @@ interface RippleState {
  * - Tap right third: seek forward (accumulates with fast taps)
  * - Tap center: toggle play/pause
  */
-export function TouchOverlay({
+export const TouchOverlay = memo(function TouchOverlay({
   onSeekBackward,
   onSeekForward,
   onTogglePlay,
@@ -86,7 +86,7 @@ export function TouchOverlay({
       ))}
     </div>
   )
-}
+})
 
 interface SeekRippleProps {
   side: 'left' | 'right'

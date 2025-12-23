@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Video Player Performance Optimizations**: Improved UI rendering performance with several optimizations:
+  - Added `React.memo` to all player child components (ControlBar, ProgressBar, VolumeControl, TimeDisplay, TouchOverlay, SettingsMenu, PlayButton, ControlButton, LoadingSpinner, SeekIndicator) to prevent unnecessary re-renders
+  - Removed 100ms interval polling in `usePlayerState` - RAF-only polling is sufficient and more efficient
+  - Memoized play/pause callbacks in VideoPlayer to maintain stable references for ControlBar
+  - Simplified `useControlsVisibility` hook from timestamp-based to single boolean state, reducing state updates
+  - Converted `sortedVariantIndices` from `useCallback` to `useMemo` in `useAdaptiveQuality` for proper memoization
 - **Codec Info Messages Show Once**: Info-type codec messages (like "H.265/HEVC hvc1 is widely supported") now appear only once at the bottom of the video variants table instead of repeated for each video row. Error/warning messages still appear per-row (VideoVariantsTable.tsx)
 - **Video Card Hover Effect**: Added `p-2 hover:bg-accent rounded-lg transition-colors` to video cards and suggestion items. Removed all grid gaps from VideoGrid - spacing now comes from card padding (VideoCard.tsx, VideoGrid.tsx, VideoSuggestions.tsx)
 - **Cinema Mode Aspect Ratio Preservation**: Video player in cinema/theater mode now preserves original aspect ratio with max-height of 85dvh. Container uses `max-h-[85dvh] flex items-center justify-center`, video element uses `max-h-[85dvh]` directly. Shows black bars on sides for tall videos instead of clipping top/bottom (VideoPlayer.tsx, VideoPage.tsx)

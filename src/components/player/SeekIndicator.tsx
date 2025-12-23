@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 interface SeekIndicatorProps {
   /** Accumulated seek time in seconds (positive = forward, negative = backward) */
   accumulatedTime: number
@@ -11,7 +13,11 @@ interface SeekIndicatorProps {
  * Overlay that shows accumulated seek time like "+10", "+15", "-5"
  * Positioned on the right when seeking forward, left when seeking backward
  */
-export function SeekIndicator({ accumulatedTime, isVisible, direction }: SeekIndicatorProps) {
+export const SeekIndicator = memo(function SeekIndicator({
+  accumulatedTime,
+  isVisible,
+  direction,
+}: SeekIndicatorProps) {
   if (!isVisible || accumulatedTime === 0) return null
 
   const displayTime = Math.abs(accumulatedTime)
@@ -53,7 +59,7 @@ export function SeekIndicator({ accumulatedTime, isVisible, direction }: SeekInd
       </div>
     </div>
   )
-}
+})
 
 function SeekArrow({ direction }: { direction: 'left' | 'right' }) {
   return (

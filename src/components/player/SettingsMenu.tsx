@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import { Settings, ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant } from '@/utils/video-event'
@@ -43,7 +43,7 @@ const PLAYBACK_SPEEDS = [
 /**
  * Settings menu with nested submenus for quality and playback speed
  */
-export function SettingsMenu({
+export const SettingsMenu = memo(function SettingsMenu({
   hlsLevels = [],
   hlsCurrentLevel = -1,
   onHlsLevelChange,
@@ -193,7 +193,7 @@ export function SettingsMenu({
       )}
     </div>
   )
-}
+})
 
 interface MainMenuProps {
   hasQualityOptions: boolean
@@ -203,7 +203,7 @@ interface MainMenuProps {
   onSpeedClick: () => void
 }
 
-function MainMenu({
+const MainMenu = memo(function MainMenu({
   hasQualityOptions,
   currentQualityLabel,
   currentSpeedLabel,
@@ -223,7 +223,7 @@ function MainMenu({
       />
     </div>
   )
-}
+})
 
 interface QualitySubmenuProps {
   options: QualityOption[]
@@ -232,7 +232,12 @@ interface QualitySubmenuProps {
   onBack: () => void
 }
 
-function QualitySubmenu({ options, currentValue, onSelect, onBack }: QualitySubmenuProps) {
+const QualitySubmenu = memo(function QualitySubmenu({
+  options,
+  currentValue,
+  onSelect,
+  onBack,
+}: QualitySubmenuProps) {
   return (
     <div role="menu">
       <SubmenuHeader title="Quality" onBack={onBack} />
@@ -246,7 +251,7 @@ function QualitySubmenu({ options, currentValue, onSelect, onBack }: QualitySubm
       ))}
     </div>
   )
-}
+})
 
 interface SpeedSubmenuProps {
   currentValue: number
@@ -254,7 +259,11 @@ interface SpeedSubmenuProps {
   onBack: () => void
 }
 
-function SpeedSubmenu({ currentValue, onSelect, onBack }: SpeedSubmenuProps) {
+const SpeedSubmenu = memo(function SpeedSubmenu({
+  currentValue,
+  onSelect,
+  onBack,
+}: SpeedSubmenuProps) {
   return (
     <div role="menu">
       <SubmenuHeader title="Playback speed" onBack={onBack} />
@@ -268,7 +277,7 @@ function SpeedSubmenu({ currentValue, onSelect, onBack }: SpeedSubmenuProps) {
       ))}
     </div>
   )
-}
+})
 
 interface MenuItemProps {
   label: string
@@ -277,7 +286,12 @@ interface MenuItemProps {
   hasSubmenu?: boolean
 }
 
-function MenuItem({ label, value, onClick, hasSubmenu = false }: MenuItemProps) {
+const MenuItem = memo(function MenuItem({
+  label,
+  value,
+  onClick,
+  hasSubmenu = false,
+}: MenuItemProps) {
   return (
     <button
       type="button"
@@ -292,14 +306,14 @@ function MenuItem({ label, value, onClick, hasSubmenu = false }: MenuItemProps) 
       </span>
     </button>
   )
-}
+})
 
 interface SubmenuHeaderProps {
   title: string
   onBack: () => void
 }
 
-function SubmenuHeader({ title, onBack }: SubmenuHeaderProps) {
+const SubmenuHeader = memo(function SubmenuHeader({ title, onBack }: SubmenuHeaderProps) {
   return (
     <button
       type="button"
@@ -312,7 +326,7 @@ function SubmenuHeader({ title, onBack }: SubmenuHeaderProps) {
       <span>{title}</span>
     </button>
   )
-}
+})
 
 interface SelectableItemProps {
   label: string
@@ -320,7 +334,11 @@ interface SelectableItemProps {
   onClick: () => void
 }
 
-function SelectableItem({ label, isSelected, onClick }: SelectableItemProps) {
+const SelectableItem = memo(function SelectableItem({
+  label,
+  isSelected,
+  onClick,
+}: SelectableItemProps) {
   return (
     <button
       type="button"
@@ -337,4 +355,4 @@ function SelectableItem({ label, isSelected, onClick }: SelectableItemProps) {
       <span>{label}</span>
     </button>
   )
-}
+})

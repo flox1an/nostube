@@ -131,10 +131,10 @@ export const ProgressBar = memo(function ProgressBar({
           style={{ width: `${progressPercentage}%` }}
         />
 
-        {/* Scrubber - positioned relative to track */}
+        {/* Scrubber - always visible, grows on hover */}
         <div
-          className={`absolute w-3.5 h-3.5 bg-primary rounded-full shadow-md transition-opacity ${
-            showScrubber ? 'opacity-100' : 'opacity-0'
+          className={`absolute bg-primary rounded-full shadow-md transition-all ${
+            showScrubber ? 'w-4 h-4' : 'w-3 h-3'
           }`}
           style={{
             left: `${progressPercentage}%`,

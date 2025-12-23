@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Progress Bar Scrubber**: Always-visible position dot that grows on hover along with thicker bar
 - **Embed Player Rewrite**: Replaced vanilla JS embed with React-based embed using shared VideoPlayer component, Vite multi-entry build
 - **Video Player Performance**: React.memo on all components, RAF-only polling, memoized callbacks
 - **Upload Form Wizard**: 4-step wizard with validation, responsive two-column layout

@@ -1,7 +1,16 @@
 import { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Trash2, Play, AlertTriangle, CheckCircle, Info, Copy } from 'lucide-react'
+import {
+  Trash2,
+  Play,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Copy,
+  LucideCircleCheck,
+  LucideBookUp,
+} from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -127,16 +136,16 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                           {codecWarning && (
                             <>
                               {codecWarning.type === 'error' && (
-                                <AlertTriangle className="h-3 w-3 text-red-500 flex-shrink-0" />
+                                <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
                               )}
                               {codecWarning.type === 'warning' && (
-                                <AlertTriangle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                                <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
                               )}
                               {codecWarning.type === 'info' && (
-                                <Info className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                                <Info className="h-3 w-3 text-blue-500 shrink-0" />
                               )}
                               {codecWarning.type === 'success' && (
-                                <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
                               )}
                             </>
                           )}
@@ -156,7 +165,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1 cursor-help">
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <LucideBookUp className="h-4 w-4 text-green-500" />
                                   <span className="text-xs font-medium">
                                     {video.uploadedBlobs.length}
                                   </span>
@@ -269,10 +278,10 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                       {Array.from(uniqueInfoWarnings.values()).map(warning => (
                         <div key={warning.key} className="flex items-start gap-2">
                           {warning.type === 'info' && (
-                            <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                           )}
                           {warning.type === 'success' && (
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            <LucideBookUp className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                           )}
                           <AlertDescription className="text-sm">{t(warning.key)}</AlertDescription>
                         </div>

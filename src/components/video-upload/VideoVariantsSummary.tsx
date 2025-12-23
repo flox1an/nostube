@@ -134,7 +134,7 @@ export function VideoVariantsSummary({ videos, onRemove, onPreview }: VideoVaria
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               {isExpanded ? (
                 <>

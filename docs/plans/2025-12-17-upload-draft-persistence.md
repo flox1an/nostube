@@ -1192,7 +1192,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
     >
       <div className="flex gap-4">
         {/* Thumbnail */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -1223,7 +1223,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
         </div>
 
         {/* Delete button */}
-        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="sm"

@@ -48,7 +48,7 @@ function AuthorProfile({
 
   return (
     <div className={cn(className, 'flex items-center space-x-4')}>
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <img
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}

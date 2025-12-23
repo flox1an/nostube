@@ -45,7 +45,7 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
         <CardContent className="p-4">
           <div className="flex gap-4">
             {/* Thumbnail */}
-            <div className="relative flex-shrink-0 w-40 h-24 bg-muted rounded overflow-hidden">
+            <div className="relative shrink-0 w-40 h-24 bg-muted rounded overflow-hidden">
               {note.thumbnailUrl && (
                 <img
                   src={note.thumbnailUrl}

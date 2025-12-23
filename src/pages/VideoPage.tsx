@@ -540,7 +540,7 @@ export function VideoPage() {
         onVideoDimensionsLoaded={handleVideoDimensionsLoadedStable}
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
-        videoVariants={video.videoVariants} // For quality selector
+        videoVariants={video.allVideoVariants || video.videoVariants} // For quality selector (use all variants to let user try any quality)
       />
     )
   }

@@ -51,23 +51,49 @@ export function usePlayerState({
   // Throttle time updates
   const lastTimeUpdateRef = useRef(0)
 
+  // Track the current video element to detect when it changes
+  const currentVideoRef = useRef<HTMLVideoElement | null>(null)
+
   // Track when video element becomes available
   const [videoReady, setVideoReady] = useState(false)
 
   // Poll for video element availability after mount
+  // Also detect when video element is unmounted/remounted
   useEffect(() => {
-    if (videoReady) return
+    let rafId: number
 
     const checkVideo = () => {
-      if (videoRef.current) {
-        setVideoReady(true)
+      const videoEl = videoRef.current
+
+      if (videoEl) {
+        // Video element exists
+        if (videoEl !== currentVideoRef.current) {
+          // Different video element - reset and mark ready
+          currentVideoRef.current = videoEl
+          setVideoReady(true)
+        }
       } else {
-        requestAnimationFrame(checkVideo)
+        // Video element was unmounted
+        if (currentVideoRef.current !== null) {
+          currentVideoRef.current = null
+          setVideoReady(false)
+        }
+        // Keep polling until video element is available
+        rafId = requestAnimationFrame(checkVideo)
       }
     }
 
-    requestAnimationFrame(checkVideo)
-  }, [videoRef, videoReady])
+    // Start polling
+    rafId = requestAnimationFrame(checkVideo)
+
+    // Also monitor periodically in case video element changes
+    const intervalId = setInterval(checkVideo, 100)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      clearInterval(intervalId)
+    }
+  }, [videoRef])
 
   // Sync state with video element
   useEffect(() => {

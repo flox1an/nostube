@@ -138,7 +138,16 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   // Cleanup subscriptions on unmount (only when app closes)
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('[UploadManager] Provider mounted')
+    }
     return () => {
+      if (import.meta.env.DEV) {
+        console.log(
+          '[UploadManager] Provider unmounting! Clearing jobs:',
+          Array.from(jobsRef.current.keys())
+        )
+      }
       jobsRef.current.forEach(job => {
         job.subscription?.unsubscribe()
         job.abortController.abort()
@@ -447,6 +456,11 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       originalDuration?: number,
       requestedResolution?: string
     ): Promise<VideoVariant> => {
+      if (import.meta.env.DEV) {
+        console.log('[UploadManager] subscribeToDvmResponses called for taskId:', taskId)
+        console.log('[UploadManager] jobsRef current keys:', Array.from(jobsRef.current.keys()))
+      }
+
       const readRelays = configRef.current.relays
         .filter(r => r.tags.includes('read') && r.url)
         .map(r => r.url)
@@ -454,6 +468,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       return new Promise((resolve, reject) => {
         const job = jobsRef.current.get(taskId)
         if (!job) {
+          if (import.meta.env.DEV) {
+            console.error('[UploadManager] Job not found for taskId:', taskId)
+            console.error('[UploadManager] Available jobs:', Array.from(jobsRef.current.keys()))
+          }
           reject(new Error('Job not found'))
           return
         }
@@ -708,6 +726,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         onAllComplete,
       }
       jobsRef.current.set(taskId, job)
+
+      if (import.meta.env.DEV) {
+        console.log('[UploadManager] startTranscode - Created job for taskId:', taskId)
+      }
 
       const completedResolutions: string[] = []
 

@@ -213,14 +213,27 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     return () => el.removeEventListener('canplay', handleCanPlay)
   }, [selectedVariantIndex])
 
-  // Set initial play position
+  // Set initial play position - must wait for video to be ready before seeking
   const hasSetInitialPos = useRef(false)
+
   useEffect(() => {
     const el = videoRef.current
     if (!el || hasSetInitialPos.current) return
-    if (initialPlayPos > 0 && Math.abs(el.currentTime - initialPlayPos) > 1) {
-      el.currentTime = initialPlayPos
-      hasSetInitialPos.current = true
+
+    const setInitialPosition = () => {
+      if (initialPlayPos > 0 && Math.abs(el.currentTime - initialPlayPos) > 1) {
+        el.currentTime = initialPlayPos
+        hasSetInitialPos.current = true
+      }
+    }
+
+    // If video is already ready (readyState >= 1 means HAVE_METADATA)
+    if (el.readyState >= 1) {
+      setInitialPosition()
+    } else {
+      // Wait for video metadata to load before seeking
+      el.addEventListener('loadedmetadata', setInitialPosition, { once: true })
+      return () => el.removeEventListener('loadedmetadata', setInitialPosition)
     }
   }, [initialPlayPos])
 

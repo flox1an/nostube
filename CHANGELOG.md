@@ -120,3 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pagination Loading**: Fixed skeleton display
 - **iOS Autoplay**: Fixed after multiple videos
 - **Mobile Sidebar**: Safe area padding
+
+### Removed
+
+- **Unused Video Cache Worker**: Deleted `src/workers/videoCacheWorker.ts` which was dead code never integrated into the app. Video loading is handled by hooks like `useInfiniteTimeline`, `useCategoryVideos`, etc.

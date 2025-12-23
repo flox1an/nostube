@@ -62,9 +62,18 @@ export function useVideoPlayPosition({
       const saved = localStorage.getItem(key)
       if (saved) {
         const time = parseFloat(saved)
-        if (!isNaN(time) && videoDuration && videoDuration - time > 5 && time < videoDuration - 1) {
-          // Only restore if more than 5 seconds left and not at the end
-          return time
+        if (!isNaN(time) && time > 0) {
+          // If we know the duration, only restore if more than 5 seconds left
+          // If we don't know the duration, restore anyway (better UX than starting over)
+          if (videoDuration) {
+            if (videoDuration - time > 5 && time < videoDuration - 1) {
+              return time
+            }
+            // Near the end, don't restore
+          } else {
+            // No duration info - restore the position
+            return time
+          }
         }
       }
     }

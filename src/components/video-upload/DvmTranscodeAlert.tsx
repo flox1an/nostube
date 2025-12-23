@@ -109,10 +109,11 @@ export function DvmTranscodeAlert({
   const handleStartTranscode = () => {
     const inputUrl = getInputVideoUrl()
     if (inputUrl && selectedResolutions.length > 0) {
-      // Sort resolutions high to low
+      // Sort resolutions high to low using AVAILABLE_RESOLUTIONS order
       const sortedResolutions = [...selectedResolutions].sort((a, b) => {
-        const order = ['1080p', '720p', '480p', '320p']
-        return order.indexOf(a) - order.indexOf(b)
+        const aIndex = AVAILABLE_RESOLUTIONS.indexOf(a as (typeof AVAILABLE_RESOLUTIONS)[number])
+        const bIndex = AVAILABLE_RESOLUTIONS.indexOf(b as (typeof AVAILABLE_RESOLUTIONS)[number])
+        return aIndex - bIndex
       })
       startTranscode(inputUrl, video.duration, sortedResolutions)
     }

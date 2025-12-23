@@ -14,7 +14,10 @@ export function useUserBlossomServers() {
   const lastLogRef = useRef({ time: 0, serverCount: 0, pubkey: '' })
 
   // Use UserBlossomServersModel to get user's blossom servers
-  const blossomServersRaw = useEventModel(UserBlossomServersModel, user?.pubkey ? [user.pubkey] : null)
+  const blossomServersRaw = useEventModel(
+    UserBlossomServersModel,
+    user?.pubkey ? [user.pubkey] : null
+  )
   const blossomServers = blossomServersRaw ?? EMPTY_ARRAY
 
   // Convert URL objects to strings and filter out blocked servers - memoized to prevent infinite loops

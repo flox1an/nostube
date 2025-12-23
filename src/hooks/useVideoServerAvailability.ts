@@ -240,7 +240,7 @@ export function useVideoServerAvailability(
         if (existing?.lastChecked && now - existing.lastChecked < CACHE_DURATION) {
           return
         }
-        updated.set(server.url, { status: 'checking' })
+        updated.set(server.url, { status: 'checking', lastChecked: existing?.lastChecked })
       })
       return updated
     })

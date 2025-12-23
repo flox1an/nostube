@@ -43,6 +43,9 @@ import { TransformVideoDialog } from '@/components/TransformVideoDialog'
 import { getNeededTransformations } from '@/lib/video-transformation-detection'
 import { useTranslation } from 'react-i18next'
 
+// Stable empty array to prevent infinite re-renders
+const EMPTY_URLS: string[] = []
+
 export function VideoPage() {
   const { t } = useTranslation()
   const { config } = useAppContext()
@@ -276,7 +279,7 @@ export function VideoPage() {
   // Use video server availability hook
   const { serverList, serverAvailability, checkAvailability, isChecking } =
     useVideoServerAvailability({
-      videoUrls: video?.urls || [],
+      videoUrls: video?.urls ?? EMPTY_URLS,
       videoHash: video?.x,
       configServers: config.blossomServers,
       userServers: userBlossomServers,

@@ -160,7 +160,7 @@ export function SettingsMenu({
 
       {isOpen && (
         <div
-          className="absolute bottom-full right-0 mb-2 min-w-[200px] bg-black/95 backdrop-blur-sm rounded-lg overflow-hidden shadow-xl z-50"
+          className="absolute bottom-full right-0 mb-2 min-w-[240px] bg-black/95 backdrop-blur-sm rounded-lg overflow-hidden shadow-xl z-50"
           onClick={e => e.stopPropagation()}
         >
           {currentView === 'main' && (
@@ -281,12 +281,12 @@ function MenuItem({ label, value, onClick, hasSubmenu = false }: MenuItemProps) 
   return (
     <button
       type="button"
-      className="flex items-center justify-between w-full px-4 py-2.5 text-white text-sm hover:bg-white/10 transition-colors"
+      className="flex items-center justify-between gap-4 w-full px-4 py-2.5 text-white text-sm hover:bg-white/10 transition-colors"
       onClick={onClick}
       role="menuitem"
     >
-      <span>{label}</span>
-      <span className="flex items-center gap-1 text-white/70">
+      <span className="whitespace-nowrap text-left">{label}</span>
+      <span className="flex items-center gap-1 text-white/70 whitespace-nowrap">
         <span>{value}</span>
         {hasSubmenu && <ChevronRight className="w-4 h-4" />}
       </span>

@@ -96,7 +96,7 @@ export function ProgressBar({
   return (
     <div
       ref={containerRef}
-      className="group relative w-full cursor-pointer py-3"
+      className="group relative w-full cursor-pointer py-2"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onMouseMove={handleMouseMove}

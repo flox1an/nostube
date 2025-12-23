@@ -21,14 +21,14 @@ export function SeekIndicator({ accumulatedTime, isVisible, direction }: SeekInd
   return (
     <div
       className={`absolute inset-y-0 pointer-events-none z-20 flex items-center ${
-        isForward ? 'right-0 pr-8' : 'left-0 pl-8'
+        isForward ? 'right-0 pr-4' : 'left-0 pl-4'
       }`}
       style={{ width: '33.333%' }}
     >
       <div
-        className={`flex items-center gap-2 px-5 py-3 rounded-xl bg-black/70 backdrop-blur-sm animate-in fade-in ${
-          isForward ? 'slide-in-from-right-4' : 'slide-in-from-left-4'
-        } duration-150 mx-auto`}
+        className={`flex items-center gap-2 px-5 py-3 rounded-xl bg-black/50 backdrop-blur-sm animate-in fade-in ${
+          isForward ? 'slide-in-from-right-4 ml-auto' : 'slide-in-from-left-4'
+        } duration-150`}
       >
         {/* Arrows */}
         <div className="flex">

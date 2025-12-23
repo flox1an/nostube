@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Video Player Settings Menu Alignment**: Changed settings menu selectable items (quality levels, playback speeds) to have check mark on the left side like YouTube, matching standard menu conventions. Submenu header back button and items now have consistent spacing and icon sizes (SettingsMenu.tsx:SelectableItem, SubmenuHeader)
+- **Video Player Settings Menu Alignment**: Changed settings menu selectable items (quality levels, playback speeds) to have check mark on the left side like YouTube. Main menu items now use whitespace-nowrap to prevent "Playback speed" from wrapping. Increased menu min-width from 200px to 240px for better fit (SettingsMenu.tsx)
 - **Video Player Controls Timing**: Reduced auto-hide delay from 3 seconds to 2 seconds for snappier feel, but increased fade-out animation from 300ms to 500ms for smoother transition (ControlBar.tsx, VideoPlayer.tsx)
 - **Video Expiration Badge**: Videos with NIP-40 expiration tags now show an amber "Expires in X" badge next to the title, or a red "Expired" badge if already expired. Uses date-fns formatDistance for human-readable time (VideoInfoSection.tsx)
 - **Play/Pause Overlay Animation**: Play icon now displays 2x longer (800ms) than pause icon (400ms) for better visual feedback. Uses `animation-fill-mode: forwards` to prevent animation cutoffs. Component is shared between VideoPlayer and ShortsVideoPage (PlayPauseOverlay.tsx)

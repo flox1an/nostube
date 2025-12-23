@@ -149,12 +149,14 @@ export function useDvmTranscodeManager({
     const completedVideos = task?.transcodeState?.completedVideos
     if (!completedVideos || completedVideos.length === 0 || !onComplete) return
 
-    // Deliver any undelivered videos
+    // Collect all undelivered videos first
+    const videosToDeliver: VideoVariant[] = []
+
     for (const video of completedVideos) {
       if (!deliveredVideosRef.current.has(video.url)) {
         deliveredVideosRef.current.add(video.url)
 
-        // Convert to VideoVariant and deliver
+        // Convert to VideoVariant
         const videoVariant: VideoVariant = {
           url: video.url,
           dimension: video.dimension,
@@ -169,12 +171,29 @@ export function useDvmTranscodeManager({
           inputMethod: 'url',
         }
 
-        if (import.meta.env.DEV) {
-          console.log('[useDvmTranscodeManager] Delivering completed video on mount:', video.url)
-        }
-
-        onComplete(videoVariant)
+        videosToDeliver.push(videoVariant)
       }
+    }
+
+    // Deliver all videos with a small delay between each to allow React to process
+    if (videosToDeliver.length > 0) {
+      if (import.meta.env.DEV) {
+        console.log(
+          '[useDvmTranscodeManager] Delivering',
+          videosToDeliver.length,
+          'completed videos on mount'
+        )
+      }
+
+      // Use setTimeout to ensure each state update is processed
+      videosToDeliver.forEach((video, index) => {
+        setTimeout(() => {
+          if (import.meta.env.DEV) {
+            console.log('[useDvmTranscodeManager] Delivering video:', video.url)
+          }
+          onComplete(video)
+        }, index * 50) // 50ms delay between each
+      })
     }
 
     // If all videos delivered and status is complete, call onAllComplete
@@ -183,11 +202,17 @@ export function useDvmTranscodeManager({
       completedVideos.length > 0 &&
       deliveredVideosRef.current.size === completedVideos.length
     ) {
-      // Only call onAllComplete once
+      // Only call onAllComplete once, after all videos are delivered
       const allDeliveredKey = `__all_complete_${taskId}`
       if (!deliveredVideosRef.current.has(allDeliveredKey)) {
         deliveredVideosRef.current.add(allDeliveredKey)
-        onAllComplete?.()
+        // Delay to ensure all video deliveries are processed first
+        setTimeout(
+          () => {
+            onAllComplete?.()
+          },
+          videosToDeliver.length * 50 + 100
+        )
       }
     }
   }, [task?.transcodeState?.completedVideos, status, taskId, onComplete, onAllComplete])

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { RichTextContent } from '@/components/RichTextContent'
+import { CommentInput } from '@/components/CommentInput'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type NostrEvent } from 'nostr-tools'
@@ -329,9 +330,10 @@ export function VideoComments({
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [visibleComments, setVisibleComments] = useState(15) // Pagination: show 15 initially
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const eventStore = useEventStore()
-  const { user } = useCurrentUser()
+  const currentUser = useCurrentUser()
+  const { user } = currentUser
+  const userProfile = useProfile(user ? { pubkey: user.pubkey } : undefined)
   const { publish } = useNostrPublish()
   const { pool, config } = useAppContext()
 
@@ -575,31 +577,15 @@ export function VideoComments({
     <div className="px-2 sm:px-0">
       <h2 className="mb-4">{t('video.comments.title')}</h2>
       {user && (
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              placeholder={t('video.comments.addComment')}
-              className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
-              rows={1}
-              onKeyDown={e => {
-                // Submit on Ctrl/Cmd + Enter
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault()
-                  handleSubmit(e)
-                }
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <Button type="submit" disabled={!newComment.trim()} size="sm">
-              {t('video.comments.commentButton')}
-            </Button>
-            <span className="text-xs text-muted-foreground">{t('video.comments.commentHint')}</span>
-          </div>
-        </form>
+        <div className="mb-8">
+          <CommentInput
+            value={newComment}
+            onChange={setNewComment}
+            onSubmit={handleSubmit}
+            userAvatar={userProfile?.picture}
+            userName={userProfile?.name || user.pubkey.slice(0, 8)}
+          />
+        </div>
       )}
 
       <div>

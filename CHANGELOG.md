@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Comment Tree Structure**: Threaded replies with small avatars (h-6) for nested comments, large avatars (h-10) for root comments, indentation-based nesting
 - **YouTube-Style Comment Input**: Collapsible comment input with small avatar when unfocused, larger avatar + emoji picker + cancel/submit buttons when focused
 - **Progress Bar Scrubber**: Always-visible position dot that grows on hover along with thicker bar, hover preview highlighting up to mouse position
 - **Embed Player Rewrite**: Replaced vanilla JS embed with React-based embed using shared VideoPlayer component, Vite multi-entry build

@@ -158,13 +158,14 @@ const CommentItem = React.memo(function CommentItem({
   const isHighlighted = highlightedCommentId === comment.id
   const [showReportDialog, setShowReportDialog] = useState(false)
 
+  // Root comments (depth=0) have big avatars, nested have small avatars
+  const isRootComment = depth === 0
+  const avatarSize = isRootComment ? 'h-10 w-10' : 'h-6 w-6'
+
   return (
-    <div
-      id={`comment-${comment.id}`}
-      className={`mb-4 ${depth > 0 ? 'ml-4' : ''} ${isHighlighted ? 'highlight-comment' : ''}`}
-    >
-      <div className="flex gap-3">
-        <Avatar className={depth > 0 ? 'h-8 w-8' : 'h-10 w-10'}>
+    <div id={`comment-${comment.id}`} className={`${isHighlighted ? 'highlight-comment' : ''}`}>
+      <div className="flex gap-3 pb-4">
+        <Avatar className={`${avatarSize} shrink-0`}>
           <AvatarImage src={imageProxy(metadata?.picture)} />
           <AvatarFallback>{name[0]}</AvatarFallback>
         </Avatar>
@@ -203,32 +204,33 @@ const CommentItem = React.memo(function CommentItem({
             videoLink={link}
             className="mt-1 break-all text-sm"
           />
-          {onReply && !isReplying && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 h-7 px-2 text-xs"
-              onClick={() => onReply(comment)}
-            >
-              <Reply className="w-3 h-3 mr-1" />
-              {t('video.comments.replyButton')}
-            </Button>
-          )}
-
-          {/* Show replies toggle button */}
-          {hasReplies && depth < maxDepth && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => onToggleExpanded(comment.id)}
-            >
-              {isExpanded ? '▼' : '▶'} {comment.replies!.length}{' '}
-              {comment.replies!.length === 1
-                ? t('video.comments.reply')
-                : t('video.comments.replies')}
-            </Button>
-          )}
+          {/* Reply and expand buttons in same row */}
+          <div className="flex items-center gap-1 mt-1">
+            {onReply && !isReplying && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => onReply(comment)}
+              >
+                <Reply className="w-3 h-3 mr-1" />
+                {t('video.comments.replyButton')}
+              </Button>
+            )}
+            {hasReplies && depth < maxDepth && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => onToggleExpanded(comment.id)}
+              >
+                {isExpanded ? '▼' : '▶'} {comment.replies!.length}{' '}
+                {comment.replies!.length === 1
+                  ? t('video.comments.reply')
+                  : t('video.comments.replies')}
+              </Button>
+            )}
+          </div>
 
           {/* Inline reply form */}
           {isReplying && onSubmitReply && onReplyContentChange && onCancelReply && (
@@ -249,7 +251,7 @@ const CommentItem = React.memo(function CommentItem({
 
           {/* Render nested replies (only if expanded) */}
           {hasReplies && isExpanded && depth < maxDepth && (
-            <div className="mt-3">
+            <div className="mt-2 relative">
               {comment.replies!.map(reply => (
                 <CommentItem
                   key={reply.id}

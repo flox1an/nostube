@@ -139,6 +139,7 @@ interface CommentInputProps {
   value: string
   onChange: (value: string) => void
   onSubmit: (e: React.FormEvent) => void
+  onCancel?: () => void
   placeholder?: string
   submitLabel?: string
   userAvatar?: string
@@ -151,6 +152,7 @@ export const CommentInput = React.memo(function CommentInput({
   value,
   onChange,
   onSubmit,
+  onCancel,
   placeholder,
   submitLabel,
   userAvatar,
@@ -183,7 +185,8 @@ export const CommentInput = React.memo(function CommentInput({
     setEmojiPickerOpen(false)
     onChange('')
     inputRef.current?.blur()
-  }, [onChange])
+    onCancel?.()
+  }, [onChange, onCancel])
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {

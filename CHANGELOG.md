@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Page Max-Width**: Consistent max-w-560 across all pages
 - **Ultra-Wide Detection**: Increased cinema mode threshold to 10% above 16:9
 - **Blossom URL Utils**: Consolidated detection/parsing, NON_BLOSSOM_SERVERS list
-- **Package Updates**: React 19.2.3, Vite 7.3.0, nostr-tools 2.19.4, tailwindcss 4.1.18, and more
+- **Package Updates**: @types/node 25.0.3, immer 11.1.0, react-resizable-panels 4.0.15, and more
 
 ### Fixed
 

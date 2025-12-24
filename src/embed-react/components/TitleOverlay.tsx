@@ -10,7 +10,7 @@ interface TitleOverlayProps {
 
 export function TitleOverlay({ title, author, authorPubkey, visible, videoId }: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
-  const watchUrl = `https://nostube.com/watch?v=${videoId}`
+  const watchUrl = `https://nostu.be/video/${videoId}`
 
   return (
     <div

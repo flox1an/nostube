@@ -80,8 +80,10 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   const linkTo = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
 
   return (
-    <Link to={linkTo}>
-      <div className="flex p-2 hover:bg-accent rounded-lg transition-colors border-none">
+    <Link to={linkTo} className="group">
+      <div className="relative flex p-2 rounded-lg border-none overflow-hidden">
+        {/* Side fade-in hover effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="relative w-40 h-24 shrink-0">
           {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
           {!thumbnailLoaded &&
@@ -110,7 +112,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             </div>
           )}
         </div>
-        <div className="pl-3">
+        <div className="relative pl-3">
           <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
           <div className="flex items-center gap-1.5 mt-1">
             <Avatar className="h-4 w-4">

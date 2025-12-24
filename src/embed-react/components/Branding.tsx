@@ -5,7 +5,7 @@ interface BrandingProps {
 }
 
 export function Branding({ visible, color, videoId }: BrandingProps) {
-  const watchUrl = `https://nostube.com/watch?v=${videoId}`
+  const watchUrl = `https://nostu.be/video/${videoId}`
 
   return (
     <a

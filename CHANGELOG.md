@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Video Player Performance**: React.memo on all components, RAF-only polling, memoized callbacks
 - **Upload Form Wizard**: 4-step wizard with validation, responsive two-column layout
 - **Draft Deletion UX**: Confirmation dialog with option to delete media from Blossom servers
-- **Video Suggestions Hover**: Side fade-in gradient effect from left on hover
+- **Video Suggestions Hover**: Solid color with opacity fade-in/fade-out effect on hover
 - **Video Card Hover**: Added hover background effect with card padding
 - **Cinema Mode**: Preserves aspect ratio with max-height 85dvh
 - **Touch Overlay**: Single-tap for seeking instead of double-tap

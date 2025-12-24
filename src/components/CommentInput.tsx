@@ -273,7 +273,7 @@ export const CommentInput = React.memo(function CommentInput({
               onFocus={handleFocus}
               onKeyDown={handleKeyDown}
               placeholder={displayPlaceholder}
-              className="w-full bg-transparent border-0 border-b border-muted-foreground/30 focus:border-foreground px-0 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground"
+              className="w-full bg-transparent border-0 border-b border-muted-foreground/30 focus:border-foreground px-0 pb-2 text-sm outline-none transition-colors placeholder:text-muted-foreground"
               disabled={disabled}
             />
 

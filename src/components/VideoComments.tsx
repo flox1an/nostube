@@ -2,11 +2,10 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
-import React, { useMemo, useState, useEffect, useRef } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type NostrEvent } from 'nostr-tools'
 import { imageProxy, nowInSecs } from '@/lib/utils'
@@ -130,6 +129,8 @@ const CommentItem = React.memo(function CommentItem({
   expandedComments,
   onToggleExpanded,
   highlightedCommentId,
+  currentUserAvatar,
+  currentUserName,
 }: {
   comment: Comment
   link: string
@@ -143,6 +144,8 @@ const CommentItem = React.memo(function CommentItem({
   expandedComments: Set<string>
   onToggleExpanded: (commentId: string) => void
   highlightedCommentId?: string | null
+  currentUserAvatar?: string
+  currentUserName?: string
 }) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
@@ -150,18 +153,10 @@ const CommentItem = React.memo(function CommentItem({
   const maxDepth = 5 // Maximum nesting level
   const dateLocale = getDateLocale(i18n.language)
   const isReplying = replyingTo === comment.id
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isExpanded = expandedComments.has(comment.id)
   const hasReplies = comment.replies && comment.replies.length > 0
   const isHighlighted = highlightedCommentId === comment.id
   const [showReportDialog, setShowReportDialog] = useState(false)
-
-  // Focus textarea when replying to this comment
-  useEffect(() => {
-    if (isReplying && textareaRef.current) {
-      textareaRef.current.focus()
-    }
-  }, [isReplying])
 
   return (
     <div
@@ -237,41 +232,19 @@ const CommentItem = React.memo(function CommentItem({
 
           {/* Inline reply form */}
           {isReplying && onSubmitReply && onReplyContentChange && onCancelReply && (
-            <form onSubmit={onSubmitReply} className="mt-3 mb-2">
-              <div className="relative">
-                <Textarea
-                  ref={textareaRef}
-                  value={replyContent || ''}
-                  onChange={e => onReplyContentChange(e.target.value)}
-                  placeholder={t('video.comments.writeReply')}
-                  className="resize-none border-0 border-b-2 border-input rounded-none px-0 py-2 focus-visible:ring-0 focus-visible:border-primary transition-colors min-h-10"
-                  rows={1}
-                  onKeyDown={e => {
-                    // Submit on Ctrl/Cmd + Enter
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                      e.preventDefault()
-                      onSubmitReply(e)
-                    }
-                    // Cancel on Escape
-                    if (e.key === 'Escape') {
-                      e.preventDefault()
-                      onCancelReply()
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Button type="submit" disabled={!replyContent?.trim()} size="sm">
-                  {t('video.comments.replyButton')}
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={onCancelReply}>
-                  {t('common.cancel')}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {t('video.comments.replyHint')}
-                </span>
-              </div>
-            </form>
+            <div className="mt-3 mb-2">
+              <CommentInput
+                value={replyContent || ''}
+                onChange={onReplyContentChange}
+                onSubmit={onSubmitReply}
+                onCancel={onCancelReply}
+                placeholder={t('video.comments.writeReply')}
+                submitLabel={t('video.comments.replyButton')}
+                userAvatar={currentUserAvatar}
+                userName={currentUserName}
+                autoFocus
+              />
+            </div>
           )}
 
           {/* Render nested replies (only if expanded) */}
@@ -292,6 +265,8 @@ const CommentItem = React.memo(function CommentItem({
                   expandedComments={expandedComments}
                   onToggleExpanded={onToggleExpanded}
                   highlightedCommentId={highlightedCommentId}
+                  currentUserAvatar={currentUserAvatar}
+                  currentUserName={currentUserName}
                 />
               ))}
             </div>
@@ -603,6 +578,8 @@ export function VideoComments({
             expandedComments={expandedComments}
             onToggleExpanded={toggleExpanded}
             highlightedCommentId={highlightedCommentId}
+            currentUserAvatar={userProfile?.picture}
+            currentUserName={userProfile?.name || user?.pubkey.slice(0, 8)}
           />
         ))}
       </div>

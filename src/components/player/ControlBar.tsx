@@ -8,6 +8,7 @@ import { SettingsMenu } from './SettingsMenu'
 import { ControlButton } from './ControlButton'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant } from '@/utils/video-event'
+import { useIsMobile } from '@/hooks'
 
 interface ControlBarProps {
   // Visibility
@@ -62,7 +63,7 @@ interface ControlBarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
 
-  // Mobile detection
+  // Mobile detection (deprecated - ControlBar now uses useIsMobile directly)
   isMobile?: boolean
 
   // Optional children (for additional controls)
@@ -103,9 +104,12 @@ export const ControlBar = memo(function ControlBar({
   onToggleCinemaMode,
   isFullscreen,
   onToggleFullscreen,
-  isMobile,
+  isMobile: _isMobile,
   children,
 }: ControlBarProps) {
+  // Use hook directly for reliable mobile detection
+  const isMobile = useIsMobile()
+
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       onPause()

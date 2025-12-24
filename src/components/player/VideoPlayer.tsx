@@ -355,22 +355,76 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
-  const toggleFullscreen = useCallback(async () => {
+  const enterFullscreen = useCallback(async () => {
     const container = containerRef.current
-    if (!container) return
+    const video = videoRef.current
+    if (!container || document.fullscreenElement) return
 
     try {
-      if (!document.fullscreenElement) {
-        await container.requestFullscreen()
-      } else {
-        await document.exitFullscreen()
+      // iOS Safari doesn't support Fullscreen API on containers
+      // Use webkit fullscreen on video element instead
+      const videoEl = video as HTMLVideoElement & {
+        webkitEnterFullscreen?: () => void
       }
+      if (videoEl?.webkitEnterFullscreen) {
+        videoEl.webkitEnterFullscreen()
+        return
+      }
+
+      await container.requestFullscreen()
     } catch (err) {
       if (import.meta.env.DEV) {
         console.log('Fullscreen error:', err)
       }
     }
   }, [])
+
+  const exitFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement) return
+
+    try {
+      await document.exitFullscreen()
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.log('Exit fullscreen error:', err)
+      }
+    }
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    if (document.fullscreenElement) {
+      await exitFullscreen()
+    } else {
+      await enterFullscreen()
+    }
+  }, [enterFullscreen, exitFullscreen])
+
+  // Auto-fullscreen on orientation change (mobile only)
+  useEffect(() => {
+    if (!isMobile) return
+
+    const handleOrientationChange = () => {
+      const isLandscape = window.matchMedia('(orientation: landscape)').matches
+      const video = videoRef.current
+
+      if (isLandscape && video && !video.paused) {
+        // Landscape + playing → enter fullscreen
+        enterFullscreen()
+      } else if (!isLandscape && document.fullscreenElement) {
+        // Portrait + in fullscreen → exit fullscreen
+        exitFullscreen()
+      }
+    }
+
+    // Use screen.orientation API if available, fall back to matchMedia
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', handleOrientationChange)
+      return () => screen.orientation.removeEventListener('change', handleOrientationChange)
+    } else {
+      window.addEventListener('orientationchange', handleOrientationChange)
+      return () => window.removeEventListener('orientationchange', handleOrientationChange)
+    }
+  }, [isMobile, enterFullscreen, exitFullscreen])
 
   // PiP handling
   const isPipSupported = 'pictureInPictureEnabled' in document
@@ -588,6 +642,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleCinemaMode={onToggleCinemaMode}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
+        isMobile={isMobile}
       />
     </div>
   )

@@ -62,6 +62,9 @@ interface ControlBarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
 
+  // Mobile detection
+  isMobile?: boolean
+
   // Optional children (for additional controls)
   children?: ReactNode
 }
@@ -100,6 +103,7 @@ export const ControlBar = memo(function ControlBar({
   onToggleCinemaMode,
   isFullscreen,
   onToggleFullscreen,
+  isMobile,
   children,
 }: ControlBarProps) {
   const handlePlayPause = useCallback(() => {
@@ -144,8 +148,8 @@ export const ControlBar = memo(function ControlBar({
         <div className="flex items-center">
           {children}
 
-          {/* PiP button */}
-          {isPipSupported && (
+          {/* PiP button - hidden on mobile */}
+          {isPipSupported && !isMobile && (
             <ControlButton
               onClick={onTogglePip}
               icon={<PictureInPicture2 className="w-5 h-5" />}

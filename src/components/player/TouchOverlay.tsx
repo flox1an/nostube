@@ -74,11 +74,21 @@ export const TouchOverlay = memo(function TouchOverlay({
     [onSeekBackward, onSeekForward, onTogglePlay, onShowControls, addRipple]
   )
 
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      // Prevent the synthetic click event that follows touchend
+      // Without this, handleTap fires twice: once for touchend, once for click
+      e.preventDefault()
+      handleTap(e)
+    },
+    [handleTap]
+  )
+
   return (
     <div
       className="absolute inset-x-0 top-0 bottom-12 z-10"
       onClick={handleTap}
-      onTouchEnd={handleTap}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Ripple animations */}
       {ripples.map(ripple => (

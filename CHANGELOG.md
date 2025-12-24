@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Auto-Fullscreen on Orientation**: Automatically enters fullscreen when rotating to landscape while playing, exits on portrait
 - **Blurhash Thumbnail Placeholders**: Blurred LQIP placeholders while thumbnails load using imeta blurhash tags
 - **Unified Draft & Upload Manager**: Single source of truth for task and draft state with debounced Nostr sync
 - **Background Transcoding**: DVM transcode jobs continue when navigating away, auto-resume on app start
@@ -33,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Mobile Controls**: Hide Picture-in-Picture button on mobile devices
 - **Comment Tree Structure**: Threaded replies with small avatars (h-6) for nested comments, large avatars (h-10) for root comments, indentation-based nesting
 - **YouTube-Style Comment Input**: Collapsible comment input with small avatar when unfocused, larger avatar + emoji picker + cancel/submit buttons when focused
 - **Progress Bar Scrubber**: Always-visible position dot that grows on hover along with thicker bar, hover preview highlighting up to mouse position
@@ -54,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Mobile Touch Play/Pause**: Fixed double-trigger of play/pause on touch (was firing both touchend and synthetic click)
+- **iOS Fullscreen**: Use webkit fullscreen API on video element for iOS Safari compatibility
 - **Embed Player Styles**: Added missing theme CSS variables and removed unlayered inline CSS that was overriding Tailwind utilities
 - **Embed Player**: Fixed crash when VideoPlayer used useAppContext outside AppProvider (useAppContextSafe fallback)
 - **Video Player**: Resume position, time display, controls auto-hide, progress bar, volume slider, keyboard shortcuts

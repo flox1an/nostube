@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Mobile Detection**: Fixed useIsMobile hook to correctly detect mobile on initial render; ControlBar now uses hook directly for reliable PiP hiding
+- **Mobile Detection**: Improved useIsMobile hook to use user agent, touch capability, and screen width for reliable mobile detection
 - **Mobile Touch Play/Pause**: Fixed double-trigger of play/pause on touch (was firing both touchend and synthetic click)
 - **iOS Fullscreen**: Use webkit fullscreen API on video element for iOS Safari compatibility
 - **Embed Player Styles**: Added missing theme CSS variables and removed unlayered inline CSS that was overriding Tailwind utilities

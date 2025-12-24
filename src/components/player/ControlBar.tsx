@@ -63,9 +63,6 @@ interface ControlBarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
 
-  // Mobile detection (deprecated - ControlBar now uses useIsMobile directly)
-  isMobile?: boolean
-
   // Optional children (for additional controls)
   children?: ReactNode
 }
@@ -104,7 +101,6 @@ export const ControlBar = memo(function ControlBar({
   onToggleCinemaMode,
   isFullscreen,
   onToggleFullscreen,
-  isMobile: _isMobile,
   children,
 }: ControlBarProps) {
   // Use hook directly for reliable mobile detection
@@ -120,7 +116,7 @@ export const ControlBar = memo(function ControlBar({
 
   return (
     <div
-      className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 ${
+      className={`absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -150,8 +146,6 @@ export const ControlBar = memo(function ControlBar({
 
         {/* Right controls */}
         <div className="flex items-center">
-          {children}
-
           {/* PiP button - hidden on mobile */}
           {isPipSupported && !isMobile && (
             <ControlButton
@@ -160,6 +154,8 @@ export const ControlBar = memo(function ControlBar({
               label="Picture in Picture"
             />
           )}
+
+          {children}
 
           {/* Captions button */}
           {hasCaptions && (
@@ -185,7 +181,7 @@ export const ControlBar = memo(function ControlBar({
           />
 
           {/* Theater mode button */}
-          {onToggleCinemaMode && (
+          {!isMobile && onToggleCinemaMode && (
             <ControlButton
               onClick={onToggleCinemaMode}
               icon={<MonitorPlay className="w-5 h-5" />}

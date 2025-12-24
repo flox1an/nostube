@@ -642,7 +642,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleCinemaMode={onToggleCinemaMode}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
-        isMobile={isMobile}
       />
     </div>
   )

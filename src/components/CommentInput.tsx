@@ -323,12 +323,7 @@ export const CommentInput = React.memo(function CommentInput({
                   <Button type="button" variant="ghost" size="sm" onClick={handleCancel}>
                     {t('common.cancel')}
                   </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!value.trim() || disabled}
-                    className="rounded-full px-4"
-                  >
+                  <Button type="submit" size="sm" disabled={!value.trim() || disabled}>
                     {displaySubmitLabel}
                   </Button>
                 </div>

@@ -25,6 +25,7 @@ import {
   useVideoServerAvailability,
   useUserBlossomServers,
   useVideoHistory,
+  useIsMobile,
 } from '@/hooks'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
 import { useCommentHighlight } from '@/hooks/useCommentHighlight'
@@ -65,6 +66,7 @@ export function VideoPage() {
   const location = useLocation()
   const { user } = useCurrentUser()
   const { addToHistory } = useVideoHistory()
+  const isMobile = useIsMobile()
 
   // Get initial relays for loading the video event
   const initialRelays = useVideoPageRelays({
@@ -529,7 +531,9 @@ export function VideoPage() {
         poster={video.images[0] || ''}
         loop={shouldVideoLoop(video.kind)}
         className={
-          cinemaMode ? 'w-full max-h-[85dvh]' : 'w-full max-h-[80dvh] aspect-video rounded-lg'
+          cinemaMode
+            ? 'w-full max-h-[85dvh]'
+            : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
         }
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={currentPlayPos > 0 ? currentPlayPos : initialPlayPos}

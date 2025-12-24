@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Mobile Video Player**: Removed rounded corners when video player is full-width on mobile portrait mode
 - **Mobile Controls**: Hide Picture-in-Picture button on mobile devices
 - **Comment Tree Structure**: Threaded replies with small avatars (h-6) for nested comments, large avatars (h-10) for root comments, indentation-based nesting
 - **YouTube-Style Comment Input**: Collapsible comment input with small avatar when unfocused, larger avatar + emoji picker + cancel/submit buttons when focused

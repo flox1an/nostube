@@ -4,7 +4,6 @@ import type { EmbedParams } from './lib/url-params'
 import type { ParsedVideo, VideoVariant } from './lib/video-parser'
 import type { Profile } from './lib/profile-fetcher'
 import { TitleOverlay } from './components/TitleOverlay'
-import { Branding } from './components/Branding'
 import { ContentWarning } from './components/ContentWarning'
 import { ErrorMessage } from './components/ErrorMessage'
 import { LoadingState } from './components/LoadingState'
@@ -118,11 +117,6 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
           visible={controlsVisible}
           videoId={params.videoId}
         />
-      )}
-
-      {/* Branding */}
-      {params.showBranding && (
-        <Branding visible={controlsVisible} color={params.accentColor} videoId={params.videoId} />
       )}
     </div>
   )

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface UseControlsVisibilityProps {
   isPlaying: boolean
+  isSeeking?: boolean
   hideDelay?: number
 }
 
@@ -16,13 +17,14 @@ interface UseControlsVisibilityResult {
  */
 export function useControlsVisibility({
   isPlaying,
+  isSeeking = false,
   hideDelay = 3000,
 }: UseControlsVisibilityProps): UseControlsVisibilityResult {
   const [isInteracting, setIsInteracting] = useState(true)
   const timeoutRef = useRef<number | null>(null)
 
-  // Controls are visible when paused OR when user recently interacted
-  const isVisible = !isPlaying || isInteracting
+  // Controls are visible when paused, seeking, OR when user recently interacted
+  const isVisible = !isPlaying || isSeeking || isInteracting
 
   // Clear any pending timeout
   const clearHideTimeout = useCallback(() => {
@@ -63,6 +65,19 @@ export function useControlsVisibility({
 
     return clearHideTimeout
   }, [isPlaying, scheduleHide, clearHideTimeout])
+
+  // When seeking state changes, manage visibility
+  useEffect(() => {
+    if (isSeeking) {
+      // While seeking, keep controls visible and clear any hide timeout
+      clearHideTimeout()
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => setIsInteracting(true), 0)
+    } else if (isPlaying) {
+      // When done seeking and playing, schedule hide
+      scheduleHide()
+    }
+  }, [isSeeking, isPlaying, clearHideTimeout, scheduleHide])
 
   return {
     isVisible,

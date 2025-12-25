@@ -7,6 +7,7 @@ interface ProgressBarProps {
   duration: number
   bufferedPercentage: number
   onSeek: (time: number) => void
+  onSeekingChange?: (isSeeking: boolean) => void
 }
 
 /**
@@ -18,6 +19,7 @@ export const ProgressBar = memo(function ProgressBar({
   duration,
   bufferedPercentage,
   onSeek,
+  onSeekingChange,
 }: ProgressBarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isHovering, setIsHovering] = useState(false)
@@ -148,6 +150,12 @@ export const ProgressBar = memo(function ProgressBar({
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
   }, [isDragging, handleMouseMove])
+
+  // Notify parent when seeking state changes
+  const isSeeking = isDragging || isTouchDragging
+  useEffect(() => {
+    onSeekingChange?.(isSeeking)
+  }, [isSeeking, onSeekingChange])
 
   const showScrubber = isHovering || isDragging || isTouchDragging
 

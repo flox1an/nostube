@@ -118,12 +118,12 @@ export const ControlBar = memo(function ControlBar({
 
   return (
     <div
-      className={`absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 ${
-        isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      className={`absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 pointer-events-none ${
+        isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      {/* Progress bar */}
-      <div className="px-2">
+      {/* Progress bar - re-enable pointer events */}
+      <div className="px-2 pointer-events-auto">
         <ProgressBar
           currentTime={currentTime}
           duration={duration}
@@ -133,8 +133,8 @@ export const ControlBar = memo(function ControlBar({
         />
       </div>
 
-      {/* Controls row */}
-      <div className="flex items-center justify-between">
+      {/* Controls row - re-enable pointer events */}
+      <div className="flex items-center justify-between pointer-events-auto">
         {/* Left controls */}
         <div className="flex items-center">
           <PlayButton isPlaying={isPlaying} onClick={handlePlayPause} />

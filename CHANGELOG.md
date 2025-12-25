@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified Draft & Upload Manager**: Single source of truth for task and draft state with debounced Nostr sync
 - **Background Transcoding**: DVM transcode jobs continue when navigating away, auto-resume on app start
 - **Adaptive Quality Switching**: Auto-downgrades video quality on slow networks after buffering events
-- **Accumulating Seek**: Arrow keys/touch gestures accumulate seek time with visual feedback (+5s, +10s, etc.)
+- **Accumulating Seek**: Arrow keys/touch gestures accumulate seek time in 5s increments with visual feedback (+5s, +10s, etc.)
 - **Custom Video Player**: YouTube-style player with auto-hiding controls, settings menu, quality/speed selection, mobile gestures, hls.js integration
 - **DVM Video Transcoding**: Multi-resolution transcoding via NIP-90 DVMs with progress display and Blossom mirroring
 - **Upload Draft Persistence**: NIP-78 drafts with localStorage + Nostr sync, NIP-44 encryption, 30-day cleanup

@@ -1,5 +1,5 @@
 import { type ReactNode, memo, useCallback } from 'react'
-import { PictureInPicture2, Subtitles, Maximize, Minimize, MonitorPlay } from 'lucide-react'
+import { PictureInPicture2, Subtitles, Maximize, Minimize, MoveHorizontal } from 'lucide-react'
 import { PlayButton } from './PlayButton'
 import { VolumeControl } from './VolumeControl'
 import { TimeDisplay } from './TimeDisplay'
@@ -187,7 +187,7 @@ export const ControlBar = memo(function ControlBar({
           {!isMobile && onToggleCinemaMode && (
             <ControlButton
               onClick={onToggleCinemaMode}
-              icon={<MonitorPlay className="w-5 h-5" />}
+              icon={<MoveHorizontal className="w-5 h-5" />}
               label={cinemaMode ? 'Exit theater mode' : 'Theater mode'}
               active={cinemaMode}
             />

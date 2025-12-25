@@ -29,7 +29,7 @@ export const SeekIndicator = memo(function SeekIndicator({
       className={`absolute inset-y-0 pointer-events-none z-20 flex items-center ${
         isForward ? 'right-0 pr-4' : 'left-0 pl-4'
       }`}
-      style={{ width: '33.333%' }}
+      style={{ width: '25%' }}
     >
       <div
         className={`flex items-center gap-2 px-5 py-3 rounded-xl bg-black/50 backdrop-blur-sm animate-in fade-in ${

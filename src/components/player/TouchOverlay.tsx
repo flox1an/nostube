@@ -16,9 +16,9 @@ interface RippleState {
 
 /**
  * Touch overlay for mobile interactions
- * - Tap left third: seek backward (accumulates with fast taps)
- * - Tap right third: seek forward (accumulates with fast taps)
- * - Tap center: toggle play/pause
+ * - Tap left quarter: seek backward (accumulates with fast taps)
+ * - Tap right quarter: seek forward (accumulates with fast taps)
+ * - Tap center half: toggle play/pause
  */
 export const TouchOverlay = memo(function TouchOverlay({
   onSeekBackward,
@@ -55,18 +55,18 @@ export const TouchOverlay = memo(function TouchOverlay({
 
       const x = clientX - rect.left
       const y = clientY - rect.top
-      const thirdWidth = rect.width / 3
+      const quarterWidth = rect.width / 4
 
-      if (x < thirdWidth) {
-        // Left third - seek backward
+      if (x < quarterWidth) {
+        // Left quarter - seek backward
         onSeekBackward()
         addRipple('left', x, y)
-      } else if (x > thirdWidth * 2) {
-        // Right third - seek forward
+      } else if (x > quarterWidth * 3) {
+        // Right quarter - seek forward
         onSeekForward()
         addRipple('right', x, y)
       } else {
-        // Center - toggle play/pause and show controls
+        // Center half - toggle play/pause and show controls
         onTogglePlay()
         onShowControls()
       }
@@ -117,7 +117,7 @@ function SeekRipple({ side, x, y }: SeekRippleProps) {
         right: side === 'right' ? 0 : 'auto',
         top: 0,
         bottom: 0,
-        width: '33.333%',
+        width: '25%',
       }}
     >
       {/* Ripple circle */}

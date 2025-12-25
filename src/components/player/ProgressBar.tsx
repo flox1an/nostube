@@ -33,9 +33,9 @@ export const ProgressBar = memo(function ProgressBar({
   const isMobile = useIsMobile()
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
-  // Show preview position while touch dragging, otherwise show current position
+  // Show preview position while touch dragging or waiting for seek to complete
   const displayPercentage =
-    isTouchDragging && previewTime !== null ? (previewTime / duration) * 100 : progressPercentage
+    previewTime !== null ? (previewTime / duration) * 100 : progressPercentage
 
   const getTimeFromPosition = useCallback(
     (clientX: number) => {
@@ -128,9 +128,8 @@ export const ProgressBar = memo(function ProgressBar({
         onSeek(previewTimeRef.current)
       }
 
+      // Keep previewTime displayed until currentTime catches up (cleared in effect below)
       setIsTouchDragging(false)
-      setPreviewTime(null)
-      previewTimeRef.current = null
     },
     [onSeek]
   )
@@ -155,6 +154,20 @@ export const ProgressBar = memo(function ProgressBar({
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
   }, [isDragging, handleMouseMove])
+
+  // Clear preview time when currentTime catches up after a seek
+  useEffect(() => {
+    if (previewTime !== null && !isTouchDragging) {
+      // Check if currentTime is close enough to previewTime (within 0.5s)
+      if (Math.abs(currentTime - previewTime) < 0.5) {
+        // Use setTimeout to avoid synchronous setState in effect
+        setTimeout(() => {
+          setPreviewTime(null)
+          previewTimeRef.current = null
+        }, 0)
+      }
+    }
+  }, [currentTime, previewTime, isTouchDragging])
 
   // Notify parent when seeking state changes
   const isSeeking = isDragging || isTouchDragging

@@ -62,6 +62,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [captionsEnabled, setCaptionsEnabled] = useState(false)
+  const [isSeeking, setIsSeeking] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
@@ -156,8 +157,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Controls visibility
   const { isVisible: controlsVisible, showControls } = useControlsVisibility({
     isPlaying: playerState.isPlaying,
+    isSeeking,
     hideDelay: 2000,
   })
+
+  // Handle seeking state change from progress bar
+  const handleSeekingChange = useCallback((seeking: boolean) => {
+    setIsSeeking(seeking)
+  }, [])
 
   // Seek accumulator for arrow keys and touch
   const handleAccumulatedSeek = useCallback(
@@ -620,6 +627,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onPlay={handlePlay}
         onPause={handlePause}
         onSeek={playerState.seek}
+        onSeekingChange={handleSeekingChange}
         volume={playerState.volume}
         isMuted={playerState.isMuted}
         onVolumeChange={playerState.setVolume}

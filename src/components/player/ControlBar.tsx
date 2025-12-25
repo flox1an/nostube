@@ -24,6 +24,7 @@ interface ControlBarProps {
   onPlay: () => void
   onPause: () => void
   onSeek: (time: number) => void
+  onSeekingChange?: (isSeeking: boolean) => void
 
   // Volume
   volume: number
@@ -79,6 +80,7 @@ export const ControlBar = memo(function ControlBar({
   onPlay,
   onPause,
   onSeek,
+  onSeekingChange,
   volume,
   isMuted,
   onVolumeChange,
@@ -127,6 +129,7 @@ export const ControlBar = memo(function ControlBar({
           duration={duration}
           bufferedPercentage={bufferedPercentage}
           onSeek={onSeek}
+          onSeekingChange={onSeekingChange}
         />
       </div>
 

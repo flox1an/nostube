@@ -3,6 +3,9 @@
  * Ensures videos play correctly across different platforms
  */
 
+// Cache for logged messages to avoid spamming console
+const loggedMessages = new Set<string>()
+
 /**
  * Detect if the current device is iOS (iPhone, iPad, iPod)
  */
@@ -69,7 +72,11 @@ export function isCodecSupported(mimeType?: string): boolean {
     for (const codec of IOS_UNSUPPORTED_CODECS) {
       if (normalizedMime.includes(codec)) {
         if (import.meta.env.DEV) {
-          console.log(`[Codec Filter] Filtered incompatible codec on iOS: ${codec} in ${mimeType}`)
+          const logKey = `ios-${codec}-${mimeType}`
+          if (!loggedMessages.has(logKey)) {
+            loggedMessages.add(logKey)
+            console.log(`[Codec Filter] Filtered incompatible codec on iOS: ${codec} in ${mimeType}`)
+          }
         }
         return false
       }
@@ -85,7 +92,11 @@ export function isCodecSupported(mimeType?: string): boolean {
       // '' means not supported
       if (support === '') {
         if (import.meta.env.DEV) {
-          console.log(`[Codec Filter] Browser cannot play: ${mimeType}`)
+          const logKey = `canplay-${mimeType}`
+          if (!loggedMessages.has(logKey)) {
+            loggedMessages.add(logKey)
+            console.log(`[Codec Filter] Browser cannot play: ${mimeType}`)
+          }
         }
         return false
       }
@@ -107,18 +118,18 @@ export function filterCompatibleVariants<T extends { mimeType?: string }>(varian
   // (better to try and fail than show nothing)
   if (compatible.length === 0) {
     if (import.meta.env.DEV) {
-      console.warn(
-        '[Codec Filter] All variants filtered out, returning original variants as fallback'
-      )
+      const logKey = `fallback-${variants.length}`
+      if (!loggedMessages.has(logKey)) {
+        loggedMessages.add(logKey)
+        console.warn(
+          '[Codec Filter] All variants filtered out, returning original variants as fallback'
+        )
+      }
     }
     return variants
   }
 
-  if (import.meta.env.DEV && compatible.length < variants.length) {
-    console.log(
-      `[Codec Filter] Filtered ${variants.length - compatible.length} incompatible variants (${compatible.length} remaining)`
-    )
-  }
+  // Don't log filtered variants count - too noisy
 
   return compatible
 }

@@ -28,6 +28,8 @@ export const ProgressBar = memo(function ProgressBar({
   const [hoverPosition, setHoverPosition] = useState(0)
   const [hoverTime, setHoverTime] = useState(0)
   const [previewTime, setPreviewTime] = useState<number | null>(null)
+  // Use ref to track preview time for touchend handler (avoids stale closure issue)
+  const previewTimeRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
@@ -91,6 +93,7 @@ export const ProgressBar = memo(function ProgressBar({
       const time = getTimeFromPosition(touch.clientX)
       const position = getPositionPercentage(touch.clientX)
       setPreviewTime(time)
+      previewTimeRef.current = time
       setHoverTime(time)
       setHoverPosition(position)
     },
@@ -108,6 +111,7 @@ export const ProgressBar = memo(function ProgressBar({
       const time = getTimeFromPosition(touch.clientX)
       const position = getPositionPercentage(touch.clientX)
       setPreviewTime(time)
+      previewTimeRef.current = time
       setHoverTime(time)
       setHoverPosition(position)
     },
@@ -119,15 +123,16 @@ export const ProgressBar = memo(function ProgressBar({
       e.stopPropagation()
       e.preventDefault()
 
-      if (isTouchDragging && previewTime !== null) {
-        // Only seek when touch ends (debounced behavior)
-        onSeek(previewTime)
+      // Use ref to get latest preview time (avoids stale closure)
+      if (previewTimeRef.current !== null) {
+        onSeek(previewTimeRef.current)
       }
 
       setIsTouchDragging(false)
       setPreviewTime(null)
+      previewTimeRef.current = null
     },
-    [isTouchDragging, previewTime, onSeek]
+    [onSeek]
   )
 
   // Handle mouse events outside the component while dragging

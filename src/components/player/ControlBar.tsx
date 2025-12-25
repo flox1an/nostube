@@ -118,7 +118,7 @@ export const ControlBar = memo(function ControlBar({
 
   return (
     <div
-      className={`absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 ${
+      className={`absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >

@@ -75,12 +75,21 @@ export function isCodecSupported(mimeType?: string): boolean {
           const logKey = `ios-${codec}-${mimeType}`
           if (!loggedMessages.has(logKey)) {
             loggedMessages.add(logKey)
-            console.log(`[Codec Filter] Filtered incompatible codec on iOS: ${codec} in ${mimeType}`)
+            console.log(
+              `[Codec Filter] Filtered incompatible codec on iOS: ${codec} in ${mimeType}`
+            )
           }
         }
         return false
       }
     }
+  }
+
+  // hvc1/hev1 are widely supported via hardware decoding even when
+  // canPlayType reports no support - let the player try them
+  const hardwareDecodedCodecs = ['hvc1', 'hev1']
+  if (hardwareDecodedCodecs.some(codec => normalizedMime.includes(codec))) {
+    return true
   }
 
   // Use native canPlayType if available (best detection)

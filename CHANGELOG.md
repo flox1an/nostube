@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **HEVC Codec Detection**: Allow hvc1/hev1 codecs through without relying on unreliable canPlayType detection (hardware decoding works even when browser reports no support)
 - **Mobile Detection**: Improved useIsMobile hook to use user agent, touch capability, and screen width for reliable mobile detection
 - **Mobile Touch Play/Pause**: Fixed double-trigger of play/pause on touch (was firing both touchend and synthetic click)
 - **iOS Fullscreen**: Use webkit fullscreen API on video element for iOS Safari compatibility

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
@@ -10,8 +10,9 @@ import { type BlobDescriptor } from 'blossom-client-sdk'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { presetBlossomServers } from '@/constants/relays'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
-import type { UploadDraft } from '@/types/upload-draft'
+import type { UploadDraft, SubtitleVariant } from '@/types/upload-draft'
 import { parseBlossomUrl } from '@/lib/blossom-url'
+import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -24,6 +25,7 @@ interface BuildVideoEventParams {
   expiration: 'none' | '1day' | '7days' | '1month' | '1year'
   thumbnailUploadedBlobs: BlobDescriptor[]
   thumbnailMirroredBlobs: BlobDescriptor[]
+  subtitles: SubtitleVariant[]
   isPreview?: boolean
   hasPendingThumbnail?: boolean
 }
@@ -55,6 +57,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     expiration,
     thumbnailUploadedBlobs,
     thumbnailMirroredBlobs,
+    subtitles,
     isPreview = false,
     hasPendingThumbnail = false,
   } = params
@@ -147,6 +150,11 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
   const createdAt = isPreview ? '<generated on publish>' : nowInSecs()
   const publishedAt = isPreview ? '<generated on publish>' : nowInSecs().toString()
 
+  // Build text-track tags for subtitles
+  const textTrackTags: string[][] = subtitles
+    .filter(s => s.uploadedBlobs.length > 0 && s.lang)
+    .map(s => ['text-track', s.uploadedBlobs[0].url, s.lang])
+
   const event = {
     kind,
     content: description,
@@ -157,6 +165,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
       ['published_at', publishedAt],
       ['duration', firstVideo.duration.toString()],
       ...imetaTags,
+      ...textTrackTags,
       ...(contentWarningEnabled
         ? [['content-warning', contentWarningReason.trim() ? contentWarningReason : 'NSFW']]
         : []),
@@ -237,6 +246,10 @@ export function useVideoUpload(
   )
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
+
+  // Subtitles state
+  const [subtitles, setSubtitles] = useState<SubtitleVariant[]>(initialDraft?.subtitles || [])
+  const [subtitleUploading, setSubtitleUploading] = useState(false)
 
   // State for video deletion dialog
   const [videoToDelete, setVideoToDelete] = useState<{
@@ -753,6 +766,87 @@ export function useVideoUpload(
     })
   }
 
+  // Handler for subtitle file drop
+  const handleSubtitleDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!blossomInitalUploadServers || blossomInitalUploadServers.length === 0 || !user) {
+        return
+      }
+
+      setSubtitleUploading(true)
+
+      for (const file of acceptedFiles) {
+        const id = generateSubtitleId()
+        const lang = detectLanguageFromFilename(file.name)
+
+        // Add subtitle with pending status
+        const newSubtitle: SubtitleVariant = {
+          id,
+          filename: file.name,
+          lang,
+          uploadedBlobs: [],
+          mirroredBlobs: [],
+        }
+        setSubtitles(prev => [...prev, newSubtitle])
+
+        try {
+          // Upload to Blossom servers
+          const uploadedBlobs = await uploadFileToMultipleServersChunked({
+            file,
+            servers: blossomInitalUploadServers.map(server => server.url),
+            signer: async draft => await user.signer.signEvent(draft),
+          })
+
+          let mirroredBlobs: BlobDescriptor[] = []
+          if (blossomMirrorServers && blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
+            mirroredBlobs = await mirrorBlobsToServers({
+              mirrorServers: blossomMirrorServers.map(s => s.url),
+              blob: uploadedBlobs[0],
+              signer: async draft => await user.signer.signEvent(draft),
+            })
+          }
+
+          // Update subtitle with uploaded blobs
+          setSubtitles(prev =>
+            prev.map(s => (s.id === id ? { ...s, uploadedBlobs, mirroredBlobs } : s))
+          )
+        } catch (error) {
+          console.error('Failed to upload subtitle:', error)
+          // Remove failed subtitle
+          setSubtitles(prev => prev.filter(s => s.id !== id))
+        }
+      }
+
+      setSubtitleUploading(false)
+    },
+    [blossomInitalUploadServers, blossomMirrorServers, user]
+  )
+
+  // Handler to remove a subtitle
+  const handleRemoveSubtitle = useCallback(
+    async (id: string) => {
+      const subtitle = subtitles.find(s => s.id === id)
+      if (!subtitle || !user) {
+        setSubtitles(prev => prev.filter(s => s.id !== id))
+        return
+      }
+
+      // Delete blobs from servers if they exist
+      const allBlobs = [...subtitle.uploadedBlobs, ...subtitle.mirroredBlobs]
+      if (allBlobs.length > 0) {
+        await deleteBlobsFromServers(allBlobs, async draft => await user.signer.signEvent(draft))
+      }
+
+      setSubtitles(prev => prev.filter(s => s.id !== id))
+    },
+    [subtitles, user]
+  )
+
+  // Handler to change subtitle language
+  const handleSubtitleLanguageChange = useCallback((id: string, lang: string) => {
+    setSubtitles(prev => prev.map(s => (s.id === id ? { ...s, lang } : s)))
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
@@ -819,6 +913,7 @@ export function useVideoUpload(
         expiration,
         thumbnailUploadedBlobs,
         thumbnailMirroredBlobs,
+        subtitles,
         isPreview: false,
       })
 
@@ -883,10 +978,11 @@ export function useVideoUpload(
           uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
           mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
         },
+        subtitles,
         updatedAt: Date.now(),
       })
     }
-  }, [uploadInfo, thumbnailUploadInfo])
+  }, [uploadInfo, thumbnailUploadInfo, subtitles])
 
   // Build preview event from current form state (reuses buildVideoEvent logic)
   const previewEvent = useMemo(() => {
@@ -907,6 +1003,7 @@ export function useVideoUpload(
       expiration,
       thumbnailUploadedBlobs: thumbUploadedBlobs,
       thumbnailMirroredBlobs: thumbMirroredBlobs,
+      subtitles,
       isPreview: true,
       hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
     })
@@ -924,6 +1021,7 @@ export function useVideoUpload(
     thumbnailSource,
     thumbnailUploadInfo,
     thumbnailBlob,
+    subtitles,
   ])
 
   return {
@@ -964,6 +1062,8 @@ export function useVideoUpload(
     previewEvent,
     videoToDelete,
     setVideoToDelete,
+    subtitles,
+    subtitleUploading,
 
     // Handlers
     handleUseRecommendedServers,
@@ -982,5 +1082,8 @@ export function useVideoUpload(
     handleRemoveVideoFromFormOnly,
     handleRemoveVideoWithBlobs,
     handleAddTranscodedVideo,
+    handleSubtitleDrop,
+    handleRemoveSubtitle,
+    handleSubtitleLanguageChange,
   }
 }

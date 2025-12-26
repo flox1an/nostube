@@ -94,6 +94,7 @@ export function createEmptyDraft(): UploadDraft {
     inputMethod: 'file',
     uploadInfo: { videos: [] },
     thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+    subtitles: [],
     thumbnailSource: 'generated',
   }
 }

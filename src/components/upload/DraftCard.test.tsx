@@ -50,6 +50,7 @@ const mockDraft: UploadDraft = {
     ],
     mirroredBlobs: [],
   },
+  subtitles: [],
   thumbnailSource: 'generated',
 }
 

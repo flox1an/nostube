@@ -159,6 +159,7 @@ export function useUploadDrafts() {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
 

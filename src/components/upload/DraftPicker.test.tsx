@@ -24,6 +24,7 @@ const mockDrafts: UploadDraft[] = [
     inputMethod: 'file',
     uploadInfo: { videos: [] },
     thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+    subtitles: [],
     thumbnailSource: 'generated',
   },
   {
@@ -39,6 +40,7 @@ const mockDrafts: UploadDraft[] = [
     inputMethod: 'file',
     uploadInfo: { videos: [] },
     thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+    subtitles: [],
     thumbnailSource: 'generated',
   },
 ]

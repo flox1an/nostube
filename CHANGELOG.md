@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **iOS Fullscreen**: Use webkit fullscreen API on video element for iOS Safari compatibility
 - **Embed Player Styles**: Added missing theme CSS variables and removed unlayered inline CSS that was overriding Tailwind utilities
 - **Embed Player**: Fixed crash when VideoPlayer used useAppContext outside AppProvider (useAppContextSafe fallback)
+- **Embed Player Tooltip**: Added missing TooltipProvider wrapper to embed entry point, fixing "Tooltip must be used within TooltipProvider" error
 - **Video Player**: Resume position, time display, controls auto-hide, progress bar, volume slider, keyboard shortcuts
 - **DVM Transcoding**: Race conditions, mirroring to user's servers, state cleanup, progress messages, queue undefined access
 - **Upload Wizard**: Form submission prevention, Enter key handling, accidental publish protection

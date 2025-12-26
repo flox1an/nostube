@@ -7,6 +7,7 @@ import { NostrClient } from './lib/nostr-client'
 import { ProfileFetcher } from './lib/profile-fetcher'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import './embed.css'
 
 interface EmbedState {
@@ -101,13 +102,15 @@ function renderApp(
 ): void {
   root.render(
     <StrictMode>
-      <EmbedApp
-        params={params}
-        video={state.video}
-        profile={state.profile}
-        error={state.error}
-        isLoading={state.isLoading}
-      />
+      <TooltipProvider>
+        <EmbedApp
+          params={params}
+          video={state.video}
+          profile={state.profile}
+          error={state.error}
+          isLoading={state.isLoading}
+        />
+      </TooltipProvider>
     </StrictMode>
   )
 }

@@ -528,6 +528,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
       switch (e.key) {
         case ' ':
+        case 'k':
+        case 'K':
           e.preventDefault()
           userInitiatedRef.current = true
           if (playerState.isPlaying) {

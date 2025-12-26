@@ -12,7 +12,7 @@ interface PlayButtonProps {
  */
 export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
   const label = isPlaying ? 'Pause' : 'Play'
-  const tooltip = `${label} (Space)`
+  const tooltip = `${label} (K)`
 
   return (
     <Tooltip delayDuration={0}>

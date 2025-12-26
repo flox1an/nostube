@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"build\", \"default\", \"serde\", \"serde_json\"]",
+  "declared_features": "[\"build\", \"default\", \"serde\", \"serde_json\"]",
+  "target": 8890963285515479296,
+  "profile": 1369601567987815722,
+  "path": 873529672253212958,
+  "deps": [
+    [3654002787373806582, "serde_json", false, 5579028607925915756],
+    [13548984313718623784, "serde", false, 5005043388167665575]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/swift-rs-fa97d520aa5a9cfd/dep-build-script-build-script-test-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

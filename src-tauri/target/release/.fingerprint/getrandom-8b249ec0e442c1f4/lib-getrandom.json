@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"std\"]",
+  "declared_features": "[\"bindgen\", \"compiler_builtins\", \"core\", \"dummy\", \"js-sys\", \"log\", \"rustc-dep-of-std\", \"std\", \"stdweb\", \"test-in-browser\", \"wasm-bindgen\"]",
+  "target": 3140061874755240240,
+  "profile": 1369601567987815722,
+  "path": 8184998926858645713,
+  "deps": [
+    [5170503507811329045, "build_script_build", false, 6246496893400998508],
+    [7667230146095136825, "cfg_if", false, 3550841440079448044],
+    [8730874933663560167, "libc", false, 7816129691793876294]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/getrandom-8b249ec0e442c1f4/dep-lib-getrandom",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

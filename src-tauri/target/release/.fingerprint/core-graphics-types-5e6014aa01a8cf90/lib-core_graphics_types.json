@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"link\"]",
+  "declared_features": "[\"default\", \"link\"]",
+  "target": 14011081126776069750,
+  "profile": 2040997289075261528,
+  "path": 18352088697807981949,
+  "deps": [
+    [8730874933663560167, "libc", false, 4859434026256651319],
+    [9001817693037665195, "bitflags", false, 13847090412708089955],
+    [15780690857268675611, "core_foundation", false, 14469527326028679847]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/core-graphics-types-5e6014aa01a8cf90/dep-lib-core_graphics_types",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

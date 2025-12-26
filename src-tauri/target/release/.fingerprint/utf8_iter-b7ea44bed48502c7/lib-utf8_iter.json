@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 6216520282702351879,
+  "profile": 2040997289075261528,
+  "path": 17194841165076295281,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/utf8_iter-b7ea44bed48502c7/dep-lib-utf8_iter",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 9037757742335137726,
+  "profile": 18409367190543837128,
+  "path": 17989110363655366366,
+  "deps": [[5858954507332936698, "build_script_build", false, 17757708356786925669]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/icu_properties_data-a649acd26345dc71/dep-lib-icu_properties_data",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

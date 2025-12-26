@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[\"chrono\", \"colored\", \"date-based\", \"libc\", \"meta-logging-in-format\", \"reopen-03\", \"reopen-1\", \"reopen03\", \"reopen1\", \"syslog-3\", \"syslog-4\", \"syslog-6\", \"syslog-7\", \"syslog3\", \"syslog4\", \"syslog6\", \"syslog7\"]",
+  "target": 13129101840984902595,
+  "profile": 2040997289075261528,
+  "path": 12034262726376885216,
+  "deps": [[10630857666389190470, "log", false, 13449352428633390981]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/fern-28bb465b01db2075/dep-lib-fern",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

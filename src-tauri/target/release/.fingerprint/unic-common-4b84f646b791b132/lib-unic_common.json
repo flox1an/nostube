@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\"]",
+  "declared_features": "[\"default\", \"unstable\"]",
+  "target": 12566424773496969179,
+  "profile": 1369601567987815722,
+  "path": 6780755842106972359,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/unic-common-4b84f646b791b132/dep-lib-unic_common",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

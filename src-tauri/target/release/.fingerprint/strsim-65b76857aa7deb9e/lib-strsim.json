@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 14520901741915772287,
+  "profile": 1369601567987815722,
+  "path": 13874151680128106512,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/strsim-65b76857aa7deb9e/dep-lib-strsim",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

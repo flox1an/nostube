@@ -1,0 +1,51 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"brotli\", \"build\", \"cargo_metadata\", \"compression\", \"html-manipulation\", \"proc-macro2\", \"quote\", \"resources\", \"schema\", \"schemars\", \"swift-rs\", \"walkdir\"]",
+  "declared_features": "[\"aes-gcm\", \"brotli\", \"build\", \"cargo_metadata\", \"compression\", \"config-json5\", \"config-toml\", \"getrandom\", \"html-manipulation\", \"isolation\", \"json5\", \"proc-macro2\", \"process-relaunch-dangerous-allow-symlink-macos\", \"quote\", \"resources\", \"schema\", \"schemars\", \"serialize-to-javascript\", \"swift-rs\", \"walkdir\"]",
+  "target": 7530130812022395703,
+  "profile": 1369601567987815722,
+  "path": 10507886273389037968,
+  "deps": [
+    [198136567835728122, "memchr", false, 13820088831589717101],
+    [855938015708810306, "toml", false, 9234316417794326844],
+    [1200537532907108615, "urlpattern", false, 5996825023667243286],
+    [1420800981318104879, "uuid", false, 17804725826757152645],
+    [1678291836268844980, "brotli", false, 7484623398946715170],
+    [1852463361802237065, "anyhow", false, 115705141334027396],
+    [2620434475832828286, "http", false, 14065161337663631599],
+    [3056178850035811329, "regex", false, 17734444455012075777],
+    [3654002787373806582, "serde_json", false, 5579028607925915756],
+    [4336745513838352383, "thiserror", false, 6830614662833759275],
+    [5404511084185685755, "url", false, 4512463414817443832],
+    [6606131838865521726, "ctor", false, 4186469013266268974],
+    [6913375703034175521, "schemars", false, 14272641227046131219],
+    [7170110829644101142, "json_patch", false, 4863504606385688987],
+    [8396910435473226963, "serde_with", false, 13542518582748745975],
+    [9086780327361459375, "serde_untagged", false, 11417218442671299085],
+    [9293239362693504808, "glob", false, 1188388915961378837],
+    [9869581871423326951, "quote", false, 2615009303531464556],
+    [10630857666389190470, "log", false, 16669499222548007904],
+    [11655476559277113544, "cargo_metadata", false, 9591912505072844702],
+    [11989259058781683633, "dunce", false, 5134229393964508117],
+    [13548984313718623784, "serde", false, 5005043388167665575],
+    [14232843520438415263, "html5ever", false, 944763329292024128],
+    [14285738760999836560, "proc_macro2", false, 11805743902258099405],
+    [14885200901422974105, "swift_rs", false, 8983922091816677974],
+    [15088007382495681292, "kuchiki", false, 1174834839015790187],
+    [15622660310229662834, "walkdir", false, 11545233852806054702],
+    [17146114186171651583, "infer", false, 9685885602988790344],
+    [17186037756130803222, "phf", false, 10618861014750307188],
+    [18361894353739432590, "semver", false, 11889366677875649079]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/tauri-utils-124120da15ab6c9d/dep-lib-tauri_utils",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

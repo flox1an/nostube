@@ -1,0 +1,53 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"common-controls-v6\", \"compression\", \"custom-protocol\", \"default\", \"dynamic-acl\", \"tauri-runtime-wry\", \"webkit2gtk\", \"webview2-com\", \"wry\", \"x11\"]",
+  "declared_features": "[\"common-controls-v6\", \"compression\", \"config-json5\", \"config-toml\", \"custom-protocol\", \"data-url\", \"default\", \"devtools\", \"dynamic-acl\", \"http-range\", \"image\", \"image-ico\", \"image-png\", \"isolation\", \"linux-libxdo\", \"macos-private-api\", \"macos-proxy\", \"native-tls\", \"native-tls-vendored\", \"objc-exception\", \"process-relaunch-dangerous-allow-symlink-macos\", \"protocol-asset\", \"rustls-tls\", \"specta\", \"tauri-runtime-wry\", \"test\", \"tracing\", \"tray-icon\", \"unstable\", \"uuid\", \"webkit2gtk\", \"webview-data-url\", \"webview2-com\", \"wry\", \"x11\"]",
+  "target": 12223948975794516716,
+  "profile": 2040997289075261528,
+  "path": 4060325565242639690,
+  "deps": [
+    [358260473257383719, "plist", false, 5462950069527965161],
+    [1260461579271933187, "serialize_to_javascript", false, 12071765228825814298],
+    [1592201444368830219, "tauri_utils", false, 13942550133814138398],
+    [1852463361802237065, "anyhow", false, 5790197236085309375],
+    [1967864351173319501, "muda", false, 4636147039452521162],
+    [2620434475832828286, "http", false, 5163560764493075710],
+    [2950256323240053722, "objc2_foundation", false, 1007078286234643336],
+    [3562970713413891683, "tauri_runtime_wry", false, 4080749799718745743],
+    [3654002787373806582, "serde_json", false, 3367685802382372993],
+    [4143744114649553716, "raw_window_handle", false, 14628859933418348152],
+    [4336745513838352383, "thiserror", false, 1737611262914770410],
+    [5404511084185685755, "url", false, 10953182124235032431],
+    [6239867374296478565, "objc2_app_kit", false, 14466097162443708100],
+    [6803352382179706244, "percent_encoding", false, 507976994056276080],
+    [7135881783873010513, "objc2", false, 16640608368199197240],
+    [7720834239451334583, "tokio", false, 6546969306140202038],
+    [8589231650440095114, "embed_plist", false, 15821211342398476824],
+    [9293239362693504808, "glob", false, 13457813468951444107],
+    [10229185211513642314, "mime", false, 4044845781321168368],
+    [10630857666389190470, "log", false, 13449352428633390981],
+    [11989259058781683633, "dunce", false, 3443321046570403215],
+    [12565293087094287914, "window_vibrancy", false, 4356744064991147253],
+    [12986574360607194341, "serde_repr", false, 15511875536025702869],
+    [13077543566650298139, "heck", false, 5871377908474644547],
+    [13232415350030091854, "tauri_runtime", false, 6087088799725794004],
+    [13548984313718623784, "serde", false, 7151781769947038484],
+    [13866776962047166976, "tauri_macros", false, 4522985865369567720],
+    [13868139152202927596, "objc2_web_kit", false, 3571915157397064925],
+    [16727543399706004146, "cookie", false, 9761743952780832506],
+    [16928111194414003569, "dirs", false, 1476790944815962405],
+    [16977293220291964259, "build_script_build", false, 7175684687793419957],
+    [18408407127522236545, "getrandom", false, 9280913598933407750]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/tauri-1bd781fb75633560/dep-lib-tauri",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

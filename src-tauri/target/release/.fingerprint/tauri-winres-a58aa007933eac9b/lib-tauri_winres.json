@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 2086567024422996381,
+  "profile": 1369601567987815722,
+  "path": 6532899306839529507,
+  "deps": [
+    [855938015708810306, "toml", false, 9234316417794326844],
+    [2889408752415680726, "embed_resource", false, 2512670915021541515],
+    [11989259058781683633, "dunce", false, 5134229393964508117]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/tauri-winres-a58aa007933eac9b/dep-lib-tauri_winres",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

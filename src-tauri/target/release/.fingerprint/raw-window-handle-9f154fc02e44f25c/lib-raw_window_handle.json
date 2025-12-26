@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"alloc\", \"std\"]",
+  "declared_features": "[\"alloc\", \"std\", \"wasm-bindgen\", \"wasm-bindgen-0-2\"]",
+  "target": 10454692504300247140,
+  "profile": 2040997289075261528,
+  "path": 22093297675768261,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/raw-window-handle-9f154fc02e44f25c/dep-lib-raw_window_handle",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

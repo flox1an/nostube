@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"std\"]",
+  "declared_features": "[\"borsh\", \"default\", \"serde\", \"std\", \"zeroize\"]",
+  "target": 12564975964323158710,
+  "profile": 2040997289075261528,
+  "path": 17790358346420225337,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/arrayvec-5c9c29e24963ca88/dep-lib-arrayvec",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

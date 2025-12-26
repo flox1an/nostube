@@ -1,0 +1,33 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"common-controls-v6\", \"x11\"]",
+  "declared_features": "[\"common-controls-v6\", \"default\", \"devtools\", \"macos-private-api\", \"macos-proxy\", \"objc-exception\", \"tracing\", \"unstable\", \"x11\"]",
+  "target": 1901661049345253480,
+  "profile": 2040997289075261528,
+  "path": 13706144395619961210,
+  "deps": [
+    [1592201444368830219, "tauri_utils", false, 13942550133814138398],
+    [2620434475832828286, "http", false, 5163560764493075710],
+    [2950256323240053722, "objc2_foundation", false, 1007078286234643336],
+    [3562970713413891683, "build_script_build", false, 4989962711084613708],
+    [4143744114649553716, "raw_window_handle", false, 14628859933418348152],
+    [4913210512734007097, "tao", false, 1606061956963425347],
+    [5404511084185685755, "url", false, 10953182124235032431],
+    [6239867374296478565, "objc2_app_kit", false, 14466097162443708100],
+    [7135881783873010513, "objc2", false, 16640608368199197240],
+    [10630857666389190470, "log", false, 13449352428633390981],
+    [13232415350030091854, "tauri_runtime", false, 6087088799725794004],
+    [14109579488288776661, "wry", false, 11283970289134313069]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/tauri-runtime-wry-1d3f94e58b9c73cb/dep-lib-tauri_runtime_wry",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

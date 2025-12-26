@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"alloc\", \"getrandom\", \"std\"]",
+  "declared_features": "[\"alloc\", \"getrandom\", \"serde\", \"serde1\", \"std\"]",
+  "target": 13770603672348587087,
+  "profile": 1369601567987815722,
+  "path": 13182938689458680806,
+  "deps": [[9920160576179037441, "getrandom", false, 6482736112880700554]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/rand_core-32657c78c18701b2/dep-lib-rand_core",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"NSAttributeDescription\", \"NSEntityDescription\", \"NSFetchRequest\", \"NSManagedObjectContext\", \"NSManagedObjectModel\", \"NSPersistentStoreRequest\", \"NSPropertyDescription\", \"bitflags\"]",
+  "declared_features": "[\"CloudKit\", \"CoreDataDefines\", \"CoreDataErrors\", \"NSAtomicStore\", \"NSAtomicStoreCacheNode\", \"NSAttributeDescription\", \"NSBatchDeleteRequest\", \"NSBatchInsertRequest\", \"NSBatchUpdateRequest\", \"NSCompositeAttributeDescription\", \"NSCoreDataCoreSpotlightDelegate\", \"NSCustomMigrationStage\", \"NSDerivedAttributeDescription\", \"NSEntityDescription\", \"NSEntityMapping\", \"NSEntityMigrationPolicy\", \"NSExpressionDescription\", \"NSFetchIndexDescription\", \"NSFetchIndexElementDescription\", \"NSFetchRequest\", \"NSFetchRequestExpression\", \"NSFetchedPropertyDescription\", \"NSFetchedResultsController\", \"NSIncrementalStore\", \"NSIncrementalStoreNode\", \"NSLightweightMigrationStage\", \"NSManagedObject\", \"NSManagedObjectContext\", \"NSManagedObjectID\", \"NSManagedObjectModel\", \"NSManagedObjectModelReference\", \"NSMappingModel\", \"NSMergePolicy\", \"NSMigrationManager\", \"NSMigrationStage\", \"NSPersistentCloudKitContainer\", \"NSPersistentCloudKitContainerEvent\", \"NSPersistentCloudKitContainerEventRequest\", \"NSPersistentCloudKitContainerOptions\", \"NSPersistentContainer\", \"NSPersistentHistoryChange\", \"NSPersistentHistoryChangeRequest\", \"NSPersistentHistoryToken\", \"NSPersistentHistoryTransaction\", \"NSPersistentStore\", \"NSPersistentStoreCoordinator\", \"NSPersistentStoreDescription\", \"NSPersistentStoreRequest\", \"NSPersistentStoreResult\", \"NSPropertyDescription\", \"NSPropertyMapping\", \"NSQueryGenerationToken\", \"NSRelationshipDescription\", \"NSSaveChangesRequest\", \"NSStagedMigrationManager\", \"alloc\", \"bitflags\", \"block2\", \"default\", \"gnustep-1-7\", \"gnustep-1-8\", \"gnustep-1-9\", \"gnustep-2-0\", \"gnustep-2-1\", \"objc2-cloud-kit\", \"objc2-core-spotlight\", \"std\", \"unstable-darwin-objc\"]",
+  "target": 7515372154814490868,
+  "profile": 10457427126514475017,
+  "path": 3677054267408695789,
+  "deps": [
+    [2950256323240053722, "objc2_foundation", false, 1007078286234643336],
+    [7135881783873010513, "objc2", false, 16640608368199197240],
+    [9001817693037665195, "bitflags", false, 13847090412708089955]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/objc2-core-data-3df5b235a00d0fca/dep-lib-objc2_core_data",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

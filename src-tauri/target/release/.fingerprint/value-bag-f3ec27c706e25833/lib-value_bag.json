@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"inline-i128\"]",
+  "declared_features": "[\"alloc\", \"error\", \"inline-i128\", \"inline-str\", \"owned\", \"seq\", \"serde\", \"serde1\", \"std\", \"sval\", \"sval2\", \"test\", \"value-bag-serde1\", \"value-bag-sval2\"]",
+  "target": 5678308607041939420,
+  "profile": 2040997289075261528,
+  "path": 17563506368478105730,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/value-bag-f3ec27c706e25833/dep-lib-value_bag",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

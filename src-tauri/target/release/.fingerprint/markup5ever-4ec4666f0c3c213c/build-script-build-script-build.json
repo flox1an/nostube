@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 5408242616063297496,
+  "profile": 1369601567987815722,
+  "path": 876193308744690546,
+  "deps": [
+    [1280075590338009456, "phf_codegen", false, 17368304349532182274],
+    [11594986142849509546, "string_cache_codegen", false, 338908980776378456]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/markup5ever-4ec4666f0c3c213c/dep-build-script-build-script-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

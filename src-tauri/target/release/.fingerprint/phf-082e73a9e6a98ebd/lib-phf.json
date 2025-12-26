@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"macros\", \"phf_macros\", \"proc-macro-hack\", \"std\"]",
+  "declared_features": "[\"default\", \"macros\", \"phf_macros\", \"proc-macro-hack\", \"serde\", \"std\", \"uncased\", \"unicase\"]",
+  "target": 3117898612494421391,
+  "profile": 1369601567987815722,
+  "path": 7900174367096044612,
+  "deps": [
+    [2132929450596319411, "phf_shared", false, 644202330591812161],
+    [4789512923348697266, "proc_macro_hack", false, 17144398512437336713],
+    [16348614515420640917, "phf_macros", false, 1754917910579416076]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/phf-082e73a9e6a98ebd/dep-lib-phf",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

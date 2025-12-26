@@ -1,0 +1,26 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"serde\", \"serde_support\"]",
+  "declared_features": "[\"default\", \"malloc_size_of\", \"serde\", \"serde_support\"]",
+  "target": 8038205195467990777,
+  "profile": 1369601567987815722,
+  "path": 10556610522864499537,
+  "deps": [
+    [2687729594444538932, "debug_unreachable", false, 8977032359658032248],
+    [6995234255362136112, "precomputed_hash", false, 1358988552997474171],
+    [9060940869921439196, "phf_shared", false, 9050389127089948989],
+    [12459942763388630573, "parking_lot", false, 14743427126395019660],
+    [13548984313718623784, "serde", false, 5005043388167665575]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/string_cache-224fd6843dd44cae/dep-lib-string_cache",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

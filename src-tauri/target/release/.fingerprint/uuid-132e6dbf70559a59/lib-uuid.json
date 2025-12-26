@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"rng\", \"serde\", \"std\", \"v4\"]",
+  "declared_features": "[\"arbitrary\", \"atomic\", \"borsh\", \"bytemuck\", \"default\", \"fast-rng\", \"js\", \"macro-diagnostics\", \"md5\", \"rng\", \"rng-getrandom\", \"rng-rand\", \"serde\", \"sha1\", \"slog\", \"std\", \"uuid-rng-internal-lib\", \"v1\", \"v3\", \"v4\", \"v5\", \"v6\", \"v7\", \"v8\", \"zerocopy\"]",
+  "target": 2422778461497348360,
+  "profile": 10765049016586272810,
+  "path": 642480230283527066,
+  "deps": [
+    [11899261697793765154, "serde_core", false, 12869485994640175533],
+    [18408407127522236545, "getrandom", false, 2585252342905288490]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/uuid-132e6dbf70559a59/dep-lib-uuid",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

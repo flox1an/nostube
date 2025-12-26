@@ -1,0 +1,32 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"common-controls-v6\", \"gtk\", \"serde\"]",
+  "declared_features": "[\"common-controls-v6\", \"default\", \"gtk\", \"libxdo\", \"serde\"]",
+  "target": 5140358902516826434,
+  "profile": 2040997289075261528,
+  "path": 6794147270502041217,
+  "deps": [
+    [2950256323240053722, "objc2_foundation", false, 1007078286234643336],
+    [3722963349756955755, "once_cell", false, 10652633537520492112],
+    [4336745513838352383, "thiserror", false, 1737611262914770410],
+    [6239867374296478565, "objc2_app_kit", false, 14466097162443708100],
+    [7135881783873010513, "objc2", false, 16640608368199197240],
+    [7606335748176206944, "dpi", false, 17803557737435473257],
+    [9727213718512686088, "crossbeam_channel", false, 7696283156248980249],
+    [11433498304369778956, "objc2_core_foundation", false, 18097001075826983851],
+    [12687914511023397207, "png", false, 7242810711797699368],
+    [13548984313718623784, "serde", false, 7151781769947038484],
+    [14532484442929614732, "keyboard_types", false, 9767861047460680832]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/muda-315c73140c401713/dep-lib-muda",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

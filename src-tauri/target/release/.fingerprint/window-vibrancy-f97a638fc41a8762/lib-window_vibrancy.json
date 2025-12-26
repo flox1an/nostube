@@ -1,0 +1,26 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 13028659016136499722,
+  "profile": 2040997289075261528,
+  "path": 8128693029658761336,
+  "deps": [
+    [2950256323240053722, "objc2_foundation", false, 1007078286234643336],
+    [4143744114649553716, "raw_window_handle", false, 14628859933418348152],
+    [6239867374296478565, "objc2_app_kit", false, 14466097162443708100],
+    [7135881783873010513, "objc2", false, 16640608368199197240],
+    [11433498304369778956, "objc2_core_foundation", false, 18097001075826983851]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/window-vibrancy-f97a638fc41a8762/dep-lib-window_vibrancy",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

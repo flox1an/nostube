@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"serde1\"]",
+  "declared_features": "[\"proptest1\", \"serde1\"]",
+  "target": 4916930958703370761,
+  "profile": 1369601567987815722,
+  "path": 775072432770154971,
+  "deps": [
+    [11463991340766958661, "build_script_build", false, 3746858565999833884],
+    [11899261697793765154, "serde_core", false, 12869485994640175533]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/camino-b99885830ab21c40/dep-lib-camino",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

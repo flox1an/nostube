@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"std\"]",
+  "declared_features": "[\"default\", \"nodrop-union\", \"std\", \"use_needs_drop\", \"use_union\"]",
+  "target": 5952940874479064501,
+  "profile": 1369601567987815722,
+  "path": 13517459841387866795,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/nodrop-131f3cb377712566/dep-lib-nodrop",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

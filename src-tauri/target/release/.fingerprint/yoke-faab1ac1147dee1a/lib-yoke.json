@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"derive\", \"zerofrom\"]",
+  "declared_features": "[\"alloc\", \"default\", \"derive\", \"serde\", \"zerofrom\"]",
+  "target": 11250006364125496299,
+  "profile": 2040997289075261528,
+  "path": 8171267530226264779,
+  "deps": [
+    [4776946450414566059, "yoke_derive", false, 4519735727156943361],
+    [12669569555400633618, "stable_deref_trait", false, 6277810201589748373],
+    [17046516144589451410, "zerofrom", false, 12099692849584591471]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/yoke-faab1ac1147dee1a/dep-lib-yoke",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

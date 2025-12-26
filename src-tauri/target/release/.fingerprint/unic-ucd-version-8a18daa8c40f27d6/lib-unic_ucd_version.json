@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 8760155134400730115,
+  "profile": 2040997289075261528,
+  "path": 14435893774184125141,
+  "deps": [[17189096646369539794, "unic_common", false, 8621636200746008104]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/unic-ucd-version-8a18daa8c40f27d6/dep-lib-unic_ucd_version",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

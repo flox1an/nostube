@@ -1,0 +1,25 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 14111979058670728083,
+  "profile": 1369601567987815722,
+  "path": 9258904546206241607,
+  "deps": [
+    [198136567835728122, "memchr", false, 13820088831589717101],
+    [855938015708810306, "toml", false, 9234316417794326844],
+    [2339942810498409260, "cc", false, 13563011740609822582],
+    [8576480473721236041, "rustc_version", false, 5170759359989876366]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/embed-resource-809e0bd5c5cb4ddc/dep-lib-embed_resource",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

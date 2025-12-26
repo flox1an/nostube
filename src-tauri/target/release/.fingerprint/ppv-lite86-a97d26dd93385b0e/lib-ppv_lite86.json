@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"simd\", \"std\"]",
+  "declared_features": "[\"default\", \"no_simd\", \"simd\", \"std\"]",
+  "target": 2607852365283500179,
+  "profile": 1369601567987815722,
+  "path": 12959262497554260044,
+  "deps": [[10670692311156573294, "zerocopy", false, 5452839479276457863]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/ppv-lite86-a97d26dd93385b0e/dep-lib-ppv_lite86",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

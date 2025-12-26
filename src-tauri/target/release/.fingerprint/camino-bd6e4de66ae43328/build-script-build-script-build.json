@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"serde1\"]",
+  "declared_features": "[\"proptest1\", \"serde1\"]",
+  "target": 5408242616063297496,
+  "profile": 1369601567987815722,
+  "path": 44783068613267212,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/camino-bd6e4de66ae43328/dep-build-script-build-script-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

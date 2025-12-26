@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[\"alloc\", \"default\", \"either\"]",
+  "target": 6209224040855486982,
+  "profile": 2040997289075261528,
+  "path": 12272884010791748210,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/writeable-a45364b2f074fcfa/dep-lib-writeable",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

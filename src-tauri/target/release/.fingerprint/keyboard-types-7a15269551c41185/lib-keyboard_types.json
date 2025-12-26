@@ -1,0 +1,24 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"serde\", \"unicode-segmentation\", \"webdriver\"]",
+  "declared_features": "[\"default\", \"serde\", \"unicode-segmentation\", \"webdriver\"]",
+  "target": 238430233519298225,
+  "profile": 2040997289075261528,
+  "path": 2347712856342633175,
+  "deps": [
+    [1232198224951696867, "unicode_segmentation", false, 8168578457037474618],
+    [9001817693037665195, "bitflags", false, 13847090412708089955],
+    [13548984313718623784, "serde", false, 7151781769947038484]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/keyboard-types-7a15269551c41185/dep-lib-keyboard_types",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

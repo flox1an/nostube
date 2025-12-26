@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"std\"]",
+  "declared_features": "[\"default\", \"std\"]",
+  "target": 12076344148867932973,
+  "profile": 14791228037615401302,
+  "path": 11608761593635795083,
+  "deps": [[4468123440088164316, "crossbeam_utils", false, 728927954531789402]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/crossbeam-channel-5d2247dc8c915429/dep-lib-crossbeam_channel",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

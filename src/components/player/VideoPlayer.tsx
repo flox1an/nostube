@@ -556,12 +556,17 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           e.preventDefault()
           toggleFullscreen()
           break
+        case 'c':
+        case 'C':
+          e.preventDefault()
+          toggleCaptions()
+          break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [playerState, addSeek, showControls, toggleFullscreen])
+  }, [playerState, addSeek, showControls, toggleFullscreen, toggleCaptions])
 
   const handleTogglePlay = useCallback(() => {
     userInitiatedRef.current = true

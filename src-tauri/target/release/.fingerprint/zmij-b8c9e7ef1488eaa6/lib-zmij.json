@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[\"no-panic\"]",
+  "target": 16603507647234574737,
+  "profile": 2040997289075261528,
+  "path": 13727971549971659987,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/zmij-b8c9e7ef1488eaa6/dep-lib-zmij",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

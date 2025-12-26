@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"zerovec\"]",
+  "declared_features": "[\"alloc\", \"databake\", \"default\", \"serde\", \"std\", \"zerovec\"]",
+  "target": 161691779326313357,
+  "profile": 1369601567987815722,
+  "path": 10964035848354478857,
+  "deps": [
+    [5298260564258778412, "displaydoc", false, 1721269626479647958],
+    [14563910249377136032, "zerovec", false, 5121315664443074450]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/tinystr-88864e59f4b400ea/dep-lib-tinystr",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

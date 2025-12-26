@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\"]",
+  "declared_features": "[\"default\", \"exact-size-is-empty\", \"fused\", \"rayon\", \"std\", \"trusted-len\", \"unstable\"]",
+  "target": 16030636495492434410,
+  "profile": 2040997289075261528,
+  "path": 12807534477279333432,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/unic-char-range-067531833d464587/dep-lib-unic_char_range",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"default\", \"powerfmt\"]",
+  "declared_features": "[\"alloc\", \"default\", \"macros\", \"num\", \"powerfmt\", \"quickcheck\", \"rand\", \"rand08\", \"rand09\", \"serde\"]",
+  "target": 17941053073926740948,
+  "profile": 10842757028416342267,
+  "path": 5037815321240987395,
+  "deps": [[5901133744777009488, "powerfmt", false, 3915499110533142148]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/deranged-f43fbb05f46ac317/dep-lib-deranged",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

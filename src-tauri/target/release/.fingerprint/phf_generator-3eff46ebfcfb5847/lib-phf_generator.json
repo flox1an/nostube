@@ -1,0 +1,23 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[\"criterion\"]",
+  "target": 10230150387258866563,
+  "profile": 1369601567987815722,
+  "path": 8107631536575016438,
+  "deps": [
+    [525931160294428996, "phf_shared", false, 16350326261530219584],
+    [4731167174326621189, "rand", false, 11955459817803009879]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/phf_generator-3eff46ebfcfb5847/dep-lib-phf_generator",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

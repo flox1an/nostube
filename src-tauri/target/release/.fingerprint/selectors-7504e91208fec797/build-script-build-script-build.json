@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[]",
+  "declared_features": "[\"bench\", \"shmem\"]",
+  "target": 12318548087768197662,
+  "profile": 1369601567987815722,
+  "path": 646626859290308535,
+  "deps": [[9113429570280746572, "phf_codegen", false, 9091303260805304504]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/selectors-7504e91208fec797/dep-build-script-build-script-build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

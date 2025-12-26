@@ -1,0 +1,20 @@
+{
+  "rustc": 12211934750107851607,
+  "features": "[\"std\"]",
+  "declared_features": "[\"default\", \"loom\", \"nightly\", \"std\"]",
+  "target": 9626079250877207070,
+  "profile": 14791228037615401302,
+  "path": 6203079398870364922,
+  "deps": [[4468123440088164316, "build_script_build", false, 18318232500005394222]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "release/.fingerprint/crossbeam-utils-9907213d3e41cca1/dep-lib-crossbeam_utils",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 2069994364910194474,
+  "compile_kind": 0
+}

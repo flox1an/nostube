@@ -626,7 +626,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         autoPlay={!contentWarning}
         playsInline
         crossOrigin="anonymous"
-        className={`w-full object-contain ${cinemaMode ? 'max-h-[85dvh]' : 'h-full'}`}
+        className={`w-full object-contain ${cinemaMode ? 'max-h-[80dvh]' : 'h-full'}`}
         onError={handleVideoError}
         onClick={handleTogglePlay}
       >

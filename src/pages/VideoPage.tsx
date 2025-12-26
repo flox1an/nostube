@@ -533,7 +533,7 @@ export function VideoPage() {
         loop={shouldVideoLoop(video.kind)}
         className={
           cinemaMode
-            ? 'w-full max-h-[85dvh]'
+            ? 'w-full max-h-[80dvh]'
             : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
         }
         onTimeUpdate={setCurrentPlayPos}

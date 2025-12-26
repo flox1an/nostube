@@ -30,7 +30,7 @@ export function HomePage() {
         layoutMode="horizontal"
         emptyMessage={t('pages.home.noVideos')}
         exhaustedMessage={t('pages.home.noMore')}
-        className="sm:px-4"
+        className="sm:px-2"
       />
     </div>
   )

@@ -26,6 +26,7 @@ interface BuildVideoEventParams {
   thumbnailUploadedBlobs: BlobDescriptor[]
   thumbnailMirroredBlobs: BlobDescriptor[]
   subtitles: SubtitleVariant[]
+  draftId: string // Used as the 'd' tag for addressable events
   isPreview?: boolean
   hasPendingThumbnail?: boolean
 }
@@ -58,13 +59,15 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     thumbnailUploadedBlobs,
     thumbnailMirroredBlobs,
     subtitles,
+    draftId,
     isPreview = false,
     hasPendingThumbnail = false,
   } = params
 
   const firstVideo = videos[0]
   const [width, height] = firstVideo.dimension.split('x').map(Number)
-  const kind = height > width ? 22 : 21
+  // Use addressable event kinds (NIP-71): 34235 for normal videos, 34236 for shorts
+  const kind = height > width ? 34236 : 34235
 
   // Create multiple imeta tags - one for each video variant
   const imetaTags: string[][] = []
@@ -160,6 +163,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     content: description,
     created_at: createdAt,
     tags: [
+      ['d', draftId], // Addressable event identifier (NIP-71)
       ['title', title],
       ['alt', description],
       ['published_at', publishedAt],
@@ -250,6 +254,9 @@ export function useVideoUpload(
   // Subtitles state
   const [subtitles, setSubtitles] = useState<SubtitleVariant[]>(initialDraft?.subtitles || [])
   const [subtitleUploading, setSubtitleUploading] = useState(false)
+
+  // Draft ID for addressable event 'd' tag - use existing draft ID or generate new UUID
+  const [draftId] = useState(() => initialDraft?.id || crypto.randomUUID())
 
   // State for video deletion dialog
   const [videoToDelete, setVideoToDelete] = useState<{
@@ -914,6 +921,7 @@ export function useVideoUpload(
         thumbnailUploadedBlobs,
         thumbnailMirroredBlobs,
         subtitles,
+        draftId,
         isPreview: false,
       })
 
@@ -1004,6 +1012,7 @@ export function useVideoUpload(
       thumbnailUploadedBlobs: thumbUploadedBlobs,
       thumbnailMirroredBlobs: thumbMirroredBlobs,
       subtitles,
+      draftId,
       isPreview: true,
       hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
     })
@@ -1022,6 +1031,7 @@ export function useVideoUpload(
     thumbnailUploadInfo,
     thumbnailBlob,
     subtitles,
+    draftId,
   ])
 
   return {

@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-Video Upload**: Upload multiple quality variants (4K/1080p/720p/etc)
 - **Internationalization**: EN/DE/FR/ES with 500+ translations
 - **NIP-71 Video Events**: Full support for imeta-based video format on all event kinds (21, 22, 34235, 34236) with legacy format fallback
+- **Addressable Video Events**: Upload now creates addressable events (kinds 34235/34236) using draft UUID as the `d` tag, enabling video metadata updates
 - **NIP-40 Video Expiration**: Optional expiration (1 day to 1 year) in upload wizard
 - **Docker Deployment**: Multi-stage Dockerfile with runtime env vars
 

@@ -553,6 +553,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           showControls()
           addSeek('forward')
           break
+        case 'j':
+        case 'J':
+          e.preventDefault()
+          showControls()
+          addSeek('backward', 10)
+          break
+        case 'l':
+        case 'L':
+          e.preventDefault()
+          showControls()
+          addSeek('forward', 10)
+          break
         case 'f':
         case 'F':
           e.preventDefault()

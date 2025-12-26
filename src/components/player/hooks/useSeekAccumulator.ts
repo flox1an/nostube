@@ -8,7 +8,7 @@ interface UseSeekAccumulatorProps {
 
 interface UseSeekAccumulatorResult {
   /** Add to the accumulated seek time (positive = forward, negative = backward) */
-  addSeek: (direction: 'forward' | 'backward') => void
+  addSeek: (direction: 'forward' | 'backward', customStepSize?: number) => void
   /** Current accumulated seek time (for display) */
   accumulatedTime: number
   /** Whether we're currently accumulating (for showing indicator) */
@@ -56,8 +56,9 @@ export function useSeekAccumulator({
 
   // Add to accumulated seek time
   const addSeek = useCallback(
-    (dir: 'forward' | 'backward') => {
-      const delta = dir === 'forward' ? stepSize : -stepSize
+    (dir: 'forward' | 'backward', customStepSize?: number) => {
+      const step = customStepSize ?? stepSize
+      const delta = dir === 'forward' ? step : -step
       accumulatedRef.current += delta
 
       setAccumulatedTime(accumulatedRef.current)

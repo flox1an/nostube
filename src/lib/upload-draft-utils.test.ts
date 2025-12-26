@@ -22,6 +22,7 @@ describe('getSmartStatus', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addVideo')
@@ -71,6 +72,7 @@ describe('getSmartStatus', () => {
         ],
         mirroredBlobs: [],
       },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.addTitle')
@@ -109,6 +111,7 @@ describe('getSmartStatus', () => {
         ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     // For generated thumbnails, we don't need an uploaded thumbnail
@@ -159,6 +162,7 @@ describe('getSmartStatus', () => {
         ],
         mirroredBlobs: [],
       },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getSmartStatus(draft)).toBe('upload.draft.status.ready')
@@ -180,6 +184,7 @@ describe('getVideoQualityInfo', () => {
       inputMethod: 'file',
       uploadInfo: { videos: [] },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('')
@@ -210,6 +215,7 @@ describe('getVideoQualityInfo', () => {
         ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('1080p • 450 MB')
@@ -248,6 +254,7 @@ describe('getVideoQualityInfo', () => {
         ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('720p, 1080p • 650 MB')
@@ -278,6 +285,7 @@ describe('getVideoQualityInfo', () => {
         ],
       },
       thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+      subtitles: [],
       thumbnailSource: 'generated',
     }
     expect(getVideoQualityInfo(draft)).toBe('4K • 2.0 GB')
@@ -332,6 +340,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        subtitles: [],
         thumbnailSource: 'generated',
       },
       {
@@ -347,6 +356,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        subtitles: [],
         thumbnailSource: 'generated',
       },
     ]
@@ -371,6 +381,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        subtitles: [],
         thumbnailSource: 'generated',
       },
       {
@@ -386,6 +397,7 @@ describe('removeOldDrafts', () => {
         inputMethod: 'file',
         uploadInfo: { videos: [] },
         thumbnailUploadInfo: { uploadedBlobs: [], mirroredBlobs: [] },
+        subtitles: [],
         thumbnailSource: 'generated',
       },
     ]

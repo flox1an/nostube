@@ -13,6 +13,7 @@ import {
   ExpirationSection,
   DvmTranscodeAlert,
   EventPreview,
+  SubtitleSection,
 } from './video-upload'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
@@ -84,6 +85,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     previewEvent,
     videoToDelete,
     setVideoToDelete,
+    subtitles,
+    subtitleUploading,
 
     // Handlers
     handleUseRecommendedServers,
@@ -100,6 +103,9 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     handleRemoveVideo,
     handleRemoveVideoFromFormOnly,
     handleRemoveVideoWithBlobs,
+    handleSubtitleDrop,
+    handleRemoveSubtitle,
+    handleSubtitleLanguageChange,
   } = videoUploadState
 
   // Handle back button - save current state before navigating
@@ -120,6 +126,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
         mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
       },
+      subtitles,
       contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
       expiration,
       thumbnailSource,
@@ -146,6 +153,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     videoUrl,
     uploadInfo,
     thumbnailUploadInfo,
+    subtitles,
     contentWarningEnabled,
     contentWarningReason,
     expiration,
@@ -157,30 +165,30 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Only allow publishing from step 4
-    if (currentStep !== 4) {
+    // Only allow publishing from step 5
+    if (currentStep !== 5) {
       if (import.meta.env.DEV) {
         console.warn(
           '[VideoUpload] Form submission blocked: currentStep is',
           currentStep,
-          'but must be 4 to publish. This may indicate an unexpected Enter key press or HMR issue.'
+          'but must be 5 to publish. This may indicate an unexpected Enter key press or HMR issue.'
         )
       }
       return
     }
 
-    // Prevent accidental submit right after arriving at step 4
-    if (justArrivedAtStep4) {
+    // Prevent accidental submit right after arriving at step 5
+    if (justArrivedAtStep5) {
       if (import.meta.env.DEV) {
         console.warn(
-          '[VideoUpload] Form submission blocked: just arrived at step 4, preventing double-click publish'
+          '[VideoUpload] Form submission blocked: just arrived at step 5, preventing double-click publish'
         )
       }
       return
     }
 
     if (import.meta.env.DEV) {
-      console.log('[VideoUpload] Publishing video from step 4, title:', title)
+      console.log('[VideoUpload] Publishing video from step 5, title:', title)
     }
 
     try {
@@ -215,7 +223,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
   const [currentStep, setCurrentStep] = useState(1) // 1: Video Upload, 2: Form, 3: Thumbnail
   const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
-  const [justArrivedAtStep4, setJustArrivedAtStep4] = useState(false)
+  const [justArrivedAtStep5, setJustArrivedAtStep5] = useState(false)
 
   // Initialize with existing configured servers
   const [uploadServers, setUploadServers] = useState<string[]>(() => {
@@ -317,11 +325,12 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               {currentStep === 1 && t('upload.step1.title', { defaultValue: 'Upload Video' })}
               {currentStep === 2 && t('upload.step2.title', { defaultValue: 'Video Details' })}
               {currentStep === 3 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
-              {currentStep === 4 &&
-                t('upload.step4.title', { defaultValue: 'Additional Settings' })}
+              {currentStep === 4 && t('upload.step4.title', { defaultValue: 'Subtitles' })}
+              {currentStep === 5 &&
+                t('upload.step5.title', { defaultValue: 'Additional Settings' })}
             </span>
             <span className="text-sm text-muted-foreground font-normal">
-              {t('upload.stepIndicator', { current: currentStep, total: 4 })}
+              {t('upload.stepIndicator', { current: currentStep, total: 5 })}
             </span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
@@ -339,6 +348,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               })}
             {currentStep === 4 &&
               t('upload.step4.description', {
+                defaultValue: 'Add subtitle files for accessibility (optional)',
+              })}
+            {currentStep === 5 &&
+              t('upload.step5.description', {
                 defaultValue: 'Configure optional settings for your video',
               })}
           </p>
@@ -506,8 +519,21 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               </div>
             )}
 
-            {/* Step 4: Additional Settings */}
+            {/* Step 4: Subtitles */}
             {currentStep === 4 && (
+              <div className="space-y-4">
+                <SubtitleSection
+                  subtitles={subtitles}
+                  onDrop={handleSubtitleDrop}
+                  onRemove={handleRemoveSubtitle}
+                  onLanguageChange={handleSubtitleLanguageChange}
+                  isUploading={subtitleUploading}
+                />
+              </div>
+            )}
+
+            {/* Step 5: Additional Settings */}
+            {currentStep === 5 && (
               <div className="space-y-4">
                 <ContentWarning
                   enabled={contentWarningEnabled}
@@ -539,15 +565,15 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   </Button>
                 )}
 
-                {currentStep < 4 ? (
+                {currentStep < 5 ? (
                   <Button
                     type="button"
                     onClick={() => {
-                      const nextStep = Math.min(4, currentStep + 1)
-                      if (nextStep === 4) {
+                      const nextStep = Math.min(5, currentStep + 1)
+                      if (nextStep === 5) {
                         // Prevent accidental double-click from triggering publish
-                        setJustArrivedAtStep4(true)
-                        setTimeout(() => setJustArrivedAtStep4(false), 500)
+                        setJustArrivedAtStep5(true)
+                        setTimeout(() => setJustArrivedAtStep5(false), 500)
                       }
                       setCurrentStep(nextStep)
                     }}
@@ -555,6 +581,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                       (currentStep === 1 && !canProceedToStep2) ||
                       (currentStep === 2 && !canProceedToStep3) ||
                       (currentStep === 3 && !canProceedToStep4)
+                      // Step 4 (Subtitles) is optional - always can proceed
                     }
                   >
                     {t('upload.next', { defaultValue: 'Next' })}
@@ -563,7 +590,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 ) : (
                   <Button
                     type="submit"
-                    disabled={isPublishing || !canPublish || justArrivedAtStep4}
+                    disabled={isPublishing || !canPublish || justArrivedAtStep5}
                   >
                     {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
                   </Button>

@@ -4,6 +4,17 @@ import type { BlobDescriptor } from 'blossom-client-sdk'
 import type { VideoVariant } from '@/lib/video-processing'
 
 /**
+ * Subtitle variant for VTT/SRT files
+ */
+export interface SubtitleVariant {
+  id: string // Unique ID for React keys
+  filename: string
+  lang: string // ISO 639-1 code (e.g., 'en', 'de')
+  uploadedBlobs: BlobDescriptor[]
+  mirroredBlobs: BlobDescriptor[]
+}
+
+/**
  * State for persisting DVM transcode jobs across navigation.
  * Allows users to leave the upload dialog and resume when they return.
  */
@@ -55,6 +66,9 @@ export interface UploadDraft {
     uploadedBlobs: BlobDescriptor[]
     mirroredBlobs: BlobDescriptor[]
   }
+
+  // Subtitles (VTT/SRT files)
+  subtitles: SubtitleVariant[]
 
   // Metadata
   thumbnailSource: 'generated' | 'upload'

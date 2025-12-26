@@ -15,6 +15,7 @@ import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
+import { isTauri, isTauriFullscreen, enterTauriFullscreen, exitTauriFullscreen } from '@/lib/tauri'
 
 interface VideoPlayerProps {
   urls: string[]
@@ -361,14 +362,38 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Fullscreen handling
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
+      // For Tauri, we check the window fullscreen state
+      if (isTauri()) {
+        isTauriFullscreen().then(setIsFullscreen)
+      } else {
+        setIsFullscreen(!!document.fullscreenElement)
+      }
     }
 
     document.addEventListener('fullscreenchange', handleFullscreenChange)
+
+    // For Tauri, also poll fullscreen state on window focus (in case changed via OS)
+    if (isTauri()) {
+      window.addEventListener('focus', handleFullscreenChange)
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange)
+        window.removeEventListener('focus', handleFullscreenChange)
+      }
+    }
+
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
   const enterFullscreen = useCallback(async () => {
+    // Use Tauri window fullscreen when running in desktop app
+    if (isTauri()) {
+      const success = await enterTauriFullscreen()
+      if (success) {
+        setIsFullscreen(true)
+        return
+      }
+    }
+
     const container = containerRef.current
     const video = videoRef.current
     if (!container || document.fullscreenElement) return
@@ -393,6 +418,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const exitFullscreen = useCallback(async () => {
+    // Use Tauri window fullscreen when running in desktop app
+    if (isTauri()) {
+      const success = await exitTauriFullscreen()
+      if (success) {
+        setIsFullscreen(false)
+        return
+      }
+    }
+
     if (!document.fullscreenElement) return
 
     try {
@@ -405,7 +439,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
+    // Use isFullscreen state for Tauri, document.fullscreenElement for browser
+    const currentlyFullscreen = isTauri() ? await isTauriFullscreen() : !!document.fullscreenElement
+
+    if (currentlyFullscreen) {
       await exitFullscreen()
     } else {
       await enterFullscreen()

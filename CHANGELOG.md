@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Tauri Desktop App**: Native desktop application using Tauri v2, wrapping the web app with system webview for macOS/Windows/Linux (~9MB bundle size vs 150MB+ Electron)
+- **Tauri Desktop App**: Native desktop application using Tauri v2, wrapping the web app with system webview for macOS/Windows/Linux (~9MB bundle size vs 150MB+ Electron), with native window fullscreen support for video player
 - **Subtitle Upload Step**: New step 4 in upload wizard for VTT/SRT subtitle files with auto-detected language from filename, manual language override, Blossom upload and mirroring, and NIP-71 text-track tag generation
 - **Subtitle Language Selector**: Settings menu now includes a subtitle language picker when multiple subtitle tracks are available, with CC button toggling the selected language on/off
 - **Subtitle URL Validation**: Validates subtitle track URLs before displaying, with automatic blossom server fallback for 404s - only shows subtitles that are actually available

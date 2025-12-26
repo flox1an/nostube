@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, memo } from 'react'
 import { Settings, ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { type HlsQualityLevel } from './hooks/useHls'
-import { type VideoVariant } from '@/utils/video-event'
+import { type VideoVariant, type TextTrack } from '@/utils/video-event'
+import { getLanguageLabel } from '@/lib/utils'
 
-type MenuView = 'main' | 'quality' | 'speed'
+type MenuView = 'main' | 'quality' | 'speed' | 'subtitles'
 
 interface QualityOption {
   label: string
@@ -24,6 +25,11 @@ interface SettingsMenuProps {
   // Playback speed
   playbackRate: number
   onPlaybackRateChange: (rate: number) => void
+
+  // Subtitles
+  textTracks?: TextTrack[]
+  selectedSubtitleLang?: string // empty string = off
+  onSubtitleChange?: (lang: string) => void
 
   // Is HLS mode
   isHls: boolean
@@ -52,6 +58,9 @@ export const SettingsMenu = memo(function SettingsMenu({
   onVariantChange,
   playbackRate,
   onPlaybackRateChange,
+  textTracks = [],
+  selectedSubtitleLang = '',
+  onSubtitleChange,
   isHls,
 }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -141,8 +150,17 @@ export const SettingsMenu = memo(function SettingsMenu({
     setCurrentView('main')
   }
 
+  const handleSubtitleSelect = (lang: string) => {
+    onSubtitleChange?.(lang)
+    setCurrentView('main')
+  }
+
   // Don't show menu if no quality options (single quality, no HLS)
   const hasQualityOptions = qualityOptions.length > 1 || isHls
+  const hasSubtitles = textTracks.length > 0
+
+  // Build subtitle label
+  const currentSubtitleLabel = selectedSubtitleLang ? getLanguageLabel(selectedSubtitleLang) : 'Off'
 
   return (
     <div className="relative" ref={containerRef}>
@@ -168,8 +186,11 @@ export const SettingsMenu = memo(function SettingsMenu({
               hasQualityOptions={hasQualityOptions}
               currentQualityLabel={currentQualityLabel}
               currentSpeedLabel={currentSpeedLabel}
+              hasSubtitles={hasSubtitles}
+              currentSubtitleLabel={currentSubtitleLabel}
               onQualityClick={() => setCurrentView('quality')}
               onSpeedClick={() => setCurrentView('speed')}
+              onSubtitlesClick={() => setCurrentView('subtitles')}
             />
           )}
 
@@ -189,6 +210,15 @@ export const SettingsMenu = memo(function SettingsMenu({
               onBack={() => setCurrentView('main')}
             />
           )}
+
+          {currentView === 'subtitles' && (
+            <SubtitlesSubmenu
+              textTracks={textTracks}
+              selectedLang={selectedSubtitleLang}
+              onSelect={handleSubtitleSelect}
+              onBack={() => setCurrentView('main')}
+            />
+          )}
         </div>
       )}
     </div>
@@ -199,16 +229,22 @@ interface MainMenuProps {
   hasQualityOptions: boolean
   currentQualityLabel: string
   currentSpeedLabel: string
+  hasSubtitles: boolean
+  currentSubtitleLabel: string
   onQualityClick: () => void
   onSpeedClick: () => void
+  onSubtitlesClick: () => void
 }
 
 const MainMenu = memo(function MainMenu({
   hasQualityOptions,
   currentQualityLabel,
   currentSpeedLabel,
+  hasSubtitles,
+  currentSubtitleLabel,
   onQualityClick,
   onSpeedClick,
+  onSubtitlesClick,
 }: MainMenuProps) {
   return (
     <div role="menu">
@@ -221,6 +257,14 @@ const MainMenu = memo(function MainMenu({
         onClick={onSpeedClick}
         hasSubmenu
       />
+      {hasSubtitles && (
+        <MenuItem
+          label="Subtitles"
+          value={currentSubtitleLabel}
+          onClick={onSubtitlesClick}
+          hasSubmenu
+        />
+      )}
     </div>
   )
 })
@@ -273,6 +317,35 @@ const SpeedSubmenu = memo(function SpeedSubmenu({
           label={speed.label}
           isSelected={speed.value === currentValue}
           onClick={() => onSelect(speed.value)}
+        />
+      ))}
+    </div>
+  )
+})
+
+interface SubtitlesSubmenuProps {
+  textTracks: TextTrack[]
+  selectedLang: string
+  onSelect: (lang: string) => void
+  onBack: () => void
+}
+
+const SubtitlesSubmenu = memo(function SubtitlesSubmenu({
+  textTracks,
+  selectedLang,
+  onSelect,
+  onBack,
+}: SubtitlesSubmenuProps) {
+  return (
+    <div role="menu">
+      <SubmenuHeader title="Subtitles" onBack={onBack} />
+      <SelectableItem label="Off" isSelected={selectedLang === ''} onClick={() => onSelect('')} />
+      {textTracks.map(track => (
+        <SelectableItem
+          key={track.lang}
+          label={getLanguageLabel(track.lang)}
+          isSelected={track.lang === selectedLang}
+          onClick={() => onSelect(track.lang)}
         />
       ))}
     </div>

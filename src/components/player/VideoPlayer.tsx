@@ -62,6 +62,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [captionsEnabled, setCaptionsEnabled] = useState(false)
+  const [selectedSubtitleLang, setSelectedSubtitleLang] = useState('')
   const [isSeeking, setIsSeeking] = useState(false)
   const spinnerTimeoutRef = useRef<number | null>(null)
   const userInitiatedRef = useRef(false)
@@ -452,17 +453,48 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [])
 
-  // Captions handling
-  const toggleCaptions = useCallback(() => {
+  // Helper to apply subtitle language to video element tracks
+  const applySubtitleLanguage = useCallback((lang: string) => {
     const el = videoRef.current
     if (!el) return
 
     const tracks = el.textTracks
     for (let i = 0; i < tracks.length; i++) {
-      tracks[i].mode = captionsEnabled ? 'hidden' : 'showing'
+      const track = tracks[i]
+      // Show only the track matching the selected language
+      track.mode = lang && track.language === lang ? 'showing' : 'hidden'
     }
-    setCaptionsEnabled(!captionsEnabled)
-  }, [captionsEnabled])
+  }, [])
+
+  // Captions toggle button - toggle between showing selected language and off
+  const toggleCaptions = useCallback(() => {
+    const el = videoRef.current
+    if (!el || textTracks.length === 0) return
+
+    if (captionsEnabled) {
+      // Turn off all captions
+      applySubtitleLanguage('')
+      setCaptionsEnabled(false)
+    } else {
+      // Turn on captions - use selected language or first available
+      const langToShow = selectedSubtitleLang || textTracks[0]?.lang || ''
+      if (langToShow) {
+        setSelectedSubtitleLang(langToShow)
+        applySubtitleLanguage(langToShow)
+        setCaptionsEnabled(true)
+      }
+    }
+  }, [captionsEnabled, selectedSubtitleLang, textTracks, applySubtitleLanguage])
+
+  // Settings menu subtitle language change
+  const handleSubtitleChange = useCallback(
+    (lang: string) => {
+      setSelectedSubtitleLang(lang)
+      applySubtitleLanguage(lang)
+      setCaptionsEnabled(lang !== '')
+    },
+    [applySubtitleLanguage]
+  )
 
   // Touch overlay handlers - use accumulator for seek
   const handleSeekBackward = useCallback(() => {
@@ -644,6 +676,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         hasCaptions={hasCaptions}
         captionsEnabled={captionsEnabled}
         onToggleCaptions={toggleCaptions}
+        textTracks={textTracks}
+        selectedSubtitleLang={selectedSubtitleLang}
+        onSubtitleChange={handleSubtitleChange}
         isPipSupported={isPipSupported}
         onTogglePip={togglePip}
         cinemaMode={cinemaMode}

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Subtitle Upload Step**: New step 4 in upload wizard for VTT/SRT subtitle files with auto-detected language from filename, manual language override, Blossom upload and mirroring, and NIP-71 text-track tag generation
+- **Subtitle Language Selector**: Settings menu now includes a subtitle language picker when multiple subtitle tracks are available, with CC button toggling the selected language on/off
 - **Auto-Fullscreen on Orientation**: Automatically enters fullscreen when rotating to landscape while playing, exits on portrait
 - **Blurhash Thumbnail Placeholders**: Blurred LQIP placeholders while thumbnails load using imeta blurhash tags
 - **Unified Draft & Upload Manager**: Single source of truth for task and draft state with debounced Nostr sync

@@ -7,7 +7,7 @@ import { ProgressBar } from './ProgressBar'
 import { SettingsMenu } from './SettingsMenu'
 import { ControlButton } from './ControlButton'
 import { type HlsQualityLevel } from './hooks/useHls'
-import { type VideoVariant } from '@/utils/video-event'
+import { type VideoVariant, type TextTrack } from '@/utils/video-event'
 import { useIsMobile } from '@/hooks'
 
 interface ControlBarProps {
@@ -47,10 +47,13 @@ interface ControlBarProps {
   selectedVariantIndex?: number
   onVariantChange?: (index: number) => void
 
-  // Captions
+  // Captions/Subtitles
   hasCaptions: boolean
   captionsEnabled: boolean
   onToggleCaptions: () => void
+  textTracks?: TextTrack[]
+  selectedSubtitleLang?: string
+  onSubtitleChange?: (lang: string) => void
 
   // PiP
   isPipSupported: boolean
@@ -97,6 +100,9 @@ export const ControlBar = memo(function ControlBar({
   hasCaptions,
   captionsEnabled,
   onToggleCaptions,
+  textTracks,
+  selectedSubtitleLang,
+  onSubtitleChange,
   isPipSupported,
   onTogglePip,
   cinemaMode,
@@ -181,6 +187,9 @@ export const ControlBar = memo(function ControlBar({
             onVariantChange={onVariantChange}
             playbackRate={playbackRate}
             onPlaybackRateChange={onPlaybackRateChange}
+            textTracks={textTracks}
+            selectedSubtitleLang={selectedSubtitleLang}
+            onSubtitleChange={onSubtitleChange}
           />
 
           {/* Theater mode button */}

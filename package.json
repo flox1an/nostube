@@ -12,7 +12,10 @@
     "deploy": "npm run build && npx -y surge@latest dist",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
-    "format:staged": "npx prettier --write --ignore-unknown"
+    "format:staged": "npx prettier --write --ignore-unknown",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -44,6 +47,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/vite": "^4.1.15",
+    "@tauri-apps/api": "^2.9.1",
     "@vitejs/plugin-react": "^5.0.4",
     "applesauce-accounts": "^4.1.0",
     "applesauce-core": "^4.4.2",
@@ -95,6 +99,7 @@
     "@html-eslint/eslint-plugin": "^0.52.0",
     "@html-eslint/parser": "^0.52.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@tauri-apps/cli": "^2.9.6",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^25.0.3",

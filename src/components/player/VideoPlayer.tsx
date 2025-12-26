@@ -10,6 +10,7 @@ import { usePlayerState } from './hooks/usePlayerState'
 import { useControlsVisibility } from './hooks/useControlsVisibility'
 import { useSeekAccumulator } from './hooks/useSeekAccumulator'
 import { useAdaptiveQuality } from './hooks/useAdaptiveQuality'
+import { useValidatedTextTracks } from './hooks/useValidatedTextTracks'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
@@ -148,6 +149,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     currentLevel: hlsCurrentLevel,
     setLevel: setHlsLevel,
   } = useHls(videoRef, videoUrl, isHls)
+
+  // Validate text tracks (check availability, use blossom fallback)
+  const { validatedTracks } = useValidatedTextTracks(textTracks)
 
   // Player state
   const playerState = usePlayerState({
@@ -469,7 +473,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Captions toggle button - toggle between showing selected language and off
   const toggleCaptions = useCallback(() => {
     const el = videoRef.current
-    if (!el || textTracks.length === 0) return
+    if (!el || validatedTracks.length === 0) return
 
     if (captionsEnabled) {
       // Turn off all captions
@@ -477,14 +481,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       setCaptionsEnabled(false)
     } else {
       // Turn on captions - use selected language or first available
-      const langToShow = selectedSubtitleLang || textTracks[0]?.lang || ''
+      const langToShow = selectedSubtitleLang || validatedTracks[0]?.lang || ''
       if (langToShow) {
         setSelectedSubtitleLang(langToShow)
         applySubtitleLanguage(langToShow)
         setCaptionsEnabled(true)
       }
     }
-  }, [captionsEnabled, selectedSubtitleLang, textTracks, applySubtitleLanguage])
+  }, [captionsEnabled, selectedSubtitleLang, validatedTracks, applySubtitleLanguage])
 
   // Settings menu subtitle language change
   const handleSubtitleChange = useCallback(
@@ -597,7 +601,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     )
   }
 
-  const hasCaptions = textTracks.length > 0
+  const hasCaptions = validatedTracks.length > 0
 
   return (
     <div
@@ -621,8 +625,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onError={handleVideoError}
         onClick={handleTogglePlay}
       >
-        {textTracks.map(track => (
-          <track key={track.lang} kind="captions" srcLang={track.lang} src={track.url} />
+        {validatedTracks.map(track => (
+          <track key={track.lang} kind="captions" srcLang={track.lang} src={track.validatedUrl} />
         ))}
       </video>
 
@@ -676,7 +680,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         hasCaptions={hasCaptions}
         captionsEnabled={captionsEnabled}
         onToggleCaptions={toggleCaptions}
-        textTracks={textTracks}
+        textTracks={validatedTracks}
         selectedSubtitleLang={selectedSubtitleLang}
         onSubtitleChange={handleSubtitleChange}
         isPipSupported={isPipSupported}

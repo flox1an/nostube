@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Debug Dialog Layout**: Wider dialog with two-column layout - variant list (Video, Thumbnail, Subtitle) on left, details on right
 - **Settings Menu Auto-Close**: Selecting quality, speed, or subtitle option now closes the settings menu immediately
 - **ESLint Config**: Added `src-tauri` to ESLint ignores to prevent linting generated Tauri build artifacts
 - **Consolidated Video Parser**: Embed player now uses the main video-event.ts parser, eliminating duplicate parsing logic and ensuring consistent NIP-71 support across main app and embeds

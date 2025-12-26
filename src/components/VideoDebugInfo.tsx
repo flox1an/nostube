@@ -251,7 +251,7 @@ export function VideoDebugInfo({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-5xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Debug Info</DialogTitle>
           <DialogDescription>
@@ -289,37 +289,50 @@ export function VideoDebugInfo({
               </div>
             </div>
 
-            {/* Blossom Servers - Tabbed by Variant */}
+            {/* Blossom Servers - Two-column layout */}
             {allVariants.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2">Blossom Server Availability by Variant</h3>
-                <Tabs defaultValue="0" className="w-full">
-                  <TabsList className="w-full justify-start flex-wrap h-auto">
-                    {allVariants.map((variantData, idx) => {
-                      const mimeType = variantData.variant.mimeType || ''
-                      let Icon = Image
-                      if (mimeType.startsWith('video/')) {
-                        Icon = Video
-                      } else if (mimeType.startsWith('text/')) {
-                        Icon = Captions
-                      }
+                <Tabs defaultValue="0" className="w-full" orientation="vertical">
+                  <div className="flex gap-4">
+                    {/* Left column: variant list */}
+                    <TabsList className="flex-col h-auto w-48 shrink-0 justify-start items-stretch">
+                      {allVariants.map((variantData, idx) => {
+                        const mimeType = variantData.variant.mimeType || ''
+                        let Icon = Image
+                        if (mimeType.startsWith('video/')) {
+                          Icon = Video
+                        } else if (mimeType.startsWith('text/')) {
+                          Icon = Captions
+                        }
 
-                      return (
-                        <TabsTrigger key={idx} value={idx.toString()} className="gap-2">
-                          <Icon className="w-4 h-4" />
-                          {variantData.label}
-                        </TabsTrigger>
-                      )
-                    })}
-                  </TabsList>
+                        return (
+                          <TabsTrigger
+                            key={idx}
+                            value={idx.toString()}
+                            className="justify-start gap-2"
+                          >
+                            <Icon className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{variantData.label}</span>
+                          </TabsTrigger>
+                        )
+                      })}
+                    </TabsList>
 
-                  {allVariants.map((variantData, idx) => (
-                    <TabsContent key={idx} value={idx.toString()} className="mt-4">
-                      <div className="bg-muted p-4 rounded-lg">
-                        {renderVariantServers(variantData.variant, variantData.serverAvailability)}
-                      </div>
-                    </TabsContent>
-                  ))}
+                    {/* Right column: variant details */}
+                    <div className="flex-1 min-w-0">
+                      {allVariants.map((variantData, idx) => (
+                        <TabsContent key={idx} value={idx.toString()} className="mt-0">
+                          <div className="bg-muted p-4 rounded-lg">
+                            {renderVariantServers(
+                              variantData.variant,
+                              variantData.serverAvailability
+                            )}
+                          </div>
+                        </TabsContent>
+                      ))}
+                    </div>
+                  </div>
                 </Tabs>
               </div>
             )}

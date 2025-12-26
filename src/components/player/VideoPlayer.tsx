@@ -561,12 +561,17 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           e.preventDefault()
           toggleCaptions()
           break
+        case 't':
+        case 'T':
+          e.preventDefault()
+          onToggleCinemaMode?.()
+          break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [playerState, addSeek, showControls, toggleFullscreen, toggleCaptions])
+  }, [playerState, addSeek, showControls, toggleFullscreen, toggleCaptions, onToggleCinemaMode])
 
   const handleTogglePlay = useCallback(() => {
     userInitiatedRef.current = true

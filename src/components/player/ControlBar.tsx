@@ -172,6 +172,7 @@ export const ControlBar = memo(function ControlBar({
               onClick={onToggleCaptions}
               icon={<Subtitles className="w-6 h-6" />}
               label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
+              shortcut="C"
               active={captionsEnabled}
             />
           )}
@@ -198,6 +199,7 @@ export const ControlBar = memo(function ControlBar({
               onClick={onToggleCinemaMode}
               icon={<MoveHorizontal className="w-5 h-5" />}
               label={cinemaMode ? 'Exit theater mode' : 'Theater mode'}
+              shortcut="T"
               active={cinemaMode}
             />
           )}
@@ -209,6 +211,7 @@ export const ControlBar = memo(function ControlBar({
               isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />
             }
             label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            shortcut="F"
           />
         </div>
       </div>

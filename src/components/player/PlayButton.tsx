@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Play, Pause } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface PlayButtonProps {
   isPlaying: boolean
@@ -10,18 +11,28 @@ interface PlayButtonProps {
  * Play/Pause button for video controls
  */
 export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
+  const label = isPlaying ? 'Pause' : 'Play'
+  const tooltip = `${label} (Space)`
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
-      aria-label={isPlaying ? 'Pause' : 'Play'}
-    >
-      {isPlaying ? (
-        <Pause className="w-6 h-6" fill="currentColor" />
-      ) : (
-        <Play className="w-6 h-6" fill="currentColor" />
-      )}
-    </button>
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
+          aria-label={label}
+        >
+          {isPlaying ? (
+            <Pause className="w-6 h-6" fill="currentColor" />
+          ) : (
+            <Play className="w-6 h-6" fill="currentColor" />
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   )
 })

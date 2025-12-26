@@ -142,16 +142,19 @@ export const SettingsMenu = memo(function SettingsMenu({
     } else {
       onVariantChange?.(value)
     }
+    setIsOpen(false)
     setCurrentView('main')
   }
 
   const handleSpeedSelect = (value: number) => {
     onPlaybackRateChange(value)
+    setIsOpen(false)
     setCurrentView('main')
   }
 
   const handleSubtitleSelect = (lang: string) => {
     onSubtitleChange?.(lang)
+    setIsOpen(false)
     setCurrentView('main')
   }
 

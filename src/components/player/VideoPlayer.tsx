@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
-import { imageProxyVideoPreview } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
@@ -23,6 +22,7 @@ interface VideoPlayerProps {
   textTracks: TextTrack[]
   mime: string
   poster?: string
+  posterHash?: string
   onTimeUpdate?: (time: number) => void
   className?: string
   contentWarning?: string
@@ -42,6 +42,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
   mime,
   poster,
+  posterHash,
   textTracks,
   loop = false,
   onTimeUpdate,
@@ -587,10 +588,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     showControls()
   }, [showControls])
 
-  const posterUrl = useMemo(
-    () => (poster !== undefined ? imageProxyVideoPreview(poster) : undefined),
-    [poster]
-  )
+  // Get poster URL with blossom fallback support (no resize proxy)
+  const posterUrls = useMemo(() => (poster ? [poster] : []), [poster])
+  const { currentUrl: posterUrl } = useMediaUrls({
+    urls: posterUrls,
+    mediaType: 'image',
+    sha256: posterHash,
+    enabled: !!poster,
+  })
 
   // Show loading state if video URLs are still loading
   if (isLoadingVideoUrls || !videoUrl) {
@@ -616,7 +621,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       <video
         ref={videoRef}
         src={isHls ? undefined : videoUrl}
-        poster={posterUrl}
+        poster={posterUrl ?? undefined}
         loop={loop}
         autoPlay={!contentWarning}
         playsInline

@@ -31,12 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Watch History**: Track last 100 watched videos
 - **Multi-Video Upload**: Upload multiple quality variants (4K/1080p/720p/etc)
 - **Internationalization**: EN/DE/FR/ES with 500+ translations
-- **NIP-71 Addressable Events**: Support for kinds 34235/34236
+- **NIP-71 Video Events**: Full support for imeta-based video format on all event kinds (21, 22, 34235, 34236) with legacy format fallback
 - **NIP-40 Video Expiration**: Optional expiration (1 day to 1 year) in upload wizard
 - **Docker Deployment**: Multi-stage Dockerfile with runtime env vars
 
 ### Changed
 
+- **Consolidated Video Parser**: Embed player now uses the main video-event.ts parser, eliminating duplicate parsing logic and ensuring consistent NIP-71 support across main app and embeds
 - **Video Player Poster**: Use full-resolution thumbnail without resize proxy, with blossom server fallback support for 404s
 - **Mobile Progress Bar**: Touch-enabled scrubbing with larger handle (7x7 active, 5x5 idle), debounced seeking (only seeks on touch end), increased touch target area, and controls stay visible while seeking
 - **Cinema Mode Icon**: Changed theater mode button icon from MonitorPlay to MoveHorizontal for better visual clarity

@@ -5,13 +5,12 @@ import { parseURLParams, validateParams } from './lib/url-params'
 import { decodeVideoIdentifier, buildRelayList } from './lib/nostr-decoder'
 import { NostrClient } from './lib/nostr-client'
 import { ProfileFetcher } from './lib/profile-fetcher'
-import { parseVideoEvent } from './lib/video-parser'
-import type { ParsedVideo } from './lib/video-parser'
+import { processEvent, type VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
 import './embed.css'
 
 interface EmbedState {
-  video: ParsedVideo | null
+  video: VideoEvent | null
   profile: Profile | null
   error: string | null
   isLoading: boolean
@@ -65,11 +64,20 @@ async function initEmbed(): Promise<void> {
 
     // Fetch video event
     const event = await client.fetchEvent(identifier)
-    const video = parseVideoEvent(event)
+    const video = processEvent(event, relays)
+    if (!video) {
+      renderApp(reactRoot, params, {
+        video: null,
+        profile: null,
+        error: 'Failed to parse video event',
+        isLoading: false,
+      })
+      return
+    }
 
     // Fetch profile in parallel (non-blocking)
     const profileFetcher = new ProfileFetcher(client)
-    const profilePromise = profileFetcher.fetchProfile(video.author, relays)
+    const profilePromise = profileFetcher.fetchProfile(video.pubkey, relays)
 
     // Render with video data (profile may still be loading)
     renderApp(reactRoot, params, { video, profile: null, error: null, isLoading: false })

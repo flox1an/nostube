@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { VideoPlayer } from '@/components/player/VideoPlayer'
 import type { EmbedParams } from './lib/url-params'
-import type { ParsedVideo, VideoVariant } from './lib/video-parser'
+import type { VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
 import { TitleOverlay } from './components/TitleOverlay'
 import { ContentWarning } from './components/ContentWarning'
@@ -10,7 +10,7 @@ import { LoadingState } from './components/LoadingState'
 
 interface EmbedAppProps {
   params: EmbedParams
-  video: ParsedVideo | null
+  video: VideoEvent | null
   profile: Profile | null
   error: string | null
   isLoading: boolean
@@ -70,23 +70,15 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         reason={video.contentWarning}
         onAccept={() => setContentWarningAccepted(true)}
         color={params.accentColor}
-        poster={video.thumbnails[0]?.url}
+        poster={video.thumbnailVariants[0]?.url}
       />
     )
   }
 
-  // Map video variants to VideoPlayer format
-  const playerVariants: VideoVariant[] = video.videoVariants.map(v => ({
-    url: v.url,
-    fallbackUrls: v.fallbackUrls,
-    quality: v.quality || '',
-    hash: v.hash,
-    mime: v.mimeType || 'video/mp4',
-  }))
-
+  // Use video variants directly from VideoEvent
   const urls = video.videoVariants.map(v => v.url)
-  const poster = video.thumbnails[0]?.url
-  const posterHash = video.thumbnails[0]?.hash
+  const poster = video.thumbnailVariants[0]?.url
+  const posterHash = video.thumbnailVariants[0]?.hash
 
   return (
     <div
@@ -96,17 +88,17 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
     >
       <VideoPlayer
         urls={urls}
-        videoVariants={playerVariants}
+        videoVariants={video.videoVariants}
         mime={video.videoVariants[0]?.mimeType || 'video/mp4'}
         poster={poster}
         posterHash={posterHash}
         loop={params.loop}
         initialPlayPos={params.startTime}
         contentWarning={undefined} // Already handled above
-        authorPubkey={video.author}
+        authorPubkey={video.pubkey}
         sha256={video.videoVariants[0]?.hash}
         onAllSourcesFailed={handleAllSourcesFailed}
-        textTracks={[]}
+        textTracks={video.textTracks}
         className="w-full h-full"
       />
 
@@ -115,7 +107,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         <TitleOverlay
           title={video.title}
           author={profile}
-          authorPubkey={video.author}
+          authorPubkey={video.pubkey}
           visible={controlsVisible}
           videoId={params.videoId}
         />

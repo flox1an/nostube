@@ -170,7 +170,7 @@ export const ControlBar = memo(function ControlBar({
           {hasCaptions && (
             <ControlButton
               onClick={onToggleCaptions}
-              icon={<Subtitles className="w-5 h-5" />}
+              icon={<Subtitles className="w-6 h-6" />}
               label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
               active={captionsEnabled}
             />

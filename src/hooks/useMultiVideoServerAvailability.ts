@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant, TextTrack } from '@/utils/video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
 import { extractBlossomHash } from '@/utils/video-event'
 import { normalizeServerUrl } from '@/lib/blossom-utils'
@@ -28,9 +28,18 @@ export interface VariantAvailability {
   isChecking: boolean
 }
 
+// Text track variant for subtitle files
+export interface TextTrackVariant {
+  url: string
+  lang: string
+  hash?: string
+  fallbackUrls: string[]
+}
+
 interface UseMultiVideoServerAvailabilityParams {
   videoVariants: VideoVariant[]
   thumbnailVariants: VideoVariant[]
+  textTracks?: TextTrack[]
   configServers?: BlossomServer[]
   userServers?: string[]
 }
@@ -38,6 +47,7 @@ interface UseMultiVideoServerAvailabilityParams {
 interface UseMultiVideoServerAvailabilityReturn {
   videoVariants: VariantAvailability[]
   thumbnailVariants: VariantAvailability[]
+  textTrackVariants: VariantAvailability[]
   allVariants: VariantAvailability[] // Combined for easy iteration
   checkAllAvailability: () => Promise<void>
   isAnyChecking: boolean
@@ -149,10 +159,23 @@ async function checkBlossomServer(
 /**
  * Hook to manage server availability for multiple video variants and thumbnails
  */
+/**
+ * Convert TextTrack to VideoVariant for unified processing
+ */
+function textTrackToVariant(textTrack: TextTrack): VideoVariant {
+  const { sha256 } = extractBlossomHash(textTrack.url)
+  return {
+    url: textTrack.url,
+    hash: sha256,
+    fallbackUrls: [],
+    mimeType: 'text/vtt',
+  }
+}
+
 export function useMultiVideoServerAvailability(
   params: UseMultiVideoServerAvailabilityParams
 ): UseMultiVideoServerAvailabilityReturn {
-  const { videoVariants, thumbnailVariants, configServers, userServers } = params
+  const { videoVariants, thumbnailVariants, textTracks = [], configServers, userServers } = params
 
   // Create availability state for each variant
   const [variantStates, setVariantStates] = useState<Map<number, Map<string, ServerAvailability>>>(
@@ -160,12 +183,19 @@ export function useMultiVideoServerAvailability(
   )
   const [checkingStates, setCheckingStates] = useState<Map<number, boolean>>(new Map())
 
+  // Convert text tracks to variants for unified processing
+  const textTrackVariants = useMemo(
+    () => textTracks.map(tt => textTrackToVariant(tt)),
+    [textTracks]
+  )
+
   // Helper to generate a descriptive label for a variant
   const getVariantLabel = (
     variant: VideoVariant,
     index: number,
     total: number,
-    type: 'Video' | 'Thumbnail'
+    type: 'Video' | 'Thumbnail' | 'Subtitle',
+    extra?: string
   ) => {
     // Build quality/dimension string
     let qualityStr = ''
@@ -181,10 +211,13 @@ export function useMultiVideoServerAvailability(
       }
     }
 
+    // Combine quality and extra info (like language)
+    const infoStr = [qualityStr, extra].filter(Boolean).join(' ')
+
     if (total === 1) {
-      return qualityStr ? `${type} (${qualityStr})` : type
+      return infoStr ? `${type} (${infoStr})` : type
     }
-    return qualityStr ? `${type} ${index + 1} (${qualityStr})` : `${type} ${index + 1}`
+    return infoStr ? `${type} ${index + 1} (${infoStr})` : `${type} ${index + 1}`
   }
 
   // Combine all variants with metadata
@@ -193,7 +226,7 @@ export function useMultiVideoServerAvailability(
       variant: VideoVariant
       label: string
       index: number
-      isVideo: boolean
+      type: 'video' | 'thumbnail' | 'subtitle'
     }> = []
 
     videoVariants.forEach((variant, index) => {
@@ -201,7 +234,7 @@ export function useMultiVideoServerAvailability(
         variant,
         label: getVariantLabel(variant, index, videoVariants.length, 'Video'),
         index: result.length,
-        isVideo: true,
+        type: 'video',
       })
     })
 
@@ -210,12 +243,22 @@ export function useMultiVideoServerAvailability(
         variant,
         label: getVariantLabel(variant, index, thumbnailVariants.length, 'Thumbnail'),
         index: result.length,
-        isVideo: false,
+        type: 'thumbnail',
+      })
+    })
+
+    textTrackVariants.forEach((variant, index) => {
+      const lang = textTracks[index]?.lang || 'unknown'
+      result.push({
+        variant,
+        label: getVariantLabel(variant, index, textTrackVariants.length, 'Subtitle', lang),
+        index: result.length,
+        type: 'subtitle',
       })
     })
 
     return result
-  }, [videoVariants, thumbnailVariants])
+  }, [videoVariants, thumbnailVariants, textTrackVariants, textTracks])
 
   // Extract server lists for each variant
   const variantServerLists = useMemo(() => {
@@ -310,9 +353,15 @@ export function useMultiVideoServerAvailability(
     checkVariantAvailability,
   ])
 
-  // Split into video and thumbnail variants
+  // Split into video, thumbnail, and text track variants
   const videoVariantResults = variantAvailabilities.slice(0, videoVariants.length)
-  const thumbnailVariantResults = variantAvailabilities.slice(videoVariants.length)
+  const thumbnailVariantResults = variantAvailabilities.slice(
+    videoVariants.length,
+    videoVariants.length + thumbnailVariants.length
+  )
+  const textTrackVariantResults = variantAvailabilities.slice(
+    videoVariants.length + thumbnailVariants.length
+  )
 
   // Check if any variant is currently checking
   const isAnyChecking = Array.from(checkingStates.values()).some(Boolean)
@@ -320,6 +369,7 @@ export function useMultiVideoServerAvailability(
   return {
     videoVariants: videoVariantResults,
     thumbnailVariants: thumbnailVariantResults,
+    textTrackVariants: textTrackVariantResults,
     allVariants: variantAvailabilities,
     checkAllAvailability,
     isAnyChecking,

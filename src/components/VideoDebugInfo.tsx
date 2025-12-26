@@ -9,11 +9,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { Check, Circle, Loader2, X, Video, Image } from 'lucide-react'
+import { Check, Circle, Loader2, X, Video, Image, Captions } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
 
@@ -78,6 +78,35 @@ function getStatusText(availability: ServerAvailability | undefined) {
   }
 }
 
+/**
+ * Deduplicate variants by URL or hash, preferring variants with more metadata
+ */
+function deduplicateVariants(variants: VideoVariant[]): VideoVariant[] {
+  const seen = new Map<string, VideoVariant>()
+
+  for (const variant of variants) {
+    const { sha256 } = extractBlossomHash(variant.url)
+    // Use hash as key if available, otherwise use URL
+    const key = sha256 || variant.url
+
+    const existing = seen.get(key)
+    if (!existing) {
+      seen.set(key, variant)
+    } else {
+      // Prefer variant with more metadata (dimensions, size, quality)
+      const existingScore =
+        (existing.dimensions ? 1 : 0) + (existing.size ? 1 : 0) + (existing.quality ? 1 : 0)
+      const variantScore =
+        (variant.dimensions ? 1 : 0) + (variant.size ? 1 : 0) + (variant.quality ? 1 : 0)
+      if (variantScore > existingScore) {
+        seen.set(key, variant)
+      }
+    }
+  }
+
+  return Array.from(seen.values())
+}
+
 export function VideoDebugInfo({
   open,
   onOpenChange,
@@ -86,11 +115,18 @@ export function VideoDebugInfo({
   blossomServers,
   userServers,
 }: VideoDebugInfoProps) {
+  // Deduplicate thumbnails with same URL or hash
+  const deduplicatedThumbnails = useMemo(
+    () => deduplicateVariants(video?.thumbnailVariants || []),
+    [video?.thumbnailVariants]
+  )
+
   // Use multi-variant availability hook
   // Use allVideoVariants to show ALL variants including incompatible codecs for debugging
   const { allVariants, checkAllAvailability } = useMultiVideoServerAvailability({
     videoVariants: video?.allVideoVariants || [],
-    thumbnailVariants: video?.thumbnailVariants || [],
+    thumbnailVariants: deduplicatedThumbnails,
+    textTracks: video?.textTracks || [],
     configServers: blossomServers,
     userServers,
   })
@@ -260,8 +296,13 @@ export function VideoDebugInfo({
                 <Tabs defaultValue="0" className="w-full">
                   <TabsList className="w-full justify-start flex-wrap h-auto">
                     {allVariants.map((variantData, idx) => {
-                      const isVideo = variantData.variant.mimeType?.startsWith('video/')
-                      const Icon = isVideo ? Video : Image
+                      const mimeType = variantData.variant.mimeType || ''
+                      let Icon = Image
+                      if (mimeType.startsWith('video/')) {
+                        Icon = Video
+                      } else if (mimeType.startsWith('text/')) {
+                        Icon = Captions
+                      }
 
                       return (
                         <TabsTrigger key={idx} value={idx.toString()} className="gap-2">

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Player Control Tooltips with Shortcuts**: All player control buttons show instant shadcn tooltips on hover with name and keyboard shortcut (e.g., "Play (Space)", "Mute (M)", "Captions (C)", "Theater mode (T)", "Fullscreen (F)")
+- **Theater Mode Keyboard Shortcut**: Press 'T' to toggle theater/cinema mode
 - **Subtitle Toggle Keyboard Shortcut**: Press 'C' to toggle subtitles/captions on and off
 - **Video Debug Info Subtitles**: Debug dialog now shows subtitle files in Blossom Server Availability tabs with Captions icon
 - **Thumbnail Deduplication in Debug**: Consolidates thumbnails with same URL or hash in debug display to reduce clutter

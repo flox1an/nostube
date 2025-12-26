@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { Volume2, Volume1, VolumeX } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface VolumeControlProps {
   volume: number
@@ -172,14 +173,21 @@ export const VolumeControl = memo(function VolumeControl({
       onBlurCapture={handleBlurCapture}
     >
       {/* Volume icon button */}
-      <button
-        type="button"
-        onClick={onToggleMute}
-        className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
-        aria-label={isMuted ? 'Unmute' : 'Mute'}
-      >
-        <VolumeIcon className="w-6 h-6" />
-      </button>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+          >
+            <VolumeIcon className="w-6 h-6" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>{isMuted ? 'Unmute (M)' : 'Mute (M)'}</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Expandable slider */}
       <div

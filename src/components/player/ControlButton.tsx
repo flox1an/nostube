@@ -1,9 +1,11 @@
 import { type ReactNode, memo } from 'react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ControlButtonProps {
   onClick: () => void
   icon: ReactNode
   label: string
+  shortcut?: string
   active?: boolean
 }
 
@@ -14,19 +16,28 @@ export const ControlButton = memo(function ControlButton({
   onClick,
   icon,
   label,
+  shortcut,
   active = false,
 }: ControlButtonProps) {
+  const tooltip = shortcut ? `${label} (${shortcut})` : label
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-neutral-700/50 ${
-        active ? 'text-primary' : 'text-white'
-      }`}
-      aria-label={label}
-      title={label}
-    >
-      {icon}
-    </button>
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-neutral-700/50 ${
+            active ? 'text-primary' : 'text-white'
+          }`}
+          aria-label={label}
+        >
+          {icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   )
 })

@@ -13,6 +13,7 @@ import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/
 import type { UploadDraft, SubtitleVariant } from '@/types/upload-draft'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
+import { generateBlurhash } from '@/lib/blurhash-encode'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -27,6 +28,7 @@ interface BuildVideoEventParams {
   thumbnailMirroredBlobs: BlobDescriptor[]
   subtitles: SubtitleVariant[]
   draftId: string // Used as the 'd' tag for addressable events
+  thumbnailBlurhash?: string // Blurhash for thumbnail placeholder
   isPreview?: boolean
   hasPendingThumbnail?: boolean
 }
@@ -60,6 +62,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     thumbnailMirroredBlobs,
     subtitles,
     draftId,
+    thumbnailBlurhash,
     isPreview = false,
     hasPendingThumbnail = false,
   } = params
@@ -110,6 +113,11 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     // Add thumbnail URLs (shared across all videos)
     thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
     thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
+
+    // Add blurhash for thumbnail placeholder (NIP-92)
+    if (thumbnailBlurhash) {
+      imetaTag.push(`blurhash ${thumbnailBlurhash}`)
+    }
 
     // For preview mode, show placeholder for pending thumbnail
     if (isPreview && hasPendingThumbnail && thumbnailUploadedBlobs.length === 0) {
@@ -231,6 +239,7 @@ export function useVideoUpload(
     initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial'
   )
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
+  const [thumbnailBlurhash, setThumbnailBlurhash] = useState<string | undefined>(undefined)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(
     initialDraft?.thumbnailSource || 'generated'
   )
@@ -403,6 +412,10 @@ export function useVideoUpload(
       }
       setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false })
       setThumbnail(acceptedFiles[0])
+
+      // Generate blurhash for the uploaded thumbnail
+      const blurhash = await generateBlurhash(acceptedFiles[0])
+      setThumbnailBlurhash(blurhash)
     } catch {
       setThumbnailUploadInfo({
         uploadedBlobs: [],
@@ -433,6 +446,7 @@ export function useVideoUpload(
     // Reset thumbnail state
     setThumbnail(null)
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
+    setThumbnailBlurhash(undefined)
   }
 
   const onDrop = async (acceptedFiles: File[]) => {
@@ -596,15 +610,21 @@ export function useVideoUpload(
 
     if (currentVideoUrl) {
       createThumbnailFromUrl(currentVideoUrl, 1)
-        .then(blob => {
+        .then(async blob => {
           if (blob) {
             setThumbnailBlob(blob)
+            // Generate blurhash for the thumbnail
+            const blurhash = await generateBlurhash(blob)
+            setThumbnailBlurhash(blurhash)
           }
           return undefined
         })
         .catch(() => {})
     } else {
-      setTimeout(() => setThumbnailBlob(null), 0)
+      setTimeout(() => {
+        setThumbnailBlob(null)
+        setThumbnailBlurhash(undefined)
+      }, 0)
     }
     return undefined
   }, [currentVideoUrl])
@@ -634,6 +654,7 @@ export function useVideoUpload(
     setUploadInfo({ videos: [] })
     setUploadState('initial')
     setThumbnailBlob(null)
+    setThumbnailBlurhash(undefined)
     setThumbnailSource('generated')
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
     setUploadProgress(null)
@@ -922,6 +943,7 @@ export function useVideoUpload(
         thumbnailMirroredBlobs,
         subtitles,
         draftId,
+        thumbnailBlurhash,
         isPreview: false,
       })
 
@@ -1013,6 +1035,7 @@ export function useVideoUpload(
       thumbnailMirroredBlobs: thumbMirroredBlobs,
       subtitles,
       draftId,
+      thumbnailBlurhash,
       isPreview: true,
       hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
     })
@@ -1030,6 +1053,7 @@ export function useVideoUpload(
     thumbnailSource,
     thumbnailUploadInfo,
     thumbnailBlob,
+    thumbnailBlurhash,
     subtitles,
     draftId,
   ])

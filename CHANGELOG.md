@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Internationalization**: EN/DE/FR/ES with 500+ translations
 - **NIP-71 Video Events**: Full support for imeta-based video format on all event kinds (21, 22, 34235, 34236) with legacy format fallback
 - **Addressable Video Events**: Upload now creates addressable events (kinds 34235/34236) using draft UUID as the `d` tag, enabling video metadata updates
+- **Blurhash Generation on Upload**: Automatically generates blurhash placeholders for thumbnails during upload, included in imeta tags (NIP-92 compliant)
 - **NIP-40 Video Expiration**: Optional expiration (1 day to 1 year) in upload wizard
 - **Docker Deployment**: Multi-stage Dockerfile with runtime env vars
 
@@ -54,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Draft Deletion UX**: Confirmation dialog with option to delete media from Blossom servers
 - **Video Suggestions Hover**: Solid color with opacity fade-in/fade-out effect on hover
 - **Video Card Hover**: Added hover background effect with card padding
-- **Cinema Mode**: Preserves aspect ratio with max-height 85dvh
+- **Cinema Mode**: Preserves aspect ratio with max-height 80dvh
 - **Touch Overlay**: Single-tap for seeking instead of double-tap
 - **Controls Timing**: 2s auto-hide delay, 500ms fade-out animation
 - **Video Expiration Badge**: Amber "Expires in X" / red "Expired" badges

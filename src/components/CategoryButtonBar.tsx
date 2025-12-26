@@ -11,7 +11,7 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
 
   return (
     <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide">
-      <div className="flex gap-2 py-4 min-w-max">
+      <div className="flex gap-2 p-2 min-w-max">
         {TAG_CATEGORIES.map(category => {
           const isActive = activeSlug === category.slug
 

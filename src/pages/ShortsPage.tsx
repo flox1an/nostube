@@ -25,7 +25,7 @@ export function ShortsPage() {
         emptyMessage={t('pages.shorts.noShorts')}
         loadingMessage={t('pages.shorts.loadingMore')}
         exhaustedMessage={t('pages.shorts.noMore')}
-        className="sm:px-4 sm:py-4"
+        className="sm:p-2"
       />
     </div>
   )

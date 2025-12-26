@@ -21,6 +21,7 @@ export const VolumeControl = memo(function VolumeControl({
   const sliderRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [hasFocus, setHasFocus] = useState(false)
   const hideTimeoutRef = useRef<number | null>(null)
 
   // Show actual volume (not affected by mute for visual feedback)
@@ -48,10 +49,64 @@ export const VolumeControl = memo(function VolumeControl({
   }, [clearHideTimeout])
 
   const handleMouseLeave = useCallback(() => {
-    if (!isDragging) {
+    if (!isDragging && !hasFocus) {
       startHideTimeout()
     }
-  }, [startHideTimeout, isDragging])
+  }, [startHideTimeout, isDragging, hasFocus])
+
+  // Handle focus events for keyboard accessibility
+  const handleFocusCapture = useCallback(() => {
+    clearHideTimeout()
+    setHasFocus(true)
+    setIsExpanded(true)
+  }, [clearHideTimeout])
+
+  const handleBlurCapture = useCallback(
+    (e: React.FocusEvent) => {
+      // Check if focus is moving to another element within the container
+      const container = containerRef.current
+      if (container && e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) {
+        return // Focus is still within container
+      }
+      setHasFocus(false)
+      if (!isDragging) {
+        startHideTimeout()
+      }
+    },
+    [isDragging, startHideTimeout]
+  )
+
+  // Handle keyboard controls for volume slider
+  const handleSliderKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 0.1 : 0.05
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowUp':
+          e.preventDefault()
+          e.stopPropagation()
+          onVolumeChange(Math.min(1, volume + step))
+          break
+        case 'ArrowLeft':
+        case 'ArrowDown':
+          e.preventDefault()
+          e.stopPropagation()
+          onVolumeChange(Math.max(0, volume - step))
+          break
+        case 'Home':
+          e.preventDefault()
+          e.stopPropagation()
+          onVolumeChange(0)
+          break
+        case 'End':
+          e.preventDefault()
+          e.stopPropagation()
+          onVolumeChange(1)
+          break
+      }
+    },
+    [volume, onVolumeChange]
+  )
 
   const getVolumeFromPosition = useCallback((clientX: number) => {
     const slider = sliderRef.current
@@ -113,6 +168,8 @@ export const VolumeControl = memo(function VolumeControl({
       className="flex items-center"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocusCapture={handleFocusCapture}
+      onBlurCapture={handleBlurCapture}
     >
       {/* Volume icon button */}
       <button
@@ -127,13 +184,21 @@ export const VolumeControl = memo(function VolumeControl({
       {/* Expandable slider */}
       <div
         className={`overflow-hidden transition-all duration-200 ${
-          isExpanded || isDragging ? 'w-20' : 'w-0'
+          isExpanded || isDragging || hasFocus ? 'w-20' : 'w-0'
         }`}
       >
         <div
           ref={sliderRef}
-          className="relative h-4 mx-2 cursor-pointer flex items-center"
+          role="slider"
+          tabIndex={0}
+          aria-label="Volume"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(displayVolume * 100)}
+          aria-valuetext={`${Math.round(displayVolume * 100)}%`}
+          className="relative h-4 mx-2 cursor-pointer flex items-center outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1 rounded"
           onMouseDown={handleSliderMouseDown}
+          onKeyDown={handleSliderKeyDown}
         >
           {/* Track background */}
           <div className="absolute left-0 right-0 h-1 bg-white/30 rounded-full" />

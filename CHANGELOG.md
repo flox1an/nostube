@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Subtitle Toggle Keyboard Shortcut**: Press 'C' to toggle subtitles/captions on and off
 - **Video Debug Info Subtitles**: Debug dialog now shows subtitle files in Blossom Server Availability tabs with Captions icon
 - **Thumbnail Deduplication in Debug**: Consolidates thumbnails with same URL or hash in debug display to reduce clutter
 - **Volume Slider Keyboard Accessibility**: Volume slider now reachable via Tab key, expands on focus with keyboard controls (Arrow Up/Down/Left/Right for 5% steps, Shift+Arrow for 10%, Home/End for min/max), proper ARIA attributes for screen readers

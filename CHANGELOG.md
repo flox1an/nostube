@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Video Player Poster**: Use full-resolution thumbnail without resize proxy, with blossom server fallback support for 404s
 - **Mobile Progress Bar**: Touch-enabled scrubbing with larger handle (7x7 active, 5x5 idle), debounced seeking (only seeks on touch end), increased touch target area, and controls stay visible while seeking
 - **Cinema Mode Icon**: Changed theater mode button icon from MonitorPlay to MoveHorizontal for better visual clarity
 - **Touch Overlay Zones**: Changed seek zones from 1/3 to 1/4 width, giving center play/pause area 50% of screen width

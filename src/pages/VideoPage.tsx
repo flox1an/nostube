@@ -529,6 +529,7 @@ export function VideoPage() {
         textTracks={video.textTracks}
         mime={video.mimeType || ''}
         poster={video.images[0] || ''}
+        posterHash={video.thumbnailVariants?.[0]?.hash}
         loop={shouldVideoLoop(video.kind)}
         className={
           cinemaMode

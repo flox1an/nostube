@@ -20,7 +20,7 @@ export interface ParsedVideo {
   duration: number
   contentWarning?: string
   videoVariants: VideoVariant[]
-  thumbnails: Array<{ url: string; fallbackUrls: string[] }>
+  thumbnails: Array<{ url: string; fallbackUrls: string[]; hash?: string }>
 }
 
 /**

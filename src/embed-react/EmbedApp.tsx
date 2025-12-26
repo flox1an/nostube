@@ -86,6 +86,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
 
   const urls = video.videoVariants.map(v => v.url)
   const poster = video.thumbnails[0]?.url
+  const posterHash = video.thumbnails[0]?.hash
 
   return (
     <div
@@ -98,6 +99,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         videoVariants={playerVariants}
         mime={video.videoVariants[0]?.mimeType || 'video/mp4'}
         poster={poster}
+        posterHash={posterHash}
         loop={params.loop}
         initialPlayPos={params.startTime}
         contentWarning={undefined} // Already handled above

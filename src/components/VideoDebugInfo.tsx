@@ -16,6 +16,7 @@ import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { useEffect, useRef, useMemo } from 'react'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
+import { deduplicateVariants } from '@/lib/blossom-blob-extractor'
 
 interface VideoDebugInfoProps {
   open: boolean
@@ -76,35 +77,6 @@ function getStatusText(availability: ServerAvailability | undefined) {
     default:
       return 'Unknown'
   }
-}
-
-/**
- * Deduplicate variants by URL or hash, preferring variants with more metadata
- */
-function deduplicateVariants(variants: VideoVariant[]): VideoVariant[] {
-  const seen = new Map<string, VideoVariant>()
-
-  for (const variant of variants) {
-    const { sha256 } = extractBlossomHash(variant.url)
-    // Use hash as key if available, otherwise use URL
-    const key = sha256 || variant.url
-
-    const existing = seen.get(key)
-    if (!existing) {
-      seen.set(key, variant)
-    } else {
-      // Prefer variant with more metadata (dimensions, size, quality)
-      const existingScore =
-        (existing.dimensions ? 1 : 0) + (existing.size ? 1 : 0) + (existing.quality ? 1 : 0)
-      const variantScore =
-        (variant.dimensions ? 1 : 0) + (variant.size ? 1 : 0) + (variant.quality ? 1 : 0)
-      if (variantScore > existingScore) {
-        seen.set(key, variant)
-      }
-    }
-  }
-
-  return Array.from(seen.values())
 }
 
 export function VideoDebugInfo({

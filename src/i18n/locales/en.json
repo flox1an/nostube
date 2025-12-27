@@ -24,7 +24,9 @@
     "optional": "optional",
     "required": "Required",
     "available": "Available",
-    "close": "Close"
+    "close": "Close",
+    "selectAll": "Select All",
+    "selectNone": "Select None"
   },
   "navigation": {
     "home": "Home",
@@ -159,6 +161,8 @@
     "mirror": {
       "title": "Mirror Video",
       "description": "Copy this video to additional blossom servers for better redundancy and availability.",
+      "filesTo": "Files to Mirror",
+      "selectBlobs": "Please select at least one file to mirror.",
       "currentlyHosted": "Currently Hosted On",
       "availableServers": "Available Servers",
       "noServers": "No blossom servers configured. Add servers in your settings or publish a kind 10063 event with your preferred servers.",

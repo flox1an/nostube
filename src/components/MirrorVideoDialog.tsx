@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,85 +10,148 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Loader2, Copy, Check, Server } from 'lucide-react'
+import { Loader2, Copy, Server, Video, Image, Captions, Check, X, Circle } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { extractBlossomHash } from '@/utils/video-event'
-import {
-  formatFileSize,
-  getSizeFromVideoEvent,
-  fetchVideoSizeFromBlossom,
-} from '@/lib/blossom-utils'
+import { formatFileSize } from '@/lib/blossom-utils'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
-import type { NostrEvent } from 'nostr-tools'
+import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
+import {
+  extractAllBlossomBlobs,
+  deduplicateVariants,
+  getTotalBlobSize,
+} from '@/lib/blossom-blob-extractor'
 import type { BlobDescriptor } from 'blossom-client-sdk'
-import type { ServerInfo, ServerAvailability } from '@/hooks/useVideoServerAvailability'
+import type { BlossomServer } from '@/contexts/AppContext'
+import type { VideoEvent } from '@/utils/video-event'
 import { useTranslation } from 'react-i18next'
 
 interface MirrorVideoDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  videoUrls: string[]
-  videoSize?: number // Size in bytes
-  videoEvent?: NostrEvent | null
-  serverList: ServerInfo[]
-  serverAvailability: Map<string, ServerAvailability>
-  isCheckingAvailability: boolean
-  onMirrorComplete?: () => void // Callback to trigger availability recheck after successful mirror
+  video: VideoEvent | null
+  blossomServers?: BlossomServer[]
+  userServers?: string[]
+  onMirrorComplete?: () => void
+}
+
+// Helper to get icon for blob type
+function getBlobIcon(mimeType?: string) {
+  if (mimeType?.startsWith('video/')) return Video
+  if (mimeType?.startsWith('text/')) return Captions
+  return Image
+}
+
+// Helper function to render status icon
+function renderStatusIcon(status: string) {
+  switch (status) {
+    case 'checking':
+      return <Loader2 className="w-3 h-3 text-blue-500 animate-spin shrink-0" />
+    case 'available':
+      return <Check className="w-3 h-3 text-green-500 shrink-0" />
+    case 'unavailable':
+      return <X className="w-3 h-3 text-red-500 shrink-0" />
+    case 'error':
+      return <X className="w-3 h-3 text-orange-500 shrink-0" />
+    default:
+      return <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
+  }
 }
 
 export function MirrorVideoDialog({
   open,
   onOpenChange,
-  videoUrls,
-  videoSize,
-  videoEvent,
-  serverList,
-  serverAvailability,
-  isCheckingAvailability: _isCheckingAvailability,
+  video,
+  blossomServers,
+  userServers,
   onMirrorComplete,
 }: MirrorVideoDialogProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useCurrentUser()
-  const sizeFromEvent = useMemo(() => getSizeFromVideoEvent(videoEvent), [videoEvent])
-  const [resolvedVideoSize, setResolvedVideoSize] = useState<number | undefined>(
-    videoSize && videoSize > 0 ? videoSize : sizeFromEvent
+
+  // Extract all blobs from the video event
+  const allBlobs = useMemo(() => extractAllBlossomBlobs(video), [video])
+  const totalSize = useMemo(() => getTotalBlobSize(allBlobs), [allBlobs])
+
+  // Deduplicate thumbnails for the hook
+  const deduplicatedThumbnails = useMemo(
+    () => deduplicateVariants(video?.thumbnailVariants || []),
+    [video?.thumbnailVariants]
   )
+
+  // Use multi-variant availability hook
+  const { allVariants, checkAllAvailability, isAnyChecking } = useMultiVideoServerAvailability({
+    videoVariants: video?.allVideoVariants || video?.videoVariants || [],
+    thumbnailVariants: deduplicatedThumbnails,
+    textTracks: video?.textTracks || [],
+    configServers: blossomServers,
+    userServers,
+  })
+
+  // Track selected blobs and target servers
+  const [selectedBlobs, setSelectedBlobs] = useState<Set<number>>(new Set())
   const [selectedServers, setSelectedServers] = useState<Set<string>>(new Set())
   const [isMirroring, setIsMirroring] = useState(false)
 
-  useEffect(() => {
-    const preferredSize = videoSize && videoSize > 0 ? videoSize : sizeFromEvent
-    setResolvedVideoSize(preferredSize)
-  }, [videoSize, sizeFromEvent])
-
-  useEffect(() => {
-    if (!open) return
-    if (resolvedVideoSize && resolvedVideoSize > 0) return
-
-    let isCancelled = false
-
-    fetchVideoSizeFromBlossom(videoUrls).then(size => {
-      if (!isCancelled && size && size > 0) {
-        setResolvedVideoSize(size)
-      }
-    })
-
-    return () => {
-      isCancelled = true
+  // Check availability when dialog opens
+  useMemo(() => {
+    if (open && allVariants.length > 0) {
+      checkAllAvailability()
     }
-  }, [open, videoUrls, resolvedVideoSize])
+    // Reset selections when dialog opens/closes
+    if (open) {
+      // Pre-select all blobs by default
+      setSelectedBlobs(new Set(allBlobs.map((_, i) => i)))
+      setSelectedServers(new Set())
+    }
+  }, [open, allVariants.length, allBlobs, checkAllAvailability])
 
-  // Get servers that currently host the video (from video URLs)
-  const currentHosts = useMemo(() => {
-    return serverList.filter(s => s.source === 'video-url')
-  }, [serverList])
-
-  // Get available servers to mirror to (exclude current hosts)
+  // Get unique servers from all variants that aren't already hosting (source !== 'video-url')
   const availableServers = useMemo(() => {
-    return serverList.filter(s => s.source !== 'video-url')
-  }, [serverList])
+    const serverMap = new Map<string, { url: string; name: string; source: string }>()
+
+    for (const variant of allVariants) {
+      for (const server of variant.serverList) {
+        // Only include servers that aren't already hosting (user or config servers)
+        if (server.source !== 'video-url' && !serverMap.has(server.url)) {
+          serverMap.set(server.url, server)
+        }
+      }
+    }
+
+    return Array.from(serverMap.values())
+  }, [allVariants])
+
+  // Calculate how many blobs each server already has
+  const serverBlobCounts = useMemo(() => {
+    const counts = new Map<string, { available: number; total: number }>()
+
+    for (const server of availableServers) {
+      let available = 0
+      for (const variant of allVariants) {
+        const serverStatus = variant.serverAvailability.get(server.url)
+        if (serverStatus?.status === 'available') {
+          available++
+        }
+      }
+      counts.set(server.url, { available, total: allVariants.length })
+    }
+
+    return counts
+  }, [availableServers, allVariants])
+
+  const handleToggleBlob = (index: number) => {
+    setSelectedBlobs(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }
 
   const handleToggleServer = (serverUrl: string) => {
     setSelectedServers(prev => {
@@ -103,6 +166,15 @@ export function MirrorVideoDialog({
   }
 
   const handleMirror = async () => {
+    if (selectedBlobs.size === 0) {
+      toast({
+        title: t('video.mirror.noSelection'),
+        description: t('video.mirror.selectBlobs'),
+        variant: 'destructive',
+      })
+      return
+    }
+
     if (selectedServers.size === 0) {
       toast({
         title: t('video.mirror.noSelection'),
@@ -112,7 +184,6 @@ export function MirrorVideoDialog({
       return
     }
 
-    // Check if user is logged in
     if (!user?.signer) {
       toast({
         title: t('video.mirror.notLoggedIn'),
@@ -122,88 +193,78 @@ export function MirrorVideoDialog({
       return
     }
 
-    // Find working blossom URL from videoUrls
-    const workingUrl = videoUrls.find(url => {
-      const { sha256 } = extractBlossomHash(url)
-      return sha256 // Has valid hash = valid blossom URL
-    })
-
-    if (!workingUrl) {
-      toast({
-        title: t('video.mirror.invalidVideo'),
-        description: t('video.mirror.noBlossomUrl'),
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Extract blob info
-    const { sha256, ext } = extractBlossomHash(workingUrl)
-    if (!sha256) {
-      toast({
-        title: t('video.mirror.invalidVideo'),
-        description: t('video.mirror.noVideoHash'),
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Determine MIME type from extension
-    const mimeTypes: Record<string, string> = {
-      mp4: 'video/mp4',
-      webm: 'video/webm',
-      mov: 'video/quicktime',
-      avi: 'video/x-msvideo',
-    }
-    const mimeType = ext ? mimeTypes[ext] || 'video/mp4' : 'video/mp4'
-
-    const blobDescriptor: BlobDescriptor = {
-      sha256,
-      size: resolvedVideoSize || 0,
-      type: mimeType,
-      url: workingUrl,
-      uploaded: Date.now(),
-    }
-
     setIsMirroring(true)
+    let totalSuccess = 0
+    let totalFailed = 0
+
     try {
-      const results = await mirrorBlobsToServers({
-        mirrorServers: Array.from(selectedServers),
-        blob: blobDescriptor,
-        signer: async draft => await user.signer.signEvent(draft),
-      })
+      // Mirror each selected blob to each selected server
+      for (const blobIndex of selectedBlobs) {
+        const blob = allBlobs[blobIndex]
+        if (!blob || !blob.hash) continue
 
-      const successCount = results.length
-      const totalCount = selectedServers.size
-      const failedCount = totalCount - successCount
+        // Determine MIME type
+        const mimeTypes: Record<string, string> = {
+          mp4: 'video/mp4',
+          webm: 'video/webm',
+          mov: 'video/quicktime',
+          avi: 'video/x-msvideo',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          webp: 'image/webp',
+          vtt: 'text/vtt',
+          srt: 'text/srt',
+        }
+        const mimeType =
+          blob.variant.mimeType || mimeTypes[blob.ext || ''] || 'application/octet-stream'
 
-      if (successCount === 0) {
-        // All failed
+        const blobDescriptor: BlobDescriptor = {
+          sha256: blob.hash,
+          size: blob.variant.size || 0,
+          type: mimeType,
+          url: blob.variant.url,
+          uploaded: Date.now(),
+        }
+
+        try {
+          const results = await mirrorBlobsToServers({
+            mirrorServers: Array.from(selectedServers),
+            blob: blobDescriptor,
+            signer: async draft => await user.signer.signEvent(draft),
+          })
+
+          totalSuccess += results.length
+          totalFailed += selectedServers.size - results.length
+        } catch {
+          totalFailed += selectedServers.size
+        }
+      }
+
+      const totalAttempted = selectedBlobs.size * selectedServers.size
+
+      if (totalSuccess === 0) {
         toast({
           title: t('video.mirror.failed'),
           description: t('video.mirror.failedMessage'),
           variant: 'destructive',
         })
-      } else if (failedCount > 0) {
-        // Partial success - show warning
+      } else if (totalFailed > 0) {
         toast({
           title: t('video.mirror.partial'),
           description: t('video.mirror.partialMessage', {
-            success: successCount,
-            total: totalCount,
-            failed: failedCount,
+            success: totalSuccess,
+            total: totalAttempted,
+            failed: totalFailed,
           }),
         })
-        // Trigger availability recheck after partial success
         onMirrorComplete?.()
         onOpenChange(false)
       } else {
-        // All succeeded
         toast({
           title: t('video.mirror.complete'),
-          description: t('video.mirror.completeMessage', { count: successCount }),
+          description: t('video.mirror.completeMessage', { count: totalSuccess }),
         })
-        // Trigger availability recheck after successful mirror
         onMirrorComplete?.()
         onOpenChange(false)
       }
@@ -220,35 +281,75 @@ export function MirrorVideoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {t('video.mirror.title')} ({formatFileSize(resolvedVideoSize)})
+            {t('video.mirror.title')} ({allBlobs.length} {allBlobs.length === 1 ? 'file' : 'files'})
           </DialogTitle>
-          <DialogDescription>{t('video.mirror.description')}</DialogDescription>
+          <DialogDescription>
+            {t('video.mirror.description')}
+            {totalSize > 0 && ` • ${formatFileSize(totalSize)} total`}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 py-4">
-          {/* Current hosting servers */}
-          {currentHosts.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-3">{t('video.mirror.currentlyHosted')}</h3>
-              <div className="space-y-2">
-                {currentHosts.map(server => (
-                  <div
-                    key={server.url}
-                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border"
-                  >
-                    <Server className="h-4 w-4 text-green-500" />
-                    <span className="text-sm flex-1">{server.name}</span>
-                    <Check className="h-4 w-4 text-green-500" />
-                  </div>
-                ))}
+          {/* Blobs to mirror */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">{t('video.mirror.filesTo')}</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedBlobs(new Set(allBlobs.map((_, i) => i)))}
+                  disabled={selectedBlobs.size === allBlobs.length}
+                >
+                  {t('common.selectAll')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedBlobs(new Set())}
+                  disabled={selectedBlobs.size === 0}
+                >
+                  {t('common.selectNone')}
+                </Button>
               </div>
             </div>
-          )}
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {allBlobs.map((blob, index) => {
+                const Icon = getBlobIcon(blob.variant.mimeType)
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/50"
+                  >
+                    <Checkbox
+                      id={`blob-${index}`}
+                      checked={selectedBlobs.has(index)}
+                      onCheckedChange={() => handleToggleBlob(index)}
+                    />
+                    <Label
+                      htmlFor={`blob-${index}`}
+                      className="flex-1 cursor-pointer flex items-center gap-2"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{blob.label}</div>
+                        {blob.variant.size && (
+                          <div className="text-xs text-muted-foreground">
+                            {formatFileSize(blob.variant.size)}
+                          </div>
+                        )}
+                      </div>
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
 
-          {/* Available servers to mirror to */}
+          {/* Target servers */}
           <div>
             <h3 className="text-sm font-medium mb-3">
               {t('video.mirror.availableServers')} ({availableServers.length})
@@ -258,11 +359,10 @@ export function MirrorVideoDialog({
                 {t('video.mirror.noServers')}
               </div>
             ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
                 {availableServers.map(server => {
-                  const availability = serverAvailability.get(server.url)
-                  const isAvailable = availability?.status === 'available'
-                  const isChecking = availability?.status === 'checking'
+                  const counts = serverBlobCounts.get(server.url)
+                  const hasAllBlobs = counts && counts.available === counts.total
 
                   return (
                     <div
@@ -278,16 +378,32 @@ export function MirrorVideoDialog({
                         htmlFor={server.url}
                         className="flex-1 cursor-pointer flex items-center gap-2"
                       >
-                        <Server className="h-4 w-4" />
+                        <Server className="h-4 w-4 shrink-0" />
                         <div className="flex-1">
                           <div className="text-sm font-medium">{server.name}</div>
                           <div className="text-xs text-muted-foreground">{server.url}</div>
                         </div>
-                        {isChecking && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
-                        {isAvailable && (
-                          <span className="text-xs text-green-600 dark:text-green-400">
-                            {t('common.available')}
-                          </span>
+                        {/* Show blob availability count */}
+                        {counts && (
+                          <div className="flex items-center gap-1 text-xs">
+                            {isAnyChecking ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                            ) : hasAllBlobs ? (
+                              <>
+                                <Check className="w-3 h-3 text-green-500" />
+                                <span className="text-green-600">All files</span>
+                              </>
+                            ) : counts.available > 0 ? (
+                              <>
+                                {renderStatusIcon('available')}
+                                <span className="text-muted-foreground">
+                                  {counts.available}/{counts.total}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">0/{counts.total}</span>
+                            )}
+                          </div>
                         )}
                         <span className="text-xs text-muted-foreground capitalize">
                           ({server.source})
@@ -307,7 +423,9 @@ export function MirrorVideoDialog({
           </Button>
           <Button
             onClick={handleMirror}
-            disabled={selectedServers.size === 0 || isMirroring || !user}
+            disabled={
+              selectedBlobs.size === 0 || selectedServers.size === 0 || isMirroring || !user
+            }
           >
             {isMirroring ? (
               <>
@@ -317,7 +435,9 @@ export function MirrorVideoDialog({
             ) : (
               <>
                 <Copy className="mr-2 h-4 w-4" />
-                {t('video.mirror.mirrorButton', { count: selectedServers.size })}
+                {t('video.mirror.mirrorButton', {
+                  count: selectedBlobs.size * selectedServers.size,
+                })}
               </>
             )}
           </Button>

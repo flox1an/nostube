@@ -606,12 +606,9 @@ export function VideoPage() {
         <MirrorVideoDialog
           open={mirrorDialogOpen}
           onOpenChange={setMirrorDialogOpen}
-          videoUrls={video.urls}
-          videoSize={video.size}
-          videoEvent={videoEvent}
-          serverList={serverList}
-          serverAvailability={serverAvailability}
-          isCheckingAvailability={isChecking}
+          video={video}
+          blossomServers={config.blossomServers}
+          userServers={userBlossomServers}
           onMirrorComplete={checkAvailability}
         />
       )}

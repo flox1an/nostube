@@ -106,49 +106,40 @@ export function extractAllBlossomBlobs(
     lang: tt.lang,
   }))
 
-  // Add video variants
+  // Add video variants (include all, even without blossom hash)
   videoVariants.forEach((variant, index) => {
     const { sha256, ext } = extractBlossomHash(variant.url)
-    // Only include if it's a valid blossom URL
-    if (sha256) {
-      blobs.push({
-        type: 'video',
-        variant,
-        label: getVariantLabel(variant, index, videoVariants.length, 'Video'),
-        hash: sha256,
-        ext: ext || 'mp4',
-      })
-    }
+    blobs.push({
+      type: 'video',
+      variant,
+      label: getVariantLabel(variant, index, videoVariants.length, 'Video'),
+      hash: sha256,
+      ext: ext || 'mp4',
+    })
   })
 
-  // Add thumbnail variants
+  // Add thumbnail variants (include all, even without blossom hash)
   thumbnailVariants.forEach((variant, index) => {
     const { sha256, ext } = extractBlossomHash(variant.url)
-    // Only include if it's a valid blossom URL
-    if (sha256) {
-      blobs.push({
-        type: 'thumbnail',
-        variant,
-        label: getVariantLabel(variant, index, thumbnailVariants.length, 'Thumbnail'),
-        hash: sha256,
-        ext: ext || 'jpg',
-      })
-    }
+    blobs.push({
+      type: 'thumbnail',
+      variant,
+      label: getVariantLabel(variant, index, thumbnailVariants.length, 'Thumbnail'),
+      hash: sha256,
+      ext: ext || 'jpg',
+    })
   })
 
-  // Add subtitle variants
+  // Add subtitle variants (include all, even without blossom hash)
   textTrackVariants.forEach(({ variant, lang }, index) => {
     const { sha256, ext } = extractBlossomHash(variant.url)
-    // Only include if it's a valid blossom URL
-    if (sha256) {
-      blobs.push({
-        type: 'subtitle',
-        variant,
-        label: getVariantLabel(variant, index, textTrackVariants.length, 'Subtitle', lang),
-        hash: sha256,
-        ext: ext || 'vtt',
-      })
-    }
+    blobs.push({
+      type: 'subtitle',
+      variant,
+      label: getVariantLabel(variant, index, textTrackVariants.length, 'Subtitle', lang),
+      hash: sha256,
+      ext: ext || 'vtt',
+    })
   })
 
   return blobs

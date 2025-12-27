@@ -93,6 +93,18 @@ export function VideoDebugInfo({
     [video?.thumbnailVariants]
   )
 
+  // Debug: Log what variants we have
+  if (import.meta.env.DEV && open) {
+    console.log('[VideoDebugInfo] Input data:', {
+      allVideoVariants: video?.allVideoVariants?.length || 0,
+      thumbnailVariants: video?.thumbnailVariants?.length || 0,
+      deduplicatedThumbnails: deduplicatedThumbnails.length,
+      textTracks: video?.textTracks?.length || 0,
+      thumbnails: video?.thumbnailVariants,
+      tracks: video?.textTracks,
+    })
+  }
+
   // Use multi-variant availability hook
   // Use allVideoVariants to show ALL variants including incompatible codecs for debugging
   const { allVariants, checkAllAvailability } = useMultiVideoServerAvailability({
@@ -102,6 +114,14 @@ export function VideoDebugInfo({
     configServers: blossomServers,
     userServers,
   })
+
+  // Debug: Log what the hook returns
+  if (import.meta.env.DEV && open) {
+    console.log('[VideoDebugInfo] Hook output:', {
+      allVariantsCount: allVariants.length,
+      allVariants: allVariants.map(v => ({ label: v.label, mimeType: v.variant.mimeType })),
+    })
+  }
 
   // Store checkAllAvailability in ref to avoid triggering effect on every state update
   const checkAllAvailabilityRef = useRef(checkAllAvailability)

@@ -193,8 +193,8 @@ export const ControlBar = memo(function ControlBar({
             onSubtitleChange={onSubtitleChange}
           />
 
-          {/* Theater mode button */}
-          {!isMobile && onToggleCinemaMode && (
+          {/* Theater mode button - hidden in fullscreen */}
+          {!isMobile && !isFullscreen && onToggleCinemaMode && (
             <ControlButton
               onClick={onToggleCinemaMode}
               icon={<MoveHorizontal className="w-5 h-5" />}

@@ -125,13 +125,57 @@ export function canRestoreExtensionAccount(): boolean {
 }
 
 /**
- * Restore a single account from persisted data
+ * Wait for extension to become available (with timeout)
  */
-export async function restoreAccount(accountData: PersistedAccount): Promise<IAccount | null> {
+export function waitForExtension(timeoutMs: number = 3000): Promise<boolean> {
+  return new Promise(resolve => {
+    // Already available
+    if (canRestoreExtensionAccount()) {
+      resolve(true)
+      return
+    }
+
+    const startTime = Date.now()
+    const checkInterval = 100 // Check every 100ms
+
+    const check = () => {
+      if (canRestoreExtensionAccount()) {
+        resolve(true)
+        return
+      }
+
+      if (Date.now() - startTime >= timeoutMs) {
+        resolve(false)
+        return
+      }
+
+      setTimeout(check, checkInterval)
+    }
+
+    check()
+  })
+}
+
+/**
+ * Restore a single account from persisted data
+ * @param accountData The persisted account data
+ * @param skipExtensionWait If true, don't wait for extension (for faster initial check)
+ */
+export async function restoreAccount(
+  accountData: PersistedAccount,
+  skipExtensionWait: boolean = false
+): Promise<IAccount | null> {
   try {
     switch (accountData.method) {
       case 'extension': {
-        if (!canRestoreExtensionAccount()) {
+        // Wait for extension if not skipping and not already available
+        if (!skipExtensionWait && !canRestoreExtensionAccount()) {
+          const extensionReady = await waitForExtension(3000)
+          if (!extensionReady) {
+            console.warn('Extension not available after waiting, cannot restore extension account')
+            return null
+          }
+        } else if (skipExtensionWait && !canRestoreExtensionAccount()) {
           console.warn('Extension not available, cannot restore extension account')
           return null
         }
@@ -189,15 +233,31 @@ export async function restoreAccountsToManager(accountManager: AccountManager): 
   const persistedAccounts = loadAccountsFromStorage()
   const activePubkey = loadActiveAccount()
 
+  if (persistedAccounts.length === 0) {
+    return
+  }
+
+  // Check if we have extension accounts - if so, wait for extension to be ready
+  const hasExtensionAccounts = persistedAccounts.some(acc => acc.method === 'extension')
+  if (hasExtensionAccounts) {
+    const extensionReady = await waitForExtension(3000)
+    if (!extensionReady) {
+      console.warn(
+        '[AccountPersistence] Extension not available after waiting, extension accounts will not be restored'
+      )
+    }
+  }
+
   const restoredAccounts: IAccount[] = []
 
   for (const accountData of persistedAccounts) {
-    const account = await restoreAccount(accountData)
+    // Skip extension wait in restoreAccount since we already waited above
+    const account = await restoreAccount(accountData, true)
     if (account) {
       restoredAccounts.push(account)
       accountManager.addAccount(account)
-    } else {
-      // Remove account that cannot be restored
+    } else if (accountData.method !== 'nsec') {
+      // Remove account that cannot be restored (except nsec which requires re-auth)
       removeAccountFromStorage(accountData.pubkey)
     }
   }

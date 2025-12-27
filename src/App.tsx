@@ -1,10 +1,15 @@
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef, useContext } from 'react'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { AccountsProvider, EventStoreProvider, FactoryProvider } from 'applesauce-react/providers'
+import {
+  AccountsProvider,
+  EventStoreProvider,
+  FactoryProvider,
+  AccountsContext,
+} from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
 import { EventFactory } from 'applesauce-factory'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
@@ -61,20 +66,31 @@ const accountManager = new AccountManager()
 
 registerCommonAccountTypes(accountManager)
 
-// Restore accounts from localStorage on initialization
-restoreAccountsToManager(accountManager).catch(() => {
-  // Failed to restore accounts - user will need to login again
-})
-
-// Account persistence will be handled in login actions and account switcher
-
 const factory = new EventFactory({
   // use the active signer from the account manager
   signer: accountManager.signer,
 })
 
-// Account persistence is handled directly in login actions and account switcher
-// No need for a separate listener component
+/**
+ * Component that restores persisted accounts on mount
+ * Uses useEffect to ensure it runs after React is ready
+ */
+function AccountRestoreInit() {
+  const manager = useContext(AccountsContext)
+  const hasRestored = useRef(false)
+
+  useEffect(() => {
+    // Only restore once
+    if (hasRestored.current || !manager) return
+    hasRestored.current = true
+
+    restoreAccountsToManager(manager).catch(error => {
+      console.error('[AccountRestoreInit] Failed to restore accounts:', error)
+    })
+  }, [manager])
+
+  return null
+}
 
 function BatchedProfileLoaderInit() {
   useBatchedProfileLoader()
@@ -116,6 +132,7 @@ export function App() {
               <UserRelaysProvider>
                 <UploadManagerProvider>
                   <TooltipProvider>
+                    <AccountRestoreInit />
                     <UserRelaySync />
                     <RelayPoolSync />
                     <BatchedProfileLoaderInit />

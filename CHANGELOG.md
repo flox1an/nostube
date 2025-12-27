@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Mark All Notifications as Read**: Button in notification dropdown to mark all notifications as read at once
 - **Seek Keyboard Shortcuts**: Press 'J' to seek backward 10s, 'L' to seek forward 10s (stacks with rapid presses like arrow keys)
 - **Play/Pause Keyboard Shortcut**: Press 'K' to toggle play/pause (Space also works)
 - **Player Control Tooltips with Shortcuts**: All player control buttons show instant shadcn tooltips on hover with name and keyboard shortcut (e.g., "Play (K)", "Mute (M)", "Captions (C)", "Theater mode (T)", "Fullscreen (F)")

@@ -566,7 +566,8 @@
     "transcodeComplete": "Transcode complete",
     "transcodeCompleteResolution": "{{resolution}} transcode complete",
     "uploadError": "Upload failed",
-    "transcodeError": "Transcode failed"
+    "transcodeError": "Transcode failed",
+    "markAllAsRead": "Mark all as read"
   },
   "report": {
     "titleVideo": "Report Video",

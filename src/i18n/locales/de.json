@@ -531,7 +531,8 @@
     "transcodeComplete": "Transkodierung abgeschlossen",
     "transcodeCompleteResolution": "{{resolution}} Transkodierung abgeschlossen",
     "uploadError": "Upload fehlgeschlagen",
-    "transcodeError": "Transkodierung fehlgeschlagen"
+    "transcodeError": "Transkodierung fehlgeschlagen",
+    "markAllAsRead": "Alle als gelesen markieren"
   },
   "report": {
     "titleVideo": "Video melden",

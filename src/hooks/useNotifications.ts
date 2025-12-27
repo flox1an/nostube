@@ -53,6 +53,20 @@ export function useNotifications() {
     })
   }, [])
 
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(() => {
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }))
+
+      // Save to localStorage
+      const storage = getNotificationStorage()
+      storage.notifications = updated
+      saveNotificationStorage(storage)
+
+      return updated
+    })
+  }, [])
+
   // Fetch notifications from Nostr relays
   // Store user pubkey and eventStore in refs to avoid recreating callback
   const userPubkeyRef = useRef<string | null>(null)
@@ -278,6 +292,7 @@ export function useNotifications() {
     isLoading,
     error,
     markAsRead,
+    markAllAsRead,
     fetchNotifications,
   }
 }

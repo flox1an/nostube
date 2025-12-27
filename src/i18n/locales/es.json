@@ -531,7 +531,8 @@
     "transcodeComplete": "Transcodificación completada",
     "transcodeCompleteResolution": "Transcodificación de {{resolution}} completada",
     "uploadError": "Error en la carga",
-    "transcodeError": "Error en la transcodificación"
+    "transcodeError": "Error en la transcodificación",
+    "markAllAsRead": "Marcar todo como leído"
   },
   "report": {
     "titleVideo": "Reportar video",

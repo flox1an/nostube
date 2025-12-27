@@ -18,6 +18,7 @@ export function NotificationBell() {
     error,
     markVideoNotificationAsRead,
     markUploadNotificationAsRead,
+    markAllAsRead,
   } = useAllNotifications()
 
   if (!user) {
@@ -69,7 +70,9 @@ export function NotificationBell() {
           notifications={notifications}
           isLoading={isLoading}
           error={error}
+          unreadCount={unreadCount}
           onNotificationClick={handleNotificationClick}
+          onMarkAllAsRead={markAllAsRead}
         />
       </DropdownMenuContent>
     </DropdownMenu>

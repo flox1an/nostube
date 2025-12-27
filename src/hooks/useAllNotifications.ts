@@ -5,7 +5,7 @@
  * sorted list for display in the notification dropdown.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import type { Notification, VideoNotification, UploadNotification } from '../types/notification'
 import { useNotifications } from './useNotifications'
 import { useUploadNotifications } from './useUploadNotifications'
@@ -28,6 +28,9 @@ export interface AllNotificationsReturn {
 
   // Mark an upload notification as read
   markUploadNotificationAsRead: (id: string) => void
+
+  // Mark all notifications as read (both video and upload)
+  markAllAsRead: () => void
 
   // Add upload notification (for UploadManager to call)
   addUploadNotification: (
@@ -53,6 +56,7 @@ export function useAllNotifications(): AllNotificationsReturn {
     isLoading,
     error,
     markAsRead: markVideoNotificationAsRead,
+    markAllAsRead: markAllVideoAsRead,
     fetchNotifications: refreshVideoNotifications,
   } = useNotifications()
 
@@ -61,6 +65,7 @@ export function useAllNotifications(): AllNotificationsReturn {
     unreadCount: uploadUnreadCount,
     addNotification: addUploadNotification,
     markAsRead: markUploadNotificationAsRead,
+    markAllAsRead: markAllUploadAsRead,
   } = useUploadNotifications()
 
   // Merge and sort notifications by timestamp (newest first)
@@ -71,6 +76,12 @@ export function useAllNotifications(): AllNotificationsReturn {
 
   const unreadCount = videoUnreadCount + uploadUnreadCount
 
+  // Mark all notifications as read (both video and upload)
+  const markAllAsRead = useCallback(() => {
+    markAllVideoAsRead()
+    markAllUploadAsRead()
+  }, [markAllVideoAsRead, markAllUploadAsRead])
+
   return {
     notifications,
     unreadCount,
@@ -78,6 +89,7 @@ export function useAllNotifications(): AllNotificationsReturn {
     error,
     markVideoNotificationAsRead,
     markUploadNotificationAsRead,
+    markAllAsRead,
     addUploadNotification,
     refreshVideoNotifications,
     videoNotifications,

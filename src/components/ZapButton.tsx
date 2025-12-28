@@ -109,7 +109,7 @@ export const ZapButton = memo(function ZapButton({
       <>
         <Button
           variant="secondary"
-          className={className}
+          className={cn(className)}
           onClick={handleQuickZap}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
@@ -123,7 +123,7 @@ export const ZapButton = memo(function ZapButton({
           ) : (
             <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
           )}
-          <span className="ml-2">{formatSats(totalSats)}</span>
+          <span className="ml-1 md:ml-2">{formatSats(totalSats)}</span>
         </Button>
 
         <ZapDialog

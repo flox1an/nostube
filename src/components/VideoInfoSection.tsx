@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
 import { nip19, type NostrEvent } from 'nostr-tools'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -104,6 +105,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 }: VideoInfoSectionProps) {
   const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
+  const isMobile = useIsMobile()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
   const [showLabelDialog, setShowLabelDialog] = useState(false)
@@ -223,11 +225,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                   relays={relaysToUse}
                   layout="inline"
                 />
-                <AddToPlaylistButton
-                  videoId={video.id}
-                  videoKind={video.kind}
-                  videoTitle={video.title}
-                />
+                {!isMobile && (
+                  <AddToPlaylistButton
+                    videoId={video.id}
+                    videoKind={video.kind}
+                    videoTitle={video.title}
+                  />
+                )}
               </>
             )}
             <ShareButton
@@ -245,6 +249,14 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
+                {isMobile && userPubkey && (
+                  <AddToPlaylistButton
+                    videoId={video.id}
+                    videoKind={video.kind}
+                    videoTitle={video.title}
+                    asMenuItem
+                  />
+                )}
                 {videoEvent && isBetaUser(userPubkey) && (
                   <DropdownMenuItem onSelect={() => setShowLabelDialog(true)}>
                     <Tag className="w-5 h-5" />

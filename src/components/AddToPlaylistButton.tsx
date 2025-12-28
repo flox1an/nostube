@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Plus } from 'lucide-react'
+import { Check, ListPlus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,6 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useCurrentUser, usePlaylists, useToast } from '@/hooks'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -23,9 +24,15 @@ interface AddToPlaylistButtonProps {
   videoId: string
   videoKind: number
   videoTitle?: string
+  asMenuItem?: boolean
 }
 
-export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPlaylistButtonProps) {
+export function AddToPlaylistButton({
+  videoId,
+  videoTitle,
+  videoKind,
+  asMenuItem = false,
+}: AddToPlaylistButtonProps) {
   const { user } = useCurrentUser()
   const { playlists, isLoading, addVideo } = usePlaylists()
   const { toast } = useToast()
@@ -64,10 +71,17 @@ export function AddToPlaylistButton({ videoId, videoTitle, videoKind }: AddToPla
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="w-full justify-start" disabled={isAdding}>
-          {isAdding ? <Skeleton className="mr-2 h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {isAdding ? 'Adding...' : 'Playlist'}
-        </Button>
+        {asMenuItem ? (
+          <DropdownMenuItem onSelect={e => e.preventDefault()} disabled={isAdding}>
+            <ListPlus className="w-5 h-5" />
+            &nbsp; {isAdding ? 'Adding...' : 'Playlist'}
+          </DropdownMenuItem>
+        ) : (
+          <Button variant="secondary" className="w-full justify-start" disabled={isAdding}>
+            {isAdding ? <Skeleton className="mr-2 h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {isAdding ? 'Adding...' : 'Playlist'}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

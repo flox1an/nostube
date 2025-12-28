@@ -131,7 +131,7 @@ export function VideoReactionButtons({
           aria-label="Upvote"
         >
           <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
-          <span className="ml-2">{upvoteCount}</span>
+          <span className="ml-1 md:ml-2">{upvoteCount}</span>
         </Button>
         <Button
           variant="ghost"
@@ -141,7 +141,7 @@ export function VideoReactionButtons({
           aria-label="Downvote"
         >
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
-          <span className="ml-2">{downvoteCount}</span>
+          <span className="ml-1 md:ml-2">{downvoteCount}</span>
         </Button>
         <ZapButton
           eventId={eventId}

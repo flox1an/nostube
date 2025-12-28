@@ -9,13 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Wallet Settings Section**: WalletSection in Settings page for managing NWC wallet connection. Shows connected wallet status with alias, balance in sats, disconnect button; or connection string input with validation and Alby link when disconnected.
-- **Zap Button**: ZapButton component with quick-zap (21 sats default) on click, long-press (500ms) or right-click to open ZapDialog for custom amounts. Shows total sats received with formatSats, loading spinner during payment, disabled for own content. Supports vertical (Shorts) and inline layouts. Opens WalletConnectDialog if wallet not connected.
-- **Zap Dialog**: ZapDialog component for sending zaps with preset amounts (21/100/500/1K/5K sats), custom amount input, optional comment (140 chars), recipient avatar/name display, and loading state during zap.
-- **Video Zaps Hook**: useVideoZaps hook to load zap receipts (kind 9735) for videos. Provides totalSats, zapCount, and zaps array with deduplication by bolt11 invoice.
-- **Zap Hook**: useZap hook for complete zap flow - fetches author profile, creates signed zap request (kind 9734), requests LNURL invoice, and pays via NWC wallet connection.
-- **NWC Wallet Context**: WalletContext and useWallet hook for NIP-47 Nostr Wallet Connect integration. Manages wallet connection state, balance, and payment methods with localStorage persistence for connection restoration.
-- **Wallet Connect Dialog**: WalletConnectDialog component for NWC onboarding with connection string input, validation, loading states, error display, and link to Alby for getting NWC connection.
+- **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment. Shows total sats received on videos with formatted display (e.g., "21.5k").
+- **Nostr Wallet Connect**: NIP-47 wallet integration via `applesauce-wallet-connect`. Connect wallet in Settings or on first zap attempt. Shows wallet balance and supports Alby and other NWC-compatible wallets.
 - **Persistent Login Sessions**: Account login persists across browser reloads using localStorage. Extension accounts wait up to 3 seconds for NIP-07 extension to inject before restoration. Bunker accounts store connection URI for automatic reconnection.
 - **Multi-Blob Mirror Dialog**: Mirror dialog now detects all blobs (videos, thumbnails, subtitles) from a video event, matching debug dialog's detection. Shared blob extraction utility (`blossom-blob-extractor.ts`) consolidates deduplication logic between both dialogs. Select/deselect individual files to mirror with server availability counts.
 - **Mark All Notifications as Read**: Button in notification dropdown to mark all notifications as read at once

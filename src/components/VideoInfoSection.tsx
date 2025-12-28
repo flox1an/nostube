@@ -384,7 +384,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         />
       )}
       {video && (
-        <div className="py-4">
+        <div className="py-4 px-2 sm:px-0">
           <VideoComments
             videoId={video.id}
             authorPubkey={video.pubkey}

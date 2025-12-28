@@ -52,11 +52,11 @@ export async function requestInvoice(
   zapRequest: NostrEvent
 ): Promise<string> {
   const amountMsats = amount * 1000
-  const encodedZapRequest = encodeURIComponent(JSON.stringify(zapRequest))
 
   const url = new URL(callback)
   url.searchParams.set('amount', amountMsats.toString())
-  url.searchParams.set('nostr', encodedZapRequest)
+  // URLSearchParams.set() automatically URL-encodes the value, so don't encode manually
+  url.searchParams.set('nostr', JSON.stringify(zapRequest))
 
   const response = await fetch(url.toString())
   if (!response.ok) {

@@ -37,7 +37,9 @@ export function ZapButton({
   })
   const { totalSats } = useVideoZaps(eventId, authorPubkey)
 
-  const isOwnContent = user?.pubkey === authorPubkey
+  // TODO: uncomment after debugging
+  // const isOwnContent = user?.pubkey === authorPubkey
+  const isOwnContent = false
 
   // Cleanup timer on unmount
   useEffect(() => {

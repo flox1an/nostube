@@ -13,6 +13,7 @@
 ## Task 1: WalletContext - Core wallet state management
 
 **Files:**
+
 - Create: `src/contexts/WalletContext.tsx`
 - Create: `src/hooks/useWallet.ts`
 
@@ -122,13 +123,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [wallet])
 
-  const payInvoice = useCallback(async (bolt11: string) => {
-    if (!wallet) throw new Error('Wallet not connected')
-    const result = await wallet.payInvoice(bolt11)
-    // Refresh balance after payment
-    refreshBalance()
-    return result
-  }, [wallet, refreshBalance])
+  const payInvoice = useCallback(
+    async (bolt11: string) => {
+      if (!wallet) throw new Error('Wallet not connected')
+      const result = await wallet.payInvoice(bolt11)
+      // Refresh balance after payment
+      refreshBalance()
+      return result
+    },
+    [wallet, refreshBalance]
+  )
 
   return (
     <WalletContext.Provider
@@ -168,6 +172,7 @@ export { useWalletContext as useWallet } from '@/contexts/WalletContext'
 **Step 3: Add to hooks/index.ts export**
 
 Add to `src/hooks/index.ts`:
+
 ```typescript
 export { useWallet } from './useWallet'
 ```
@@ -180,9 +185,7 @@ Modify `src/components/AppProvider.tsx` - add WalletProvider inside the existing
 import { WalletProvider } from '@/contexts/WalletContext'
 
 // Inside the provider chain, wrap with WalletProvider
-<WalletProvider>
-  {/* existing children */}
-</WalletProvider>
+;<WalletProvider>{/* existing children */}</WalletProvider>
 ```
 
 **Step 5: Run typecheck**
@@ -202,6 +205,7 @@ git commit -m "feat(wallet): add WalletContext and useWallet hook for NWC"
 ## Task 2: Zap utilities - LNURL and zap request helpers
 
 **Files:**
+
 - Create: `src/lib/zap-utils.ts`
 
 **Step 1: Create zap utility functions**
@@ -332,6 +336,7 @@ git commit -m "feat(zap): add zap utility functions for LNURL and NIP-57"
 ## Task 3: useZap hook - Complete zap flow
 
 **Files:**
+
 - Create: `src/hooks/useZap.ts`
 
 **Step 1: Create useZap hook**
@@ -368,72 +373,83 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
   const { publish } = useNostrPublish()
   const eventStore = useEventStore()
 
-  const zap = useCallback(async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
-    if (!user) {
-      toast.error('Please log in to zap')
-      return false
-    }
-
-    if (!isConnected) {
-      setShowWalletDialog(true)
-      return false
-    }
-
-    setIsZapping(true)
-
-    try {
-      // Get author's profile to find their lightning address
-      const profile = eventStore.getEvent(authorPubkey, 0)
-      if (!profile) {
-        toast.error('Could not load author profile')
+  const zap = useCallback(
+    async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
+      if (!user) {
+        toast.error('Please log in to zap')
         return false
       }
 
-      // Get LNURL endpoint
-      const zapEndpoint = await getRecipientZapEndpoint(profile)
-      if (!zapEndpoint) {
-        toast.error('Author cannot receive zaps (no lightning address)')
+      if (!isConnected) {
+        setShowWalletDialog(true)
         return false
       }
 
-      // Get write relays
-      const writeRelays = config.relays
-        .filter(r => r.tags.includes('write'))
-        .map(r => r.url)
+      setIsZapping(true)
 
-      // Create zap request
-      const zapRequestTemplate = createZapRequest({
-        recipientPubkey: authorPubkey,
-        amount,
-        comment,
-        relays: writeRelays,
-        eventId,
-        eventKind,
-      })
+      try {
+        // Get author's profile to find their lightning address
+        const profile = eventStore.getEvent(authorPubkey, 0)
+        if (!profile) {
+          toast.error('Could not load author profile')
+          return false
+        }
 
-      // Sign the zap request
-      const signedZapRequest = await publish({
-        event: zapRequestTemplate,
-        relays: [], // Don't publish to relays, just sign
-        skipPublish: true,
-      })
+        // Get LNURL endpoint
+        const zapEndpoint = await getRecipientZapEndpoint(profile)
+        if (!zapEndpoint) {
+          toast.error('Author cannot receive zaps (no lightning address)')
+          return false
+        }
 
-      // Request invoice from LNURL
-      const bolt11 = await requestInvoice(zapEndpoint, amount, signedZapRequest)
+        // Get write relays
+        const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
-      // Pay the invoice via NWC
-      await payInvoice(bolt11)
+        // Create zap request
+        const zapRequestTemplate = createZapRequest({
+          recipientPubkey: authorPubkey,
+          amount,
+          comment,
+          relays: writeRelays,
+          eventId,
+          eventKind,
+        })
 
-      toast.success(`Zapped ${amount} sats!`)
-      return true
-    } catch (err) {
-      console.error('Zap failed:', err)
-      toast.error(err instanceof Error ? err.message : 'Zap failed')
-      return false
-    } finally {
-      setIsZapping(false)
-    }
-  }, [user, isConnected, eventStore, authorPubkey, config.relays, eventId, eventKind, publish, payInvoice])
+        // Sign the zap request
+        const signedZapRequest = await publish({
+          event: zapRequestTemplate,
+          relays: [], // Don't publish to relays, just sign
+          skipPublish: true,
+        })
+
+        // Request invoice from LNURL
+        const bolt11 = await requestInvoice(zapEndpoint, amount, signedZapRequest)
+
+        // Pay the invoice via NWC
+        await payInvoice(bolt11)
+
+        toast.success(`Zapped ${amount} sats!`)
+        return true
+      } catch (err) {
+        console.error('Zap failed:', err)
+        toast.error(err instanceof Error ? err.message : 'Zap failed')
+        return false
+      } finally {
+        setIsZapping(false)
+      }
+    },
+    [
+      user,
+      isConnected,
+      eventStore,
+      authorPubkey,
+      config.relays,
+      eventId,
+      eventKind,
+      publish,
+      payInvoice,
+    ]
+  )
 
   return {
     zap,
@@ -509,74 +525,85 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
   // Load author profile
   const profile = useStoreQuery(ProfileQuery, [authorPubkey])
 
-  const zap = useCallback(async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
-    if (!user) {
-      toast.error('Please log in to zap')
-      return false
-    }
-
-    if (!isConnected) {
-      setNeedsWallet(true)
-      return false
-    }
-
-    const signer = accountManager?.active?.signer
-    if (!signer) {
-      toast.error('No signer available')
-      return false
-    }
-
-    setIsZapping(true)
-
-    try {
-      // Get author's profile event
-      const profileEvent = eventStore.getEvent(authorPubkey, 0)
-      if (!profileEvent) {
-        toast.error('Could not load author profile')
+  const zap = useCallback(
+    async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
+      if (!user) {
+        toast.error('Please log in to zap')
         return false
       }
 
-      // Get LNURL endpoint
-      const zapEndpoint = await getRecipientZapEndpoint(profileEvent)
-      if (!zapEndpoint) {
-        toast.error('Author cannot receive zaps (no lightning address)')
+      if (!isConnected) {
+        setNeedsWallet(true)
         return false
       }
 
-      // Get write relays
-      const writeRelays = config.relays
-        .filter(r => r.tags.includes('write'))
-        .map(r => r.url)
+      const signer = accountManager?.active?.signer
+      if (!signer) {
+        toast.error('No signer available')
+        return false
+      }
 
-      // Create zap request template
-      const zapRequestTemplate = createZapRequest({
-        recipientPubkey: authorPubkey,
-        amount,
-        comment,
-        relays: writeRelays,
-        eventId,
-        eventKind,
-      })
+      setIsZapping(true)
 
-      // Sign the zap request (kind 9734)
-      const signedZapRequest = await signer.signEvent(zapRequestTemplate)
+      try {
+        // Get author's profile event
+        const profileEvent = eventStore.getEvent(authorPubkey, 0)
+        if (!profileEvent) {
+          toast.error('Could not load author profile')
+          return false
+        }
 
-      // Request invoice from LNURL
-      const bolt11 = await requestInvoice(zapEndpoint, amount, signedZapRequest)
+        // Get LNURL endpoint
+        const zapEndpoint = await getRecipientZapEndpoint(profileEvent)
+        if (!zapEndpoint) {
+          toast.error('Author cannot receive zaps (no lightning address)')
+          return false
+        }
 
-      // Pay the invoice via NWC
-      await payInvoice(bolt11)
+        // Get write relays
+        const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
-      toast.success(`Zapped ${amount} sats!`)
-      return true
-    } catch (err) {
-      console.error('Zap failed:', err)
-      toast.error(err instanceof Error ? err.message : 'Zap failed')
-      return false
-    } finally {
-      setIsZapping(false)
-    }
-  }, [user, isConnected, accountManager, eventStore, authorPubkey, config.relays, eventId, eventKind, payInvoice])
+        // Create zap request template
+        const zapRequestTemplate = createZapRequest({
+          recipientPubkey: authorPubkey,
+          amount,
+          comment,
+          relays: writeRelays,
+          eventId,
+          eventKind,
+        })
+
+        // Sign the zap request (kind 9734)
+        const signedZapRequest = await signer.signEvent(zapRequestTemplate)
+
+        // Request invoice from LNURL
+        const bolt11 = await requestInvoice(zapEndpoint, amount, signedZapRequest)
+
+        // Pay the invoice via NWC
+        await payInvoice(bolt11)
+
+        toast.success(`Zapped ${amount} sats!`)
+        return true
+      } catch (err) {
+        console.error('Zap failed:', err)
+        toast.error(err instanceof Error ? err.message : 'Zap failed')
+        return false
+      } finally {
+        setIsZapping(false)
+      }
+    },
+    [
+      user,
+      isConnected,
+      accountManager,
+      eventStore,
+      authorPubkey,
+      config.relays,
+      eventId,
+      eventKind,
+      payInvoice,
+    ]
+  )
 
   return {
     zap,
@@ -610,6 +637,7 @@ git commit -m "feat(zap): add useZap hook for complete zap flow"
 ## Task 4: useVideoZaps hook - Load zap receipts
 
 **Files:**
+
 - Create: `src/hooks/useVideoZaps.ts`
 
 **Step 1: Create useVideoZaps hook**
@@ -701,6 +729,7 @@ git commit -m "feat(zap): add useVideoZaps hook to load zap receipts"
 ## Task 5: WalletConnectDialog component
 
 **Files:**
+
 - Create: `src/components/WalletConnectDialog.tsx`
 
 **Step 1: Create WalletConnectDialog**
@@ -768,9 +797,7 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
               onKeyDown={handleKeyDown}
               disabled={isConnecting}
             />
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -789,10 +816,7 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleConnect}
-              disabled={!connectionString.trim() || isConnecting}
-            >
+            <Button onClick={handleConnect} disabled={!connectionString.trim() || isConnecting}>
               {isConnecting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -827,6 +851,7 @@ git commit -m "feat(wallet): add WalletConnectDialog for NWC onboarding"
 ## Task 6: ZapDialog component
 
 **Files:**
+
 - Create: `src/components/ZapDialog.tsx`
 
 **Step 1: Create ZapDialog**
@@ -963,9 +988,7 @@ export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }
               maxLength={140}
               rows={2}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {comment.length}/140
-            </p>
+            <p className="text-xs text-muted-foreground text-right">{comment.length}/140</p>
           </div>
 
           {/* Zap button */}
@@ -1010,6 +1033,7 @@ git commit -m "feat(zap): add ZapDialog with preset amounts and comment"
 ## Task 7: ZapButton component
 
 **Files:**
+
 - Create: `src/components/ZapButton.tsx`
 
 **Step 1: Create ZapButton with long-press support**
@@ -1209,11 +1233,13 @@ git commit -m "feat(zap): add ZapButton with quick-zap and long-press"
 ## Task 8: Integrate ZapButton into VideoReactionButtons
 
 **Files:**
+
 - Modify: `src/components/VideoReactionButtons.tsx`
 
 **Step 1: Add ZapButton to VideoReactionButtons**
 
 Add import at top:
+
 ```typescript
 import { ZapButton } from './ZapButton'
 ```
@@ -1221,6 +1247,7 @@ import { ZapButton } from './ZapButton'
 Add `relays` prop to the component (if not already there).
 
 In the inline layout section (after downvote button), add:
+
 ```tsx
 <ZapButton
   eventId={eventId}
@@ -1232,6 +1259,7 @@ In the inline layout section (after downvote button), add:
 ```
 
 In the vertical layout section (after downvote div), add:
+
 ```tsx
 <ZapButton
   eventId={eventId}
@@ -1259,6 +1287,7 @@ git commit -m "feat(zap): integrate ZapButton into VideoReactionButtons"
 ## Task 9: WalletSection for Settings page
 
 **Files:**
+
 - Create: `src/components/settings/WalletSection.tsx`
 - Modify: `src/pages/settings/SettingsPage.tsx`
 
@@ -1285,7 +1314,7 @@ export function WalletSection() {
     error,
     connect,
     disconnect,
-    refreshBalance
+    refreshBalance,
   } = useWallet()
 
   const handleConnect = async () => {
@@ -1322,9 +1351,7 @@ export function WalletSection() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="font-medium">
-                    {walletInfo?.alias || 'Connected Wallet'}
-                  </span>
+                  <span className="font-medium">{walletInfo?.alias || 'Connected Wallet'}</span>
                 </div>
                 <Button variant="outline" size="sm" onClick={disconnect}>
                   Disconnect
@@ -1335,12 +1362,7 @@ export function WalletSection() {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Zap className="h-4 w-4 text-yellow-500" />
                   <span>Balance: {formatSats(Math.floor(balance / 1000))} sats</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2"
-                    onClick={refreshBalance}
-                  >
+                  <Button variant="ghost" size="sm" className="h-6 px-2" onClick={refreshBalance}>
                     Refresh
                   </Button>
                 </div>
@@ -1360,9 +1382,7 @@ export function WalletSection() {
                 onKeyDown={handleKeyDown}
                 disabled={isConnecting}
               />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
 
             <div className="flex items-center justify-between">
@@ -1376,10 +1396,7 @@ export function WalletSection() {
                 <ExternalLink className="h-3 w-3" />
               </a>
 
-              <Button
-                onClick={handleConnect}
-                disabled={!connectionString.trim() || isConnecting}
-              >
+              <Button onClick={handleConnect} disabled={!connectionString.trim() || isConnecting}>
                 {isConnecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1419,11 +1436,13 @@ git commit -m "feat(wallet): add WalletSection to settings page"
 ## Task 10: Add translations
 
 **Files:**
+
 - Modify: `src/i18n/locales/en.json`
 
 **Step 1: Add wallet and zap translations**
 
 Add to en.json under appropriate sections:
+
 ```json
 {
   "wallet": {
@@ -1472,11 +1491,13 @@ git commit -m "feat(i18n): add wallet and zap translations"
 ## Task 11: Update CHANGELOG and final build
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
 **Step 1: Add changelog entry**
 
 Add under `## [Unreleased]` → `### Added`:
+
 ```markdown
 - **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment
 - **Nostr Wallet Connect**: NIP-47 wallet integration via `applesauce-wallet-connect`. Connect wallet in Settings or on first zap attempt. Shows wallet balance and supports Alby and other NWC-compatible wallets
@@ -1504,6 +1525,7 @@ git commit -m "docs: update changelog with zaps and wallet connect"
 ## Summary
 
 This plan implements:
+
 1. **WalletContext** - NWC client state management with localStorage persistence
 2. **Zap utilities** - LNURL and NIP-57 helpers
 3. **useZap hook** - Complete zap flow (profile lookup → LNURL → invoice → NWC payment)

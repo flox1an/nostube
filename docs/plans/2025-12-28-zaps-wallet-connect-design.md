@@ -51,7 +51,7 @@ src/components/settings/WalletSection.tsx # Settings page wallet config
 interface WalletState {
   isConnected: boolean
   isConnecting: boolean
-  balance: number | null        // msats, fetched on connect
+  balance: number | null // msats, fetched on connect
   walletInfo: WalletInfo | null // alias, supported methods
   error: string | null
 }
@@ -87,12 +87,12 @@ interface WalletState {
 ### Zap Request Tags (kind 9734)
 
 ```typescript
-[
+;[
   ['relays', ...writeRelays],
   ['amount', millisats.toString()],
   ['p', recipientPubkey],
   ['e', videoEventId],
-  ['k', videoEventKind],  // 34235 or 34236
+  ['k', videoEventKind], // 34235 or 34236
 ]
 ```
 

@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag Handling**: Deduplication on paste, state consistency, React key collisions
 - **Notification System**: Draft deletion removes notifications, duplicate prevention
 - **Build Warnings**: Fixed ESLint/TypeScript warnings across codebase
+- **Build Errors**: Removed unused eslint-disable comment in global.d.ts, fixed synchronous setState in VideoPage effect by using queueMicrotask
 
 ### Removed
 

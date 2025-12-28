@@ -96,8 +96,9 @@ export function VideoPage() {
 
   // Load video event with explicit subscription management for proper cleanup
   useEffect(() => {
+    // Reset state when videoIdentifier becomes falsy - use microtask to avoid synchronous setState in effect
     if (!videoIdentifier) {
-      setVideoEvent(undefined)
+      queueMicrotask(() => setVideoEvent(undefined))
       return
     }
 
@@ -137,7 +138,7 @@ export function VideoPage() {
     } else if (videoIdentifier.type === 'address') {
       const addressPointer = videoIdentifier.data
       if (!addressPointer) {
-        setVideoEvent(undefined)
+        queueMicrotask(() => setVideoEvent(undefined))
         return
       }
 

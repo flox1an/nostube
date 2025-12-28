@@ -87,6 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **VideoPage Subscription Leak**: Fixed relay subscriptions not being closed when navigating away from video pages. Changed from RxJS `finalize()` to explicit `useEffect` cleanup to guarantee subscription closure on unmount. Added `take(1)` to complete observables after initial load.
 - **Zap Invoice Request Encoding**: Fixed double URL-encoding of zap request causing 400 errors from LNURL endpoints. `URLSearchParams.set()` auto-encodes values, so manual `encodeURIComponent()` was redundant.
+- **Zap Receipt Fetching**: Added relay subscription to fetch kind 9735 zap receipts from popular relays (damus, primal, nos.lol). Previously only reading from eventStore without fetching.
+- **Zap Count Caching**: Added localStorage cache for zap totals with 1-hour TTL. Shows cached amounts immediately on page load, updates in background when fresh data arrives.
 - **Mirror Dialog Missing Blobs**: Fixed blob extraction filtering out thumbnails and subtitles that don't have standard blossom hash URLs - now shows all variants matching debug dialog
 - **HEVC Codec Detection**: Allow hvc1/hev1 codecs through without relying on unreliable canPlayType detection (hardware decoding works even when browser reports no support)
 - **Mobile Detection**: Improved useIsMobile hook to use user agent, touch capability, and screen width for reliable mobile detection

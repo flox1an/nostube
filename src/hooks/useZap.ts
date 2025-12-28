@@ -10,7 +10,6 @@ const DEFAULT_ZAP_AMOUNT = 21
 
 interface UseZapOptions {
   eventId: string
-  eventKind: number
   authorPubkey: string
 }
 
@@ -21,7 +20,7 @@ interface UseZapReturn {
   setNeedsWallet: (value: boolean) => void
 }
 
-export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): UseZapReturn {
+export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   const [isZapping, setIsZapping] = useState(false)
   const [needsWallet, setNeedsWallet] = useState(false)
   const { user } = useCurrentUser()
@@ -34,13 +33,9 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
 
   // Get video event from store to access seenRelays
   const videoEvent = useMemo(() => {
-    // Try addressable event first (kind 34235/34236)
-    if (eventKind === 34235 || eventKind === 34236) {
-      return eventStore.getReplaceable(eventKind, authorPubkey)
-    }
-    // Fall back to regular event
+    // Always try to get by event ID first (works for all event types)
     return eventStore.getEvent(eventId)
-  }, [eventStore, eventId, eventKind, authorPubkey])
+  }, [eventStore, eventId])
 
   // Compute target relays: video seenRelays + author inbox + user write relays
   const targetRelays = useMemo(() => {

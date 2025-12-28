@@ -32,14 +32,14 @@ export function ZapButton({
   const { user } = useCurrentUser()
   const { zap, isZapping, needsWallet, setNeedsWallet } = useZap({
     eventId,
-    eventKind: kind,
     authorPubkey,
   })
   const { totalSats } = useVideoZaps(eventId, authorPubkey)
 
-  // TODO: uncomment after debugging
-  // const isOwnContent = user?.pubkey === authorPubkey
-  const isOwnContent = false
+  const isOwnContent = user?.pubkey === authorPubkey
+
+  // kind is available for future use but not currently needed
+  void kind
 
   // Cleanup timer on unmount
   useEffect(() => {

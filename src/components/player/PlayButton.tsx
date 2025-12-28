@@ -20,7 +20,7 @@ export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayB
         <button
           type="button"
           onClick={onClick}
-          className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
+          className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-black/40"
           aria-label={label}
         >
           {isPlaying ? (

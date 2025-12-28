@@ -32,7 +32,7 @@ export const SeekIndicator = memo(function SeekIndicator({
       style={{ width: '25%' }}
     >
       <div
-        className={`flex items-center gap-2 px-5 py-3 rounded-xl bg-black/50 backdrop-blur-sm animate-in fade-in ${
+        className={`flex items-center gap-2 px-5 py-3 rounded-xl bg-black/40 backdrop-blur-sm animate-in fade-in ${
           isForward ? 'slide-in-from-right-4 ml-auto' : 'slide-in-from-left-4'
         } duration-150`}
       >

@@ -40,7 +40,7 @@ export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: 
     <button
       type="button"
       onClick={toggleMode}
-      className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap p-2 rounded-full cursor-pointer transition-all hover:bg-neutral-700/50"
+      className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap p-2 rounded-full cursor-pointer transition-all hover:bg-black/40"
       title={showRemaining ? 'Click to show elapsed time' : 'Click to show remaining time'}
     >
       <span>

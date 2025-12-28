@@ -200,7 +200,7 @@ export const ProgressBar = memo(function ProgressBar({
       {/* Hover/drag timestamp tooltip */}
       {showScrubber && (
         <div
-          className="absolute bottom-full mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded pointer-events-none z-20"
+          className="absolute bottom-full mb-2 px-2 py-1 bg-black/40 text-white text-xs rounded pointer-events-none z-20"
           style={{
             left: `${isTouchDragging ? hoverPosition : hoverPosition}%`,
             transform: 'translateX(-50%)',

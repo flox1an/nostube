@@ -17,7 +17,6 @@ export function MainLayout() {
           </div>
         )}
         <main className="flex-1 bg-background overflow-auto w-full">
-          {/*          <DisclaimerBanner />*/}
           <Outlet />
         </main>
       </div>

@@ -149,7 +149,7 @@ export function VideoReactionButtons({
     return (
       <>
         <Button
-          variant="secondary"
+          variant="ghost"
           className={className}
           onClick={handleUpvote}
           disabled={!user || isPending || hasReacted}
@@ -159,7 +159,7 @@ export function VideoReactionButtons({
           <span className="ml-2">{upvoteCount}</span>
         </Button>
         <Button
-          variant="secondary"
+          variant="ghost"
           className={className}
           onClick={handleDownvote}
           disabled={!user || isPending || hasReacted}

@@ -371,7 +371,14 @@
     "selectSection": "Select a section",
     "selectSectionDescription": "Choose a settings category from the menu",
     "presets": {
-      "title": "Presets"
+      "title": "Presets",
+      "pageTitle": "Choose a Preset",
+      "description": "Select a configuration preset to use for relays and content filtering",
+      "loading": "Loading presets...",
+      "noPresets": "No presets found",
+      "selected": "Preset selected",
+      "whatArePresets": "What are presets?",
+      "explanation": "Presets are community-published configurations that include recommended relays, blocked users, and NSFW author lists. By selecting a preset, you adopt that configuration for your nostube experience."
     },
     "general": {
       "title": "General Settings",

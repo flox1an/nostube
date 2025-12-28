@@ -331,7 +331,14 @@
     "selectSection": "Sélectionner une section",
     "selectSectionDescription": "Choisissez une catégorie de paramètres dans le menu",
     "presets": {
-      "title": "Préréglages"
+      "title": "Préréglages",
+      "pageTitle": "Choisir un préréglage",
+      "description": "Sélectionnez un préréglage de configuration pour les relais et le filtrage de contenu",
+      "loading": "Chargement des préréglages...",
+      "noPresets": "Aucun préréglage trouvé",
+      "selected": "Préréglage sélectionné",
+      "whatArePresets": "Que sont les préréglages ?",
+      "explanation": "Les préréglages sont des configurations publiées par la communauté qui incluent des relais recommandés, des utilisateurs bloqués et des listes d'auteurs NSFW. En sélectionnant un préréglage, vous adoptez cette configuration pour votre expérience nostube."
     },
     "general": {
       "title": "Paramètres généraux",

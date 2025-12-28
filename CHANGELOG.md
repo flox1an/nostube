@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Zap Component Performance**: Added `React.memo` and `useCallback` to ZapButton, ZapDialog, and WalletConnectDialog components to prevent unnecessary re-renders.
 - **Fullscreen Mode**: Theater/cinema mode has no effect in fullscreen, and the theater mode button is hidden when in fullscreen
 - **Debug Dialog Layout**: Wider dialog with two-column layout - variant list (Video, Thumbnail, Subtitle) on left, details on right
 - **Settings Menu Auto-Close**: Selecting quality, speed, or subtitle option now closes the settings menu immediately

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, memo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,15 @@ interface WalletConnectDialogProps {
   onConnected?: () => void
 }
 
-export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletConnectDialogProps) {
+export const WalletConnectDialog = memo(function WalletConnectDialog({
+  open,
+  onOpenChange,
+  onConnected,
+}: WalletConnectDialogProps) {
   const [connectionString, setConnectionString] = useState('')
   const { connect, isConnecting, error } = useWallet()
 
-  const handleConnect = async () => {
+  const handleConnect = useCallback(async () => {
     try {
       await connect(connectionString.trim())
       onOpenChange(false)
@@ -30,13 +34,24 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
     } catch {
       // Error is handled by context
     }
-  }
+  }, [connect, connectionString, onOpenChange, onConnected])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && connectionString.trim()) {
-      handleConnect()
-    }
-  }
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && connectionString.trim()) {
+        handleConnect()
+      }
+    },
+    [connectionString, handleConnect]
+  )
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setConnectionString(e.target.value)
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,7 +70,7 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
               id="nwc-uri"
               placeholder="nostr+walletconnect://..."
               value={connectionString}
-              onChange={e => setConnectionString(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               disabled={isConnecting}
             />
@@ -75,7 +90,7 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
             <Button onClick={handleConnect} disabled={!connectionString.trim() || isConnecting}>
@@ -93,4 +108,4 @@ export function WalletConnectDialog({ open, onOpenChange, onConnected }: WalletC
       </DialogContent>
     </Dialog>
   )
-}
+})

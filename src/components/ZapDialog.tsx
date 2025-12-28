@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, memo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,13 @@ interface ZapDialogProps {
   isZapping: boolean
 }
 
-export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }: ZapDialogProps) {
+export const ZapDialog = memo(function ZapDialog({
+  open,
+  onOpenChange,
+  authorPubkey,
+  onZap,
+  isZapping,
+}: ZapDialogProps) {
   const [selectedAmount, setSelectedAmount] = useState<number>(100)
   const [customAmount, setCustomAmount] = useState('')
   const [comment, setComment] = useState('')
@@ -36,21 +42,25 @@ export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }
 
   const effectiveAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount
 
-  const handlePresetClick = (amount: number) => {
+  const handlePresetClick = useCallback((amount: number) => {
     setSelectedAmount(amount)
     setCustomAmount('')
-  }
+  }, [])
 
-  const handleCustomChange = (value: string) => {
+  const handleCustomChange = useCallback((value: string) => {
     // Only allow digits
     const cleaned = value.replace(/\D/g, '')
     setCustomAmount(cleaned)
     if (cleaned) {
       setSelectedAmount(0) // Deselect presets
     }
-  }
+  }, [])
 
-  const handleZap = async () => {
+  const handleCommentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setComment(e.target.value.slice(0, 140))
+  }, [])
+
+  const handleZap = useCallback(async () => {
     if (effectiveAmount < 1) return
     const success = await onZap(effectiveAmount, comment || undefined)
     if (success) {
@@ -59,7 +69,7 @@ export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }
       setCustomAmount('')
       setSelectedAmount(100)
     }
-  }
+  }, [effectiveAmount, comment, onZap, onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,7 +134,7 @@ export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }
               id="zap-comment"
               placeholder="Add a message..."
               value={comment}
-              onChange={e => setComment(e.target.value.slice(0, 140))}
+              onChange={handleCommentChange}
               maxLength={140}
               rows={2}
             />
@@ -153,4 +163,4 @@ export function ZapDialog({ open, onOpenChange, authorPubkey, onZap, isZapping }
       </DialogContent>
     </Dialog>
   )
-}
+})

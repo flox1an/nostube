@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Zap, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,7 +17,7 @@ interface ZapButtonProps {
 
 const LONG_PRESS_DELAY = 500
 
-export function ZapButton({
+export const ZapButton = memo(function ZapButton({
   eventId,
   kind,
   authorPubkey,
@@ -61,51 +61,54 @@ export function ZapButton({
     }
   }, [needsWallet, showWalletDialog, setNeedsWallet])
 
-  const handleQuickZap = async () => {
+  const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
     await zap()
-  }
+  }, [zap])
 
-  const handlePointerDown = () => {
+  const handlePointerDown = useCallback(() => {
     isLongPress.current = false
     longPressTimer.current = window.setTimeout(() => {
       isLongPress.current = true
       setShowZapDialog(true)
     }, LONG_PRESS_DELAY)
-  }
+  }, [])
 
-  const handlePointerUp = () => {
+  const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-  }
+  }, [])
 
-  const handlePointerLeave = () => {
+  const handlePointerLeave = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-  }
+  }, [])
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setShowZapDialog(true)
-  }
+  }, [])
 
-  const handleZapFromDialog = async (amount: number, comment?: string) => {
-    return zap(amount, comment)
-  }
+  const handleZapFromDialog = useCallback(
+    async (amount: number, comment?: string) => {
+      return zap(amount, comment)
+    },
+    [zap]
+  )
 
-  const handleWalletConnected = () => {
+  const handleWalletConnected = useCallback(() => {
     // Retry the pending zap if there was one
-  }
+  }, [])
 
   if (layout === 'inline') {
     return (
       <>
         <Button
-          variant="secondary"
+          variant="outline"
           className={className}
           onClick={handleQuickZap}
           onPointerDown={handlePointerDown}
@@ -145,7 +148,7 @@ export function ZapButton({
     <>
       <div className={cn('flex flex-col items-center gap-1', className)}>
         <Button
-          variant="secondary"
+          variant="outline"
           size="icon"
           className="rounded-full"
           onClick={handleQuickZap}
@@ -180,4 +183,4 @@ export function ZapButton({
       />
     </>
   )
-}
+})

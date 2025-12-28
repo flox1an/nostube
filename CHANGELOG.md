@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Zap Dialog**: ZapDialog component for sending zaps with preset amounts (21/100/500/1K/5K sats), custom amount input, optional comment (140 chars), recipient avatar/name display, and loading state during zap.
 - **Video Zaps Hook**: useVideoZaps hook to load zap receipts (kind 9735) for videos. Provides totalSats, zapCount, and zaps array with deduplication by bolt11 invoice.
 - **Zap Hook**: useZap hook for complete zap flow - fetches author profile, creates signed zap request (kind 9734), requests LNURL invoice, and pays via NWC wallet connection.
 - **NWC Wallet Context**: WalletContext and useWallet hook for NIP-47 Nostr Wallet Connect integration. Manages wallet connection state, balance, and payment methods with localStorage persistence for connection restoration.

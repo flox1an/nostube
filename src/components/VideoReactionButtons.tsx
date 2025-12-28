@@ -5,6 +5,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { ZapButton } from './ZapButton'
 
 interface VideoReactionButtonsProps {
   eventId: string
@@ -144,6 +145,13 @@ export function VideoReactionButtons({
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
           <span className="ml-2">{downvoteCount}</span>
         </Button>
+        <ZapButton
+          eventId={eventId}
+          kind={kind}
+          authorPubkey={authorPubkey}
+          layout="inline"
+          className={className}
+        />
       </>
     )
   }
@@ -180,6 +188,13 @@ export function VideoReactionButtons({
         </Button>
         <span className="text-sm font-medium">{downvoteCount}</span>
       </div>
+      <ZapButton
+        eventId={eventId}
+        kind={kind}
+        authorPubkey={authorPubkey}
+        layout="vertical"
+        className={className}
+      />
     </>
   )
 }

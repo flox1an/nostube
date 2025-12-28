@@ -1,9 +1,9 @@
 import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
-import { of } from 'rxjs'
-import { switchMap, catchError, finalize, map } from 'rxjs/operators'
+import { of, Subscription } from 'rxjs'
+import { switchMap, catchError, take } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
+import type { NostrEvent } from 'nostr-tools'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
@@ -91,44 +91,63 @@ export function VideoPage() {
     [pool, eventStore, initialRelays]
   )
 
-  // Use EventStore to get the video event with fallback to loader
-  const videoObservable = useMemo(() => {
-    if (!videoIdentifier) return of(undefined)
+  // State for video event loaded from EventStore/relays
+  const [videoEvent, setVideoEvent] = useState<NostrEvent | undefined>(undefined)
+
+  // Load video event with explicit subscription management for proper cleanup
+  useEffect(() => {
+    if (!videoIdentifier) {
+      setVideoEvent(undefined)
+      return
+    }
+
+    let sub: Subscription | undefined
+    let subId: string | undefined
 
     if (videoIdentifier.type === 'event') {
       const eventPointer = videoIdentifier.data
-      const subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
+      subId = logSubscriptionCreated('VideoPage-event', initialRelays, {
         ids: [eventPointer.id],
       })
 
-      return eventStore.event(eventPointer.id).pipe(
-        switchMap(event => {
-          if (event) {
-            return of(event)
-          }
-          // If no event in store, fallback to loader
-          return eventLoader(eventPointer)
-        }),
-        catchError(() => {
-          // If eventStore fails, fallback to loader
-          return eventLoader(eventPointer)
-        }),
-        map(event => event ?? undefined), // Normalize null to undefined
-        finalize(() => {
-          logSubscriptionClosed(subId)
+      sub = eventStore
+        .event(eventPointer.id)
+        .pipe(
+          switchMap(event => {
+            if (event) {
+              return of(event)
+            }
+            // If no event in store, fallback to loader
+            return eventLoader(eventPointer)
+          }),
+          catchError(() => {
+            // If eventStore fails, fallback to loader
+            return eventLoader(eventPointer)
+          }),
+          take(1) // Complete after first event to avoid keeping subscription open
+        )
+        .subscribe({
+          next: event => {
+            setVideoEvent(event ?? undefined)
+          },
+          error: () => {
+            setVideoEvent(undefined)
+          },
         })
-      )
     } else if (videoIdentifier.type === 'address') {
       const addressPointer = videoIdentifier.data
-      if (!addressPointer) return of(undefined)
+      if (!addressPointer) {
+        setVideoEvent(undefined)
+        return
+      }
 
-      const subId = logSubscriptionCreated('VideoPage-address', initialRelays, {
+      subId = logSubscriptionCreated('VideoPage-address', initialRelays, {
         kinds: [addressPointer.kind],
         authors: [addressPointer.pubkey],
         '#d': [addressPointer.identifier],
       })
 
-      return eventStore
+      sub = eventStore
         .replaceable(addressPointer.kind, addressPointer.pubkey, addressPointer.identifier)
         .pipe(
           switchMap(event => {
@@ -142,17 +161,28 @@ export function VideoPage() {
             // If eventStore fails, fallback to loader
             return addressLoader(addressPointer)
           }),
-          map(event => event ?? undefined), // Normalize null to undefined
-          finalize(() => {
-            logSubscriptionClosed(subId)
-          })
+          take(1) // Complete after first event to avoid keeping subscription open
         )
+        .subscribe({
+          next: event => {
+            setVideoEvent(event ?? undefined)
+          },
+          error: () => {
+            setVideoEvent(undefined)
+          },
+        })
     }
 
-    return of(undefined)
+    // Cleanup: always unsubscribe and log closure
+    return () => {
+      if (sub) {
+        sub.unsubscribe()
+      }
+      if (subId) {
+        logSubscriptionClosed(subId)
+      }
+    }
   }, [eventStore, eventLoader, addressLoader, videoIdentifier, initialRelays])
-
-  const videoEvent = useObservableState(videoObservable)
 
   // Get relays for playlist loading (includes video event relays once available)
   const playlistRelays = useVideoPageRelays({

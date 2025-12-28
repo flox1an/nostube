@@ -108,7 +108,6 @@ export const ZapButton = memo(function ZapButton({
     return (
       <>
         <Button
-          variant="outline"
           className={className}
           onClick={handleQuickZap}
           onPointerDown={handlePointerDown}
@@ -148,7 +147,6 @@ export const ZapButton = memo(function ZapButton({
     <>
       <div className={cn('flex flex-col items-center gap-1', className)}>
         <Button
-          variant="outline"
           size="icon"
           className="rounded-full"
           onClick={handleQuickZap}

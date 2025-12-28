@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { useCurrentUser, useNostrPublish, useAppContext } from '@/hooks'
 import { useReactions } from '@/hooks/useReactions'
+import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -29,8 +31,29 @@ export function VideoReactionButtons({
   const { config } = useAppContext()
   const { publish, isPending } = useNostrPublish()
 
+  // Get author's inbox relays (NIP-65)
+  const authorRelays = useUserRelays(authorPubkey)
+
   // Use the useReactions hook to load reactions from relays
   const reactions = useReactions({ eventId, authorPubkey, kind, relays })
+
+  // Get video event from store to access seenRelays
+  const videoEvent = useMemo(() => {
+    // Try addressable event first (kind 34235/34236)
+    if (kind === 34235 || kind === 34236) {
+      return eventStore.getReplaceable(kind, authorPubkey)
+    }
+    // Fall back to regular event
+    return eventStore.getEvent(eventId)
+  }, [eventStore, eventId, kind, authorPubkey])
+
+  // Compute target relays: video seenRelays + author inbox + user write relays
+  const targetRelays = useMemo(() => {
+    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+    const videoSeenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
+    const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
+  }, [config.relays, videoEvent, authorRelays.data])
 
   // Check if current user has upvoted or downvoted
   const hasUpvoted = useMemo(
@@ -86,7 +109,7 @@ export function VideoReactionButtons({
             ['k', `${kind}`],
           ],
         },
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+        relays: targetRelays,
       })
 
       // Add the reaction to the event store immediately for instant feedback
@@ -111,7 +134,7 @@ export function VideoReactionButtons({
             ['k', `${kind}`],
           ],
         },
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+        relays: targetRelays,
       })
 
       // Add the reaction to the event store immediately for instant feedback

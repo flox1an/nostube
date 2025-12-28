@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useCurrentUser, useWallet, useAppContext } from '@/hooks'
+import { useUserRelays } from '@/hooks/useUserRelays'
 import { getRecipientZapEndpoint, createZapRequest, requestInvoice } from '@/lib/zap-utils'
 import { toast } from 'sonner'
 
@@ -26,6 +28,27 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
   const { isConnected, payInvoice } = useWallet()
   const { config } = useAppContext()
   const eventStore = useEventStore()
+
+  // Get author's inbox relays (NIP-65)
+  const authorRelays = useUserRelays(authorPubkey)
+
+  // Get video event from store to access seenRelays
+  const videoEvent = useMemo(() => {
+    // Try addressable event first (kind 34235/34236)
+    if (eventKind === 34235 || eventKind === 34236) {
+      return eventStore.getReplaceable(eventKind, authorPubkey)
+    }
+    // Fall back to regular event
+    return eventStore.getEvent(eventId)
+  }, [eventStore, eventId, eventKind, authorPubkey])
+
+  // Compute target relays: video seenRelays + author inbox + user write relays
+  const targetRelays = useMemo(() => {
+    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+    const videoSeenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
+    const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
+  }, [config.relays, videoEvent, authorRelays.data])
 
   const zap = useCallback(
     async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
@@ -62,15 +85,13 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
           return false
         }
 
-        // Get write relays
-        const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-
-        // Create zap request template
+        // Create zap request template with target relays
+        // (includes video seenRelays + author inbox + user write relays)
         const zapRequestTemplate = createZapRequest({
           recipientPubkey: authorPubkey,
           amount,
           comment,
-          relays: writeRelays,
+          relays: targetRelays,
           eventId,
           eventKind,
         })
@@ -94,7 +115,7 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
         setIsZapping(false)
       }
     },
-    [user, isConnected, eventStore, authorPubkey, config.relays, eventId, eventKind, payInvoice]
+    [user, isConnected, eventStore, authorPubkey, targetRelays, eventId, eventKind, payInvoice]
   )
 
   return {

@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment. Shows total sats received on videos with formatted display (e.g., "21.5k").
+- **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment. Shows total sats received on videos with formatted display (e.g., "21.5k"). Zaps are published to author's inbox relays (NIP-65) and the relays where the video was seen.
 - **Nostr Wallet Connect**: NIP-47 wallet integration via `applesauce-wallet-connect`. Connect wallet in Settings or on first zap attempt. Shows wallet balance and supports Alby and other NWC-compatible wallets.
+- **NIP-65 Relay Targeting for Reactions**: Likes and dislikes are now published to the video author's inbox relays in addition to the user's write relays and the relays where the video was seen, ensuring better delivery.
 - **Persistent Login Sessions**: Account login persists across browser reloads using localStorage. Extension accounts wait up to 3 seconds for NIP-07 extension to inject before restoration. Bunker accounts store connection URI for automatic reconnection.
 - **Multi-Blob Mirror Dialog**: Mirror dialog now detects all blobs (videos, thumbnails, subtitles) from a video event, matching debug dialog's detection. Shared blob extraction utility (`blossom-blob-extractor.ts`) consolidates deduplication logic between both dialogs. Select/deselect individual files to mirror with server availability counts.
 - **Mark All Notifications as Read**: Button in notification dropdown to mark all notifications as read at once

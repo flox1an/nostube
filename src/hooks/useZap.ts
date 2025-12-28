@@ -87,13 +87,13 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
 
         // Create zap request template with target relays
         // (includes video seenRelays + author inbox + user write relays)
+        // Pass the actual event so d tag is preserved for addressable events
         const zapRequestTemplate = createZapRequest({
           recipientPubkey: authorPubkey,
           amount,
           comment,
           relays: targetRelays,
-          eventId,
-          eventKind,
+          event: videoEvent || undefined,
         })
 
         // Sign the zap request (kind 9734)
@@ -115,7 +115,7 @@ export function useZap({ eventId, eventKind, authorPubkey }: UseZapOptions): Use
         setIsZapping(false)
       }
     },
-    [user, isConnected, eventStore, authorPubkey, targetRelays, eventId, eventKind, payInvoice]
+    [user, isConnected, eventStore, authorPubkey, targetRelays, videoEvent, payInvoice]
   )
 
   return {

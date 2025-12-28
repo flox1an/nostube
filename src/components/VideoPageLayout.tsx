@@ -19,7 +19,11 @@ export function VideoPageLayout({
 }: VideoPageLayoutProps) {
   return (
     <div className={cinemaMode ? 'pb-8' : 'max-w-560 mx-auto sm:py-4 pb-8'}>
-      <div className={cinemaMode ? 'flex flex-col' : 'flex gap-4 md:px-4 flex-col lg:flex-row'}>
+      <div
+        className={
+          cinemaMode ? 'flex flex-col' : 'flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row'
+        }
+      >
         {/* Video player container - always rendered in same position */}
         <div className={cinemaMode ? '' : 'flex-1'}>
           {videoPlayer}
@@ -29,7 +33,7 @@ export function VideoPageLayout({
         {/* Sidebar/Bottom content */}
         {cinemaMode ? (
           <div className="w-full max-w-560 mx-auto">
-            <div className="flex gap-4 md:px-4 flex-col lg:flex-row">
+            <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">
               <div className="flex-1">{videoInfo}</div>
               <div className="w-full lg:w-96 p-2 md:p-0 space-y-4 mt-4">{sidebar}</div>
             </div>

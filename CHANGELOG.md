@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Mobile Video Page Playlist Button**: Playlist button moved into dropdown menu on mobile to reduce button bar clutter.
 - **Mobile Reaction Button Spacing**: Reduced internal spacing (icon to count) in reaction and zap buttons on mobile (`ml-1` vs `ml-2`).
+- **useIsMobile Reactivity**: Hook now listens for resize events and media query changes, updating state when DevTools mobile toggle is used.
 - **Zap Component Performance**: Added `React.memo` and `useCallback` to ZapButton, ZapDialog, and WalletConnectDialog components to prevent unnecessary re-renders.
 - **Fullscreen Mode**: Theater/cinema mode has no effect in fullscreen, and the theater mode button is hidden when in fullscreen
 - **Debug Dialog Layout**: Wider dialog with two-column layout - variant list (Video, Thumbnail, Subtitle) on left, details on right

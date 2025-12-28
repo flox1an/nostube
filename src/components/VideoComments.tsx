@@ -551,7 +551,7 @@ export function VideoComments({
   }
 
   return (
-    <div className="px-2 sm:px-0">
+    <div>
       <h2 className="mb-4">{t('video.comments.title')}</h2>
       {user && (
         <div className="mb-8">

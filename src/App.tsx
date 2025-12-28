@@ -24,6 +24,7 @@ import { useAppContext } from '@/hooks'
 import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
+import { WalletProvider } from '@/contexts/WalletContext'
 
 export const defaultResizeServer = 'https://imgproxy.nostu.be/'
 
@@ -131,18 +132,20 @@ export function App() {
             <FactoryProvider factory={factory}>
               <UserRelaysProvider>
                 <UploadManagerProvider>
-                  <TooltipProvider>
-                    <AccountRestoreInit />
-                    <UserRelaySync />
-                    <RelayPoolSync />
-                    <BatchedProfileLoaderInit />
-                    <LoginTimeTrackingInit />
-                    <BlossomServerSync />
-                    <OnboardingDialog />
-                    <Suspense>
-                      <AppRouter />
-                    </Suspense>
-                  </TooltipProvider>
+                  <WalletProvider>
+                    <TooltipProvider>
+                      <AccountRestoreInit />
+                      <UserRelaySync />
+                      <RelayPoolSync />
+                      <BatchedProfileLoaderInit />
+                      <LoginTimeTrackingInit />
+                      <BlossomServerSync />
+                      <OnboardingDialog />
+                      <Suspense>
+                        <AppRouter />
+                      </Suspense>
+                    </TooltipProvider>
+                  </WalletProvider>
                 </UploadManagerProvider>
               </UserRelaysProvider>
             </FactoryProvider>

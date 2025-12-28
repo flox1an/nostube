@@ -67,6 +67,7 @@ export { useVideoNotes } from './useVideoNotes'
 export type { VideoNote } from './useVideoNotes'
 export { useDvmTranscode } from './useDvmTranscode'
 export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
+export { useWallet } from './useWallet'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

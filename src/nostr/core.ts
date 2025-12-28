@@ -65,7 +65,11 @@ presistEventsToCache(eventStore, events => addEvents(cache!, events))
 
 // Configure NostrConnectSigner with relay pool methods
 // This is required for NIP-46 bunker:// URI login to work
-const subscriptionMethod: NostrSubscriptionMethod = (relays: string[], filters: Filter[]) => {
+// Also exported for use by applesauce-wallet-connect
+export const subscriptionMethod: NostrSubscriptionMethod = (
+  relays: string[],
+  filters: Filter[]
+) => {
   return relayPool
     .subscription(relays, filters)
     .pipe(
@@ -75,7 +79,7 @@ const subscriptionMethod: NostrSubscriptionMethod = (relays: string[], filters: 
     )
 }
 
-const publishMethod: NostrPublishMethod = async (relays: string[], event: NostrEvent) => {
+export const publishMethod: NostrPublishMethod = async (relays: string[], event: NostrEvent) => {
   const results = await relayPool.publish(relays, event)
   return results
 }

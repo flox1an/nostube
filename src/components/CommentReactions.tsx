@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
-import { useCurrentUser, useNostrPublish, useAppContext, useEventZaps, useZap } from '@/hooks'
-import { useReactions } from '@/hooks/useReactions'
+import {
+  useCurrentUser,
+  useNostrPublish,
+  useAppContext,
+  useZap,
+  useEventStats,
+  useUserReactionStatus,
+} from '@/hooks'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -42,17 +48,22 @@ export const CommentReactions = memo(function CommentReactions({
   // Get author's inbox relays (NIP-65)
   const authorRelays = useUserRelays(authorPubkey)
 
-  // Use the useReactions hook to load reactions from relays
-  const reactions = useReactions({ eventId, authorPubkey, kind })
+  // Use unified event stats hook (cached + background fetch)
+  const { totalSats, upvoteCount, downvoteCount, reactions } = useEventStats({
+    eventId,
+    authorPubkey,
+    kind,
+  })
+
+  // Check if current user has reacted
+  const { hasUpvoted, hasDownvoted } = useUserReactionStatus(reactions, user?.pubkey)
+  const hasReacted = hasUpvoted || hasDownvoted
 
   // Use the useZap hook for zapping
   const { zap, isZapping, needsWallet, setNeedsWallet } = useZap({
     eventId,
     authorPubkey,
   })
-
-  // Get zap totals
-  const { totalSats } = useEventZaps(eventId, authorPubkey)
 
   const isOwnContent = user?.pubkey === authorPubkey
 
@@ -63,53 +74,6 @@ export const CommentReactions = memo(function CommentReactions({
     const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
     return Array.from(new Set([...commentSeenRelays, ...authorInboxRelays, ...writeRelays]))
   }, [config.relays, storedEvent, authorRelays.data])
-
-  // Check if current user has upvoted or downvoted
-  const hasUpvoted = useMemo(
-    () => user && reactions.some(e => e.pubkey === user.pubkey && e.content === '+'),
-    [user, reactions]
-  )
-  const hasDownvoted = useMemo(
-    () => user && reactions.some(e => e.pubkey === user.pubkey && e.content === '-'),
-    [user, reactions]
-  )
-  const hasReacted = hasUpvoted || hasDownvoted
-
-  // Count upvotes (+) - deduplicate by user
-  const upvoteCount = useMemo(
-    () =>
-      reactions
-        .filter(e => e.content === '+')
-        .reduce(
-          (acc, e) => {
-            if (!acc.seen.has(e.pubkey)) {
-              acc.seen.add(e.pubkey)
-              acc.count++
-            }
-            return acc
-          },
-          { seen: new Set<string>(), count: 0 }
-        ).count,
-    [reactions]
-  )
-
-  // Count downvotes (-) - deduplicate by user
-  const downvoteCount = useMemo(
-    () =>
-      reactions
-        .filter(e => e.content === '-')
-        .reduce(
-          (acc, e) => {
-            if (!acc.seen.has(e.pubkey)) {
-              acc.seen.add(e.pubkey)
-              acc.count++
-            }
-            return acc
-          },
-          { seen: new Set<string>(), count: 0 }
-        ).count,
-    [reactions]
-  )
 
   // Cleanup timer on unmount
   useEffect(() => {

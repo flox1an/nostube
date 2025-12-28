@@ -70,6 +70,7 @@ export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from '
 export { useWallet } from './useWallet'
 export { useZap } from './useZap'
 export { useEventZaps, useVideoZaps } from './useEventZaps'
+export { useEventStats, useUserReactionStatus } from './useEventStats'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

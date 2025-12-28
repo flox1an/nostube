@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
-import { useCurrentUser, useNostrPublish, useAppContext } from '@/hooks'
-import { useReactions } from '@/hooks/useReactions'
+import {
+  useCurrentUser,
+  useNostrPublish,
+  useAppContext,
+  useEventStats,
+  useUserReactionStatus,
+} from '@/hooks'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -34,8 +39,17 @@ export function VideoReactionButtons({
   // Get author's inbox relays (NIP-65)
   const authorRelays = useUserRelays(authorPubkey)
 
-  // Use the useReactions hook to load reactions from relays
-  const reactions = useReactions({ eventId, authorPubkey, kind, relays })
+  // Use unified event stats hook (cached + background fetch)
+  const { upvoteCount, downvoteCount, reactions } = useEventStats({
+    eventId,
+    authorPubkey,
+    kind,
+    relays,
+  })
+
+  // Check if current user has reacted
+  const { hasUpvoted, hasDownvoted } = useUserReactionStatus(reactions, user?.pubkey)
+  const hasReacted = hasUpvoted || hasDownvoted
 
   // Get video event from store to access seenRelays
   const videoEvent = useMemo(() => {
@@ -54,45 +68,6 @@ export function VideoReactionButtons({
     const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
     return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
   }, [config.relays, videoEvent, authorRelays.data])
-
-  // Check if current user has upvoted or downvoted
-  const hasUpvoted = useMemo(
-    () => user && reactions.some(event => event.pubkey === user.pubkey && event.content === '+'),
-    [user, reactions]
-  )
-  const hasDownvoted = useMemo(
-    () => user && reactions.some(event => event.pubkey === user.pubkey && event.content === '-'),
-    [user, reactions]
-  )
-  const hasReacted = hasUpvoted || hasDownvoted
-
-  // Count upvotes (+) - deduplicate by user
-  const upvoteCount = reactions
-    .filter(event => event.content === '+')
-    .reduce(
-      (acc, event) => {
-        if (!acc.seen.has(event.pubkey)) {
-          acc.seen.add(event.pubkey)
-          acc.count++
-        }
-        return acc
-      },
-      { seen: new Set<string>(), count: 0 }
-    ).count
-
-  // Count downvotes (-) - deduplicate by user
-  const downvoteCount = reactions
-    .filter(event => event.content === '-')
-    .reduce(
-      (acc, event) => {
-        if (!acc.seen.has(event.pubkey)) {
-          acc.seen.add(event.pubkey)
-          acc.count++
-        }
-        return acc
-      },
-      { seen: new Set<string>(), count: 0 }
-    ).count
 
   const handleUpvote = async () => {
     if (!user || hasReacted) return

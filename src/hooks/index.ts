@@ -69,7 +69,7 @@ export { useDvmTranscode } from './useDvmTranscode'
 export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
 export { useWallet } from './useWallet'
 export { useZap } from './useZap'
-export { useVideoZaps } from './useVideoZaps'
+export { useEventZaps, useVideoZaps } from './useEventZaps'
 
 // Default export (special case)
 export { default as useVideoTimeline } from './useVideoTimeline'

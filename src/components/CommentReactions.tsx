@@ -1,0 +1,290 @@
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import { useCurrentUser, useNostrPublish, useAppContext, useEventZaps, useZap } from '@/hooks'
+import { useReactions } from '@/hooks/useReactions'
+import { useUserRelays } from '@/hooks/useUserRelays'
+import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { ThumbsUp, ThumbsDown, Zap, Loader2 } from 'lucide-react'
+import { cn, nowInSecs } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { formatSats } from '@/lib/zap-utils'
+import { ZapDialog } from './ZapDialog'
+import { WalletConnectDialog } from './WalletConnectDialog'
+
+interface CommentReactionsProps {
+  eventId: string
+  authorPubkey: string
+  kind?: number
+  className?: string
+}
+
+const LONG_PRESS_DELAY = 500
+
+export const CommentReactions = memo(function CommentReactions({
+  eventId,
+  authorPubkey,
+  kind = 1111,
+  className = '',
+}: CommentReactionsProps) {
+  const { user } = useCurrentUser()
+  const eventStore = useEventStore()
+  const { config } = useAppContext()
+  const { publish, isPending } = useNostrPublish()
+
+  const [showZapDialog, setShowZapDialog] = useState(false)
+  const [showWalletDialog, setShowWalletDialog] = useState(false)
+  const longPressTimer = useRef<number | null>(null)
+  const isLongPress = useRef(false)
+
+  // Get the event from the store for seenRelays
+  const storedEvent = useMemo(() => eventStore.getEvent(eventId), [eventStore, eventId])
+
+  // Get author's inbox relays (NIP-65)
+  const authorRelays = useUserRelays(authorPubkey)
+
+  // Use the useReactions hook to load reactions from relays
+  const reactions = useReactions({ eventId, authorPubkey, kind })
+
+  // Use the useZap hook for zapping
+  const { zap, isZapping, needsWallet, setNeedsWallet } = useZap({
+    eventId,
+    authorPubkey,
+  })
+
+  // Get zap totals
+  const { totalSats } = useEventZaps(eventId, authorPubkey)
+
+  const isOwnContent = user?.pubkey === authorPubkey
+
+  // Compute target relays: comment seenRelays + author inbox + user write relays
+  const targetRelays = useMemo(() => {
+    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+    const commentSeenRelays = storedEvent ? Array.from(getSeenRelays(storedEvent) || []) : []
+    const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    return Array.from(new Set([...commentSeenRelays, ...authorInboxRelays, ...writeRelays]))
+  }, [config.relays, storedEvent, authorRelays.data])
+
+  // Check if current user has upvoted or downvoted
+  const hasUpvoted = useMemo(
+    () => user && reactions.some(e => e.pubkey === user.pubkey && e.content === '+'),
+    [user, reactions]
+  )
+  const hasDownvoted = useMemo(
+    () => user && reactions.some(e => e.pubkey === user.pubkey && e.content === '-'),
+    [user, reactions]
+  )
+  const hasReacted = hasUpvoted || hasDownvoted
+
+  // Count upvotes (+) - deduplicate by user
+  const upvoteCount = useMemo(
+    () =>
+      reactions
+        .filter(e => e.content === '+')
+        .reduce(
+          (acc, e) => {
+            if (!acc.seen.has(e.pubkey)) {
+              acc.seen.add(e.pubkey)
+              acc.count++
+            }
+            return acc
+          },
+          { seen: new Set<string>(), count: 0 }
+        ).count,
+    [reactions]
+  )
+
+  // Count downvotes (-) - deduplicate by user
+  const downvoteCount = useMemo(
+    () =>
+      reactions
+        .filter(e => e.content === '-')
+        .reduce(
+          (acc, e) => {
+            if (!acc.seen.has(e.pubkey)) {
+              acc.seen.add(e.pubkey)
+              acc.count++
+            }
+            return acc
+          },
+          { seen: new Set<string>(), count: 0 }
+        ).count,
+    [reactions]
+  )
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
+  // Show wallet dialog when needed
+  useEffect(() => {
+    if (needsWallet && !showWalletDialog) {
+      requestAnimationFrame(() => {
+        setShowWalletDialog(true)
+        setNeedsWallet(false)
+      })
+    }
+  }, [needsWallet, showWalletDialog, setNeedsWallet])
+
+  const handleUpvote = useCallback(async () => {
+    if (!user || hasReacted) return
+
+    try {
+      const signedEvent = await publish({
+        event: {
+          kind: 7,
+          created_at: nowInSecs(),
+          content: '+',
+          tags: [
+            ['e', eventId],
+            ['p', authorPubkey],
+            ['k', `${kind}`],
+          ],
+        },
+        relays: targetRelays,
+      })
+
+      eventStore.add(signedEvent)
+    } catch (error) {
+      console.error('Failed to publish upvote:', error)
+    }
+  }, [user, hasReacted, publish, eventId, authorPubkey, kind, targetRelays, eventStore])
+
+  const handleDownvote = useCallback(async () => {
+    if (!user || hasReacted) return
+
+    try {
+      const signedEvent = await publish({
+        event: {
+          kind: 7,
+          created_at: nowInSecs(),
+          content: '-',
+          tags: [
+            ['e', eventId],
+            ['p', authorPubkey],
+            ['k', `${kind}`],
+          ],
+        },
+        relays: targetRelays,
+      })
+
+      eventStore.add(signedEvent)
+    } catch (error) {
+      console.error('Failed to publish downvote:', error)
+    }
+  }, [user, hasReacted, publish, eventId, authorPubkey, kind, targetRelays, eventStore])
+
+  const handleQuickZap = useCallback(async () => {
+    if (isLongPress.current) return
+    await zap()
+  }, [zap])
+
+  const handlePointerDown = useCallback(() => {
+    isLongPress.current = false
+    longPressTimer.current = window.setTimeout(() => {
+      isLongPress.current = true
+      setShowZapDialog(true)
+    }, LONG_PRESS_DELAY)
+  }, [])
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const handlePointerLeave = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setShowZapDialog(true)
+  }, [])
+
+  const handleZapFromDialog = useCallback(
+    async (amount: number, comment?: string) => {
+      return zap(amount, comment)
+    },
+    [zap]
+  )
+
+  const handleWalletConnected = useCallback(() => {
+    // Retry the pending zap if there was one
+  }, [])
+
+  return (
+    <>
+      <div className={cn('flex items-center gap-1', className)}>
+        {/* Upvote button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleUpvote}
+          disabled={!user || isPending || hasReacted}
+          aria-label="Upvote"
+        >
+          <ThumbsUp className={cn('w-3 h-3', hasUpvoted && 'fill-current')} />
+          {upvoteCount > 0 && <span className="ml-1">{upvoteCount}</span>}
+        </Button>
+
+        {/* Downvote button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleDownvote}
+          disabled={!user || isPending || hasReacted}
+          aria-label="Downvote"
+        >
+          <ThumbsDown className={cn('w-3 h-3', hasDownvoted && 'fill-current')} />
+          {downvoteCount > 0 && <span className="ml-1">{downvoteCount}</span>}
+        </Button>
+
+        {/* Zap button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleQuickZap}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
+          onContextMenu={handleContextMenu}
+          disabled={!user || isZapping || isOwnContent}
+          aria-label="Zap"
+        >
+          {isZapping ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Zap className={cn('w-3 h-3', totalSats > 0 && 'text-yellow-500')} />
+          )}
+          {totalSats > 0 && <span className="ml-1">{formatSats(totalSats)}</span>}
+        </Button>
+      </div>
+
+      <ZapDialog
+        open={showZapDialog}
+        onOpenChange={setShowZapDialog}
+        authorPubkey={authorPubkey}
+        onZap={handleZapFromDialog}
+        isZapping={isZapping}
+      />
+
+      <WalletConnectDialog
+        open={showWalletDialog}
+        onOpenChange={setShowWalletDialog}
+        onConnected={handleWalletConnected}
+      />
+    </>
+  )
+})

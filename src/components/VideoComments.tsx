@@ -12,6 +12,7 @@ import { imageProxy, nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { Reply, MoreVertical, Flag } from 'lucide-react'
+import { CommentReactions } from '@/components/CommentReactions'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -204,8 +205,9 @@ const CommentItem = React.memo(function CommentItem({
             videoLink={link}
             className="mt-1 break-all text-sm"
           />
-          {/* Reply and expand buttons in same row */}
+          {/* Reactions, reply, and expand buttons in same row */}
           <div className="flex items-center gap-1 mt-1">
+            <CommentReactions eventId={comment.id} authorPubkey={comment.pubkey} />
             {onReply && !isReplying && (
               <Button
                 variant="ghost"

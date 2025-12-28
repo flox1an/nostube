@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Comment Reactions**: Thumbs up/down and zap buttons on comments matching video reactions UX. Ghost buttons with small font, counts shown when ≥1, quick zap on click, custom amount on long-press/right-click. Reactions published to comment author's inbox relays (NIP-65).
 - **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment. Shows total sats received on videos with formatted display (e.g., "21.5k"). Zaps are published to author's inbox relays (NIP-65) and the relays where the video was seen.
 - **Nostr Wallet Connect**: NIP-47 wallet integration via `applesauce-wallet-connect`. Connect wallet in Settings or on first zap attempt. Shows wallet balance and supports Alby and other NWC-compatible wallets.
 - **NIP-65 Relay Targeting for Reactions**: Likes and dislikes are now published to the video author's inbox relays in addition to the user's write relays and the relays where the video was seen, ensuring better delivery.

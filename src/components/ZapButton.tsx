@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Zap, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useZap, useVideoZaps, useCurrentUser } from '@/hooks'
+import { useZap, useEventZaps, useCurrentUser } from '@/hooks'
 import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
 import { WalletConnectDialog } from './WalletConnectDialog'
@@ -34,7 +34,7 @@ export const ZapButton = memo(function ZapButton({
     eventId,
     authorPubkey,
   })
-  const { totalSats } = useVideoZaps(eventId, authorPubkey)
+  const { totalSats } = useEventZaps(eventId, authorPubkey)
 
   const isOwnContent = user?.pubkey === authorPubkey
 

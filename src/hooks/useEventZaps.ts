@@ -71,14 +71,14 @@ function setCache(eventId: string, totalSats: number, zapCount: number) {
 // Load cache on module init
 loadCache()
 
-interface UseVideoZapsReturn {
+interface UseEventZapsReturn {
   totalSats: number
   zapCount: number
   zaps: NostrEvent[]
   isLoading: boolean
 }
 
-export function useVideoZaps(eventId: string, authorPubkey: string): UseVideoZapsReturn {
+export function useEventZaps(eventId: string, authorPubkey: string): UseEventZapsReturn {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
 
@@ -167,3 +167,6 @@ export function useVideoZaps(eventId: string, authorPubkey: string): UseVideoZap
     isLoading: !zaps,
   }
 }
+
+// Backward compatibility alias
+export const useVideoZaps = useEventZaps

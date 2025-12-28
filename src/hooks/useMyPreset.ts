@@ -140,9 +140,13 @@ export function useMyPreset() {
         tags,
       }
 
-      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+      // Publish to all user relays + preset discovery relays for maximum visibility
+      const allRelays = new Set<string>()
+      config.relays.forEach(r => allRelays.add(r.url))
+      presetRelays.forEach(r => allRelays.add(r.url))
+      allRelays.add(METADATA_RELAY)
 
-      const signedEvent = await publish({ event, relays: writeRelays })
+      const signedEvent = await publish({ event, relays: Array.from(allRelays) })
 
       // Add to event store for immediate update
       eventStore.add(signedEvent)

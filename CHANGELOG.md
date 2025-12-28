@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Wallet Settings Section**: WalletSection in Settings page for managing NWC wallet connection. Shows connected wallet status with alias, balance in sats, disconnect button; or connection string input with validation and Alby link when disconnected.
 - **Zap Button**: ZapButton component with quick-zap (21 sats default) on click, long-press (500ms) or right-click to open ZapDialog for custom amounts. Shows total sats received with formatSats, loading spinner during payment, disabled for own content. Supports vertical (Shorts) and inline layouts. Opens WalletConnectDialog if wallet not connected.
 - **Zap Dialog**: ZapDialog component for sending zaps with preset amounts (21/100/500/1K/5K sats), custom amount input, optional comment (140 chars), recipient avatar/name display, and loading state during zap.
 - **Video Zaps Hook**: useVideoZaps hook to load zap receipts (kind 9735) for videos. Provides totalSats, zapCount, and zaps array with deduplication by bolt11 invoice.

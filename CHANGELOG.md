@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Video Zaps Hook**: useVideoZaps hook to load zap receipts (kind 9735) for videos. Provides totalSats, zapCount, and zaps array with deduplication by bolt11 invoice.
 - **Zap Hook**: useZap hook for complete zap flow - fetches author profile, creates signed zap request (kind 9734), requests LNURL invoice, and pays via NWC wallet connection.
 - **NWC Wallet Context**: WalletContext and useWallet hook for NIP-47 Nostr Wallet Connect integration. Manages wallet connection state, balance, and payment methods with localStorage persistence for connection restoration.
+- **Wallet Connect Dialog**: WalletConnectDialog component for NWC onboarding with connection string input, validation, loading states, error display, and link to Alby for getting NWC connection.
 - **Persistent Login Sessions**: Account login persists across browser reloads using localStorage. Extension accounts wait up to 3 seconds for NIP-07 extension to inject before restoration. Bunker accounts store connection URI for automatic reconnection.
 - **Multi-Blob Mirror Dialog**: Mirror dialog now detects all blobs (videos, thumbnails, subtitles) from a video event, matching debug dialog's detection. Shared blob extraction utility (`blossom-blob-extractor.ts`) consolidates deduplication logic between both dialogs. Select/deselect individual files to mirror with server availability counts.
 - **Mark All Notifications as Read**: Button in notification dropdown to mark all notifications as read at once

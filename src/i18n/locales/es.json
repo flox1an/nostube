@@ -337,6 +337,7 @@
       "description": "Seleccione un preajuste de configuración para relés y filtrado de contenido",
       "loading": "Cargando preajustes...",
       "noPresets": "No se encontraron preajustes",
+      "loadingMore": "Cargando más preajustes...",
       "selected": "Preajuste seleccionado",
       "whatArePresets": "¿Qué son los preajustes?",
       "explanation": "Los preajustes son configuraciones publicadas por la comunidad que incluyen relés recomendados, usuarios bloqueados y listas de autores NSFW. Al seleccionar un preajuste, adopta esa configuración para su experiencia en nostube."

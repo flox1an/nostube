@@ -337,6 +337,7 @@
       "description": "Wählen Sie eine Konfigurationsvorlage für Relays und Inhaltsfilterung",
       "loading": "Vorlagen werden geladen...",
       "noPresets": "Keine Vorlagen gefunden",
+      "loadingMore": "Weitere Vorlagen werden geladen...",
       "selected": "Vorlage ausgewählt",
       "whatArePresets": "Was sind Vorlagen?",
       "explanation": "Vorlagen sind von der Community veröffentlichte Konfigurationen mit empfohlenen Relays, blockierten Benutzern und NSFW-Autorenlisten. Durch Auswahl einer Vorlage übernehmen Sie diese Konfiguration für Ihr nostube-Erlebnis."

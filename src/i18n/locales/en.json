@@ -376,6 +376,7 @@
       "description": "Select a configuration preset to use for relays and content filtering",
       "loading": "Loading presets...",
       "noPresets": "No presets found",
+      "loadingMore": "Loading more presets...",
       "selected": "Preset selected",
       "whatArePresets": "What are presets?",
       "explanation": "Presets are community-published configurations that include recommended relays, blocked users, and NSFW author lists. By selecting a preset, you adopt that configuration for your nostube experience."

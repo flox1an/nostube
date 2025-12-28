@@ -11,6 +11,7 @@
 export interface NostubePresetContent {
   defaultRelays: string[]
   defaultBlossomProxy?: string
+  defaultThumbResizeServer?: string
   blockedPubkeys: string[]
   nsfwPubkeys: string[]
   blockedEvents: string[]
@@ -48,6 +49,7 @@ export const PRESET_D_TAG = 'nostube-presets'
 export const EMPTY_PRESET_CONTENT: NostubePresetContent = {
   defaultRelays: [],
   defaultBlossomProxy: undefined,
+  defaultThumbResizeServer: undefined,
   blockedPubkeys: [],
   nsfwPubkeys: [],
   blockedEvents: [],

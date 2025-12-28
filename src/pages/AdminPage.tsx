@@ -216,6 +216,7 @@ export function AdminPage() {
     description: '',
     defaultRelays: [],
     defaultBlossomProxy: '',
+    defaultThumbResizeServer: '',
     blockedPubkeys: [],
     nsfwPubkeys: [],
     blockedEvents: [],
@@ -230,6 +231,7 @@ export function AdminPage() {
           description: preset.description || '',
           defaultRelays: preset.defaultRelays,
           defaultBlossomProxy: preset.defaultBlossomProxy || '',
+          defaultThumbResizeServer: preset.defaultThumbResizeServer || '',
           blockedPubkeys: preset.blockedPubkeys,
           nsfwPubkeys: preset.nsfwPubkeys,
           blockedEvents: preset.blockedEvents,
@@ -355,6 +357,21 @@ export function AdminPage() {
               value={formData.defaultBlossomProxy}
               onChange={e => setFormData(d => ({ ...d, defaultBlossomProxy: e.target.value }))}
               placeholder="https://proxy.example.com"
+            />
+          </CardContent>
+        </Card>
+
+        {/* Thumbnail Resize Server */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Thumbnail Resize Server</CardTitle>
+            <CardDescription>Optional server for resizing thumbnail images</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Input
+              value={formData.defaultThumbResizeServer}
+              onChange={e => setFormData(d => ({ ...d, defaultThumbResizeServer: e.target.value }))}
+              placeholder="https://imgproxy.nostu.be/"
             />
           </CardContent>
         </Card>

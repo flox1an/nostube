@@ -51,8 +51,11 @@ export function ZapButton({
   // Show wallet dialog when needed
   useEffect(() => {
     if (needsWallet && !showWalletDialog) {
-      setShowWalletDialog(true)
-      setNeedsWallet(false)
+      // Use requestAnimationFrame to avoid synchronous setState in effect
+      requestAnimationFrame(() => {
+        setShowWalletDialog(true)
+        setNeedsWallet(false)
+      })
     }
   }, [needsWallet, showWalletDialog, setNeedsWallet])
 

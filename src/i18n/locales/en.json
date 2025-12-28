@@ -678,5 +678,31 @@
     "it": "Italian",
     "tr": "Turkish",
     "nl": "Dutch"
+  },
+  "wallet": {
+    "title": "Lightning Wallet",
+    "description": "Connect your lightning wallet to send zaps",
+    "connect": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "balance": "Balance",
+    "refresh": "Refresh",
+    "nwcPlaceholder": "nostr+walletconnect://...",
+    "getAlby": "Get NWC from Alby",
+    "invalidUri": "Invalid NWC URI format",
+    "connectionFailed": "Failed to connect wallet"
+  },
+  "zap": {
+    "send": "Send Zap",
+    "zapping": "Zapping...",
+    "amount": "Amount (sats)",
+    "customAmount": "Custom amount",
+    "comment": "Comment (optional)",
+    "commentPlaceholder": "Add a message...",
+    "success": "Zapped {{amount}} sats!",
+    "noLightningAddress": "Author cannot receive zaps",
+    "loginRequired": "Please log in to zap",
+    "failed": "Zap failed"
   }
 }

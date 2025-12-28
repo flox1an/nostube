@@ -1,6 +1,7 @@
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
 import { useAppContext, useLikedEvents, useReadRelays, useReportedPubkeys } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
@@ -13,6 +14,7 @@ export function LikedVideosPage() {
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
   const blockedPubkeys = useReportedPubkeys()
+  const { presetContent } = useSelectedPreset()
   const [loadingVideos, setLoadingVideos] = useState(false)
   const loadingRef = useRef(false)
   const likedIdsStringRef = useRef<string>('')
@@ -37,7 +39,14 @@ export function LikedVideosPage() {
     // Get events directly from EventStore
     const events = uniqueLikedIds.map(id => eventStore.getEvent(id)).filter(Boolean)
 
-    const processed = processEvents(events, readRelays, blockedPubkeys, config.blossomServers)
+    const processed = processEvents(
+      events,
+      readRelays,
+      blockedPubkeys,
+      config.blossomServers,
+      undefined,
+      presetContent.nsfwPubkeys
+    )
 
     // Final deduplication: filter out any duplicate videos by ID (just in case)
     const seenIds = new Set<string>()
@@ -48,7 +57,15 @@ export function LikedVideosPage() {
       seenIds.add(video.id)
       return true
     })
-  }, [likedIdsString, forceUpdate, eventStore, readRelays, blockedPubkeys, config.blossomServers])
+  }, [
+    likedIdsString,
+    forceUpdate,
+    eventStore,
+    readRelays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+  ])
 
   // Load missing video events from relays
   useEffect(() => {

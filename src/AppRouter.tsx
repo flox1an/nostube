@@ -35,6 +35,10 @@ const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default:
 const PlaylistPage = lazy(() => import('./pages/Playlists'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const PresetsPage = lazy(() =>
+  import('./pages/PresetsPage').then(m => ({ default: m.PresetsPage }))
+)
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
@@ -175,6 +179,22 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <SettingsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <AdminPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/presets"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <PresetsPage />
               </Suspense>
             }
           />

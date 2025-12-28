@@ -17,6 +17,7 @@ import {
   useAuthorPageRelays,
   useLoadAuthorRelayList,
 } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -97,6 +98,7 @@ export function AuthorPage() {
 
   const { config, pool } = useAppContext()
   const eventStoreInstance = useEventStore()
+  const { presetContent } = useSelectedPreset()
 
   // Get relays for this author page
   // Initially: nprofile relays, user config, presets, purplepag.es
@@ -186,7 +188,14 @@ export function AuthorPage() {
 
         // Process events to VideoEvent format
         const { processEvents } = await import('@/utils/video-event')
-        const processedVideos = processEvents(events, relays, undefined, config.blossomServers)
+        const processedVideos = processEvents(
+          events,
+          relays,
+          undefined,
+          config.blossomServers,
+          undefined,
+          presetContent.nsfwPubkeys
+        )
 
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
         loadedPlaylistsRef.current.add(playlist.identifier)
@@ -200,7 +209,7 @@ export function AuthorPage() {
         setLoadingPlaylist(null)
       }
     },
-    [config, pool, eventStoreInstance, relays]
+    [config, pool, eventStoreInstance, relays, presetContent.nsfwPubkeys]
   )
 
   // Auto-fetch video events for all playlists when playlists are loaded

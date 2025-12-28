@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **App Presets System**: NIP-78 based preset system (kind 30078) for app-wide configuration. Admins can manage blocked pubkeys, NSFW authors, default relays, and blossom proxy via `/admin` route. Users can browse and select presets from other users via `/presets` route. Selected preset stored in localStorage, with 1-hour cache for performance. Default preset: `npub1klr0dy2ul2dx9llk58czvpx73rprcmrvd5dc7ck8esg8f8es06qs427gxc`.
 - **Comment Reactions**: Thumbs up/down and zap buttons on comments matching video reactions UX. Ghost buttons with small font, counts shown when ≥1, quick zap on click, custom amount on long-press/right-click. Reactions published to comment author's inbox relays (NIP-65).
 - **Unified Event Stats Cache**: New `useEventStats` hook combines zaps and reaction counts with localStorage caching (1-hour TTL). Shows cached values instantly on page load, fetches fresh data in background. Used by both video and comment reactions for consistent caching behavior.
 - **Lightning Zaps**: Send zaps to video creators with NIP-57 support. Quick zap (21 sats) on click, custom amount on long-press/right-click with preset amounts (21, 100, 500, 1000, 5000) and optional comment. Shows total sats received on videos with formatted display (e.g., "21.5k"). Zaps are published to author's inbox relays (NIP-65) and the relays where the video was seen.

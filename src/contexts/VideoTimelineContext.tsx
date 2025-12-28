@@ -11,6 +11,7 @@ import { type VideoType } from '@/contexts/AppContext'
 import { type VideoEvent } from '@/utils/video-event'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useReportedPubkeys, useAppContext } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { getKindsForType } from '@/lib/video-types'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
@@ -39,6 +40,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
   const blockedPubkeys = useReportedPubkeys()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
 
   // Single timeline state
   const [timelineState, setTimelineState] = useState<TimelineState>({
@@ -88,7 +90,16 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       const videos$ = eventStore
         .timeline(filter)
         .pipe(
-          map(events => processEvents(events, readRelays, blockedPubkeys, config.blossomServers))
+          map(events =>
+            processEvents(
+              events,
+              readRelays,
+              blockedPubkeys,
+              config.blossomServers,
+              undefined,
+              presetContent.nsfwPubkeys
+            )
+          )
         )
 
       // Subscribe to videos observable with cleanup tracking
@@ -121,7 +132,14 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
           })
       }
     },
-    [blockedPubkeys, eventStore, config.relays, config.blossomServers, pool]
+    [
+      blockedPubkeys,
+      eventStore,
+      config.relays,
+      config.blossomServers,
+      pool,
+      presetContent.nsfwPubkeys,
+    ]
   )
 
   const contextValue = useMemo(

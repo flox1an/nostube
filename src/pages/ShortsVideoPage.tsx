@@ -22,6 +22,7 @@ import {
   useCommentCount,
   usePreloadVideoData,
 } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import {
   createEventLoader,
@@ -514,6 +515,7 @@ function ShortVideoItem({
 
 export function ShortsVideoPage() {
   const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const { nevent } = useParams<{ nevent: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -729,8 +731,8 @@ export function ShortsVideoPage() {
   // Process the initial video
   const initialVideo = useMemo(() => {
     if (!nevent || !initialVideoEvent) return null
-    return processEvent(initialVideoEvent, [], config.blossomServers)
-  }, [nevent, initialVideoEvent, config.blossomServers])
+    return processEvent(initialVideoEvent, [], config.blossomServers, presetContent.nsfwPubkeys)
+  }, [nevent, initialVideoEvent, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Track whether we've loaded from store or relays
   const loadSourceRef = useRef<'store' | 'relays' | null>(null)
@@ -794,9 +796,14 @@ export function ShortsVideoPage() {
     const shortsSub = shortsObservable
       .pipe(
         map(events => {
-          return processEvents(events, readRelays, blockedPubkeys, config.blossomServers).filter(
-            v => v.type === 'shorts'
-          )
+          return processEvents(
+            events,
+            readRelays,
+            blockedPubkeys,
+            config.blossomServers,
+            undefined,
+            presetContent.nsfwPubkeys
+          ).filter(v => v.type === 'shorts')
         })
       )
       .subscribe(videos => {

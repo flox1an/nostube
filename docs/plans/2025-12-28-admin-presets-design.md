@@ -41,7 +41,7 @@ interface NostubePresetContent {
 interface NostubePreset extends NostubePresetContent {
   name: string
   description?: string
-  pubkey: string  // owner
+  pubkey: string // owner
   createdAt: number
 }
 ```
@@ -90,7 +90,7 @@ interface AppConfig {
   nsfwFilter: 'hide' | 'warning' | 'show'
 
   // new
-  selectedPresetPubkey: string | null  // null = use default
+  selectedPresetPubkey: string | null // null = use default
 }
 ```
 

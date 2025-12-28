@@ -27,6 +27,7 @@ import {
   useVideoHistory,
   useIsMobile,
 } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
 import { useCommentHighlight } from '@/hooks/useCommentHighlight'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
@@ -50,6 +51,7 @@ const EMPTY_URLS: string[] = []
 export function VideoPage() {
   const { t } = useTranslation()
   const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const { nevent } = useParams<{ nevent: string }>()
   const [searchParams] = useSearchParams()
   const playlistParam = searchParams.get('playlist')
@@ -231,12 +233,17 @@ export function VideoPage() {
 
     // If we have the event from EventStore, process it
     if (videoEvent) {
-      const processedEvent = processEvent(videoEvent, [], config.blossomServers)
+      const processedEvent = processEvent(
+        videoEvent,
+        [],
+        config.blossomServers,
+        presetContent.nsfwPubkeys
+      )
       return processedEvent
     }
 
     return null
-  }, [nevent, videoEvent, config.blossomServers])
+  }, [nevent, videoEvent, config.blossomServers, presetContent.nsfwPubkeys])
 
   const isLoading = !video && videoEvent === undefined
 

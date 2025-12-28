@@ -274,11 +274,12 @@ export function processEvents(
   relays: string[],
   blockPubkeys?: ReportedPubkeys,
   blossomServers?: BlossomServer[],
-  missingVideoIds?: Set<string>
+  missingVideoIds?: Set<string>,
+  nsfwPubkeys?: string[]
 ): VideoEvent[] {
   const processed = events
     .filter((event): event is Event => event !== undefined)
-    .map(event => processEvent(event, relays, blossomServers))
+    .map(event => processEvent(event, relays, blossomServers, nsfwPubkeys))
     .filter(
       (video): video is VideoEvent =>
         video !== undefined &&
@@ -297,7 +298,8 @@ export function processEvents(
 export function processEvent(
   event: Event,
   relays: string[],
-  blossomServers?: BlossomServer[]
+  blossomServers?: BlossomServer[],
+  nsfwPubkeys?: string[]
 ): VideoEvent | undefined {
   // Get relays from applesauce's seenRelays tracking
   const seenRelays = getSeenRelays(event)
@@ -307,7 +309,7 @@ export function processEvent(
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')
   const contentWarning =
     event.tags.find(t => t[0] == 'content-warning')?.[1] ||
-    (isNSFWAuthor(event.pubkey) ? 'NSFW' : undefined)
+    (isNSFWAuthor(event.pubkey, nsfwPubkeys) ? 'NSFW' : undefined)
 
   if (imetaTags.length > 0) {
     // Parse all imeta tags

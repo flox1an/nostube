@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext, useVideoHistory } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 export function HistoryPage() {
   const { t } = useTranslation()
   const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const { history, clearHistory } = useVideoHistory()
   const [isClearing, setIsClearing] = useState(false)
 
@@ -28,14 +30,14 @@ export function HistoryPage() {
     return history
       .map(entry => {
         try {
-          return processEvent(entry.event, [], config.blossomServers)
+          return processEvent(entry.event, [], config.blossomServers, presetContent.nsfwPubkeys)
         } catch (error) {
           console.error('Error processing history event:', error)
           return null
         }
       })
       .filter((video): video is VideoEvent => video !== null)
-  }, [history, config.blossomServers])
+  }, [history, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Update document title
   useEffect(() => {

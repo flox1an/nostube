@@ -62,6 +62,8 @@ export interface AppConfig {
   nsfwFilter: NsfwFilter
   /** Media failover configuration */
   media?: MediaConfig
+  /** Selected preset pubkey (null = use default preset) */
+  selectedPresetPubkey?: string | null
 }
 
 export interface AppContextType {

@@ -7,6 +7,7 @@ import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
@@ -163,6 +164,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 }: VideoSuggestionsProps) {
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
   const readRelays = useReadRelays()
 
@@ -258,7 +260,12 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     // Process events into VideoEvent objects
     const processedVideos: VideoEvent[] = []
     for (const event of events) {
-      const processed = processEvent(event, readRelays, config.blossomServers)
+      const processed = processEvent(
+        event,
+        readRelays,
+        config.blossomServers,
+        presetContent.nsfwPubkeys
+      )
       if (processed) {
         processedVideos.push(processed)
       }
@@ -278,6 +285,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     currentVideoId,
     readRelays,
     config.blossomServers,
+    presetContent.nsfwPubkeys,
   ])
 
   return (

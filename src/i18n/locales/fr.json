@@ -328,6 +328,11 @@
   },
   "settings": {
     "title": "Paramètres",
+    "selectSection": "Sélectionner une section",
+    "selectSectionDescription": "Choisissez une catégorie de paramètres dans le menu",
+    "presets": {
+      "title": "Préréglages"
+    },
     "general": {
       "title": "Paramètres généraux",
       "description": "Configurer les préférences générales de l'application",

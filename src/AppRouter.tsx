@@ -34,11 +34,38 @@ const VideoNotesPage = lazy(() =>
 const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default: m.UploadPage })))
 const PlaylistPage = lazy(() => import('./pages/Playlists'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
-const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
-const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
-const PresetsPage = lazy(() =>
-  import('./pages/PresetsPage').then(m => ({ default: m.PresetsPage }))
+const SettingsLayout = lazy(() =>
+  import('./pages/settings/SettingsLayout').then(m => ({ default: m.SettingsLayout }))
 )
+const GeneralSettingsPage = lazy(() =>
+  import('./pages/settings/GeneralSettingsPage').then(m => ({ default: m.GeneralSettingsPage }))
+)
+const WalletSettingsPage = lazy(() =>
+  import('./pages/settings/WalletSettingsPage').then(m => ({ default: m.WalletSettingsPage }))
+)
+const RelaysSettingsPage = lazy(() =>
+  import('./pages/settings/RelaysSettingsPage').then(m => ({ default: m.RelaysSettingsPage }))
+)
+const BlossomSettingsPage = lazy(() =>
+  import('./pages/settings/BlossomSettingsPage').then(m => ({ default: m.BlossomSettingsPage }))
+)
+const CachingSettingsPage = lazy(() =>
+  import('./pages/settings/CachingSettingsPage').then(m => ({ default: m.CachingSettingsPage }))
+)
+const CacheSettingsPage = lazy(() =>
+  import('./pages/settings/CacheSettingsPage').then(m => ({ default: m.CacheSettingsPage }))
+)
+const MissingVideosSettingsPage = lazy(() =>
+  import('./pages/settings/MissingVideosSettingsPage').then(m => ({
+    default: m.MissingVideosSettingsPage,
+  }))
+)
+const PresetsSettingsPage = lazy(() =>
+  import('./pages/settings/PresetsSettingsPage').then(m => ({
+    default: m.PresetsSettingsPage,
+  }))
+)
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
@@ -178,23 +205,80 @@ export function AppRouter() {
             path="/settings"
             element={
               <Suspense fallback={<PageLoader />}>
-                <SettingsPage />
+                <SettingsLayout />
               </Suspense>
             }
-          />
+          >
+            <Route
+              path="general"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <GeneralSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="presets"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PresetsSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="wallet"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <WalletSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="relays"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <RelaysSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="blossom"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <BlossomSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="caching"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <CachingSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="cache"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <CacheSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="missing-videos"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <MissingVideosSettingsPage />
+                </Suspense>
+              }
+            />
+          </Route>
           <Route
             path="/admin"
             element={
               <Suspense fallback={<PageLoader />}>
                 <AdminPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/presets"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PresetsPage />
               </Suspense>
             }
           />

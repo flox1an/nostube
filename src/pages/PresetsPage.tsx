@@ -1,12 +1,10 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { Loader2, Settings, Plus } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { usePresets } from '@/hooks/usePresets'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PresetCard } from '@/components/presets/PresetCard'
-import { Button } from '@/components/ui/button'
 import { DEFAULT_PRESET_PUBKEY } from '@/types/preset'
 
 export function PresetsPage() {
@@ -27,36 +25,13 @@ export function PresetsPage() {
     toast.success('Preset selected')
   }
 
-  // Check if user has their own preset
-  const userHasPreset = user && presets.some(p => p.pubkey === user.pubkey)
-
   return (
     <div className="max-w-560 mx-auto p-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Choose a Preset</h1>
-          <p className="text-muted-foreground">
-            Select a configuration preset to use for relays and content filtering
-          </p>
-        </div>
-
-        {user && (
-          <Link to="/admin">
-            <Button variant="outline">
-              {userHasPreset ? (
-                <>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Edit Your Preset
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Preset
-                </>
-              )}
-            </Button>
-          </Link>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Choose a Preset</h1>
+        <p className="text-muted-foreground">
+          Select a configuration preset to use for relays and content filtering
+        </p>
       </div>
 
       {isLoading ? (
@@ -66,15 +41,7 @@ export function PresetsPage() {
         </div>
       ) : presets.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No presets found</p>
-          {user && (
-            <Link to="/admin">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create the first preset
-              </Button>
-            </Link>
-          )}
+          <p className="text-muted-foreground">No presets found</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -368,6 +368,11 @@
   },
   "settings": {
     "title": "Settings",
+    "selectSection": "Select a section",
+    "selectSectionDescription": "Choose a settings category from the menu",
+    "presets": {
+      "title": "Presets"
+    },
     "general": {
       "title": "General Settings",
       "description": "Configure general application preferences",

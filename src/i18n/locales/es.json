@@ -329,6 +329,11 @@
   },
   "settings": {
     "title": "Ajustes",
+    "selectSection": "Seleccionar sección",
+    "selectSectionDescription": "Elija una categoría de configuración del menú",
+    "presets": {
+      "title": "Preajustes"
+    },
     "general": {
       "title": "Ajustes Generales",
       "description": "Configure las preferencias generales de la aplicación",

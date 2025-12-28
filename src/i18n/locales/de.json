@@ -329,6 +329,11 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "selectSection": "Bereich auswählen",
+    "selectSectionDescription": "Wählen Sie eine Einstellungskategorie aus dem Menü",
+    "presets": {
+      "title": "Vorlagen"
+    },
     "general": {
       "title": "Allgemeine Einstellungen",
       "description": "Allgemeine Anwendungseinstellungen konfigurieren",

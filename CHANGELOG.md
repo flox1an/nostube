@@ -94,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Author Page Relay Discovery in Incognito**: Added indexer relays (index.hzrd149.com, relay.noswhere.com, relay.snort.social) to NIP-65 relay list discovery in `useUserRelays`. Previously, author pages in incognito mode with no configured relays couldn't find author's outbox relays for video loading.
 - **VideoPage Subscription Leak**: Fixed relay subscriptions not being closed when navigating away from video pages. Changed from RxJS `finalize()` to explicit `useEffect` cleanup to guarantee subscription closure on unmount. Added `take(1)` to complete observables after initial load.
 - **Zap Invoice Request Encoding**: Fixed double URL-encoding of zap request causing 400 errors from LNURL endpoints. `URLSearchParams.set()` auto-encodes values, so manual `encodeURIComponent()` was redundant.
 - **Zap Receipt Fetching**: Added relay subscription to fetch kind 9735 zap receipts from popular relays (damus, primal, nos.lol). Previously only reading from eventStore without fetching.

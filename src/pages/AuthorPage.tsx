@@ -15,7 +15,6 @@ import {
   useAppContext,
   useInfiniteScroll,
   useAuthorPageRelays,
-  useLoadAuthorRelayList,
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
@@ -110,21 +109,9 @@ export function AuthorPage() {
 
   // Stabilize relays array to prevent unnecessary loader recreations
   // Only update if the relay URLs actually changed (deep comparison)
+  // Note: NIP-65 relay discovery is handled by useUserRelays inside useAuthorPageRelays
+  // with indexer relays included for better discovery in incognito mode
   const relays = useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
-
-  // Load author's NIP-65 relay list from network
-  // Uses a broad set of discovery relays to ensure we find the relay list
-  const discoveryRelays = useMemo(
-    () => [
-      ...relays,
-      'wss://index.hzrd149.com', // Relay indexer
-      'wss://relay.noswhere.com', // Another popular relay
-      'wss://relay.snort.social', // Snort relay
-    ],
-    [relays]
-  )
-
-  useLoadAuthorRelayList(pubkey, discoveryRelays)
 
   // Fetch playlists and videos for this author using the reactive relay set
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)

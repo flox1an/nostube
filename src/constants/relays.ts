@@ -18,6 +18,17 @@ export const presetRelays: Relay[] = [
  */
 export const METADATA_RELAY = 'wss://purplepag.es'
 
+/**
+ * Indexer relays for discovering NIP-65 relay lists and profile metadata.
+ * These aggregate data from many relays and are useful for discovery when
+ * the user has no configured relays (e.g., incognito mode).
+ */
+export const INDEXER_RELAYS: string[] = [
+  'wss://index.hzrd149.com', // Relay indexer
+  'wss://relay.noswhere.com', // Popular relay with good coverage
+  'wss://relay.snort.social', // Snort relay
+]
+
 export const presetBlossomServers: BlossomServer[] = [
   {
     url: 'https://almond.slidestr.net',

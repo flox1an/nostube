@@ -4,7 +4,7 @@ import { type NostrEvent } from 'nostr-tools'
 import { useEffect, useMemo } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from './useAppContext'
-import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import { METADATA_RELAY, presetRelays, INDEXER_RELAYS } from '@/constants/relays'
 
 export interface UserRelayInfo {
   url: string
@@ -37,6 +37,8 @@ export function useUserRelays(pubkey: string | undefined) {
     config.relays.forEach(relay => urls.add(relay.url))
     presetRelays.forEach(relay => urls.add(relay.url))
     urls.add(METADATA_RELAY)
+    // Include indexer relays for better NIP-65 discovery in incognito mode
+    INDEXER_RELAYS.forEach(url => urls.add(url))
     return Array.from(urls)
   }, [config.relays])
 

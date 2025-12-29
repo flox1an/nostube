@@ -31,7 +31,7 @@ export interface NostubePreset extends NostubePresetContent {
  * Default preset pubkey - used when no preset is selected
  */
 export const DEFAULT_PRESET_PUBKEY =
-  'b7c6f691cf8a9a65ffd6a1f02c0368d18c3c6d8d8d6e3d62c7cc8093e7307e80' // npub1klr0dy2ul2dx9llk58czvpx73rprcmrvd5dc7ck8esg8f8es06qs427gxc
+  'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81'
 
 /**
  * Event kind for app-specific data (NIP-78)

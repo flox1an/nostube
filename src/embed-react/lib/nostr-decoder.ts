@@ -70,7 +70,7 @@ export function decodeVideoIdentifier(identifier: string): DecodedIdentifier | n
  * Get default relay list
  */
 export function getDefaultRelays(): string[] {
-  return ['wss://relay.divine.video', 'wss://relay.nostr.band']
+  return ['wss://relay.divine.video', 'wss://relay.damus.io']
 }
 
 /**

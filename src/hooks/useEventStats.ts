@@ -9,13 +9,7 @@ import { combineRelays } from '@/lib/utils'
 import type { NostrEvent } from 'nostr-tools'
 
 // Popular relays that typically have zap receipts
-const ZAP_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://nostr.wine',
-]
+const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
 
 const STATS_CACHE_KEY = 'event-stats-cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour

@@ -68,6 +68,8 @@ export function useMyPreset() {
       return
     }
 
+    console.log(discoveryRelays)
+
     queueMicrotask(() => setIsLoading(true))
 
     const loader = createAddressLoader(pool)

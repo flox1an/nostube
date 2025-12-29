@@ -6,7 +6,6 @@ export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@/lib/blossom-u
 export const presetRelays: Relay[] = [
   { url: 'wss://relay.divine.video', name: 'relay.divine.video', tags: ['read'] },
   { url: 'wss://ditto.pub/relay', name: 'ditto.pub', tags: ['read'] },
-  { url: 'wss://relay.nostr.band', name: 'relay.nostr.band', tags: ['read'] },
   { url: 'wss://relay.damus.io', name: 'relay.damus.io', tags: ['read'] },
   { url: 'wss://relay.primal.net', name: 'relay.primal.net', tags: ['read'] },
   { url: 'wss://nos.lol', name: 'nos.lol', tags: ['read'] },

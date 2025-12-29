@@ -20,6 +20,7 @@ import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
+import { PresetProvider } from '@/contexts/PresetContext'
 import { useAppContext } from '@/hooks'
 import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
@@ -130,24 +131,26 @@ export function App() {
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
             <FactoryProvider factory={factory}>
-              <UserRelaysProvider>
-                <UploadManagerProvider>
-                  <WalletProvider>
-                    <TooltipProvider>
-                      <AccountRestoreInit />
-                      <UserRelaySync />
-                      <RelayPoolSync />
-                      <BatchedProfileLoaderInit />
-                      <LoginTimeTrackingInit />
-                      <BlossomServerSync />
-                      <OnboardingDialog />
-                      <Suspense>
-                        <AppRouter />
-                      </Suspense>
-                    </TooltipProvider>
-                  </WalletProvider>
-                </UploadManagerProvider>
-              </UserRelaysProvider>
+              <PresetProvider>
+                <UserRelaysProvider>
+                  <UploadManagerProvider>
+                    <WalletProvider>
+                      <TooltipProvider>
+                        <AccountRestoreInit />
+                        <UserRelaySync />
+                        <RelayPoolSync />
+                        <BatchedProfileLoaderInit />
+                        <LoginTimeTrackingInit />
+                        <BlossomServerSync />
+                        <OnboardingDialog />
+                        <Suspense>
+                          <AppRouter />
+                        </Suspense>
+                      </TooltipProvider>
+                    </WalletProvider>
+                  </UploadManagerProvider>
+                </UserRelaysProvider>
+              </PresetProvider>
             </FactoryProvider>
           </EventStoreProvider>
         </AccountsProvider>

@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Required Preset Loading**: App now blocks rendering until the preset configuration is loaded from Nostr relays. Shows loading spinner while fetching and error state with retry button if loading fails. Cached presets allow instant startup while fresh data loads in background. This ensures NSFW filtering and blocked pubkeys are always enforced.
 - **Mobile Video Page Playlist Button**: Playlist button moved into dropdown menu on mobile to reduce button bar clutter.
 - **Mobile Reaction Button Spacing**: Reduced internal spacing (icon to count) in reaction and zap buttons on mobile (`ml-1` vs `ml-2`).
 - **useIsMobile Reactivity**: Hook now listens for resize events and media query changes, updating state when DevTools mobile toggle is used.

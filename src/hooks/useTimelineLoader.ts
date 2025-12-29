@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { cacheRequest } from '@/nostr/core'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
 import { of } from 'rxjs'
@@ -89,6 +90,7 @@ export function useTimelineLoader({
     })()
     const loader = createTimelineLoader(pool, relays, filters, {
       eventStore,
+      cache: cacheRequest, // Load from IndexedDB cache first
       limit,
     })
 
@@ -150,6 +152,7 @@ export function useTimelineLoader({
 
     const loader = createTimelineLoader(pool, relays, paginatedFilters, {
       eventStore,
+      cache: cacheRequest, // Load from IndexedDB cache first
       limit,
     })
 

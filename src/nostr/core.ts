@@ -52,6 +52,7 @@ const replaceableLoader = createAddressLoader(relayPool, {
   eventStore,
   cacheRequest,
   lookupRelays: DEFAULT_RELAYS,
+  bufferTime: 0, // Don't batch - emit first result immediately
 })
 
 // Set loaders on event store so useEventModel can fetch data

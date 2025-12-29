@@ -35,7 +35,12 @@ interface CachedPreset {
   cachedAt: number
 }
 
-function getCachedPreset(expectedPubkey: string): NostubePreset | null {
+interface CacheResult {
+  preset: NostubePreset
+  stale: boolean
+}
+
+function getCachedPreset(expectedPubkey: string): CacheResult | null {
   try {
     const cached = localStorage.getItem(CACHE_KEY)
     if (!cached) return null
@@ -48,13 +53,10 @@ function getCachedPreset(expectedPubkey: string): NostubePreset | null {
       return null
     }
 
-    // Check if cache is expired
-    if (Date.now() - parsed.cachedAt > CACHE_TTL) {
-      localStorage.removeItem(CACHE_KEY)
-      return null
-    }
-
-    return parsed.preset
+    // Return preset with stale flag - don't delete expired cache
+    // Use stale-while-revalidate: show immediately, fetch fresh in background
+    const stale = Date.now() - parsed.cachedAt > CACHE_TTL
+    return { preset: parsed.preset, stale }
   } catch {
     return null
   }
@@ -95,10 +97,11 @@ export function PresetProvider({ children }: PresetProviderProps) {
   // Get selected pubkey from config, fall back to default
   const selectedPubkey = config.selectedPresetPubkey ?? DEFAULT_PRESET_PUBKEY
 
-  // Check for cached preset immediately
-  const [cachedPreset] = useState<NostubePreset | null>(() => getCachedPreset(selectedPubkey))
+  // Check for cached preset immediately (stale-while-revalidate)
+  const [cacheResult] = useState<CacheResult | null>(() => getCachedPreset(selectedPubkey))
+  const cachedPreset = cacheResult?.preset ?? null
 
-  // Track loading state - start as 'loaded' if we have a cached preset
+  // Track loading state - start as 'loaded' if we have a cached preset (even if stale)
   const [status, setStatus] = useState<PresetStatus>(() => (cachedPreset ? 'loaded' : 'loading'))
   const [retryCount, setRetryCount] = useState(0)
 
@@ -128,7 +131,10 @@ export function PresetProvider({ children }: PresetProviderProps) {
     // Track if we received a valid event in this effect run
     let receivedEvent = false
 
-    const loader = createAddressLoader(pool)
+    const loader = createAddressLoader(pool, {
+      eventStore,
+      bufferTime: 0, // Don't batch - emit first result immediately
+    })
     const subscription = loader({
       kind: PRESET_EVENT_KIND,
       pubkey: selectedPubkey,

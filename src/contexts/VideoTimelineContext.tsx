@@ -14,6 +14,7 @@ import { useReportedPubkeys, useAppContext } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { getKindsForType } from '@/lib/video-types'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { cacheRequest } from '@/nostr/core'
 import { processEvents } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
 import { hashObjectBigInt } from '@/lib/utils'
@@ -120,6 +121,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
         loaderSubscriptionRef.current = createTimelineLoader(pool, readRelays, filter, {
           limit: 50,
           eventStore,
+          cache: cacheRequest, // Load from IndexedDB cache first
         })()
           .pipe(
             finalize(() => {

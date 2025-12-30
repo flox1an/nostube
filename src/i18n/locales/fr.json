@@ -538,6 +538,7 @@
   },
   "notifications": {
     "commentedOnYourVideo": "a commenté votre vidéo",
+    "zappedYourVideo": "a zappé votre vidéo {{amount}} sats",
     "noNotifications": "Aucune nouvelle notification",
     "uploadComplete": "Téléchargement terminé",
     "transcodeComplete": "Transcodage terminé",

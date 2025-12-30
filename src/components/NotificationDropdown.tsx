@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { Loader2, CheckCheck } from 'lucide-react'
 import type { Notification } from '../types/notification'
-import { isVideoNotification, isUploadNotification } from '../types/notification'
+import { isVideoNotification, isUploadNotification, isZapNotification } from '../types/notification'
 import { NotificationItem } from './NotificationItem'
 import { UploadNotificationItem } from './UploadNotificationItem'
+import { ZapNotificationItem } from './ZapNotificationItem'
 import { ScrollArea } from './ui/scroll-area'
 import { Button } from './ui/button'
 
@@ -76,6 +77,15 @@ export function NotificationDropdown({
             if (isUploadNotification(notification)) {
               return (
                 <UploadNotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onClick={() => onNotificationClick(notification)}
+                />
+              )
+            }
+            if (isZapNotification(notification)) {
+              return (
+                <ZapNotificationItem
                   key={notification.id}
                   notification={notification}
                   onClick={() => onNotificationClick(notification)}

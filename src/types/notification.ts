@@ -27,7 +27,19 @@ export interface UploadNotification {
   errorMessage?: string // for error notifications
 }
 
-export type Notification = VideoNotification | UploadNotification
+export interface ZapNotification {
+  id: string // zap receipt event ID
+  zapperPubkey: string // who sent the zap
+  amount: number // sats
+  comment?: string // optional zap comment
+  videoId: string // zapped video event ID
+  videoTitle?: string // cached video title
+  timestamp: number // unix timestamp in seconds
+  read: boolean
+  videoEventId: string // for navigation (nevent or naddr)
+}
+
+export type Notification = VideoNotification | UploadNotification | ZapNotification
 
 export interface NotificationStorage {
   lastLoginTime: number
@@ -38,6 +50,11 @@ export interface NotificationStorage {
 export interface UploadNotificationStorage {
   notifications: UploadNotification[]
   lastUpdated: number
+}
+
+export interface ZapNotificationStorage {
+  notifications: ZapNotification[]
+  lastFetchTime: number
 }
 
 // Type guards
@@ -52,4 +69,8 @@ export function isUploadNotification(n: Notification): n is UploadNotification {
       (n as UploadNotification).type
     )
   )
+}
+
+export function isZapNotification(n: Notification): n is ZapNotification {
+  return 'zapperPubkey' in n && 'amount' in n
 }

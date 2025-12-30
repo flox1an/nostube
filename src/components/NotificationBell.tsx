@@ -4,7 +4,7 @@ import { useAllNotifications } from '../hooks/useAllNotifications'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { NotificationDropdown } from './NotificationDropdown'
 import type { Notification } from '../types/notification'
-import { isVideoNotification, isUploadNotification } from '../types/notification'
+import { isVideoNotification, isUploadNotification, isZapNotification } from '../types/notification'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Button } from './ui/button'
 
@@ -18,6 +18,7 @@ export function NotificationBell() {
     error,
     markVideoNotificationAsRead,
     markUploadNotificationAsRead,
+    markZapNotificationAsRead,
     markAllAsRead,
   } = useAllNotifications()
 
@@ -38,6 +39,12 @@ export function NotificationBell() {
 
       // Navigate to upload page with the draft
       navigate(`/upload?draft=${notification.draftId}`)
+    } else if (isZapNotification(notification)) {
+      // Mark as read
+      markZapNotificationAsRead(notification.id)
+
+      // Navigate to video page
+      navigate(`/video/${notification.videoEventId}`)
     }
   }
 

@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **NIP-51 Follow Sets**: Migrated from NIP-2 contact lists with auto-import dialog
 - **Blossom Server Onboarding**: Two-step onboarding with follow import and server configuration
 - **Video Comment Notifications**: Bell icon dropdown with 7-day persistence
+- **Zap Notifications**: Receive notifications when someone zaps your videos. Shows zapper's avatar, display name, amount in sats, optional zap comment, and video title. Notifications polled from popular zap relays (damus, primal, nos.lol) every 2.5 minutes with 7-day retention and localStorage caching.
 - **Category/Hashtag Browsing**: 9 categories and `/tag/:tag` routes with clickable hashtags
 - **Share Dialog Embed Tab**: Copy iframe embed code with optional timestamp
 - **Embed Player**: Standalone player with branding, content warnings, profile fetching, event caching

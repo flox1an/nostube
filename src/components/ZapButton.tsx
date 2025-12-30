@@ -105,6 +105,16 @@ export const ZapButton = memo(function ZapButton({
   }, [])
 
   if (layout === 'inline') {
+    // Render static display for own content
+    if (isOwnContent) {
+      return (
+        <div className={cn('inline-flex items-center gap-1 text-muted-foreground', className)}>
+          <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
+          <span className="ml-1 md:ml-2">{formatSats(totalSats)}</span>
+        </div>
+      )
+    }
+
     return (
       <>
         <Button
@@ -115,7 +125,7 @@ export const ZapButton = memo(function ZapButton({
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerLeave}
           onContextMenu={handleContextMenu}
-          disabled={!user || isZapping || isOwnContent}
+          disabled={!user || isZapping}
           aria-label="Zap"
         >
           {isZapping ? (
@@ -144,6 +154,18 @@ export const ZapButton = memo(function ZapButton({
   }
 
   // Vertical layout (for Shorts)
+  // Render static display for own content
+  if (isOwnContent) {
+    return (
+      <div className={cn('flex flex-col items-center gap-1', className)}>
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+          <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
+        </div>
+        <span className="text-sm font-medium">{formatSats(totalSats)}</span>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className={cn('flex flex-col items-center gap-1', className)}>
@@ -156,7 +178,7 @@ export const ZapButton = memo(function ZapButton({
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerLeave}
           onContextMenu={handleContextMenu}
-          disabled={!user || isZapping || isOwnContent}
+          disabled={!user || isZapping}
           aria-label="Zap"
         >
           {isZapping ? (

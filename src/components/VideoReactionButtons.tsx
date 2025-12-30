@@ -36,6 +36,8 @@ export function VideoReactionButtons({
   const { config } = useAppContext()
   const { publish, isPending } = useNostrPublish()
 
+  const isOwnContent = user?.pubkey === authorPubkey
+
   // Get author's inbox relays (NIP-65)
   const authorRelays = useUserRelays(authorPubkey)
 
@@ -121,6 +123,33 @@ export function VideoReactionButtons({
 
   if (layout === 'inline') {
     // VideoPage layout: count inside button
+    // Render static display for own content
+    if (isOwnContent) {
+      return (
+        <>
+          <div
+            className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
+          >
+            <ThumbsUp className="h-5 w-5" />
+            <span className="ml-1 md:ml-2">{upvoteCount}</span>
+          </div>
+          <div
+            className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
+          >
+            <ThumbsDown className="h-5 w-5" />
+            <span className="ml-1 md:ml-2">{downvoteCount}</span>
+          </div>
+          <ZapButton
+            eventId={eventId}
+            kind={kind}
+            authorPubkey={authorPubkey}
+            layout="inline"
+            className={className}
+          />
+        </>
+      )
+    }
+
     return (
       <>
         <Button
@@ -155,10 +184,37 @@ export function VideoReactionButtons({
   }
 
   // ShortsPage layout: count below button (vertical)
+  // Render static display for own content
+  if (isOwnContent) {
+    return (
+      <>
+        <div className={cn('flex flex-col items-center gap-1', className)}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <ThumbsUp className="h-5 w-5" />
+          </div>
+          <span className="text-sm font-medium">{upvoteCount}</span>
+        </div>
+        <div className={cn('flex flex-col items-center gap-1', className)}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <ThumbsDown className="h-5 w-5" />
+          </div>
+          <span className="text-sm font-medium">{downvoteCount}</span>
+        </div>
+        <ZapButton
+          eventId={eventId}
+          kind={kind}
+          authorPubkey={authorPubkey}
+          layout="vertical"
+          className={className}
+        />
+      </>
+    )
+  }
+
   return (
     <>
       {/* Upvote button */}
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
+      <div className={cn('flex flex-col items-center gap-1', className)}>
         <Button
           variant="secondary"
           size="icon"
@@ -173,7 +229,7 @@ export function VideoReactionButtons({
       </div>
 
       {/* Downvote button */}
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
+      <div className={cn('flex flex-col items-center gap-1', className)}>
         <Button
           variant="secondary"
           size="icon"

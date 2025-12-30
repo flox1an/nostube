@@ -108,7 +108,7 @@ export const ZapButton = memo(function ZapButton({
     // Render static display for own content
     if (isOwnContent) {
       return (
-        <div className={cn('inline-flex items-center gap-1 text-muted-foreground', className)}>
+        <div className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}>
           <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
           <span className="ml-1 md:ml-2">{formatSats(totalSats)}</span>
         </div>

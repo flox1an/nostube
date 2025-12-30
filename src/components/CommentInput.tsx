@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Smile } from 'lucide-react'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { imageProxy } from '@/lib/utils'
 
 // Common emoji categories for quick access
 const EMOJI_CATEGORIES = [
@@ -144,6 +143,7 @@ interface CommentInputProps {
   submitLabel?: string
   userAvatar?: string
   userName?: string
+  userPubkey?: string
   disabled?: boolean
   autoFocus?: boolean
 }
@@ -157,6 +157,7 @@ export const CommentInput = React.memo(function CommentInput({
   submitLabel,
   userAvatar,
   userName,
+  userPubkey,
   disabled,
   autoFocus,
 }: CommentInputProps) {
@@ -256,12 +257,12 @@ export const CommentInput = React.memo(function CommentInput({
       <form onSubmit={handleSubmit}>
         <div className="flex gap-3 items-start">
           {/* Avatar - small when collapsed, larger when expanded */}
-          <Avatar
+          <UserAvatar
+            picture={userAvatar}
+            pubkey={userPubkey}
+            name={userName}
             className={`shrink-0 transition-all duration-200 ${isFocused ? 'h-10 w-10' : 'h-6 w-6'}`}
-          >
-            <AvatarImage src={imageProxy(userAvatar)} />
-            <AvatarFallback className="text-xs">{userName?.[0] ?? '?'}</AvatarFallback>
-          </Avatar>
+          />
 
           <div className="flex-1 min-w-0">
             {/* Input field */}

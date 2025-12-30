@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **User Avatar Fallback**: New `UserAvatar` component generates unique dicebear avatars for users without profile pictures. Falls back to a colorful avatar based on user's pubkey instead of a plain character, providing better visual identity across the app.
 - **App Presets System**: NIP-78 based preset system (kind 30078) for app-wide configuration. Admins can manage blocked pubkeys, NSFW authors, default relays, blossom proxy, and thumbnail resize server via `/admin` route. Users can browse and select presets via `/settings/presets`. Selected preset stored in localStorage, with 1-hour cache for performance. Default preset: `npub1klr0dy2ul2dx9llk58czvpx73rprcmrvd5dc7ck8esg8f8es06qs427gxc`.
 - **Thumbnail Resize Server Preset**: Presets can now include a `defaultThumbResizeServer` URL (e.g., `https://imgproxy.nostu.be/`) for resizing thumbnail images.
 - **Settings Page Sections**: Settings page now has menu-based navigation with routes (`/settings/<section>`). Sections: General, Presets, Wallet, Relays, Blossom Servers, Caching Servers, Cache, Missing Videos. Presets moved from standalone `/presets` route into settings.

@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type VideoEvent } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn, imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
+import { UserAvatar } from '@/components/UserAvatar'
+import { cn, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import React, { useRef, useState, useMemo } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
@@ -268,13 +268,13 @@ export const VideoCard = React.memo(function VideoCard({
           <div className="flex gap-3">
             {!hideAuthor && (
               <Link to={`/author/${authorNprofile}`} className="shrink-0">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={imageProxy(metadata?.picture, config.thumbResizeServerUrl)}
-                    alt={name}
-                  />
-                  <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  picture={metadata?.picture}
+                  pubkey={video.pubkey}
+                  name={name}
+                  thumbResizeServerUrl={config.thumbResizeServerUrl}
+                  className="h-10 w-10"
+                />
               </Link>
             )}
             <div className="min-w-0 flex-1">

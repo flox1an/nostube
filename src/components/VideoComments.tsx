@@ -2,13 +2,13 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { useObservableState } from 'observable-hooks'
 import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
 import React, { useMemo, useState, useEffect } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type NostrEvent } from 'nostr-tools'
-import { imageProxy, nowInSecs } from '@/lib/utils'
+import { nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { Reply, MoreVertical, Flag } from 'lucide-react'
@@ -132,6 +132,7 @@ const CommentItem = React.memo(function CommentItem({
   highlightedCommentId,
   currentUserAvatar,
   currentUserName,
+  currentUserPubkey,
 }: {
   comment: Comment
   link: string
@@ -147,6 +148,7 @@ const CommentItem = React.memo(function CommentItem({
   highlightedCommentId?: string | null
   currentUserAvatar?: string
   currentUserName?: string
+  currentUserPubkey?: string
 }) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
@@ -166,10 +168,12 @@ const CommentItem = React.memo(function CommentItem({
   return (
     <div id={`comment-${comment.id}`} className={`${isHighlighted ? 'highlight-comment' : ''}`}>
       <div className="flex gap-3 pb-4">
-        <Avatar className={`${avatarSize} shrink-0`}>
-          <AvatarImage src={imageProxy(metadata?.picture)} />
-          <AvatarFallback>{name[0]}</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          picture={metadata?.picture}
+          pubkey={comment.pubkey}
+          name={name}
+          className={`${avatarSize} shrink-0`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <div className="font-semibold text-sm">{name}</div>
@@ -246,6 +250,7 @@ const CommentItem = React.memo(function CommentItem({
                 submitLabel={t('video.comments.replyButton')}
                 userAvatar={currentUserAvatar}
                 userName={currentUserName}
+                userPubkey={currentUserPubkey}
                 autoFocus
               />
             </div>
@@ -271,6 +276,7 @@ const CommentItem = React.memo(function CommentItem({
                   highlightedCommentId={highlightedCommentId}
                   currentUserAvatar={currentUserAvatar}
                   currentUserName={currentUserName}
+                  currentUserPubkey={currentUserPubkey}
                 />
               ))}
             </div>
@@ -563,6 +569,7 @@ export function VideoComments({
             onSubmit={handleSubmit}
             userAvatar={userProfile?.picture}
             userName={userProfile?.name || user.pubkey.slice(0, 8)}
+            userPubkey={user.pubkey}
           />
         </div>
       )}
@@ -584,6 +591,7 @@ export function VideoComments({
             highlightedCommentId={highlightedCommentId}
             currentUserAvatar={userProfile?.picture}
             currentUserName={userProfile?.name || user?.pubkey.slice(0, 8)}
+            currentUserPubkey={user?.pubkey}
           />
         ))}
       </div>

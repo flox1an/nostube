@@ -2,11 +2,10 @@ import { Link, useParams } from 'react-router-dom'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoGrid } from '@/components/VideoGrid'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 
-import { imageProxy } from '@/lib/utils'
 import { nprofileFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile } from '@/hooks'
 
@@ -60,10 +59,12 @@ export default function SinglePlaylistPage() {
           to={`/author/${nprofileFromPubkey(playlistEvent.pubkey, readRelays)}`}
           className="shrink-0 flex flex-row gap-2 items-center"
         >
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={imageProxy(metadata?.picture)} alt={name} />
-            <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            picture={metadata?.picture}
+            pubkey={playlistEvent.pubkey}
+            name={name}
+            className="h-10 w-10"
+          />
           {name}
         </Link>
       </div>

@@ -12,16 +12,11 @@ import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
-import {
-  imageProxyVideoPreview,
-  imageProxyVideoThumbnail,
-  combineRelays,
-  imageProxy,
-} from '@/lib/utils'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { getDateLocale } from '@/lib/date-locale'
 
 function formatDuration(seconds: number): string {
@@ -116,10 +111,12 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
         <div className="relative pl-3">
           <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
           <div className="flex items-center gap-1.5 mt-1">
-            <Avatar className="h-4 w-4">
-              <AvatarImage src={imageProxy(authorPicture)} />
-              <AvatarFallback className="text-[8px]">{name[0]}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              picture={authorPicture}
+              pubkey={video.pubkey}
+              name={name}
+              className="h-4 w-4"
+            />
             <div className="text-xs text-muted-foreground">{name}</div>
           </div>
           <div className="text-xs text-muted-foreground mt-1">

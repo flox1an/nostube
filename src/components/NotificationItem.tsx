@@ -1,10 +1,9 @@
 import { formatDistance } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import type { VideoNotification } from '../types/notification'
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
+import { UserAvatar } from './UserAvatar'
 import { getDateLocale } from '../lib/date-locale'
 import { useProfile } from '../hooks/useProfile'
-import { imageProxy } from '@/lib/utils'
 
 interface NotificationItemProps {
   notification: VideoNotification
@@ -31,10 +30,12 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       }`}
     >
       <div className="flex gap-3">
-        <Avatar className="h-8 w-8 shrink-0">
-          <AvatarImage src={imageProxy(profile?.picture)} />
-          <AvatarFallback className="text-xs">{displayName[0]}</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          picture={profile?.picture}
+          pubkey={notification.commenterPubkey}
+          name={displayName}
+          className="h-8 w-8 shrink-0"
+        />
 
         <div className="flex-1 min-w-0">
           <p className="text-sm">

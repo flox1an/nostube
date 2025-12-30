@@ -1,5 +1,5 @@
-import { Check, User } from 'lucide-react'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Check } from 'lucide-react'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks/useProfile'
 import { type NostubePreset } from '@/types/preset'
 import { cn } from '@/lib/utils'
@@ -29,12 +29,12 @@ export function PresetCard({ preset, isSelected, onClick }: PresetCardProps) {
       )}
     >
       <div className="flex items-start gap-3">
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={profile?.picture} alt={ownerName} />
-          <AvatarFallback>
-            <User className="h-5 w-5" />
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          picture={profile?.picture}
+          pubkey={preset.pubkey}
+          name={ownerName}
+          className="h-10 w-10 shrink-0"
+        />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

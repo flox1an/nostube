@@ -6,7 +6,7 @@ import { switchMap, catchError, map } from 'rxjs/operators'
 import { useTranslation } from 'react-i18next'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import { FollowButton } from '@/components/FollowButton'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
@@ -31,7 +31,7 @@ import {
 } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2 } from 'lucide-react'
-import { imageProxy, imageProxyVideoPreview, combineRelays } from '@/lib/utils'
+import { imageProxyVideoPreview, combineRelays } from '@/lib/utils'
 import { getKindsForType } from '@/lib/video-types'
 import { nprofileFromEvent } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
@@ -449,13 +449,13 @@ function ShortVideoItem({
               <FollowButton pubkey={video.pubkey} className="text-white self-start" />
               <div className="flex items-center gap-4">
                 <Link to={`/author/${authorNprofile}`}>
-                  <Avatar className="h-10 w-10 border-2 border-white">
-                    <AvatarImage
-                      src={imageProxy(authorPicture, config.thumbResizeServerUrl)}
-                      alt={authorName}
-                    />
-                    <AvatarFallback>{authorName?.charAt(0) || '?'}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    picture={authorPicture}
+                    pubkey={video.pubkey}
+                    name={authorName}
+                    thumbResizeServerUrl={config.thumbResizeServerUrl}
+                    className="h-10 w-10 border-2 border-white"
+                  />
                 </Link>
                 <div className="flex-1 min-w-0">
                   <Link to={`/author/${authorNprofile}`}>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks'
 import { Loader2, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -80,10 +80,12 @@ export const ZapDialog = memo(function ZapDialog({
             Send Zap
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2 pt-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={avatar} />
-              <AvatarFallback>{displayName[0]}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              picture={avatar}
+              pubkey={authorPubkey}
+              name={displayName}
+              className="h-6 w-6"
+            />
             <span>to {displayName}</span>
           </DialogDescription>
         </DialogHeader>

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
 import { nip19, type NostrEvent } from 'nostr-tools'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Separator } from '@/components/ui/separator'
@@ -26,7 +26,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
 import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag, Clock } from 'lucide-react'
-import { imageProxy, nowInSecs } from '@/lib/utils'
+import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
@@ -199,10 +199,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             to={`/author/${nip19.nprofileEncode({ pubkey: video?.pubkey || '', relays: relaysToUse })}`}
             className="flex items-center gap-4"
           >
-            <Avatar>
-              <AvatarImage src={imageProxy(metadata?.picture)} />
-              <AvatarFallback>{authorName[0]}</AvatarFallback>
-            </Avatar>
+            <UserAvatar picture={metadata?.picture} pubkey={video?.pubkey} name={authorName} />
             <div>
               <div className="font-semibold">{authorName}</div>
               <div className="text-sm text-muted-foreground">

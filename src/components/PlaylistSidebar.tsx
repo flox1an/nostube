@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { imageProxy, imageProxyVideoPreview, imageProxyVideoThumbnail, cn } from '@/lib/utils'
+import { imageProxyVideoPreview, imageProxyVideoThumbnail, cn } from '@/lib/utils'
 import { useProfile, useAppContext } from '@/hooks'
 import { useMemo, useState } from 'react'
 
@@ -73,10 +73,12 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
       <div className="flex-1 min-w-0 space-y-1">
         <p className="text-sm font-medium line-clamp-2">{item.title || 'Untitled Video'}</p>
         <div className="flex items-center gap-1.5">
-          <Avatar className="h-4 w-4">
-            <AvatarImage src={imageProxy(authorPicture)} />
-            <AvatarFallback className="text-[8px]">{authorName[0]}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            picture={authorPicture}
+            pubkey={item.pubkey}
+            name={authorName}
+            className="h-4 w-4"
+          />
           <p className="text-xs text-muted-foreground truncate">{authorName}</p>
         </div>
         {isActive && <Badge variant="default">Now playing</Badge>}

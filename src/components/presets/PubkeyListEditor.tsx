@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
 import { nip19 } from 'nostr-tools'
-import { X, Plus, User } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks/useProfile'
 import { cn } from '@/lib/utils'
 
@@ -20,12 +20,12 @@ function PubkeyItem({ pubkey, onRemove }: PubkeyItemProps) {
 
   return (
     <div className="flex items-center gap-2 rounded-md border bg-muted/50 p-2">
-      <Avatar className="h-6 w-6">
-        <AvatarImage src={profile?.picture} alt={displayName} />
-        <AvatarFallback>
-          <User className="h-3 w-3" />
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        picture={profile?.picture}
+        pubkey={pubkey}
+        name={displayName}
+        className="h-6 w-6"
+      />
       <div className="flex-1 min-w-0">
         <div className="truncate text-sm font-medium">{displayName}</div>
         <div className="truncate text-xs text-muted-foreground">{npub.slice(0, 16)}...</div>

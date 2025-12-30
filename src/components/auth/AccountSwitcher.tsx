@@ -9,9 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useNavigate } from 'react-router-dom'
-import { imageProxy } from '@/lib/utils'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
 import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext } from '@/hooks'
 import { getDisplayName } from 'applesauce-core/helpers'
@@ -41,13 +40,13 @@ function AccountSwitchItem({
       onClick={onClick}
       className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
     >
-      <Avatar className="w-8 h-8">
-        <AvatarImage
-          src={imageProxy(accountProfile?.picture as string, thumbResizeServerUrl)}
-          alt={displayName || ''}
-        />
-        <AvatarFallback>{displayName?.charAt(0) || '?'}</AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        picture={accountProfile?.picture as string}
+        pubkey={account.pubkey}
+        name={displayName || undefined}
+        thumbResizeServerUrl={thumbResizeServerUrl}
+        className="w-8 h-8"
+      />
       <div className="flex-1 truncate">
         <p className="text-sm font-medium">{displayName || account.pubkey.slice(0, 8)}</p>
       </div>
@@ -87,13 +86,13 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost">
-          <Avatar className="w-8 h-8">
-            <AvatarImage
-              src={imageProxy(profile?.picture as string, config.thumbResizeServerUrl)}
-              alt={getDisplayName(profile)}
-            />
-            <AvatarFallback>{getDisplayName(profile)?.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            picture={profile?.picture as string}
+            pubkey={activeAccount?.pubkey}
+            name={getDisplayName(profile) || undefined}
+            thumbResizeServerUrl={config.thumbResizeServerUrl}
+            className="w-8 h-8"
+          />
           <div className="flex-1 text-left hidden md:block truncate">
             <p className="font-medium text-sm truncate">{getDisplayName(profile)}</p>
           </div>

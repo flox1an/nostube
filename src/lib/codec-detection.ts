@@ -68,8 +68,8 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
       }
     }
 
-    // Only read the first MB - MP4 metadata is at the beginning
-    const MAX_BYTES = 1024 * 1024 // 1MB
+    // Only read the first 2MB - MP4 metadata is at the beginning but can be large
+    const MAX_BYTES = 2 * 1024 * 1024 // 2MB for large moov atoms
     const blob = file.slice(0, MAX_BYTES)
 
     const fileReader = new FileReader()
@@ -107,7 +107,7 @@ export const getCodecsFromFile = (file: File): Promise<CodecInfo> => {
  * Attempts range requests first, falls back to regular requests with manual abort.
  */
 export const getCodecsFromUrl = async (url: string): Promise<CodecInfo> => {
-  const CHUNK_SIZE = 1024 * 1024 // 1MB chunks
+  const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB chunks - needed for large moov atoms
 
   if (import.meta.env.DEV) console.log('[CODEC] Fetching codec info from URL:', url)
 
@@ -166,7 +166,7 @@ async function tryParseFromRange(
   endByte: number
 ): Promise<CodecInfo> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
   const rangeResponse = await fetch(url, {
     headers: {
@@ -177,11 +177,52 @@ async function tryParseFromRange(
 
   clearTimeout(timeoutId)
 
-  if (!rangeResponse.ok || rangeResponse.status !== 206) {
+  if (!rangeResponse.ok) {
+    throw new Error('Fetch failed')
+  }
+
+  let arrayBuffer: ArrayBuffer
+
+  // Check if range request was honored (206) or ignored (200)
+  if (rangeResponse.status === 206) {
+    arrayBuffer = await rangeResponse.arrayBuffer()
+  } else if (rangeResponse.status === 200 && startByte === 0) {
+    // Server doesn't support range requests - read partial response via streaming
+    if (import.meta.env.DEV) {
+      console.log('[CODEC] Range not supported, falling back to streaming read')
+    }
+    const reader = rangeResponse.body?.getReader()
+    if (!reader) throw new Error('No response body')
+
+    const chunks: Uint8Array[] = []
+    let totalBytes = 0
+    const maxBytes = endByte - startByte + 1
+
+    while (totalBytes < maxBytes) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      totalBytes += value.length
+    }
+
+    // Cancel the rest of the download
+    reader.cancel()
+
+    // Combine chunks into a single buffer
+    const combined = new Uint8Array(Math.min(totalBytes, maxBytes))
+    let offset = 0
+    for (const chunk of chunks) {
+      const remaining = maxBytes - offset
+      const toCopy = Math.min(chunk.length, remaining)
+      combined.set(chunk.subarray(0, toCopy), offset)
+      offset += toCopy
+      if (offset >= maxBytes) break
+    }
+    arrayBuffer = combined.buffer
+  } else {
     throw new Error('Range request failed')
   }
 
-  const arrayBuffer = await rangeResponse.arrayBuffer()
   if (import.meta.env.DEV) {
     console.log('[CODEC] Fetched', arrayBuffer.byteLength, 'bytes from offset', startByte)
   }

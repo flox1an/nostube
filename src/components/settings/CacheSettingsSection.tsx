@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Trash2, Loader2 } from 'lucide-react'
-import { toast } from '@/hooks'
 
 export function CacheSettingsSection() {
   const { t } = useTranslation()
@@ -58,19 +57,23 @@ export function CacheSettingsSection() {
     setIsClearing(true)
     setShowClearDialog(false)
 
-    // Store a flag in sessionStorage to trigger cache clear on page load
-    sessionStorage.setItem('clearCacheOnLoad', 'true')
+    try {
+      // Delete the nostr-idb IndexedDB database
+      await new Promise<void>((resolve, reject) => {
+        const request = window.indexedDB.deleteDatabase('nostr-idb')
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(new Error('Failed to delete database'))
+        request.onblocked = () => {
+          // Database is blocked, but we'll reload anyway
+          resolve()
+        }
+      })
+    } catch (error) {
+      console.error('Failed to clear cache:', error)
+    }
 
-    toast({
-      title: t('settings.cache.clearingTitle'),
-      description: t('settings.cache.clearingMessage'),
-    })
-
-    // Reload the page - this will close all DB connections
-    // The cache clearing will happen in a beforeunload handler
-    setTimeout(() => {
-      window.location.reload()
-    }, 500)
+    // Reload the page
+    window.location.reload()
   }
 
   return (

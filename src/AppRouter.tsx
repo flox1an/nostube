@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { MainLayout } from '@/components/MainLayout'
 import { VideoCardSkeleton } from '@/components/VideoCard'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
@@ -79,6 +80,29 @@ function PageLoader() {
       {Array.from({ length: 24 }).map((_, i) => (
         <VideoCardSkeleton key={i} format="horizontal" />
       ))}
+    </div>
+  )
+}
+
+function SettingsMenuLoader() {
+  return (
+    <div className="container mx-auto py-8 max-w-2xl px-4">
+      <Skeleton className="h-9 w-32 mb-6" />
+      <div className="space-y-1">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SettingsContentLoader() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <Skeleton className="h-32 w-full rounded-lg" />
     </div>
   )
 }
@@ -204,7 +228,7 @@ export function AppRouter() {
           <Route
             path="/settings"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<SettingsMenuLoader />}>
                 <SettingsLayout />
               </Suspense>
             }
@@ -212,7 +236,7 @@ export function AppRouter() {
             <Route
               path="general"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <GeneralSettingsPage />
                 </Suspense>
               }
@@ -220,7 +244,7 @@ export function AppRouter() {
             <Route
               path="presets"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <PresetsSettingsPage />
                 </Suspense>
               }
@@ -228,7 +252,7 @@ export function AppRouter() {
             <Route
               path="wallet"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <WalletSettingsPage />
                 </Suspense>
               }
@@ -236,7 +260,7 @@ export function AppRouter() {
             <Route
               path="relays"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <RelaysSettingsPage />
                 </Suspense>
               }
@@ -244,7 +268,7 @@ export function AppRouter() {
             <Route
               path="blossom"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <BlossomSettingsPage />
                 </Suspense>
               }
@@ -252,7 +276,7 @@ export function AppRouter() {
             <Route
               path="caching"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <CachingSettingsPage />
                 </Suspense>
               }
@@ -260,7 +284,7 @@ export function AppRouter() {
             <Route
               path="cache"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <CacheSettingsPage />
                 </Suspense>
               }
@@ -268,7 +292,7 @@ export function AppRouter() {
             <Route
               path="missing-videos"
               element={
-                <Suspense fallback={<PageLoader />}>
+                <Suspense fallback={<SettingsContentLoader />}>
                   <MissingVideosSettingsPage />
                 </Suspense>
               }

@@ -54,11 +54,8 @@ export function PresetsPage() {
   const hasContent = sortedPresets.length > 0
 
   return (
-    <div className="max-w-560 mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{t('settings.presets.pageTitle')}</h1>
-        <p className="text-muted-foreground">{t('settings.presets.description')}</p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">{t('settings.presets.description')}</p>
 
       {!hasContent && isLoading ? (
         <div className="text-center py-12">

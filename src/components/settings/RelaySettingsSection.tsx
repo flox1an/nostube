@@ -5,7 +5,6 @@ import { type RelayTag } from '@/contexts/AppContext'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon, Cog } from 'lucide-react'
 import { presetRelays } from '@/constants/relays'
@@ -75,90 +74,83 @@ export function RelaySettingsSection() {
 
   const availableTags: RelayTag[] = ['read', 'write']
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('settings.relays.title')}</CardTitle>
-        <CardDescription>{t('settings.relays.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            {config.relays.length === 0 ? (
-              <p className="text-muted-foreground">{t('settings.relays.noRelays')}</p>
-            ) : (
-              <ScrollArea className="w-full rounded-md border p-4">
-                <ul className="space-y-2">
-                  {config.relays.map(relay => (
-                    <li key={relay.url} className="flex items-center justify-between text-sm">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex gap-2 mt-1">
-                          <span>{relay.name || relay.url}</span>
-                          {(relay.tags || []).map(tag => (
-                            <Badge key={tag} variant={tag == 'write' ? 'default' : 'outline'}>
-                              {' '}
-                              {t(`settings.relays.${tag}`)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={t('settings.relays.editTags')}
-                            >
-                              <span className="sr-only">{t('settings.relays.editTags')}</span>
-                              <Cog className="h-6 w-6" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {availableTags.map(tag => (
-                              <DropdownMenuCheckboxItem
-                                key={tag}
-                                checked={(relay.tags || []).includes(tag)}
-                                onCheckedChange={() => handleToggleTag(relay.url, tag)}
-                              >
-                                {t(`settings.relays.${tag}`)}
-                              </DropdownMenuCheckboxItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">{t('settings.relays.description')}</p>
+      <div>
+        {config.relays.length === 0 ? (
+          <p className="text-muted-foreground">{t('settings.relays.noRelays')}</p>
+        ) : (
+          <ScrollArea className="w-full rounded-md border p-4">
+            <ul className="space-y-2">
+              {config.relays.map(relay => (
+                <li key={relay.url} className="flex items-center justify-between text-sm">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-2 mt-1">
+                      <span>{relay.name || relay.url}</span>
+                      {(relay.tags || []).map(tag => (
+                        <Badge key={tag} variant={tag == 'write' ? 'default' : 'outline'}>
+                          {' '}
+                          {t(`settings.relays.${tag}`)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRemoveRelay(relay.url)}
+                          aria-label={t('settings.relays.editTags')}
                         >
-                          <XIcon className="h-4 w-4" />
+                          <span className="sr-only">{t('settings.relays.editTags')}</span>
+                          <Cog className="h-6 w-6" />
                         </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            )}
-          </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {availableTags.map(tag => (
+                          <DropdownMenuCheckboxItem
+                            key={tag}
+                            checked={(relay.tags || []).includes(tag)}
+                            onCheckedChange={() => handleToggleTag(relay.url, tag)}
+                          >
+                            {t(`settings.relays.${tag}`)}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveRelay(relay.url)}
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
+        )}
+      </div>
 
-          <div className="flex w-full space-x-2">
-            <Input
-              placeholder={t('settings.relays.addPlaceholder')}
-              value={newRelayUrl}
-              onChange={e => setNewRelayUrl(e.target.value)}
-              onKeyPress={e => {
-                if (e.key === 'Enter') {
-                  handleAddRelay()
-                }
-              }}
-            />
-            <Button onClick={handleAddRelay}>{t('settings.relays.addButton')}</Button>
-          </div>
+      <div className="flex w-full space-x-2">
+        <Input
+          placeholder={t('settings.relays.addPlaceholder')}
+          value={newRelayUrl}
+          onChange={e => setNewRelayUrl(e.target.value)}
+          onKeyPress={e => {
+            if (e.key === 'Enter') {
+              handleAddRelay()
+            }
+          }}
+        />
+        <Button onClick={handleAddRelay}>{t('settings.relays.addButton')}</Button>
+      </div>
 
-          <Button variant="outline" onClick={handleResetRelays}>
-            {t('settings.relays.resetButton')}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <Button variant="outline" onClick={handleResetRelays}>
+        {t('settings.relays.resetButton')}
+      </Button>
+    </div>
   )
 }

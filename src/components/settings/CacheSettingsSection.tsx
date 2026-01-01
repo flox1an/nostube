@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Trash2, Database, Loader2 } from 'lucide-react'
+import { Trash2, Loader2 } from 'lucide-react'
 import { toast } from '@/hooks'
 
 export function CacheSettingsSection() {
@@ -76,69 +75,60 @@ export function CacheSettingsSection() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            {t('settings.cache.title')}
-          </CardTitle>
-          <CardDescription>{t('settings.cache.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <p className="font-medium">{t('settings.cache.cacheSize')}</p>
-              <p className="text-sm text-muted-foreground">{cacheSize}</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void refreshCacheSize()}
-              disabled={isClearing}
-            >
-              {t('common.refresh')}
-            </Button>
-          </div>
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">{t('settings.cache.description')}</p>
 
-          <div className="flex items-center justify-between p-4 border rounded-lg border-destructive/50 bg-destructive/5">
-            <div>
-              <p className="font-medium text-destructive">{t('settings.cache.clearButton')}</p>
-              <p className="text-sm text-muted-foreground">
-                {t('settings.cache.clearDescription')}
-              </p>
-            </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowClearDialog(true)}
-              disabled={isClearing}
-            >
-              {isClearing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {t('settings.cache.clearing')}
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t('settings.cache.clearButton')}
-                </>
-              )}
-            </Button>
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div>
+            <p className="font-medium">{t('settings.cache.cacheSize')}</p>
+            <p className="text-sm text-muted-foreground">{cacheSize}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshCacheSize()}
+            disabled={isClearing}
+          >
+            {t('common.refresh')}
+          </Button>
+        </div>
 
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-2">{t('settings.cache.whatGetsCleared')}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>{t('settings.cache.item1')}</li>
-              <li>{t('settings.cache.item2')}</li>
-              <li>{t('settings.cache.item3')}</li>
-              <li>{t('settings.cache.item4')}</li>
-            </ul>
-            <p className="mt-3">{t('settings.cache.note')}</p>
+        <div className="flex items-center justify-between p-4 border rounded-lg border-destructive/50 bg-destructive/5">
+          <div>
+            <p className="font-medium text-destructive">{t('settings.cache.clearButton')}</p>
+            <p className="text-sm text-muted-foreground">{t('settings.cache.clearDescription')}</p>
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowClearDialog(true)}
+            disabled={isClearing}
+          >
+            {isClearing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t('settings.cache.clearing')}
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t('settings.cache.clearButton')}
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          <p className="font-medium mb-2">{t('settings.cache.whatGetsCleared')}</p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>{t('settings.cache.item1')}</li>
+            <li>{t('settings.cache.item2')}</li>
+            <li>{t('settings.cache.item3')}</li>
+            <li>{t('settings.cache.item4')}</li>
+          </ul>
+          <p className="mt-3">{t('settings.cache.note')}</p>
+        </div>
+      </div>
 
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>

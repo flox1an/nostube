@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Settings,
@@ -10,6 +10,7 @@ import {
   Trash2,
   AlertTriangle,
   ChevronRight,
+  ChevronLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -30,43 +31,49 @@ const menuItems: SettingsMenuItem[] = [
   { path: 'missing-videos', labelKey: 'settings.missingVideos.title', icon: AlertTriangle },
 ]
 
-function SettingsMenu({ onItemClick }: { onItemClick?: () => void }) {
+function SettingsMenu() {
   const { t } = useTranslation()
 
   return (
     <nav className="space-y-1">
       {menuItems.map(item => (
-        <NavLink
+        <Link
           key={item.path}
           to={`/settings/${item.path}`}
-          onClick={onItemClick}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-              'hover:bg-accent hover:text-accent-foreground',
-              isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
-            )
-          }
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors',
+            'hover:bg-accent hover:text-accent-foreground',
+            'text-foreground'
+          )}
         >
-          <item.icon className="h-4 w-4" />
+          <item.icon className="h-5 w-5 text-muted-foreground" />
           <span className="flex-1">{t(item.labelKey)}</span>
-          <ChevronRight className="h-4 w-4 opacity-50" />
-        </NavLink>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
       ))}
     </nav>
   )
 }
 
-function SettingsIndex() {
+function SettingsHeader() {
   const { t } = useTranslation()
+  const location = useLocation()
+
+  // Find current section from path
+  const currentPath = location.pathname.replace('/settings/', '')
+  const currentItem = menuItems.find(item => item.path === currentPath)
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">{t('settings.selectSection')}</h2>
-        <p className="text-sm text-muted-foreground">{t('settings.selectSectionDescription')}</p>
-      </div>
-      <SettingsMenu />
+    <div className="flex items-center gap-3 mb-6">
+      <Link
+        to="/settings"
+        className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-accent transition-colors"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </Link>
+      <h1 className="text-2xl font-bold">
+        {currentItem ? t(currentItem.labelKey) : t('settings.title')}
+      </h1>
     </div>
   )
 }
@@ -77,26 +84,17 @@ export function SettingsLayout() {
   const isIndex = location.pathname === '/settings'
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">{t('settings.title')}</h1>
-
-      <div className="flex gap-8">
-        {/* Sidebar menu - hidden on mobile when viewing a section */}
-        <aside className={cn('w-64 shrink-0', !isIndex && 'hidden md:block')}>
+    <div className="container mx-auto py-8 max-w-2xl px-4">
+      {isIndex ? (
+        <>
+          <h1 className="text-3xl font-bold mb-6">{t('settings.title')}</h1>
           <SettingsMenu />
-        </aside>
-
-        {/* Content area */}
-        <main className={cn('flex-1 min-w-0', isIndex && 'hidden md:block')}>
-          {isIndex ? <SettingsIndex /> : <Outlet />}
-        </main>
-      </div>
-
-      {/* Mobile: show menu as index */}
-      {isIndex && (
-        <div className="md:hidden">
-          <SettingsMenu />
-        </div>
+        </>
+      ) : (
+        <>
+          <SettingsHeader />
+          <Outlet />
+        </>
       )}
     </div>
   )

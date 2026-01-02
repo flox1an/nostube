@@ -177,9 +177,12 @@ export function useHashtagVideos({
 
       const labelEvents: NostrEvent[] = []
 
-      const filter = {
+      // NIP-32 label events use L (namespace) and l (label value) tags
+      // For hashtags: L="#t" (namespace), l=<tag> (the actual hashtag)
+      const filter: Filter = {
         kinds: [1985], // NIP-32 label events
-        '#t': [tag.toLowerCase()],
+        '#L': ['#t'], // Namespace for hashtags
+        '#l': [tag.toLowerCase()], // The actual label value
         limit: 100, // Reasonable cap
       }
 

@@ -245,13 +245,19 @@ export function AuthorPage() {
 
   const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos])
 
+  // Set initial tab based on content type (only once when first videos load)
+  const hasSetInitialTab = useRef(false)
   useEffect(() => {
+    if (hasSetInitialTab.current) return
+    if (videos.length === 0 && shorts.length === 0) return
+
+    hasSetInitialTab.current = true
     if (videos.length > shorts.length) {
       setActiveTab('videos')
     } else {
       setActiveTab('shorts')
     }
-  }, [shorts, videos])
+  }, [shorts.length, videos.length])
 
   const authorMeta = useProfile({ pubkey })
   const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey

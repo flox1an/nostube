@@ -75,18 +75,39 @@ export function DvmTranscodeAlert({
   const transcodeCheck = shouldOfferTranscode(video)
   const isResuming = !!initialTranscodeState
 
+  // Debug logging
+  if (import.meta.env.DEV) {
+    console.log('[DvmTranscodeAlert] State:', {
+      transcodeCheck,
+      isResuming,
+      isDvmAvailable,
+      isDvmLoading,
+      dismissed,
+      video: { dimension: video.dimension, videoCodec: video.videoCodec },
+    })
+  }
+
   // Don't show if not needed or dismissed (unless we're resuming)
   if ((!transcodeCheck.needed && !isResuming) || dismissed) {
+    if (import.meta.env.DEV) {
+      console.log('[DvmTranscodeAlert] Hidden: transcode not needed or dismissed')
+    }
     return null
   }
 
   // Don't show if still checking for DVM availability (unless resuming)
   if (!isResuming && isDvmLoading) {
+    if (import.meta.env.DEV) {
+      console.log('[DvmTranscodeAlert] Hidden: still checking DVM availability')
+    }
     return null
   }
 
   // Don't show if no DVM is available (unless resuming an active transcode)
   if (!isResuming && !isDvmAvailable) {
+    if (import.meta.env.DEV) {
+      console.log('[DvmTranscodeAlert] Hidden: no DVM available')
+    }
     return null
   }
 

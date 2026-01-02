@@ -22,15 +22,25 @@ export function useDvmAvailability(): {
 
   useEffect(() => {
     if (!hasRelays) {
+      if (import.meta.env.DEV) {
+        console.log('[DVM Availability] No read relays configured')
+      }
       return
     }
 
     let resolved = false
 
+    if (import.meta.env.DEV) {
+      console.log('[DVM Availability] Checking for DVM on relays:', readRelays)
+    }
+
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true
         sub.unsubscribe()
+        if (import.meta.env.DEV) {
+          console.log('[DVM Availability] Timeout - no DVM found within 5s')
+        }
         setIsAvailable(false)
         setIsLoading(false)
       }
@@ -47,17 +57,28 @@ export function useDvmAvailability(): {
       ])
       .subscribe({
         next: event => {
-          if (typeof event === 'string') return // EOSE
+          if (typeof event === 'string') {
+            if (import.meta.env.DEV) {
+              console.log('[DVM Availability] EOSE received')
+            }
+            return // EOSE
+          }
           if (resolved) return
 
           // Found a handler
+          if (import.meta.env.DEV) {
+            console.log('[DVM Availability] Found DVM handler:', event)
+          }
           resolved = true
           clearTimeout(timeout)
           sub.unsubscribe()
           setIsAvailable(true)
           setIsLoading(false)
         },
-        error: () => {
+        error: err => {
+          if (import.meta.env.DEV) {
+            console.log('[DVM Availability] Error:', err)
+          }
           if (!resolved) {
             resolved = true
             clearTimeout(timeout)
@@ -67,6 +88,9 @@ export function useDvmAvailability(): {
         },
         complete: () => {
           // No handler found
+          if (import.meta.env.DEV) {
+            console.log('[DVM Availability] Subscription completed - no DVM found')
+          }
           if (!resolved) {
             resolved = true
             clearTimeout(timeout)

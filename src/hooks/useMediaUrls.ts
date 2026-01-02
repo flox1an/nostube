@@ -14,10 +14,11 @@ import {
 import { discoverUrlsWithCache, type DiscoveryOptions } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
 import { useAppContextSafe } from '@/hooks/useAppContext'
+import { INDEXER_RELAYS } from '@/constants/relays'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
-  enabled?: boolean // Enable auto-discovery (default: true)
-  discoveryEnabled?: boolean // Enable relay discovery (default: false)
+  enabled?: boolean // Enable URL generation (default: true)
+  discoveryEnabled?: boolean // Enable relay discovery for kind 1063 (default: true when sha256 provided)
   discoveryRelays?: string[] // Relays for discovery
   discoveryTimeout?: number // Discovery timeout (default: 10s)
   preValidate?: boolean // Pre-validate URLs before returning (default: false)
@@ -89,15 +90,20 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   const mediaConfig = config?.media
 
   // Memoize all computed config values to prevent unnecessary re-renders
+  // Enable discovery by default when sha256 is available (required for kind 1063 lookup)
   const finalDiscoveryEnabled = useMemo(
-    () => discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? false,
-    [discoveryEnabled, mediaConfig?.failover.discovery.enabled]
+    () => discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? !!sha256,
+    [discoveryEnabled, mediaConfig?.failover.discovery.enabled, sha256]
   )
 
-  const finalDiscoveryRelays = useMemo(
-    () => discoveryRelays ?? config?.relays.map(r => r.url) ?? [],
-    [discoveryRelays, config?.relays]
-  )
+  // Use user's relays + indexer relays for discovery
+  // Indexer relays are good for finding kind 1063 file metadata events
+  const finalDiscoveryRelays = useMemo(() => {
+    const userRelays = discoveryRelays ?? config?.relays.map(r => r.url) ?? []
+    // Combine user relays with indexer relays, deduplicate
+    const allRelays = [...new Set([...userRelays, ...INDEXER_RELAYS])]
+    return allRelays
+  }, [discoveryRelays, config?.relays])
 
   const finalDiscoveryTimeout = useMemo(
     () => discoveryTimeout ?? mediaConfig?.failover.discovery.timeout ?? 10000,
@@ -180,7 +186,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   // Serialize discovery relays for stable comparison
   const discoveryRelaysKey = useMemo(() => finalDiscoveryRelays.join('|'), [finalDiscoveryRelays])
 
-  // Discover alternative URLs if enabled
+  // Discover alternative URLs via kind 1063 lookup if enabled
   useEffect(() => {
     if (!enabled || !finalDiscoveryEnabled || !sha256 || finalDiscoveryRelays.length === 0) {
       return
@@ -190,6 +196,12 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
 
     const discover = async () => {
       setIsDiscovering(true)
+
+      if (import.meta.env.DEV) {
+        console.log(
+          `[useMediaUrls] Discovering kind 1063 for ${mediaType} hash=${sha256.slice(0, 8)}...`
+        )
+      }
 
       try {
         const discoveryOptions: DiscoveryOptions = {

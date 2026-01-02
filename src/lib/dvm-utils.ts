@@ -29,17 +29,16 @@ export interface TranscodeCheckResult {
  * Check if a video should be offered for transcoding
  *
  * Triggers when:
- * - Resolution is 1080p or higher (max dimension >= 1920)
+ * - Resolution exceeds 1080p (either dimension > 1080)
  * - Video codec is problematic: hev1, av01, vp09, vp9
  *
  * Compatible codecs that don't trigger: avc1 (H.264), hvc1 (HEVC variant that works on iOS)
  */
 export function shouldOfferTranscode(video: VideoVariant): TranscodeCheckResult {
   const [width, height] = video.dimension.split('x').map(Number)
-  const resolution = Math.max(width, height)
 
-  if (resolution >= 1920) {
-    return { needed: true, reason: 'Video is 1080p or higher' }
+  if (width > 1080 || height > 1080) {
+    return { needed: true, reason: 'Video is higher than 1080p' }
   }
 
   const codec = video.videoCodec?.toLowerCase() || ''

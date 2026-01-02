@@ -105,8 +105,8 @@ export const ZapButton = memo(function ZapButton({
   }, [])
 
   if (layout === 'inline') {
-    // Render static display for own content
-    if (isOwnContent) {
+    // Render static display for own content or when not logged in
+    if (isOwnContent || !user) {
       return (
         <div className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}>
           <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
@@ -154,8 +154,8 @@ export const ZapButton = memo(function ZapButton({
   }
 
   // Vertical layout (for Shorts)
-  // Render static display for own content
-  if (isOwnContent) {
+  // Render static display for own content or when not logged in
+  if (isOwnContent || !user) {
     return (
       <div className={cn('flex flex-col items-center gap-1', className)}>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">

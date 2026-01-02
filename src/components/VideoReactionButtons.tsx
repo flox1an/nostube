@@ -123,8 +123,8 @@ export function VideoReactionButtons({
 
   if (layout === 'inline') {
     // VideoPage layout: count inside button
-    // Render static display for own content
-    if (isOwnContent) {
+    // Render static display for own content or when not logged in
+    if (isOwnContent || !user) {
       return (
         <>
           <div
@@ -184,8 +184,8 @@ export function VideoReactionButtons({
   }
 
   // ShortsPage layout: count below button (vertical)
-  // Render static display for own content
-  if (isOwnContent) {
+  // Render static display for own content or when not logged in
+  if (isOwnContent || !user) {
     return (
       <>
         <div className={cn('flex flex-col items-center gap-1', className)}>

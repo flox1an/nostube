@@ -213,23 +213,19 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           </Link>
 
           <div className="flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto">
-            {userPubkey && (
-              <>
-                <VideoReactionButtons
-                  eventId={video.id}
-                  authorPubkey={video.pubkey}
-                  kind={video.kind}
-                  relays={relaysToUse}
-                  layout="inline"
-                />
-                {!isMobile && (
-                  <AddToPlaylistButton
-                    videoId={video.id}
-                    videoKind={video.kind}
-                    videoTitle={video.title}
-                  />
-                )}
-              </>
+            <VideoReactionButtons
+              eventId={video.id}
+              authorPubkey={video.pubkey}
+              kind={video.kind}
+              relays={relaysToUse}
+              layout="inline"
+            />
+            {userPubkey && !isMobile && (
+              <AddToPlaylistButton
+                videoId={video.id}
+                videoKind={video.kind}
+                videoTitle={video.title}
+              />
             )}
             <ShareButton
               shareOpen={shareOpen}

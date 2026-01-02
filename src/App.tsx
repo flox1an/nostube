@@ -11,8 +11,10 @@ import {
   AccountsContext,
 } from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
-import { EventFactory } from 'applesauce-factory'
+import { EventFactory } from 'applesauce-core'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
+// Import applesauce-common to register EventFactory extensions (note, reaction, etc.)
+import 'applesauce-common'
 import { eventStore } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'

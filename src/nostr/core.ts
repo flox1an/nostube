@@ -46,18 +46,18 @@ relayPool.request = ((relays, filters, opts) => {
   return race(originalRequest(relays, filters, opts), timeout$)
 }) as typeof relayPool.request
 
-// Configure loaders for replaceable events (kind 10000-19999)
+// Configure unified loader for replaceable events (kind 10000-19999)
 // This includes kind 10063 (blossom servers), kind 10002 (relay lists), etc.
-const replaceableLoader = createAddressLoader(relayPool, {
+const addressLoader = createAddressLoader(relayPool, {
   eventStore,
   cacheRequest,
   lookupRelays: DEFAULT_RELAYS,
   bufferTime: 0, // Don't batch - emit first result immediately
 })
 
-// Set loaders on event store so useEventModel can fetch data
-eventStore.replaceableLoader = replaceableLoader
-eventStore.addressableLoader = replaceableLoader
+// Set loader on event store so useEventModel can fetch data
+// In v5, eventLoader handles all pointer types (EventPointer, AddressPointer, etc.)
+eventStore.eventLoader = addressLoader
 
 console.log('📡 Configured EventStore loaders with relays:', DEFAULT_RELAYS)
 

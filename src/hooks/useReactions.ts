@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useEventModel, useEventStore } from 'applesauce-react/hooks'
-import { ReactionsModel } from 'applesauce-core/models'
+import { ReactionsModel } from 'applesauce-common/models'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useAppContext } from './useAppContext'
 import { createReactionsLoader } from 'applesauce-loaders/loaders'

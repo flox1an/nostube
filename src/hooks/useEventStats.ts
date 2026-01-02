@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useState } from 'react'
 import { useEventStore, useObservableMemo, useEventModel } from 'applesauce-react/hooks'
-import { ReactionsModel } from 'applesauce-core/models'
+import { ReactionsModel } from 'applesauce-common/models'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { getInvoiceAmount } from '@/lib/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'

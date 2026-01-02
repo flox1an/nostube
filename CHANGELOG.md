@@ -96,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Page Max-Width**: Consistent max-w-560 across all pages
 - **Ultra-Wide Detection**: Increased cinema mode threshold to 10% above 16:9
 - **Blossom URL Utils**: Consolidated detection/parsing, NON_BLOSSOM_SERVERS list
-- **Package Updates**: @types/node 25.0.3, immer 11.1.0, react-resizable-panels 4.0.15, and more
+- **Package Updates**: Applesauce v5.0.0 (accounts, core, loaders, react, relay, signers, wallet-connect), applesauce-common v5.0.0 (new package for models and blueprints), @types/node 25.0.3, immer 11.1.0, react-resizable-panels 4.0.15, and more
 
 ### Fixed
 

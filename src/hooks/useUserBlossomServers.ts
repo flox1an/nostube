@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventModel } from 'applesauce-react/hooks'
-import { UserBlossomServersModel } from 'applesauce-core/models'
+import { UserBlossomServersModel } from 'applesauce-common/models'
 import { isBlossomServerBlocked } from '@/constants/relays'
 
 // Stable empty array to prevent infinite re-renders when user is not logged in

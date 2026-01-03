@@ -5,6 +5,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { cacheRequest } from '@/nostr/core'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { of } from 'rxjs'
 import { type NostrEvent, type Filter } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
@@ -57,6 +58,7 @@ export function useTimelineLoader({
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
   const blockedPubkeys = useReportedPubkeys()
+  const { presetContent } = useSelectedPreset()
   const [loading, setLoading] = useState(true) // Start true to show skeletons instead of empty state
   const [hasLoaded, setHasLoaded] = useState(false)
 
@@ -74,8 +76,15 @@ export function useTimelineLoader({
 
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
   const videos = useMemo(() => {
-    return processEvents(events, relays, blockedPubkeys, config.blossomServers)
-  }, [events, relays, blockedPubkeys, config.blossomServers])
+    return processEvents(
+      events,
+      relays,
+      blockedPubkeys,
+      config.blossomServers,
+      undefined,
+      presetContent.nsfwPubkeys
+    )
+  }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Load initial events from relays
   useEffect(() => {

@@ -3,6 +3,7 @@ import { useAppContext } from './useAppContext'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent, deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
+import { useSelectedPreset } from './useSelectedPreset'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 
@@ -33,6 +34,7 @@ export function useCategoryVideos({
 }: UseCategoryVideosOptions): UseCategoryVideosResult {
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
+  const { presetContent } = useSelectedPreset()
 
   const [videos, setVideos] = useState<VideoEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,7 +72,7 @@ export function useCategoryVideos({
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
-        const processed = processEvent(event, [], config.blossomServers)
+        const processed = processEvent(event, [], config.blossomServers, presetContent.nsfwPubkeys)
         if (processed) {
           processedVideos.push(processed)
         }
@@ -92,7 +94,15 @@ export function useCategoryVideos({
       clearTimeout(timeout)
       subscription.unsubscribe()
     }
-  }, [normalizedTags, pool, relays, videoKinds, eventStore, config.blossomServers])
+  }, [
+    normalizedTags,
+    pool,
+    relays,
+    videoKinds,
+    eventStore,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+  ])
 
   // Load more function (currently no-op, can be extended for pagination)
   const loadMore = () => {

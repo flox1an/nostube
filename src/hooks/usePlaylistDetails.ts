@@ -17,6 +17,7 @@ import { processEvents } from '@/utils/video-event'
 
 import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
+import { useSelectedPreset } from './useSelectedPreset'
 
 type NeventPointer = { id: string }
 type NaddrPointer = { identifier: string; pubkey: string; kind: number }
@@ -61,6 +62,7 @@ export function usePlaylistDetails(
 ): PlaylistDetailsResult {
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
+  const { presetContent } = useSelectedPreset()
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -322,10 +324,19 @@ export function usePlaylistDetails(
     return combineLatest(observables).pipe(
       switchMap(events => {
         const filteredEvents = events.filter((event): event is NostrEvent => Boolean(event))
-        return of(processEvents(filteredEvents, readRelays, undefined, config.blossomServers))
+        return of(
+          processEvents(
+            filteredEvents,
+            readRelays,
+            undefined,
+            config.blossomServers,
+            undefined,
+            presetContent.nsfwPubkeys
+          )
+        )
       })
     )
-  }, [videoRefs, eventStore, readRelays, config.blossomServers])
+  }, [videoRefs, eventStore, readRelays, config.blossomServers, presetContent.nsfwPubkeys])
 
   const videoEvents = useObservableState(videoEventsObservable, [])
 

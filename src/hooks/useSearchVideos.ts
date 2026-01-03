@@ -3,6 +3,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 import { RelayPool } from 'applesauce-relay'
@@ -56,6 +57,7 @@ export function useSearchVideos({
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const blockedPubkeys = useReportedPubkeys()
+  const { presetContent } = useSelectedPreset()
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [events, setEvents] = useState<NostrEvent[]>([])
@@ -80,8 +82,15 @@ export function useSearchVideos({
 
   // Process events - only use search relay for discovery
   const videos = useMemo(() => {
-    return processEvents(events, SEARCH_RELAYS, blockedPubkeys, config.blossomServers)
-  }, [events, blockedPubkeys, config.blossomServers])
+    return processEvents(
+      events,
+      SEARCH_RELAYS,
+      blockedPubkeys,
+      config.blossomServers,
+      undefined,
+      presetContent.nsfwPubkeys
+    )
+  }, [events, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Load initial events from search relay
   useEffect(() => {

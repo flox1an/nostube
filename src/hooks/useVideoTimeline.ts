@@ -2,6 +2,7 @@ import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
+import { useSelectedPreset } from './useSelectedPreset'
 import { useEffect, useMemo, useState } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -19,6 +20,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
   const { getAllMissingVideos } = useMissingVideos()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const [videosLoading, setVideosLoading] = useState(false)
 
   const readRelays = useReadRelays()
@@ -47,12 +49,21 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
           readRelays,
           blockedPubkeys,
           config.blossomServers,
-          missingVideoIds
+          missingVideoIds,
+          presetContent.nsfwPubkeys
         )
       })
     )
     return result
-  }, [eventStore, readRelays, blockedPubkeys, filters, config.blossomServers, missingVideoIds])
+  }, [
+    eventStore,
+    readRelays,
+    blockedPubkeys,
+    filters,
+    config.blossomServers,
+    missingVideoIds,
+    presetContent.nsfwPubkeys,
+  ])
 
   const videos =
     useObservableMemo(() => {

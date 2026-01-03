@@ -3,6 +3,7 @@ import { useAppContext } from './useAppContext'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent, deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
+import { useSelectedPreset } from './useSelectedPreset'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 
@@ -35,6 +36,7 @@ export function useHashtagVideos({
 }: UseHashtagVideosOptions): UseHashtagVideosResult {
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
+  const { presetContent } = useSelectedPreset()
 
   // Phase 1: Native videos with #t tags
   const [nativeVideos, setNativeVideos] = useState<VideoEvent[]>([])
@@ -98,7 +100,7 @@ export function useHashtagVideos({
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
-        const processed = processEvent(event, [], config.blossomServers)
+        const processed = processEvent(event, [], config.blossomServers, presetContent.nsfwPubkeys)
         if (processed) {
           processedVideos.push(processed)
         }
@@ -131,7 +133,7 @@ export function useHashtagVideos({
       clearTimeout(timeout)
       subscription.unsubscribe()
     }
-  }, [tag, pool, relays, videoKinds, eventStore, config.blossomServers])
+  }, [tag, pool, relays, videoKinds, eventStore, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Phase 2: Query label events (background, after native results)
   useEffect(() => {
@@ -268,7 +270,12 @@ export function useHashtagVideos({
         await new Promise<void>(resolve => {
           const subscription = loader().subscribe({
             next: (event: NostrEvent) => {
-              const processed = processEvent(event, [], config.blossomServers)
+              const processed = processEvent(
+                event,
+                [],
+                config.blossomServers,
+                presetContent.nsfwPubkeys
+              )
               if (processed) {
                 fetchedVideos.push(processed)
               }
@@ -292,7 +299,15 @@ export function useHashtagVideos({
     }
 
     fetchLabeledVideos()
-  }, [labeledVideoIds, pool, relays, videoKinds, eventStore, config.blossomServers])
+  }, [
+    labeledVideoIds,
+    pool,
+    relays,
+    videoKinds,
+    eventStore,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+  ])
 
   // Merge and deduplicate videos
   const mergedVideos = useMemo(() => {

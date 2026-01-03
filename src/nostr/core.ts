@@ -1,6 +1,6 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
-import { createTimelineLoader, createAddressLoader } from 'applesauce-loaders/loaders'
+import { createTimelineLoader, createEventLoaderForStore } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
 import type { IDBPDatabase } from 'idb'
@@ -46,20 +46,17 @@ relayPool.request = ((relays, filters, opts) => {
   return race(originalRequest(relays, filters, opts), timeout$)
 }) as typeof relayPool.request
 
-// Configure unified loader for replaceable events (kind 10000-19999)
-// This includes kind 10063 (blossom servers), kind 10002 (relay lists), etc.
-const addressLoader = createAddressLoader(relayPool, {
-  eventStore,
+// Configure unified event loader for all pointer types
+// Handles both EventPointer (by id) and AddressPointer (by kind/pubkey/d-tag)
+// This includes kind 10063 (blossom servers), kind 10002 (relay lists), profiles, etc.
+createEventLoaderForStore(eventStore, relayPool, {
   cacheRequest,
   lookupRelays: DEFAULT_RELAYS,
   bufferTime: 0, // Don't batch - emit first result immediately
+  followRelayHints: true,
 })
 
-// Set loader on event store so useEventModel can fetch data
-// In v5, eventLoader handles all pointer types (EventPointer, AddressPointer, etc.)
-eventStore.eventLoader = addressLoader
-
-console.log('📡 Configured EventStore loaders with relays:', DEFAULT_RELAYS)
+console.log('📡 Configured unified EventStore loader with relays:', DEFAULT_RELAYS)
 
 // Save all new events to the cache
 presistEventsToCache(eventStore, events => addEvents(cache!, events))

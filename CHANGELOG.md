@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Page Max-Width**: Consistent max-w-560 across all pages
 - **Ultra-Wide Detection**: Increased cinema mode threshold to 10% above 16:9
 - **Blossom URL Utils**: Consolidated detection/parsing, NON_BLOSSOM_SERVERS list
+- **Unified Event Loader**: Replaced `createAddressLoader` with `createEventLoaderForStore` from applesauce-loaders v5 in core.ts. This unified loader handles both EventPointer (by id) and AddressPointer (by kind/pubkey/d-tag) lookups automatically, with support for relay hints and IDB caching.
 - **Package Updates**: Applesauce v5.0.0 (accounts, core, loaders, react, relay, signers, wallet-connect), applesauce-common v5.0.0 (new package for models and blueprints), @types/node 25.0.3, immer 11.1.0, react-resizable-panels 4.0.15, and more
 
 ### Fixed

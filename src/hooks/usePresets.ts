@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from './useAppContext'
 import { METADATA_RELAY, presetRelays } from '@/constants/relays'
@@ -54,14 +53,17 @@ export function usePresets() {
   const [isLoading, setIsLoading] = useState(true)
 
   // Query event store for all preset events
-  const presetsObservable = eventStore.timeline([
-    {
-      kinds: [PRESET_EVENT_KIND],
-      '#d': [PRESET_D_TAG],
-    },
-  ])
-
-  const presetEvents = useObservableState(presetsObservable, [])
+  const presetEvents =
+    use$(
+      () =>
+        eventStore.timeline([
+          {
+            kinds: [PRESET_EVENT_KIND],
+            '#d': [PRESET_D_TAG],
+          },
+        ]),
+      [eventStore]
+    ) ?? []
 
   // Build list of relays to query
   const discoveryRelays = useMemo(() => {

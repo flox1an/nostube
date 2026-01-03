@@ -1,5 +1,4 @@
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
@@ -229,26 +228,32 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   }, [authorPubkey, currentVideoType, relaysToUse, pool, eventStore])
 
   // Use EventStore timeline for author-specific suggestions
-  const authorSuggestionsObservable = eventStore.timeline([
-    {
-      kinds: getKindsForType('all'),
-      authors: authorPubkey ? [authorPubkey] : [],
-      limit: 30,
-    },
-  ])
-
-  const authorSuggestions = useObservableState(authorSuggestionsObservable, [])
+  const authorSuggestions =
+    use$(
+      () =>
+        eventStore.timeline([
+          {
+            kinds: getKindsForType('all'),
+            authors: authorPubkey ? [authorPubkey] : [],
+            limit: 30,
+          },
+        ]),
+      [eventStore, authorPubkey]
+    ) ?? []
   const authorIsLoading = authorPubkey && authorSuggestions.length === 0
 
   // Use EventStore timeline for global suggestions
-  const globalSuggestionsObservable = eventStore.timeline([
-    {
-      kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
-      limit: 30,
-    },
-  ])
-
-  const globalSuggestions = useObservableState(globalSuggestionsObservable, [])
+  const globalSuggestions =
+    use$(
+      () =>
+        eventStore.timeline([
+          {
+            kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
+            limit: 30,
+          },
+        ]),
+      [eventStore, currentVideoType]
+    ) ?? []
   const globalIsLoading = globalSuggestions.length === 0
 
   const suggestions = useMemo(() => {

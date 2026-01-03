@@ -1,5 +1,4 @@
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
 import type { Filter } from 'nostr-tools'
 
@@ -42,8 +41,7 @@ export const useReports = ({ p, e, x }: UseReportsParams = {}) => {
   }, [p, e, x])
 
   // Use EventStore timeline to get reports
-  const reportsObservable = eventStore.timeline([filter])
-  const reportEvents = useObservableState(reportsObservable, [])
+  const reportEvents = use$(() => eventStore.timeline([filter]), [eventStore, filter]) ?? []
 
   const processedReports = useMemo(() => {
     return reportEvents.map(event => {

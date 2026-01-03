@@ -1,6 +1,5 @@
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
 import { useTranslation } from 'react-i18next'
@@ -726,7 +725,7 @@ export function ShortsVideoPage() {
     return of(undefined)
   }, [eventStore, eventLoader, addressLoader, videoIdentifier])
 
-  const initialVideoEvent = useObservableState(videoObservable)
+  const initialVideoEvent = use$(() => videoObservable, [videoObservable])
 
   // Process the initial video
   const initialVideo = useMemo(() => {

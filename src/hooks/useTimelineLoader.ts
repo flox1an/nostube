@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { cacheRequest } from '@/nostr/core'
 import { processEvents } from '@/utils/video-event'
@@ -64,15 +63,13 @@ export function useTimelineLoader({
 
   // Subscribe to events from EventStore for reactive updates
   // Only recreate observable when filters change, not when processing dependencies change
-  const timeline$ = useMemo(() => {
-    if (!filters) {
-      return of([]) // Return observable that emits empty array
-    }
-    return eventStore.timeline(filters)
-  }, [eventStore, filters])
-
-  // Subscribe to timeline with default empty array
-  const events = useObservableState(timeline$, [])
+  const events =
+    use$(() => {
+      if (!filters) {
+        return of([]) // Return observable that emits empty array
+      }
+      return eventStore.timeline(filters)
+    }, [eventStore, filters]) ?? []
 
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
   const videos = useMemo(() => {

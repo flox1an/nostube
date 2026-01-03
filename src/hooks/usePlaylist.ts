@@ -1,5 +1,4 @@
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useCurrentUser } from './useCurrentUser'
 import { useNostrPublish } from './useNostrPublish'
 import { nowInSecs } from '@/lib/utils'
@@ -57,8 +56,7 @@ export function usePlaylists() {
   )
 
   // Use EventStore timeline to get playlists for current user
-  const playlistsObservable = eventStore.timeline(filters)
-  const allPlaylistEvents = useObservableState(playlistsObservable, [])
+  const allPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters]) ?? []
 
   // Filter out deleted playlists
   const playlistEvents = useMemo(
@@ -324,7 +322,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   // Also load deletion events (kind 5) for filtering
   const deletionFilters = useMemo(() => [{ kinds: [5], authors: pubkey ? [pubkey] : [] }], [pubkey])
 
-  const allPlaylistEvents = useObservableState(eventStore.timeline(filters), [])
+  const allPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters]) ?? []
 
   // Filter out deleted playlists
   const playlistEvents = useMemo(

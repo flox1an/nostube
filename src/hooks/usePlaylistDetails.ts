@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { of, combineLatest } from 'rxjs'
 import { switchMap, map } from 'rxjs/operators'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import {
   createAddressLoader,
   createEventLoader,
@@ -139,7 +138,7 @@ export function usePlaylistDetails(
     return of(undefined)
   }, [playlistPointer, eventStore])
 
-  const playlistEvent = useObservableState(playlistObservable)
+  const playlistEvent = use$(() => playlistObservable, [playlistObservable])
 
   const isLoadingPlaylist = Boolean(playlistPointer) && !playlistEvent
 
@@ -338,7 +337,7 @@ export function usePlaylistDetails(
     )
   }, [videoRefs, eventStore, readRelays, config.blossomServers, presetContent.nsfwPubkeys])
 
-  const videoEvents = useObservableState(videoEventsObservable, [])
+  const videoEvents = use$(() => videoEventsObservable, [videoEventsObservable]) ?? []
 
   const isLoadingVideos = Boolean(playlistEvent) && videoRefs.length > 0 && videoEvents.length === 0
 

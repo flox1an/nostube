@@ -1,4 +1,4 @@
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
@@ -65,10 +65,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
     presetContent.nsfwPubkeys,
   ])
 
-  const videos =
-    useObservableMemo(() => {
-      return videos$
-    }, [videos$]) || []
+  const videos = use$(() => videos$, [videos$]) ?? []
 
   useEffect(() => {
     const lastLoaded = lastLoadedTimestamp.get(hash)

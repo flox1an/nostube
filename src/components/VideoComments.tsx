@@ -1,5 +1,4 @@
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -397,13 +396,14 @@ export function VideoComments({
   }, [pool, readRelays, filters, eventStore])
 
   // Use EventStore timeline to get comments for this video
-  const comments$ = useMemo(() => {
-    return eventStore
-      .timeline(filters)
-      .pipe(map(events => events.map(e => mapEventToComment(e, videoId))))
-  }, [eventStore, filters, videoId])
-
-  const flatComments = useObservableState(comments$, [])
+  const flatComments =
+    use$(
+      () =>
+        eventStore
+          .timeline(filters)
+          .pipe(map(events => events.map(e => mapEventToComment(e, videoId)))),
+      [eventStore, filters, videoId]
+    ) ?? []
 
   // Build threaded comment structure
   const threadedComments = useMemo(() => {

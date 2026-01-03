@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { of, map } from 'rxjs'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from './useAppContext'
@@ -40,7 +39,7 @@ export function useMyPreset() {
   const userPubkey = user?.pubkey
 
   // Query event store for user's preset
-  const presetObservable = useMemo(
+  const presetEvent = use$(
     () =>
       userPubkey
         ? eventStore
@@ -49,8 +48,6 @@ export function useMyPreset() {
         : of(undefined),
     [eventStore, userPubkey]
   )
-
-  const presetEvent = useObservableState(presetObservable)
 
   // Build list of relays to query
   const discoveryRelays = useMemo(() => {

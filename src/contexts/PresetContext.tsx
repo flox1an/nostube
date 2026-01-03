@@ -7,8 +7,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { map } from 'rxjs'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from '@/hooks/useAppContext'
@@ -106,14 +105,13 @@ export function PresetProvider({ children }: PresetProviderProps) {
   const [retryCount, setRetryCount] = useState(0)
 
   // Query event store for the selected preset
-  const presetObservable = useMemo(
+  const presetEvent = use$(
     () =>
       eventStore
         .replaceable(PRESET_EVENT_KIND, selectedPubkey, PRESET_D_TAG)
         .pipe(map(event => event ?? undefined)),
     [eventStore, selectedPubkey]
   )
-  const presetEvent = useObservableState(presetObservable)
 
   // Build list of relays to query
   const discoveryRelays = useMemo(() => {

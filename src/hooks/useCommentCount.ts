@@ -1,6 +1,4 @@
-import { useMemo } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { map } from 'rxjs/operators'
 
 interface UseCommentCountOptions {
@@ -14,27 +12,18 @@ interface UseCommentCountOptions {
 export function useCommentCount({ videoId }: UseCommentCountOptions) {
   const eventStore = useEventStore()
 
-  // Filters to get all comments for this video
-  const filters = useMemo(
-    () => [
-      {
-        kinds: [1],
-        '#e': [videoId],
-      },
-      {
-        kinds: [1111],
-        '#E': [videoId],
-      },
-    ],
-    [videoId]
-  )
-
-  // Subscribe to timeline and count events
-  const commentCount$ = useMemo(() => {
-    return eventStore.timeline(filters).pipe(map(events => events.length))
-  }, [eventStore, filters])
-
-  const count = useObservableState(commentCount$, 0)
+  // Subscribe to timeline and count comments (kind 1 and kind 1111)
+  const count =
+    use$(
+      () =>
+        eventStore
+          .timeline([
+            { kinds: [1], '#e': [videoId] },
+            { kinds: [1111], '#E': [videoId] },
+          ])
+          .pipe(map(events => events.length)),
+      [eventStore, videoId]
+    ) ?? 0
 
   return count
 }

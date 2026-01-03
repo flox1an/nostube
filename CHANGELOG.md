@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated to applesauce-react use$ hook**: Replaced `useObservableMemo` and `useObservableState` (from `observable-hooks`) with the new unified `use$` hook from `applesauce-react`. This simplifies React integration by combining observable subscription management and state updates into a single hook. Updated 18 files including hooks (`useProfile`, `useEventZaps`, `useLikedEvents`, `useCommentCount`, `useReports`, `usePlaylist`, `useEventStats`, `useVideoTimeline`, `useMyPreset`, `useUserRelays`, `usePresets`, `useTimelineLoader`, `usePlaylistDetails`) and components (`PresetContext`, `ShortsVideoPage`, `VideoSuggestions`, `VideoComments`). Removed `observable-hooks` dependency entirely.
+
 ### Added
 
 - **User Avatar Fallback**: New `UserAvatar` component generates unique dicebear avatars for users without profile pictures. Falls back to a colorful avatar based on user's pubkey instead of a plain character, providing better visual identity across the app.

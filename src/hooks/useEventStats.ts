@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from 'react'
-import { useEventStore, useObservableMemo, useEventModel } from 'applesauce-react/hooks'
+import { useEventStore, use$, useEventModel } from 'applesauce-react/hooks'
 import { ReactionsModel } from 'applesauce-common/models'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { getInvoiceAmount } from '@/lib/zap-utils'
@@ -173,13 +173,14 @@ export function useEventStats({
   }, [eventId, pool, eventStore])
 
   // Subscribe to zap receipts from store
-  const zaps = useObservableMemo(() => {
-    const filter = {
-      kinds: [9735],
-      '#e': [eventId],
-    }
-    return eventStore.timeline(filter)
-  }, [eventStore, eventId])
+  const zaps = use$(
+    () =>
+      eventStore.timeline({
+        kinds: [9735],
+        '#e': [eventId],
+      }),
+    [eventStore, eventId]
+  )
 
   // Calculate zap totals
   const { totalSats, zapCount } = useMemo(() => {

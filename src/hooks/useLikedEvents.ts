@@ -1,6 +1,5 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -16,14 +15,17 @@ export function useLikedEvents() {
   }, [config.relays])
 
   // Use EventStore timeline to get user's reactions (kind 7)
-  const reactionsObservable = eventStore.timeline([
-    {
-      kinds: [7],
-      authors: user?.pubkey ? [user.pubkey] : [],
-    },
-  ])
-
-  const reactionEvents = useObservableState(reactionsObservable, [])
+  const reactionEvents =
+    use$(
+      () =>
+        eventStore.timeline([
+          {
+            kinds: [7],
+            authors: user?.pubkey ? [user.pubkey] : [],
+          },
+        ]),
+      [eventStore, user?.pubkey]
+    ) ?? []
 
   // Load reactions from relays if not in EventStore
   useEffect(() => {

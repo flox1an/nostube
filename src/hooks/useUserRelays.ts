@@ -1,5 +1,4 @@
-import { useEventStore } from 'applesauce-react/hooks'
-import { useObservableState } from 'observable-hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { type NostrEvent } from 'nostr-tools'
 import { useEffect, useMemo } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -22,15 +21,18 @@ export function useUserRelays(pubkey: string | undefined) {
   const { pool, config } = useAppContext()
 
   // Use EventStore to get user's relay list (kind 10002)
-  const relayListObservable = eventStore.timeline([
-    {
-      kinds: [10002],
-      authors: pubkey ? [pubkey] : [],
-      limit: 1,
-    },
-  ])
-
-  const relayListEvents = useObservableState(relayListObservable, [])
+  const relayListEvents =
+    use$(
+      () =>
+        eventStore.timeline([
+          {
+            kinds: [10002],
+            authors: pubkey ? [pubkey] : [],
+            limit: 1,
+          },
+        ]),
+      [eventStore, pubkey]
+    ) ?? []
 
   const discoveryRelays = useMemo(() => {
     const urls = new Set<string>()

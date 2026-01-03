@@ -1,5 +1,5 @@
 import { kinds } from 'nostr-tools'
-import { useEventStore, useObservableMemo } from 'applesauce-react/hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { type ProfileContent } from 'applesauce-core/helpers/profile'
 import { type ProfilePointer } from 'nostr-tools/nip19'
 import { type Model } from 'applesauce-core'
@@ -57,5 +57,5 @@ export function useProfile(user?: ProfilePointer): ProfileContent | undefined {
       )
   }
 
-  return useObservableMemo(() => eventStore.model(ProfileQuery, user), [user])
+  return use$(() => eventStore.model(ProfileQuery, user), [user])
 }

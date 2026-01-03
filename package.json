@@ -48,6 +48,7 @@
     "applesauce-accounts": "^5.0.0",
     "applesauce-common": "^5.0.0",
     "applesauce-core": "^5.0.0",
+    "applesauce-extra": "^5.0.0",
     "applesauce-factory": "^4.0.0",
     "applesauce-loaders": "^5.0.0",
     "applesauce-react": "^5.0.0",

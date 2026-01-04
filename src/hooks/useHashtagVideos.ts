@@ -119,8 +119,7 @@ export function useHashtagVideos({
 
     queueMicrotask(() => setLoading(true))
 
-    const loaderFilters: Filter[] = [{ ...nativeFilter, limit }]
-    const loader = createTimelineLoader(pool, relays, loaderFilters, { eventStore })
+    const loader = createTimelineLoader(pool, relays, nativeFilter, { eventStore, limit })
 
     let eventCount = 0
     const subscription = loader().subscribe({
@@ -311,8 +310,8 @@ export function useHashtagVideos({
     const oldestVideo = mergedVideos[mergedVideos.length - 1]
     const until = oldestVideo.created_at
 
-    const paginatedFilters: Filter[] = [{ ...nativeFilter, until, limit }]
-    const loader = createTimelineLoader(pool, relays, paginatedFilters, { eventStore })
+    const paginatedFilter = { ...nativeFilter, until }
+    const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
 
     let eventCount = 0
     const subscription = loader().subscribe({

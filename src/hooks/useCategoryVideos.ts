@@ -101,8 +101,7 @@ export function useCategoryVideos({
 
     queueMicrotask(() => setLoading(true))
 
-    const loaderFilters: Filter[] = [{ ...filters, limit }]
-    const loader = createTimelineLoader(pool, relays, loaderFilters, { eventStore })
+    const loader = createTimelineLoader(pool, relays, filters, { eventStore, limit })
 
     let eventCount = 0
     const subscription = loader().subscribe({
@@ -141,8 +140,8 @@ export function useCategoryVideos({
     const oldestVideo = videos[videos.length - 1]
     const until = oldestVideo.created_at
 
-    const paginatedFilters: Filter[] = [{ ...filters, until, limit }]
-    const loader = createTimelineLoader(pool, relays, paginatedFilters, { eventStore })
+    const paginatedFilter = { ...filters, until }
+    const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
 
     let eventCount = 0
     const subscription = loader().subscribe({

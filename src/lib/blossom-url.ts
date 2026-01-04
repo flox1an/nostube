@@ -51,6 +51,11 @@ export function isBlossomServerBlocked(url: string): boolean {
  * @returns Object with sha256 hash and extension, or empty object if not a valid Blossom URL
  */
 export function extractBlossomHash(url: string): { sha256?: string; ext?: string } {
+  // Data URLs are not Blossom URLs
+  if (url.startsWith('data:')) {
+    return {}
+  }
+
   // Check if it's from a non-Blossom server first
   if (isNonBlossomServer(url)) {
     return {}

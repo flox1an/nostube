@@ -222,6 +222,8 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
  */
 export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string) => {
   if (!videoUrl) return ''
+  // Check for data URLs and return them immediately
+  if (videoUrl.startsWith('data:')) return videoUrl
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   // imgproxy can generate thumbnails from video URLs

@@ -222,6 +222,13 @@ function generateProxyUrls(
 }
 
 /**
+ * Check if a URL is a data URL (e.g., data:image/png;base64,...)
+ */
+function isDataUrl(url: string): boolean {
+  return url.startsWith('data:')
+}
+
+/**
  * Generate all possible media URLs with fallbacks
  *
  * Priority Order:
@@ -229,6 +236,8 @@ function generateProxyUrls(
  * 2. Original URLs (if valid Blossom URLs)
  * 3. Mirror URLs (exact copies from user's Blossom servers)
  * 4. Original URLs again (if not Blossom URLs)
+ *
+ * Data URLs are returned immediately without any processing.
  */
 export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
   const {
@@ -247,6 +256,13 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
 
   // Process each original URL
   for (const originalUrl of originalUrls) {
+    // Data URLs should be used directly without any processing
+    if (isDataUrl(originalUrl)) {
+      allUrls.push(originalUrl)
+      allMetadata.push({ source: 'original' })
+      continue
+    }
+
     const isBlossom = isBlossomUrl(originalUrl)
 
     // 1. Generate and add proxy URLs FIRST (if caching servers configured)

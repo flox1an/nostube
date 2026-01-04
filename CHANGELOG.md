@@ -106,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Data URL Thumbnail Handling**: Data URLs (e.g., `data:image/png;base64,...`) are now displayed directly without any imgproxy resizing, blossom server lookups, or fallback logic. Updated `imageProxyVideoThumbnail`, `generateMediaUrls`, `extractBlossomHash`, `validateMediaUrl`, and `findValidUrl` to detect and pass through data URLs immediately.
 - **NSFW Filtering on Category/Hashtag/Search Pages**: Fixed preset NSFW author filtering not being applied on category, hashtag, search, playlist, and timeline pages. Added `useSelectedPreset` hook and `nsfwPubkeys` parameter to `processEvent`/`processEvents` calls in `useCategoryVideos`, `useHashtagVideos`, `useSearchVideos`, `useTimelineLoader`, `useVideoTimeline`, and `usePlaylistDetails` hooks.
 - **Codec Detection for Large Moov Atoms**: Increased chunk size from 1MB to 2MB to handle videos with large moov atoms (e.g., VP9/Opus files with 1.6MB metadata). Added streaming fallback for Blossom servers that don't support HTTP Range requests (return 200 instead of 206), allowing codec detection to work by reading partial response via streaming then cancelling.
 - **Default Preset Pubkey**: Fixed incorrect default preset pubkey that prevented preset from loading in incognito mode. The pubkey in the code didn't match the actual preset event pubkey.

@@ -191,6 +191,11 @@ async function validateUrl(
  * Validate a media URL with enhanced validation options
  */
 export async function validateMediaUrl(url: string, options?: ValidationOptions): Promise<boolean> {
+  // Data URLs are always valid - no need to validate them
+  if (url.startsWith('data:')) {
+    return true
+  }
+
   const startTime = Date.now()
   const result = await validateUrl(url, options?.timeout || 5000, options)
   const validationTime = Date.now() - startTime
@@ -223,6 +228,12 @@ export async function findValidUrl(options: FindValidUrlOptions): Promise<string
 
   if (urls.length === 0) {
     return null
+  }
+
+  // Data URLs are always valid - return immediately
+  const firstUrl = urls[0]
+  if (firstUrl?.startsWith('data:')) {
+    return firstUrl
   }
 
   const mediaType = resourceType as MediaType

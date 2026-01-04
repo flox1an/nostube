@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
@@ -7,6 +7,7 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 import { RelayPool } from 'applesauce-relay'
+import { of } from 'rxjs'
 
 // Dedicated relay pool for search - only uses relay.nostr.band
 const SEARCH_RELAY = 'wss://relay.nostr.band'
@@ -40,6 +41,7 @@ interface UseSearchVideosOptions {
 /**
  * Hook for searching videos using NIP-50 full-text search.
  * Uses a dedicated relay pool that only connects to relay.nostr.band.
+ * Uses use$ to subscribe to EventStore for reactive updates.
  *
  * @example
  * const { videos, loading, loadMore } = useSearchVideos({ query: 'bitcoin' })
@@ -60,30 +62,42 @@ export function useSearchVideos({
   const { presetContent } = useSelectedPreset()
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
-  const [events, setEvents] = useState<NostrEvent[]>([])
 
-  // Create NIP-50 search filter
-  const filters = useMemo(() => {
-    if (!query) {
-      return null
-    }
-    const searchFilter = {
+  // Create NIP-50 search filter (without the search param for EventStore query)
+  const storeFilter = useMemo(() => {
+    if (!query) return null
+    return { kinds }
+  }, [query, kinds])
+
+  // Create full NIP-50 search filter for relay query
+  const searchFilter = useMemo(() => {
+    if (!query) return null
+
+    const filter = {
       kinds,
       search: query, // NIP-50 full-text search
     }
 
-    // Debug: Log the filter being sent to relay
     if (import.meta.env.DEV) {
-      console.log('🔍 NIP-50 Search Filter:', JSON.stringify(searchFilter, null, 2))
+      console.log('🔍 NIP-50 Search Filter:', JSON.stringify(filter, null, 2))
     }
 
-    return searchFilter
+    return filter
   }, [query, kinds])
+
+  // Subscribe to EventStore for reactive updates as events arrive
+  // Note: EventStore doesn't support NIP-50 search, so we query by kinds only
+  // and filter client-side based on what the search relay returned
+  const events = use$(() => {
+    if (!storeFilter) return of([])
+    return eventStore.timeline(storeFilter)
+  }, [eventStore, storeFilter])
 
   // Process events - only use search relay for discovery
   const videos = useMemo(() => {
+    const eventList = events ?? []
     return processEvents(
-      events,
+      eventList,
       SEARCH_RELAYS,
       blockedPubkeys,
       config.blossomServers,
@@ -92,28 +106,23 @@ export function useSearchVideos({
     )
   }, [events, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
+  // Reset hasLoaded when query changes to trigger reload
+  useEffect(() => {
+    if (query === undefined || query === null) return
+    queueMicrotask(() => {
+      setHasLoaded(false)
+      setLoading(true)
+    })
+  }, [query])
+
   // Load initial events from search relay
   useEffect(() => {
-    if (!filters || hasLoaded) return
+    if (!searchFilter || hasLoaded) return
 
     const pool = getSearchPool()
-    let cancelled = false
-    ;(async () => {
-      await Promise.resolve()
-      if (!cancelled) {
-        setLoading(true)
-      }
-    })()
+    queueMicrotask(() => setLoading(true))
 
-    // Debug: Log the actual REQ being sent
-    if (import.meta.env.DEV) {
-      console.log('🔍 Sending NIP-50 REQ to relay.nostr.band:', {
-        relay: SEARCH_RELAY,
-        filter: filters,
-      })
-    }
-
-    const loader = createTimelineLoader(pool, SEARCH_RELAYS, filters, {
+    const loader = createTimelineLoader(pool, SEARCH_RELAYS, searchFilter, {
       eventStore,
       limit,
     })
@@ -121,52 +130,26 @@ export function useSearchVideos({
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
-        setEvents(prev => [...prev, event])
       },
       complete: () => {
-        if (cancelled) {
-          return
-        }
         setLoading(false)
         setHasLoaded(true)
       },
       error: err => {
         console.error('Error searching videos:', err)
-        if (cancelled) {
-          return
-        }
         setLoading(false)
         setHasLoaded(true)
       },
     })
 
     return () => {
-      cancelled = true
       subscription.unsubscribe()
     }
-  }, [filters, eventStore, hasLoaded, limit])
-
-  // Reset hasLoaded and events when query changes
-  useEffect(() => {
-    if (query === undefined || query === null) {
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      await Promise.resolve()
-      if (!cancelled) {
-        setHasLoaded(false)
-        setEvents([])
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [query])
+  }, [searchFilter, eventStore, hasLoaded, limit])
 
   // Load more videos (pagination)
   const loadMore = useCallback(() => {
-    if (!filters || loading) return
+    if (!searchFilter || loading) return
 
     const pool = getSearchPool()
     setLoading(true)
@@ -174,7 +157,7 @@ export function useSearchVideos({
     const oldestEvent = videos.length > 0 ? videos[videos.length - 1] : null
     const until = oldestEvent?.created_at
 
-    const paginatedFilters = until ? { ...filters, until } : filters
+    const paginatedFilters = until ? { ...searchFilter, until } : searchFilter
 
     const loader = createTimelineLoader(pool, SEARCH_RELAYS, paginatedFilters, {
       eventStore,
@@ -184,7 +167,6 @@ export function useSearchVideos({
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
-        setEvents(prev => [...prev, event])
       },
       complete: () => {
         setLoading(false)
@@ -198,7 +180,7 @@ export function useSearchVideos({
     return () => {
       subscription.unsubscribe()
     }
-  }, [filters, eventStore, loading, videos, limit])
+  }, [searchFilter, eventStore, loading, videos, limit])
 
   return {
     videos,

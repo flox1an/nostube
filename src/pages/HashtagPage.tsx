@@ -15,7 +15,7 @@ export function HashtagPage() {
   const videoKinds = useMemo(() => getKindsForType('all'), [])
 
   // Use new hook that includes NIP-32 labeled videos
-  const { videos, loading, loadMore } = useHashtagVideos({
+  const { videos, loading, exhausted, loadMore } = useHashtagVideos({
     tag,
     relays,
     videoKinds,
@@ -42,11 +42,10 @@ export function HashtagPage() {
       <VideoTimelinePage
         videos={videos}
         loading={loading}
-        exhausted={false}
+        exhausted={exhausted}
         onLoadMore={loadMore}
         layoutMode="auto"
         emptyMessage={t('pages.hashtag.noVideos', { tag })}
-        exhaustedMessage=""
         className=""
       />
     </div>

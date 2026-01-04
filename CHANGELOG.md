@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Infinite Scroll on Category/Hashtag Pages**: Category and hashtag pages now support infinite scroll pagination. Automatically loads more videos when scrolling to the bottom, with proper exhaustion detection to stop loading when no more videos are available. Uses `until` parameter for timestamp-based pagination.
 - **People Search in Global Search Bar**: Search bar now supports searching for Nostr users via Primal relay (NIP-50). Shows matching profiles with avatars in a dropdown, clicking navigates to author page. Keyboard navigation with arrow keys, Enter to select, Escape to close. Video search option always available at bottom of dropdown.
 - **User Avatar Fallback**: New `UserAvatar` component generates unique dicebear avatars for users without profile pictures. Falls back to a colorful avatar based on user's pubkey instead of a plain character, providing better visual identity across the app.
 - **App Presets System**: NIP-78 based preset system (kind 30078) for app-wide configuration. Admins can manage blocked pubkeys, NSFW authors, default relays, blossom proxy, and thumbnail resize server via `/admin` route. Users can browse and select presets via `/settings/presets`. Selected preset stored in localStorage, with 1-hour cache for performance. Default preset: `npub1klr0dy2ul2dx9llk58czvpx73rprcmrvd5dc7ck8esg8f8es06qs427gxc`.

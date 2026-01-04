@@ -23,7 +23,7 @@ export function CategoryPage() {
   )
 
   // Use category videos hook with all tags in the category
-  const { videos, loading, loadMore } = useCategoryVideos({
+  const { videos, loading, exhausted, loadMore } = useCategoryVideos({
     tags: category?.tags || [],
     relays,
     videoKinds,
@@ -67,11 +67,10 @@ export function CategoryPage() {
       <VideoTimelinePage
         videos={videos}
         loading={loading}
-        exhausted={false}
+        exhausted={exhausted}
         onLoadMore={loadMore}
         layoutMode="auto"
         emptyMessage={t('pages.category.noVideos', { category: category.name })}
-        exhaustedMessage=""
         className=""
       />
     </div>

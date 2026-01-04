@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
@@ -7,7 +7,7 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 import { RelayPool } from 'applesauce-relay'
-import { of } from 'rxjs'
+import { of, type Subscription } from 'rxjs'
 
 // Dedicated relay pool for search - only uses relay.nostr.band
 const SEARCH_RELAY = 'wss://relay.nostr.band'
@@ -62,6 +62,8 @@ export function useSearchVideos({
   const { presetContent } = useSelectedPreset()
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  // Store subscription ref to keep it alive during loadMore
+  const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
 
   // Create NIP-50 search filter (without the search param for EventStore query)
   const storeFilter = useMemo(() => {
@@ -147,9 +149,19 @@ export function useSearchVideos({
     }
   }, [searchFilter, eventStore, hasLoaded, limit])
 
+  // Cleanup loadMore subscription on unmount
+  useEffect(() => {
+    return () => {
+      loadMoreSubscriptionRef.current?.unsubscribe()
+    }
+  }, [])
+
   // Load more videos (pagination)
   const loadMore = useCallback(() => {
     if (!searchFilter || loading) return
+
+    // Clean up any previous loadMore subscription
+    loadMoreSubscriptionRef.current?.unsubscribe()
 
     const pool = getSearchPool()
     setLoading(true)
@@ -164,7 +176,7 @@ export function useSearchVideos({
       limit,
     })
 
-    const subscription = loader().subscribe({
+    loadMoreSubscriptionRef.current = loader().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
       },
@@ -176,10 +188,6 @@ export function useSearchVideos({
         setLoading(false)
       },
     })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [searchFilter, eventStore, loading, videos, limit])
 
   return {

@@ -7,7 +7,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
-import { of } from 'rxjs'
+import { of, type Subscription } from 'rxjs'
 
 interface UseCategoryVideosOptions {
   tags: string[] // All tags in the category
@@ -50,6 +50,8 @@ export function useCategoryVideos({
 
   // Track the count of videos before loading more to detect exhaustion
   const prevVideoCountRef = useRef(0)
+  // Store subscription ref to keep it alive during loadMore
+  const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
 
   // Normalize tags to lowercase
   const normalizedTags = useMemo(() => tags.map(tag => tag.toLowerCase()), [tags])
@@ -129,9 +131,19 @@ export function useCategoryVideos({
     }
   }, [filters, pool, relays, eventStore, hasLoaded, limit])
 
+  // Cleanup loadMore subscription on unmount
+  useEffect(() => {
+    return () => {
+      loadMoreSubscriptionRef.current?.unsubscribe()
+    }
+  }, [])
+
   // Load more videos (pagination)
   const loadMore = useCallback(() => {
     if (!filters || !pool || loading || exhausted || videos.length === 0) return
+
+    // Clean up any previous loadMore subscription
+    loadMoreSubscriptionRef.current?.unsubscribe()
 
     setLoading(true)
     prevVideoCountRef.current = videos.length
@@ -144,7 +156,7 @@ export function useCategoryVideos({
     const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
 
     let eventCount = 0
-    const subscription = loader().subscribe({
+    loadMoreSubscriptionRef.current = loader().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
         eventCount++
@@ -161,10 +173,6 @@ export function useCategoryVideos({
         setLoading(false)
       },
     })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [filters, pool, relays, eventStore, loading, exhausted, videos, limit])
 
   return {

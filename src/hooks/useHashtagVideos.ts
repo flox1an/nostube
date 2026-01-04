@@ -12,7 +12,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
-import { of } from 'rxjs'
+import { of, type Subscription } from 'rxjs'
 
 interface UseHashtagVideosOptions {
   tag: string | undefined
@@ -66,6 +66,8 @@ export function useHashtagVideos({
   const phase1CompletedOnce = useRef(false)
   // Capture relays when Phase 1 completes to ensure Phase 2 uses same relays
   const phase1Relays = useRef<string[]>([])
+  // Store subscription ref to keep it alive during loadMore
+  const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
 
   // Build filter for Phase 1 EventStore subscription
   const nativeFilter = useMemo((): Filter | null => {
@@ -299,9 +301,19 @@ export function useHashtagVideos({
     return deduplicated.sort((a, b) => b.created_at - a.created_at)
   }, [nativeVideos, labeledVideos])
 
+  // Cleanup loadMore subscription on unmount
+  useEffect(() => {
+    return () => {
+      loadMoreSubscriptionRef.current?.unsubscribe()
+    }
+  }, [])
+
   // Load more videos (pagination for native videos)
   const loadMore = useCallback(() => {
     if (!nativeFilter || !pool || loading || exhausted || mergedVideos.length === 0) return
+
+    // Clean up any previous loadMore subscription
+    loadMoreSubscriptionRef.current?.unsubscribe()
 
     setLoading(true)
 
@@ -314,7 +326,7 @@ export function useHashtagVideos({
     const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
 
     let eventCount = 0
-    const subscription = loader().subscribe({
+    loadMoreSubscriptionRef.current = loader().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
         eventCount++
@@ -331,10 +343,6 @@ export function useHashtagVideos({
         setLoading(false)
       },
     })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [nativeFilter, pool, relays, eventStore, loading, exhausted, mergedVideos, limit])
 
   return {

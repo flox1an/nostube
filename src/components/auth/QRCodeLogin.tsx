@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useContext } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Loader2, Smartphone, RefreshCw } from 'lucide-react'
+import { Loader2, Smartphone, RefreshCw, Copy, Check } from 'lucide-react'
 import { NostrConnectSigner } from 'applesauce-signers'
 import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
@@ -32,6 +32,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
   const { t } = useTranslation()
   const accountManager = useContext(AccountsContext)
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const signerRef = useRef<NostrConnectSigner | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -93,8 +94,14 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
 
       onLogin()
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        // User cancelled, ignore
+      // Check if this was an abort (user cancelled, tab switched, or regenerated)
+      const isAbort =
+        error instanceof Error &&
+        (error.name === 'AbortError' ||
+          error.message.toLowerCase().includes('aborted') ||
+          error.message.toLowerCase().includes('abort'))
+      if (isAbort) {
+        // User cancelled or regenerated, ignore
         return
       }
       console.error('QR code login failed:', error)
@@ -116,7 +123,19 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
 
   const handleRefresh = () => {
     setNostrConnectUri(null)
+    setCopied(false)
     generateQRCode()
+  }
+
+  const handleCopy = async () => {
+    if (!nostrConnectUri) return
+    try {
+      await navigator.clipboard.writeText(nostrConnectUri)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
   }
 
   return (
@@ -141,10 +160,22 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
         )}
       </div>
 
-      <Button variant="ghost" size="sm" onClick={handleRefresh} className="text-muted-foreground">
-        <RefreshCw className="w-4 h-4 mr-2" />
-        {t('auth.login.qrRefresh', 'Generate new code')}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          disabled={!nostrConnectUri}
+          className="text-muted-foreground"
+        >
+          {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+          {copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleRefresh} className="text-muted-foreground">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {t('auth.login.qrRefresh', 'Generate new code')}
+        </Button>
+      </div>
     </div>
   )
 }

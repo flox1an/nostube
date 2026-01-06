@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Nostrconnect QR Code Login**: New primary login method using NIP-46 nostrconnect flow. Displays a QR code that can be scanned with mobile signer apps like Amber or Nostrudel. The app generates a `nostrconnect://` URI, displays it as a QR code, and automatically detects when the remote signer connects. Session persists across browser reloads via bunker URI storage.
+- **Nostrconnect QR Code Login**: New primary login method using NIP-46 nostrconnect flow. Displays a QR code that can be scanned with mobile signer apps like Amber or Nostrudel. The app generates a `nostrconnect://` URI, displays it as a QR code, and automatically detects when the remote signer connects. Session persists across browser reloads via bunker URI storage. Includes copy-to-clipboard button for manually pasting the URI into signer apps.
 - **Infinite Scroll on Category/Hashtag Pages**: Category and hashtag pages now support infinite scroll pagination. Automatically loads more videos when scrolling to the bottom, with proper exhaustion detection to stop loading when no more videos are available. Uses `until` parameter for timestamp-based pagination.
 - **People Search in Global Search Bar**: Search bar now supports searching for Nostr users via Primal relay (NIP-50). Shows matching profiles with avatars in a dropdown, clicking navigates to author page. Keyboard navigation with arrow keys, Enter to select, Escape to close. Video search option always available at bottom of dropdown.
 - **User Avatar Fallback**: New `UserAvatar` component generates unique dicebear avatars for users without profile pictures. Falls back to a colorful avatar based on user's pubkey instead of a plain character, providing better visual identity across the app.
@@ -108,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Nostrconnect Abort Error**: Fixed "Aborted" error appearing when switching away from QR code login tab or regenerating the code. Now properly detects and silently ignores abort signals.
 - **Data URL Thumbnail Handling**: Data URLs (e.g., `data:image/png;base64,...`) are now displayed directly without any imgproxy resizing, blossom server lookups, or fallback logic. Updated `imageProxyVideoThumbnail`, `generateMediaUrls`, `extractBlossomHash`, `validateMediaUrl`, and `findValidUrl` to detect and pass through data URLs immediately.
 - **Infinite Scroll Relay Fetching**: Fixed `loadMore` pagination in `useCategoryVideos`, `useHashtagVideos`, and `useSearchVideos` not actually fetching new events from relays. The RxJS subscription was a local variable that got garbage collected immediately. Now stored in a ref to keep it alive until events arrive from relays.
 - **NSFW Filtering on Category/Hashtag/Search Pages**: Fixed preset NSFW author filtering not being applied on category, hashtag, search, playlist, and timeline pages. Added `useSelectedPreset` hook and `nsfwPubkeys` parameter to `processEvent`/`processEvents` calls in `useCategoryVideos`, `useHashtagVideos`, `useSearchVideos`, `useTimelineLoader`, `useVideoTimeline`, and `usePlaylistDetails` hooks.

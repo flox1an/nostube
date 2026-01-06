@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState } from 'react'
-import { Shield, Upload, AlertCircle } from 'lucide-react'
+import { Shield, Upload, AlertCircle, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import {
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.t
 import { Alert, AlertDescription } from '@/components/ui/alert.tsx'
 import { useLoginActions } from '@/hooks/useLoginActions'
 import { useTranslation } from 'react-i18next'
+import { QRCodeLogin } from './QRCodeLogin'
 
 interface LoginDialogProps {
   isOpen: boolean
@@ -147,16 +148,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             </Alert>
           )}
 
-          <Tabs
-            defaultValue={'nostr' in window ? 'extension' : 'key'}
-            className="w-full"
-            onValueChange={() => setError(null)}
-          >
-            <TabsList className="grid grid-cols-3 mb-6">
+          <Tabs defaultValue="qr" className="w-full" onValueChange={() => setError(null)}>
+            <TabsList className="grid grid-cols-4 mb-6">
+              <TabsTrigger value="qr">
+                <QrCode className="w-4 h-4 mr-1" />
+                {t('auth.login.qr', 'QR')}
+              </TabsTrigger>
               <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
               <TabsTrigger value="key">{t('auth.login.nsec')}</TabsTrigger>
               <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="qr" className="space-y-4">
+              <QRCodeLogin
+                onLogin={() => {
+                  onLogin()
+                  onClose()
+                }}
+                onError={setError}
+              />
+            </TabsContent>
 
             <TabsContent value="extension" className="space-y-4">
               <div className="text-center p-4 rounded-lg bg-card">

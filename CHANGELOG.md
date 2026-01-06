@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Nostrconnect QR Code Login**: New primary login method using NIP-46 nostrconnect flow. Displays a QR code that can be scanned with mobile signer apps like Amber or Nostrudel. The app generates a `nostrconnect://` URI, displays it as a QR code, and automatically detects when the remote signer connects. Session persists across browser reloads via bunker URI storage.
 - **Infinite Scroll on Category/Hashtag Pages**: Category and hashtag pages now support infinite scroll pagination. Automatically loads more videos when scrolling to the bottom, with proper exhaustion detection to stop loading when no more videos are available. Uses `until` parameter for timestamp-based pagination.
 - **People Search in Global Search Bar**: Search bar now supports searching for Nostr users via Primal relay (NIP-50). Shows matching profiles with avatars in a dropdown, clicking navigates to author page. Keyboard navigation with arrow keys, Enter to select, Escape to close. Video search option always available at bottom of dropdown.
 - **User Avatar Fallback**: New `UserAvatar` component generates unique dicebear avatars for users without profile pictures. Falls back to a colorful avatar based on user's pubkey instead of a plain character, providing better visual identity across the app.

@@ -209,6 +209,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Track in-flight Nostr saves so we can wait for them
   const inflightSaveRef = useRef<Promise<void> | null>(null)
 
+  // Track last synced content to avoid redundant Nostr publishes
+  const lastSyncedContentRef = useRef<string | null>(null)
+
   // Refs for stable access in callbacks
   const userRef = useRef(user)
   const configRef = useRef(config)
@@ -264,6 +267,17 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
     const saveOperation = async () => {
       try {
+        // Create content without lastModified for comparison (lastModified always changes)
+        const draftsContent = JSON.stringify(draftsToSave)
+
+        // Skip if content hasn't changed
+        if (draftsContent === lastSyncedContentRef.current) {
+          if (import.meta.env.DEV) {
+            console.log('[UploadManager] saveToNostr - skipping, content unchanged')
+          }
+          return
+        }
+
         const plaintext = JSON.stringify({
           version: '1',
           lastModified: Date.now(),
@@ -289,6 +303,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
         const signedEvent = await currentUser.signer.signEvent(event)
         await relayPool.publish(writeRelays, signedEvent)
+
+        // Update last synced content after successful publish
+        lastSyncedContentRef.current = draftsContent
 
         if (import.meta.env.DEV) {
           console.log('[UploadManager] saveToNostr - published successfully')
@@ -431,6 +448,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           const nostrDrafts = parsed.drafts || []
           const merged = mergeDraftsFromNostr(nostrDrafts, event.created_at)
           saveDraftsToStorage(merged)
+
+          // Update last synced content to prevent re-publishing the same data
+          lastSyncedContentRef.current = JSON.stringify(merged)
+
           setDraftsVersion(v => v + 1)
         } catch (error) {
           console.error('[UploadManager] Failed to parse NIP-78 event:', error)

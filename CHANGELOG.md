@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Skip Redundant Draft Nostr Sync**: Upload drafts are now only synced to Nostr when the content actually changes. Tracks last synced content and compares before publishing, avoiding unnecessary relay publishes when draft data remains the same.
 - **Migrated to applesauce-react use$ hook**: Replaced `useObservableMemo` and `useObservableState` (from `observable-hooks`) with the new unified `use$` hook from `applesauce-react`. This simplifies React integration by combining observable subscription management and state updates into a single hook. Updated 18 files including hooks (`useProfile`, `useEventZaps`, `useLikedEvents`, `useCommentCount`, `useReports`, `usePlaylist`, `useEventStats`, `useVideoTimeline`, `useMyPreset`, `useUserRelays`, `usePresets`, `useTimelineLoader`, `usePlaylistDetails`) and components (`PresetContext`, `ShortsVideoPage`, `VideoSuggestions`, `VideoComments`). Removed `observable-hooks` dependency entirely.
 
 ### Added

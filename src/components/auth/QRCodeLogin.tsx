@@ -58,6 +58,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
       const uri = signer.getNostrConnectURI({
         name: 'nostube',
         url: window.location.origin,
+        image: `${window.location.origin}/nostube.png`,
         permissions: NostrConnectSigner.buildSigningPermissions([0, 1, 3, 7, 10002]),
       })
 

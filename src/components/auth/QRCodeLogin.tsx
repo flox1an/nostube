@@ -58,7 +58,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
       const uri = signer.getNostrConnectURI({
         name: 'nostube',
         url: window.location.origin,
-        image: `${window.location.origin}/nostube.png`,
+        image: new URL('/apple-touch-icon.png', window.location.origin).toString(),
         permissions: NostrConnectSigner.buildSigningPermissions([0, 1, 3, 7, 10002]),
       })
 

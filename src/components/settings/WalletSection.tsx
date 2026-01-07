@@ -6,9 +6,29 @@ import { Label } from '@/components/ui/label'
 import { useWalletContext } from '@/contexts/WalletContext'
 import { formatSats } from '@/lib/zap-utils'
 import { useCurrentUser } from '@/hooks'
-import { Loader2, Zap, ExternalLink, Wallet, Plus, Lock, Unlock, Coins, Radio } from 'lucide-react'
+import {
+  Loader2,
+  Zap,
+  ExternalLink,
+  Wallet,
+  Plus,
+  Lock,
+  Unlock,
+  Coins,
+  Radio,
+  ChevronsUpDown,
+} from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 
 // Default Cashu mints
 const DEFAULT_CASHU_MINTS = [
@@ -23,6 +43,7 @@ export function WalletSection() {
   const [nwcConnectionString, setNwcConnectionString] = useState('')
   const [newMintUrl, setNewMintUrl] = useState('')
   const [selectedMints, setSelectedMints] = useState<string[]>([DEFAULT_CASHU_MINTS[0]])
+  const [mintPopoverOpen, setMintPopoverOpen] = useState(false)
 
   const {
     walletType,
@@ -69,15 +90,20 @@ export function WalletSection() {
     }
   }, [createCashuWallet, selectedMints])
 
-  const handleAddMint = useCallback(async () => {
-    if (!newMintUrl.trim()) return
-    try {
-      await addCashuMint(newMintUrl.trim())
-      setNewMintUrl('')
-    } catch {
-      // Error handled by context
-    }
-  }, [addCashuMint, newMintUrl])
+  const handleAddMint = useCallback(
+    async (mintUrl?: string) => {
+      const url = mintUrl || newMintUrl.trim()
+      if (!url) return
+      try {
+        await addCashuMint(url)
+        setNewMintUrl('')
+        setMintPopoverOpen(false)
+      } catch {
+        // Error handled by context
+      }
+    },
+    [addCashuMint, newMintUrl]
+  )
 
   const toggleMintSelection = useCallback((mintUrl: string) => {
     setSelectedMints(prev =>
@@ -171,21 +197,64 @@ export function WalletSection() {
             {/* Cashu: Add new mint */}
             {walletType === 'cashu' && (
               <div className="space-y-2 pt-2 border-t">
-                <Label htmlFor="new-mint" className="text-xs">
-                  Add Mint
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="new-mint"
-                    placeholder="https://mint.example.com"
-                    value={newMintUrl}
-                    onChange={e => setNewMintUrl(e.target.value)}
-                    className="flex-1 text-sm"
-                  />
-                  <Button size="sm" onClick={handleAddMint} disabled={!newMintUrl.trim()}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Label className="text-xs">Add Mint</Label>
+                <Popover open={mintPopoverOpen} onOpenChange={setMintPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={mintPopoverOpen}
+                      className="w-full justify-between text-sm font-normal"
+                    >
+                      <span className="truncate text-muted-foreground">
+                        {newMintUrl || 'Select or enter a mint URL...'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Enter mint URL..."
+                        value={newMintUrl}
+                        onValueChange={setNewMintUrl}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {newMintUrl.trim() ? (
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start"
+                              onClick={() => handleAddMint()}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add "{newMintUrl}"
+                            </Button>
+                          ) : (
+                            'Enter a mint URL'
+                          )}
+                        </CommandEmpty>
+                        <CommandGroup heading="Popular Mints">
+                          {DEFAULT_CASHU_MINTS.filter(
+                            mint => !cashuMints.some(m => m.url === mint)
+                          ).map(mint => (
+                            <CommandItem
+                              key={mint}
+                              value={mint}
+                              onSelect={() => handleAddMint(mint)}
+                              className="cursor-pointer"
+                            >
+                              <span className="truncate font-mono text-xs">{mint}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
           </CardContent>

@@ -661,9 +661,12 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [playerState])
 
   // Mouse move handler for showing controls
+  // Skip on mobile - touch interactions are handled by TouchOverlay
+  // This prevents iOS from keeping the home indicator visible during fullscreen
   const handleMouseMove = useCallback(() => {
+    if (isMobile) return
     showControls()
-  }, [showControls])
+  }, [showControls, isMobile])
 
   // Get poster URL with blossom fallback support (no resize proxy)
   const posterUrls = useMemo(() => (poster ? [poster] : []), [poster])

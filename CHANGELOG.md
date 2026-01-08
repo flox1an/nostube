@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embed player: now uses author's blossom servers for video fallback URLs (same logic as main player)
 - Video player: added 5-second stall detection to faster failover to next URL when loading stalls
 - Video page: video player now sticks to top of screen on mobile portrait when scrolling
+- Updated dependencies: applesauce-react 5.0.1, globals 17.0.0, i18next 25.7.4, immer 11.1.3, react-hook-form 7.70.0, react-i18next 16.5.1, react-resizable-panels 4.3.1, react-router-dom 7.12.0, typescript-eslint 8.52.0, vite 7.3.1, zod 4.3.5
 
 ### Fixed
 

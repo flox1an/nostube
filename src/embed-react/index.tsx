@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { EmbedApp } from './EmbedApp'
+import { EmbedAppProvider } from './EmbedAppProvider'
 import { parseURLParams, validateParams } from './lib/url-params'
 import { decodeVideoIdentifier, buildRelayList } from './lib/nostr-decoder'
 import { NostrClient } from './lib/nostr-client'
@@ -15,6 +16,7 @@ interface EmbedState {
   profile: Profile | null
   error: string | null
   isLoading: boolean
+  authorBlossomServers: string[]
 }
 
 async function initEmbed(): Promise<void> {
@@ -36,12 +38,19 @@ async function initEmbed(): Promise<void> {
       profile: null,
       error: validation.error!,
       isLoading: false,
+      authorBlossomServers: [],
     })
     return
   }
 
   // Show loading state
-  renderApp(reactRoot, params, { video: null, profile: null, error: null, isLoading: true })
+  renderApp(reactRoot, params, {
+    video: null,
+    profile: null,
+    error: null,
+    isLoading: true,
+    authorBlossomServers: [],
+  })
 
   try {
     // Decode video identifier
@@ -52,6 +61,7 @@ async function initEmbed(): Promise<void> {
         profile: null,
         error: 'Invalid video ID',
         isLoading: false,
+        authorBlossomServers: [],
       })
       return
     }
@@ -72,26 +82,56 @@ async function initEmbed(): Promise<void> {
         profile: null,
         error: 'Failed to parse video event',
         isLoading: false,
+        authorBlossomServers: [],
       })
       return
     }
 
-    // Fetch profile in parallel (non-blocking)
+    // Fetch profile and blossom servers in parallel (non-blocking)
     const profileFetcher = new ProfileFetcher(client)
     const profilePromise = profileFetcher.fetchProfile(video.pubkey, relays)
+    const blossomServersPromise = client.fetchBlossomServers(video.pubkey)
 
-    // Render with video data (profile may still be loading)
-    renderApp(reactRoot, params, { video, profile: null, error: null, isLoading: false })
+    // Render with video data (profile/blossom may still be loading)
+    renderApp(reactRoot, params, {
+      video,
+      profile: null,
+      error: null,
+      isLoading: false,
+      authorBlossomServers: [],
+    })
+
+    // Update with blossom servers first (for faster fallback)
+    const authorBlossomServers = await blossomServersPromise
+    renderApp(reactRoot, params, {
+      video,
+      profile: null,
+      error: null,
+      isLoading: false,
+      authorBlossomServers,
+    })
 
     // Update with profile when ready
     const profile = await profilePromise
-    renderApp(reactRoot, params, { video, profile, error: null, isLoading: false })
+    renderApp(reactRoot, params, {
+      video,
+      profile,
+      error: null,
+      isLoading: false,
+      authorBlossomServers,
+    })
 
     // Cleanup
     client.closeAll()
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to load video'
-    renderApp(reactRoot, params, { video: null, profile: null, error: message, isLoading: false })
+    renderApp(reactRoot, params, {
+      video: null,
+      profile: null,
+      error: message,
+      isLoading: false,
+      authorBlossomServers: [],
+    })
   }
 }
 
@@ -102,15 +142,17 @@ function renderApp(
 ): void {
   root.render(
     <StrictMode>
-      <TooltipProvider>
-        <EmbedApp
-          params={params}
-          video={state.video}
-          profile={state.profile}
-          error={state.error}
-          isLoading={state.isLoading}
-        />
-      </TooltipProvider>
+      <EmbedAppProvider authorBlossomServers={state.authorBlossomServers}>
+        <TooltipProvider>
+          <EmbedApp
+            params={params}
+            video={state.video}
+            profile={state.profile}
+            error={state.error}
+            isLoading={state.isLoading}
+          />
+        </TooltipProvider>
+      </EmbedAppProvider>
     </StrictMode>
   )
 }

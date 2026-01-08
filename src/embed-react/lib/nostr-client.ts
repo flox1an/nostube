@@ -241,6 +241,96 @@ export class NostrClient {
   }
 
   /**
+   * Fetch blossom servers (kind 10063) for a pubkey
+   */
+  async fetchBlossomServers(pubkey: string): Promise<string[]> {
+    const subId = `blossom-${Date.now()}`
+    const filter = {
+      kinds: [10063],
+      authors: [pubkey],
+    }
+
+    return new Promise(resolve => {
+      let resolved = false
+      let latestEvent: NostrEvent | null = null
+      let eoseCount = 0
+      let connectedCount = 0
+
+      // Timeout - return whatever we have after 3 seconds
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          this.closeSubscription(subId)
+          resolve(extractBlossomUrls(latestEvent))
+        }
+      }, 3000)
+
+      const handleMessage = (event: MessageEvent) => {
+        if (resolved) return
+
+        try {
+          const message = JSON.parse(event.data)
+
+          if (message[0] === 'EVENT' && message[1] === subId) {
+            const nostrEvent = message[2] as NostrEvent
+            // Keep the most recent event
+            if (!latestEvent || nostrEvent.created_at > latestEvent.created_at) {
+              latestEvent = nostrEvent
+            }
+          }
+
+          if (message[0] === 'EOSE' && message[1] === subId) {
+            eoseCount++
+            // If we've heard from all connected relays, resolve
+            if (eoseCount >= connectedCount && connectedCount > 0) {
+              resolved = true
+              clearTimeout(timeout)
+              this.closeSubscription(subId)
+              resolve(extractBlossomUrls(latestEvent))
+            }
+          }
+        } catch (error) {
+          console.error('[Nostr Client] Failed to parse blossom message:', error)
+        }
+      }
+
+      const subscribeToRelay = (ws: WebSocket) => {
+        ws.addEventListener('message', handleMessage)
+
+        if (!this.subscriptions.has(subId)) {
+          this.subscriptions.set(subId, [])
+        }
+        this.subscriptions.get(subId)!.push({ ws, handler: handleMessage })
+
+        const reqMessage = JSON.stringify(['REQ', subId, filter])
+        ws.send(reqMessage)
+      }
+
+      // Connect to relays
+      this.relays.forEach(url => {
+        this.connectRelay(url)
+          .then(ws => {
+            if (resolved) return
+            connectedCount++
+            subscribeToRelay(ws)
+          })
+          .catch(() => {
+            // Ignore connection failures for blossom lookup
+          })
+      })
+
+      // If no relays connect within 1 second, resolve with empty
+      setTimeout(() => {
+        if (connectedCount === 0 && !resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          resolve([])
+        }
+      }, 1000)
+    })
+  }
+
+  /**
    * Close all connections
    */
   closeAll(): void {
@@ -258,4 +348,25 @@ export class NostrClient {
 
     this.connections.clear()
   }
+}
+
+/**
+ * Extract blossom server URLs from a kind 10063 event
+ */
+function extractBlossomUrls(event: NostrEvent | null): string[] {
+  if (!event) return []
+
+  const urls: string[] = []
+  for (const tag of event.tags) {
+    if (tag[0] === 'server' && tag[1]) {
+      try {
+        // Validate it's a proper URL
+        const url = new URL(tag[1])
+        urls.push(url.toString().replace(/\/$/, '')) // Normalize URL
+      } catch {
+        // Invalid URL, skip
+      }
+    }
+  }
+  return urls
 }

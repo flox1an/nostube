@@ -358,6 +358,59 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [hasMoreVideoUrls, moveToNextVideo, onAllSourcesFailed, urls])
 
+  // Stall detection - move to next URL if loading takes too long
+  useEffect(() => {
+    if (!videoUrl || !hasMoreVideoUrls) return
+
+    const el = videoRef.current
+    if (!el) return
+
+    let stallTimeout: ReturnType<typeof setTimeout> | null = null
+    let hasStartedLoading = false
+
+    const clearStallTimeout = () => {
+      if (stallTimeout) {
+        clearTimeout(stallTimeout)
+        stallTimeout = null
+      }
+    }
+
+    const handleLoadProgress = () => {
+      hasStartedLoading = true
+      clearStallTimeout()
+    }
+
+    const startStallDetection = () => {
+      clearStallTimeout()
+      hasStartedLoading = false
+
+      // If no progress within 5 seconds, try next URL
+      stallTimeout = setTimeout(() => {
+        if (!hasStartedLoading && hasMoreVideoUrls) {
+          if (import.meta.env.DEV) {
+            console.log('Video stalled (no progress in 5s), trying next URL...')
+          }
+          moveToNextVideo()
+        }
+      }, 5000)
+    }
+
+    // Start stall detection when URL changes
+    startStallDetection()
+
+    // Cancel stall detection when we get progress
+    el.addEventListener('loadedmetadata', handleLoadProgress)
+    el.addEventListener('canplay', handleLoadProgress)
+    el.addEventListener('progress', handleLoadProgress)
+
+    return () => {
+      clearStallTimeout()
+      el.removeEventListener('loadedmetadata', handleLoadProgress)
+      el.removeEventListener('canplay', handleLoadProgress)
+      el.removeEventListener('progress', handleLoadProgress)
+    }
+  }, [videoUrl, hasMoreVideoUrls, moveToNextVideo])
+
   // Fullscreen handling
   useEffect(() => {
     const handleFullscreenChange = () => {

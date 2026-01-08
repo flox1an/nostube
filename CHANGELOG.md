@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video player: added 5-second stall detection to faster failover to next URL when loading stalls
 - Video page: video player now sticks to top of screen on mobile portrait when scrolling
 
+### Fixed
+
+- Video page: fixed sticky video player not working due to overflow-auto on main container
+
 ## [1.0.0] - 2025-01-08
 
 ### Added

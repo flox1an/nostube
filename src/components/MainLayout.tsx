@@ -16,7 +16,7 @@ export function MainLayout() {
             <Sidebar />
           </div>
         )}
-        <main className="flex-1 bg-background overflow-auto w-full">
+        <main className="flex-1 bg-background w-full">
           <Outlet />
         </main>
       </div>

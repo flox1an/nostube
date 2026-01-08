@@ -65,6 +65,9 @@ export const ProgressBar = memo(function ProgressBar({
       setHoverPosition(position)
 
       if (isDragging) {
+        // Update preview immediately so scrubber follows mouse without waiting for video to seek
+        setPreviewTime(time)
+        previewTimeRef.current = time
         onSeek(time)
       }
     },
@@ -77,6 +80,9 @@ export const ProgressBar = memo(function ProgressBar({
       e.stopPropagation()
       setIsDragging(true)
       const time = getTimeFromPosition(e.clientX)
+      // Set preview immediately for responsive scrubber
+      setPreviewTime(time)
+      previewTimeRef.current = time
       onSeek(time)
     },
     [getTimeFromPosition, onSeek]
@@ -155,9 +161,12 @@ export const ProgressBar = memo(function ProgressBar({
     }
   }, [isDragging, handleMouseMove])
 
+  // Combined seeking state for mouse and touch
+  const isSeeking = isDragging || isTouchDragging
+
   // Clear preview time when currentTime catches up after a seek
   useEffect(() => {
-    if (previewTime !== null && !isTouchDragging) {
+    if (previewTime !== null && !isSeeking) {
       // Check if currentTime is close enough to previewTime (within 0.5s)
       if (Math.abs(currentTime - previewTime) < 0.5) {
         // Use setTimeout to avoid synchronous setState in effect
@@ -167,10 +176,9 @@ export const ProgressBar = memo(function ProgressBar({
         }, 0)
       }
     }
-  }, [currentTime, previewTime, isTouchDragging])
+  }, [currentTime, previewTime, isSeeking])
 
   // Notify parent when seeking state changes
-  const isSeeking = isDragging || isTouchDragging
   useEffect(() => {
     onSeekingChange?.(isSeeking)
   }, [isSeeking, onSeekingChange])
@@ -189,6 +197,7 @@ export const ProgressBar = memo(function ProgressBar({
     <div
       ref={containerRef}
       className={`group relative w-full cursor-pointer ${isMobile ? 'py-4' : 'py-2'}`}
+      style={{ touchAction: 'none' }} // Prevent browser touch delays for immediate response
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onMouseMove={handleMouseMove}
@@ -202,8 +211,9 @@ export const ProgressBar = memo(function ProgressBar({
         <div
           className="absolute bottom-full mb-2 px-2 py-1 bg-black/40 text-white text-xs rounded pointer-events-none z-20"
           style={{
-            left: `${isTouchDragging ? hoverPosition : hoverPosition}%`,
+            left: `${hoverPosition}%`,
             transform: 'translateX(-50%)',
+            willChange: isSeeking ? 'left' : 'auto',
           }}
         >
           {formatTime(hoverTime)}
@@ -224,27 +234,35 @@ export const ProgressBar = memo(function ProgressBar({
             style={{ width: `${bufferedPercentage}%` }}
           />
 
-          {/* Progress track (played) - shows preview position during touch drag */}
+          {/* Progress track (played) - shows preview position during drag */}
           <div
             className="absolute inset-y-0 left-0 bg-primary rounded-full"
-            style={{ width: `${displayPercentage}%` }}
+            style={{
+              width: `${displayPercentage}%`,
+              willChange: isSeeking ? 'width' : 'auto',
+            }}
           />
 
           {/* Hover preview track - shows position up to mouse/touch */}
           {showScrubber && (
             <div
               className="absolute inset-y-0 left-0 bg-white/30 rounded-full pointer-events-none"
-              style={{ width: `${hoverPosition}%` }}
+              style={{
+                width: `${hoverPosition}%`,
+                willChange: isSeeking ? 'width' : 'auto',
+              }}
             />
           )}
 
           {/* Scrubber - always visible, grows on hover/touch, larger on mobile */}
+          {/* Disable transitions during drag for immediate response */}
           <div
-            className={`absolute bg-primary rounded-full shadow-md transition-all ${getScrubberSize()}`}
+            className={`absolute bg-primary rounded-full shadow-md ${isSeeking ? '' : 'transition-all'} ${getScrubberSize()}`}
             style={{
               left: `${displayPercentage}%`,
               top: '50%',
               transform: 'translate(-50%, -50%)',
+              willChange: isSeeking ? 'left' : 'auto',
             }}
           />
         </div>

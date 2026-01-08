@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: fixed sticky video player z-index to appear above header on mobile
 - Video page: fixed duplicate video player mounting causing double audio on mobile (CSS hiding replaced with JS conditional rendering)
 - Video player: fixed iOS home indicator staying visible during fullscreen by disabling continuous mouse move handler on mobile (touch handled separately by TouchOverlay)
+- Video player: fixed progress bar scrubber lagging behind cursor/finger during drag (scrubber now uses preview position for immediate feedback, disabled transitions during drag, added will-change hints)
 
 ## [1.0.0] - 2025-01-08
 

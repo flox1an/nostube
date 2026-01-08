@@ -245,6 +245,10 @@ export function WalletSection() {
                               key={mint}
                               value={mint}
                               onSelect={() => handleAddMint(mint)}
+                              onMouseDown={e => {
+                                e.preventDefault()
+                                handleAddMint(mint)
+                              }}
                               className="cursor-pointer"
                             >
                               <span className="truncate font-mono text-xs">{mint}</span>

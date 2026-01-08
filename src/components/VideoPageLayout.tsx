@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { useIsMobile } from '@/hooks'
 
 interface VideoPageLayoutProps {
   cinemaMode: boolean
@@ -20,6 +21,8 @@ export function VideoPageLayout({
   videoInfo,
   sidebar,
 }: VideoPageLayoutProps) {
+  const isMobile = useIsMobile()
+
   if (cinemaMode) {
     return (
       <div className="pb-8">
@@ -36,16 +39,17 @@ export function VideoPageLayout({
     )
   }
 
-  // Normal mode with sticky video on mobile
+  // Normal mode - use JS-based conditional rendering to avoid mounting two video players
+  // (CSS hiding would mount both, causing double audio playback)
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8">
       {/* Mobile: sticky video player at top level so it can stick while ALL content scrolls */}
-      <div className="md:hidden sticky top-0 z-[60] bg-background">{videoPlayer}</div>
+      {isMobile && <div className="sticky top-0 z-[60] bg-background">{videoPlayer}</div>}
 
       <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">
         {/* Desktop: video player inside the flex column */}
         <div className="flex-1">
-          <div className="hidden md:block">{videoPlayer}</div>
+          {!isMobile && videoPlayer}
           {videoInfo}
         </div>
 

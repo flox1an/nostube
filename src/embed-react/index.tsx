@@ -87,22 +87,12 @@ async function initEmbed(): Promise<void> {
       return
     }
 
-    // Fetch profile and blossom servers in parallel (non-blocking)
-    const profileFetcher = new ProfileFetcher(client)
-    const profilePromise = profileFetcher.fetchProfile(video.pubkey, relays)
-    const blossomServersPromise = client.fetchBlossomServers(video.pubkey)
+    // Fetch blossom servers first (needed for fallback URLs)
+    console.log('[Embed] Starting blossom server fetch for author:', video.pubkey.slice(0, 8))
+    const authorBlossomServers = await client.fetchBlossomServers(video.pubkey)
+    console.log('[Embed] Blossom servers received:', authorBlossomServers)
 
-    // Render with video data (profile/blossom may still be loading)
-    renderApp(reactRoot, params, {
-      video,
-      profile: null,
-      error: null,
-      isLoading: false,
-      authorBlossomServers: [],
-    })
-
-    // Update with blossom servers first (for faster fallback)
-    const authorBlossomServers = await blossomServersPromise
+    // Now render with video data and blossom servers
     renderApp(reactRoot, params, {
       video,
       profile: null,
@@ -111,8 +101,9 @@ async function initEmbed(): Promise<void> {
       authorBlossomServers,
     })
 
-    // Update with profile when ready
-    const profile = await profilePromise
+    // Fetch profile in background (non-blocking)
+    const profileFetcher = new ProfileFetcher(client)
+    const profile = await profileFetcher.fetchProfile(video.pubkey, relays)
     renderApp(reactRoot, params, {
       video,
       profile,

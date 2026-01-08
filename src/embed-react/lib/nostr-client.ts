@@ -250,6 +250,20 @@ export class NostrClient {
       authors: [pubkey],
     }
 
+    // Debug: check connection state
+    const openConnections = Array.from(this.connections.entries()).filter(
+      ([, ws]) => ws.readyState === WebSocket.OPEN
+    )
+    console.log(
+      '[Embed] fetchBlossomServers called for',
+      pubkey.slice(0, 8),
+      '- relays:',
+      this.relays.length,
+      '- open connections:',
+      openConnections.length,
+      openConnections.map(([url]) => url)
+    )
+
     return new Promise(resolve => {
       let resolved = false
       let latestEvent: NostrEvent | null = null
@@ -259,6 +273,7 @@ export class NostrClient {
       // Timeout - return whatever we have after 3 seconds
       const timeout = setTimeout(() => {
         if (!resolved) {
+          console.log('[Embed] Blossom fetch timeout, found:', latestEvent ? 'event' : 'nothing')
           resolved = true
           this.closeSubscription(subId)
           resolve(extractBlossomUrls(latestEvent))
@@ -273,6 +288,7 @@ export class NostrClient {
 
           if (message[0] === 'EVENT' && message[1] === subId) {
             const nostrEvent = message[2] as NostrEvent
+            console.log('[Embed] Got blossom event:', nostrEvent.tags)
             // Keep the most recent event
             if (!latestEvent || nostrEvent.created_at > latestEvent.created_at) {
               latestEvent = nostrEvent
@@ -281,12 +297,15 @@ export class NostrClient {
 
           if (message[0] === 'EOSE' && message[1] === subId) {
             eoseCount++
+            console.log('[Embed] Got blossom EOSE', eoseCount, '/', connectedCount)
             // If we've heard from all connected relays, resolve
             if (eoseCount >= connectedCount && connectedCount > 0) {
               resolved = true
               clearTimeout(timeout)
               this.closeSubscription(subId)
-              resolve(extractBlossomUrls(latestEvent))
+              const urls = extractBlossomUrls(latestEvent)
+              console.log('[Embed] Blossom servers found:', urls)
+              resolve(urls)
             }
           }
         } catch (error) {
@@ -294,7 +313,7 @@ export class NostrClient {
         }
       }
 
-      const subscribeToRelay = (ws: WebSocket) => {
+      const subscribeToRelay = (ws: WebSocket, url: string) => {
         ws.addEventListener('message', handleMessage)
 
         if (!this.subscriptions.has(subId)) {
@@ -303,25 +322,40 @@ export class NostrClient {
         this.subscriptions.get(subId)!.push({ ws, handler: handleMessage })
 
         const reqMessage = JSON.stringify(['REQ', subId, filter])
+        console.log('[Embed] Sending blossom REQ to', url, reqMessage)
         ws.send(reqMessage)
       }
 
       // Connect to relays
+      console.log('[Embed] Starting blossom relay connections for', this.relays)
       this.relays.forEach(url => {
+        console.log('[Embed] Attempting blossom connection to:', url)
         this.connectRelay(url)
           .then(ws => {
-            if (resolved) return
+            console.log('[Embed] Got WebSocket for blossom:', url, 'readyState:', ws.readyState)
+            if (resolved) {
+              console.log('[Embed] Already resolved, skipping:', url)
+              return
+            }
             connectedCount++
-            subscribeToRelay(ws)
+            console.log('[Embed] Connected to relay for blossom:', url, 'total:', connectedCount)
+            subscribeToRelay(ws, url)
           })
-          .catch(() => {
-            // Ignore connection failures for blossom lookup
+          .catch(err => {
+            console.log('[Embed] Failed to connect for blossom:', url, err)
           })
       })
 
       // If no relays connect within 1 second, resolve with empty
       setTimeout(() => {
+        console.log(
+          '[Embed] 1s timeout check - connectedCount:',
+          connectedCount,
+          'resolved:',
+          resolved
+        )
         if (connectedCount === 0 && !resolved) {
+          console.log('[Embed] No relays connected in 1s, resolving empty')
           resolved = true
           clearTimeout(timeout)
           resolve([])

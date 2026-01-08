@@ -5,6 +5,7 @@ import {
   useAppContext,
   useEventStats,
   useUserReactionStatus,
+  useProfile,
 } from '@/hooks'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -37,6 +38,10 @@ export function VideoReactionButtons({
   const { publish, isPending } = useNostrPublish()
 
   const isOwnContent = user?.pubkey === authorPubkey
+
+  // Get author's profile to check for lightning address
+  const authorProfile = useProfile({ pubkey: authorPubkey })
+  const hasLightningAddress = Boolean(authorProfile?.lud16 || authorProfile?.lud06)
 
   // Get author's inbox relays (NIP-65)
   const authorRelays = useUserRelays(authorPubkey)
@@ -139,13 +144,15 @@ export function VideoReactionButtons({
             <ThumbsDown className="h-5 w-5" />
             <span className="ml-1 md:ml-2">{downvoteCount}</span>
           </div>
-          <ZapButton
-            eventId={eventId}
-            kind={kind}
-            authorPubkey={authorPubkey}
-            layout="inline"
-            className={className}
-          />
+          {hasLightningAddress && (
+            <ZapButton
+              eventId={eventId}
+              kind={kind}
+              authorPubkey={authorPubkey}
+              layout="inline"
+              className={className}
+            />
+          )}
         </>
       )
     }
@@ -172,13 +179,15 @@ export function VideoReactionButtons({
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
           <span className="ml-1 md:ml-2">{downvoteCount}</span>
         </Button>
-        <ZapButton
-          eventId={eventId}
-          kind={kind}
-          authorPubkey={authorPubkey}
-          layout="inline"
-          className={className}
-        />
+        {hasLightningAddress && (
+          <ZapButton
+            eventId={eventId}
+            kind={kind}
+            authorPubkey={authorPubkey}
+            layout="inline"
+            className={className}
+          />
+        )}
       </>
     )
   }
@@ -200,13 +209,15 @@ export function VideoReactionButtons({
           </div>
           <span className="text-sm font-medium">{downvoteCount}</span>
         </div>
-        <ZapButton
-          eventId={eventId}
-          kind={kind}
-          authorPubkey={authorPubkey}
-          layout="vertical"
-          className={className}
-        />
+        {hasLightningAddress && (
+          <ZapButton
+            eventId={eventId}
+            kind={kind}
+            authorPubkey={authorPubkey}
+            layout="vertical"
+            className={className}
+          />
+        )}
       </>
     )
   }
@@ -242,13 +253,15 @@ export function VideoReactionButtons({
         </Button>
         <span className="text-sm font-medium">{downvoteCount}</span>
       </div>
-      <ZapButton
-        eventId={eventId}
-        kind={kind}
-        authorPubkey={authorPubkey}
-        layout="vertical"
-        className={className}
-      />
+      {hasLightningAddress && (
+        <ZapButton
+          eventId={eventId}
+          kind={kind}
+          authorPubkey={authorPubkey}
+          layout="vertical"
+          className={className}
+        />
+      )}
     </>
   )
 }

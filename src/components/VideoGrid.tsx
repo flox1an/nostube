@@ -26,13 +26,14 @@ export function VideoGrid({
   const width = useWindowWidth()
   const { config } = useAppContext()
 
-  // Filter out NSFW videos if nsfwFilter is 'hide'
+  // Filter out NSFW videos if nsfwFilter is 'hide' (default to 'hide' if not set)
+  const nsfwFilter = config.nsfwFilter ?? 'hide'
   const filteredVideos = useMemo(() => {
-    if (config.nsfwFilter === 'hide') {
+    if (nsfwFilter === 'hide') {
       return videos.filter(video => !video.contentWarning)
     }
     return videos
-  }, [videos, config.nsfwFilter])
+  }, [videos, nsfwFilter])
 
   // Determine number of columns for each type based on width
   const getCols = useCallback(

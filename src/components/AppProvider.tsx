@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback } from 'react'
+import { type ReactNode, useState, useCallback, useEffect } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
@@ -18,6 +18,17 @@ export function AppProvider(props: AppProviderProps) {
 
   // App configuration state with localStorage persistence
   const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
+
+  // MIGRATION: Ensure nsfwFilter has a default value (added in later version)
+  useEffect(() => {
+    if (config.nsfwFilter === undefined) {
+      setConfig(currentConfig => ({
+        ...currentConfig,
+        nsfwFilter: 'hide',
+      }))
+    }
+  }, [config.nsfwFilter, setConfig])
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   //const { user } = useCurrentUser();

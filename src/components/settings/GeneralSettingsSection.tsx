@@ -128,7 +128,7 @@ export function GeneralSettingsSection() {
       {/* NSFW Filter */}
       <div className="space-y-3">
         <Label>{t('settings.general.nsfwFilter')}</Label>
-        <RadioGroup value={config.nsfwFilter} onValueChange={handleNsfwFilterChange}>
+        <RadioGroup value={config.nsfwFilter ?? 'hide'} onValueChange={handleNsfwFilterChange}>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="hide" id="nsfw-hide" />
             <Label htmlFor="nsfw-hide" className="font-normal cursor-pointer">

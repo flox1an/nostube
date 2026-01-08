@@ -52,8 +52,9 @@ export const VideoCard = React.memo(function VideoCard({
     [video.pubkey, event]
   )
 
-  // Determine if we should show NSFW warning based on filter setting
-  const showNsfwWarning = video.contentWarning && config.nsfwFilter === 'warning'
+  // Determine if we should show NSFW warning based on filter setting (default to 'hide' if not set)
+  const nsfwFilter = config.nsfwFilter ?? 'hide'
+  const showNsfwWarning = video.contentWarning && nsfwFilter === 'warning'
 
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'

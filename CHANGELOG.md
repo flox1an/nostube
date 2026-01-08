@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Zap button now only displayed when video author has a lightning address (lud16/lud06)
+- Embed player: reordered title overlay to show title on top, author below
+- Embed player: video now pauses when opening in nostube
 
 ## [1.0.0] - 2025-01-08
 

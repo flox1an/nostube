@@ -6,11 +6,23 @@ interface TitleOverlayProps {
   authorPubkey: string
   visible: boolean
   videoId: string
+  onOpenVideo?: () => void
 }
 
-export function TitleOverlay({ title, author, authorPubkey, visible, videoId }: TitleOverlayProps) {
+export function TitleOverlay({
+  title,
+  author,
+  authorPubkey,
+  visible,
+  videoId,
+  onOpenVideo,
+}: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
   const watchUrl = `https://nostu.be/video/${videoId}`
+
+  const handleClick = () => {
+    onOpenVideo?.()
+  }
 
   return (
     <div
@@ -18,8 +30,19 @@ export function TitleOverlay({ title, author, authorPubkey, visible, videoId }: 
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
+      {/* Title */}
+      <a
+        href={watchUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleClick}
+        className="text-white font-medium text-base hover:underline line-clamp-2 block mb-1"
+      >
+        {title}
+      </a>
+
       {/* Author row */}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2">
         {author?.picture && (
           <img
             src={author.picture}
@@ -29,16 +52,6 @@ export function TitleOverlay({ title, author, authorPubkey, visible, videoId }: 
         )}
         <span className="text-white/80 text-sm">{displayName}</span>
       </div>
-
-      {/* Title */}
-      <a
-        href={watchUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-white font-medium text-base hover:underline line-clamp-2"
-      >
-        {title}
-      </a>
     </div>
   )
 }

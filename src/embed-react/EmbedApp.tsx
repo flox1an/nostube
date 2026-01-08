@@ -110,6 +110,13 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
           authorPubkey={video.pubkey}
           visible={controlsVisible}
           videoId={params.videoId}
+          onOpenVideo={() => {
+            // Pause video when opening in nostube
+            const videoEl = document.querySelector('video')
+            if (videoEl) {
+              videoEl.pause()
+            }
+          }}
         />
       )}
     </div>

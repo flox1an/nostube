@@ -61,7 +61,7 @@ export function CategoryPage() {
   }
 
   return (
-    <div className="max-w-560 mx-auto px-4">
+    <div className="max-w-560 mx-auto sm:px-2">
       <CategoryButtonBar activeSlug={categorySlug} />
 
       <VideoTimelinePage

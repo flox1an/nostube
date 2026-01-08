@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below sticky video player by increasing z-index from 50 to 70
 - Video page: fixed sticky video player not working due to overflow-auto on main container
 - Video page: fixed sticky video player z-index to appear above header on mobile
 - Video page: fixed duplicate video player mounting causing double audio on mobile (CSS hiding replaced with JS conditional rendering)

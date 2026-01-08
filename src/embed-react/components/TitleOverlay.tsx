@@ -1,3 +1,4 @@
+import { nip19 } from 'nostr-tools'
 import type { Profile } from '../lib/profile-fetcher'
 
 interface TitleOverlayProps {
@@ -19,6 +20,8 @@ export function TitleOverlay({
 }: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
   const watchUrl = `https://nostu.be/video/${videoId}`
+  const nprofile = nip19.nprofileEncode({ pubkey: authorPubkey })
+  const profileUrl = `https://nostu.be/author/${nprofile}`
 
   const handleClick = () => {
     onOpenVideo?.()
@@ -42,7 +45,13 @@ export function TitleOverlay({
       </a>
 
       {/* Author row */}
-      <div className="flex items-center gap-2">
+      <a
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleClick}
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+      >
         {author?.picture && (
           <img
             src={author.picture}
@@ -51,7 +60,7 @@ export function TitleOverlay({
           />
         )}
         <span className="text-white/80 text-sm">{displayName}</span>
-      </div>
+      </a>
     </div>
   )
 }

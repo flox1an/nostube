@@ -31,6 +31,7 @@ interface BuildVideoEventParams {
   thumbnailBlurhash?: string // Blurhash for thumbnail placeholder
   isPreview?: boolean
   hasPendingThumbnail?: boolean
+  publishAt?: number // Scheduled publish timestamp (seconds), undefined = now
 }
 
 interface BuildVideoEventResult {
@@ -65,6 +66,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     thumbnailBlurhash,
     isPreview = false,
     hasPendingThumbnail = false,
+    publishAt,
   } = params
 
   const firstVideo = videos[0]
@@ -158,8 +160,14 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     return (now + durations[expiration]).toString()
   }
 
-  const createdAt = isPreview ? '<generated on publish>' : nowInSecs()
-  const publishedAt = isPreview ? '<generated on publish>' : nowInSecs().toString()
+  // Use publishAt if scheduled, otherwise use current time
+  const timestamp = publishAt ?? nowInSecs()
+  const createdAt = isPreview ? (publishAt ? publishAt : '<generated on publish>') : timestamp
+  const publishedAt = isPreview
+    ? publishAt
+      ? publishAt.toString()
+      : '<generated on publish>'
+    : timestamp.toString()
 
   // Build text-track tags for subtitles
   const textTrackTags: string[][] = subtitles
@@ -257,6 +265,7 @@ export function useVideoUpload(
   const [expiration, setExpiration] = useState<'none' | '1day' | '7days' | '1month' | '1year'>(
     initialDraft?.expiration || 'none'
   )
+  const [publishAt, setPublishAt] = useState<number | undefined>(initialDraft?.publishAt)
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
 
@@ -947,6 +956,7 @@ export function useVideoUpload(
         draftId,
         thumbnailBlurhash,
         isPreview: false,
+        publishAt,
       })
 
       const publishedEvent = await publish({
@@ -993,6 +1003,7 @@ export function useVideoUpload(
         videoUrl,
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
         expiration,
+        publishAt,
         thumbnailSource,
         updatedAt: Date.now(),
       })
@@ -1007,6 +1018,7 @@ export function useVideoUpload(
     contentWarningEnabled,
     contentWarningReason,
     expiration,
+    publishAt,
     thumbnailSource,
   ])
 
@@ -1049,6 +1061,7 @@ export function useVideoUpload(
       thumbnailBlurhash,
       isPreview: true,
       hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
+      publishAt,
     })
 
     return result.event
@@ -1067,6 +1080,7 @@ export function useVideoUpload(
     thumbnailBlurhash,
     subtitles,
     draftId,
+    publishAt,
   ])
 
   return {
@@ -1098,6 +1112,8 @@ export function useVideoUpload(
     setContentWarningReason,
     expiration,
     setExpiration,
+    publishAt,
+    setPublishAt,
     uploadProgress,
     publishSummary,
     blossomInitalUploadServers,

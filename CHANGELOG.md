@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Upload: publish date picker in step 5 allows scheduling video publish date/time (defaults to "now" for immediate publishing)
+
 ### Changed
 
 - Zap button now only displayed when video author has a lightning address (lud16/lud06)
@@ -25,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below sticky video player by increasing z-index from 50 to 70
 - Video page: fixed sticky video player not working due to overflow-auto on main container
 - Video page: fixed sticky video player z-index to appear above header on mobile
-- Video page: fixed sticky video player being hidden under iOS notch when scrolling (safe-area padding now only applied when actually stuck, not in initial position)
+- Video page: fixed sticky video player iOS notch handling - player now sticks at safe-area-inset-top with fixed background covering the notch area, drop shadow appears when stuck
 - Video page: fixed duplicate video player mounting causing double audio on mobile (CSS hiding replaced with JS conditional rendering)
 - Video player: fixed iOS home indicator staying visible during fullscreen by disabling continuous mouse move handler on mobile (touch handled separately by TouchOverlay)
 - Video player: fixed progress bar scrubber lagging behind cursor/finger during drag (scrubber now uses preview position for immediate feedback, disabled transitions during drag, added will-change hints)

@@ -11,6 +11,7 @@ import {
   ContentWarning,
   ThumbnailSection,
   ExpirationSection,
+  PublishDateSection,
   DvmTranscodeAlert,
   EventPreview,
   SubtitleSection,
@@ -79,6 +80,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     setContentWarningReason,
     expiration,
     setExpiration,
+    publishAt,
+    setPublishAt,
     uploadProgress,
     blossomInitalUploadServers,
     blossomMirrorServers,
@@ -131,6 +134,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       subtitles,
       contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
       expiration,
+      publishAt,
       thumbnailSource,
       updatedAt: Date.now(),
     })
@@ -159,6 +163,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     contentWarningEnabled,
     contentWarningReason,
     expiration,
+    publishAt,
     thumbnailSource,
     onBack,
   ])
@@ -541,14 +546,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
             {/* Step 5: Additional Settings */}
             {currentStep === 5 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <PublishDateSection value={publishAt} onChange={setPublishAt} />
                 <ContentWarning
                   enabled={contentWarningEnabled}
                   onEnabledChange={setContentWarningEnabled}
                   reason={contentWarningReason}
                   onReasonChange={setContentWarningReason}
                 />
-
                 <ExpirationSection value={expiration} onChange={setExpiration} />
               </div>
             )}

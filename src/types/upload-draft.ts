@@ -53,6 +53,9 @@ export interface UploadDraft {
   // Expiration
   expiration: 'none' | '1day' | '7days' | '1month' | '1year'
 
+  // Scheduled publishing (timestamp in seconds, undefined = publish immediately)
+  publishAt?: number
+
   // Input method
   inputMethod: 'file' | 'url'
   videoUrl?: string

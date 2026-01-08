@@ -18,6 +18,14 @@ import { useAppContext } from './useAppContext'
 import { useReadRelays } from './useReadRelays'
 import { useSelectedPreset } from './useSelectedPreset'
 
+// Constant fallback relays - defined outside component to prevent re-renders
+const VIDEO_RELAY_FALLBACKS = [
+  'wss://haven.slidestr.net',
+  'wss://strfry.apps3.slidestr.net',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+]
+
 type NeventPointer = { id: string }
 type NaddrPointer = { identifier: string; pubkey: string; kind: number }
 
@@ -102,18 +110,11 @@ export function usePlaylistDetails(
 
   const allConfigRelays = useMemo(() => config.relays.map(r => r.url), [config.relays])
 
-  const videoRelayFallbacks = [
-    'wss://haven.slidestr.net',
-    'wss://strfry.apps3.slidestr.net',
-    'wss://relay.damus.io',
-    'wss://nos.lol',
-  ]
-
   const relaysToUse = useMemo(() => {
     const pointerRelays = (playlistPointer as { relays?: string[] } | null)?.relays || []
     const videoRelays = videoEventRelays || []
-    return combineRelays([videoRelays, pointerRelays, allConfigRelays, videoRelayFallbacks])
-  }, [playlistPointer, allConfigRelays, videoEventRelays, videoRelayFallbacks])
+    return combineRelays([videoRelays, pointerRelays, allConfigRelays, VIDEO_RELAY_FALLBACKS])
+  }, [playlistPointer, allConfigRelays, videoEventRelays])
 
   const eventLoader = useMemo(
     () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),

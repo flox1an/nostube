@@ -111,6 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Playlist Page Infinite Re-render Loop**: Fixed "Maximum update depth exceeded" error on playlist pages. The `videoRelayFallbacks` array was being recreated on every render, causing `relaysToUse` useMemo dependency to change continuously, triggering the useEffect that calls `setLoadingVideoIds` in a loop. Moved fallback relay list to module-level constant.
+- **Imeta URL Whitespace Parsing**: Fixed malformed Nostr events with extra whitespace in imeta tags (e.g., `"image  https://..."` with double space) causing 400 errors from imgproxy. Now trims whitespace when parsing imeta key-value pairs, preventing leading spaces in URLs.
 - **Nostrconnect Abort Error**: Fixed "Aborted" error appearing when switching away from QR code login tab or regenerating the code. Now properly detects and silently ignores abort signals.
 - **Data URL Thumbnail Handling**: Data URLs (e.g., `data:image/png;base64,...`) are now displayed directly without any imgproxy resizing, blossom server lookups, or fallback logic. Updated `imageProxyVideoThumbnail`, `generateMediaUrls`, `extractBlossomHash`, `validateMediaUrl`, and `findValidUrl` to detect and pass through data URLs immediately.
 - **Infinite Scroll Relay Fetching**: Fixed `loadMore` pagination in `useCategoryVideos`, `useHashtagVideos`, and `useSearchVideos` not actually fetching new events from relays. The RxJS subscription was a local variable that got garbage collected immediately. Now stored in a ref to keep it alive until events arrive from relays.

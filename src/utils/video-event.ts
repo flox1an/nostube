@@ -114,7 +114,8 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
     let key: string | undefined, value: string | undefined
     if (firstSpace !== -1) {
       key = imetaTag[i].slice(0, firstSpace)
-      value = imetaTag[i].slice(firstSpace + 1)
+      // Trim whitespace to handle malformed events with extra spaces
+      value = imetaTag[i].slice(firstSpace + 1).trim()
     } else {
       key = imetaTag[i]
       value = undefined
@@ -130,9 +131,6 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
 
   const url = imetaValues.get('url')?.[0]
   if (!url) return null
-
-  // Clean up URL if it has space (malformed events)
-  const cleanUrl = url.includes(' ') ? url.split(' ')[0] : url
 
   const mimeType = imetaValues.get('m')?.[0]
   const dimensions = imetaValues.get('dim')?.[0]
@@ -155,7 +153,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
   }
 
   return {
-    url: cleanUrl,
+    url,
     hash,
     size,
     dimensions,
@@ -326,7 +324,8 @@ export function processEvent(
         const firstSpace = imetaTag[i].indexOf(' ')
         if (firstSpace !== -1) {
           const key = imetaTag[i].slice(0, firstSpace)
-          const value = imetaTag[i].slice(firstSpace + 1)
+          // Trim whitespace to handle malformed events with extra spaces
+          const value = imetaTag[i].slice(firstSpace + 1).trim()
           if (key === 'image' && value) {
             imageUrls.push(value)
           }
@@ -364,7 +363,8 @@ export function processEvent(
       let key: string | undefined, value: string | undefined
       if (firstSpace !== -1) {
         key = imetaTag[i].slice(0, firstSpace)
-        value = imetaTag[i].slice(firstSpace + 1)
+        // Trim whitespace to handle malformed events with extra spaces
+        value = imetaTag[i].slice(firstSpace + 1).trim()
       } else {
         key = imetaTag[i]
         value = undefined

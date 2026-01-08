@@ -50,7 +50,7 @@ export function TitleOverlay({
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleClick}
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        className="group flex items-center gap-2"
       >
         {author?.picture && (
           <img
@@ -59,7 +59,9 @@ export function TitleOverlay({
             className="w-6 h-6 rounded-full object-cover"
           />
         )}
-        <span className="text-white/80 text-sm">{displayName}</span>
+        <span className="text-white/80 text-sm group-hover:text-white transition-colors">
+          {displayName}
+        </span>
       </a>
     </div>
   )

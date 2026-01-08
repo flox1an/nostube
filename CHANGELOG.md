@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: after successful video publish, draft is now deleted and app navigates to the video page
 - Config: nsfwFilter now defaults to 'hide' when not set (migration for old configs without this setting)
 - UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below sticky video player by increasing z-index from 50 to 70
 - Video page: fixed sticky video player not working due to overflow-auto on main container

@@ -875,21 +875,23 @@ export function useVideoUpload(
     setSubtitles(prev => prev.map(s => (s.id === id ? { ...s, lang } : s)))
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent
+  ): Promise<{ id: string; kind: number; pubkey: string; identifier: string } | undefined> => {
     e.preventDefault()
-    if (!user) return
+    if (!user) return undefined
 
     setPublishSummary({ fallbackUrls: [] })
 
     // Validate that we have at least one video
-    if (uploadInfo.videos.length === 0) return
+    if (uploadInfo.videos.length === 0) return undefined
 
     let thumbnailFile: File | null = null
     let thumbnailUploadedBlobs: BlobDescriptor[] = []
     let thumbnailMirroredBlobs: BlobDescriptor[] = []
 
     if (thumbnailSource === 'generated') {
-      if (!thumbnailBlob) return
+      if (!thumbnailBlob) return undefined
       thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', {
         type: thumbnailBlob.type || 'image/jpeg',
         lastModified: Date.now(),
@@ -920,7 +922,7 @@ export function useVideoUpload(
         thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
       } else {
         // No thumbnail available
-        return
+        return undefined
       }
     }
 
@@ -965,8 +967,17 @@ export function useVideoUpload(
       setTags([])
       setTagInput('')
       setLanguage('en')
+
+      // Return event info for navigation
+      return {
+        id: publishedEvent.id,
+        kind: publishedEvent.kind,
+        pubkey: publishedEvent.pubkey,
+        identifier: draftId,
+      }
     } catch {
       // Upload failed
+      return undefined
     }
   }
 

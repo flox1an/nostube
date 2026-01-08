@@ -2,7 +2,7 @@ import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   InputMethodSelector,
   UrlInputSection,
@@ -25,6 +25,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { deriveServerName } from '@/lib/blossom-servers'
+import { generateEventLink } from '@/lib/nostr'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
@@ -38,6 +39,7 @@ interface UploadFormProps {
 export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
 
   const { updateDraft, deleteDraft } = useUploadDrafts()
 
@@ -161,7 +163,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     onBack,
   ])
 
-  // Wrap handleSubmit to delete draft on success
+  // Wrap handleSubmit to delete draft on success and navigate to video page
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -192,9 +194,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     }
 
     try {
-      await originalHandleSubmit(e)
-      // On success, delete the draft
-      deleteDraft(draft.id)
+      const publishedEvent = await originalHandleSubmit(e)
+      if (publishedEvent) {
+        // On success, delete the draft
+        deleteDraft(draft.id)
+        // Navigate to the video page
+        const eventLink = generateEventLink(publishedEvent, publishedEvent.identifier)
+        navigate(`/video/${eventLink}`)
+      }
     } catch (error) {
       // Keep draft on error
       console.error('Publish failed:', error)

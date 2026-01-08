@@ -44,14 +44,21 @@ export function VideoPageLayout({
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8">
       {/* Mobile: sticky video player at top level so it can stick while ALL content scrolls */}
-      {/* top: env(safe-area-inset-top) makes it stick at the safe area boundary (below iOS notch) */}
       {isMobile && (
-        <div
-          className="sticky z-[60] bg-background"
-          style={{ top: 'env(safe-area-inset-top, 0)' }}
-        >
-          {videoPlayer}
-        </div>
+        <>
+          {/* Fixed background to cover notch area when header hides and video is stuck */}
+          <div
+            className="fixed top-0 left-0 right-0 z-[59] bg-background"
+            style={{ height: 'env(safe-area-inset-top, 0)' }}
+          />
+          {/* Video sticks just below the notch */}
+          <div
+            className="sticky z-[60] bg-background"
+            style={{ top: 'env(safe-area-inset-top, 0)' }}
+          >
+            {videoPlayer}
+          </div>
+        </>
       )}
 
       <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">

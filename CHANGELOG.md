@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Video page: fixed sticky video player not working due to overflow-auto on main container
+- Video page: fixed sticky video player z-index to appear above header on mobile
 
 ## [1.0.0] - 2025-01-08
 

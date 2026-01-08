@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below sticky video player by increasing z-index from 50 to 70
 - Video page: fixed sticky video player not working due to overflow-auto on main container
 - Video page: fixed sticky video player z-index to appear above header on mobile
+- Video page: fixed sticky video player being hidden under iOS notch when scrolling (added safe-area padding)
 - Video page: fixed duplicate video player mounting causing double audio on mobile (CSS hiding replaced with JS conditional rendering)
 - Video player: fixed iOS home indicator staying visible during fullscreen by disabling continuous mouse move handler on mobile (touch handled separately by TouchOverlay)
 - Video player: fixed progress bar scrubber lagging behind cursor/finger during drag (scrubber now uses preview position for immediate feedback, disabled transitions during drag, added will-change hints)

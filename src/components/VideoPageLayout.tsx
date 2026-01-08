@@ -44,7 +44,12 @@ export function VideoPageLayout({
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8">
       {/* Mobile: sticky video player at top level so it can stick while ALL content scrolls */}
-      {isMobile && <div className="sticky top-0 z-[60] bg-background">{videoPlayer}</div>}
+      {/* pt-[env(safe-area-inset-top)] adds padding for iOS notch when scrolled under the status bar */}
+      {isMobile && (
+        <div className="sticky top-0 z-[60] bg-background pt-[env(safe-area-inset-top)]">
+          {videoPlayer}
+        </div>
+      )}
 
       <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">
         {/* Desktop: video player inside the flex column */}

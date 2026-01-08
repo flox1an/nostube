@@ -24,9 +24,9 @@ export function VideoPageLayout({
           cinemaMode ? 'flex flex-col' : 'flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row'
         }
       >
-        {/* Video player container - always rendered in same position */}
+        {/* Video player container - sticky on mobile portrait, normal on larger screens */}
         <div className={cinemaMode ? '' : 'flex-1'}>
-          {videoPlayer}
+          <div className="sticky top-0 z-20 md:static md:z-auto bg-background">{videoPlayer}</div>
           {!cinemaMode && videoInfo}
         </div>
 

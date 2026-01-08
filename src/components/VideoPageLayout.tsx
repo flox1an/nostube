@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode } from 'react'
 import { useIsMobile } from '@/hooks'
 
 interface VideoPageLayoutProps {
@@ -23,30 +23,6 @@ export function VideoPageLayout({
 }: VideoPageLayoutProps) {
   const isMobile = useIsMobile()
 
-  // Track when the sticky player is actually "stuck" to add safe-area padding only when needed
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const [isStuck, setIsStuck] = useState(false)
-
-  useEffect(() => {
-    if (!isMobile || cinemaMode) return
-
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
-
-    // IntersectionObserver detects when the sentinel (placed just above sticky element)
-    // leaves the viewport, meaning the sticky element is now "stuck" to the top
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // When sentinel is not intersecting (scrolled past), the player is stuck
-        setIsStuck(!entry.isIntersecting)
-      },
-      { threshold: 0 }
-    )
-
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [isMobile, cinemaMode])
-
   if (cinemaMode) {
     return (
       <div className="pb-8">
@@ -68,18 +44,14 @@ export function VideoPageLayout({
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8">
       {/* Mobile: sticky video player at top level so it can stick while ALL content scrolls */}
+      {/* top: env(safe-area-inset-top) makes it stick at the safe area boundary (below iOS notch) */}
       {isMobile && (
-        <>
-          {/* Sentinel element to detect when sticky player becomes "stuck" */}
-          <div ref={sentinelRef} className="h-0" />
-          {/* pt-[env(safe-area-inset-top)] adds padding for iOS notch only when stuck under status bar */}
-          <div
-            className="sticky top-0 z-[60] bg-background transition-[padding] duration-150"
-            style={{ paddingTop: isStuck ? 'env(safe-area-inset-top, 0)' : '0' }}
-          >
-            {videoPlayer}
-          </div>
-        </>
+        <div
+          className="sticky z-[60] bg-background"
+          style={{ top: 'env(safe-area-inset-top, 0)' }}
+        >
+          {videoPlayer}
+        </div>
       )}
 
       <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">

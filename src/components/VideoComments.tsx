@@ -560,7 +560,9 @@ export function VideoComments({
 
   return (
     <div>
-      <h2 className="mb-4">{t('video.comments.title')}</h2>
+      <h2 className="mb-4">
+        {threadedComments.length} {t('video.comments.title')}
+      </h2>
       {user && (
         <div className="mb-8">
           <CommentInput

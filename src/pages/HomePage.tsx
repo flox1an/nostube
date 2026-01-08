@@ -19,7 +19,7 @@ export function HomePage() {
 
   return (
     <div className="max-w-560 mx-auto">
-      <div className="px-4">
+      <div className="sm:px-2">
         <CategoryButtonBar />
       </div>
       <VideoTimelinePage

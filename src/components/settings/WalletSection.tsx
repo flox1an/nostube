@@ -216,7 +216,7 @@ export function WalletSection() {
                     className="w-[var(--radix-popover-trigger-width)] p-0"
                     align="start"
                   >
-                    <Command>
+                    <Command shouldFilter={false}>
                       <CommandInput
                         placeholder="Enter mint URL..."
                         value={newMintUrl}

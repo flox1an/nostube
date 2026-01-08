@@ -63,6 +63,7 @@ interface WalletContextValue {
   // Cashu-specific
   cashuMints: CashuMintInfo[]
   cashuWalletEvent: NostrEvent | undefined
+  isCashuWalletUnlocked: boolean
   isUnlocking: boolean
 
   // NWC connection
@@ -391,6 +392,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [cashuWalletEvent, userPubkey])
 
   const isConnected = walletType === 'nwc' ? nwcClient !== null : walletType === 'cashu'
+  const isCashuWalletUnlocked = cashuWalletEvent
+    ? WalletHelpers.isWalletUnlocked(cashuWalletEvent)
+    : false
 
   return (
     <WalletContext.Provider
@@ -404,6 +408,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         balance,
         cashuMints,
         cashuWalletEvent,
+        isCashuWalletUnlocked,
         connectNWC,
         createCashuWallet,
         unlockCashuWallet,

@@ -55,6 +55,7 @@ export function WalletSection() {
     error,
     cashuMints,
     cashuWalletEvent,
+    isCashuWalletUnlocked,
     connectNWC,
     createCashuWallet,
     unlockCashuWallet,
@@ -171,7 +172,7 @@ export function WalletSection() {
             )}
 
             {/* Cashu: Unlock wallet if locked */}
-            {walletType === 'cashu' && cashuWalletEvent && (
+            {walletType === 'cashu' && cashuWalletEvent && !isCashuWalletUnlocked && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"

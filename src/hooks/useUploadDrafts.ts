@@ -323,27 +323,45 @@ export function useUploadDrafts() {
       const nostrEventMs = nostrEventTimestamp * 1000 // Convert seconds to milliseconds
       const shouldRestoreFromNostr = nostrEventMs > localLastModified
 
+      let hasChanges = false
       nostrDrafts.forEach(d => {
         const existing = draftMap.get(d.id)
         if (existing) {
           // Draft exists locally - update if Nostr version is newer
           if (d.updatedAt > existing.updatedAt) {
             draftMap.set(d.id, d)
+            hasChanges = true
           }
         } else if (shouldRestoreFromNostr) {
           // Draft doesn't exist locally - only add if Nostr event is newer than local storage
           // This prevents adding back drafts that were deleted locally
           draftMap.set(d.id, d)
+          hasChanges = true
         }
       })
 
-      // Sort by updatedAt descending
-      const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
+      // Only save if there were actual changes from the merge
+      if (hasChanges) {
+        // Sort by updatedAt descending
+        const merged = Array.from(draftMap.values()).sort((a, b) => b.updatedAt - a.updatedAt)
 
-      // Save merged result to localStorage
-      saveToLocalStorage(merged)
+        // Save merged result to localStorage only (don't sync back to Nostr - we just got this from there)
+        const data: UploadDraftsData = {
+          version: '1',
+          lastModified: Date.now(),
+          drafts: merged,
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+        if (import.meta.env.DEV) {
+          console.log('[useUploadDrafts] mergeDraftsFromNostr - saved merged drafts:', merged)
+        }
+        // Trigger re-render to read fresh data
+        setVersion(v => v + 1)
+      } else if (import.meta.env.DEV) {
+        console.log('[useUploadDrafts] mergeDraftsFromNostr - no changes, skipping save')
+      }
     },
-    [saveToLocalStorage]
+    []
   )
 
   // Subscribe to NIP-78 event changes

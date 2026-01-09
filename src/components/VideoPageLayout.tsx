@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { useIsMobile } from '@/hooks'
+import { useIsMobile, useIsPortrait } from '@/hooks'
 
 interface VideoPageLayoutProps {
   cinemaMode: boolean
@@ -13,7 +13,7 @@ interface VideoPageLayoutProps {
  * Handles cinema mode vs normal mode layout
  *
  * On mobile portrait: video player sticks to top while scrolling through content
- * On tablet/desktop: normal scrolling layout with video in left column
+ * On tablet/desktop or landscape: normal scrolling layout with video in left column
  */
 export function VideoPageLayout({
   cinemaMode,
@@ -22,13 +22,17 @@ export function VideoPageLayout({
   sidebar,
 }: VideoPageLayoutProps) {
   const isMobile = useIsMobile()
+  const isPortrait = useIsPortrait()
+
+  // Sticky behavior only applies in mobile portrait mode
+  const useStickyPlayer = isMobile && isPortrait
 
   // Track when the sticky player is "stuck" to add drop shadow
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [isStuck, setIsStuck] = useState(false)
 
   useEffect(() => {
-    if (!isMobile || cinemaMode) return
+    if (!useStickyPlayer || cinemaMode) return
 
     const sentinel = sentinelRef.current
     if (!sentinel) return
@@ -44,7 +48,7 @@ export function VideoPageLayout({
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [isMobile, cinemaMode])
+  }, [useStickyPlayer, cinemaMode])
 
   if (cinemaMode) {
     return (
@@ -66,8 +70,8 @@ export function VideoPageLayout({
   // (CSS hiding would mount both, causing double audio playback)
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8">
-      {/* Mobile: sticky video player at top level so it can stick while ALL content scrolls */}
-      {isMobile && (
+      {/* Mobile portrait: sticky video player at top level so it can stick while ALL content scrolls */}
+      {useStickyPlayer && (
         <>
           {/* Sentinel element to detect when sticky player becomes "stuck" */}
           <div ref={sentinelRef} className="h-0" />
@@ -89,9 +93,9 @@ export function VideoPageLayout({
       )}
 
       <div className="flex gap-0 md:gap-4 md:px-4 flex-col lg:flex-row">
-        {/* Desktop: video player inside the flex column */}
+        {/* Desktop/landscape: video player inside the flex column */}
         <div className="flex-1">
-          {!isMobile && videoPlayer}
+          {!useStickyPlayer && videoPlayer}
           {videoInfo}
         </div>
 

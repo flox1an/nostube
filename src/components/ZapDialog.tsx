@@ -1,4 +1,4 @@
-import { useState, useCallback, memo, useEffect } from 'react'
+import { useState, useCallback, memo, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
 import {
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { UserAvatar } from '@/components/UserAvatar'
-import { useProfile } from '@/hooks'
+import { useProfile, useEventZaps } from '@/hooks'
 import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -23,6 +23,7 @@ const PRESET_AMOUNTS = [21, 100, 500, 1000, 5000]
 interface ZapDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  eventId: string
   authorPubkey: string
   onZap: (amount: number, comment?: string) => Promise<boolean>
   isZapping: boolean
@@ -33,6 +34,7 @@ interface ZapDialogProps {
 export const ZapDialog = memo(function ZapDialog({
   open,
   onOpenChange,
+  eventId,
   authorPubkey,
   onZap,
   isZapping,
@@ -47,6 +49,12 @@ export const ZapDialog = memo(function ZapDialog({
   const [copied, setCopied] = useState(false)
   const profile = useProfile({ pubkey: authorPubkey })
 
+  // Track if we've already handled this invoice's payment
+  const handledInvoiceRef = useRef<string | null>(null)
+
+  // Watch for zap receipts when we have an invoice
+  const { zaps } = useEventZaps(eventId, authorPubkey)
+
   const displayName = profile?.display_name || profile?.name || authorPubkey.slice(0, 8)
   const avatar = profile?.picture
 
@@ -57,8 +65,33 @@ export const ZapDialog = memo(function ZapDialog({
     if (!open) {
       setInvoice(null)
       setCopied(false)
+      handledInvoiceRef.current = null
     }
   }, [open])
+
+  // Watch for zap receipt matching our invoice
+  useEffect(() => {
+    if (!invoice || !zaps || zaps.length === 0) return
+    // Don't handle the same invoice twice
+    if (handledInvoiceRef.current === invoice) return
+
+    // Check if any zap receipt has our invoice
+    const matchingZap = zaps.find(zap => {
+      const bolt11Tag = zap.tags.find(t => t[0] === 'bolt11')
+      const bolt11 = bolt11Tag?.[1]
+      // Compare case-insensitively since bolt11 can vary in case
+      return bolt11?.toLowerCase() === invoice.toLowerCase()
+    })
+
+    if (matchingZap) {
+      handledInvoiceRef.current = invoice
+      toast.success(`Zapped ${effectiveAmount} sats!`)
+      onOpenChange(false)
+      setComment('')
+      setCustomAmount('')
+      setSelectedAmount(100)
+    }
+  }, [invoice, zaps, effectiveAmount, onOpenChange])
 
   const handlePresetClick = useCallback((amount: number) => {
     setSelectedAmount(amount)

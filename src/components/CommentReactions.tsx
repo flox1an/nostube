@@ -228,6 +228,7 @@ export const CommentReactions = memo(function CommentReactions({
       <ZapDialog
         open={showZapDialog}
         onOpenChange={setShowZapDialog}
+        eventId={eventId}
         authorPubkey={authorPubkey}
         onZap={handleZapFromDialog}
         isZapping={isZapping}

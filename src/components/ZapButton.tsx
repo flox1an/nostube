@@ -127,6 +127,7 @@ export const ZapButton = memo(function ZapButton({
         <ZapDialog
           open={showZapDialog}
           onOpenChange={setShowZapDialog}
+          eventId={eventId}
           authorPubkey={authorPubkey}
           onZap={handleZapFromDialog}
           isZapping={isZapping}
@@ -177,6 +178,7 @@ export const ZapButton = memo(function ZapButton({
       <ZapDialog
         open={showZapDialog}
         onOpenChange={setShowZapDialog}
+        eventId={eventId}
         authorPubkey={authorPubkey}
         onZap={handleZapFromDialog}
         isZapping={isZapping}

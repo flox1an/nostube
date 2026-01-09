@@ -14,10 +14,13 @@ interface RippleState {
   y: number
 }
 
+// Timing constants for double-tap detection
+const DOUBLE_TAP_DELAY = 300 // ms window for double tap
+
 /**
  * Touch overlay for mobile interactions
- * - Tap left quarter: seek backward (accumulates with fast taps)
- * - Tap right quarter: seek forward (accumulates with fast taps)
+ * - Double-tap left quarter: seek backward (triple+ taps stack more time)
+ * - Double-tap right quarter: seek forward (triple+ taps stack more time)
  * - Tap center half: toggle play/pause
  */
 export const TouchOverlay = memo(function TouchOverlay({
@@ -28,6 +31,15 @@ export const TouchOverlay = memo(function TouchOverlay({
 }: TouchOverlayProps) {
   const [ripples, setRipples] = useState<RippleState[]>([])
   const rippleIdRef = useRef(0)
+
+  // Track taps for double-tap detection on seek zones
+  const lastTapRef = useRef<{
+    time: number
+    zone: 'left' | 'right' | 'center'
+    x: number
+    y: number
+  } | null>(null)
+  const singleTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const addRipple = useCallback((side: 'left' | 'right', x: number, y: number) => {
     const id = rippleIdRef.current++
@@ -56,19 +68,67 @@ export const TouchOverlay = memo(function TouchOverlay({
       const x = clientX - rect.left
       const y = clientY - rect.top
       const quarterWidth = rect.width / 4
+      const now = Date.now()
 
+      // Determine which zone was tapped
+      let zone: 'left' | 'right' | 'center'
       if (x < quarterWidth) {
-        // Left quarter - seek backward
-        onSeekBackward()
-        addRipple('left', x, y)
+        zone = 'left'
       } else if (x > quarterWidth * 3) {
-        // Right quarter - seek forward
-        onSeekForward()
-        addRipple('right', x, y)
+        zone = 'right'
       } else {
-        // Center half - toggle play/pause and show controls
+        zone = 'center'
+      }
+
+      // Center zone: single tap toggles play/pause
+      if (zone === 'center') {
+        // Clear any pending single tap timeout from seek zones
+        if (singleTapTimeoutRef.current) {
+          clearTimeout(singleTapTimeoutRef.current)
+          singleTapTimeoutRef.current = null
+        }
+        lastTapRef.current = null
         onTogglePlay()
         onShowControls()
+        return
+      }
+
+      // Seek zones (left/right): require double tap to start, then stack with more taps
+      const lastTap = lastTapRef.current
+      const isDoubleTap = lastTap && lastTap.zone === zone && now - lastTap.time < DOUBLE_TAP_DELAY
+
+      if (isDoubleTap) {
+        // Clear single tap timeout since we're doing a double tap
+        if (singleTapTimeoutRef.current) {
+          clearTimeout(singleTapTimeoutRef.current)
+          singleTapTimeoutRef.current = null
+        }
+
+        // Execute seek
+        if (zone === 'left') {
+          onSeekBackward()
+          addRipple('left', x, y)
+        } else {
+          onSeekForward()
+          addRipple('right', x, y)
+        }
+
+        // Update last tap time so triple+ taps continue to stack
+        lastTapRef.current = { time: now, zone, x, y }
+      } else {
+        // First tap in a potential double tap sequence
+        // Clear any existing timeout
+        if (singleTapTimeoutRef.current) {
+          clearTimeout(singleTapTimeoutRef.current)
+        }
+
+        lastTapRef.current = { time: now, zone, x, y }
+
+        // Set timeout to clear the tap if no second tap comes
+        singleTapTimeoutRef.current = setTimeout(() => {
+          lastTapRef.current = null
+          singleTapTimeoutRef.current = null
+        }, DOUBLE_TAP_DELAY)
       }
     },
     [onSeekBackward, onSeekForward, onTogglePlay, onShowControls, addRipple]

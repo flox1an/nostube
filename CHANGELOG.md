@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload drafts: fixed excessive NIP-44 encrypt/decrypt calls when navigating to upload page (now only saves to localStorage when merging from Nostr, skips when no changes)
 - Video page: fixed sticky video player filling entire screen on iPad landscape (sticky behavior now only activates in portrait orientation)
 - Video page: fixed zap amount from previous video being displayed when navigating between videos (cached value now updates with eventId)
+- Video page: fixed video playback stopping when rotating device between portrait/landscape (video player no longer remounts on orientation change)
 
 ## [1.0.0] - 2025-01-08
 

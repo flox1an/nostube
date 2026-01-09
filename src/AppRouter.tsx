@@ -84,6 +84,38 @@ function PageLoader() {
   )
 }
 
+function VideoPageLoader() {
+  return (
+    <div className="max-w-560 mx-auto sm:py-4 pb-8 md:px-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_384px] gap-0 lg:gap-4">
+        {/* Left column: video + info */}
+        <div className="flex flex-col">
+          <Skeleton className="w-full aspect-video" />
+          <div className="p-2 md:p-0 mt-3 space-y-3">
+            <Skeleton className="h-7 w-3/4" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </div>
+        </div>
+        {/* Right column: sidebar */}
+        <div className="w-full p-2 md:p-0 space-y-3 mt-4 lg:mt-0">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-2">
+              <Skeleton className="w-40 aspect-video rounded-lg flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SettingsMenuLoader() {
   return (
     <div className="container mx-auto py-8 max-w-2xl px-4">
@@ -148,7 +180,7 @@ export function AppRouter() {
           <Route
             path="/video/:nevent"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<VideoPageLoader />}>
                 <VideoPage />
               </Suspense>
             }

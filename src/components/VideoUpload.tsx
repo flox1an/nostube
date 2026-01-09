@@ -17,6 +17,10 @@ import {
   SubtitleSection,
 } from './video-upload'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
+import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
+import { deleteBlobsFromServers } from '@/lib/blossom-upload'
+import { useUploadNotifications } from '@/hooks/useUploadNotifications'
+import { useToast } from '@/hooks/useToast'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
@@ -31,17 +35,6 @@ import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 
 interface UploadFormProps {
   draft: UploadDraft
@@ -54,6 +47,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const navigate = useNavigate()
 
   const { updateDraft, deleteDraft } = useUploadDrafts()
+  const { toast } = useToast()
+  const { removeByDraftId } = useUploadNotifications()
+  const { user } = useCurrentUser()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const handleDraftChange = useCallback(
     (updates: Partial<UploadDraft>) => {
@@ -179,6 +176,71 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     onBack,
   ])
 
+  // Handle delete draft (draft only, keep media)
+  const handleDeleteDraftOnly = useCallback(() => {
+    deleteDraft(draft.id)
+    removeByDraftId(draft.id)
+    toast({
+      title: t('upload.draft.deleted'),
+      description: t('upload.draft.deletedDescription'),
+      duration: 3000,
+    })
+    // Navigate back to draft picker
+    if (onBack) onBack()
+  }, [deleteDraft, draft.id, removeByDraftId, toast, t, onBack])
+
+  // Handle delete draft with all uploaded media
+  const handleDeleteWithMedia = useCallback(async () => {
+    if (!user?.signer) {
+      throw new Error('User not logged in')
+    }
+
+    // Collect all blobs from videos and thumbnails
+    const allBlobs = [
+      ...draft.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
+      ...draft.thumbnailUploadInfo.uploadedBlobs,
+      ...draft.thumbnailUploadInfo.mirroredBlobs,
+    ]
+
+    // Delete all blobs from their servers
+    const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+      allBlobs,
+      async eventDraft => await user.signer.signEvent(eventDraft)
+    )
+
+    // Delete the draft and related notifications
+    deleteDraft(draft.id)
+    removeByDraftId(draft.id)
+
+    // Show result toast
+    if (totalSuccessful > 0 && totalFailed === 0) {
+      toast({
+        title: t('upload.draft.deletedWithMedia'),
+        description: t('upload.draft.deletedWithMediaDescription', { count: totalSuccessful }),
+        duration: 3000,
+      })
+    } else if (totalSuccessful > 0 && totalFailed > 0) {
+      toast({
+        title: t('upload.draft.deletedPartial'),
+        description: t('upload.draft.deletedPartialDescription', {
+          successful: totalSuccessful,
+          failed: totalFailed,
+        }),
+        duration: 5000,
+      })
+    } else {
+      toast({
+        title: t('upload.draft.deletedMediaFailed'),
+        description: t('upload.draft.deletedMediaFailedDescription'),
+        variant: 'destructive',
+        duration: 5000,
+      })
+    }
+
+    // Navigate back to draft picker
+    if (onBack) onBack()
+  }, [user, draft, deleteDraft, removeByDraftId, toast, t, onBack])
+
   // Wrap handleSubmit to delete draft on success and navigate to video page
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -239,7 +301,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       multiple: false,
     })
 
-  const { user } = useCurrentUser()
   const { config, updateConfig } = useAppContext()
   const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
   const [showUploadPicker, setShowUploadPicker] = useState(false)
@@ -584,40 +645,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
               <div className="flex gap-2">
                 {onBack && (
                   <>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button type="button" variant="outline" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t('upload.draft.deleteTitle', { defaultValue: 'Delete Draft?' })}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t('upload.draft.deleteDescription', {
-                              defaultValue:
-                                'This will permanently delete this draft. This action cannot be undone.',
-                            })}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {t('common.cancel', { defaultValue: 'Cancel' })}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              deleteDraft(draft.id)
-                              onBack()
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {t('common.delete', { defaultValue: 'Delete' })}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     <Button type="button" variant="secondary" onClick={handleBack}>
                       <Save className="h-4 w-4 mr-2" />
                       {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
@@ -707,6 +742,15 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         video={videoToDelete?.video ?? null}
         onDeleteFromFormOnly={handleRemoveVideoFromFormOnly}
         onDeleteWithBlobs={handleRemoveVideoWithBlobs}
+      />
+
+      {/* Delete Draft Dialog */}
+      <DeleteDraftDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        draft={draft}
+        onDeleteDraftOnly={handleDeleteDraftOnly}
+        onDeleteWithMedia={handleDeleteWithMedia}
       />
     </>
   )

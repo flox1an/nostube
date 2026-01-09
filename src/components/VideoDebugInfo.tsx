@@ -7,9 +7,10 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { Check, Circle, Loader2, X, Video, Image, Captions } from 'lucide-react'
+import { Check, Circle, Loader2, X, Video, Image, Captions, ChevronRight } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
@@ -252,13 +253,18 @@ export function VideoDebugInfo({
         </DialogHeader>
         <ScrollArea className="h-[70vh] pr-4">
           <div className="space-y-6">
-            {/* Full Event JSON */}
-            <div>
-              <h3 className="font-semibold mb-2">Nostr Event</h3>
-              <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                {JSON.stringify(videoEvent, null, 2)}
-              </pre>
-            </div>
+            {/* Full Event JSON - Collapsed by default */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 font-semibold mb-2 hover:text-foreground/80 group">
+                <ChevronRight className="w-4 h-4 transition-transform group-data-[state=open]:rotate-90" />
+                Nostr Event
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
+                  {JSON.stringify(videoEvent, null, 2)}
+                </pre>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Relays */}
             <div>
@@ -281,14 +287,14 @@ export function VideoDebugInfo({
               </div>
             </div>
 
-            {/* Blossom Servers - Two-column layout */}
+            {/* Blossom Servers - Responsive layout: stacked on mobile, side-by-side on desktop */}
             {allVariants.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2">Blossom Server Availability by Variant</h3>
                 <Tabs defaultValue="0" className="w-full" orientation="vertical">
-                  <div className="flex gap-4">
-                    {/* Left column: variant list */}
-                    <TabsList className="flex-col h-auto w-48 shrink-0 justify-start items-stretch">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Variant list: horizontal scroll on mobile, vertical list on desktop */}
+                    <TabsList className="flex md:flex-col h-auto md:w-48 shrink-0 justify-start items-stretch overflow-x-auto md:overflow-x-visible">
                       {allVariants.map((variantData, idx) => {
                         const mimeType = variantData.variant.mimeType || ''
                         let Icon = Image
@@ -302,7 +308,7 @@ export function VideoDebugInfo({
                           <TabsTrigger
                             key={idx}
                             value={idx.toString()}
-                            className="justify-start gap-2"
+                            className="justify-start gap-2 whitespace-nowrap md:whitespace-normal"
                           >
                             <Icon className="w-4 h-4 shrink-0" />
                             <span className="truncate">{variantData.label}</span>
@@ -311,7 +317,7 @@ export function VideoDebugInfo({
                       })}
                     </TabsList>
 
-                    {/* Right column: variant details */}
+                    {/* Variant details */}
                     <div className="flex-1 min-w-0">
                       {allVariants.map((variantData, idx) => (
                         <TabsContent key={idx} value={idx.toString()} className="mt-0">

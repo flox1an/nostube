@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video player: fixed progress bar scrubber lagging behind cursor/finger during drag (scrubber now uses preview position for immediate feedback, disabled transitions during drag, added will-change hints)
 - Upload drafts: fixed excessive NIP-44 encrypt/decrypt calls when navigating to upload page (now only saves to localStorage when merging from Nostr, skips when no changes)
 - Video page: fixed sticky video player filling entire screen on iPad landscape (sticky behavior now only activates in portrait orientation)
+- Video page: fixed zap amount from previous video being displayed when navigating between videos (cached value now updates with eventId)
 
 ## [1.0.0] - 2025-01-08
 

@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getInvoiceAmount } from '@/lib/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'
@@ -76,8 +76,8 @@ export function useEventZaps(eventId: string, authorPubkey: string): UseEventZap
   const eventStore = useEventStore()
   const { pool } = useAppContext()
 
-  // Get cached value immediately
-  const [cachedValue] = useState(() => getCached(eventId))
+  // Get cached value - recalculate when eventId changes
+  const cachedValue = useMemo(() => getCached(eventId), [eventId])
 
   // Fetch zap receipts from relays using subscription (keeps listening for new zaps)
   useEffect(() => {

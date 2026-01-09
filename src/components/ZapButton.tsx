@@ -7,8 +7,8 @@ import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
 
 interface ZapButtonProps {
-  eventId: string
-  kind: number
+  eventId?: string // Optional - not provided when zapping a profile directly
+  kind?: number
   authorPubkey: string
   layout?: 'vertical' | 'inline'
   className?: string
@@ -32,7 +32,9 @@ export const ZapButton = memo(function ZapButton({
     eventId,
     authorPubkey,
   })
-  const { totalSats } = useEventZaps(eventId, authorPubkey)
+  // Only fetch zap stats if we have an eventId (not for profile zaps)
+  const { totalSats } = useEventZaps(eventId || '', authorPubkey)
+  const displaySats = eventId ? totalSats : 0
 
   const isOwnContent = user?.pubkey === authorPubkey
 
@@ -97,8 +99,8 @@ export const ZapButton = memo(function ZapButton({
     if (isOwnContent || !user) {
       return (
         <div className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}>
-          <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
-          <span className="ml-1 md:ml-2">{formatSats(totalSats)}</span>
+          <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
+          <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
         </div>
       )
     }
@@ -119,9 +121,9 @@ export const ZapButton = memo(function ZapButton({
           {isZapping ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
+            <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
           )}
-          <span className="ml-1 md:ml-2">{formatSats(totalSats)}</span>
+          <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
         </Button>
 
         <ZapDialog
@@ -144,9 +146,9 @@ export const ZapButton = memo(function ZapButton({
     return (
       <div className={cn('flex flex-col items-center gap-1', className)}>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-          <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
+          <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
         </div>
-        <span className="text-sm font-medium">{formatSats(totalSats)}</span>
+        <span className="text-sm font-medium">{formatSats(displaySats)}</span>
       </div>
     )
   }
@@ -169,10 +171,10 @@ export const ZapButton = memo(function ZapButton({
           {isZapping ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Zap className={cn('h-5 w-5', totalSats > 0 && 'text-yellow-500')} />
+            <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
           )}
         </Button>
-        <span className="text-sm font-medium">{formatSats(totalSats)}</span>
+        <span className="text-sm font-medium">{formatSats(displaySats)}</span>
       </div>
 
       <ZapDialog

@@ -23,7 +23,7 @@ const PRESET_AMOUNTS = [21, 100, 500, 1000, 5000]
 interface ZapDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  eventId: string
+  eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
   onZap: (amount: number, comment?: string) => Promise<boolean>
   isZapping: boolean
@@ -52,8 +52,8 @@ export const ZapDialog = memo(function ZapDialog({
   // Track if we've already handled this invoice's payment
   const handledInvoiceRef = useRef<string | null>(null)
 
-  // Watch for zap receipts when we have an invoice
-  const { zaps } = useEventZaps(eventId, authorPubkey)
+  // Watch for zap receipts when we have an invoice (only for event zaps, not profile zaps)
+  const { zaps } = useEventZaps(eventId || '', authorPubkey)
 
   const displayName = profile?.display_name || profile?.name || authorPubkey.slice(0, 8)
   const avatar = profile?.picture
@@ -69,8 +69,10 @@ export const ZapDialog = memo(function ZapDialog({
     }
   }, [open])
 
-  // Watch for zap receipt matching our invoice
+  // Watch for zap receipt matching our invoice (only works for event zaps with eventId)
   useEffect(() => {
+    // Skip if no eventId (profile zaps don't have zap receipt detection)
+    if (!eventId) return
     if (!invoice || !zaps || zaps.length === 0) return
     // Don't handle the same invoice twice
     if (handledInvoiceRef.current === invoice) return
@@ -91,7 +93,7 @@ export const ZapDialog = memo(function ZapDialog({
       setCustomAmount('')
       setSelectedAmount(100)
     }
-  }, [invoice, zaps, effectiveAmount, onOpenChange])
+  }, [eventId, invoice, zaps, effectiveAmount, onOpenChange])
 
   const handlePresetClick = useCallback((amount: number) => {
     setSelectedAmount(amount)

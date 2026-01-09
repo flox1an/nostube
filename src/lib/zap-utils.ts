@@ -1,6 +1,16 @@
 import { getZapEndpoint, makeZapRequest, getSatoshisAmountFromBolt11 } from 'nostr-tools/nip57'
 import type { NostrEvent, EventTemplate } from 'nostr-tools'
 
+/**
+ * Check if a profile metadata object has a lightning address (lud16 or lud06)
+ */
+export function hasLightningAddress(
+  metadata: { lud16?: string; lud06?: string } | null | undefined
+): boolean {
+  if (!metadata) return false
+  return !!(metadata.lud16 || metadata.lud06)
+}
+
 export interface ZapRequestParams {
   recipientPubkey: string
   amount: number // in sats

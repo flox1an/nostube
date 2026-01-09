@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 const DEFAULT_ZAP_AMOUNT = 21
 
 interface UseZapOptions {
-  eventId: string
+  eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
 }
 
@@ -33,9 +33,9 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   // Get author's inbox relays (NIP-65)
   const authorRelays = useUserRelays(authorPubkey)
 
-  // Get video event from store to access seenRelays
+  // Get video event from store to access seenRelays (only if eventId is provided)
   const videoEvent = useMemo(() => {
-    // Always try to get by event ID first (works for all event types)
+    if (!eventId) return undefined
     return eventStore.getEvent(eventId)
   }, [eventStore, eventId])
 

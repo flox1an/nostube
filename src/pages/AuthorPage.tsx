@@ -8,6 +8,7 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
+import { ZapButton } from '@/components/ZapButton'
 import {
   useProfile,
   useUserPlaylists,
@@ -15,7 +16,9 @@ import {
   useAppContext,
   useInfiniteScroll,
   useAuthorPageRelays,
+  useCurrentUser,
 } from '@/hooks'
+import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
@@ -42,9 +45,13 @@ function AuthorProfile({
   className: string
 }) {
   const { t } = useTranslation()
+  const { user } = useCurrentUser()
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
+
+  const isOwnProfile = user?.pubkey === pubkey
+  const canZap = !isOwnProfile && hasLightningAddress(metadata)
 
   return (
     <div className={cn(className, 'flex items-center space-x-4')}>
@@ -71,6 +78,11 @@ function AuthorProfile({
           />
         )}
       </div>
+      {canZap && (
+        <div className="shrink-0">
+          <ZapButton authorPubkey={pubkey} layout="inline" />
+        </div>
+      )}
     </div>
   )
 }

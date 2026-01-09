@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Upload: publish date picker in step 5 allows scheduling video publish date/time (defaults to "now" for immediate publishing)
+- Author page: added zap button to send sats directly to content creators (only shown if author has lightning address)
 
 ### Changed
 

@@ -30,7 +30,18 @@ import { generateEventLink } from '@/lib/nostr'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface UploadFormProps {
   draft: UploadDraft
@@ -572,9 +583,46 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
               <div className="flex gap-2">
                 {onBack && (
-                  <Button type="button" variant="secondary" onClick={handleBack}>
-                    {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
-                  </Button>
+                  <>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" variant="outline" size="icon">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {t('upload.draft.deleteTitle', { defaultValue: 'Delete Draft?' })}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('upload.draft.deleteDescription', {
+                              defaultValue:
+                                'This will permanently delete this draft. This action cannot be undone.',
+                            })}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>
+                            {t('common.cancel', { defaultValue: 'Cancel' })}
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              deleteDraft(draft.id)
+                              onBack()
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {t('common.delete', { defaultValue: 'Delete' })}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <Button type="button" variant="secondary" onClick={handleBack}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
+                    </Button>
+                  </>
                 )}
 
                 {currentStep < 5 ? (

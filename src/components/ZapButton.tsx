@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 import { useZap, useEventZaps, useCurrentUser } from '@/hooks'
 import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
-import { WalletConnectDialog } from './WalletConnectDialog'
 
 interface ZapButtonProps {
   eventId: string
@@ -25,12 +24,11 @@ export const ZapButton = memo(function ZapButton({
   className = '',
 }: ZapButtonProps) {
   const [showZapDialog, setShowZapDialog] = useState(false)
-  const [showWalletDialog, setShowWalletDialog] = useState(false)
   const longPressTimer = useRef<number | null>(null)
   const isLongPress = useRef(false)
 
   const { user } = useCurrentUser()
-  const { zap, isZapping, needsWallet, setNeedsWallet } = useZap({
+  const { zap, generateInvoice, isZapping, isConnected } = useZap({
     eventId,
     authorPubkey,
   })
@@ -50,21 +48,15 @@ export const ZapButton = memo(function ZapButton({
     }
   }, [])
 
-  // Show wallet dialog when needed
-  useEffect(() => {
-    if (needsWallet && !showWalletDialog) {
-      // Use requestAnimationFrame to avoid synchronous setState in effect
-      requestAnimationFrame(() => {
-        setShowWalletDialog(true)
-        setNeedsWallet(false)
-      })
-    }
-  }, [needsWallet, showWalletDialog, setNeedsWallet])
-
   const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
-    await zap()
-  }, [zap])
+    // If wallet is connected, do quick zap; otherwise open dialog for QR code
+    if (isConnected) {
+      await zap()
+    } else {
+      setShowZapDialog(true)
+    }
+  }, [zap, isConnected])
 
   const handlePointerDown = useCallback(() => {
     isLongPress.current = false
@@ -99,10 +91,6 @@ export const ZapButton = memo(function ZapButton({
     },
     [zap]
   )
-
-  const handleWalletConnected = useCallback(() => {
-    // Retry the pending zap if there was one
-  }, [])
 
   if (layout === 'inline') {
     // Render static display for own content or when not logged in
@@ -142,12 +130,8 @@ export const ZapButton = memo(function ZapButton({
           authorPubkey={authorPubkey}
           onZap={handleZapFromDialog}
           isZapping={isZapping}
-        />
-
-        <WalletConnectDialog
-          open={showWalletDialog}
-          onOpenChange={setShowWalletDialog}
-          onConnected={handleWalletConnected}
+          isWalletConnected={isConnected}
+          generateInvoice={generateInvoice}
         />
       </>
     )
@@ -196,12 +180,8 @@ export const ZapButton = memo(function ZapButton({
         authorPubkey={authorPubkey}
         onZap={handleZapFromDialog}
         isZapping={isZapping}
-      />
-
-      <WalletConnectDialog
-        open={showWalletDialog}
-        onOpenChange={setShowWalletDialog}
-        onConnected={handleWalletConnected}
+        isWalletConnected={isConnected}
+        generateInvoice={generateInvoice}
       />
     </>
   )

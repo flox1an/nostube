@@ -1,4 +1,6 @@
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, memo, useEffect } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+import { Link } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -12,8 +14,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks'
-import { Loader2, Zap } from 'lucide-react'
+import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const PRESET_AMOUNTS = [21, 100, 500, 1000, 5000]
 
@@ -23,6 +26,8 @@ interface ZapDialogProps {
   authorPubkey: string
   onZap: (amount: number, comment?: string) => Promise<boolean>
   isZapping: boolean
+  isWalletConnected: boolean
+  generateInvoice?: (amount: number, comment?: string) => Promise<string | null>
 }
 
 export const ZapDialog = memo(function ZapDialog({
@@ -31,16 +36,29 @@ export const ZapDialog = memo(function ZapDialog({
   authorPubkey,
   onZap,
   isZapping,
+  isWalletConnected,
+  generateInvoice,
 }: ZapDialogProps) {
   const [selectedAmount, setSelectedAmount] = useState<number>(100)
   const [customAmount, setCustomAmount] = useState('')
   const [comment, setComment] = useState('')
+  const [invoice, setInvoice] = useState<string | null>(null)
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
+  const [copied, setCopied] = useState(false)
   const profile = useProfile({ pubkey: authorPubkey })
 
   const displayName = profile?.display_name || profile?.name || authorPubkey.slice(0, 8)
   const avatar = profile?.picture
 
   const effectiveAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount
+
+  // Reset invoice when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setInvoice(null)
+      setCopied(false)
+    }
+  }, [open])
 
   const handlePresetClick = useCallback((amount: number) => {
     setSelectedAmount(amount)
@@ -62,14 +80,118 @@ export const ZapDialog = memo(function ZapDialog({
 
   const handleZap = useCallback(async () => {
     if (effectiveAmount < 1) return
-    const success = await onZap(effectiveAmount, comment || undefined)
-    if (success) {
-      onOpenChange(false)
-      setComment('')
-      setCustomAmount('')
-      setSelectedAmount(100)
+
+    // If wallet is connected, use the normal zap flow
+    if (isWalletConnected) {
+      const success = await onZap(effectiveAmount, comment || undefined)
+      if (success) {
+        onOpenChange(false)
+        setComment('')
+        setCustomAmount('')
+        setSelectedAmount(100)
+      }
+      return
     }
-  }, [effectiveAmount, comment, onZap, onOpenChange])
+
+    // No wallet - generate invoice and show QR code
+    if (!generateInvoice) return
+
+    setIsGeneratingInvoice(true)
+    try {
+      const bolt11 = await generateInvoice(effectiveAmount, comment || undefined)
+      if (bolt11) {
+        setInvoice(bolt11)
+      }
+    } finally {
+      setIsGeneratingInvoice(false)
+    }
+  }, [effectiveAmount, comment, onZap, onOpenChange, isWalletConnected, generateInvoice])
+
+  const handleCopyInvoice = useCallback(async () => {
+    if (!invoice) return
+    try {
+      await navigator.clipboard.writeText(invoice)
+      setCopied(true)
+      toast.success('Invoice copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Failed to copy invoice')
+    }
+  }, [invoice])
+
+  const handleBack = useCallback(() => {
+    setInvoice(null)
+    setCopied(false)
+  }, [])
+
+  // Show QR code view when invoice is generated (no wallet mode)
+  if (invoice) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              Pay Invoice
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 pt-2">
+              <span>Scan with your lightning wallet to zap {effectiveAmount} sats</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center space-y-4">
+            {/* QR Code */}
+            <div className="p-4 bg-white rounded-xl">
+              <QRCodeSVG value={invoice.toUpperCase()} size={200} level="M" includeMargin={false} />
+            </div>
+
+            {/* Copy button */}
+            <Button variant="outline" onClick={handleCopyInvoice} className="w-full">
+              {copied ? (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Invoice
+                </>
+              )}
+            </Button>
+
+            {/* Separator */}
+            <div className="w-full flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex-1 border-t" />
+              <span>or</span>
+              <div className="flex-1 border-t" />
+            </div>
+
+            {/* Configure wallet link */}
+            <Link
+              to="/settings/wallet"
+              onClick={() => onOpenChange(false)}
+              className="flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              <Settings className="h-4 w-4" />
+              Configure wallet for one-tap zaps
+            </Link>
+
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="text-muted-foreground"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Change amount
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,12 +269,12 @@ export const ZapDialog = memo(function ZapDialog({
           <Button
             className="w-full"
             onClick={handleZap}
-            disabled={effectiveAmount < 1 || isZapping}
+            disabled={effectiveAmount < 1 || isZapping || isGeneratingInvoice}
           >
-            {isZapping ? (
+            {isZapping || isGeneratingInvoice ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Zapping...
+                {isGeneratingInvoice ? 'Getting invoice...' : 'Zapping...'}
               </>
             ) : (
               <>
@@ -161,6 +283,21 @@ export const ZapDialog = memo(function ZapDialog({
               </>
             )}
           </Button>
+
+          {/* Configure wallet hint when no wallet */}
+          {!isWalletConnected && (
+            <p className="text-center text-xs text-muted-foreground">
+              No wallet configured.{' '}
+              <Link
+                to="/settings/wallet"
+                onClick={() => onOpenChange(false)}
+                className="text-primary hover:underline"
+              >
+                Set up wallet
+              </Link>{' '}
+              for one-tap zaps.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

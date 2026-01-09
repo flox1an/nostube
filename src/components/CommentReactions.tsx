@@ -15,7 +15,6 @@ import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
-import { WalletConnectDialog } from './WalletConnectDialog'
 
 interface CommentReactionsProps {
   eventId: string
@@ -38,7 +37,6 @@ export const CommentReactions = memo(function CommentReactions({
   const { publish, isPending } = useNostrPublish()
 
   const [showZapDialog, setShowZapDialog] = useState(false)
-  const [showWalletDialog, setShowWalletDialog] = useState(false)
   const longPressTimer = useRef<number | null>(null)
   const isLongPress = useRef(false)
 
@@ -60,7 +58,7 @@ export const CommentReactions = memo(function CommentReactions({
   const hasReacted = hasUpvoted || hasDownvoted
 
   // Use the useZap hook for zapping
-  const { zap, isZapping, needsWallet, setNeedsWallet } = useZap({
+  const { zap, generateInvoice, isZapping, isConnected } = useZap({
     eventId,
     authorPubkey,
   })
@@ -83,16 +81,6 @@ export const CommentReactions = memo(function CommentReactions({
       }
     }
   }, [])
-
-  // Show wallet dialog when needed
-  useEffect(() => {
-    if (needsWallet && !showWalletDialog) {
-      requestAnimationFrame(() => {
-        setShowWalletDialog(true)
-        setNeedsWallet(false)
-      })
-    }
-  }, [needsWallet, showWalletDialog, setNeedsWallet])
 
   const handleUpvote = useCallback(async () => {
     if (!user || hasReacted) return
@@ -144,8 +132,13 @@ export const CommentReactions = memo(function CommentReactions({
 
   const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
-    await zap()
-  }, [zap])
+    // If wallet is connected, do quick zap; otherwise open dialog for QR code
+    if (isConnected) {
+      await zap()
+    } else {
+      setShowZapDialog(true)
+    }
+  }, [zap, isConnected])
 
   const handlePointerDown = useCallback(() => {
     isLongPress.current = false
@@ -180,10 +173,6 @@ export const CommentReactions = memo(function CommentReactions({
     },
     [zap]
   )
-
-  const handleWalletConnected = useCallback(() => {
-    // Retry the pending zap if there was one
-  }, [])
 
   return (
     <>
@@ -242,12 +231,8 @@ export const CommentReactions = memo(function CommentReactions({
         authorPubkey={authorPubkey}
         onZap={handleZapFromDialog}
         isZapping={isZapping}
-      />
-
-      <WalletConnectDialog
-        open={showWalletDialog}
-        onOpenChange={setShowWalletDialog}
-        onConnected={handleWalletConnected}
+        isWalletConnected={isConnected}
+        generateInvoice={generateInvoice}
       />
     </>
   )

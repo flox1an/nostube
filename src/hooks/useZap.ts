@@ -15,7 +15,9 @@ interface UseZapOptions {
 
 interface UseZapReturn {
   zap: (amount?: number, comment?: string) => Promise<boolean>
+  generateInvoice: (amount: number, comment?: string) => Promise<string | null>
   isZapping: boolean
+  isConnected: boolean
   needsWallet: boolean
   setNeedsWallet: (value: boolean) => void
 }
@@ -113,9 +115,65 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
     [user, isConnected, eventStore, authorPubkey, targetRelays, videoEvent, payInvoice]
   )
 
+  // Generate invoice without paying (for users without wallet)
+  const generateInvoice = useCallback(
+    async (amount: number, comment?: string): Promise<string | null> => {
+      if (!user) {
+        toast.error('Please log in to zap')
+        return null
+      }
+
+      const signer = user.signer
+      if (!signer) {
+        toast.error('No signer available')
+        return null
+      }
+
+      try {
+        // Get author's profile event (kind 0 is replaceable)
+        const profileEvent = eventStore.getReplaceable(0, authorPubkey)
+        if (!profileEvent) {
+          toast.error('Could not load author profile')
+          return null
+        }
+
+        // Get LNURL endpoint
+        const zapEndpoint = await getRecipientZapEndpoint(profileEvent)
+        if (!zapEndpoint) {
+          toast.error('Author cannot receive zaps (no lightning address)')
+          return null
+        }
+
+        // Create zap request template with target relays
+        const zapRequestTemplate = createZapRequest({
+          recipientPubkey: authorPubkey,
+          amount,
+          comment,
+          relays: targetRelays,
+          event: videoEvent || undefined,
+        })
+
+        // Sign the zap request (kind 9734)
+        const signedZapRequest = await signer.signEvent(zapRequestTemplate)
+
+        // Request invoice from LNURL
+        const bolt11 = await requestInvoice(zapEndpoint, amount, signedZapRequest)
+
+        return bolt11
+      } catch (err) {
+        console.error('Failed to generate invoice:', err)
+        toast.error(err instanceof Error ? err.message : 'Failed to generate invoice')
+        return null
+      }
+    },
+    [user, eventStore, authorPubkey, targetRelays, videoEvent]
+  )
+
   return {
     zap,
+    generateInvoice,
     isZapping,
+    isConnected,
     needsWallet,
     setNeedsWallet,
   }

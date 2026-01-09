@@ -42,6 +42,68 @@ import { getDateLocale } from '@/lib/date-locale'
 import { isBetaUser } from '@/lib/beta-users'
 import ngeohash from 'ngeohash'
 
+// Map ISO-639-1 language codes to country codes for flag display
+const languageToCountryCode: Record<string, string> = {
+  en: 'US',
+  de: 'DE',
+  fr: 'FR',
+  es: 'ES',
+  it: 'IT',
+  pt: 'BR',
+  ru: 'RU',
+  zh: 'CN',
+  ja: 'JP',
+  ko: 'KR',
+  ar: 'SA',
+  hi: 'IN',
+  nl: 'NL',
+  pl: 'PL',
+  tr: 'TR',
+  uk: 'UA',
+  vi: 'VN',
+  th: 'TH',
+  sv: 'SE',
+  da: 'DK',
+  fi: 'FI',
+  no: 'NO',
+  cs: 'CZ',
+  el: 'GR',
+  he: 'IL',
+  id: 'ID',
+  ms: 'MY',
+  ro: 'RO',
+  hu: 'HU',
+  sk: 'SK',
+  bg: 'BG',
+  hr: 'HR',
+  sr: 'RS',
+  sl: 'SI',
+  et: 'EE',
+  lv: 'LV',
+  lt: 'LT',
+  fa: 'IR',
+  bn: 'BD',
+  ta: 'IN',
+  te: 'IN',
+}
+
+// Convert country code to flag emoji
+function countryCodeToFlag(countryCode: string): string {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0))
+  return String.fromCodePoint(...codePoints)
+}
+
+// Get flag + shortcode for a language
+function getLanguageDisplay(langCode: string): { flag: string; code: string } {
+  const upperCode = langCode.toUpperCase()
+  const countryCode = languageToCountryCode[langCode.toLowerCase()]
+  const flag = countryCode ? countryCodeToFlag(countryCode) : '🌐'
+  return { flag, code: upperCode }
+}
+
 interface ProfileMetadata {
   name?: string
   display_name?: string
@@ -297,23 +359,27 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           <Separator />
         )}
 
-        {/* Display languages from video and labels */}
-        {video &&
+        {/* Display tags, languages, and location */}
+        {(video && video.tags.length > 0) ||
+        (video &&
           'languages' in video &&
           Array.isArray(video.languages) &&
-          video.languages.length > 0 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-muted-foreground">{t('video.languages')}:</span>
-              {(video.languages as string[]).map((lang: string) => (
-                <Badge key={lang} variant="outline">
-                  {lang.toUpperCase()}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-        {(video && video.tags.length > 0) || geohash ? (
+          video.languages.length > 0) ||
+        geohash ? (
           <div className="flex flex-wrap gap-2">
+            {/* Language badges with flag + shortcode */}
+            {video &&
+              'languages' in video &&
+              Array.isArray(video.languages) &&
+              (video.languages as string[]).map((lang: string) => {
+                const { flag, code } = getLanguageDisplay(lang)
+                return (
+                  <Badge key={`lang-${lang}`} variant="outline">
+                    {flag} {code}
+                  </Badge>
+                )
+              })}
+            {/* Tag badges */}
             {video &&
               video.tags.slice(0, 20).map(tag => (
                 <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>

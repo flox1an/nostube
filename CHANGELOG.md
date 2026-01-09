@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video player: mobile touch seek now requires double-tap to trigger (single tap on side zones no longer seeks); triple+ taps stack additional seek time
 - Video page: video player now sticks to top of screen on mobile portrait when scrolling
 - Video page: reduced title font size on mobile for better readability
+- Video page: limit title to 2 lines with ellipsis on mobile to prevent excessive vertical space
 - Updated dependencies: applesauce-react 5.0.1, globals 17.0.0, i18next 25.7.4, immer 11.1.3, react-hook-form 7.70.0, react-i18next 16.5.1, react-resizable-panels 4.3.1, react-router-dom 7.12.0, typescript-eslint 8.52.0, vite 7.3.1, zod 4.3.5
 
 ### Fixed

@@ -227,6 +227,10 @@
       "description": "Select or upload a thumbnail for your video"
     },
     "step4": {
+      "title": "Subtitles",
+      "description": "Add subtitle files for your video (optional)"
+    },
+    "step5": {
       "title": "Additional Settings",
       "description": "Configure optional settings for your video"
     },
@@ -251,6 +255,37 @@
     "uploading": "Uploading...",
     "publishVideo": "Publish Video",
     "publishing": "Publishing...",
+    "videoSource": "Video Source",
+    "videoUrl": "Video URL",
+    "videoUrlPlaceholder": "https://example.com/video.mp4",
+    "process": "Process",
+    "dropzone": {
+      "dropHere": "Drop the file here...",
+      "dragDrop": "Drag & drop a file here, or click to select",
+      "selected": "Selected"
+    },
+    "subtitles": {
+      "dropHere": "Drop subtitle files here...",
+      "dragDrop": "Drag & drop VTT or SRT files here, or click to select",
+      "optional": "(Optional)",
+      "helperText": "Add subtitle files to make your video accessible in multiple languages. Language is auto-detected from filename (e.g., video_en.vtt).",
+      "noLanguageWarning": "Some subtitles have no language selected. Please select a language for each subtitle.",
+      "language": "Language",
+      "filename": "Filename",
+      "status": "Status",
+      "actions": "Actions",
+      "selectLanguage": "Select...",
+      "pending": "Pending",
+      "remove": "Remove"
+    },
+    "publishDate": {
+      "title": "Publish Date",
+      "now": "Publish immediately",
+      "scheduled": "Set publishing time",
+      "pickDate": "Pick a date",
+      "descriptionNow": "Your video will be published as soon as you click Publish.",
+      "descriptionScheduled": "Your video will be published with the selected date/time. Note: The video will be visible immediately but dated for the scheduled time."
+    },
     "form": {
       "title": "Title",
       "description": "Description",

@@ -207,6 +207,29 @@
   },
   "upload": {
     "title": "Video hochladen",
+    "stepIndicator": "Schritt {{current}} von {{total}}",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "step1": {
+      "title": "Video hochladen",
+      "description": "Lade mindestens ein Video hoch, um fortzufahren"
+    },
+    "step2": {
+      "title": "Videodetails",
+      "description": "Fülle die erforderlichen Felder aus (* kennzeichnet Pflichtfelder)"
+    },
+    "step3": {
+      "title": "Vorschaubild",
+      "description": "Wähle oder lade ein Vorschaubild für dein Video hoch"
+    },
+    "step4": {
+      "title": "Untertitel",
+      "description": "Füge Untertiteldateien für dein Video hinzu (optional)"
+    },
+    "step5": {
+      "title": "Zusätzliche Einstellungen",
+      "description": "Konfiguriere optionale Einstellungen für dein Video"
+    },
     "loginRequired": "Bitte melde dich an, um Videos hochzuladen",
     "uploadInfo": "Wird direkt auf {{upload}} Server hochgeladen. Spiegelt auf {{mirror}} Server.",
     "useRecommended": "Empfohlene Server verwenden",
@@ -218,6 +241,47 @@
     "uploading": "Lädt hoch...",
     "publishVideo": "Video veröffentlichen",
     "publishing": "Wird veröffentlicht...",
+    "videoSource": "Videoquelle",
+    "videoUrl": "Video-URL",
+    "videoUrlPlaceholder": "https://beispiel.de/video.mp4",
+    "process": "Verarbeiten",
+    "dropzone": {
+      "dropHere": "Datei hier ablegen...",
+      "dragDrop": "Datei hierher ziehen oder klicken zum Auswählen",
+      "selected": "Ausgewählt"
+    },
+    "subtitles": {
+      "dropHere": "Untertiteldateien hier ablegen...",
+      "dragDrop": "VTT- oder SRT-Dateien hierher ziehen oder klicken zum Auswählen",
+      "optional": "(Optional)",
+      "helperText": "Füge Untertiteldateien hinzu, um dein Video in mehreren Sprachen zugänglich zu machen. Sprache wird automatisch aus dem Dateinamen erkannt (z.B. video_de.vtt).",
+      "noLanguageWarning": "Einige Untertitel haben keine Sprache ausgewählt. Bitte wähle eine Sprache für jeden Untertitel.",
+      "language": "Sprache",
+      "filename": "Dateiname",
+      "status": "Status",
+      "actions": "Aktionen",
+      "selectLanguage": "Auswählen...",
+      "pending": "Ausstehend",
+      "remove": "Entfernen"
+    },
+    "publishDate": {
+      "title": "Veröffentlichungsdatum",
+      "now": "Sofort veröffentlichen",
+      "scheduled": "Veröffentlichungszeit festlegen",
+      "pickDate": "Datum auswählen",
+      "descriptionNow": "Dein Video wird veröffentlicht, sobald du auf Veröffentlichen klickst.",
+      "descriptionScheduled": "Dein Video wird mit dem ausgewählten Datum/Uhrzeit veröffentlicht. Hinweis: Das Video ist sofort sichtbar, aber mit dem geplanten Zeitpunkt datiert."
+    },
+    "expiration": {
+      "title": "Video-Ablauf",
+      "selectDuration": "Ablaufzeit auswählen",
+      "none": "Läuft nie ab",
+      "1day": "1 Tag",
+      "7days": "7 Tage",
+      "1month": "1 Monat",
+      "1year": "1 Jahr",
+      "description": "Lege fest, wann dieses Video ablaufen und von Relays gelöscht werden soll. Dies ist keine Sicherheitsfunktion."
+    },
     "form": {
       "title": "Titel",
       "description": "Beschreibung",

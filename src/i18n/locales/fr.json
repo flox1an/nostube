@@ -207,6 +207,29 @@
   },
   "upload": {
     "title": "Mettre en ligne une vidéo",
+    "stepIndicator": "Étape {{current}} sur {{total}}",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "step1": {
+      "title": "Mettre en ligne une vidéo",
+      "description": "Téléchargez au moins une vidéo pour continuer"
+    },
+    "step2": {
+      "title": "Détails de la vidéo",
+      "description": "Remplissez les champs obligatoires (* indique un champ obligatoire)"
+    },
+    "step3": {
+      "title": "Miniature",
+      "description": "Sélectionnez ou téléchargez une miniature pour votre vidéo"
+    },
+    "step4": {
+      "title": "Sous-titres",
+      "description": "Ajoutez des fichiers de sous-titres pour votre vidéo (optionnel)"
+    },
+    "step5": {
+      "title": "Paramètres supplémentaires",
+      "description": "Configurez les paramètres optionnels pour votre vidéo"
+    },
     "loginRequired": "Veuillez vous connecter pour mettre en ligne des vidéos",
     "uploadInfo": "Mise en ligne directe vers {{upload}} serveur(s). Duplication vers {{mirror}} serveur(s).",
     "useRecommended": "Utiliser les serveurs recommandés",
@@ -218,6 +241,47 @@
     "uploading": "Mise en ligne...",
     "publishVideo": "Publier la vidéo",
     "publishing": "Publication...",
+    "videoSource": "Source vidéo",
+    "videoUrl": "URL de la vidéo",
+    "videoUrlPlaceholder": "https://exemple.com/video.mp4",
+    "process": "Traiter",
+    "dropzone": {
+      "dropHere": "Déposez le fichier ici...",
+      "dragDrop": "Glissez-déposez un fichier ici, ou cliquez pour sélectionner",
+      "selected": "Sélectionné"
+    },
+    "subtitles": {
+      "dropHere": "Déposez les fichiers de sous-titres ici...",
+      "dragDrop": "Glissez-déposez des fichiers VTT ou SRT ici, ou cliquez pour sélectionner",
+      "optional": "(Optionnel)",
+      "helperText": "Ajoutez des fichiers de sous-titres pour rendre votre vidéo accessible en plusieurs langues. La langue est détectée automatiquement à partir du nom de fichier (ex : video_fr.vtt).",
+      "noLanguageWarning": "Certains sous-titres n'ont pas de langue sélectionnée. Veuillez sélectionner une langue pour chaque sous-titre.",
+      "language": "Langue",
+      "filename": "Nom de fichier",
+      "status": "Statut",
+      "actions": "Actions",
+      "selectLanguage": "Sélectionner...",
+      "pending": "En attente",
+      "remove": "Supprimer"
+    },
+    "publishDate": {
+      "title": "Date de publication",
+      "now": "Publier immédiatement",
+      "scheduled": "Définir l'heure de publication",
+      "pickDate": "Choisir une date",
+      "descriptionNow": "Votre vidéo sera publiée dès que vous cliquerez sur Publier.",
+      "descriptionScheduled": "Votre vidéo sera publiée avec la date/heure sélectionnée. Note : La vidéo sera visible immédiatement mais datée à l'heure programmée."
+    },
+    "expiration": {
+      "title": "Expiration de la vidéo",
+      "selectDuration": "Sélectionner la durée d'expiration",
+      "none": "N'expire jamais",
+      "1day": "1 jour",
+      "7days": "7 jours",
+      "1month": "1 mois",
+      "1year": "1 an",
+      "description": "Définissez quand cette vidéo doit expirer et être supprimée par les relais. Ce n'est pas une fonctionnalité de sécurité."
+    },
     "form": {
       "title": "Titre",
       "description": "Description",

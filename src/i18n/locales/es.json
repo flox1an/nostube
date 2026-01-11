@@ -207,6 +207,29 @@
   },
   "upload": {
     "title": "Subir Video",
+    "stepIndicator": "Paso {{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "step1": {
+      "title": "Subir Video",
+      "description": "Suba al menos un video para continuar"
+    },
+    "step2": {
+      "title": "Detalles del Video",
+      "description": "Complete los campos obligatorios (* indica obligatorio)"
+    },
+    "step3": {
+      "title": "Miniatura",
+      "description": "Seleccione o suba una miniatura para su video"
+    },
+    "step4": {
+      "title": "Subtítulos",
+      "description": "Agregue archivos de subtítulos para su video (opcional)"
+    },
+    "step5": {
+      "title": "Configuración Adicional",
+      "description": "Configure ajustes opcionales para su video"
+    },
     "loginRequired": "Por favor, inicie sesión para subir videos",
     "uploadInfo": "Subiendo directamente a {{upload}} servidor(es). Replicando a {{mirror}} servidor(es).",
     "useRecommended": "Usar servidores recomendados",
@@ -218,6 +241,47 @@
     "uploading": "Subiendo...",
     "publishVideo": "Publicar Video",
     "publishing": "Publicando...",
+    "videoSource": "Fuente del Video",
+    "videoUrl": "URL del Video",
+    "videoUrlPlaceholder": "https://ejemplo.com/video.mp4",
+    "process": "Procesar",
+    "dropzone": {
+      "dropHere": "Suelte el archivo aquí...",
+      "dragDrop": "Arrastre y suelte un archivo aquí, o haga clic para seleccionar",
+      "selected": "Seleccionado"
+    },
+    "subtitles": {
+      "dropHere": "Suelte los archivos de subtítulos aquí...",
+      "dragDrop": "Arrastre y suelte archivos VTT o SRT aquí, o haga clic para seleccionar",
+      "optional": "(Opcional)",
+      "helperText": "Agregue archivos de subtítulos para hacer su video accesible en múltiples idiomas. El idioma se detecta automáticamente del nombre del archivo (ej. video_es.vtt).",
+      "noLanguageWarning": "Algunos subtítulos no tienen idioma seleccionado. Por favor seleccione un idioma para cada subtítulo.",
+      "language": "Idioma",
+      "filename": "Nombre de archivo",
+      "status": "Estado",
+      "actions": "Acciones",
+      "selectLanguage": "Seleccionar...",
+      "pending": "Pendiente",
+      "remove": "Eliminar"
+    },
+    "publishDate": {
+      "title": "Fecha de Publicación",
+      "now": "Publicar inmediatamente",
+      "scheduled": "Establecer hora de publicación",
+      "pickDate": "Seleccionar fecha",
+      "descriptionNow": "Su video se publicará tan pronto como haga clic en Publicar.",
+      "descriptionScheduled": "Su video se publicará con la fecha/hora seleccionada. Nota: El video será visible inmediatamente pero fechado para la hora programada."
+    },
+    "expiration": {
+      "title": "Expiración del Video",
+      "selectDuration": "Seleccionar tiempo de expiración",
+      "none": "Nunca expira",
+      "1day": "1 día",
+      "7days": "7 días",
+      "1month": "1 mes",
+      "1year": "1 año",
+      "description": "Establezca cuándo este video debe expirar y ser eliminado por los relays. Esta no es una función de seguridad."
+    },
     "form": {
       "title": "Título",
       "description": "Descripción",

@@ -1,5 +1,6 @@
 import { useDropzone } from 'react-dropzone'
 import { File } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface FileDropzoneProps {
   onDrop: (acceptedFiles: File[]) => void
@@ -18,6 +19,7 @@ export function FileDropzone({
   className = '',
   style,
 }: FileDropzoneProps) {
+  const { t } = useTranslation()
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept,
@@ -41,11 +43,12 @@ export function FileDropzone({
       <input {...getInputProps()} />
       <File className="w-8 h-8 text-muted-foreground mb-2" />
       <span className="text-base text-muted-foreground">
-        {isDragActive ? 'Drop the file here...' : 'Drag & drop a file here, or click to select'}
+        {isDragActive ? t('upload.dropzone.dropHere') : t('upload.dropzone.dragDrop')}
       </span>
       {selectedFile && (
         <div className="mt-2 text-sm text-foreground">
-          <b>Selected:</b> {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+          <b>{t('upload.dropzone.selected')}:</b> {selectedFile.name} (
+          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
         </div>
       )}
     </div>

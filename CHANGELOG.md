@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Video cards: hide user avatar on portrait/shorts video cards for cleaner layout (author name still shown in metadata)
 - Zaps: when no wallet is configured, clicking zap now shows a lightning invoice QR code instead of wallet setup dialog, with a "configure wallet" link for one-tap zaps; dialog auto-closes when payment is detected
 - Zap button now only displayed when video author has a lightning address (lud16/lud06)
 - Embed player: reordered title overlay to show title on top, author below

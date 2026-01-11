@@ -267,7 +267,7 @@ export const VideoCard = React.memo(function VideoCard({
         </Link>
         <div className="pt-3">
           <div className="flex gap-3">
-            {!hideAuthor && (
+            {!hideAuthor && format !== 'vertical' && (
               <Link to={`/author/${authorNprofile}`} className="shrink-0">
                 <UserAvatar
                   picture={metadata?.picture}
@@ -328,9 +328,11 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
       <Skeleton className={cn('w-full', aspectRatio)} />
       <div className="pt-3">
         <div className="flex gap-3">
-          <div className="shrink-0">
-            <Skeleton className="h-10 w-10 rounded-full" />
-          </div>
+          {format !== 'vertical' && (
+            <div className="shrink-0">
+              <Skeleton className="h-10 w-10 rounded-full" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <Skeleton className="h-5 w-full" />
             <Skeleton className="h-4 w-2/3 mt-1" />

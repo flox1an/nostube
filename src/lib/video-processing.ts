@@ -105,6 +105,25 @@ export async function processUploadedVideo(
 }
 
 /**
+ * Fetch file size from URL using HEAD request
+ */
+async function fetchFileSizeFromUrl(url: string): Promise<number | undefined> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' })
+    const contentLength = response.headers.get('Content-Length')
+    if (contentLength) {
+      const bytes = parseInt(contentLength, 10)
+      if (!isNaN(bytes) && bytes > 0) {
+        return bytes
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch file size from URL:', error)
+  }
+  return undefined
+}
+
+/**
  * Process video URL and extract metadata
  */
 export async function processVideoUrl(
@@ -118,8 +137,12 @@ export async function processVideoUrl(
   video.playsInline = true
   video.preload = 'metadata'
 
-  const { dimension, duration } = await extractVideoMetadata(video)
+  const [{ dimension, duration }, fileSize] = await Promise.all([
+    extractVideoMetadata(video),
+    fetchFileSizeFromUrl(url),
+  ])
   const qualityLabel = generateQualityLabel(dimension)
+  const sizeMB = fileSize ? Number((fileSize / 1024 / 1024).toFixed(2)) : undefined
 
   let videoCodec: string | undefined
   let audioCodec: string | undefined
@@ -137,6 +160,7 @@ export async function processVideoUrl(
   return {
     url,
     dimension,
+    sizeMB,
     duration,
     videoCodec,
     audioCodec,

@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type NostrEvent } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { Reply, MoreVertical, Flag } from 'lucide-react'
+import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp } from 'lucide-react'
 import { CommentReactions } from '@/components/CommentReactions'
 import {
   DropdownMenu,
@@ -32,6 +32,53 @@ interface Comment {
   replyToId?: string // The comment this is replying to
   replies?: Comment[] // Nested replies
 }
+
+interface ParentPreviewProps {
+  parentId: string
+  onClick?: () => void
+}
+
+// ParentPreview component for showing reply context in deep threads (used in CommentItem)
+export const ParentPreview = React.memo(function ParentPreview({
+  parentId,
+  onClick,
+}: ParentPreviewProps) {
+  const { t } = useTranslation()
+  const eventStore = useEventStore()
+  const parentEvent = eventStore.getEvent(parentId)
+  const parentPubkey = parentEvent?.pubkey
+  const metadata = useProfile(parentPubkey ? { pubkey: parentPubkey } : undefined)
+  const name = metadata?.name || parentPubkey?.slice(0, 8) || '...'
+
+  if (!parentEvent) return null
+
+  const contentPreview =
+    parentEvent.content.slice(0, 30) + (parentEvent.content.length > 30 ? '...' : '')
+
+  return (
+    <button
+      type="button"
+      onClick={e => {
+        e.stopPropagation()
+        onClick?.()
+      }}
+      className="flex items-center gap-1 text-xs rounded-full px-2 py-0.5 bg-muted text-muted-foreground hover:text-foreground transition-colors max-w-full"
+      aria-label={`${t('video.comments.replyingTo')} ${name}`}
+    >
+      <span className="shrink-0">{t('video.comments.replyingTo')}</span>
+      {parentPubkey && (
+        <UserAvatar
+          picture={metadata?.picture}
+          pubkey={parentPubkey}
+          name={name}
+          className="w-4 h-4 shrink-0"
+        />
+      )}
+      <span className="truncate">{name}</span>
+      <span className="truncate text-muted-foreground/70">"{contentPreview}"</span>
+    </button>
+  )
+})
 
 interface VideoCommentsProps {
   videoId: string
@@ -132,6 +179,7 @@ const CommentItem = React.memo(function CommentItem({
   currentUserAvatar,
   currentUserName,
   currentUserPubkey,
+  onScrollToComment,
 }: {
   comment: Comment
   link: string
@@ -148,6 +196,7 @@ const CommentItem = React.memo(function CommentItem({
   currentUserAvatar?: string
   currentUserName?: string
   currentUserPubkey?: string
+  onScrollToComment?: (commentId: string) => void
 }) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
@@ -203,6 +252,15 @@ const CommentItem = React.memo(function CommentItem({
               </DropdownMenu>
             </div>
           </div>
+          {/* Show parent context when this is a nested reply */}
+          {depth > 0 && comment.replyToId && (
+            <div className="mt-1 mb-1">
+              <ParentPreview
+                parentId={comment.replyToId}
+                onClick={() => onScrollToComment?.(comment.replyToId!)}
+              />
+            </div>
+          )}
           <RichTextContent
             content={comment.content}
             videoLink={link}
@@ -222,17 +280,25 @@ const CommentItem = React.memo(function CommentItem({
                 {t('video.comments.replyButton')}
               </Button>
             )}
-            {hasReplies && depth < maxDepth && (
+            {/* Only show expand/collapse when more than 1 reply */}
+            {hasReplies && comment.replies!.length > 1 && depth < maxDepth && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => onToggleExpanded(comment.id)}
               >
-                {isExpanded ? '▼' : '▶'} {comment.replies!.length}{' '}
-                {comment.replies!.length === 1
-                  ? t('video.comments.reply')
-                  : t('video.comments.replies')}
+                {isExpanded ? (
+                  <>
+                    <ChevronUp className="w-3 h-3 mr-1" />
+                    {t('video.comments.hideReplies')} ({comment.replies!.length})
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3 h-3 mr-1" />
+                    {t('video.comments.showReplies')} ({comment.replies!.length})
+                  </>
+                )}
               </Button>
             )}
           </div>
@@ -255,28 +321,38 @@ const CommentItem = React.memo(function CommentItem({
             </div>
           )}
 
-          {/* Render nested replies (only if expanded) */}
-          {hasReplies && isExpanded && depth < maxDepth && (
+          {/* Render replies: auto-show if only 1 reply, or if expanded for multiple */}
+          {hasReplies && (isExpanded || comment.replies!.length === 1) && depth < maxDepth && (
             <div className="mt-2 relative">
-              {comment.replies!.map(reply => (
-                <CommentItem
-                  key={reply.id}
-                  comment={reply}
-                  link={link}
-                  depth={depth + 1}
-                  onReply={onReply}
-                  replyingTo={replyingTo}
-                  replyContent={replyContent}
-                  onReplyContentChange={onReplyContentChange}
-                  onSubmitReply={onSubmitReply}
-                  onCancelReply={onCancelReply}
-                  expandedComments={expandedComments}
-                  onToggleExpanded={onToggleExpanded}
-                  highlightedCommentId={highlightedCommentId}
-                  currentUserAvatar={currentUserAvatar}
-                  currentUserName={currentUserName}
-                  currentUserPubkey={currentUserPubkey}
-                />
+              {comment.replies!.map((reply, index) => (
+                <div key={reply.id} className="relative flex">
+                  {/* Vertical continuation line for all but the last reply */}
+                  {index < comment.replies!.length - 1 && (
+                    <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
+                  )}
+                  {/* L-shaped connector from parent to reply */}
+                  <div className="absolute left-3 top-0 h-5 w-4 rounded-bl-lg border-l border-b border-border" />
+                  <div className="flex-1 pl-6">
+                    <CommentItem
+                      comment={reply}
+                      link={link}
+                      depth={depth + 1}
+                      onScrollToComment={onScrollToComment}
+                      onReply={onReply}
+                      replyingTo={replyingTo}
+                      replyContent={replyContent}
+                      onReplyContentChange={onReplyContentChange}
+                      onSubmitReply={onSubmitReply}
+                      onCancelReply={onCancelReply}
+                      expandedComments={expandedComments}
+                      onToggleExpanded={onToggleExpanded}
+                      highlightedCommentId={highlightedCommentId}
+                      currentUserAvatar={currentUserAvatar}
+                      currentUserName={currentUserName}
+                      currentUserPubkey={currentUserPubkey}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -328,6 +404,25 @@ export function VideoComments({
   const setHighlightedCommentId = useCommentHighlightStore(state => state.setHighlightedCommentId)
   const setCommentParentMap = useCommentHighlightStore(state => state.setCommentParentMap)
   const clearState = useCommentHighlightStore(state => state.clearState)
+
+  // Scroll to a comment, expanding ancestors first
+  const scrollToComment = useCallback(
+    (commentId: string) => {
+      // First, expand all ancestors so the comment is visible
+      const ancestors = useCommentHighlightStore.getState().getAncestorIds(commentId)
+      useCommentHighlightStore.getState().expandComments(ancestors)
+
+      // Wait for DOM update, then scroll
+      setTimeout(() => {
+        const element = document.getElementById(`comment-${commentId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          setHighlightedCommentId(commentId)
+        }
+      }, 100)
+    },
+    [setHighlightedCommentId]
+  )
 
   // Clear store state when unmounting (leaving video page)
   useEffect(() => {
@@ -582,6 +677,7 @@ export function VideoComments({
             key={comment.id}
             comment={comment}
             link={link}
+            onScrollToComment={scrollToComment}
             onReply={user ? handleReply : undefined}
             replyingTo={replyTo?.id}
             replyContent={replyContent}

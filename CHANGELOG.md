@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)
 - i18n: added missing translations for upload dialog (video source, URL input, dropzone, subtitles, publish date, step indicators) in EN/DE/FR/ES
 - SEO: added Open Graph and Twitter card meta tags for better social sharing previews (og:image, og:url, twitter:card)
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Comments: single replies are now auto-expanded (no expand button needed); expand/collapse button only shown when there are 2+ replies
 - Video cards: hide user avatar on portrait/shorts video cards for cleaner layout (author name still shown in metadata)
 - Zaps: when no wallet is configured, clicking zap now shows a lightning invoice QR code instead of wallet setup dialog, with a "configure wallet" link for one-tap zaps; dialog auto-closes when payment is detected
 - Zap button now only displayed when video author has a lightning address (lud16/lud06)

@@ -273,6 +273,32 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     hasSetInitialPos.current = false
   }, [urls])
 
+  // Explicit autoplay - browsers may block the autoPlay attribute, so we call play() explicitly
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el || contentWarning) return
+
+    const attemptAutoplay = async () => {
+      try {
+        await el.play()
+      } catch (err) {
+        // Autoplay was blocked by the browser - this is expected behavior
+        if (import.meta.env.DEV) {
+          console.log('[VideoPlayer] Autoplay blocked:', err)
+        }
+      }
+    }
+
+    // If video is ready to play, attempt autoplay immediately
+    if (el.readyState >= 3) {
+      attemptAutoplay()
+    } else {
+      // Wait for canplay event
+      el.addEventListener('canplay', attemptAutoplay, { once: true })
+      return () => el.removeEventListener('canplay', attemptAutoplay)
+    }
+  }, [videoUrl, contentWarning])
+
   // Notify parent when video element is ready
   useEffect(() => {
     onVideoElementReady?.(videoRef.current)

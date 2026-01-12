@@ -64,6 +64,8 @@ export interface AppConfig {
   media?: MediaConfig
   /** Selected preset pubkey (null = use default preset) */
   selectedPresetPubkey?: string | null
+  /** Enable hover previews for videos */
+  hoverPreview?: boolean
 }
 
 export interface AppContextType {

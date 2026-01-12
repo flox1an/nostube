@@ -69,7 +69,7 @@ export const VideoCard = React.memo(function VideoCard({
   const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
   const [fallbackFailed, setFallbackFailed] = useState(hasNoThumbnail)
 
-  const hoverPreviewEnabled = false
+  const hoverPreviewEnabled = config.hoverPreview ?? true
 
   // Generate thumbnail URL with fallback to video URL if image fails
   const thumbnailUrl = useMemo(() => {
@@ -185,7 +185,10 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className={cn('p-2 hover:bg-accent rounded-lg transition-colors', maxWidth)}
+      className={cn(
+        'p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:-translate-y-0.5',
+        maxWidth
+      )}
       style={{ contain: 'layout style paint' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

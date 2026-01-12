@@ -10,8 +10,16 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide">
+    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md border-b">
       <div className="flex gap-2 p-2 min-w-max">
+        <Button
+          variant={!activeSlug ? 'default' : 'outline'}
+          size="sm"
+          className="shrink-0 rounded-full px-4"
+          onClick={() => navigate('/')}
+        >
+          All
+        </Button>
         {TAG_CATEGORIES.map(category => {
           const isActive = activeSlug === category.slug
 
@@ -20,7 +28,7 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
               key={category.slug}
               variant={isActive ? 'default' : 'outline'}
               size="sm"
-              className="shrink-0"
+              className="shrink-0 rounded-full px-4"
               onClick={() => navigate(`/category/${category.slug}`)}
             >
               {category.name}

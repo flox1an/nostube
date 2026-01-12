@@ -1,5 +1,4 @@
 import { VideoGrid } from '@/components/VideoGrid'
-import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
 import { useAppContext, useLikedEvents, useReadRelays, useReportedPubkeys } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
@@ -151,19 +150,13 @@ export function LikedVideosPage() {
     <div className="max-w-560 mx-auto sm:p-4">
       <div className="text-2xl font-semibold mb-4">{t('pages.likedVideos.title')}</div>
 
-      {isLoading && videos.length === 0 ? (
-        <VideoGridSkeleton count={8} />
-      ) : (
-        <>
-          <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
+      <VideoGrid videos={videos} isLoading={isLoading} showSkeletons={true} layoutMode="auto" />
 
-          {videos.length === 0 && !isLoading && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t('pages.likedVideos.noVideos')}</p>
-              <p className="text-sm mt-2">{t('pages.likedVideos.emptyState')}</p>
-            </div>
-          )}
-        </>
+      {videos.length === 0 && !isLoading && (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>{t('pages.likedVideos.noVideos')}</p>
+          <p className="text-sm mt-2">{t('pages.likedVideos.emptyState')}</p>
+        </div>
       )}
     </div>
   )

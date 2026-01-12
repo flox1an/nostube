@@ -1,6 +1,7 @@
 import { useAppContext } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { type NsfwFilter } from '@/contexts/AppContext'
 import { defaultResizeServer } from '../../App'
@@ -31,6 +32,13 @@ export function GeneralSettingsSection() {
     updateConfig(currentConfig => ({
       ...currentConfig,
       nsfwFilter: value,
+    }))
+  }
+
+  const handleHoverPreviewChange = (enabled: boolean) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      hoverPreview: enabled,
     }))
   }
 
@@ -151,6 +159,21 @@ export function GeneralSettingsSection() {
         <p className="text-xs text-muted-foreground">
           {t('settings.general.nsfwFilterDescription')}
         </p>
+      </div>
+
+      {/* Hover Previews */}
+      <div className="flex items-center justify-between space-x-2">
+        <div className="space-y-0.5">
+          <Label htmlFor="hover-preview">{t('settings.general.hoverPreview')}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.general.hoverPreviewDescription')}
+          </p>
+        </div>
+        <Switch
+          id="hover-preview"
+          checked={config.hoverPreview ?? true}
+          onCheckedChange={handleHoverPreviewChange}
+        />
       </div>
     </div>
   )

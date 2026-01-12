@@ -5,7 +5,6 @@ import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VideoGrid } from '@/components/VideoGrid'
-import { VideoGridSkeleton } from '@/components/VideoGridSkeleton'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
@@ -339,53 +338,36 @@ export function AuthorPage() {
         </TabsList>
 
         <TabsContent value="videos" className="mt-6">
-          {loading && videos.length === 0 ? (
-            <VideoGridSkeleton count={8} />
-          ) : (
-            <>
-              <VideoGrid
-                videos={videos}
-                isLoading={loading && videos.length === 0}
-                showSkeletons={false}
-                layoutMode="auto"
-              />
+          <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
 
-              <InfiniteScrollTrigger
-                triggerRef={ref}
-                loading={loading && videos.length > 0}
-                exhausted={exhausted}
-                itemCount={videos.length}
-                emptyMessage={t('pages.author.noVideos')}
-                loadingMessage={t('pages.author.loadingMore')}
-                exhaustedMessage={t('pages.author.noMore')}
-              />
-            </>
-          )}
+          <InfiniteScrollTrigger
+            triggerRef={ref}
+            loading={loading && videos.length > 0}
+            exhausted={exhausted}
+            itemCount={videos.length}
+            emptyMessage={t('pages.author.noVideos')}
+            loadingMessage={t('pages.author.loadingMore')}
+            exhaustedMessage={t('pages.author.noMore')}
+          />
         </TabsContent>
 
         <TabsContent value="shorts" className="mt-6">
-          {loading && shorts.length === 0 ? (
-            <VideoGridSkeleton count={8} />
-          ) : (
-            <>
-              <VideoGrid
-                videos={shorts}
-                isLoading={loading && shorts.length === 0}
-                showSkeletons={false}
-                layoutMode="vertical"
-              />
+          <VideoGrid
+            videos={shorts}
+            isLoading={loading}
+            showSkeletons={true}
+            layoutMode="vertical"
+          />
 
-              <InfiniteScrollTrigger
-                triggerRef={ref}
-                loading={loading && shorts.length > 0}
-                exhausted={exhausted}
-                itemCount={shorts.length}
-                emptyMessage={t('pages.author.noShorts')}
-                loadingMessage={t('pages.author.loadingMoreShorts')}
-                exhaustedMessage={t('pages.author.noMoreShorts')}
-              />
-            </>
-          )}
+          <InfiniteScrollTrigger
+            triggerRef={ref}
+            loading={loading && shorts.length > 0}
+            exhausted={exhausted}
+            itemCount={shorts.length}
+            emptyMessage={t('pages.author.noShorts')}
+            loadingMessage={t('pages.author.loadingMoreShorts')}
+            exhaustedMessage={t('pages.author.noMoreShorts')}
+          />
         </TabsContent>
 
         {playlists.map(playlist => {
@@ -402,22 +384,18 @@ export function AuthorPage() {
 
           return (
             <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
-              {showSkeleton ? (
-                <VideoGridSkeleton count={8} />
-              ) : (
-                <VideoGrid
-                  videos={playlistVideos[playlist.identifier] || []}
-                  isLoading={false}
-                  showSkeletons={false}
-                  layoutMode="auto"
-                  playlistParam={nip19.naddrEncode({
-                    kind: 30005,
-                    pubkey,
-                    identifier: playlist.identifier,
-                    relays: relays.slice(0, 3),
-                  })}
-                />
-              )}
+              <VideoGrid
+                videos={playlistVideos[playlist.identifier] || []}
+                isLoading={showSkeleton}
+                showSkeletons={true}
+                layoutMode="auto"
+                playlistParam={nip19.naddrEncode({
+                  kind: 30005,
+                  pubkey,
+                  identifier: playlist.identifier,
+                  relays: relays.slice(0, 3),
+                })}
+              />
             </TabsContent>
           )
         })}

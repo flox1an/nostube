@@ -1,17 +1,36 @@
-import { Home, Play, Users, History, ListVideo, ThumbsUp, Clock, Cog, FileText } from 'lucide-react'
+import {
+  Home,
+  Play,
+  Users,
+  History,
+  ListVideo,
+  ThumbsUp,
+  Clock,
+  Cog,
+  FileText,
+  MenuIcon,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
-import { useCurrentUser, useAppContext, useReadRelays } from '@/hooks'
+import { useCurrentUser, useAppContext, useReadRelays, useIsMobile } from '@/hooks'
+import { Button } from '@/components/ui/button'
+import { useTheme } from '@/providers/theme-provider'
+import { getThemeById } from '@/lib/themes'
 import { nip19 } from 'nostr-tools'
 import { cn } from '@/lib/utils'
 import { isBetaUser } from '@/lib/beta-users'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-export function Sidebar() {
+export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto' }) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
-  const { config: _config, toggleSidebar } = useAppContext()
+  const { toggleSidebar } = useAppContext()
+  const { colorTheme } = useTheme()
+  const currentTheme = getThemeById(colorTheme)
+  const appTitle = currentTheme.appTitle || { text: 'nostube', imageUrl: '/nostube.svg' }
+  const isMobile = useIsMobile()
+  const isDrawer = mode === 'drawer' || (mode === 'auto' && isMobile)
   const readRelays = useReadRelays()
   const pubkey = user?.pubkey
 
@@ -56,18 +75,52 @@ export function Sidebar() {
     { name: t('navigation.settings'), icon: Cog, href: '/settings', disabled: false },
   ]
 
+  const handleItemClick = (disabled?: boolean) => {
+    if (disabled) return
+    if (isDrawer) {
+      toggleSidebar()
+    }
+  }
+
   return (
-    <div
-      className="flex flex-col h-full w-56 bg-background/95 backdrop-blur-sm border-r border-border shadow-lg"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    <aside
+      className={cn(
+        'flex flex-col w-56 bg-background border-r border-border transition-all duration-300 overflow-y-auto',
+        isDrawer
+          ? 'h-full shadow-lg backdrop-blur-sm bg-background/95'
+          : 'sticky top-14 h-[calc(100vh-3.5rem)]'
+      )}
+      style={{
+        paddingTop: isDrawer ? 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' : '1rem',
+      }}
     >
       <div className="flex flex-col h-full">
+        {isDrawer && (
+          <div className="flex items-center gap-2 px-4 h-14 shrink-0">
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+              <MenuIcon />
+            </Button>
+            <Link
+              to="/"
+              onClick={toggleSidebar}
+              className="text-xl font-bold flex flex-row gap-2 items-center"
+            >
+              <img className="w-8" src={appTitle.imageUrl} alt="logo" />
+              <span className="relative">
+                {appTitle.text}
+                <span className="absolute -top-1 -right-6 text-[0.5rem] font-semibold text-muted-foreground">
+                  {t('common.beta')}
+                </span>
+              </span>
+            </Link>
+          </div>
+        )}
         <nav className="px-2">
           {navigationItems.map(item => (
             <Link
               key={item.name}
               to={item.href}
-              onClick={toggleSidebar}
+              onClick={() => handleItemClick()}
               className="flex items-center gap-4 py-2 px-3 rounded-lg hover:bg-accent transition-colors"
             >
               <item.icon className="h-5 w-5" />
@@ -87,7 +140,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   to={item.disabled ? '#' : item.href}
-                  onClick={item.disabled ? undefined : toggleSidebar}
+                  onClick={() => handleItemClick(item.disabled)}
                   className={cn(
                     'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                     item.disabled
@@ -112,7 +165,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               to={item.disabled ? '#' : item.href}
-              onClick={item.disabled ? undefined : toggleSidebar}
+              onClick={() => handleItemClick(item.disabled)}
               className={cn(
                 'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                 item.disabled
@@ -126,6 +179,6 @@ export function Sidebar() {
           ))}
         </nav>
       </div>
-    </div>
+    </aside>
   )
 }

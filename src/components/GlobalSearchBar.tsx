@@ -8,13 +8,25 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { nprofileFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
 
-export function GlobalSearchBar() {
+interface GlobalSearchBarProps {
+  isMobileExpanded?: boolean
+  onSearch?: () => void
+}
+
+export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Focus input on mount if expanded on mobile
+  useEffect(() => {
+    if (isMobileExpanded) {
+      inputRef.current?.focus()
+    }
+  }, [isMobileExpanded])
 
   const { profiles, loading } = useSearchProfiles({
     query: searchQuery,
@@ -37,14 +49,32 @@ export function GlobalSearchBar() {
       }
     }
 
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Focus search bar on '/' key
+      if (
+        e.key === '/' &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA' &&
+        !(document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+    }
   }, [])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       setIsOpen(false)
+      onSearch?.()
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
@@ -52,6 +82,7 @@ export function GlobalSearchBar() {
   const handleProfileClick = (pubkey: string) => {
     const nprofile = nprofileFromPubkey(pubkey)
     setIsOpen(false)
+    onSearch?.()
     setSearchQuery('')
     navigate(`/author/${nprofile}`)
   }
@@ -90,8 +121,16 @@ export function GlobalSearchBar() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="hidden md:flex gap-2 items-center">
-      <div className="relative w-full max-w-[20em] lg:max-w-[28em] lg:w-[28em]">
+    <form
+      onSubmit={handleSubmit}
+      className={cn('flex gap-2 items-center w-full', !isMobileExpanded && 'hidden md:flex')}
+    >
+      <div
+        className={cn(
+          'relative w-full',
+          !isMobileExpanded && 'max-w-[20em] lg:max-w-[28em] lg:w-[28em]'
+        )}
+      >
         <Input
           ref={inputRef}
           value={searchQuery}

@@ -436,7 +436,9 @@
       "nsfwFilterDescription": "Control how NSFW (Not Safe For Work) content is displayed in the app.",
       "language": "Language",
       "selectLanguage": "Select language",
-      "languageDescription": "Choose the language for the user interface."
+      "languageDescription": "Choose the language for the user interface.",
+      "hoverPreview": "Hover Previews",
+      "hoverPreviewDescription": "Enable muted video playback when hovering over video thumbnails."
     },
     "relays": {
       "title": "Relays",

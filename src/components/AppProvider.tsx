@@ -29,6 +29,16 @@ export function AppProvider(props: AppProviderProps) {
     }
   }, [config.nsfwFilter, setConfig])
 
+  // MIGRATION: Ensure hoverPreview has a default value
+  useEffect(() => {
+    if (config.hoverPreview === undefined) {
+      setConfig(currentConfig => ({
+        ...currentConfig,
+        hoverPreview: true,
+      }))
+    }
+  }, [config.hoverPreview, setConfig])
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   //const { user } = useCurrentUser();

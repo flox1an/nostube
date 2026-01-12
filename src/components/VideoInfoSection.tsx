@@ -234,7 +234,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   return (
     <>
-      <div className="flex flex-col gap-4 p-2 md:px-0 pt-4">
+      <div className="flex flex-col gap-4 px-2 md:px-0">
         <div className="flex flex-wrap items-center gap-2">
           {video?.title && (
             <h1 className="text-xl md:text-2xl font-bold line-clamp-2 md:line-clamp-none">

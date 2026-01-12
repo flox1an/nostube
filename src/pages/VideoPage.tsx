@@ -547,7 +547,7 @@ export function VideoPage() {
   }
 
   // Render video player
-  const renderVideoPlayer = () => {
+  const videoPlayer = useMemo(() => {
     if (isLoading) {
       return <Skeleton className="w-full aspect-video" />
     }
@@ -575,7 +575,7 @@ export function VideoPage() {
             : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
         }
         onTimeUpdate={setCurrentPlayPos}
-        initialPlayPos={currentPlayPos > 0 ? currentPlayPos : initialPlayPos}
+        initialPlayPos={initialPlayPos}
         contentWarning={video.contentWarning}
         sha256={video.x} // Pass SHA256 hash for URL discovery
         authorPubkey={video.pubkey} // Pass author pubkey for AS query parameter
@@ -585,16 +585,29 @@ export function VideoPage() {
         onVideoDimensionsLoaded={handleVideoDimensionsLoadedStable}
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
-        videoVariants={video.allVideoVariants || video.videoVariants} // For quality selector (use all variants to let user try any quality)
+        videoVariants={video.allVideoVariants || video.videoVariants} // For quality selector
       />
     )
-  }
+  }, [
+    isLoading,
+    video,
+    playlistParam,
+    cinemaMode,
+    isMobile,
+    initialPlayPos,
+    setCurrentPlayPos,
+    handleAllSourcesFailed,
+    toggleCinemaMode,
+    handleVideoDimensionsLoadedStable,
+    handlePlaylistVideoEnd,
+    handleVideoElementReady,
+  ])
 
   return (
     <>
       <VideoPageLayout
         cinemaMode={cinemaMode}
-        videoPlayer={renderVideoPlayer()}
+        videoPlayer={videoPlayer}
         videoInfo={
           <VideoInfoSection
             video={videoWithLabels ?? null}

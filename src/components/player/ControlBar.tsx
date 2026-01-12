@@ -161,6 +161,7 @@ export const ControlBar = memo(function ControlBar({
               onClick={onTogglePip}
               icon={<PictureInPicture2 className="w-5 h-5" />}
               label="Picture in Picture"
+              shortcut="P"
             />
           )}
 

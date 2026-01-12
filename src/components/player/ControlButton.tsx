@@ -1,5 +1,6 @@
 import { type ReactNode, memo } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Kbd } from '@/components/ui/kbd'
 
 interface ControlButtonProps {
   onClick: () => void
@@ -19,8 +20,6 @@ export const ControlButton = memo(function ControlButton({
   shortcut,
   active = false,
 }: ControlButtonProps) {
-  const tooltip = shortcut ? `${label} (${shortcut})` : label
-
   return (
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
@@ -35,8 +34,9 @@ export const ControlButton = memo(function ControlButton({
           {icon}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>{tooltip}</p>
+      <TooltipContent side="top" className="flex items-center gap-2">
+        <span>{label}</span>
+        {shortcut && <Kbd>{shortcut}</Kbd>}
       </TooltipContent>
     </Tooltip>
   )

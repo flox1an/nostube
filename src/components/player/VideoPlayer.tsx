@@ -623,6 +623,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           e.preventDefault()
           toggleFullscreen()
           break
+        case 'p':
+        case 'P':
+          e.preventDefault()
+          togglePip()
+          break
         case 'c':
         case 'C':
           e.preventDefault()

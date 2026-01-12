@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { Volume2, Volume1, VolumeX } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Kbd } from '@/components/ui/kbd'
 
 interface VolumeControlProps {
   volume: number
@@ -184,8 +185,9 @@ export const VolumeControl = memo(function VolumeControl({
             <VolumeIcon className="w-6 h-6" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>{isMuted ? 'Unmute (M)' : 'Mute (M)'}</p>
+        <TooltipContent side="top" className="flex items-center gap-2">
+          <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+          <Kbd>M</Kbd>
         </TooltipContent>
       </Tooltip>
 

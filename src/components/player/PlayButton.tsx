@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Play, Pause } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Kbd } from '@/components/ui/kbd'
 
 interface PlayButtonProps {
   isPlaying: boolean
@@ -12,7 +13,6 @@ interface PlayButtonProps {
  */
 export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
   const label = isPlaying ? 'Pause' : 'Play'
-  const tooltip = `${label} (K)`
 
   return (
     <Tooltip delayDuration={0}>
@@ -30,8 +30,9 @@ export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayB
           )}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>{tooltip}</p>
+      <TooltipContent side="top" className="flex items-center gap-2">
+        <span>{label}</span>
+        <Kbd>K</Kbd>
       </TooltipContent>
     </Tooltip>
   )

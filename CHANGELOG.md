@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: reverted grid layout change that broke sticky video player and sidebar positioning (restored working flex-based layout)
 - Video page: fixed video playback stopping when rotating device between portrait/landscape (video player no longer remounts on orientation change)
 - Video page: fixed wrong loading skeleton (video grid) showing when lazy-loading video page module (now shows video player + sidebar skeleton)
+- Build: fixed ESLint errors - empty interface in kbd.tsx (changed to type alias) and conditional useMemo hook in VideoPage.tsx (moved before early return)
 
 ## [1.0.0] - 2025-01-08
 

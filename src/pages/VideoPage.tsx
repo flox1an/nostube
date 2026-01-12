@@ -515,38 +515,7 @@ export function VideoPage() {
     )
   }
 
-  // Handle video not found or missing
-  if (!isLoading && !video) {
-    // Get event ID for missing video check
-    const eventId = videoIdentifier?.type === 'event' ? videoIdentifier.data.id : videoEvent?.id // For addressable events, use the actual event ID once loaded
-
-    const isMissing = eventId && isVideoMissing(eventId)
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Alert variant={isMissing ? 'destructive' : 'default'}>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{isMissing ? t('video.unavailable') : t('video.notFound')}</AlertTitle>
-          <AlertDescription className="flex flex-col gap-4">
-            <p>{isMissing ? t('video.unavailableDescription') : t('video.notFoundDescription')}</p>
-            {isMissing && eventId && (
-              <Button
-                onClick={() => {
-                  clearMissingVideo(eventId)
-                  window.location.reload()
-                }}
-                variant="outline"
-                className="w-fit"
-              >
-                {t('common.retryNow')}
-              </Button>
-            )}
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  // Render video player
+  // Render video player (placed before early returns to satisfy React hooks rules)
   const videoPlayer = useMemo(() => {
     if (isLoading) {
       return <Skeleton className="w-full aspect-video" />
@@ -602,6 +571,37 @@ export function VideoPage() {
     handlePlaylistVideoEnd,
     handleVideoElementReady,
   ])
+
+  // Handle video not found or missing
+  if (!isLoading && !video) {
+    // Get event ID for missing video check
+    const eventId = videoIdentifier?.type === 'event' ? videoIdentifier.data.id : videoEvent?.id // For addressable events, use the actual event ID once loaded
+
+    const isMissing = eventId && isVideoMissing(eventId)
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Alert variant={isMissing ? 'destructive' : 'default'}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{isMissing ? t('video.unavailable') : t('video.notFound')}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-4">
+            <p>{isMissing ? t('video.unavailableDescription') : t('video.notFoundDescription')}</p>
+            {isMissing && eventId && (
+              <Button
+                onClick={() => {
+                  clearMissingVideo(eventId)
+                  window.location.reload()
+                }}
+                variant="outline"
+                className="w-fit"
+              >
+                {t('common.retryNow')}
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <>

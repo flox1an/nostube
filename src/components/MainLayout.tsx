@@ -20,10 +20,12 @@ export function MainLayout() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <div className={cn('flex flex-1 relative w-full lg:mb-0', !isVideoPage && 'mb-16')}>
-        {/* Desktop Sidebar - Inline toggle between Mini and Full (always visible on LG+) */}
-        <div className="hidden lg:block shrink-0">
-          {isSidebarOpen ? <Sidebar mode="inline" /> : <MiniSidebar />}
-        </div>
+        {/* Desktop Sidebar - Inline toggle between Mini and Full (hidden on video pages) */}
+        {!isVideoPage && (
+          <div className="hidden lg:block shrink-0">
+            {isSidebarOpen ? <Sidebar mode="inline" /> : <MiniSidebar />}
+          </div>
+        )}
 
         {/* Floating Sidebar Drawer - Only for mobile/tablet (<LG) */}
         <div className="lg:hidden">

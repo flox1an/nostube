@@ -30,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embed player: now uses author's blossom servers for video fallback URLs (same logic as main player)
 - Video player: added 5-second stall detection to faster failover to next URL when loading stalls
 - Video player: mobile touch seek now requires double-tap to trigger (single tap on side zones no longer seeks); triple+ taps stack additional seek time
-- Video page: video player now sticks to top of screen on mobile portrait when scrolling
 - Video page: reduced title font size on mobile for better readability
 - Video page: limit title to 2 lines with ellipsis on mobile to prevent excessive vertical space
 - Debug dialog: collapse Nostr event JSON by default; variant tabs stack vertically on mobile for better usability
@@ -42,18 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upload: after successful video publish, draft is now deleted and app navigates to the video page
 - Config: nsfwFilter now defaults to 'hide' when not set (migration for old configs without this setting)
-- UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below sticky video player by increasing z-index from 50 to 70
-- Video page: fixed sticky video player not working due to overflow-auto on main container
-- Video page: fixed sticky video player z-index to appear above header on mobile
-- Video page: fixed sticky video player iOS notch handling - player now sticks at safe-area-inset-top with fixed background covering the notch area, drop shadow appears when stuck
-- Video page: fixed duplicate video player mounting causing double audio on mobile (CSS hiding replaced with JS conditional rendering)
+- UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below video player by increasing z-index from 50 to 70
+- Video page: fixed video player remounting when toggling theater mode (unified layout structure keeps player in same DOM position)
 - Video player: fixed iOS home indicator staying visible during fullscreen by disabling continuous mouse move handler on mobile (touch handled separately by TouchOverlay)
 - Video player: fixed progress bar scrubber lagging behind cursor/finger during drag (scrubber now uses preview position for immediate feedback, disabled transitions during drag, added will-change hints)
 - Upload drafts: fixed excessive NIP-44 encrypt/decrypt calls when navigating to upload page (now only saves to localStorage when merging from Nostr, skips when no changes)
-- Video page: fixed sticky video player filling entire screen on iPad landscape (sticky behavior now only activates in portrait orientation)
 - Video page: fixed zap amount from previous video being displayed when navigating between videos (cached value now updates with eventId)
-- Video page: reverted grid layout change that broke sticky video player and sidebar positioning (restored working flex-based layout)
-- Video page: fixed video playback stopping when rotating device between portrait/landscape (video player no longer remounts on orientation change)
 - Video page: fixed wrong loading skeleton (video grid) showing when lazy-loading video page module (now shows video player + sidebar skeleton)
 - Build: fixed ESLint errors - empty interface in kbd.tsx (changed to type alias) and conditional useMemo hook in VideoPage.tsx (moved before early return)
 

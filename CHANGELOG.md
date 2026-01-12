@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: language badges now display with country flag emoji and shortcode (e.g., 🇺🇸 EN), merged into tag list without separate "Languages:" label
 - Layout: hide mini icon sidebar on video and shorts pages for full-width video experience (consistent with mobile behavior)
 - Video page: added horizontal padding to video info and sidebar sections in theater mode on desktop for better content spacing
+- Video page: video suggestions now display in 2-column grid in theater mode on desktop (single column in normal mode)
 - Updated dependencies: applesauce-react 5.0.1, globals 17.0.0, i18next 25.7.4, immer 11.1.3, react-hook-form 7.70.0, react-i18next 16.5.1, react-resizable-panels 4.3.1, react-router-dom 7.12.0, typescript-eslint 8.52.0, vite 7.3.1, zod 4.3.5
 
 ### Fixed

@@ -511,6 +511,7 @@ export function VideoPage() {
         authorPubkey={video?.pubkey}
         currentVideoType={video?.type}
         relays={relaysToUse}
+        cinemaMode={cinemaMode}
       />
     )
   }

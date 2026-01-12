@@ -148,6 +148,7 @@ interface VideoSuggestionsProps {
   authorPubkey?: string
   currentVideoType?: VideoType
   relays?: string[] // Relays from nevent or other sources
+  cinemaMode?: boolean
 }
 
 export const VideoSuggestions = React.memo(function VideoSuggestions({
@@ -155,6 +156,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   currentVideoType,
   authorPubkey,
   relays,
+  cinemaMode,
 }: VideoSuggestionsProps) {
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
@@ -290,7 +292,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
-    <div className="sm:grid grid-cols-2 lg:block">
+    <div className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'}`}>
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
         : suggestions.map(video => (

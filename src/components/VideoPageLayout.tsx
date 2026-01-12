@@ -34,7 +34,9 @@ export function VideoPageLayout({
         {/* Left column: video player + info together */}
         <div className={cn('flex flex-col', cinemaMode && 'col-span-full')}>
           {videoPlayer}
-          <div className={cn('mt-4', cinemaMode && 'lg:px-4')}>{videoInfo}</div>
+          <div className={cn('pt-2', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
+            {videoInfo}
+          </div>
         </div>
 
         {/* Right column: sidebar */}

@@ -134,7 +134,11 @@
       "reply": "reply",
       "loadMore": "Load more comments",
       "remaining": "remaining",
-      "reportComment": "Report comment"
+      "reportComment": "Report comment",
+      "showReplies": "Show replies",
+      "hideReplies": "Hide replies",
+      "replyingTo": "Replying to",
+      "showMutedReply": "Show hidden reply"
     },
     "share": {
       "title": "Share this video",

@@ -132,7 +132,11 @@
       "reply": "réponse",
       "loadMore": "Charger plus de commentaires",
       "remaining": "restants",
-      "reportComment": "Signaler le commentaire"
+      "reportComment": "Signaler le commentaire",
+      "showReplies": "Afficher les réponses",
+      "hideReplies": "Masquer les réponses",
+      "replyingTo": "En réponse à",
+      "showMutedReply": "Afficher la réponse masquée"
     },
     "share": {
       "title": "Partager cette vidéo",

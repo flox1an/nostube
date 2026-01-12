@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Comments: improved highlight animation for parent comment navigation - smoother 1.5s fade with multi-step keyframes and CSS transitions
 - Comments: single replies are now auto-expanded (no expand button needed); expand/collapse button only shown when there are 2+ replies
 - Video cards: hide user avatar on portrait/shorts video cards for cleaner layout (author name still shown in metadata)
 - Zaps: when no wallet is configured, clicking zap now shows a lightning invoice QR code instead of wallet setup dialog, with a "configure wallet" link for one-tap zaps; dialog auto-closes when payment is detected

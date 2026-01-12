@@ -245,7 +245,10 @@
 
 @keyframes highlight-fade {
   0% {
-    background-color: hsl(var(--primary) / 0.4);
+    background-color: hsl(var(--primary) / 0.3);
+  }
+  70% {
+    background-color: hsl(var(--primary) / 0.2);
   }
   100% {
     background-color: transparent;
@@ -253,5 +256,5 @@
 }
 
 .highlight-comment {
-  animation: highlight-fade 1s ease-out;
+  animation: highlight-fade 1.5s ease-out;
 }

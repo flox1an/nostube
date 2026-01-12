@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
-import React, { useMemo, useState, useEffect, useCallback } from 'react'
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type NostrEvent } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
@@ -214,7 +214,10 @@ const CommentItem = React.memo(function CommentItem({
   const avatarSize = isRootComment ? 'h-10 w-10' : 'h-6 w-6'
 
   return (
-    <div id={`comment-${comment.id}`} className={`${isHighlighted ? 'highlight-comment' : ''}`}>
+    <div
+      id={`comment-${comment.id}`}
+      className={`transition-colors duration-500 ${isHighlighted ? 'highlight-comment' : ''}`}
+    >
       <div className="flex gap-3 pb-4">
         <UserAvatar
           picture={metadata?.picture}
@@ -405,15 +408,23 @@ export function VideoComments({
   const setCommentParentMap = useCommentHighlightStore(state => state.setCommentParentMap)
   const clearState = useCommentHighlightStore(state => state.clearState)
 
+  // Ref to track scroll timeout for cleanup
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Scroll to a comment, expanding ancestors first
   const scrollToComment = useCallback(
     (commentId: string) => {
+      // Cancel any pending scroll
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+
       // First, expand all ancestors so the comment is visible
       const ancestors = useCommentHighlightStore.getState().getAncestorIds(commentId)
       useCommentHighlightStore.getState().expandComments(ancestors)
 
       // Wait for DOM update, then scroll
-      setTimeout(() => {
+      scrollTimeoutRef.current = setTimeout(() => {
         const element = document.getElementById(`comment-${commentId}`)
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -424,9 +435,14 @@ export function VideoComments({
     [setHighlightedCommentId]
   )
 
-  // Clear store state when unmounting (leaving video page)
+  // Clear store state and scroll timeout when unmounting (leaving video page)
   useEffect(() => {
-    return () => clearState()
+    return () => {
+      clearState()
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
   }, [clearState])
 
   // Auto-remove highlight after 3 seconds

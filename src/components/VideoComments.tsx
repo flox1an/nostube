@@ -34,53 +34,6 @@ interface Comment {
   replies?: Comment[] // Nested replies
 }
 
-interface ParentPreviewProps {
-  parentId: string
-  onClick?: () => void
-}
-
-// ParentPreview component for showing reply context in deep threads (used in CommentItem)
-export const ParentPreview = React.memo(function ParentPreview({
-  parentId,
-  onClick,
-}: ParentPreviewProps) {
-  const { t } = useTranslation()
-  const eventStore = useEventStore()
-  const parentEvent = eventStore.getEvent(parentId)
-  const parentPubkey = parentEvent?.pubkey
-  const metadata = useProfile(parentPubkey ? { pubkey: parentPubkey } : undefined)
-  const name = metadata?.name || parentPubkey?.slice(0, 8) || '...'
-
-  if (!parentEvent) return null
-
-  const contentPreview =
-    parentEvent.content.slice(0, 30) + (parentEvent.content.length > 30 ? '...' : '')
-
-  return (
-    <button
-      type="button"
-      onClick={e => {
-        e.stopPropagation()
-        onClick?.()
-      }}
-      className="flex items-center gap-1 text-xs rounded-full px-2 py-0.5 bg-muted text-muted-foreground hover:text-foreground transition-colors max-w-full"
-      aria-label={`${t('video.comments.replyingTo')} ${name}`}
-    >
-      <span className="shrink-0">{t('video.comments.replyingTo')}</span>
-      {parentPubkey && (
-        <UserAvatar
-          picture={metadata?.picture}
-          pubkey={parentPubkey}
-          name={name}
-          className="w-4 h-4 shrink-0"
-        />
-      )}
-      <span className="truncate">{name}</span>
-      <span className="truncate text-muted-foreground/70">"{contentPreview}"</span>
-    </button>
-  )
-})
-
 export function CommentSkeleton({ depth = 0 }: { depth?: number }) {
   const isRootComment = depth === 0
   const avatarSize = isRootComment ? 'h-10 w-10' : 'h-6 w-6'
@@ -279,15 +232,6 @@ const CommentItem = React.memo(function CommentItem({
               </DropdownMenu>
             </div>
           </div>
-          {/* Show parent context when this is a nested reply */}
-          {depth > 0 && comment.replyToId && (
-            <div className="mt-1 mb-1">
-              <ParentPreview
-                parentId={comment.replyToId}
-                onClick={() => onScrollToComment?.(comment.replyToId!)}
-              />
-            </div>
-          )}
           <RichTextContent
             content={comment.content}
             videoLink={link}

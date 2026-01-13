@@ -177,24 +177,35 @@ export function useNotifications() {
       const newNotifications: VideoNotification[] = []
 
       for (const comment of comments) {
-        // Extract video ID from 'e' tag (lowercase) or 'E' tag (uppercase)
-        const eTag = comment.tags.find(t => t[0] === 'e' || t[0] === 'E')
-        if (!eTag) {
-          continue
-        }
+        // Determine if this is a direct comment on our video (P tag) or a reply to our comment (p tag)
+        const uppercasePTag = comment.tags.find(t => t[0] === 'P')
+        const lowercasePTag = comment.tags.find(t => t[0] === 'p')
 
-        // Check if this is a comment on a video event (K or k tag should be 21, 22, 34235, or 34236)
-        const kTag = comment.tags.find(t => t[0] === 'K' || t[0] === 'k')
-        const videoKind = kTag?.[1]
+        // Check if this is a reply to user's comment (lowercase p matches user)
+        // vs a direct comment on user's video (uppercase P matches user)
+        const isReplyToComment =
+          lowercasePTag?.[1] === currentUserPubkey && uppercasePTag?.[1] !== currentUserPubkey
+
+        // Get the root video kind from K tag (uppercase = root)
+        const rootKTag = comment.tags.find(t => t[0] === 'K')
+        const rootVideoKind = rootKTag?.[1]
+
+        // Must be a comment on a video thread (root kind should be video)
         if (
-          !videoKind ||
-          !['21', '22', '34235', '34236'].includes(videoKind) ||
-          videoKind === '1111'
+          !rootVideoKind ||
+          !['21', '22', '34235', '34236'].includes(rootVideoKind) ||
+          rootVideoKind === '1111'
         ) {
           continue
         }
 
-        const videoId = eTag[1]
+        // Get video ID from root E tag (the video), not parent e tag (which could be a comment)
+        const rootETag = comment.tags.find(t => t[0] === 'E')
+        if (!rootETag) {
+          continue
+        }
+
+        const videoId = rootETag[1]
 
         // Fetch video metadata from eventStore
         const videoEvent = eventStoreRef.current.getEvent(videoId)
@@ -220,6 +231,7 @@ export function useNotifications() {
                 []
               )
             : generateEventLink({ id: videoId, kind: 34235, pubkey: currentUserPubkey }),
+          isReplyToComment,
         }
 
         newNotifications.push(notification)

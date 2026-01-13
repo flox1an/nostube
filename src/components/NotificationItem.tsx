@@ -40,7 +40,9 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
         <div className="flex-1 min-w-0">
           <p className="text-sm">
             <span className="font-medium">{displayName}</span>{' '}
-            {t('notifications.commentedOnYourVideo')}
+            {notification.isReplyToComment
+              ? t('notifications.repliedToYourComment')
+              : t('notifications.commentedOnYourVideo')}
           </p>
 
           {notification.videoTitle && (

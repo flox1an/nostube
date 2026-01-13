@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Comments: improved highlight animation for parent comment navigation - smoother 1.5s fade with multi-step keyframes and CSS transitions
 - Comments: single replies are now auto-expanded (no expand button needed); expand/collapse button only shown when there are 2+ replies
+- Comments: removed "Replying to @user" badge from nested comments for cleaner UI (visual threading makes context clear)
 - Video cards: hide user avatar on portrait/shorts video cards for cleaner layout (author name still shown in metadata)
 - Zaps: when no wallet is configured, clicking zap now shows a lightning invoice QR code instead of wallet setup dialog, with a "configure wallet" link for one-tap zaps; dialog auto-closes when payment is detected
 - Zap button now only displayed when video author has a lightning address (lud16/lud06)
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Notifications: replies to user comments now correctly show "replied to your comment" instead of "commented on your video"; video title is now properly resolved from root E/K tags (previously showed "Unknown video" for replies)
 - Upload: after successful video publish, draft is now deleted and app navigates to the video page
 - Config: nsfwFilter now defaults to 'hide' when not set (migration for old configs without this setting)
 - UI: fixed modal dialogs (dialog, alert-dialog, sheet, drawer) appearing below video player by increasing z-index from 50 to 70

@@ -607,6 +607,7 @@
   },
   "notifications": {
     "commentedOnYourVideo": "hat Ihr Video kommentiert",
+    "repliedToYourComment": "hat auf Ihren Kommentar geantwortet",
     "zappedYourVideo": "hat Ihr Video mit {{amount}} Sats gezappt",
     "noNotifications": "Keine neuen Benachrichtigungen",
     "uploadComplete": "Upload abgeschlossen",

@@ -8,6 +8,7 @@ export interface VideoNotification {
   timestamp: number // when (created_at)
   read: boolean // read status
   videoEventId: string // for navigation (nevent or naddr)
+  isReplyToComment?: boolean // true if this is a reply to user's comment (not a direct video comment)
 }
 
 export type UploadNotificationType =

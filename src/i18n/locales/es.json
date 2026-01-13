@@ -607,6 +607,7 @@
   },
   "notifications": {
     "commentedOnYourVideo": "comentó en tu video",
+    "repliedToYourComment": "respondió a tu comentario",
     "zappedYourVideo": "zapeó tu video con {{amount}} sats",
     "noNotifications": "No hay notificaciones nuevas",
     "uploadComplete": "Carga completada",

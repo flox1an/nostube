@@ -1,5 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
+const VOLUME_STORAGE_KEY = 'nostube:player-volume'
+
+function loadSavedVolume(): number {
+  try {
+    const saved = localStorage.getItem(VOLUME_STORAGE_KEY)
+    if (saved !== null) {
+      const vol = parseFloat(saved)
+      if (!isNaN(vol) && vol >= 0 && vol <= 1) {
+        return vol
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return 1
+}
+
+function saveVolume(volume: number): void {
+  try {
+    localStorage.setItem(VOLUME_STORAGE_KEY, String(volume))
+  } catch {
+    // localStorage not available
+  }
+}
+
 interface UsePlayerStateProps {
   videoRef: React.RefObject<HTMLVideoElement | null>
   onTimeUpdate?: (time: number) => void
@@ -39,7 +64,7 @@ export function usePlayerState({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [volume, setVolumeState] = useState(1)
+  const [volume, setVolumeState] = useState(loadSavedVolume)
   const [isMuted, setIsMuted] = useState(false)
   const [bufferedPercentage, setBufferedPercentage] = useState(0)
   const [isBuffering, setIsBuffering] = useState(false)
@@ -152,7 +177,11 @@ export function usePlayerState({
     if (Number.isFinite(video.duration)) {
       setDuration(video.duration)
     }
-    setVolumeState(video.volume)
+    // Apply saved volume to video element
+    const savedVolume = loadSavedVolume()
+    video.volume = savedVolume
+    previousVolumeRef.current = savedVolume
+    setVolumeState(savedVolume)
     setIsMuted(video.muted)
     setPlaybackRateState(video.playbackRate)
 
@@ -223,6 +252,7 @@ export function usePlayerState({
         if (clampedVolume > 0) {
           video.muted = false
           previousVolumeRef.current = clampedVolume
+          saveVolume(clampedVolume)
         }
       }
     },

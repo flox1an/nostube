@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Video player: volume setting now persists across sessions (stored in localStorage)
 - Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)
 - i18n: added missing translations for upload dialog (video source, URL input, dropzone, subtitles, publish date, step indicators) in EN/DE/FR/ES

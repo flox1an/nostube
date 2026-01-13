@@ -366,7 +366,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           Array.isArray(video.languages) &&
           video.languages.length > 0) ||
         geohash ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             {/* Language badges with flag + shortcode */}
             {video &&
               'languages' in video &&
@@ -374,7 +374,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               (video.languages as string[]).map((lang: string) => {
                 const { flag, code } = getLanguageDisplay(lang)
                 return (
-                  <Badge key={`lang-${lang}`} variant="outline">
+                  <Badge key={`lang-${lang}`} variant="outline" className="shrink-0">
                     {flag} {code}
                   </Badge>
                 )
@@ -383,7 +383,10 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             {video &&
               video.tags.slice(0, 20).map(tag => (
                 <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 cursor-pointer hover:bg-secondary/80"
+                  >
                     #{tag}
                   </Badge>
                 </Link>
@@ -404,7 +407,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               >
                 <Badge
                   variant="secondary"
-                  className="cursor-pointer hover:bg-secondary/80 inline-flex items-center"
+                  className="shrink-0 cursor-pointer hover:bg-secondary/80 inline-flex items-center"
                 >
                   <MapPin className="w-3.5 h-3.5 mr-1" />
                   {t('video.location')}

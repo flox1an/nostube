@@ -15,6 +15,7 @@ import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
+// import { BulletComments } from './BulletComments' // disabled for now
 
 interface VideoPlayerProps {
   urls: string[]
@@ -748,6 +749,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
       {/* Loading spinner */}
       <LoadingSpinner isVisible={showBufferingSpinner} />
+
+      {/* Bullet comments (danmaku) - disabled for now
+      <BulletComments
+        isPlaying={playerState.isPlaying}
+        currentTime={playerState.currentTime}
+        videoDuration={playerState.duration}
+      />
+      */}
 
       {/* Play/Pause overlay */}
       <PlayPauseOverlay videoRef={videoRef} userInitiatedRef={userInitiatedRef} />

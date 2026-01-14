@@ -71,6 +71,10 @@ interface ControlBarProps {
   eventId?: string
   authorPubkey?: string
 
+  // Loop
+  loopEnabled?: boolean
+  onToggleLoop?: () => void
+
   // Optional children (for additional controls)
   children?: ReactNode
 }
@@ -115,6 +119,8 @@ export const ControlBar = memo(function ControlBar({
   onToggleFullscreen,
   eventId,
   authorPubkey,
+  loopEnabled,
+  onToggleLoop,
   children,
 }: ControlBarProps) {
   // Use hook directly for reliable mobile detection
@@ -200,6 +206,8 @@ export const ControlBar = memo(function ControlBar({
             textTracks={textTracks}
             selectedSubtitleLang={selectedSubtitleLang}
             onSubtitleChange={onSubtitleChange}
+            loopEnabled={loopEnabled}
+            onToggleLoop={onToggleLoop}
           />
 
           {/* Theater mode button - hidden in fullscreen */}

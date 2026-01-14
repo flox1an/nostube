@@ -40,13 +40,15 @@ interface VideoPlayerProps {
   videoVariants?: VideoVariant[]
 }
 
+const LOOP_STORAGE_KEY = 'nostube:video-loop'
+
 export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
   mime,
   poster,
   posterHash,
   textTracks,
-  loop = false,
+  loop: loopProp = false,
   onTimeUpdate,
   className,
   contentWarning,
@@ -69,6 +71,28 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false)
   const [selectedSubtitleLang, setSelectedSubtitleLang] = useState('')
   const [isSeeking, setIsSeeking] = useState(false)
+
+  // Loop state - use prop if provided, otherwise use localStorage
+  const [loopEnabled, setLoopEnabled] = useState(() => {
+    if (loopProp) return true
+    try {
+      return localStorage.getItem(LOOP_STORAGE_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleLoop = useCallback(() => {
+    setLoopEnabled(prev => {
+      const newValue = !prev
+      try {
+        localStorage.setItem(LOOP_STORAGE_KEY, String(newValue))
+      } catch {
+        // ignore storage errors
+      }
+      return newValue
+    })
+  }, [])
   const spinnerTimeoutRef = useRef<number | null>(null)
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
@@ -736,7 +760,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         ref={videoRef}
         src={isHls ? undefined : videoUrl}
         poster={posterUrl ?? undefined}
-        loop={loop}
+        loop={loopEnabled}
         autoPlay={!contentWarning}
         playsInline
         crossOrigin="anonymous"
@@ -818,6 +842,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleFullscreen={toggleFullscreen}
         eventId={eventId}
         authorPubkey={authorPubkey}
+        loopEnabled={loopEnabled}
+        onToggleLoop={toggleLoop}
       />
     </div>
   )

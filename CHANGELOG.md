@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI: extracted reusable EmojiPicker component (used by CommentInput and ZapDialog)
 - Video player: SoundCloud-style timeline markers on progress bar showing zap activity; markers cluster to prevent overlap, display zapper avatars, and show tooltips with zap comment, author info, and zap amounts on hover; clicking a marker seeks to that position; uses actual video timestamp from zap request if available, falls back to seeded random position for zaps without timestamp; first zap has special golden highlight and "First Zap" badge in tooltip
 - Video player: volume setting now persists across sessions (stored in localStorage)
+- Video player: loop/replay toggle in settings menu with checkbox; setting persists across sessions (stored in localStorage)
 - Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)
 - i18n: added missing translations for upload dialog (video source, URL input, dropzone, subtitles, publish date, step indicators) in EN/DE/FR/ES
@@ -45,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: added horizontal padding to video info and sidebar sections in theater mode on desktop for better content spacing
 - Video page: video suggestions now display in 2-column grid in theater mode on desktop (single column in normal mode)
 - Video player: added explicit autoplay - calls play() when video is ready to ensure playback starts (fallback for browsers that block autoPlay attribute)
+- Video player: timeline zap markers hidden on mobile for cleaner touch interaction
 - Updated dependencies: applesauce-react 5.0.1, globals 17.0.0, i18next 25.7.4, immer 11.1.3, react-hook-form 7.70.0, react-i18next 16.5.1, react-resizable-panels 4.3.1, react-router-dom 7.12.0, typescript-eslint 8.52.0, vite 7.3.1, zod 4.3.5
 
 ### Fixed

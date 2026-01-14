@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, memo } from 'react'
-import { Settings, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { Settings, ChevronRight, ChevronLeft, Check, Repeat } from 'lucide-react'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant, type TextTrack } from '@/utils/video-event'
 import { getLanguageLabel } from '@/lib/utils'
@@ -31,6 +31,10 @@ interface SettingsMenuProps {
   selectedSubtitleLang?: string // empty string = off
   onSubtitleChange?: (lang: string) => void
 
+  // Loop
+  loopEnabled?: boolean
+  onToggleLoop?: () => void
+
   // Is HLS mode
   isHls: boolean
 }
@@ -61,6 +65,8 @@ export const SettingsMenu = memo(function SettingsMenu({
   textTracks = [],
   selectedSubtitleLang = '',
   onSubtitleChange,
+  loopEnabled = false,
+  onToggleLoop,
   isHls,
 }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -158,6 +164,12 @@ export const SettingsMenu = memo(function SettingsMenu({
     setCurrentView('main')
   }
 
+  const handleLoopToggle = () => {
+    onToggleLoop?.()
+    setIsOpen(false)
+    setCurrentView('main')
+  }
+
   // Don't show menu if no quality options (single quality, no HLS)
   const hasQualityOptions = qualityOptions.length > 1 || isHls
   const hasSubtitles = textTracks.length > 0
@@ -191,9 +203,11 @@ export const SettingsMenu = memo(function SettingsMenu({
               currentSpeedLabel={currentSpeedLabel}
               hasSubtitles={hasSubtitles}
               currentSubtitleLabel={currentSubtitleLabel}
+              loopEnabled={loopEnabled}
               onQualityClick={() => setCurrentView('quality')}
               onSpeedClick={() => setCurrentView('speed')}
               onSubtitlesClick={() => setCurrentView('subtitles')}
+              onLoopClick={handleLoopToggle}
             />
           )}
 
@@ -234,9 +248,11 @@ interface MainMenuProps {
   currentSpeedLabel: string
   hasSubtitles: boolean
   currentSubtitleLabel: string
+  loopEnabled: boolean
   onQualityClick: () => void
   onSpeedClick: () => void
   onSubtitlesClick: () => void
+  onLoopClick: () => void
 }
 
 const MainMenu = memo(function MainMenu({
@@ -245,9 +261,11 @@ const MainMenu = memo(function MainMenu({
   currentSpeedLabel,
   hasSubtitles,
   currentSubtitleLabel,
+  loopEnabled,
   onQualityClick,
   onSpeedClick,
   onSubtitlesClick,
+  onLoopClick,
 }: MainMenuProps) {
   return (
     <div role="menu">
@@ -268,6 +286,12 @@ const MainMenu = memo(function MainMenu({
           hasSubmenu
         />
       )}
+      <ToggleMenuItem
+        label="Loop"
+        enabled={loopEnabled}
+        onClick={onLoopClick}
+        icon={<Repeat className="w-4 h-4" />}
+      />
     </div>
   )
 })
@@ -429,6 +453,42 @@ const SelectableItem = memo(function SelectableItem({
         {isSelected && <Check className="w-5 h-5 text-primary" />}
       </span>
       <span>{label}</span>
+    </button>
+  )
+})
+
+interface ToggleMenuItemProps {
+  label: string
+  enabled: boolean
+  onClick: () => void
+  icon?: React.ReactNode
+}
+
+const ToggleMenuItem = memo(function ToggleMenuItem({
+  label,
+  enabled,
+  onClick,
+  icon,
+}: ToggleMenuItemProps) {
+  return (
+    <button
+      type="button"
+      className="flex items-center justify-between gap-4 w-full px-4 py-2.5 text-white text-sm hover:bg-white/10 transition-colors"
+      onClick={onClick}
+      role="menuitemcheckbox"
+      aria-checked={enabled}
+    >
+      <span className="flex items-center gap-2 whitespace-nowrap text-left">
+        {icon}
+        <span>{label}</span>
+      </span>
+      <span
+        className={`w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${
+          enabled ? 'bg-primary border-primary' : 'border-white/50'
+        }`}
+      >
+        {enabled && <Check className="w-3 h-3 text-white" />}
+      </span>
     </button>
   )
 })

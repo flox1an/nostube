@@ -229,7 +229,8 @@ export const ProgressBar = memo(function ProgressBar({
       )}
 
       {/* Timeline markers (SoundCloud-style) - positioned above the track, outside height-changing element */}
-      {showTimelineMarkers && duration > 0 && (
+      {/* Hidden on mobile for cleaner UI and better touch interaction */}
+      {showTimelineMarkers && duration > 0 && !isMobile && (
         <div
           className="absolute inset-x-0 pointer-events-none"
           style={{ zIndex: 15, bottom: 'calc(50% + 1px)' }}

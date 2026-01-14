@@ -65,8 +65,8 @@ interface TimelineMarkersProps {
 function generateTimelineComments(duration: number): TimelineComment[] {
   if (duration <= 0) return []
 
-  // Generate fewer comments for timeline markers (1 per 5 seconds, max 60)
-  const count = Math.min(60, Math.floor(duration / 5))
+  // Generate comments for timeline markers (1 per 2 seconds, max 150)
+  const count = Math.min(150, Math.floor(duration / 2))
   const comments: TimelineComment[] = []
   const now = Date.now()
 

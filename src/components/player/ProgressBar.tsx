@@ -35,6 +35,7 @@ export const ProgressBar = memo(function ProgressBar({
   const [hoverPosition, setHoverPosition] = useState(0)
   const [hoverTime, setHoverTime] = useState(0)
   const [previewTime, setPreviewTime] = useState<number | null>(null)
+  const [isMarkerHovered, setIsMarkerHovered] = useState(false)
   // Use ref to track preview time for touchend handler (avoids stale closure issue)
   const previewTimeRef = useRef<number | null>(null)
   const isMobile = useIsMobile()
@@ -213,8 +214,8 @@ export const ProgressBar = memo(function ProgressBar({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Hover/drag timestamp tooltip */}
-      {showScrubber && (
+      {/* Hover/drag timestamp tooltip - hide when hovering over markers */}
+      {showScrubber && !isMarkerHovered && (
         <div
           className="absolute bottom-full mb-2 px-2 py-1 bg-black/40 text-white text-xs rounded pointer-events-none z-20"
           style={{
@@ -237,6 +238,7 @@ export const ProgressBar = memo(function ProgressBar({
             duration={duration}
             currentTime={currentTime}
             onSeekToMarker={onSeek}
+            onMarkerHoverChange={setIsMarkerHovered}
             eventId={eventId}
             authorPubkey={authorPubkey}
           />

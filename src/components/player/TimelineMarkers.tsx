@@ -43,6 +43,7 @@ interface TimelineMarkersProps {
   duration: number
   currentTime: number
   onSeekToMarker?: (time: number) => void
+  onMarkerHoverChange?: (isHovering: boolean) => void
   eventId?: string
   authorPubkey?: string
 }
@@ -347,12 +348,18 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   currentTime,
   onSeekToMarker,
+  onMarkerHoverChange,
   eventId,
   authorPubkey,
 }: TimelineMarkersProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+
+  // Notify parent when marker hover state changes
+  useEffect(() => {
+    onMarkerHoverChange?.(hoveredClusterId !== null)
+  }, [hoveredClusterId, onMarkerHoverChange])
 
   // Fetch actual zaps for this video
   const { zaps } = useEventZaps(eventId || '', authorPubkey || '')

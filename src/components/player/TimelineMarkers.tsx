@@ -17,10 +17,23 @@ function formatCompactNumber(num: number): string {
   return num.toString()
 }
 
+// Format seconds as mm:ss or h:mm:ss
+function formatVideoTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 interface TimelineZap {
   id: string
   text: string // comment or empty for flash symbol
   videoTime: number // video timestamp in seconds (from zap request or seeded random fallback)
+  hasTimestamp: boolean // true if zap has a real timestamp tag, false if random
   senderPubkey: string
   postedAt: Date
   zapAmount: number
@@ -64,6 +77,7 @@ function parseZapEvent(
 
     // Use the actual timestamp if valid and within duration, otherwise use seeded random
     let videoTime: number
+    let hasTimestamp = false
     if (
       timestampSeconds !== null &&
       !isNaN(timestampSeconds) &&
@@ -71,6 +85,7 @@ function parseZapEvent(
       timestampSeconds <= duration
     ) {
       videoTime = timestampSeconds
+      hasTimestamp = true
     } else {
       // Fallback to seeded random for zaps without timestamp
       videoTime = seededRandom() * duration
@@ -80,6 +95,7 @@ function parseZapEvent(
       id: zap.id,
       text: comment,
       videoTime,
+      hasTimestamp,
       senderPubkey,
       postedAt: new Date(zap.created_at * 1000),
       zapAmount,
@@ -297,6 +313,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
                 )}
                 <span className="text-white/50 text-[10px]">
                   {formatDistanceToNow(zap.postedAt, { addSuffix: true })}
+                  {zap.hasTimestamp && ` at ${formatVideoTime(zap.videoTime)}`}
                 </span>
               </div>
               {zap.text ? (

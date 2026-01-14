@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Video player: SoundCloud-style timeline markers on progress bar showing comment/zap activity at specific timestamps; markers cluster to prevent overlap, display avatars for high-zap content, and show tooltips with comment text, author info, and zap amounts on hover; clicking a marker seeks to that position (experimental, using sample data)
 - Video player: volume setting now persists across sessions (stored in localStorage)
 - Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)

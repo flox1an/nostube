@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { formatTime } from './TimeDisplay'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { TimelineMarkers } from './TimelineMarkers'
 
 interface ProgressBarProps {
   currentTime: number
@@ -8,6 +9,7 @@ interface ProgressBarProps {
   bufferedPercentage: number
   onSeek: (time: number) => void
   onSeekingChange?: (isSeeking: boolean) => void
+  showTimelineMarkers?: boolean
 }
 
 /**
@@ -20,6 +22,7 @@ export const ProgressBar = memo(function ProgressBar({
   bufferedPercentage,
   onSeek,
   onSeekingChange,
+  showTimelineMarkers = true,
 }: ProgressBarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isHovering, setIsHovering] = useState(false)
@@ -218,6 +221,11 @@ export const ProgressBar = memo(function ProgressBar({
         >
           {formatTime(hoverTime)}
         </div>
+      )}
+
+      {/* Timeline markers (SoundCloud-style) */}
+      {showTimelineMarkers && duration > 0 && (
+        <TimelineMarkers duration={duration} currentTime={currentTime} onSeekToMarker={onSeek} />
       )}
 
       {/* Track wrapper - centers the track vertically so it expands both ways */}

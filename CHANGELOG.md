@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video player: SoundCloud-style timeline markers on progress bar showing zap activity; markers cluster to prevent overlap, display zapper avatars, and show tooltips with zap comment, author info, and zap amounts on hover; clicking a marker seeks to that position; uses actual video timestamp from zap request if available, falls back to seeded random position for zaps without timestamp; first zap has special golden highlight and "First Zap" badge in tooltip
 - Video player: volume setting now persists across sessions (stored in localStorage)
 - Video player: loop/replay toggle in settings menu with checkbox; setting persists across sessions (stored in localStorage)
+- Video player: blurhash placeholder shown while poster image loads for smoother perceived loading experience
 - Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)
 - i18n: added missing translations for upload dialog (video source, URL input, dropzone, subtitles, publish date, step indicators) in EN/DE/FR/ES

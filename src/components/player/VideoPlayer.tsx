@@ -15,6 +15,7 @@ import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
+import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 // import { BulletComments } from './BulletComments' // disabled for now
 
 interface VideoPlayerProps {
@@ -735,6 +736,35 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     enabled: !!poster,
   })
 
+  // Generate blurhash placeholder for poster LQIP (Low Quality Image Placeholder)
+  const blurhashPlaceholder = useMemo(() => blurHashToDataURL(posterHash), [posterHash])
+
+  // Track poster loading state
+  const [posterLoaded, setPosterLoaded] = useState(false)
+
+  // Preload poster image and track when it's loaded
+  useEffect(() => {
+    if (!posterUrl) {
+      // Use microtask to avoid synchronous setState in effect
+      queueMicrotask(() => setPosterLoaded(false))
+      return
+    }
+
+    // Reset state when URL changes (use microtask to avoid synchronous setState)
+    queueMicrotask(() => setPosterLoaded(false))
+
+    const img = new Image()
+    img.onload = () => setPosterLoaded(true)
+    img.onerror = () => setPosterLoaded(true) // Still mark as "loaded" on error to hide blurhash
+    img.src = posterUrl
+
+    // Cleanup when poster URL changes
+    return () => {
+      img.onload = null
+      img.onerror = null
+    }
+  }, [posterUrl])
+
   // Show loading state if video URLs are still loading
   if (isLoadingVideoUrls || !videoUrl) {
     return (
@@ -755,6 +785,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {}}
     >
+      {/* Blurhash placeholder shown while poster loads */}
+      {blurhashPlaceholder && !posterLoaded && (
+        <img
+          src={blurhashPlaceholder}
+          alt=""
+          aria-hidden="true"
+          className={`absolute inset-0 w-full h-full object-cover ${cinemaMode && !isFullscreen ? 'max-h-[80dvh]' : ''}`}
+        />
+      )}
+
       {/* Video element */}
       <video
         ref={videoRef}

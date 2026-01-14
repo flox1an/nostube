@@ -151,13 +151,13 @@ const TimelineMarker = memo(function TimelineMarker({
 
   return (
     <div
-      className="absolute bottom-0 transform -translate-x-1/2 cursor-pointer z-10 group"
+      className="absolute bottom-full transform -translate-x-1/2 cursor-pointer z-10 group flex flex-col items-center"
       style={{ left: `${cluster.position}%` }}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
       onClick={onClick}
     >
-      {/* Marker dot/avatar */}
+      {/* Marker dot/avatar - sits above the line */}
       <div
         className={`rounded-full border-2 border-white/60 shadow-lg transition-all duration-150 overflow-hidden ${
           isActive ? 'scale-150 border-primary' : 'hover:scale-125'
@@ -165,7 +165,6 @@ const TimelineMarker = memo(function TimelineMarker({
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          marginBottom: '2px',
         }}
       >
         {size >= 12 ? (
@@ -182,13 +181,8 @@ const TimelineMarker = memo(function TimelineMarker({
         )}
       </div>
 
-      {/* Vertical line indicator */}
-      <div
-        className={`absolute left-1/2 -translate-x-1/2 w-px bg-white/40 transition-all ${
-          isActive ? 'h-3 bg-primary' : 'h-1.5'
-        }`}
-        style={{ bottom: '-2px' }}
-      />
+      {/* Vertical line indicator - extends down to connect to track */}
+      <div className={`w-px bg-white/50 transition-all ${isActive ? 'h-2 bg-primary' : 'h-1.5'}`} />
     </div>
   )
 })
@@ -330,11 +324,11 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   return (
     <div
       ref={containerRef}
-      className="absolute inset-x-0 bottom-0 h-5 pointer-events-none"
+      className="absolute inset-0 pointer-events-none overflow-visible"
       style={{ zIndex: 15 }}
     >
-      {/* Markers */}
-      <div className="absolute inset-x-0 bottom-0 h-4 pointer-events-auto">
+      {/* Markers - each positioned absolutely relative to this container */}
+      <div className="relative w-full h-full pointer-events-auto">
         {clusters.map(cluster => (
           <TimelineMarker
             key={cluster.id}

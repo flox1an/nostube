@@ -223,16 +223,19 @@ export const ProgressBar = memo(function ProgressBar({
         </div>
       )}
 
-      {/* Timeline markers (SoundCloud-style) */}
-      {showTimelineMarkers && duration > 0 && (
-        <TimelineMarkers duration={duration} currentTime={currentTime} onSeekToMarker={onSeek} />
-      )}
-
       {/* Track wrapper - centers the track vertically so it expands both ways */}
       <div className="flex items-center h-1">
         <div
           className={`relative w-full rounded-full transition-all ${showScrubber ? 'h-1.5' : 'h-1'}`}
         >
+          {/* Timeline markers (SoundCloud-style) - positioned above the track */}
+          {showTimelineMarkers && duration > 0 && (
+            <TimelineMarkers
+              duration={duration}
+              currentTime={currentTime}
+              onSeekToMarker={onSeek}
+            />
+          )}
           {/* Background track */}
           <div className="absolute inset-0 bg-white/20 rounded-full" />
 

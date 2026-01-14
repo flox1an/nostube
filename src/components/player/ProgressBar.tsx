@@ -225,7 +225,10 @@ export const ProgressBar = memo(function ProgressBar({
 
       {/* Timeline markers (SoundCloud-style) - positioned above the track, outside height-changing element */}
       {showTimelineMarkers && duration > 0 && (
-        <div className="absolute inset-x-0 bottom-1/2 pointer-events-none" style={{ zIndex: 15 }}>
+        <div
+          className="absolute inset-x-0 pointer-events-none"
+          style={{ zIndex: 15, bottom: 'calc(50% + 4px)' }}
+        >
           <TimelineMarkers duration={duration} currentTime={currentTime} onSeekToMarker={onSeek} />
         </div>
       )}

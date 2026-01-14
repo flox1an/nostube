@@ -182,7 +182,7 @@ const TimelineMarker = memo(function TimelineMarker({
       </div>
 
       {/* Vertical line indicator - extends down to connect to track */}
-      <div className={`w-px bg-white/50 transition-all ${isActive ? 'h-2 bg-primary' : 'h-1.5'}`} />
+      <div className={`w-px bg-white/50 transition-all ${isActive ? 'h-4 bg-primary' : 'h-3'}`} />
     </div>
   )
 })
@@ -218,11 +218,14 @@ const MarkerTooltip = memo(function MarkerTooltip({
   const showMultiple = cluster.comments.length > 1 && cluster.comments.length <= 3
   const displayComments = showMultiple ? cluster.comments : [cluster.comments[0]]
 
+  // Calculate marker height to position tooltip above it
+  const markerHeight = 28 + 12 // max marker size + line height
+
   return (
     <div
       ref={tooltipRef}
-      className="absolute bottom-full mb-3 transform -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
-      style={{ left: `${adjustedPosition}%` }}
+      className="absolute transform -translate-x-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+      style={{ left: `${adjustedPosition}%`, bottom: `${markerHeight + 8}px` }}
     >
       <div className="bg-black/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 overflow-hidden">
         {displayComments.map((comment, idx) => (

@@ -1,6 +1,7 @@
 import { VideoCard, VideoCardSkeleton } from '@/components/VideoCard'
 import { type VideoEvent } from '@/utils/video-event'
 import { cn } from '@/lib/utils'
+import { chunk } from '@/lib/array-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
 import { useCallback, useMemo } from 'react'
@@ -67,14 +68,7 @@ export function VideoGrid({
     return { wideVideos: [], portraitVideos: [] }
   }, [layoutMode, filteredVideos])
 
-  // Helper to chunk array into rows (memoized)
-  const chunk = useCallback(<T,>(arr: T[], size: number): T[][] => {
-    const res: T[][] = []
-    for (let i = 0; i < arr.length; i += size) {
-      res.push(arr.slice(i, i + size))
-    }
-    return res
-  }, [])
+  // chunk function imported from @/lib/array-utils
 
   // Helper to map column count to Tailwind class (memoized)
   const gridColsClass = useMemo(

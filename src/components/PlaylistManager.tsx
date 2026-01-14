@@ -38,14 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-
-function formatDate(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
+import { formatDateSimple } from '@/lib/format-utils'
 
 interface VideoListProps {
   videos: Video[]
@@ -92,7 +85,9 @@ function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
                 {video.title || 'Untitled Video'}
               </button>
             </p>
-            <p className="text-xs text-muted-foreground">Added {formatDate(video.added_at)}</p>
+            <p className="text-xs text-muted-foreground">
+              Added {formatDateSimple(video.added_at)}
+            </p>
           </div>
           <Button
             variant="ghost"

@@ -18,21 +18,9 @@ import { EmojiPicker } from '@/components/EmojiPicker'
 import { useProfile, useEventZaps } from '@/hooks'
 import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatTimestamp } from '@/lib/format-utils'
+import { ZAP_PRESET_AMOUNTS } from '@/constants'
 import { toast } from 'sonner'
-
-const PRESET_AMOUNTS = [21, 100, 500, 1000, 5000]
-
-// Format seconds as mm:ss or h:mm:ss
-function formatTimestamp(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 interface ZapDialogProps {
   open: boolean
@@ -294,7 +282,7 @@ export const ZapDialog = memo(function ZapDialog({
           <div className="space-y-2">
             <Label>Amount (sats)</Label>
             <div className="grid grid-cols-5 gap-2">
-              {PRESET_AMOUNTS.map(amount => (
+              {ZAP_PRESET_AMOUNTS.map(amount => (
                 <Button
                   key={amount}
                   variant={selectedAmount === amount && !customAmount ? 'default' : 'outline'}

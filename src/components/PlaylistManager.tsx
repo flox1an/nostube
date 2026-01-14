@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
+import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent } from '@/utils/video-event'
 import { imageProxyVideoPreview } from '@/lib/utils'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
@@ -127,6 +128,41 @@ interface VideoListProps {
 }
 
 function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
+  const eventStore = useEventStore()
+  const { pool, config } = useAppContext()
+
+  // Get read relays for loading missing videos
+  const readRelays = useMemo(
+    () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
+    [config.relays]
+  )
+
+  // Load missing video events from relays
+  useEffect(() => {
+    if (videos.length === 0) return
+
+    // Find videos not yet in the event store
+    const missingIds = videos.filter(v => !eventStore.hasEvent(v.id)).map(v => v.id)
+
+    if (missingIds.length === 0) return
+
+    // Batch load missing videos
+    const loader = createTimelineLoader(pool, readRelays, { ids: missingIds }, { eventStore })
+
+    const subscription = loader().subscribe({
+      next: event => {
+        if (event) {
+          eventStore.add(event)
+        }
+      },
+      error: err => {
+        console.error('[PlaylistManager] Failed to load video events:', err)
+      },
+    })
+
+    return () => subscription.unsubscribe()
+  }, [videos, eventStore, pool, readRelays])
+
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground py-2">No videos in this playlist yet.</p>
   }

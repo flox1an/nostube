@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Playlists: playlist manager now shows video thumbnails and titles for each video in the accordion list
 - Comments: improved highlight animation for parent comment navigation - smoother 1.5s fade with multi-step keyframes and CSS transitions
 - Comments: single replies are now auto-expanded (no expand button needed); expand/collapse button only shown when there are 2+ replies
 - Comments: removed "Replying to @user" badge from nested comments for cleaner UI (visual threading makes context clear)

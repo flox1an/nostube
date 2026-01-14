@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
-import { useEventStore } from 'applesauce-react/hooks'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
+import { processEvent } from '@/utils/video-event'
+import { imageProxyVideoPreview } from '@/lib/utils'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -40,6 +42,84 @@ import {
 } from '@/components/ui/dialog'
 import { formatDateSimple } from '@/lib/format-utils'
 
+interface PlaylistVideoItemProps {
+  video: Video
+  playlistParam: string
+  onRemove: (videoId: string) => Promise<void>
+}
+
+function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItemProps) {
+  const navigate = useNavigate()
+  const eventStore = useEventStore()
+  const { config } = useAppContext()
+
+  // Get the video event from store reactively
+  const videoEvent = use$(() => eventStore.event(video.id), [eventStore, video.id])
+
+  // Process the event to get thumbnail and title
+  const processedVideo = useMemo(() => {
+    if (!videoEvent) return null
+    return processEvent(videoEvent, [], config.blossomServers)
+  }, [videoEvent, config.blossomServers])
+
+  const thumbnailUrl = processedVideo?.images?.[0]
+  const title = processedVideo?.title || video.title || 'Untitled Video'
+
+  const handleClick = () => {
+    const event = eventStore.getEvent(video.id)
+    const nevent = event
+      ? nip19.neventEncode({
+          id: video.id,
+          kind: video.kind,
+          author: event.pubkey,
+        })
+      : nip19.neventEncode({
+          id: video.id,
+          kind: video.kind,
+        })
+    navigate(`/video/${nevent}?playlist=${encodeURIComponent(playlistParam)}`)
+  }
+
+  return (
+    <div className="flex items-center gap-3 py-2 border-b last:border-0">
+      {/* Thumbnail */}
+      <button
+        type="button"
+        onClick={handleClick}
+        className="shrink-0 w-24 h-14 bg-muted rounded overflow-hidden hover:opacity-80 transition-opacity"
+      >
+        {thumbnailUrl ? (
+          <img
+            src={imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)}
+            alt={title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+            No thumbnail
+          </div>
+        )}
+      </button>
+
+      {/* Title and metadata */}
+      <div className="flex-1 min-w-0">
+        <button type="button" className="text-left w-full hover:underline" onClick={handleClick}>
+          <p className="text-sm font-medium line-clamp-2">{title}</p>
+        </button>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Added {formatDateSimple(video.added_at)}
+        </p>
+      </div>
+
+      {/* Remove button */}
+      <Button variant="ghost" size="icon" onClick={() => onRemove(video.id)} className="shrink-0">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 interface VideoListProps {
   videos: Video[]
   onRemove: (videoId: string) => Promise<void>
@@ -47,57 +127,19 @@ interface VideoListProps {
 }
 
 function VideoList({ videos, onRemove, playlistParam }: VideoListProps) {
-  const navigate = useNavigate()
-  const eventStore = useEventStore()
-
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground py-2">No videos in this playlist yet.</p>
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {videos.map(video => (
-        <div
+        <PlaylistVideoItem
           key={video.id}
-          className="flex items-center justify-between py-2 border-b last:border-0"
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              <button
-                type="button"
-                className="text-left w-full hover:underline"
-                onClick={() => {
-                  // Fetch event from store to get author pubkey
-                  const event = eventStore.getEvent(video.id)
-                  const nevent = event
-                    ? nip19.neventEncode({
-                        id: video.id,
-                        kind: video.kind,
-                        author: event.pubkey,
-                      })
-                    : nip19.neventEncode({
-                        id: video.id,
-                        kind: video.kind,
-                      })
-                  navigate(`/video/${nevent}?playlist=${encodeURIComponent(playlistParam)}`)
-                }}
-              >
-                {video.title || 'Untitled Video'}
-              </button>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Added {formatDateSimple(video.added_at)}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onRemove(video.id)}
-            className="ml-2 shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+          video={video}
+          playlistParam={playlistParam}
+          onRemove={onRemove}
+        />
       ))}
     </div>
   )

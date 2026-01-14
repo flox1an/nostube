@@ -454,10 +454,15 @@ export const TimelineMarkers = memo(function TimelineMarkers({
           className="absolute transform -translate-x-1/2 z-40 pointer-events-none animate-in fade-in duration-150"
           style={{ left: `${activeCluster.position}%`, bottom: '48px' }}
         >
-          <div className="px-2 py-1 bg-black/60 rounded text-white text-sm whitespace-nowrap max-w-[200px] truncate flex items-center gap-1">
+          <div className="px-2 py-1 bg-black/60 rounded text-white text-sm whitespace-nowrap max-w-[200px] truncate flex items-center gap-1.5">
+            {activeCluster.id === firstZapClusterId && (
+              <span className="bg-yellow-400 text-black text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0">
+                First Zap
+              </span>
+            )}
             {activeZap.text || (
               <>
-                <Zap className="w-3 h-3 text-yellow-400" />
+                <Zap className="w-3 h-3 text-yellow-400 flex-shrink-0" />
                 <span className="text-yellow-400">
                   {formatCompactNumber(activeZap.zapAmount)} sats
                 </span>

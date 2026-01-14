@@ -317,14 +317,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
                   {zap.hasTimestamp && ` at ${formatVideoTime(zap.videoTime)}`}
                 </span>
               </div>
-              {zap.text ? (
-                <p className="text-white/90 text-sm mt-0.5 break-words">{zap.text}</p>
-              ) : (
-                <p className="text-white/50 text-sm mt-0.5 italic flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-yellow-400" />
-                  zapped
-                </p>
-              )}
+              {zap.text && <p className="text-white/90 text-sm mt-0.5 break-words">{zap.text}</p>}
               <div className="flex items-center gap-1 mt-1">
                 <span className="text-yellow-400 text-xs">⚡</span>
                 <span className="text-yellow-400 text-xs font-medium">

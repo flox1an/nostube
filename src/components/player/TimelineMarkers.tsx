@@ -159,8 +159,8 @@ const TimelineMarker = memo(function TimelineMarker({
     >
       {/* Marker dot/avatar - sits above the line */}
       <div
-        className={`rounded-full border-2 border-white/60 shadow-lg transition-all duration-150 overflow-hidden ${
-          isActive ? 'scale-150 border-primary' : 'hover:scale-125'
+        className={`rounded-full border shadow-lg transition-all duration-150 overflow-hidden ${
+          isActive ? 'scale-125 border-primary border-2' : 'border-white/60 hover:scale-110'
         }`}
         style={{
           width: `${size}px`,
@@ -321,6 +321,8 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   }, [])
 
   const hoveredCluster = clusters.find(c => c.id === hoveredClusterId)
+  // Show tooltip for hovered cluster, or active cluster if not hovering
+  const tooltipCluster = hoveredCluster || activeCluster
 
   if (clusters.length === 0) return null
 
@@ -344,8 +346,8 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         ))}
       </div>
 
-      {/* Tooltip - rendered separately for proper z-index */}
-      {hoveredCluster && <MarkerTooltip cluster={hoveredCluster} containerWidth={containerWidth} />}
+      {/* Tooltip - shown for hovered or active marker */}
+      {tooltipCluster && <MarkerTooltip cluster={tooltipCluster} containerWidth={containerWidth} />}
     </div>
   )
 })

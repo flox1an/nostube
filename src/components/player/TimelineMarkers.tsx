@@ -309,16 +309,20 @@ export const TimelineMarkers = memo(function TimelineMarkers({
     return clusters.find(c => Math.abs(c.position - currentPosition) < 1.5)
   }, [clusters, currentTime, duration])
 
-  // Track container width for tooltip positioning
+  // Track container width for tooltip positioning (use ResizeObserver for theater mode changes)
   useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
     const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth)
-      }
+      setContainerWidth(container.offsetWidth)
     }
     updateWidth()
-    window.addEventListener('resize', updateWidth)
-    return () => window.removeEventListener('resize', updateWidth)
+
+    const resizeObserver = new ResizeObserver(updateWidth)
+    resizeObserver.observe(container)
+
+    return () => resizeObserver.disconnect()
   }, [])
 
   const hoveredCluster = clusters.find(c => c.id === hoveredClusterId)

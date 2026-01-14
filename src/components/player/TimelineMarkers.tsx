@@ -144,10 +144,7 @@ const TimelineMarker = memo(function TimelineMarker({
   onClick: () => void
 }) {
   const topComment = cluster.comments[0]
-  // Size based on total zaps (min 12px, max 28px for multiple comments)
-  const baseSize = cluster.comments.length > 1 ? 16 : 12
-  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 100))
-  const size = baseSize + zapBonus
+  const size = 20 // Fixed size for all markers
 
   return (
     <div
@@ -219,7 +216,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
   const displayComments = showMultiple ? cluster.comments : [cluster.comments[0]]
 
   // Calculate marker height to position tooltip above it
-  const markerHeight = 28 + 12 // max marker size + line height
+  const markerHeight = 20 + 12 // marker size + line height
 
   return (
     <div

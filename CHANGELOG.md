@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: limit title to 2 lines with ellipsis on mobile to prevent excessive vertical space
 - Debug dialog: collapse Nostr event JSON by default; variant tabs stack vertically on mobile for better usability
 - Video page: language badges now display with country flag emoji and shortcode (e.g., 🇺🇸 EN), merged into tag list without separate "Languages:" label
-- Layout: hide mini icon sidebar on video and shorts pages for full-width video experience (consistent with mobile behavior)
+- Layout: hide mini icon sidebar on individual video pages (/video/, /short/) for full-width experience; shorts feed (/shorts) now shows sidebar like homepage
 - Video page: added horizontal padding to video info and sidebar sections in theater mode on desktop for better content spacing
 - Video page: video suggestions now display in 2-column grid in theater mode on desktop (single column in normal mode)
 - Video player: added explicit autoplay - calls play() when video is ready to ensure playback starts (fallback for browsers that block autoPlay attribute)

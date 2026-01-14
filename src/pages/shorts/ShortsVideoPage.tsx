@@ -15,7 +15,11 @@ import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useReportedPubkeys, useReadRelays, useVideoHistory } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { createEventLoader, createAddressLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
+import {
+  createEventLoader,
+  createAddressLoader,
+  createTimelineLoader,
+} from 'applesauce-loaders/loaders'
 import { getKindsForType } from '@/lib/video-types'
 import { Header } from '@/components/Header'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'

@@ -102,17 +102,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const isMobile = useIsMobile()
 
   // Video quality variant selector with position preservation
-  const {
-    selectedVariantIndex,
-    effectiveUrls,
-    effectiveSha256,
-    handleVariantChange,
-  } = useVideoVariantSelector({
-    videoRef,
-    videoVariants,
-    urls,
-    sha256,
-  })
+  const { selectedVariantIndex, effectiveUrls, effectiveSha256, handleVariantChange } =
+    useVideoVariantSelector({
+      videoRef,
+      videoVariants,
+      urls,
+      sha256,
+    })
 
   // Store callbacks in refs to avoid dependency issues
   const onAllSourcesFailedRef = useRef(onAllSourcesFailed)

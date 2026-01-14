@@ -10,11 +10,10 @@ export function MainLayout() {
   const { isSidebarOpen, toggleSidebar } = useAppContext()
   const location = useLocation()
 
-  // Hide mobile bottom nav on video pages to save space
+  // Hide sidebar and mobile bottom nav on individual video pages to save space
+  // Note: /shorts feed page should show sidebar like homepage, only /short/:id hides it
   const isVideoPage =
-    location.pathname.startsWith('/video/') ||
-    location.pathname.startsWith('/short/') ||
-    location.pathname.startsWith('/shorts')
+    location.pathname.startsWith('/video/') || location.pathname.startsWith('/short/')
 
   return (
     <div className="min-h-screen flex flex-col">

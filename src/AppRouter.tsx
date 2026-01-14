@@ -72,6 +72,20 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 function PageLoader() {
   return (
     <div className="max-w-560 mx-auto">
+      {/* Category bar skeleton */}
+      <div className="sm:px-2">
+        <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md border-b">
+          <div className="flex gap-2 p-2 min-w-max">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <Skeleton
+                key={i}
+                className={cn('h-8 rounded-full shrink-0', i === 0 ? 'w-12' : 'w-20')}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Video grid skeleton */}
       <div className="sm:px-2">
         <div
           className={cn(

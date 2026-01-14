@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactoring: new `src/lib/language-flags.ts` with `languageToCountryCode` map, `countryCodeToFlag`, `getLanguageDisplay` functions
 - Refactoring: new `src/constants/` directory with centralized storage keys, timing values, and UI constants
 - Refactoring: reorganized `src/hooks/index.ts` with section comments by domain (auth, video, wallet, upload, relay, ui)
+- Refactoring: split UploadManagerProvider (1,610 lines) into `src/providers/upload/` with types.ts, constants.ts, utils.ts modules
 - Zaps: timestamped zaps - when zapping a video, the current play position is captured and included in the zap request via `['timestamp', '<seconds>']` tag; ZapDialog shows a checkbox "at play position X:XX" (checked by default) to optionally include the timestamp
 - Zaps: added emoji picker to ZapDialog comment field for adding emoji reactions to zaps
 - UI: extracted reusable EmojiPicker component (used by CommentInput and ZapDialog)

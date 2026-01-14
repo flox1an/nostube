@@ -215,8 +215,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
     }
   }, [cluster.position, containerWidth])
 
-  const showMultiple = cluster.comments.length > 1 && cluster.comments.length <= 3
-  const displayComments = showMultiple ? cluster.comments : [cluster.comments[0]]
+  const comment = cluster.comments[0]
 
   // Calculate marker height to position tooltip above it
   const markerHeight = 24 + 12 // max marker size + line height
@@ -228,54 +227,34 @@ const MarkerTooltip = memo(function MarkerTooltip({
       style={{ left: `${adjustedPosition}%`, bottom: `${markerHeight + 8}px` }}
     >
       <div className="bg-black/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 overflow-hidden">
-        {displayComments.map((comment, idx) => (
-          <div
-            key={comment.id}
-            className={`px-3 py-2 ${idx > 0 ? 'border-t border-white/10' : ''}`}
-          >
-            <div className="flex items-start gap-2.5 min-w-[180px] max-w-[280px]">
-              <img
-                src={comment.ownerAvatar}
-                alt={comment.ownerName}
-                className="w-8 h-8 rounded-full flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-white text-xs font-semibold truncate">
-                    {comment.ownerName}
-                  </span>
-                  <span className="text-white/50 text-[10px]">
-                    {formatDistanceToNow(comment.postedAt, { addSuffix: true })}
+        <div className="px-3 py-2">
+          <div className="flex items-start gap-2.5 min-w-[180px] max-w-[280px]">
+            <img
+              src={comment.ownerAvatar}
+              alt={comment.ownerName}
+              className="w-8 h-8 rounded-full flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-xs font-semibold truncate">
+                  {comment.ownerName}
+                </span>
+                <span className="text-white/50 text-[10px]">
+                  {formatDistanceToNow(comment.postedAt, { addSuffix: true })}
+                </span>
+              </div>
+              <p className="text-white/90 text-sm mt-0.5 break-words">{comment.text}</p>
+              {comment.zapAmount > 0 && (
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-yellow-400 text-xs">⚡</span>
+                  <span className="text-yellow-400 text-xs font-medium">
+                    {comment.zapAmount.toLocaleString()} sats
                   </span>
                 </div>
-                <p className="text-white/90 text-sm mt-0.5 break-words">{comment.text}</p>
-                {comment.zapAmount > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-yellow-400 text-xs">⚡</span>
-                    <span className="text-yellow-400 text-xs font-medium">
-                      {comment.zapAmount.toLocaleString()} sats
-                    </span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        ))}
-        {cluster.comments.length > 3 && (
-          <div className="px-3 py-1.5 bg-white/5 text-center">
-            <span className="text-white/60 text-xs">
-              +{cluster.comments.length - 1} more comments
-            </span>
-          </div>
-        )}
-        {cluster.comments.length > 1 && (
-          <div className="px-3 py-1.5 bg-yellow-500/10 flex items-center justify-center gap-1.5">
-            <span className="text-yellow-400 text-xs">⚡</span>
-            <span className="text-yellow-400 text-xs font-semibold">
-              {cluster.totalZaps.toLocaleString()} total sats
-            </span>
-          </div>
-        )}
+        </div>
       </div>
       {/* Arrow pointing down */}
       <div

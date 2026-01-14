@@ -71,15 +71,19 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
   return (
-    <div
-      className={cn(
-        'w-full grid gap-4 sm:px-4 sm:py-4',
-        'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
-      )}
-    >
-      {Array.from({ length: 24 }).map((_, i) => (
-        <VideoCardSkeleton key={i} format="horizontal" />
-      ))}
+    <div className="max-w-560 mx-auto">
+      <div className="sm:px-2">
+        <div
+          className={cn(
+            'grid',
+            'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+          )}
+        >
+          {Array.from({ length: 24 }).map((_, i) => (
+            <VideoCardSkeleton key={i} format="horizontal" />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

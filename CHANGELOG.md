@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: fixed ESLint errors - empty interface in kbd.tsx (changed to type alias) and conditional useMemo hook in VideoPage.tsx (moved before early return)
 - Comments: fixed L-shaped threading connector line not aligning with avatar center (changed height from h-5 to h-4)
 - Video page: fixed tag/language badges wrapping on small screens (now scroll horizontally with flex-nowrap and whitespace-nowrap)
+- Home page: fixed loading skeleton layout mismatch - removed gap-4 from grid and matched wrapper/padding to actual page structure (max-w-560, sm:px-2)
 
 ## [1.0.0] - 2025-01-08
 

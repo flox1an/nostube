@@ -182,9 +182,9 @@ const TimelineMarker = memo(function TimelineMarker({
   onSeek: (time: number) => void
 }) {
   const topZap = cluster.zaps[0]
-  // Size based on zap amount (min 12px, max 24px)
-  const baseSize = 12
-  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 500))
+  // Size based on zap amount (min 20px, max 36px)
+  const baseSize = 20
+  const zapBonus = Math.min(16, Math.floor(cluster.totalZaps / 500))
   const size = baseSize + zapBonus
 
   const handleMouseEnter = useCallback(() => {
@@ -222,7 +222,7 @@ const TimelineMarker = memo(function TimelineMarker({
       </div>
 
       {/* Vertical line indicator - extends down to connect to track */}
-      <div className={`w-px transition-all ${isActive ? 'h-4 bg-primary' : 'h-3 bg-white/50'}`} />
+      <div className={`w-0.5 transition-all ${isActive ? 'h-5 bg-primary' : 'h-4 bg-white/60'}`} />
     </div>
   )
 })

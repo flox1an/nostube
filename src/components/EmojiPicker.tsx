@@ -163,7 +163,7 @@ export const EmojiPicker = memo(function EmojiPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-2"
+        className="w-80 p-2 z-[100]"
         align={align}
         side={side}
         sideOffset={8}

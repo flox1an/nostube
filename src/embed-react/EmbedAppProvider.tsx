@@ -6,6 +6,8 @@ import {
   type BlossomServerTag,
 } from '@/contexts/AppContext'
 import { RelayPool } from 'applesauce-relay'
+import { EventStore } from 'applesauce-core'
+import { EventStoreProvider } from 'applesauce-react/providers'
 
 interface EmbedAppProviderProps {
   children: React.ReactNode
@@ -13,11 +15,17 @@ interface EmbedAppProviderProps {
   authorBlossomServers?: string[]
 }
 
+// Create singleton EventStore and RelayPool for the embed
+// These are created outside the component to persist across re-renders
+const embedEventStore = new EventStore()
+const embedRelayPool = new RelayPool()
+
 /**
  * Minimal AppContext provider for the embed player.
- * Provides author's blossom servers for fallback URL generation without
- * requiring the full app context.
+ * Provides author's blossom servers for fallback URL generation,
+ * EventStore for zap timeline markers, and RelayPool for relay subscriptions.
  */
+
 export function EmbedAppProvider({ children, authorBlossomServers = [] }: EmbedAppProviderProps) {
   const contextValue = useMemo<AppContextType>(() => {
     // Convert author's blossom server URLs to the format expected by AppContext
@@ -61,9 +69,13 @@ export function EmbedAppProvider({ children, authorBlossomServers = [] }: EmbedA
       updateConfig: () => {}, // No-op for embed
       isSidebarOpen: false,
       toggleSidebar: () => {}, // No-op for embed
-      pool: new RelayPool(),
+      pool: embedRelayPool,
     }
   }, [authorBlossomServers])
 
-  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+  return (
+    <EventStoreProvider eventStore={embedEventStore}>
+      <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+    </EventStoreProvider>
+  )
 }

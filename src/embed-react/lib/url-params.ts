@@ -10,6 +10,7 @@ export interface EmbedParams {
   controls: boolean
   showTitle: boolean
   showBranding: boolean
+  showZaps: boolean
   preferredQuality: string
   customRelays: string[]
   accentColor: string
@@ -30,6 +31,7 @@ export function parseURLParams(): EmbedParams {
     controls: params.get('controls') !== '0',
     showTitle: params.get('title') !== '0',
     showBranding: params.get('branding') !== '0',
+    showZaps: params.get('zaps') !== '0',
     preferredQuality: params.get('quality') || 'auto',
     customRelays: params.get('relays')
       ? params

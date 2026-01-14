@@ -96,6 +96,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         initialPlayPos={params.startTime}
         contentWarning={undefined} // Already handled above
         authorPubkey={video.pubkey}
+        eventId={params.showZaps ? video.id : undefined}
         sha256={video.videoVariants[0]?.hash}
         onAllSourcesFailed={handleAllSourcesFailed}
         textTracks={video.textTracks}

@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embed player: video now pauses when opening in nostube
 - Embed player: author avatar/name now links to profile page in nostube
 - Embed player: now uses author's blossom servers for video fallback URLs (same logic as main player)
+- Embed player: added optional timeline markers showing zap activity (enabled by default, disable with `?zaps=0` URL parameter)
 - Video player: added 5-second stall detection to faster failover to next URL when loading stalls
 - Video player: mobile touch seek now requires double-tap to trigger (single tap on side zones no longer seeks); triple+ taps stack additional seek time
 - Video page: reduced title font size on mobile for better readability

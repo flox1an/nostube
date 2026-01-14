@@ -1,4 +1,12 @@
-// Account persistence utilities (not a hook, just functions)
+/**
+ * Hooks barrel export - organized by domain for easier discovery.
+ *
+ * Usage: import { useCurrentUser, useProfile } from '@/hooks'
+ */
+
+// ============================================================================
+// ACCOUNT PERSISTENCE (utilities, not hooks)
+// ============================================================================
 export {
   restoreAccountsToManager,
   saveActiveAccount,
@@ -12,67 +20,103 @@ export {
 } from './useAccountPersistence'
 export type { AccountMethod, PersistedAccount } from './useAccountPersistence'
 
-// Hooks
-export { useAsyncAction } from './useAsyncAction'
-export { useAppContext } from './useAppContext'
-export { useCinemaMode } from './useCinemaMode'
-export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
+// ============================================================================
+// AUTH & USER
+// ============================================================================
 export { useCurrentUser } from './useCurrentUser'
-export { useDebounce } from './useDebounce'
-export { useDialogState } from './useDialogState'
-export type { DialogState } from './useDialogState'
-export { useFollowedAuthors } from './useFollowedAuthors'
-export { useFollowSet } from './useFollowSet'
-export { useFormDialog } from './useFormDialog'
-export { useInfiniteScroll } from './useInfiniteScroll'
-export { useIsMobile } from './useIsMobile'
-export { useIsPortrait } from './useIsPortrait'
-export { useScrollDirection } from './useScrollDirection'
-export { useLikedEvents } from './useLikedEvents'
-export { useLocalStorage } from './useLocalStorage'
+export { useLoginActions } from './useLoginActions'
 export { useLoggedInAccounts } from './useLoggedInAccounts'
 export type { Account } from './useLoggedInAccounts'
-export { useLoginActions } from './useLoginActions'
-export { useMissingVideos } from './useMissingVideos'
-export { useNostrPublish } from './useNostrPublish'
-export { usePlaylists, useUserPlaylists } from './usePlaylist'
-export type { Playlist, Video } from './usePlaylist'
-export { usePlaylistDetails } from './usePlaylistDetails'
+
+// ============================================================================
+// PROFILE & SOCIAL
+// ============================================================================
 export { useProfile } from './useProfile'
 export { useBatchedProfileLoader, requestProfile } from './useBatchedProfiles'
-export { useQueryParams } from './useQueryParams'
-export { useReadRelays } from './useReadRelays'
-export { useStableRelays } from './useStableRelays'
+export { useFollowedAuthors } from './useFollowedAuthors'
+export { useFollowSet } from './useFollowSet'
+export { useReactions } from './useReactions'
+export { useLikedEvents } from './useLikedEvents'
+export { useCommentCount } from './useCommentCount'
 export { useReportedPubkeys } from './useReportedPubkeys'
 export type { ReportedPubkeys } from './useReportedPubkeys'
 export { useReports } from './useReports'
 export type { ProcessedReportEvent } from './useReports'
-export { useTimelineLoader } from './useTimelineLoader'
-export { useToast, toast } from './useToast'
-export { useUserBlossomServers } from './useUserBlossomServers'
-export { useUserRelays } from './useUserRelays'
-export { useWindowWidth } from './useWindowWidth'
-export { useWriteRelays } from './useWriteRelays'
+
+// ============================================================================
+// VIDEO PLAYBACK & PLAYER
+// ============================================================================
+export { default as useVideoTimeline } from './useVideoTimeline'
 export { useVideoPlayPosition } from './useVideoPlayPosition'
-export { useUltraWideVideo } from './useUltraWideVideo'
-export { usePlaylistNavigation } from './usePlaylistNavigation'
 export { useVideoKeyboardShortcuts } from './useVideoKeyboardShortcuts'
-export { useReactions } from './useReactions'
-export { useCommentCount } from './useCommentCount'
-export { usePreloadVideoData } from './usePreloadVideoData'
-export { useVideoServerAvailability } from './useVideoServerAvailability'
-export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
 export { useVideoHistory } from './useVideoHistory'
 export type { VideoHistoryEntry } from './useVideoHistory'
-export { useVideoUpload } from './useVideoUpload'
 export { useVideoNotes } from './useVideoNotes'
 export type { VideoNote } from './useVideoNotes'
-export { useDvmTranscode } from './useDvmTranscode'
-export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
+export { useUltraWideVideo } from './useUltraWideVideo'
+export { useCinemaMode } from './useCinemaMode'
+export { usePreloadVideoData } from './usePreloadVideoData'
+export { useMissingVideos } from './useMissingVideos'
+
+// ============================================================================
+// VIDEO SERVER & AVAILABILITY
+// ============================================================================
+export { useVideoServerAvailability } from './useVideoServerAvailability'
+export type { ServerInfo, ServerAvailability, ServerStatus } from './useVideoServerAvailability'
+
+// ============================================================================
+// VIDEO STATISTICS & EVENTS
+// ============================================================================
+export { useEventStats, useUserReactionStatus } from './useEventStats'
+
+// ============================================================================
+// PLAYLIST
+// ============================================================================
+export { usePlaylists, useUserPlaylists } from './usePlaylist'
+export type { Playlist, Video } from './usePlaylist'
+export { usePlaylistDetails } from './usePlaylistDetails'
+export { usePlaylistNavigation } from './usePlaylistNavigation'
+
+// ============================================================================
+// WALLET & ZAPS
+// ============================================================================
 export { useWallet } from './useWallet'
 export { useZap } from './useZap'
 export { useEventZaps, useVideoZaps } from './useEventZaps'
-export { useEventStats, useUserReactionStatus } from './useEventStats'
 
-// Default export (special case)
-export { default as useVideoTimeline } from './useVideoTimeline'
+// ============================================================================
+// UPLOAD & TRANSCODING
+// ============================================================================
+export { useVideoUpload } from './useVideoUpload'
+export { useDvmTranscode } from './useDvmTranscode'
+export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
+export { useUserBlossomServers } from './useUserBlossomServers'
+
+// ============================================================================
+// RELAY & NOSTR
+// ============================================================================
+export { useAppContext } from './useAppContext'
+export { useNostrPublish } from './useNostrPublish'
+export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
+export { useReadRelays } from './useReadRelays'
+export { useWriteRelays } from './useWriteRelays'
+export { useUserRelays } from './useUserRelays'
+export { useStableRelays } from './useStableRelays'
+export { useTimelineLoader } from './useTimelineLoader'
+
+// ============================================================================
+// UI UTILITIES
+// ============================================================================
+export { useDebounce } from './useDebounce'
+export { useDialogState } from './useDialogState'
+export type { DialogState } from './useDialogState'
+export { useFormDialog } from './useFormDialog'
+export { useLocalStorage } from './useLocalStorage'
+export { useQueryParams } from './useQueryParams'
+export { useToast, toast } from './useToast'
+export { useInfiniteScroll } from './useInfiniteScroll'
+export { useScrollDirection } from './useScrollDirection'
+export { useWindowWidth } from './useWindowWidth'
+export { useIsMobile } from './useIsMobile'
+export { useIsPortrait } from './useIsPortrait'
+export { useAsyncAction } from './useAsyncAction'

@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactoring: new `src/lib/array-utils.ts` with `chunk`, `uniqueBy`, `groupBy`, `interleave` functions
 - Refactoring: new `src/lib/language-flags.ts` with `languageToCountryCode` map, `countryCodeToFlag`, `getLanguageDisplay` functions
 - Refactoring: new `src/constants/` directory with centralized storage keys, timing values, and UI constants
-
+- Refactoring: reorganized `src/hooks/index.ts` with section comments by domain (auth, video, wallet, upload, relay, ui)
 - Zaps: timestamped zaps - when zapping a video, the current play position is captured and included in the zap request via `['timestamp', '<seconds>']` tag; ZapDialog shows a checkbox "at play position X:XX" (checked by default) to optionally include the timestamp
 - Zaps: added emoji picker to ZapDialog comment field for adding emoji reactions to zaps
 - UI: extracted reusable EmojiPicker component (used by CommentInput and ZapDialog)
@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- UI: fixed LanguageSelect dropdown appearing behind dialog by adding z-index to SelectContent
 - Notifications: replies to user comments now correctly show "replied to your comment" instead of "commented on your video"; video title is now properly resolved from root E/K tags (previously showed "Unknown video" for replies)
 - Upload: after successful video publish, draft is now deleted and app navigates to the video page
 - Config: nsfwFilter now defaults to 'hide' when not set (migration for old configs without this setting)

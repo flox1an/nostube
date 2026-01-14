@@ -173,11 +173,13 @@ const ZapperAvatar = memo(function ZapperAvatar({
 const TimelineMarker = memo(function TimelineMarker({
   cluster,
   isActive,
+  isFirstZap,
   onHoverChange,
   onSeek,
 }: {
   cluster: MarkerCluster
   isActive: boolean
+  isFirstZap: boolean
   onHoverChange: (clusterId: string | null) => void
   onSeek: (time: number) => void
 }) {
@@ -200,6 +202,13 @@ const TimelineMarker = memo(function TimelineMarker({
     onSeek(avgTime)
   }, [cluster.zaps, onSeek])
 
+  // Determine border styling based on state
+  const getBorderClass = () => {
+    if (isActive) return 'scale-125 border-primary border-2'
+    if (isFirstZap) return 'border-yellow-400 border-2 ring-2 ring-yellow-400/30 hover:scale-110'
+    return 'border-white/60 hover:scale-110'
+  }
+
   return (
     <div
       className="absolute bottom-0 transform -translate-x-1/2 cursor-pointer z-10 group flex flex-col items-center"
@@ -210,9 +219,7 @@ const TimelineMarker = memo(function TimelineMarker({
     >
       {/* Marker dot/avatar - sits above the line */}
       <div
-        className={`rounded-full border shadow-lg transition-all duration-150 overflow-hidden ${
-          isActive ? 'scale-125 border-primary border-2' : 'border-white/60 hover:scale-110'
-        }`}
+        className={`rounded-full border shadow-lg transition-all duration-150 overflow-hidden ${getBorderClass()}`}
         style={{
           width: `${size}px`,
           height: `${size}px`,
@@ -222,7 +229,11 @@ const TimelineMarker = memo(function TimelineMarker({
       </div>
 
       {/* Vertical line indicator - extends down to connect to track */}
-      <div className={`w-0.5 transition-all ${isActive ? 'h-5 bg-primary' : 'h-4 bg-white/60'}`} />
+      <div
+        className={`w-0.5 transition-all ${
+          isActive ? 'h-5 bg-primary' : isFirstZap ? 'h-5 bg-yellow-400' : 'h-4 bg-white/60'
+        }`}
+      />
     </div>
   )
 })
@@ -231,9 +242,11 @@ const TimelineMarker = memo(function TimelineMarker({
 const MarkerTooltip = memo(function MarkerTooltip({
   cluster,
   containerWidth,
+  isFirstZap,
 }: {
   cluster: MarkerCluster
   containerWidth: number
+  isFirstZap: boolean
 }) {
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [adjustedPosition, setAdjustedPosition] = useState(cluster.position)
@@ -275,8 +288,13 @@ const MarkerTooltip = memo(function MarkerTooltip({
               <ZapperAvatar pubkey={zap.senderPubkey} size={32} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-white text-xs font-semibold truncate">{displayName}</span>
+                {isFirstZap && (
+                  <span className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    First Zap
+                  </span>
+                )}
                 <span className="text-white/50 text-[10px]">
                   {formatDistanceToNow(zap.postedAt, { addSuffix: true })}
                 </span>
@@ -343,6 +361,18 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   // Cluster zaps to avoid overlap
   const clusters = useMemo(() => clusterZaps(timelineZaps, duration), [timelineZaps, duration])
 
+  // Find the cluster containing the first zap (earliest postedAt)
+  const firstZapClusterId = useMemo(() => {
+    if (timelineZaps.length === 0) return null
+    // Find the zap with earliest postedAt
+    const firstZap = timelineZaps.reduce((earliest, zap) =>
+      zap.postedAt < earliest.postedAt ? zap : earliest
+    )
+    // Find which cluster contains this zap
+    const cluster = clusters.find(c => c.zaps.some(z => z.id === firstZap.id))
+    return cluster?.id || null
+  }, [timelineZaps, clusters])
+
   // Find active cluster (near current time)
   const activeCluster = useMemo(() => {
     if (duration <= 0) return null
@@ -402,6 +432,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
             key={cluster.id}
             cluster={cluster}
             isActive={activeCluster?.id === cluster.id}
+            isFirstZap={cluster.id === firstZapClusterId}
             onHoverChange={handleHoverChange}
             onSeek={handleSeek}
           />
@@ -409,7 +440,13 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       </div>
 
       {/* Full tooltip - only shown on hover */}
-      {hoveredCluster && <MarkerTooltip cluster={hoveredCluster} containerWidth={containerWidth} />}
+      {hoveredCluster && (
+        <MarkerTooltip
+          cluster={hoveredCluster}
+          containerWidth={containerWidth}
+          isFirstZap={hoveredCluster.id === firstZapClusterId}
+        />
+      )}
 
       {/* Simple text tooltip - shown for active marker when not hovering */}
       {activeZap && activeCluster && (

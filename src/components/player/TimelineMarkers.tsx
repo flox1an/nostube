@@ -321,10 +321,11 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   }, [])
 
   const hoveredCluster = clusters.find(c => c.id === hoveredClusterId)
-  // Show tooltip for hovered cluster, or active cluster if not hovering
-  const tooltipCluster = hoveredCluster || activeCluster
 
   if (clusters.length === 0) return null
+
+  // Simple text for active marker (no hover)
+  const activeComment = activeCluster && !hoveredCluster ? activeCluster.comments[0] : null
 
   return (
     <div ref={containerRef} className="relative w-full overflow-visible">
@@ -346,8 +347,20 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         ))}
       </div>
 
-      {/* Tooltip - shown for hovered or active marker */}
-      {tooltipCluster && <MarkerTooltip cluster={tooltipCluster} containerWidth={containerWidth} />}
+      {/* Full tooltip - only shown on hover */}
+      {hoveredCluster && <MarkerTooltip cluster={hoveredCluster} containerWidth={containerWidth} />}
+
+      {/* Simple text tooltip - shown for active marker when not hovering */}
+      {activeComment && activeCluster && (
+        <div
+          className="absolute transform -translate-x-1/2 z-40 pointer-events-none animate-in fade-in duration-150"
+          style={{ left: `${activeCluster.position}%`, bottom: '48px' }}
+        >
+          <div className="px-2 py-1 bg-black/60 rounded text-white text-sm whitespace-nowrap max-w-[200px] truncate">
+            {activeComment.text}
+          </div>
+        </div>
+      )}
     </div>
   )
 })

@@ -1,5 +1,14 @@
-import { useState, useRef, useEffect, memo } from 'react'
-import { Settings, ChevronRight, ChevronLeft, Check, Repeat } from 'lucide-react'
+import { useState, useRef, useEffect, memo, type ReactNode } from 'react'
+import {
+  Settings,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Repeat,
+  Gauge,
+  SlidersHorizontal,
+  Captions,
+} from 'lucide-react'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant, type TextTrack } from '@/utils/video-event'
 import { getLanguageLabel } from '@/lib/utils'
@@ -270,13 +279,20 @@ const MainMenu = memo(function MainMenu({
   return (
     <div role="menu">
       {hasQualityOptions && (
-        <MenuItem label="Quality" value={currentQualityLabel} onClick={onQualityClick} hasSubmenu />
+        <MenuItem
+          label="Quality"
+          value={currentQualityLabel}
+          onClick={onQualityClick}
+          hasSubmenu
+          icon={<SlidersHorizontal className="w-4 h-4" />}
+        />
       )}
       <MenuItem
         label="Playback speed"
         value={currentSpeedLabel}
         onClick={onSpeedClick}
         hasSubmenu
+        icon={<Gauge className="w-4 h-4" />}
       />
       {hasSubtitles && (
         <MenuItem
@@ -284,6 +300,7 @@ const MainMenu = memo(function MainMenu({
           value={currentSubtitleLabel}
           onClick={onSubtitlesClick}
           hasSubmenu
+          icon={<Captions className="w-4 h-4" />}
         />
       )}
       <ToggleMenuItem
@@ -384,6 +401,7 @@ interface MenuItemProps {
   value: string
   onClick: () => void
   hasSubmenu?: boolean
+  icon?: ReactNode
 }
 
 const MenuItem = memo(function MenuItem({
@@ -391,6 +409,7 @@ const MenuItem = memo(function MenuItem({
   value,
   onClick,
   hasSubmenu = false,
+  icon,
 }: MenuItemProps) {
   return (
     <button
@@ -399,7 +418,10 @@ const MenuItem = memo(function MenuItem({
       onClick={onClick}
       role="menuitem"
     >
-      <span className="whitespace-nowrap text-left">{label}</span>
+      <span className="flex items-center gap-2 whitespace-nowrap text-left">
+        {icon}
+        <span>{label}</span>
+      </span>
       <span className="flex items-center gap-1 text-white/70 whitespace-nowrap">
         <span>{value}</span>
         {hasSubmenu && <ChevronRight className="w-4 h-4" />}

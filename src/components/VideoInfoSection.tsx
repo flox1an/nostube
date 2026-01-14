@@ -142,6 +142,7 @@ interface VideoInfoSectionProps {
   onMirror?: () => void
   userServers?: string[]
   geohash?: string | null
+  currentTime?: number // Current video playback position (for timestamped zaps)
 }
 
 export const VideoInfoSection = React.memo(function VideoInfoSection({
@@ -164,6 +165,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   onMirror,
   userServers,
   geohash,
+  currentTime,
 }: VideoInfoSectionProps) {
   const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
@@ -285,6 +287,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               kind={video.kind}
               relays={relaysToUse}
               layout="inline"
+              currentTime={currentTime}
             />
             {userPubkey && !isMobile && (
               <AddToPlaylistButton

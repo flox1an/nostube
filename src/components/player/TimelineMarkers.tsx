@@ -20,7 +20,7 @@ function formatCompactNumber(num: number): string {
 interface TimelineZap {
   id: string
   text: string // comment or empty for flash symbol
-  videoTime: number // video timestamp in seconds (random for now)
+  videoTime: number // video timestamp in seconds (from zap request or seeded random fallback)
   senderPubkey: string
   postedAt: Date
   zapAmount: number
@@ -58,8 +58,23 @@ function parseZapEvent(
     const senderPubkey = zapRequest.pubkey
     const comment = zapRequest.content || '' // Empty if no comment
 
-    // Generate random video timestamp using seeded random for consistency
-    const videoTime = seededRandom() * duration
+    // Check for timestamp tag in the zap request (for timestamped zaps)
+    const timestampTag = zapRequest.tags.find(t => t[0] === 'timestamp')
+    const timestampSeconds = timestampTag ? parseInt(timestampTag[1], 10) : null
+
+    // Use the actual timestamp if valid and within duration, otherwise use seeded random
+    let videoTime: number
+    if (
+      timestampSeconds !== null &&
+      !isNaN(timestampSeconds) &&
+      timestampSeconds >= 0 &&
+      timestampSeconds <= duration
+    ) {
+      videoTime = timestampSeconds
+    } else {
+      // Fallback to seeded random for zaps without timestamp
+      videoTime = seededRandom() * duration
+    }
 
     return {
       id: zap.id,

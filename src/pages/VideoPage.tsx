@@ -631,6 +631,7 @@ export function VideoPage() {
             onMirror={handleMirror}
             userServers={userBlossomServers}
             geohash={videoGeohash}
+            currentTime={currentPlayPos}
           />
         }
         sidebar={

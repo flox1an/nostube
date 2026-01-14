@@ -144,7 +144,10 @@ const TimelineMarker = memo(function TimelineMarker({
   onClick: () => void
 }) {
   const topComment = cluster.comments[0]
-  const size = 20 // Fixed size for all markers
+  // Size based on zap amount (min 12px, max 24px)
+  const baseSize = 12
+  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 50))
+  const size = baseSize + zapBonus
 
   return (
     <div
@@ -179,7 +182,7 @@ const TimelineMarker = memo(function TimelineMarker({
       </div>
 
       {/* Vertical line indicator - extends down to connect to track */}
-      <div className={`w-px bg-white/50 transition-all ${isActive ? 'h-4 bg-primary' : 'h-3'}`} />
+      <div className={`w-px transition-all ${isActive ? 'h-4 bg-primary' : 'h-3 bg-white/50'}`} />
     </div>
   )
 })
@@ -216,7 +219,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
   const displayComments = showMultiple ? cluster.comments : [cluster.comments[0]]
 
   // Calculate marker height to position tooltip above it
-  const markerHeight = 20 + 12 // marker size + line height
+  const markerHeight = 24 + 12 // max marker size + line height
 
   return (
     <div

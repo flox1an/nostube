@@ -227,7 +227,7 @@ export const ProgressBar = memo(function ProgressBar({
       {showTimelineMarkers && duration > 0 && (
         <div
           className="absolute inset-x-0 pointer-events-none"
-          style={{ zIndex: 15, bottom: 'calc(50% + 4px)' }}
+          style={{ zIndex: 15, bottom: 'calc(50% + 1px)' }}
         >
           <TimelineMarkers duration={duration} currentTime={currentTime} onSeekToMarker={onSeek} />
         </div>

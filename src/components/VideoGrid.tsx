@@ -58,14 +58,21 @@ export function VideoGrid({
   )
 
   // Split videos by type for auto mode (memoized)
-  const { wideVideos, portraitVideos } = useMemo(() => {
+  // Also pre-compute index map for O(1) lookup instead of O(n) findIndex
+  const { wideVideos, portraitVideos, portraitIndexMap } = useMemo(() => {
     if (layoutMode === 'auto') {
+      const wide = filteredVideos.filter(v => v.type === 'videos')
+      const portrait = filteredVideos.filter(v => v.type === 'shorts')
+      // Pre-compute index map for O(1) lookup
+      const indexMap = new Map<string, number>()
+      portrait.forEach((v, i) => indexMap.set(v.id, i))
       return {
-        wideVideos: filteredVideos.filter(v => v.type === 'videos'),
-        portraitVideos: filteredVideos.filter(v => v.type === 'shorts'),
+        wideVideos: wide,
+        portraitVideos: portrait,
+        portraitIndexMap: indexMap,
       }
     }
-    return { wideVideos: [], portraitVideos: [] }
+    return { wideVideos: [], portraitVideos: [], portraitIndexMap: new Map<string, number>() }
   }, [layoutMode, filteredVideos])
 
   // chunk function imported from @/lib/array-utils
@@ -187,19 +194,16 @@ export function VideoGrid({
       if (portraitRows[i]) {
         rows.push(
           <div key={'portrait-' + i} className={`grid ${gridColsClass(getCols('vertical'))}`}>
-            {portraitRows[i].map(video => {
-              const videoIndex = portraitVideos.findIndex(v => v.id === video.id)
-              return (
-                <VideoCard
-                  key={video.id}
-                  video={video}
-                  format="vertical"
-                  playlistParam={playlistParam}
-                  allVideos={portraitVideos}
-                  videoIndex={videoIndex}
-                />
-              )
-            })}
+            {portraitRows[i].map(video => (
+              <VideoCard
+                key={video.id}
+                video={video}
+                format="vertical"
+                playlistParam={playlistParam}
+                allVideos={portraitVideos}
+                videoIndex={portraitIndexMap.get(video.id)}
+              />
+            ))}
           </div>
         )
       }

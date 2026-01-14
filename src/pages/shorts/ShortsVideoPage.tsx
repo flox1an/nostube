@@ -9,7 +9,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
-import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useCallback, startTransition } from 'react'
 import { processEvent, processEvents } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -79,18 +79,21 @@ export function ShortsVideoPage() {
 
     const observer = new IntersectionObserver(
       entries => {
-        // Throttle callback to max ~60fps (16ms) to reduce computation frequency
+        // Throttle callback to reduce computation frequency during scroll
+        // Increased from 16ms to 100ms since video changes don't need 60fps updates
         if (observerCallbackThrottleRef.current) return
 
         observerCallbackThrottleRef.current = setTimeout(() => {
           observerCallbackThrottleRef.current = undefined
 
+          // Find the best visible entry (highest intersection ratio)
           let bestEntry: IntersectionObserverEntry | null = null
+          let bestRatio = 0
 
           for (const entry of entries) {
-            if (!entry.isIntersecting) continue
-            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+            if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
               bestEntry = entry
+              bestRatio = entry.intersectionRatio
             }
           }
 
@@ -106,13 +109,13 @@ export function ShortsVideoPage() {
             currentVideoIndexRef.current = nextIndex
             setCurrentIndex(nextIndex)
           }
-        }, 16) // ~60fps throttle
+        }, 100) // 100ms throttle for smoother scroll performance
       },
       {
-        // Reduced thresholds from [0.4, 0.6, 0.8, 1] to [0.5, 0.8] for fewer callbacks
-        threshold: [0.5, 0.8],
-        // Reduced rootMargin from default for less aggressive preloading
-        rootMargin: '200px',
+        // Single threshold at 50% visibility for cleaner transitions
+        threshold: 0.5,
+        // Reduced rootMargin for less aggressive observation
+        rootMargin: '100px',
       }
     )
 
@@ -470,13 +473,31 @@ export function ShortsVideoPage() {
     }
   }, [currentVideo?.title])
 
-  // Update URL when video changes (but not during programmatic updates)
+  // Update URL when video changes (debounced and non-blocking)
+  // Uses startTransition to avoid blocking scroll interactions
+  const urlUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => {
     if (currentVideo && currentVideo.link !== nevent) {
-      const newPath = `/short/${currentVideo.link}`
+      // Clear any pending URL update
+      if (urlUpdateTimeoutRef.current) {
+        clearTimeout(urlUpdateTimeoutRef.current)
+      }
 
-      pendingUrlUpdateRef.current = currentVideo.link
-      navigate(newPath, { replace: true })
+      // Debounce URL updates to avoid excessive history API calls during fast scrolling
+      urlUpdateTimeoutRef.current = setTimeout(() => {
+        const newPath = `/short/${currentVideo.link}`
+        pendingUrlUpdateRef.current = currentVideo.link
+        // Use startTransition to make this non-blocking for scroll
+        startTransition(() => {
+          navigate(newPath, { replace: true })
+        })
+      }, 150) // 150ms debounce
+    }
+
+    return () => {
+      if (urlUpdateTimeoutRef.current) {
+        clearTimeout(urlUpdateTimeoutRef.current)
+      }
     }
   }, [currentVideo, nevent, navigate, currentVideoIndex])
 
@@ -516,6 +537,9 @@ export function ShortsVideoPage() {
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
           paddingTop: 'calc(56px + env(safe-area-inset-top, 0))',
+          // GPU acceleration hints for smoother scrolling
+          willChange: 'scroll-position',
+          transform: 'translateZ(0)',
         }}
       >
         {allVideos.map((video, index) => {

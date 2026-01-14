@@ -13,9 +13,15 @@ interface UseZapOptions {
   authorPubkey: string
 }
 
+interface ZapParams {
+  amount?: number
+  comment?: string
+  timestamp?: number // Video timestamp in seconds (for timestamped zaps)
+}
+
 interface UseZapReturn {
-  zap: (amount?: number, comment?: string) => Promise<boolean>
-  generateInvoice: (amount: number, comment?: string) => Promise<string | null>
+  zap: (params?: ZapParams) => Promise<boolean>
+  generateInvoice: (amount: number, comment?: string, timestamp?: number) => Promise<string | null>
   isZapping: boolean
   isConnected: boolean
   needsWallet: boolean
@@ -48,7 +54,9 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   }, [config.relays, videoEvent, authorRelays.data])
 
   const zap = useCallback(
-    async (amount: number = DEFAULT_ZAP_AMOUNT, comment?: string): Promise<boolean> => {
+    async (params?: ZapParams): Promise<boolean> => {
+      const { amount = DEFAULT_ZAP_AMOUNT, comment, timestamp } = params || {}
+
       if (!user) {
         toast.error('Please log in to zap')
         return false
@@ -91,6 +99,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           comment,
           relays: targetRelays,
           event: videoEvent || undefined,
+          timestamp,
         })
 
         // Sign the zap request (kind 9734)
@@ -117,7 +126,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
 
   // Generate invoice without paying (for users without wallet)
   const generateInvoice = useCallback(
-    async (amount: number, comment?: string): Promise<string | null> => {
+    async (amount: number, comment?: string, timestamp?: number): Promise<string | null> => {
       if (!user) {
         toast.error('Please log in to zap')
         return null
@@ -151,6 +160,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
           comment,
           relays: targetRelays,
           event: videoEvent || undefined,
+          timestamp,
         })
 
         // Sign the zap request (kind 9734)

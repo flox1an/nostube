@@ -169,7 +169,7 @@ export const CommentReactions = memo(function CommentReactions({
 
   const handleZapFromDialog = useCallback(
     async (amount: number, comment?: string) => {
-      return zap(amount, comment)
+      return zap({ amount, comment })
     },
     [zap]
   )

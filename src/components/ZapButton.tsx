@@ -12,6 +12,7 @@ interface ZapButtonProps {
   authorPubkey: string
   layout?: 'vertical' | 'inline'
   className?: string
+  currentTime?: number // Current video playback position (for timestamped zaps)
 }
 
 const LONG_PRESS_DELAY = 500
@@ -22,8 +23,10 @@ export const ZapButton = memo(function ZapButton({
   authorPubkey,
   layout = 'vertical',
   className = '',
+  currentTime,
 }: ZapButtonProps) {
   const [showZapDialog, setShowZapDialog] = useState(false)
+  const [capturedTimestamp, setCapturedTimestamp] = useState<number | undefined>(undefined)
   const longPressTimer = useRef<number | null>(null)
   const isLongPress = useRef(false)
 
@@ -52,21 +55,25 @@ export const ZapButton = memo(function ZapButton({
 
   const handleQuickZap = useCallback(async () => {
     if (isLongPress.current) return
+    // Capture timestamp at the moment of click
+    setCapturedTimestamp(currentTime)
     // If wallet is connected, do quick zap; otherwise open dialog for QR code
     if (isConnected) {
-      await zap()
+      await zap({ timestamp: currentTime })
     } else {
       setShowZapDialog(true)
     }
-  }, [zap, isConnected])
+  }, [zap, isConnected, currentTime])
 
   const handlePointerDown = useCallback(() => {
     isLongPress.current = false
+    // Capture timestamp at the moment of press
+    setCapturedTimestamp(currentTime)
     longPressTimer.current = window.setTimeout(() => {
       isLongPress.current = true
       setShowZapDialog(true)
     }, LONG_PRESS_DELAY)
-  }, [])
+  }, [currentTime])
 
   const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
@@ -82,14 +89,19 @@ export const ZapButton = memo(function ZapButton({
     }
   }, [])
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setShowZapDialog(true)
-  }, [])
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      // Capture timestamp at the moment of right-click
+      setCapturedTimestamp(currentTime)
+      setShowZapDialog(true)
+    },
+    [currentTime]
+  )
 
   const handleZapFromDialog = useCallback(
-    async (amount: number, comment?: string) => {
-      return zap(amount, comment)
+    async (amount: number, comment?: string, timestamp?: number) => {
+      return zap({ amount, comment, timestamp })
     },
     [zap]
   )
@@ -135,6 +147,7 @@ export const ZapButton = memo(function ZapButton({
           isZapping={isZapping}
           isWalletConnected={isConnected}
           generateInvoice={generateInvoice}
+          timestamp={capturedTimestamp}
         />
       </>
     )
@@ -186,6 +199,7 @@ export const ZapButton = memo(function ZapButton({
         isZapping={isZapping}
         isWalletConnected={isConnected}
         generateInvoice={generateInvoice}
+        timestamp={capturedTimestamp}
       />
     </>
   )

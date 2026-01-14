@@ -10,6 +10,8 @@ interface ProgressBarProps {
   onSeek: (time: number) => void
   onSeekingChange?: (isSeeking: boolean) => void
   showTimelineMarkers?: boolean
+  eventId?: string
+  authorPubkey?: string
 }
 
 /**
@@ -23,6 +25,8 @@ export const ProgressBar = memo(function ProgressBar({
   onSeek,
   onSeekingChange,
   showTimelineMarkers = true,
+  eventId,
+  authorPubkey,
 }: ProgressBarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isHovering, setIsHovering] = useState(false)
@@ -229,7 +233,13 @@ export const ProgressBar = memo(function ProgressBar({
           className="absolute inset-x-0 pointer-events-none"
           style={{ zIndex: 15, bottom: 'calc(50% + 1px)' }}
         >
-          <TimelineMarkers duration={duration} currentTime={currentTime} onSeekToMarker={onSeek} />
+          <TimelineMarkers
+            duration={duration}
+            currentTime={currentTime}
+            onSeekToMarker={onSeek}
+            eventId={eventId}
+            authorPubkey={authorPubkey}
+          />
         </div>
       )}
 

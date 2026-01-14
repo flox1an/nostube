@@ -22,6 +22,7 @@ interface VideoReactionButtonsProps {
   relays?: string[]
   className?: string
   layout?: 'vertical' | 'inline' // vertical: count below (Shorts), inline: count inside button (VideoPage)
+  currentTime?: number // Current video playback position (for timestamped zaps)
 }
 
 export function VideoReactionButtons({
@@ -31,6 +32,7 @@ export function VideoReactionButtons({
   relays = [],
   className = '',
   layout = 'vertical',
+  currentTime,
 }: VideoReactionButtonsProps) {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
@@ -186,6 +188,7 @@ export function VideoReactionButtons({
             authorPubkey={authorPubkey}
             layout="inline"
             className={className}
+            currentTime={currentTime}
           />
         )}
       </>
@@ -216,6 +219,7 @@ export function VideoReactionButtons({
             authorPubkey={authorPubkey}
             layout="vertical"
             className={className}
+            currentTime={currentTime}
           />
         )}
       </>

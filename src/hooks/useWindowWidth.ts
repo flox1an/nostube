@@ -4,11 +4,17 @@ export function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
 
   useEffect(() => {
+    // Debounced resize handler to avoid excessive re-renders
+    let resizeTimeout: ReturnType<typeof setTimeout>
     function handleResize() {
-      setWidth(window.innerWidth)
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => setWidth(window.innerWidth), 150)
     }
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      clearTimeout(resizeTimeout)
+      window.removeEventListener('resize', handleResize)
+    }
   }, [])
 
   return width

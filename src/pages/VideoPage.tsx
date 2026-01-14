@@ -549,6 +549,7 @@ export function VideoPage() {
         contentWarning={video.contentWarning}
         sha256={video.x} // Pass SHA256 hash for URL discovery
         authorPubkey={video.pubkey} // Pass author pubkey for AS query parameter
+        eventId={video.id} // Pass event ID for timeline markers (zaps)
         onAllSourcesFailed={handleAllSourcesFailed}
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}

@@ -1,149 +1,128 @@
-import { useMemo, useState, memo, useRef, useEffect } from 'react'
+import { useMemo, useState, memo, useRef, useEffect, useCallback } from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import { useEventZaps } from '@/hooks/useEventZaps'
+import { useProfile } from '@/hooks'
+import { getInvoiceAmount } from '@/lib/zap-utils'
+import type { NostrEvent } from 'nostr-tools'
+import { Zap } from 'lucide-react'
 
-// Reuse interfaces from BulletComments
-interface TimelineComment {
-  id: number
-  text: string
-  videoTime: number // video timestamp in seconds
-  ownerName: string
-  ownerAvatar: string
+// Format large numbers compactly (1000 -> 1k, 1000000 -> 1M)
+function formatCompactNumber(num: number): string {
+  if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 1) + 'M'
+  }
+  if (num >= 1_000) {
+    return (num / 1_000).toFixed(num % 1_000 === 0 ? 0 : 1) + 'k'
+  }
+  return num.toString()
+}
+
+interface TimelineZap {
+  id: string
+  text: string // comment or empty for flash symbol
+  videoTime: number // video timestamp in seconds (random for now)
+  senderPubkey: string
   postedAt: Date
   zapAmount: number
 }
-
-// Demo users for random assignment
-const DEMO_USERS = [
-  { name: 'satoshi', avatar: 'https://i.pravatar.cc/150?u=satoshi' },
-  { name: 'alice_nostr', avatar: 'https://i.pravatar.cc/150?u=alice' },
-  { name: 'bob_zaps', avatar: 'https://i.pravatar.cc/150?u=bob' },
-  { name: 'lightning_fan', avatar: 'https://i.pravatar.cc/150?u=lightning' },
-  { name: 'nostr_dev', avatar: 'https://i.pravatar.cc/150?u=nostrdev' },
-  { name: 'pleb21', avatar: 'https://i.pravatar.cc/150?u=pleb21' },
-  { name: 'stackingsats', avatar: 'https://i.pravatar.cc/150?u=stacking' },
-  { name: 'zap_queen', avatar: 'https://i.pravatar.cc/150?u=zapqueen' },
-  { name: 'bitcoin_maxi', avatar: 'https://i.pravatar.cc/150?u=maxi' },
-  { name: 'freedom_tech', avatar: 'https://i.pravatar.cc/150?u=freedom' },
-]
-
-// Sample comments - mix of short reactions and longer phrases
-const DEMO_COMMENTS = [
-  // Short reactions
-  'lol',
-  'nice!',
-  '🔥🔥🔥',
-  'based',
-  'GOAT',
-  '😂😂😂',
-  '草',
-  '666',
-  'W',
-  '❤️',
-  '⚡️',
-  '💀💀💀',
-  // Medium phrases
-  'this is amazing',
-  'bruh moment',
-  'legendary',
-  'no way',
-  'sheesh',
-  'lets gooo',
-  'fire content',
-  'pure gold',
-  'mind blown',
-  'facts only',
-  'so true',
-  'big if true',
-  // Longer comments
-  'this is exactly what I needed to see today',
-  'been waiting for someone to explain this properly',
-  'underrated content right here',
-  'this changes everything I thought I knew',
-  'finally someone gets it',
-  'sharing this with everyone I know',
-  'came for the memes, stayed for the knowledge',
-  'the algorithm blessed me today',
-  'this deserves way more views',
-  'take my sats, you earned it',
-  'best explanation on the internet',
-  'I watch this part on repeat',
-  'this is the content we need more of',
-  'absolute banger of a video',
-  'saved to watch again later',
-  'my face when I understood this 🤯',
-  'commenting so I can find this later',
-  'the real treasure is in the comments',
-  'you just blew my mind',
-  'this hit different at 2am',
-]
 
 interface TimelineMarkersProps {
   duration: number
   currentTime: number
   onSeekToMarker?: (time: number) => void
+  eventId?: string
+  authorPubkey?: string
 }
 
-// Generate clustered timeline comments
-function generateTimelineComments(duration: number): TimelineComment[] {
-  if (duration <= 0) return []
+// Parse a zap event to extract sender info and amount
+function parseZapEvent(
+  zap: NostrEvent,
+  duration: number,
+  seededRandom: () => number
+): TimelineZap | null {
+  try {
+    // Get bolt11 from tags to calculate amount
+    const bolt11Tag = zap.tags.find(t => t[0] === 'bolt11')
+    const bolt11 = bolt11Tag?.[1]
+    if (!bolt11) return null
 
-  // Generate comments for timeline markers (1 per 2 seconds, max 150)
-  const count = Math.min(150, Math.floor(duration / 2))
-  const comments: TimelineComment[] = []
-  const now = Date.now()
+    const zapAmount = getInvoiceAmount(bolt11)
+    if (zapAmount <= 0) return null
 
-  for (let i = 0; i < count; i++) {
-    const owner = DEMO_USERS[Math.floor(Math.random() * DEMO_USERS.length)]
-    // Higher zap amounts for bigger markers
-    const zapAmount = Math.floor(1 + Math.random() * 500)
+    // Get the zap request from description tag (contains sender info and comment)
+    const descriptionTag = zap.tags.find(t => t[0] === 'description')
+    const descriptionJson = descriptionTag?.[1]
+    if (!descriptionJson) return null
 
-    comments.push({
-      id: i,
-      text: DEMO_COMMENTS[Math.floor(Math.random() * DEMO_COMMENTS.length)],
-      videoTime: Math.random() * duration,
-      ownerName: owner.name,
-      ownerAvatar: owner.avatar,
-      postedAt: new Date(now - Math.random() * 30 * 24 * 60 * 60 * 1000), // Up to 30 days ago
+    const zapRequest = JSON.parse(descriptionJson) as NostrEvent
+    const senderPubkey = zapRequest.pubkey
+    const comment = zapRequest.content || '' // Empty if no comment
+
+    // Generate random video timestamp using seeded random for consistency
+    const videoTime = seededRandom() * duration
+
+    return {
+      id: zap.id,
+      text: comment,
+      videoTime,
+      senderPubkey,
+      postedAt: new Date(zap.created_at * 1000),
       zapAmount,
-    })
+    }
+  } catch {
+    return null
+  }
+}
+
+// Create a seeded random number generator for consistent random positions
+function createSeededRandom(seed: string): () => number {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32bit integer
   }
 
-  return comments.sort((a, b) => a.videoTime - b.videoTime)
+  return () => {
+    hash = Math.imul(hash ^ (hash >>> 15), hash | 1)
+    hash ^= hash + Math.imul(hash ^ (hash >>> 7), hash | 61)
+    return ((hash ^ (hash >>> 14)) >>> 0) / 4294967296
+  }
 }
 
-// Cluster nearby comments to avoid overlap
+// Cluster nearby zaps to avoid overlap
 interface MarkerCluster {
   id: string
   position: number // percentage
-  comments: TimelineComment[]
+  zaps: TimelineZap[]
   totalZaps: number
 }
 
-function clusterComments(comments: TimelineComment[], duration: number): MarkerCluster[] {
-  if (duration <= 0 || comments.length === 0) return []
+function clusterZaps(zaps: TimelineZap[], duration: number): MarkerCluster[] {
+  if (duration <= 0 || zaps.length === 0) return []
 
   const clusters: MarkerCluster[] = []
   const clusterThreshold = 2 // percentage threshold for clustering
 
-  for (const comment of comments) {
-    const position = (comment.videoTime / duration) * 100
+  for (const zap of zaps) {
+    const position = (zap.videoTime / duration) * 100
 
     // Find existing cluster within threshold
     const existingCluster = clusters.find(c => Math.abs(c.position - position) < clusterThreshold)
 
     if (existingCluster) {
-      existingCluster.comments.push(comment)
-      existingCluster.totalZaps += comment.zapAmount
+      existingCluster.zaps.push(zap)
+      existingCluster.totalZaps += zap.zapAmount
       // Recalculate position as average
       existingCluster.position =
-        existingCluster.comments.reduce((sum, c) => sum + (c.videoTime / duration) * 100, 0) /
-        existingCluster.comments.length
+        existingCluster.zaps.reduce((sum, z) => sum + (z.videoTime / duration) * 100, 0) /
+        existingCluster.zaps.length
     } else {
       clusters.push({
-        id: `cluster-${comment.id}`,
+        id: `cluster-${zap.id}`,
         position,
-        comments: [comment],
-        totalZaps: comment.zapAmount,
+        zaps: [zap],
+        totalZaps: zap.zapAmount,
       })
     }
   }
@@ -151,33 +130,68 @@ function clusterComments(comments: TimelineComment[], duration: number): MarkerC
   return clusters
 }
 
+// Avatar component that fetches profile
+const ZapperAvatar = memo(function ZapperAvatar({
+  pubkey,
+  size,
+}: {
+  pubkey: string
+  size: number
+}) {
+  const profile = useProfile({ pubkey })
+
+  if (profile?.picture) {
+    return (
+      <img src={profile.picture} alt="" className="w-full h-full object-cover" loading="lazy" />
+    )
+  }
+
+  // Fallback: white background with lightning icon
+  return (
+    <div className="w-full h-full bg-white/80 flex items-center justify-center">
+      <Zap className="text-black" style={{ width: size * 0.6, height: size * 0.6 }} />
+    </div>
+  )
+})
+
 // Individual marker component
 const TimelineMarker = memo(function TimelineMarker({
   cluster,
   isActive,
-  onHover,
-  onLeave,
-  onClick,
+  onHoverChange,
+  onSeek,
 }: {
   cluster: MarkerCluster
   isActive: boolean
-  onHover: () => void
-  onLeave: () => void
-  onClick: () => void
+  onHoverChange: (clusterId: string | null) => void
+  onSeek: (time: number) => void
 }) {
-  const topComment = cluster.comments[0]
+  const topZap = cluster.zaps[0]
   // Size based on zap amount (min 12px, max 24px)
   const baseSize = 12
-  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 50))
+  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 500))
   const size = baseSize + zapBonus
+
+  const handleMouseEnter = useCallback(() => {
+    onHoverChange(cluster.id)
+  }, [cluster.id, onHoverChange])
+
+  const handleMouseLeave = useCallback(() => {
+    onHoverChange(null)
+  }, [onHoverChange])
+
+  const handleClick = useCallback(() => {
+    const avgTime = cluster.zaps.reduce((sum, z) => sum + z.videoTime, 0) / cluster.zaps.length
+    onSeek(avgTime)
+  }, [cluster.zaps, onSeek])
 
   return (
     <div
       className="absolute bottom-0 transform -translate-x-1/2 cursor-pointer z-10 group flex flex-col items-center"
       style={{ left: `${cluster.position}%` }}
-      onMouseEnter={onHover}
-      onMouseLeave={onLeave}
-      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
     >
       {/* Marker dot/avatar - sits above the line */}
       <div
@@ -189,18 +203,7 @@ const TimelineMarker = memo(function TimelineMarker({
           height: `${size}px`,
         }}
       >
-        {size >= 12 ? (
-          <img
-            src={topComment.ownerAvatar}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className={`w-full h-full ${cluster.totalZaps > 100 ? 'bg-yellow-400' : 'bg-white/80'}`}
-          />
-        )}
+        <ZapperAvatar pubkey={topZap.senderPubkey} size={size} />
       </div>
 
       {/* Vertical line indicator - extends down to connect to track */}
@@ -219,6 +222,8 @@ const MarkerTooltip = memo(function MarkerTooltip({
 }) {
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [adjustedPosition, setAdjustedPosition] = useState(cluster.position)
+  const zap = cluster.zaps[0]
+  const profile = useProfile({ pubkey: zap.senderPubkey })
 
   // Adjust tooltip position to keep it within bounds
   useEffect(() => {
@@ -237,7 +242,7 @@ const MarkerTooltip = memo(function MarkerTooltip({
     }
   }, [cluster.position, containerWidth])
 
-  const comment = cluster.comments[0]
+  const displayName = profile?.display_name || profile?.name || zap.senderPubkey.slice(0, 8)
 
   // Calculate marker height to position tooltip above it
   const markerHeight = 24 + 12 // max marker size + line height
@@ -250,30 +255,31 @@ const MarkerTooltip = memo(function MarkerTooltip({
     >
       <div className="bg-black/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 overflow-hidden">
         <div className="px-3 py-2">
-          <div className="flex items-start gap-2.5 min-w-[180px] max-w-[280px]">
-            <img
-              src={comment.ownerAvatar}
-              alt={comment.ownerName}
-              className="w-8 h-8 rounded-full flex-shrink-0"
-            />
+          <div className="flex items-start gap-2.5 max-w-[280px]">
+            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+              <ZapperAvatar pubkey={zap.senderPubkey} size={32} />
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-white text-xs font-semibold truncate">
-                  {comment.ownerName}
-                </span>
+                <span className="text-white text-xs font-semibold truncate">{displayName}</span>
                 <span className="text-white/50 text-[10px]">
-                  {formatDistanceToNow(comment.postedAt, { addSuffix: true })}
+                  {formatDistanceToNow(zap.postedAt, { addSuffix: true })}
                 </span>
               </div>
-              <p className="text-white/90 text-sm mt-0.5 break-words">{comment.text}</p>
-              {comment.zapAmount > 0 && (
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-yellow-400 text-xs">⚡</span>
-                  <span className="text-yellow-400 text-xs font-medium">
-                    {comment.zapAmount.toLocaleString()} sats
-                  </span>
-                </div>
+              {zap.text ? (
+                <p className="text-white/90 text-sm mt-0.5 break-words">{zap.text}</p>
+              ) : (
+                <p className="text-white/50 text-sm mt-0.5 italic flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                  zapped
+                </p>
               )}
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-yellow-400 text-xs">⚡</span>
+                <span className="text-yellow-400 text-xs font-medium">
+                  {formatCompactNumber(zap.zapAmount)} sats
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -291,16 +297,36 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   currentTime,
   onSeekToMarker,
+  eventId,
+  authorPubkey,
 }: TimelineMarkersProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
-  // Generate comments once per duration
-  const comments = useMemo(() => generateTimelineComments(duration), [duration])
+  // Fetch actual zaps for this video
+  const { zaps } = useEventZaps(eventId || '', authorPubkey || '')
 
-  // Cluster comments to avoid overlap
-  const clusters = useMemo(() => clusterComments(comments, duration), [comments, duration])
+  // Parse zaps into timeline format with random timestamps
+  const timelineZaps = useMemo(() => {
+    if (!zaps || zaps.length === 0 || duration <= 0 || !eventId) return []
+
+    // Create seeded random for consistent positions per video
+    const seededRandom = createSeededRandom(eventId)
+
+    const parsed: TimelineZap[] = []
+    for (const zap of zaps) {
+      const timelineZap = parseZapEvent(zap, duration, seededRandom)
+      if (timelineZap) {
+        parsed.push(timelineZap)
+      }
+    }
+
+    return parsed.sort((a, b) => a.videoTime - b.videoTime)
+  }, [zaps, duration, eventId])
+
+  // Cluster zaps to avoid overlap
+  const clusters = useMemo(() => clusterZaps(timelineZaps, duration), [timelineZaps, duration])
 
   // Find active cluster (near current time)
   const activeCluster = useMemo(() => {
@@ -325,29 +351,44 @@ export const TimelineMarkers = memo(function TimelineMarkers({
     return () => resizeObserver.disconnect()
   }, [])
 
-  const hoveredCluster = clusters.find(c => c.id === hoveredClusterId)
+  // Memoize hovered cluster lookup
+  const hoveredCluster = useMemo(
+    () => clusters.find(c => c.id === hoveredClusterId),
+    [clusters, hoveredClusterId]
+  )
+
+  // Memoize active zap for tooltip
+  const activeZap = useMemo(
+    () => (activeCluster && !hoveredCluster ? activeCluster.zaps[0] : null),
+    [activeCluster, hoveredCluster]
+  )
+
+  // Stable callback for hover changes
+  const handleHoverChange = useCallback((clusterId: string | null) => {
+    setHoveredClusterId(clusterId)
+  }, [])
+
+  // Stable callback for seeking
+  const handleSeek = useCallback(
+    (time: number) => {
+      onSeekToMarker?.(time)
+    },
+    [onSeekToMarker]
+  )
 
   if (clusters.length === 0) return null
 
-  // Simple text for active marker (no hover)
-  const activeComment = activeCluster && !hoveredCluster ? activeCluster.comments[0] : null
-
   return (
-    <div ref={containerRef} className="relative w-full overflow-visible">
+    <div ref={containerRef} className="relative w-full h-8 overflow-visible">
       {/* Markers container - markers position themselves above this line */}
-      <div className="relative w-full pointer-events-auto">
+      <div className="relative w-full h-full pointer-events-auto">
         {clusters.map(cluster => (
           <TimelineMarker
             key={cluster.id}
             cluster={cluster}
             isActive={activeCluster?.id === cluster.id}
-            onHover={() => setHoveredClusterId(cluster.id)}
-            onLeave={() => setHoveredClusterId(null)}
-            onClick={() => {
-              const avgTime =
-                cluster.comments.reduce((sum, c) => sum + c.videoTime, 0) / cluster.comments.length
-              onSeekToMarker?.(avgTime)
-            }}
+            onHoverChange={handleHoverChange}
+            onSeek={handleSeek}
           />
         ))}
       </div>
@@ -356,13 +397,20 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       {hoveredCluster && <MarkerTooltip cluster={hoveredCluster} containerWidth={containerWidth} />}
 
       {/* Simple text tooltip - shown for active marker when not hovering */}
-      {activeComment && activeCluster && (
+      {activeZap && activeCluster && (
         <div
           className="absolute transform -translate-x-1/2 z-40 pointer-events-none animate-in fade-in duration-150"
           style={{ left: `${activeCluster.position}%`, bottom: '48px' }}
         >
-          <div className="px-2 py-1 bg-black/60 rounded text-white text-sm whitespace-nowrap max-w-[200px] truncate">
-            {activeComment.text}
+          <div className="px-2 py-1 bg-black/60 rounded text-white text-sm whitespace-nowrap max-w-[200px] truncate flex items-center gap-1">
+            {activeZap.text || (
+              <>
+                <Zap className="w-3 h-3 text-yellow-400" />
+                <span className="text-yellow-400">
+                  {formatCompactNumber(activeZap.zapAmount)} sats
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -29,6 +29,7 @@ interface VideoPlayerProps {
   contentWarning?: string
   sha256?: string
   authorPubkey?: string
+  eventId?: string
   initialPlayPos?: number
   onAllSourcesFailed?: (urls: string[]) => void
   cinemaMode?: boolean
@@ -51,6 +52,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   contentWarning,
   sha256,
   authorPubkey,
+  eventId,
   initialPlayPos = 0,
   onAllSourcesFailed,
   cinemaMode = false,
@@ -814,6 +816,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleCinemaMode={onToggleCinemaMode}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
+        eventId={eventId}
+        authorPubkey={authorPubkey}
       />
     </div>
   )

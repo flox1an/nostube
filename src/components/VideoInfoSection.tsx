@@ -234,7 +234,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   return (
     <>
-      <div className="flex flex-col gap-4 px-2 md:px-0">
+      <div className="flex flex-col gap-4 px-2 md:px-0 min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           {video?.title && (
             <h1 className="text-xl md:text-2xl font-bold line-clamp-2 md:line-clamp-none">
@@ -366,7 +366,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           Array.isArray(video.languages) &&
           video.languages.length > 0) ||
         geohash ? (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          <div className="flex flex-wrap gap-2 pb-1">
             {/* Language badges with flag + shortcode */}
             {video &&
               'languages' in video &&
@@ -374,7 +374,11 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               (video.languages as string[]).map((lang: string) => {
                 const { flag, code } = getLanguageDisplay(lang)
                 return (
-                  <Badge key={`lang-${lang}`} variant="outline" className="shrink-0">
+                  <Badge
+                    key={`lang-${lang}`}
+                    variant="outline"
+                    className="shrink-0 whitespace-nowrap"
+                  >
                     {flag} {code}
                   </Badge>
                 )
@@ -385,7 +389,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
                   <Badge
                     variant="secondary"
-                    className="shrink-0 cursor-pointer hover:bg-secondary/80"
+                    className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
                   >
                     #{tag}
                   </Badge>

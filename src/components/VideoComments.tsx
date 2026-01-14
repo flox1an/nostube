@@ -302,7 +302,7 @@ const CommentItem = React.memo(function CommentItem({
                     <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
                   )}
                   {/* L-shaped connector from parent to reply */}
-                  <div className="absolute left-3 top-0 h-5 w-4 rounded-bl-lg border-l border-b border-border" />
+                  <div className="absolute left-3 top-0 h-4 w-4 rounded-bl-lg border-l border-b border-border" />
                   <div className="flex-1 pl-6">
                     <CommentItem
                       comment={reply}

@@ -67,6 +67,10 @@ interface ControlBarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
 
+  // Timeline markers
+  eventId?: string
+  authorPubkey?: string
+
   // Optional children (for additional controls)
   children?: ReactNode
 }
@@ -109,6 +113,8 @@ export const ControlBar = memo(function ControlBar({
   onToggleCinemaMode,
   isFullscreen,
   onToggleFullscreen,
+  eventId,
+  authorPubkey,
   children,
 }: ControlBarProps) {
   // Use hook directly for reliable mobile detection
@@ -136,6 +142,8 @@ export const ControlBar = memo(function ControlBar({
           bufferedPercentage={bufferedPercentage}
           onSeek={onSeek}
           onSeekingChange={onSeekingChange}
+          eventId={eventId}
+          authorPubkey={authorPubkey}
         />
       </div>
 

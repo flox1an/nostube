@@ -17,6 +17,7 @@ export interface ZapRequestParams {
   comment?: string
   relays: string[]
   event?: NostrEvent // The actual event to zap (includes d tag for addressable events)
+  timestamp?: number // Video timestamp in seconds (for timestamped zaps)
 }
 
 /**
@@ -30,13 +31,14 @@ export async function getRecipientZapEndpoint(profile: NostrEvent): Promise<stri
  * Create an unsigned zap request event template
  */
 export function createZapRequest(params: ZapRequestParams): EventTemplate {
-  const { recipientPubkey, amount, comment, relays, event } = params
+  const { recipientPubkey, amount, comment, relays, event, timestamp } = params
 
   const amountMsats = amount * 1000
 
+  let template: EventTemplate
   if (event) {
     // Zapping an event - pass the actual event so d tag is preserved for addressable events
-    return makeZapRequest({
+    template = makeZapRequest({
       event,
       amount: amountMsats,
       comment,
@@ -44,13 +46,20 @@ export function createZapRequest(params: ZapRequestParams): EventTemplate {
     })
   } else {
     // Zapping a profile
-    return makeZapRequest({
+    template = makeZapRequest({
       pubkey: recipientPubkey,
       amount: amountMsats,
       comment,
       relays,
     })
   }
+
+  // Add timestamp tag if provided (for video timestamped zaps)
+  if (timestamp !== undefined && timestamp >= 0) {
+    template.tags = [...template.tags, ['timestamp', Math.floor(timestamp).toString()]]
+  }
+
+  return template
 }
 
 /**

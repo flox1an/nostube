@@ -49,12 +49,20 @@ export function useIsMobile() {
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const handleChange = () => setIsMobile(getIsMobile())
 
+    // Debounced resize handler to avoid excessive re-renders
+    let resizeTimeout: ReturnType<typeof setTimeout>
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(handleChange, 150)
+    }
+
     mediaQuery.addEventListener('change', handleChange)
-    window.addEventListener('resize', handleChange)
+    window.addEventListener('resize', handleResize)
 
     return () => {
+      clearTimeout(resizeTimeout)
       mediaQuery.removeEventListener('change', handleChange)
-      window.removeEventListener('resize', handleChange)
+      window.removeEventListener('resize', handleResize)
     }
   }, [])
 

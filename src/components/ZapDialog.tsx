@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile, useEventZaps } from '@/hooks'
 import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
@@ -20,15 +21,28 @@ import { toast } from 'sonner'
 
 const PRESET_AMOUNTS = [21, 100, 500, 1000, 5000]
 
+// Format seconds as mm:ss or h:mm:ss
+function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 interface ZapDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
-  onZap: (amount: number, comment?: string) => Promise<boolean>
+  onZap: (amount: number, comment?: string, timestamp?: number) => Promise<boolean>
   isZapping: boolean
   isWalletConnected: boolean
-  generateInvoice?: (amount: number, comment?: string) => Promise<string | null>
+  generateInvoice?: (amount: number, comment?: string, timestamp?: number) => Promise<string | null>
+  timestamp?: number // Video timestamp in seconds (for timestamped zaps)
 }
 
 export const ZapDialog = memo(function ZapDialog({
@@ -40,6 +54,7 @@ export const ZapDialog = memo(function ZapDialog({
   isZapping,
   isWalletConnected,
   generateInvoice,
+  timestamp,
 }: ZapDialogProps) {
   const [selectedAmount, setSelectedAmount] = useState<number>(100)
   const [customAmount, setCustomAmount] = useState('')
@@ -47,6 +62,7 @@ export const ZapDialog = memo(function ZapDialog({
   const [invoice, setInvoice] = useState<string | null>(null)
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [includeTimestamp, setIncludeTimestamp] = useState(true)
   const profile = useProfile({ pubkey: authorPubkey })
 
   // Track if we've already handled this invoice's payment
@@ -60,12 +76,15 @@ export const ZapDialog = memo(function ZapDialog({
 
   const effectiveAmount = customAmount ? parseInt(customAmount, 10) : selectedAmount
 
-  // Reset invoice when dialog closes
+  // Reset state when dialog closes/opens
   useEffect(() => {
     if (!open) {
       setInvoice(null)
       setCopied(false)
       handledInvoiceRef.current = null
+    } else {
+      // Reset timestamp checkbox to checked when dialog opens
+      setIncludeTimestamp(true)
     }
   }, [open])
 
@@ -116,9 +135,12 @@ export const ZapDialog = memo(function ZapDialog({
   const handleZap = useCallback(async () => {
     if (effectiveAmount < 1) return
 
+    // Only include timestamp if checkbox is checked
+    const effectiveTimestamp = includeTimestamp ? timestamp : undefined
+
     // If wallet is connected, use the normal zap flow
     if (isWalletConnected) {
-      const success = await onZap(effectiveAmount, comment || undefined)
+      const success = await onZap(effectiveAmount, comment || undefined, effectiveTimestamp)
       if (success) {
         onOpenChange(false)
         setComment('')
@@ -133,14 +155,27 @@ export const ZapDialog = memo(function ZapDialog({
 
     setIsGeneratingInvoice(true)
     try {
-      const bolt11 = await generateInvoice(effectiveAmount, comment || undefined)
+      const bolt11 = await generateInvoice(
+        effectiveAmount,
+        comment || undefined,
+        effectiveTimestamp
+      )
       if (bolt11) {
         setInvoice(bolt11)
       }
     } finally {
       setIsGeneratingInvoice(false)
     }
-  }, [effectiveAmount, comment, onZap, onOpenChange, isWalletConnected, generateInvoice])
+  }, [
+    effectiveAmount,
+    comment,
+    onZap,
+    onOpenChange,
+    isWalletConnected,
+    generateInvoice,
+    timestamp,
+    includeTimestamp,
+  ])
 
   const handleCopyInvoice = useCallback(async () => {
     if (!invoice) return
@@ -299,6 +334,20 @@ export const ZapDialog = memo(function ZapDialog({
             />
             <p className="text-right text-xs text-muted-foreground">{comment.length}/140</p>
           </div>
+
+          {/* Timestamp checkbox (only shown when timestamp is available) */}
+          {timestamp !== undefined && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="include-timestamp"
+                checked={includeTimestamp}
+                onCheckedChange={checked => setIncludeTimestamp(checked === true)}
+              />
+              <Label htmlFor="include-timestamp" className="text-sm font-normal cursor-pointer">
+                at play position {formatTimestamp(timestamp)}
+              </Label>
+            </div>
+          )}
 
           {/* Zap button */}
           <Button

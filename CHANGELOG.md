@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Video player: SoundCloud-style timeline markers on progress bar showing comment/zap activity at specific timestamps; markers cluster to prevent overlap, display avatars for high-zap content, and show tooltips with comment text, author info, and zap amounts on hover; clicking a marker seeks to that position (experimental, using sample data)
+- Zaps: timestamped zaps - when zapping a video, the current play position is captured and included in the zap request via `['timestamp', '<seconds>']` tag; ZapDialog shows a checkbox "at play position X:XX" (checked by default) to optionally include the timestamp
+- Video player: SoundCloud-style timeline markers on progress bar showing zap activity; markers cluster to prevent overlap, display zapper avatars, and show tooltips with zap comment (or ⚡ icon for no-comment zaps), author info, and zap amounts on hover; clicking a marker seeks to that position; timestamps are randomly distributed (video-specific timestamps not yet supported)
 - Video player: volume setting now persists across sessions (stored in localStorage)
 - Comments: clicking "Replying to @user" badge in nested comments scrolls to and highlights the parent comment, auto-expanding collapsed ancestor threads
 - Upload: file size now displayed for pasted video URLs (fetched via HEAD request for Content-Length header)
@@ -56,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: fixed zap amount from previous video being displayed when navigating between videos (cached value now updates with eventId)
 - Video page: fixed wrong loading skeleton (video grid) showing when lazy-loading video page module (now shows video player + sidebar skeleton)
 - Build: fixed ESLint errors - empty interface in kbd.tsx (changed to type alias) and conditional useMemo hook in VideoPage.tsx (moved before early return)
+- Comments: fixed L-shaped threading connector line not aligning with avatar center (changed height from h-5 to h-4)
+- Video page: fixed tag/language badges wrapping on small screens (now scroll horizontally with flex-nowrap and whitespace-nowrap)
 
 ## [1.0.0] - 2025-01-08
 

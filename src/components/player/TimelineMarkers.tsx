@@ -144,14 +144,14 @@ const TimelineMarker = memo(function TimelineMarker({
   onClick: () => void
 }) {
   const topComment = cluster.comments[0]
-  // Size based on total zaps (min 6px, max 16px for multiple comments)
-  const baseSize = cluster.comments.length > 1 ? 10 : 6
-  const zapBonus = Math.min(6, Math.floor(cluster.totalZaps / 200))
+  // Size based on total zaps (min 8px, max 20px for multiple comments)
+  const baseSize = cluster.comments.length > 1 ? 12 : 8
+  const zapBonus = Math.min(8, Math.floor(cluster.totalZaps / 150))
   const size = baseSize + zapBonus
 
   return (
     <div
-      className="absolute bottom-full transform -translate-x-1/2 cursor-pointer z-10 group flex flex-col items-center"
+      className="absolute bottom-0 transform -translate-x-1/2 cursor-pointer z-10 group flex flex-col items-center"
       style={{ left: `${cluster.position}%` }}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -322,13 +322,9 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   if (clusters.length === 0) return null
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 pointer-events-none overflow-visible"
-      style={{ zIndex: 15 }}
-    >
-      {/* Markers - each positioned absolutely relative to this container */}
-      <div className="relative w-full h-full pointer-events-auto">
+    <div ref={containerRef} className="relative w-full overflow-visible">
+      {/* Markers container - markers position themselves above this line */}
+      <div className="relative w-full pointer-events-auto">
         {clusters.map(cluster => (
           <TimelineMarker
             key={cluster.id}

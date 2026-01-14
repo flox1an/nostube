@@ -144,9 +144,9 @@ const TimelineMarker = memo(function TimelineMarker({
   onClick: () => void
 }) {
   const topComment = cluster.comments[0]
-  // Size based on total zaps (min 8px, max 20px for multiple comments)
-  const baseSize = cluster.comments.length > 1 ? 12 : 8
-  const zapBonus = Math.min(8, Math.floor(cluster.totalZaps / 150))
+  // Size based on total zaps (min 12px, max 28px for multiple comments)
+  const baseSize = cluster.comments.length > 1 ? 16 : 12
+  const zapBonus = Math.min(12, Math.floor(cluster.totalZaps / 100))
   const size = baseSize + zapBonus
 
   return (

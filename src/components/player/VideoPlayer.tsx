@@ -4,12 +4,15 @@ import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import { Loader2 } from 'lucide-react'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
-import { useHls } from './hooks/useHls'
-import { usePlayerState } from './hooks/usePlayerState'
-import { useControlsVisibility } from './hooks/useControlsVisibility'
-import { useSeekAccumulator } from './hooks/useSeekAccumulator'
-import { useAdaptiveQuality } from './hooks/useAdaptiveQuality'
-import { useValidatedTextTracks } from './hooks/useValidatedTextTracks'
+import {
+  useHls,
+  usePlayerState,
+  useControlsVisibility,
+  useSeekAccumulator,
+  useAdaptiveQuality,
+  useValidatedTextTracks,
+  useVideoVariantSelector,
+} from './hooks'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
@@ -98,35 +101,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
 
-  // Compute default quality index: prefer 1080p, then 720p, else first
-  const defaultQualityIndex = useMemo(() => {
-    if (!videoVariants || videoVariants.length === 0) return 0
-    const idx1080 = videoVariants.findIndex(v => v.quality === '1080p')
-    if (idx1080 !== -1) return idx1080
-    const idx720 = videoVariants.findIndex(v => v.quality === '720p')
-    if (idx720 !== -1) return idx720
-    return 0
-  }, [videoVariants])
-
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(defaultQualityIndex)
-  const pendingSeekTimeRef = useRef<number | null>(null)
-  const wasPlayingRef = useRef(false)
-
-  // Compute URLs based on selected variant
-  const effectiveUrls = useMemo(() => {
-    if (videoVariants && videoVariants.length > 0 && selectedVariantIndex < videoVariants.length) {
-      const variant = videoVariants[selectedVariantIndex]
-      return [variant.url, ...variant.fallbackUrls]
-    }
-    return urls
-  }, [videoVariants, selectedVariantIndex, urls])
-
-  const effectiveSha256 = useMemo(() => {
-    if (videoVariants && videoVariants.length > 0 && selectedVariantIndex < videoVariants.length) {
-      return videoVariants[selectedVariantIndex].hash || sha256
-    }
-    return sha256
-  }, [videoVariants, selectedVariantIndex, sha256])
+  // Video quality variant selector with position preservation
+  const {
+    selectedVariantIndex,
+    effectiveUrls,
+    effectiveSha256,
+    handleVariantChange,
+  } = useVideoVariantSelector({
+    videoRef,
+    videoVariants,
+    urls,
+    sha256,
+  })
 
   // Store callbacks in refs to avoid dependency issues
   const onAllSourcesFailedRef = useRef(onAllSourcesFailed)
@@ -218,42 +204,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     stepSize: 5,
     debounceMs: 500,
   })
-
-  // Handle quality change
-  const handleVariantChange = useCallback(
-    (newIndex: number) => {
-      if (newIndex === selectedVariantIndex) return
-
-      const el = videoRef.current
-      if (el) {
-        pendingSeekTimeRef.current = el.currentTime
-        wasPlayingRef.current = !el.paused
-      }
-      setSelectedVariantIndex(newIndex)
-    },
-    [selectedVariantIndex]
-  )
-
-  // Restore playback position after quality change
-  useEffect(() => {
-    if (pendingSeekTimeRef.current === null) return
-
-    const el = videoRef.current
-    if (!el) return
-
-    const handleCanPlay = () => {
-      if (pendingSeekTimeRef.current !== null) {
-        el.currentTime = pendingSeekTimeRef.current
-        pendingSeekTimeRef.current = null
-        if (wasPlayingRef.current) {
-          el.play().catch(() => {})
-        }
-      }
-    }
-
-    el.addEventListener('canplay', handleCanPlay, { once: true })
-    return () => el.removeEventListener('canplay', handleCanPlay)
-  }, [selectedVariantIndex])
 
   // Adaptive quality - auto-downgrade on buffering/slow network (only for non-HLS)
   useAdaptiveQuality({

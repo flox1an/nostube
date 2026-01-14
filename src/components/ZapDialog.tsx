@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { UserAvatar } from '@/components/UserAvatar'
+import { EmojiPicker } from '@/components/EmojiPicker'
 import { useProfile, useEventZaps } from '@/hooks'
 import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -63,6 +64,7 @@ export const ZapDialog = memo(function ZapDialog({
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
   const [copied, setCopied] = useState(false)
   const [includeTimestamp, setIncludeTimestamp] = useState(true)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const profile = useProfile({ pubkey: authorPubkey })
 
   // Track if we've already handled this invoice's payment
@@ -130,6 +132,11 @@ export const ZapDialog = memo(function ZapDialog({
 
   const handleCommentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setComment(e.target.value.slice(0, 140))
+  }, [])
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setComment(prev => (prev + emoji).slice(0, 140))
+    setEmojiPickerOpen(false)
   }, [])
 
   const handleZap = useCallback(async () => {
@@ -332,7 +339,14 @@ export const ZapDialog = memo(function ZapDialog({
               maxLength={140}
               rows={2}
             />
-            <p className="text-right text-xs text-muted-foreground">{comment.length}/140</p>
+            <div className="flex items-center justify-between">
+              <EmojiPicker
+                open={emojiPickerOpen}
+                onOpenChange={setEmojiPickerOpen}
+                onEmojiSelect={handleEmojiSelect}
+              />
+              <span className="text-xs text-muted-foreground">{comment.length}/140</span>
+            </div>
           </div>
 
           {/* Timestamp checkbox (only shown when timestamp is available) */}

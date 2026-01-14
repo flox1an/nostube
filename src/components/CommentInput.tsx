@@ -1,138 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Smile } from 'lucide-react'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-
-// Common emoji categories for quick access
-const EMOJI_CATEGORIES = [
-  {
-    name: 'smileys',
-    emojis: [
-      '😀',
-      '😃',
-      '😄',
-      '😁',
-      '😅',
-      '😂',
-      '🤣',
-      '😊',
-      '😇',
-      '🙂',
-      '😉',
-      '😍',
-      '🥰',
-      '😘',
-      '😋',
-      '😛',
-      '🤪',
-      '😜',
-      '🤨',
-      '🧐',
-      '🤓',
-      '😎',
-      '🥳',
-      '😏',
-      '😒',
-      '😞',
-      '😔',
-      '😟',
-      '😕',
-      '🙁',
-      '😣',
-      '😖',
-      '😫',
-      '😩',
-      '🥺',
-      '😢',
-      '😭',
-      '😤',
-      '😠',
-      '😡',
-    ],
-  },
-  {
-    name: 'gestures',
-    emojis: [
-      '👍',
-      '👎',
-      '👏',
-      '🙌',
-      '👐',
-      '🤲',
-      '🤝',
-      '🙏',
-      '✌️',
-      '🤞',
-      '🤟',
-      '🤘',
-      '🤙',
-      '👈',
-      '👉',
-      '👆',
-      '👇',
-      '☝️',
-      '✋',
-      '🤚',
-      '🖐️',
-      '🖖',
-      '👋',
-      '🤏',
-      '✍️',
-      '💪',
-    ],
-  },
-  {
-    name: 'hearts',
-    emojis: [
-      '❤️',
-      '🧡',
-      '💛',
-      '💚',
-      '💙',
-      '💜',
-      '🖤',
-      '🤍',
-      '🤎',
-      '💔',
-      '❤️‍🔥',
-      '❤️‍🩹',
-      '💕',
-      '💞',
-      '💓',
-      '💗',
-      '💖',
-      '💘',
-      '💝',
-    ],
-  },
-  {
-    name: 'reactions',
-    emojis: [
-      '🔥',
-      '⭐',
-      '✨',
-      '💯',
-      '💥',
-      '💫',
-      '🎉',
-      '🎊',
-      '🏆',
-      '🥇',
-      '🎯',
-      '💡',
-      '💪',
-      '👀',
-      '🤔',
-      '💀',
-      '☠️',
-      '👻',
-      '🤖',
-      '👽',
-    ],
-  },
-]
+import { EmojiPicker } from '@/components/EmojiPicker'
 
 interface CommentInputProps {
   value: string
@@ -282,45 +152,11 @@ export const CommentInput = React.memo(function CommentInput({
             {isFocused && (
               <div className="flex items-center justify-between mt-2">
                 {/* Emoji picker */}
-                <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-full"
-                      aria-label="Add emoji"
-                    >
-                      <Smile className="h-5 w-5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-80 p-2"
-                    align="start"
-                    side="bottom"
-                    sideOffset={8}
-                    onOpenAutoFocus={e => e.preventDefault()}
-                  >
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {EMOJI_CATEGORIES.map(category => (
-                        <div key={category.name}>
-                          <div className="flex flex-wrap gap-1">
-                            {category.emojis.map(emoji => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => handleEmojiSelect(emoji)}
-                                className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <EmojiPicker
+                  open={emojiPickerOpen}
+                  onOpenChange={setEmojiPickerOpen}
+                  onEmojiSelect={handleEmojiSelect}
+                />
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2">

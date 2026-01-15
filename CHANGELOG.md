@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Sidebar: hide Subscriptions and Playlists menu items in mini sidebar when not logged in (matches full sidebar behavior)
 - Playlists: playlist manager now shows video thumbnails and titles for each video in the accordion list; missing video events are automatically loaded from relays
 - Comments: improved highlight animation for parent comment navigation - smoother 1.5s fade with multi-step keyframes and CSS transitions
 - Comments: single replies are now auto-expanded (no expand button needed); expand/collapse button only shown when there are 2+ replies

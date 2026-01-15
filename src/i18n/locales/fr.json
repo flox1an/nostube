@@ -24,7 +24,8 @@
     "optional": "optionnel",
     "required": "Obligatoire",
     "available": "Disponible",
-    "close": "Fermer"
+    "close": "Fermer",
+    "notSet": "Non défini"
   },
   "navigation": {
     "home": "Accueil",
@@ -615,6 +616,8 @@
     "tagsLabel": "Tags",
     "tagsPlaceholder": "bitcoin, nostr, tutoriel",
     "tagsHelp": "Hashtags séparés par des virgules (sans symbole #)",
+    "languageLabel": "Langue",
+    "languagePlaceholder": "Sélectionner la langue",
     "contentWarningLabel": "Avertissement de contenu (NSFW)",
     "contentWarningPlaceholder": "Raison de l'avertissement",
     "submitButton": "Enregistrer les modifications",

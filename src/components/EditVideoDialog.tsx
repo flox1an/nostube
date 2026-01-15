@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Pencil, Loader2 } from 'lucide-react'
+import { LanguageSelect } from '@/components/ui/language-select'
 import { useNostrPublish } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ export function EditVideoDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState('')
+  const [language, setLanguage] = useState('')
   const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
   const [contentWarningReason, setContentWarningReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,6 +77,10 @@ export function EditVideoDialog({
         setContentWarningEnabled(false)
         setContentWarningReason('')
       }
+
+      // Extract language (l tag with ISO-639-1 namespace)
+      const languageTag = videoEvent.tags.find(t => t[0] === 'l' && t[2] === 'ISO-639-1')
+      setLanguage(languageTag?.[1] || '')
     }
   }, [open, videoEvent])
 
@@ -100,22 +106,10 @@ export function EditVideoDialog({
         .map(tag => tag.trim().toLowerCase().replace(/^#/, ''))
         .filter(tag => tag.length > 0)
 
-      // Preserve media-related tags from the original event
-      const preservedTags = videoEvent.tags.filter(tag => {
-        const key = tag[0]
-        // Preserve: d, imeta, duration, published_at, expiration, text-track, L, l (language), alt, client
-        return [
-          'd',
-          'imeta',
-          'duration',
-          'published_at',
-          'expiration',
-          'text-track',
-          'L',
-          'l',
-          'client',
-        ].includes(key)
-      })
+      // Preserve all tags EXCEPT the ones we're replacing (for future compatibility)
+      // We replace: title, alt, t (hashtags), L, l (language), content-warning
+      const replacedTagKeys = ['title', 'alt', 't', 'L', 'l', 'content-warning']
+      const preservedTags = videoEvent.tags.filter(tag => !replacedTagKeys.includes(tag[0]))
 
       // Build new tags array
       const newTags: string[][] = [
@@ -123,6 +117,12 @@ export function EditVideoDialog({
         ['title', title.trim()],
         ['alt', description.trim() || title.trim()],
         ...hashtagList.map(tag => ['t', tag]),
+        ...(language
+          ? [
+              ['L', 'ISO-639-1'],
+              ['l', language, 'ISO-639-1'],
+            ]
+          : []),
         ...(contentWarningEnabled
           ? [['content-warning', contentWarningReason.trim() || 'NSFW']]
           : []),
@@ -191,6 +191,19 @@ export function EditVideoDialog({
                 placeholder={t('editVideo.tagsPlaceholder')}
               />
               <p className="text-xs text-muted-foreground">{t('editVideo.tagsHelp')}</p>
+            </div>
+
+            {/* Language */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-language">{t('editVideo.languageLabel')}</Label>
+              <LanguageSelect
+                id="edit-language"
+                value={language}
+                onValueChange={setLanguage}
+                placeholder={t('editVideo.languagePlaceholder')}
+                allowNone
+                noneLabel={t('common.notSet')}
+              />
             </div>
 
             {/* Content Warning */}

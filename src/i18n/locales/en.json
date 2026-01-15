@@ -26,7 +26,8 @@
     "available": "Available",
     "close": "Close",
     "selectAll": "Select All",
-    "selectNone": "Select None"
+    "selectNone": "Select None",
+    "notSet": "Not set"
   },
   "navigation": {
     "home": "Home",
@@ -628,6 +629,8 @@
     "tagsLabel": "Tags",
     "tagsPlaceholder": "bitcoin, nostr, tutorial",
     "tagsHelp": "Comma-separated hashtags (without # symbol)",
+    "languageLabel": "Language",
+    "languagePlaceholder": "Select language",
     "contentWarningLabel": "Content warning (NSFW)",
     "contentWarningPlaceholder": "Reason for content warning",
     "submitButton": "Save Changes",

@@ -24,7 +24,8 @@
     "optional": "opcional",
     "required": "Requerido",
     "available": "Disponible",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "notSet": "No establecido"
   },
   "navigation": {
     "home": "Inicio",
@@ -616,6 +617,8 @@
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "bitcoin, nostr, tutorial",
     "tagsHelp": "Hashtags separados por comas (sin símbolo #)",
+    "languageLabel": "Idioma",
+    "languagePlaceholder": "Seleccionar idioma",
     "contentWarningLabel": "Advertencia de contenido (NSFW)",
     "contentWarningPlaceholder": "Razón de la advertencia",
     "submitButton": "Guardar cambios",

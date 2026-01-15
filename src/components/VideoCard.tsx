@@ -186,7 +186,7 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:-translate-y-0.5',
+        'p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
         maxWidth
       )}
       style={{ contain: 'layout style paint' }}

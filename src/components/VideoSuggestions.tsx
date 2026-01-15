@@ -76,7 +76,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
   return (
     <Link to={linkTo} className="group">
-      <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:-translate-y-0.5">
+      <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
         <div className="relative w-40 h-24 shrink-0">
           {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
           {!thumbnailLoaded &&

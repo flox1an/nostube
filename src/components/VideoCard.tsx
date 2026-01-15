@@ -69,7 +69,8 @@ export const VideoCard = React.memo(function VideoCard({
   const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
   const [fallbackFailed, setFallbackFailed] = useState(hasNoThumbnail)
 
-  const hoverPreviewEnabled = config.hoverPreview ?? true
+  // Hover preview disabled - causes unnecessary bandwidth usage
+  const hoverPreviewEnabled = false
 
   // Generate thumbnail URL with fallback to video URL if image fails
   const thumbnailUrl = useMemo(() => {

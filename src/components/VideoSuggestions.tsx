@@ -279,6 +279,9 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       blockedPubkeys,
     })
 
+    // Sort by publish date descending (newest first), fallback to created_at
+    filtered.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+
     return filtered.slice(0, 30) // Return up to 30 unique suggestions
   }, [
     authorSuggestions,

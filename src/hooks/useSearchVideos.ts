@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { processEvents } from '@/utils/video-event'
+import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent } from 'nostr-tools'
@@ -96,9 +96,10 @@ export function useSearchVideos({
   }, [eventStore, storeFilter])
 
   // Process events - only use search relay for discovery
+  // Sort by publish date descending (newest first), fallback to created_at
   const videos = useMemo(() => {
     const eventList = events ?? []
-    return processEvents(
+    const processed = processEvents(
       eventList,
       SEARCH_RELAYS,
       blockedPubkeys,
@@ -106,6 +107,7 @@ export function useSearchVideos({
       undefined,
       presetContent.nsfwPubkeys
     )
+    return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [events, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Reset hasLoaded when query changes to trigger reload

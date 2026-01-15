@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Video dates: all video timestamps now display `published_at` date (with `created_at` as fallback); video page shows "updated X ago" in parentheses when video was edited after publishing
+- Video feeds: all timelines and feeds now sorted by `published_at` date (with `created_at` as fallback) for correct video ordering; video page shows "updated X ago" in parentheses when video was edited after publishing
 - Video cards: hover effect changed from upward shift to centered zoom for smoother visual feedback
 - Sidebar: hide Subscriptions and Playlists menu items in mini sidebar when not logged in (matches full sidebar behavior)
 - Playlists: playlist manager now shows video thumbnails and titles for each video in the accordion list; missing video events are automatically loaded from relays

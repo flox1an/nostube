@@ -1,4 +1,4 @@
-import { processEvents } from '@/utils/video-event'
+import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useReportedPubkeys, useAppContext, useMissingVideos } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type TimelineLoader } from 'applesauce-loaders/loaders'
@@ -131,9 +131,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     })
   }, [loader, loading, exhausted])
 
-  // Process events to VideoEvent format
+  // Process events to VideoEvent format and sort by publish date
   const videos = useMemo(() => {
-    return processEvents(
+    const processed = processEvents(
       events,
       readRelays,
       blockedPubkeys,
@@ -141,6 +141,8 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       missingVideoIds,
       presetContent.nsfwPubkeys
     )
+    // Sort by publish date descending (newest first), fallback to created_at
+    return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,
     readRelays,

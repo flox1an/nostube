@@ -6,6 +6,7 @@ import {
   processEvent,
   processEvents,
   deduplicateByIdentifier,
+  getPublishDate,
   type VideoEvent,
 } from '@/utils/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
@@ -297,8 +298,8 @@ export function useHashtagVideos({
     // Deduplicate by identifier (same video posted as both addressable and regular events)
     const deduplicated = deduplicateByIdentifier(Array.from(videoMap.values()))
 
-    // Sort by timestamp descending (newest first)
-    return deduplicated.sort((a, b) => b.created_at - a.created_at)
+    // Sort by publish date descending (newest first), fallback to created_at
+    return deduplicated.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [nativeVideos, labeledVideos])
 
   // Cleanup loadMore subscription on unmount

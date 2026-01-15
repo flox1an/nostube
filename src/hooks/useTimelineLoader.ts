@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { cacheRequest } from '@/nostr/core'
-import { processEvents } from '@/utils/video-event'
+import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { of } from 'rxjs'
@@ -72,8 +72,9 @@ export function useTimelineLoader({
     }, [eventStore, filters]) ?? []
 
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
+  // Sort by publish date descending (newest first), fallback to created_at
   const videos = useMemo(() => {
-    return processEvents(
+    const processed = processEvents(
       events,
       relays,
       blockedPubkeys,
@@ -81,6 +82,7 @@ export function useTimelineLoader({
       undefined,
       presetContent.nsfwPubkeys
     )
+    return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Load initial events from relays

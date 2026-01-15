@@ -6,7 +6,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { useEffect, useMemo, useState } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { processEvents } from '@/utils/video-event'
+import { processEvents, getPublishDate } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
 import { type VideoType } from '@/contexts/AppContext'
 import { hashObjectBigInt } from '@/lib/utils'
@@ -44,7 +44,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
   const videos$ = useMemo(() => {
     const result = eventStore.timeline(filters).pipe(
       map(events => {
-        return processEvents(
+        const processed = processEvents(
           events,
           readRelays,
           blockedPubkeys,
@@ -52,6 +52,8 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
           missingVideoIds,
           presetContent.nsfwPubkeys
         )
+        // Sort by publish date descending (newest first), fallback to created_at
+        return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
       })
     )
     return result

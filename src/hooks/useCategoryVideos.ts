@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
-import { processEvents, type VideoEvent } from '@/utils/video-event'
+import { processEvents, getPublishDate, type VideoEvent } from '@/utils/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'
@@ -72,9 +72,10 @@ export function useCategoryVideos({
   }, [eventStore, filters])
 
   // Process events separately so relay/blockedPubkeys changes don't recreate observable
+  // Sort by publish date descending (newest first), fallback to created_at
   const videos = useMemo(() => {
     const eventList = events ?? []
-    return processEvents(
+    const processed = processEvents(
       eventList,
       relays,
       blockedPubkeys,
@@ -82,6 +83,7 @@ export function useCategoryVideos({
       undefined,
       presetContent.nsfwPubkeys
     )
+    return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Reset state when tags change to trigger reload

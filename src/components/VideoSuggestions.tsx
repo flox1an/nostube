@@ -257,11 +257,9 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const globalIsLoading = globalSuggestions.length === 0
 
   const suggestions = useMemo(() => {
-    const events = [...authorSuggestions, ...globalSuggestions]
-
-    // Process events into VideoEvent objects
-    const processedVideos: VideoEvent[] = []
-    for (const event of events) {
+    // Process author videos separately
+    const authorVideos: VideoEvent[] = []
+    for (const event of authorSuggestions) {
       const processed = processEvent(
         event,
         readRelays,
@@ -269,20 +267,43 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
         presetContent.nsfwPubkeys
       )
       if (processed) {
-        processedVideos.push(processed)
+        authorVideos.push(processed)
       }
     }
 
-    // Filter videos using the shared filter function
-    const filtered = filterVideoSuggestions(processedVideos, {
+    // Process global videos separately
+    const globalVideos: VideoEvent[] = []
+    for (const event of globalSuggestions) {
+      const processed = processEvent(
+        event,
+        readRelays,
+        config.blossomServers,
+        presetContent.nsfwPubkeys
+      )
+      if (processed) {
+        globalVideos.push(processed)
+      }
+    }
+
+    // Filter each section separately
+    const filteredAuthor = filterVideoSuggestions(authorVideos, {
+      currentVideoId,
+      blockedPubkeys,
+    })
+    const filteredGlobal = filterVideoSuggestions(globalVideos, {
       currentVideoId,
       blockedPubkeys,
     })
 
-    // Sort by publish date descending (newest first), fallback to created_at
-    filtered.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    // Sort each section by publish date descending (newest first)
+    filteredAuthor.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    filteredGlobal.sort((a, b) => getPublishDate(b) - getPublishDate(a))
 
-    return filtered.slice(0, 30) // Return up to 30 unique suggestions
+    // Combine: author videos first, then global (excluding duplicates)
+    const seenIds = new Set(filteredAuthor.map(v => v.id))
+    const uniqueGlobal = filteredGlobal.filter(v => !seenIds.has(v.id))
+
+    return [...filteredAuthor, ...uniqueGlobal].slice(0, 30)
   }, [
     authorSuggestions,
     globalSuggestions,

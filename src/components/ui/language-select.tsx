@@ -84,7 +84,7 @@ export function LanguageSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="z-[80]">
-        {allowNone && <SelectItem value={NONE_VALUE}>{noneLabel}</SelectItem>}
+        {allowNone && <SelectItem value={NONE_VALUE}>🏳️ {noneLabel}</SelectItem>}
         {LANGUAGES.map(lang => (
           <SelectItem key={lang.code} value={lang.code}>
             {lang.flag} {lang.name} ({lang.code})

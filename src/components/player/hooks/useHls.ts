@@ -114,6 +114,11 @@ export function useHls(
       // Sort by height descending
       qualityLevels.sort((a, b) => b.height - a.height)
       setHlsLevels(qualityLevels)
+
+      // Autoplay when manifest is ready
+      video.play().catch(() => {
+        // Autoplay blocked by browser - expected behavior
+      })
     })
 
     hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {

@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: fixed ESLint errors - empty interface in kbd.tsx (changed to type alias) and conditional useMemo hook in VideoPage.tsx (moved before early return)
 - Video player: fixed old video continuing to play/download when navigating between videos (added cleanup to pause video and abort pending downloads on unmount and URL change)
 - Video cards: disabled hover video preview feature (causes unnecessary bandwidth usage); removed setting from General Settings
+- Video player: improved autoplay reliability - now listens for multiple events (canplay, loadeddata) and triggers play immediately when HLS manifest is parsed
 - Comments: fixed L-shaped threading connector line not aligning with avatar center (changed height from h-5 to h-4)
 - Video page: fixed tag/language badges wrapping on small screens (now scroll horizontally with flex-nowrap and whitespace-nowrap)
 - Home page: fixed loading skeleton layout mismatch - removed gap-4 from grid and matched wrapper/padding to actual page structure (max-w-560, sm:px-2)

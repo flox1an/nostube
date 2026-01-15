@@ -280,9 +280,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Explicit autoplay - browsers may block the autoPlay attribute, so we call play() explicitly
   useEffect(() => {
     const el = videoRef.current
-    if (!el || contentWarning) return
+    if (!el || contentWarning || !videoUrl) return
+
+    let hasPlayed = false
 
     const attemptAutoplay = async () => {
+      if (hasPlayed || el.paused === false) return
+      hasPlayed = true
+
       try {
         await el.play()
       } catch (err) {
@@ -297,9 +302,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (el.readyState >= 3) {
       attemptAutoplay()
     } else {
-      // Wait for canplay event
-      el.addEventListener('canplay', attemptAutoplay, { once: true })
-      return () => el.removeEventListener('canplay', attemptAutoplay)
+      // Listen for multiple events to catch all cases
+      el.addEventListener('canplay', attemptAutoplay)
+      el.addEventListener('loadeddata', attemptAutoplay)
+
+      return () => {
+        el.removeEventListener('canplay', attemptAutoplay)
+        el.removeEventListener('loadeddata', attemptAutoplay)
+      }
     }
   }, [videoUrl, contentWarning])
 

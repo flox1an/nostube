@@ -46,6 +46,8 @@ interface TimelineMarkersProps {
   onMarkerHoverChange?: (isHovering: boolean) => void
   eventId?: string
   authorPubkey?: string
+  kind?: number
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
 }
 
 // Parse a zap event to extract sender info and amount
@@ -344,6 +346,8 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   onMarkerHoverChange,
   eventId,
   authorPubkey,
+  kind = 1,
+  identifier,
 }: TimelineMarkersProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null)
@@ -355,7 +359,12 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   }, [hoveredClusterId, onMarkerHoverChange])
 
   // Fetch actual zaps for this video
-  const { zaps } = useEventZaps(eventId || '', authorPubkey || '')
+  const { zaps } = useEventZaps({
+    eventId: eventId || '',
+    authorPubkey: authorPubkey || '',
+    kind,
+    identifier,
+  })
 
   // Parse zaps into timeline format with random timestamps
   const timelineZaps = useMemo(() => {

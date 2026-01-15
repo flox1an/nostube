@@ -13,17 +13,19 @@ interface ZapButtonProps {
   layout?: 'vertical' | 'inline'
   className?: string
   currentTime?: number // Current video playback position (for timestamped zaps)
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
 }
 
 const LONG_PRESS_DELAY = 500
 
 export const ZapButton = memo(function ZapButton({
   eventId,
-  kind,
+  kind = 1,
   authorPubkey,
   layout = 'vertical',
   className = '',
   currentTime,
+  identifier,
 }: ZapButtonProps) {
   const [showZapDialog, setShowZapDialog] = useState(false)
   const [capturedTimestamp, setCapturedTimestamp] = useState<number | undefined>(undefined)
@@ -36,13 +38,15 @@ export const ZapButton = memo(function ZapButton({
     authorPubkey,
   })
   // Only fetch zap stats if we have an eventId (not for profile zaps)
-  const { totalSats } = useEventZaps(eventId || '', authorPubkey)
+  const { totalSats } = useEventZaps({
+    eventId: eventId || '',
+    authorPubkey,
+    kind,
+    identifier,
+  })
   const displaySats = eventId ? totalSats : 0
 
   const isOwnContent = user?.pubkey === authorPubkey
-
-  // kind is available for future use but not currently needed
-  void kind
 
   // Cleanup timer on unmount
   useEffect(() => {

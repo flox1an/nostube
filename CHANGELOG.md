@@ -91,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shorts: improved scroll performance - wrapped ShortVideoItem with React.memo and custom comparison function, changed getMaxWidth from useCallback to useMemo, increased IntersectionObserver throttle from 16ms to 100ms with simplified thresholds, added debounced URL updates with startTransition for non-blocking navigation, added GPU acceleration hints (will-change, translateZ) on scroll container
 - VideoGrid: fixed O(n²) performance issue - replaced findIndex inside map loop with pre-computed Map for O(1) index lookup when rendering portrait/shorts videos
 - Comments: fixed comments being lost when editing addressable video events (kinds 34235, 34236) - now uses NIP-22 address tags (`A`/`a`) for proper linking that persists across edits; also queries by both event ID and address for backwards compatibility
+- Reactions/Zaps: fixed reactions and zaps being lost when editing addressable video events (kinds 34235, 34236) - now publishes with both `a` tag (address) and `e` tag (event ID) for NIP-25 reactions; queries zap receipts by both `#e` and `#a` filters; liked videos list now extracts both event IDs and addresses from reaction events
 
 ## [1.0.0] - 2025-01-08
 

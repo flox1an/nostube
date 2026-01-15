@@ -27,6 +27,8 @@ interface ZapDialogProps {
   onOpenChange: (open: boolean) => void
   eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
+  kind?: number
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
   onZap: (amount: number, comment?: string, timestamp?: number) => Promise<boolean>
   isZapping: boolean
   isWalletConnected: boolean
@@ -39,6 +41,8 @@ export const ZapDialog = memo(function ZapDialog({
   onOpenChange,
   eventId,
   authorPubkey,
+  kind = 1,
+  identifier,
   onZap,
   isZapping,
   isWalletConnected,
@@ -59,7 +63,12 @@ export const ZapDialog = memo(function ZapDialog({
   const handledInvoiceRef = useRef<string | null>(null)
 
   // Watch for zap receipts when we have an invoice (only for event zaps, not profile zaps)
-  const { zaps } = useEventZaps(eventId || '', authorPubkey)
+  const { zaps } = useEventZaps({
+    eventId: eventId || '',
+    authorPubkey,
+    kind,
+    identifier,
+  })
 
   const displayName = profile?.display_name || profile?.name || authorPubkey.slice(0, 8)
   const avatar = profile?.picture

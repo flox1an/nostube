@@ -404,6 +404,7 @@ export const ShortVideoItem = memo(
               kind={video.kind}
               authorPubkey={video.pubkey}
               relays={reactionRelays}
+              identifier={video.identifier}
             />
 
             {/* Comments button */}

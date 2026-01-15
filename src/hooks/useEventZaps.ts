@@ -65,6 +65,13 @@ function setCache(eventId: string, totalSats: number, zapCount: number) {
 // Load cache on module init
 loadCache()
 
+interface UseEventZapsOptions {
+  eventId: string
+  authorPubkey: string
+  kind: number
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+}
+
 interface UseEventZapsReturn {
   totalSats: number
   zapCount: number
@@ -72,24 +79,43 @@ interface UseEventZapsReturn {
   isLoading: boolean
 }
 
-export function useEventZaps(eventId: string, authorPubkey: string): UseEventZapsReturn {
+export function useEventZaps({
+  eventId,
+  authorPubkey,
+  kind,
+  identifier,
+}: UseEventZapsOptions): UseEventZapsReturn {
   const eventStore = useEventStore()
   const { pool } = useAppContext()
+
+  // Build address for addressable events (kinds 34235, 34236)
+  const isAddressable = kind === 34235 || kind === 34236
+  const videoAddress = useMemo(() => {
+    if (isAddressable && identifier) {
+      return `${kind}:${authorPubkey}:${identifier}`
+    }
+    return null
+  }, [isAddressable, kind, authorPubkey, identifier])
 
   // Get cached value - recalculate when eventId changes
   const cachedValue = useMemo(() => getCached(eventId), [eventId])
 
   // Fetch zap receipts from relays using subscription (keeps listening for new zaps)
+  // Query by both #e (event ID) and #a (address) for addressable events
   useEffect(() => {
     if (!eventId) return
 
-    const filter = {
-      kinds: [9735],
-      '#e': [eventId],
+    // Build filters for both event ID and address (for addressable events)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filters: any[] = [{ kinds: [9735], '#e': [eventId] }]
+
+    // For addressable events, also query by address
+    if (videoAddress) {
+      filters.push({ kinds: [9735], '#a': [videoAddress] })
     }
 
     // Use subscription to keep listening for new zap receipts
-    const sub = pool.subscription(ZAP_RELAYS, [filter]).subscribe({
+    const sub = pool.subscription(ZAP_RELAYS, filters).subscribe({
       next: event => {
         if (typeof event !== 'string' && 'kind' in event) {
           eventStore.add(event)
@@ -99,10 +125,11 @@ export function useEventZaps(eventId: string, authorPubkey: string): UseEventZap
     })
 
     return () => sub.unsubscribe()
-  }, [eventId, pool, eventStore])
+  }, [eventId, videoAddress, pool, eventStore])
 
-  // Subscribe to zap receipts (kind 9735) for this event from the store
-  const zaps = use$(
+  // Subscribe to zap receipts from store
+  // Query by both #e and #a for addressable events
+  const zapsByEventId = use$(
     () =>
       eventStore.timeline({
         kinds: [9735],
@@ -110,6 +137,34 @@ export function useEventZaps(eventId: string, authorPubkey: string): UseEventZap
       }),
     [eventStore, eventId]
   )
+
+  const zapsByAddress = use$(
+    () =>
+      videoAddress
+        ? eventStore.timeline({
+            kinds: [9735],
+            '#a': [videoAddress],
+          })
+        : undefined,
+    [eventStore, videoAddress]
+  )
+
+  // Merge and deduplicate zaps from both queries
+  const zaps = useMemo(() => {
+    const byId = zapsByEventId || []
+    const byAddress = zapsByAddress || []
+    const seen = new Set<string>()
+    const merged: NostrEvent[] = []
+
+    for (const zap of [...byId, ...byAddress]) {
+      if (!seen.has(zap.id)) {
+        seen.add(zap.id)
+        merged.push(zap)
+      }
+    }
+
+    return merged
+  }, [zapsByEventId, zapsByAddress])
 
   // Calculate total sats from zap receipts
   const { totalSats, zapCount } = useMemo(() => {
@@ -146,19 +201,16 @@ export function useEventZaps(eventId: string, authorPubkey: string): UseEventZap
     }
   }, [eventId, totalSats, zapCount])
 
-  // Note: authorPubkey is included for potential future filtering
-  void authorPubkey
-
   // Return cached value if no fresh data yet, otherwise return fresh data
-  const hasLiveData = zaps && zaps.length > 0
+  const hasLiveData = zaps.length > 0
   const displaySats = hasLiveData ? totalSats : (cachedValue?.totalSats ?? 0)
   const displayCount = hasLiveData ? zapCount : (cachedValue?.zapCount ?? 0)
 
   return {
     totalSats: displaySats,
     zapCount: displayCount,
-    zaps: zaps || [],
-    isLoading: !zaps,
+    zaps,
+    isLoading: !hasLiveData && !cachedValue,
   }
 }
 

@@ -88,6 +88,7 @@ interface UseEventStatsOptions {
   authorPubkey: string
   kind: number
   relays?: string[]
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
 }
 
 interface UseEventStatsReturn {
@@ -111,12 +112,22 @@ export function useEventStats({
   authorPubkey,
   kind,
   relays = [],
+  identifier,
 }: UseEventStatsOptions): UseEventStatsReturn {
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
 
   // Get cached value immediately
   const [cachedValue] = useState(() => getCached(eventId))
+
+  // Build address for addressable events (kinds 34235, 34236)
+  const isAddressable = kind === 34235 || kind === 34236
+  const videoAddress = useMemo(() => {
+    if (isAddressable && identifier) {
+      return `${kind}:${authorPubkey}:${identifier}`
+    }
+    return null
+  }, [isAddressable, kind, authorPubkey, identifier])
 
   // Get stored event for seenRelays
   const storedEvent = useMemo(() => eventStore.getEvent(eventId), [eventStore, eventId])
@@ -152,15 +163,20 @@ export function useEventStats({
   // ============ ZAP LOADING ============
 
   // Fetch zap receipts from relays
+  // Query by both #e (event ID) and #a (address) for addressable events
   useEffect(() => {
     if (!eventId) return
 
-    const filter = {
-      kinds: [9735],
-      '#e': [eventId],
+    // Build filters for both event ID and address (for addressable events)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filters: any[] = [{ kinds: [9735], '#e': [eventId] }]
+
+    // For addressable events, also query by address
+    if (videoAddress) {
+      filters.push({ kinds: [9735], '#a': [videoAddress] })
     }
 
-    const sub = pool.subscription(ZAP_RELAYS, [filter]).subscribe({
+    const sub = pool.subscription(ZAP_RELAYS, filters).subscribe({
       next: event => {
         if (typeof event !== 'string' && 'kind' in event) {
           eventStore.add(event)
@@ -170,10 +186,11 @@ export function useEventStats({
     })
 
     return () => sub.unsubscribe()
-  }, [eventId, pool, eventStore])
+  }, [eventId, videoAddress, pool, eventStore])
 
   // Subscribe to zap receipts from store
-  const zaps = use$(
+  // Query by both #e and #a for addressable events
+  const zapsByEventId = use$(
     () =>
       eventStore.timeline({
         kinds: [9735],
@@ -181,6 +198,34 @@ export function useEventStats({
       }),
     [eventStore, eventId]
   )
+
+  const zapsByAddress = use$(
+    () =>
+      videoAddress
+        ? eventStore.timeline({
+            kinds: [9735],
+            '#a': [videoAddress],
+          })
+        : undefined,
+    [eventStore, videoAddress]
+  )
+
+  // Merge and deduplicate zaps from both queries
+  const zaps = useMemo(() => {
+    const byId = zapsByEventId || []
+    const byAddress = zapsByAddress || []
+    const seen = new Set<string>()
+    const merged: NostrEvent[] = []
+
+    for (const zap of [...byId, ...byAddress]) {
+      if (!seen.has(zap.id)) {
+        seen.add(zap.id)
+        merged.push(zap)
+      }
+    }
+
+    return merged
+  }, [zapsByEventId, zapsByAddress])
 
   // Calculate zap totals
   const { totalSats, zapCount } = useMemo(() => {

@@ -244,6 +244,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
               relays={relaysToUse}
               layout="inline"
               currentTime={currentTime}
+              identifier={video.identifier}
             />
             {userPubkey && !isMobile && (
               <AddToPlaylistButton

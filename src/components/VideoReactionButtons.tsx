@@ -23,6 +23,7 @@ interface VideoReactionButtonsProps {
   className?: string
   layout?: 'vertical' | 'inline' // vertical: count below (Shorts), inline: count inside button (VideoPage)
   currentTime?: number // Current video playback position (for timestamped zaps)
+  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
 }
 
 export function VideoReactionButtons({
@@ -33,6 +34,7 @@ export function VideoReactionButtons({
   className = '',
   layout = 'vertical',
   currentTime,
+  identifier,
 }: VideoReactionButtonsProps) {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
@@ -54,6 +56,7 @@ export function VideoReactionButtons({
     authorPubkey,
     kind,
     relays,
+    identifier,
   })
 
   // Check if current user has reacted
@@ -78,6 +81,34 @@ export function VideoReactionButtons({
     return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
   }, [config.relays, videoEvent, authorRelays.data])
 
+  // Build address for addressable events (kinds 34235, 34236)
+  const isAddressable = kind === 34235 || kind === 34236
+  const videoAddress = useMemo(() => {
+    if (isAddressable && identifier) {
+      return `${kind}:${authorPubkey}:${identifier}`
+    }
+    return null
+  }, [isAddressable, kind, authorPubkey, identifier])
+
+  // Build reaction tags - include both 'a' and 'e' for addressable events
+  const buildReactionTags = (): string[][] => {
+    const tags: string[][] = [
+      ['p', authorPubkey],
+      ['k', `${kind}`],
+    ]
+
+    if (videoAddress) {
+      // For addressable events: include both address and event ID for compatibility
+      tags.unshift(['a', videoAddress])
+      tags.push(['e', eventId]) // Add 'e' tag for backwards compatibility
+    } else {
+      // For regular events: just use event ID
+      tags.unshift(['e', eventId])
+    }
+
+    return tags
+  }
+
   const handleUpvote = async () => {
     if (!user || hasReacted) return
 
@@ -87,11 +118,7 @@ export function VideoReactionButtons({
           kind: 7,
           created_at: nowInSecs(),
           content: '+',
-          tags: [
-            ['e', eventId],
-            ['p', authorPubkey],
-            ['k', `${kind}`],
-          ],
+          tags: buildReactionTags(),
         },
         relays: targetRelays,
       })
@@ -112,11 +139,7 @@ export function VideoReactionButtons({
           kind: 7,
           created_at: nowInSecs(),
           content: '-',
-          tags: [
-            ['e', eventId],
-            ['p', authorPubkey],
-            ['k', `${kind}`],
-          ],
+          tags: buildReactionTags(),
         },
         relays: targetRelays,
       })

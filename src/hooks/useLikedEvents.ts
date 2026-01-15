@@ -59,31 +59,45 @@ export function useLikedEvents() {
     }
   }, [user?.pubkey, pool, readRelays, eventStore, loadedPubkey])
 
-  const likedEventIds = useMemo(() => {
-    if (!user || reactionEvents.length === 0) return []
+  // Extract both event IDs (e tags) and addresses (a tags) for liked events
+  // This handles both regular events and addressable events (kinds 34235, 34236)
+  const { likedEventIds, likedAddresses } = useMemo(() => {
+    if (!user || reactionEvents.length === 0) return { likedEventIds: [], likedAddresses: [] }
 
     // Sort reaction events by created_at in descending order (most recent first)
     const sortedReactions = [...reactionEvents]
       .filter(event => event.content === '+')
       .sort((a, b) => b.created_at - a.created_at)
 
-    const eventIds = sortedReactions
-      .map(event => {
-        const eTag = event.tags.find(tag => tag[0] === 'e')
-        return eTag ? eTag[1] : undefined
-      })
-      .filter((id): id is string => id !== undefined)
+    const eventIds: string[] = []
+    const addresses: string[] = []
 
-    // Filter out duplicate event IDs (keep first occurrence, which is the most recent like)
+    for (const event of sortedReactions) {
+      // Extract 'e' tag (event ID)
+      const eTag = event.tags.find(tag => tag[0] === 'e')
+      if (eTag?.[1]) {
+        eventIds.push(eTag[1])
+      }
+
+      // Extract 'a' tag (address for addressable events)
+      const aTag = event.tags.find(tag => tag[0] === 'a')
+      if (aTag?.[1]) {
+        addresses.push(aTag[1])
+      }
+    }
+
+    // Filter out duplicates (keep first occurrence, which is the most recent like)
     const uniqueEventIds = Array.from(new Set(eventIds))
+    const uniqueAddresses = Array.from(new Set(addresses))
 
-    return uniqueEventIds
+    return { likedEventIds: uniqueEventIds, likedAddresses: uniqueAddresses }
   }, [user, reactionEvents])
 
   const hasLoadedReactions = Boolean(user?.pubkey && loadedPubkey === user.pubkey)
 
   return {
     data: likedEventIds,
+    likedAddresses,
     isLoading: Boolean(user && reactionEvents.length === 0 && !hasLoadedReactions),
     enabled: !!user,
   }

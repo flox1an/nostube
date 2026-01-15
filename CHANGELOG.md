@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload: publish date picker in step 5 allows scheduling video publish date/time (defaults to "now" for immediate publishing)
 - Author page: added zap button to send sats directly to content creators (only shown if author has lightning address)
 - Upload: added delete draft button (trash icon) with confirmation dialog next to save draft button; offers option to delete uploaded media from servers; navigates to draft overview after deletion; save draft button now shows save icon
+- Docs: added NIP-71 best practices guide (`docs/NIP-71-best-practices.md`) covering video event creation, imeta tags, multi-resolution support, thumbnails, content resilience, codec compatibility, and common pitfalls
 
 ### Changed
 

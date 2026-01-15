@@ -19,14 +19,15 @@ This document extends [NIP-71](https://github.com/nostr-protocol/nips/blob/maste
 
 ### Choose the Right Kind
 
-| Kind | Type | Use Case |
-|------|------|----------|
-| `21` | Regular normal video | Immutable video posts, one-time publications |
-| `22` | Regular short video | Immutable vertical/portrait shorts |
+| Kind    | Type                     | Use Case                                          |
+| ------- | ------------------------ | ------------------------------------------------- |
+| `21`    | Regular normal video     | Immutable video posts, one-time publications      |
+| `22`    | Regular short video      | Immutable vertical/portrait shorts                |
 | `34235` | Addressable normal video | Videos that may need metadata updates, migrations |
-| `34236` | Addressable short video | Shorts that may need updates |
+| `34236` | Addressable short video  | Shorts that may need updates                      |
 
 **Recommendation:** Prefer addressable events (34235/34236) for most use cases. They allow:
+
 - Metadata corrections without republishing
 - URL migration when hosting changes
 - Preserving the same reference (`naddr`) across updates
@@ -51,6 +52,7 @@ Always include these tags for proper client rendering:
 ### The `d` Tag Identifier
 
 For addressable events, the `d` tag should be:
+
 - **Unique per author**: Use the video's SHA256 hash, a UUID, or platform-specific ID
 - **Stable**: Never change this value when updating the event
 - **URL-safe**: Avoid special characters that may cause encoding issues
@@ -68,7 +70,8 @@ The `imeta` tag is the primary source of video information. Structure it careful
 ### Minimal imeta
 
 ```json
-["imeta",
+[
+  "imeta",
   "url https://example.com/video.mp4",
   "m video/mp4",
   "x 3093509d1e0bc604ff60cb9286f4cd7c781553bc8991937befaacfdc28ec5cdc"
@@ -78,7 +81,8 @@ The `imeta` tag is the primary source of video information. Structure it careful
 ### Complete imeta
 
 ```json
-["imeta",
+[
+  "imeta",
   "url https://example.com/video.mp4",
   "m video/mp4; codecs=\"avc1.640028,mp4a.40.2\"",
   "x 3093509d1e0bc604ff60cb9286f4cd7c781553bc8991937befaacfdc28ec5cdc",
@@ -134,7 +138,8 @@ Provide multiple quality variants using separate imeta tags:
 ```json
 {
   "tags": [
-    ["imeta",
+    [
+      "imeta",
       "url https://example.com/1080p.mp4",
       "m video/mp4",
       "dim 1920x1080",
@@ -142,7 +147,8 @@ Provide multiple quality variants using separate imeta tags:
       "bitrate 5000000",
       "image https://example.com/thumb-1080.jpg"
     ],
-    ["imeta",
+    [
+      "imeta",
       "url https://example.com/720p.mp4",
       "m video/mp4",
       "dim 1280x720",
@@ -150,7 +156,8 @@ Provide multiple quality variants using separate imeta tags:
       "bitrate 2500000",
       "image https://example.com/thumb-720.jpg"
     ],
-    ["imeta",
+    [
+      "imeta",
       "url https://example.com/480p.mp4",
       "m video/mp4",
       "dim 854x480",
@@ -169,17 +176,8 @@ For HLS streams, provide both the manifest and direct file variants:
 ```json
 {
   "tags": [
-    ["imeta",
-      "url https://example.com/master.m3u8",
-      "m application/x-mpegURL",
-      "duration 120.5"
-    ],
-    ["imeta",
-      "url https://example.com/1080p.mp4",
-      "m video/mp4",
-      "dim 1920x1080",
-      "x abc123..."
-    ]
+    ["imeta", "url https://example.com/master.m3u8", "m application/x-mpegURL", "duration 120.5"],
+    ["imeta", "url https://example.com/1080p.mp4", "m video/mp4", "dim 1920x1080", "x abc123..."]
   ]
 }
 ```
@@ -195,7 +193,8 @@ For HLS streams, provide both the manifest and direct file variants:
 Provide thumbnails with fallbacks:
 
 ```json
-["imeta",
+[
+  "imeta",
   "url https://example.com/video.mp4",
   "image https://primary.example.com/thumb.jpg",
   "image https://mirror.example.com/thumb.jpg",
@@ -209,9 +208,7 @@ Provide thumbnails with fallbacks:
 Include blurhash for smooth loading experience:
 
 ```json
-["imeta",
-  "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"
-]
+["imeta", "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"]
 ```
 
 Clients can decode this to show a blurred placeholder while the thumbnail loads.
@@ -244,6 +241,7 @@ https://blossom.example.com/<sha256>.<ext>
 ```
 
 This enables:
+
 - Content-addressed discovery via kind 1063 file metadata events
 - Automatic mirroring across Blossom servers
 - Hash verification for integrity
@@ -253,7 +251,8 @@ This enables:
 Always provide multiple sources:
 
 ```json
-["imeta",
+[
+  "imeta",
   "url https://primary.example.com/video.mp4",
   "fallback https://mirror1.example.com/video.mp4",
   "fallback https://mirror2.example.com/video.mp4",
@@ -268,7 +267,8 @@ Always provide multiple sources:
 Enable NIP-96 server discovery:
 
 ```json
-["imeta",
+[
+  "imeta",
   "url https://example.com/video.mp4",
   "x 3093509d1e0bc604ff60cb9286f4cd7c781553bc8991937befaacfdc28ec5cdc",
   "service nip96"
@@ -326,14 +326,14 @@ When displaying video feeds:
 
 ### Platform-Specific Issues
 
-| Codec | Safari/iOS | Chrome | Firefox |
-|-------|------------|--------|---------|
-| H.264 (AVC) | Yes | Yes | Yes |
-| H.265 (HEVC) | Yes* | Partial | No |
-| VP9 | No | Yes | Yes |
-| AV1 | Safari 17+ | Yes | Yes |
+| Codec        | Safari/iOS | Chrome  | Firefox |
+| ------------ | ---------- | ------- | ------- |
+| H.264 (AVC)  | Yes        | Yes     | Yes     |
+| H.265 (HEVC) | Yes\*      | Partial | No      |
+| VP9          | No         | Yes     | Yes     |
+| AV1          | Safari 17+ | Yes     | Yes     |
 
-*iOS requires hardware support
+\*iOS requires hardware support
 
 ### Codec Detection
 
@@ -363,12 +363,14 @@ Always include a widely-compatible format:
 ```json
 {
   "tags": [
-    ["imeta",
+    [
+      "imeta",
       "url https://example.com/hevc.mp4",
       "m video/mp4; codecs=\"hvc1.2.4.L120.b0\"",
       "dim 1920x1080"
     ],
-    ["imeta",
+    [
+      "imeta",
       "url https://example.com/h264.mp4",
       "m video/mp4; codecs=\"avc1.640028\"",
       "dim 1920x1080"
@@ -424,10 +426,7 @@ Always include a widely-compatible format:
 **Solution:** Upload thumbnails to a hosting service and reference by URL. Use blurhash for placeholders:
 
 ```json
-["imeta",
-  "image https://example.com/thumb.jpg",
-  "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"
-]
+["imeta", "image https://example.com/thumb.jpg", "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"]
 ```
 
 ### 6. YouTube/External Embeds
@@ -441,6 +440,7 @@ Always include a widely-compatible format:
 **Problem:** Some fields appear both in imeta and as separate tags.
 
 **Solution:** Prefer imeta for media-specific data. Use separate tags for:
+
 - `title` - Video title
 - `published_at` - Publication timestamp
 - `t` - Hashtags
@@ -463,7 +463,8 @@ Always include a widely-compatible format:
     ["published_at", "1704067200"],
     ["alt", "Timelapse video of a sunset over mountain peaks"],
 
-    ["imeta",
+    [
+      "imeta",
       "url https://blossom.example.com/abc123.mp4",
       "m video/mp4; codecs=\"avc1.640028,mp4a.40.2\"",
       "x abc123def456789...",
@@ -475,7 +476,8 @@ Always include a widely-compatible format:
       "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
       "fallback https://mirror.example.com/abc123.mp4"
     ],
-    ["imeta",
+    [
+      "imeta",
       "url https://blossom.example.com/abc123-720p.mp4",
       "m video/mp4; codecs=\"avc1.640028,mp4a.40.2\"",
       "x def456ghi789...",

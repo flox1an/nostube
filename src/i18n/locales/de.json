@@ -605,6 +605,25 @@
     "success": "Kennzeichnungen erfolgreich veröffentlicht",
     "error": "Kennzeichnungen konnten nicht veröffentlicht werden"
   },
+  "editVideo": {
+    "button": "Video bearbeiten",
+    "title": "Video bearbeiten",
+    "description": "Aktualisiere Titel, Beschreibung und Tags für dieses Video.",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Videotitel eingeben",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Videobeschreibung eingeben",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "bitcoin, nostr, tutorial",
+    "tagsHelp": "Kommagetrennte Hashtags (ohne #-Symbol)",
+    "contentWarningLabel": "Inhaltswarnung (NSFW)",
+    "contentWarningPlaceholder": "Grund für Inhaltswarnung",
+    "submitButton": "Änderungen speichern",
+    "loginRequired": "Bitte melde dich an, um Videos zu bearbeiten",
+    "titleRequired": "Titel ist erforderlich",
+    "success": "Video erfolgreich aktualisiert",
+    "error": "Video konnte nicht aktualisiert werden"
+  },
   "notifications": {
     "commentedOnYourVideo": "hat Ihr Video kommentiert",
     "repliedToYourComment": "hat auf Ihren Kommentar geantwortet",

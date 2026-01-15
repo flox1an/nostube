@@ -617,6 +617,25 @@
     "success": "Labels published successfully",
     "error": "Failed to publish labels"
   },
+  "editVideo": {
+    "button": "Edit Video",
+    "title": "Edit Video",
+    "description": "Update the title, description, and tags for this video.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter video title",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Enter video description",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "bitcoin, nostr, tutorial",
+    "tagsHelp": "Comma-separated hashtags (without # symbol)",
+    "contentWarningLabel": "Content warning (NSFW)",
+    "contentWarningPlaceholder": "Reason for content warning",
+    "submitButton": "Save Changes",
+    "loginRequired": "Please log in to edit videos",
+    "titleRequired": "Title is required",
+    "success": "Video updated successfully",
+    "error": "Failed to update video"
+  },
   "notifications": {
     "commentedOnYourVideo": "commented on your video",
     "repliedToYourComment": "replied to your comment",

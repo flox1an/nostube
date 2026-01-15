@@ -605,6 +605,25 @@
     "success": "Etiquetas publicadas exitosamente",
     "error": "No se pudieron publicar las etiquetas"
   },
+  "editVideo": {
+    "button": "Editar video",
+    "title": "Editar video",
+    "description": "Actualice el título, la descripción y las etiquetas de este video.",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Ingrese el título del video",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Ingrese la descripción del video",
+    "tagsLabel": "Etiquetas",
+    "tagsPlaceholder": "bitcoin, nostr, tutorial",
+    "tagsHelp": "Hashtags separados por comas (sin símbolo #)",
+    "contentWarningLabel": "Advertencia de contenido (NSFW)",
+    "contentWarningPlaceholder": "Razón de la advertencia",
+    "submitButton": "Guardar cambios",
+    "loginRequired": "Por favor inicie sesión para editar videos",
+    "titleRequired": "El título es obligatorio",
+    "success": "Video actualizado exitosamente",
+    "error": "No se pudo actualizar el video"
+  },
   "notifications": {
     "commentedOnYourVideo": "comentó en tu video",
     "repliedToYourComment": "respondió a tu comentario",

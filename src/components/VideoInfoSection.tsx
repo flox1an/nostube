@@ -25,7 +25,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag, Clock } from 'lucide-react'
+import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag, Clock, Pencil } from 'lucide-react'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
@@ -34,8 +34,9 @@ import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
+import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
-import { type VideoEvent } from '../utils/video-event'
+import { type VideoEvent, isAddressableKind } from '../utils/video-event'
 import { type BlossomServer } from '@/contexts/AppContext'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -112,7 +113,12 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
   const [showLabelDialog, setShowLabelDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
+
+  // Check if video is editable (owner + addressable event)
+  const isOwner = userPubkey === video?.pubkey
+  const isEditable = isOwner && video && isAddressableKind(video.kind)
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
@@ -258,7 +264,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     asMenuItem
                   />
                 )}
-                {videoEvent && isBetaUser(userPubkey) && (
+                {isEditable && videoEvent && (
+                  <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
+                    <Pencil className="w-5 h-5" />
+                    &nbsp; {t('editVideo.button')}
+                  </DropdownMenuItem>
+                )}
+                {videoEvent && isBetaUser(userPubkey) && !isEditable && (
                   <DropdownMenuItem onSelect={() => setShowLabelDialog(true)}>
                     <Tag className="w-5 h-5" />
                     &nbsp; {t('labelVideo.button')}
@@ -396,6 +408,14 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           videoEvent={videoEvent}
           open={showLabelDialog}
           onOpenChange={setShowLabelDialog}
+        />
+      )}
+      {videoEvent && isEditable && (
+        <EditVideoDialog
+          videoEvent={videoEvent}
+          relays={relaysToUse}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
         />
       )}
       {video && (

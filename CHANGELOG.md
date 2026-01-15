@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Author page: added zap button to send sats directly to content creators (only shown if author has lightning address)
 - Upload: added delete draft button (trash icon) with confirmation dialog next to save draft button; offers option to delete uploaded media from servers; navigates to draft overview after deletion; save draft button now shows save icon
 - Docs: added NIP-71 best practices guide (`docs/NIP-71-best-practices.md`) covering video event creation, imeta tags, multi-resolution support, thumbnails, content resilience, codec compatibility, and common pitfalls
+- Video page: added "Edit Video" option for owners of replaceable video events (kinds 34235, 34236) allowing in-place editing of title, description, tags, and content warning; preserves all media-related tags (imeta, duration, etc.) when republishing; replaces "Label Video" option for video owners
 
 ### Changed
 

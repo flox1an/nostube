@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import type { Filter } from 'nostr-tools'
 import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { CommentInput } from '@/components/CommentInput'
@@ -26,6 +27,7 @@ export function VideoComments({
   authorPubkey,
   relays,
   videoKind,
+  identifier,
 }: VideoCommentsProps) {
   const { t } = useTranslation()
   const [newComment, setNewComment] = useState('')
@@ -117,21 +119,36 @@ export function VideoComments({
     return config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
   }, [relays, config.relays])
 
-  const filters = useMemo(
-    () => [
-      {
-        kinds: [1],
-        '#e': [videoId],
-        limit: 100,
-      },
-      {
-        kinds: [1111],
-        '#E': [videoId],
-        limit: 100,
-      },
-    ],
-    [videoId]
-  )
+  // Build address for addressable events (kinds 34235, 34236)
+  // Address format: <kind>:<pubkey>:<d-tag>
+  const isAddressable = videoKind === 34235 || videoKind === 34236
+  const videoAddress = useMemo(() => {
+    if (isAddressable && identifier) {
+      return `${videoKind}:${authorPubkey}:${identifier}`
+    }
+    return null
+  }, [isAddressable, videoKind, authorPubkey, identifier])
+
+  // Build filters to query comments
+  // For addressable events: query by both address (#A/#a) and event ID (#E/#e) for compatibility
+  // For regular events: query by event ID only
+  const filters = useMemo(() => {
+    // Query by event ID (for backwards compatibility and non-addressable events)
+    const baseFilters = [
+      { kinds: [1], '#e': [videoId], limit: 100 },
+      { kinds: [1111], '#E': [videoId], limit: 100 },
+    ] as Filter[]
+
+    // For addressable events, also query by address
+    if (videoAddress) {
+      baseFilters.push(
+        { kinds: [1], '#a': [videoAddress], limit: 100 } as Filter,
+        { kinds: [1111], '#A': [videoAddress], limit: 100 } as Filter
+      )
+    }
+
+    return baseFilters
+  }, [videoId, videoAddress])
 
   // Load comments from relays when filters change
   useEffect(() => {
@@ -151,8 +168,10 @@ export function VideoComments({
       () =>
         eventStore
           .timeline(filters)
-          .pipe(map(events => events.map(e => mapEventToComment(e, videoId)))),
-      [eventStore, filters, videoId]
+          .pipe(
+            map(events => events.map(e => mapEventToComment(e, videoId, videoAddress ?? undefined)))
+          ),
+      [eventStore, filters, videoId, videoAddress]
     ) ?? []
 
   // Build threaded comment structure
@@ -185,19 +204,36 @@ export function VideoComments({
     const relayHint = videoEventRelays[0] || writeRelays[0] || readRelays[0] || ''
 
     // NIP-22: Top-level comment on a video event
-    const tags: string[][] = [
-      // Root scope: the video event
-      ['E', videoId, relayHint, authorPubkey],
-      ['K', String(videoKind || 34235)], // Video event kind
-      ['P', authorPubkey, relayHint],
+    // For addressable events (kinds 34235, 34236), use A/a tags with address format
+    // For regular events (kinds 21, 22), use E/e tags with event ID
+    const tags: string[][] = []
 
-      // Parent (same as root for top-level comments)
-      ['e', videoId, relayHint, authorPubkey],
-      ['k', String(videoKind || 34235)], // Parent is also the video
-      ['p', authorPubkey, relayHint],
+    if (isAddressable && videoAddress) {
+      // Addressable event: use A/a tags with address, plus e tag for current event ID
+      tags.push(
+        // Root scope: the video address
+        ['A', videoAddress, relayHint],
+        ['K', String(videoKind)],
+        ['P', authorPubkey, relayHint],
+        // Parent (same as root for top-level comments) - use both address and event ID
+        ['a', videoAddress, relayHint],
+        ['e', videoId, relayHint], // Include event ID for compatibility
+        ['k', String(videoKind)],
+        ['p', authorPubkey, relayHint]
+      )
+    } else {
+      // Regular event: use E/e tags with event ID
+      tags.push(
+        ['E', videoId, relayHint, authorPubkey],
+        ['K', String(videoKind || 34235)],
+        ['P', authorPubkey, relayHint],
+        ['e', videoId, relayHint, authorPubkey],
+        ['k', String(videoKind || 34235)],
+        ['p', authorPubkey, relayHint]
+      )
+    }
 
-      ['client', 'nostube'],
-    ]
+    tags.push(['client', 'nostube'])
 
     const draftEvent = {
       kind: 1111,
@@ -247,19 +283,33 @@ export function VideoComments({
     const relayHint = parentCommentRelays[0] || writeRelays[0] || readRelays[0] || ''
 
     // NIP-22: Reply to a comment
-    const tags: string[][] = [
-      // Root scope: the video event (always the same for all comments in this thread)
-      ['E', videoId, relayHint, authorPubkey],
-      ['K', String(videoKind || 34235)], // Video event kind
-      ['P', authorPubkey, relayHint],
+    // Root scope uses A tag for addressable events, E tag for regular events
+    // Parent is always the comment being replied to (uses e tag)
+    const tags: string[][] = []
 
-      // Parent: the comment being replied to
+    if (isAddressable && videoAddress) {
+      // Addressable event: use A tag for root scope
+      tags.push(
+        ['A', videoAddress, relayHint],
+        ['K', String(videoKind)],
+        ['P', authorPubkey, relayHint]
+      )
+    } else {
+      // Regular event: use E tag for root scope
+      tags.push(
+        ['E', videoId, relayHint, authorPubkey],
+        ['K', String(videoKind || 34235)],
+        ['P', authorPubkey, relayHint]
+      )
+    }
+
+    // Parent: the comment being replied to (always uses e tag)
+    tags.push(
       ['e', replyTo.id, relayHint, replyTo.pubkey],
-      ['k', '1111'], // Parent is a comment (kind 1111)
+      ['k', '1111'],
       ['p', replyTo.pubkey, relayHint],
-
-      ['client', 'nostube'],
-    ]
+      ['client', 'nostube']
+    )
 
     const draftEvent = {
       kind: 1111,

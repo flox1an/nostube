@@ -501,6 +501,7 @@ export const ShortVideoItem = memo(
                 link={video.link}
                 relays={eventRelays}
                 videoKind={video.kind}
+                identifier={video.identifier}
               />
             </div>
           </SheetContent>

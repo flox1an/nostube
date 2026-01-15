@@ -31,4 +31,9 @@ export interface VideoCommentsProps {
    * The kind of the video event being commented on (e.g., 34235, 34236)
    */
   videoKind?: number
+  /**
+   * The d-tag (identifier) for addressable events (kinds 34235, 34236).
+   * Required for proper NIP-22 comment linking that persists across edits.
+   */
+  identifier?: string
 }

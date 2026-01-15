@@ -446,6 +446,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             link={video.link}
             relays={relaysToUse}
             videoKind={video.kind}
+            identifier={video.identifier}
           />
         </div>
       )}

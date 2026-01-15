@@ -21,6 +21,7 @@ import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
+import { getPublishDate } from '@/utils/video-event'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
@@ -290,7 +291,7 @@ export function AuthorPage() {
     totalViews: 0, // Could be implemented with NIP-78 view counts
     joinedDate:
       allVideos.length > 0
-        ? new Date(Math.min(...allVideos.map(v => v.created_at * 1000)))
+        ? new Date(Math.min(...allVideos.map(v => getPublishDate(v) * 1000)))
         : new Date(),
   }
 

@@ -123,6 +123,7 @@
     "viewLocation": "View location on map",
     "expiresIn": "Expires in {{time}}",
     "expired": "Expired",
+    "updatedAgo": "updated {{time}} ago",
     "comments": {
       "title": "Comments",
       "addComment": "Add a comment...",

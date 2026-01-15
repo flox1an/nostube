@@ -14,7 +14,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
 import { memo, useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import type { VideoEvent } from '@/utils/video-event'
+import { type VideoEvent, getPublishDate } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import {
   useAppContext,
@@ -458,7 +458,7 @@ export const ShortVideoItem = memo(
                       <div className="text-white font-semibold truncate">{authorName}</div>
                     </Link>
                     <div className="text-white/70 text-sm">
-                      {formatDistance(new Date(video.created_at * 1000), new Date(), {
+                      {formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
                         addSuffix: true,
                         locale: dateLocale,
                       })}

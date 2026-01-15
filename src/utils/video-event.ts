@@ -51,6 +51,7 @@ export interface VideoEvent {
   images: string[]
   pubkey: string
   created_at: number
+  published_at?: number // NIP-71: scheduled publish date (falls back to created_at if not set)
   duration: number
   tags: string[]
   searchText: string
@@ -68,6 +69,14 @@ export interface VideoEvent {
   videoVariants: VideoVariant[] // Compatible video variants (filtered for current platform)
   thumbnailVariants: VideoVariant[] // All thumbnail variants
   allVideoVariants?: VideoVariant[] // All video variants including incompatible codecs (for debugging)
+}
+
+/**
+ * Get the effective publish date for a video (for display and sorting)
+ * Uses published_at if available, otherwise falls back to created_at
+ */
+export function getPublishDate(video: VideoEvent): number {
+  return video.published_at ?? video.created_at
 }
 
 // Create an in-memory index for fast text search
@@ -309,6 +318,10 @@ export function processEvent(
     event.tags.find(t => t[0] == 'content-warning')?.[1] ||
     (isNSFWAuthor(event.pubkey, nsfwPubkeys) ? 'NSFW' : undefined)
 
+  // Extract published_at timestamp (NIP-71 scheduled publish date)
+  const publishedAtTag = event.tags.find(t => t[0] === 'published_at')?.[1]
+  const published_at = publishedAtTag ? parseInt(publishedAtTag, 10) : undefined
+
   if (imetaTags.length > 0) {
     // Parse all imeta tags
     const allVariants = imetaTags
@@ -463,6 +476,7 @@ export function processEvent(
       images: images.length > 0 ? images : [url || blurHashToDataURL(blurhash) || ''], // use the video url, which is converted to an image by the image proxy
       pubkey: event.pubkey,
       created_at: event.created_at,
+      published_at,
       duration,
       x: primaryVariant?.hash || x,
       tags,
@@ -552,6 +566,7 @@ export function processEvent(
       images: [thumb || url], // use the video url, which is converted to an image by the image proxy
       pubkey: event.pubkey,
       created_at: event.created_at,
+      published_at,
       duration,
       tags,
       searchText: '',

@@ -36,7 +36,7 @@ import { VideoDebugInfo } from '@/components/VideoDebugInfo'
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
-import { type VideoEvent, isAddressableKind } from '../utils/video-event'
+import { type VideoEvent, isAddressableKind, getPublishDate } from '../utils/video-event'
 import { type BlossomServer } from '@/contexts/AppContext'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -216,11 +216,22 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             <div>
               <div className="font-semibold">{authorName}</div>
               <div className="text-sm text-muted-foreground">
-                {video?.created_at &&
-                  formatDistance(new Date(video.created_at * 1000), new Date(), {
+                {video &&
+                  formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
                     addSuffix: true,
                     locale: dateLocale,
                   })}
+                {video?.published_at && video.created_at !== video.published_at && (
+                  <span className="ml-1">
+                    (
+                    {t('video.updatedAgo', {
+                      time: formatDistance(new Date(video.created_at * 1000), new Date(), {
+                        locale: dateLocale,
+                      }),
+                    })}
+                    )
+                  </span>
+                )}
               </div>
             </div>
           </Link>

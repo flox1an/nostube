@@ -121,6 +121,7 @@
     "viewLocation": "Standort auf Karte anzeigen",
     "expiresIn": "Läuft ab in {{time}}",
     "expired": "Abgelaufen",
+    "updatedAgo": "aktualisiert vor {{time}}",
     "comments": {
       "title": "Kommentare",
       "addComment": "Kommentar hinzufügen...",

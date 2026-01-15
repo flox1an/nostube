@@ -1,7 +1,7 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { processEvent, type VideoEvent, getPublishDate } from '@/utils/video-event'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -117,7 +117,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             <div className="text-xs text-muted-foreground">{name}</div>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {formatDistance(new Date(video.created_at * 1000), new Date(), {
+            {formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
               addSuffix: true,
               locale: dateLocale,
             })}

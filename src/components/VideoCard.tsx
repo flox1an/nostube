@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns/formatDistance'
-import { type VideoEvent } from '@/utils/video-event'
+import { type VideoEvent, getPublishDate } from '@/utils/video-event'
 import { formatDuration } from '../lib/formatDuration'
 import { UserAvatar } from '@/components/UserAvatar'
 import { cn, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
@@ -300,11 +300,11 @@ export const VideoCard = React.memo(function VideoCard({
                 {name && <>&nbsp;•&nbsp;</>}
                 <div
                   className="text-muted-foreground"
-                  title={formatDate(new Date(video.created_at * 1000), 'PPpp', {
+                  title={formatDate(new Date(getPublishDate(video) * 1000), 'PPpp', {
                     locale: dateLocale,
                   })}
                 >
-                  {formatDistance(new Date(video.created_at * 1000), new Date(), {
+                  {formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {
                     addSuffix: true,
                     locale: dateLocale,
                   })}

@@ -110,6 +110,36 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       sha256,
     })
 
+  // Cleanup: pause video and clear source on unmount to stop downloads
+  useEffect(() => {
+    return () => {
+      const el = videoRef.current
+      if (el) {
+        el.pause()
+        // Clear the source to abort any ongoing downloads
+        el.removeAttribute('src')
+        el.load() // This aborts any pending network requests
+      }
+    }
+  }, [])
+
+  // Pause old video when URLs change (playlist mode: component doesn't remount)
+  const prevUrlsRef = useRef<string[]>([])
+  useEffect(() => {
+    const prevUrls = prevUrlsRef.current
+    prevUrlsRef.current = urls
+
+    // Skip on first render or if urls are the same
+    if (prevUrls.length === 0 || prevUrls === urls) return
+    // Check if URLs actually changed (not just same reference)
+    if (prevUrls.length === urls.length && prevUrls.every((url, i) => url === urls[i])) return
+
+    const el = videoRef.current
+    if (el) {
+      el.pause()
+    }
+  }, [urls])
+
   // Store callbacks in refs to avoid dependency issues
   const onAllSourcesFailedRef = useRef(onAllSourcesFailed)
   const urlsRef = useRef(urls)

@@ -25,7 +25,9 @@ export interface VideoVariant {
  */
 export function generateQualityLabel(dimension: string): string {
   const [width, height] = dimension.split('x').map(Number)
-  const resolution = Math.max(width, height)
+  // Use the shorter dimension (height for landscape, width for portrait)
+  // as that's what the "p" value represents (e.g., 720p = 720 vertical lines)
+  const resolution = Math.min(width, height)
 
   if (resolution >= 3840) return '4K'
   if (resolution >= 2560) return '2K'

@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload: added delete draft button (trash icon) with confirmation dialog next to save draft button; offers option to delete uploaded media from servers; navigates to draft overview after deletion; save draft button now shows save icon
 - Docs: added NIP-71 best practices guide (`docs/NIP-71-best-practices.md`) covering video event creation, imeta tags, multi-resolution support, thumbnails, content resilience, codec compatibility, and common pitfalls
 - Video page: added "Edit Video" option for owners of replaceable video events (kinds 34235, 34236) allowing in-place editing of title, description, tags, language, and content warning; preserves all unknown tags for forward compatibility; publishes to all relays where video was seen; replaces "Label Video" option for video owners
+- DVM transcoding: added NIP-04 encryption support for DVM job requests and responses; when signer supports NIP-04, transcode requests are encrypted to protect video URLs from public visibility; status and result events from DVM are automatically decrypted; falls back to unencrypted requests for signers without NIP-04 support
+- DVM transcoding: added codec parameter support (h264/h265) for transcoding jobs
 
 ### Changed
 
@@ -69,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: fixed video quality detection using max dimension instead of height; a 1086x720 video was incorrectly labeled 480p instead of 720p (now uses shorter dimension which matches standard resolution naming)
 - UI: fixed LanguageSelect dropdown appearing behind dialog by adding z-index to SelectContent
 - Notifications: replies to user comments now correctly show "replied to your comment" instead of "commented on your video"; video title is now properly resolved from root E/K tags (previously showed "Unknown video" for replies)
 - Upload: after successful video publish, draft is now deleted and app navigates to the video page

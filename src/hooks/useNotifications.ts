@@ -190,12 +190,10 @@ export function useNotifications() {
         const rootKTag = comment.tags.find(t => t[0] === 'K')
         const rootVideoKind = rootKTag?.[1]
 
-        // Must be a comment on a video thread (root kind should be video)
-        if (
-          !rootVideoKind ||
-          !['21', '22', '34235', '34236'].includes(rootVideoKind) ||
-          rootVideoKind === '1111'
-        ) {
+        // Only show notifications for comments on video threads (kinds 21, 22, 34235, 34236)
+        // Skip kind 1 (text notes), kind 1111 (comments), and any other non-video kinds
+        const VIDEO_KINDS = ['21', '22', '34235', '34236']
+        if (!rootVideoKind || !VIDEO_KINDS.includes(rootVideoKind)) {
           continue
         }
 

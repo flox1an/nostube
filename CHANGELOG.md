@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Notifications: comments on kind 1 events (text notes) are now properly filtered out; only comments on video events (kinds 21, 22, 34235, 34236) trigger notifications
 - Upload: fixed video quality detection using max dimension instead of height; a 1086x720 video was incorrectly labeled 480p instead of 720p (now uses shorter dimension which matches standard resolution naming)
 - UI: fixed LanguageSelect dropdown appearing behind dialog by adding z-index to SelectContent
 - Notifications: replies to user comments now correctly show "replied to your comment" instead of "commented on your video"; video title is now properly resolved from root E/K tags (previously showed "Unknown video" for replies)

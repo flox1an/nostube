@@ -10,7 +10,7 @@ export function CategoryButtonBar({ activeSlug }: CategoryButtonBarProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md border-b">
+    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md">
       <div className="flex gap-2 p-2 min-w-max">
         <Button
           variant={!activeSlug ? 'default' : 'outline'}

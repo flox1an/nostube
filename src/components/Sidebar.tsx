@@ -85,7 +85,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
   return (
     <aside
       className={cn(
-        'flex flex-col w-56 bg-background border-r border-border transition-all duration-300 overflow-y-auto',
+        'flex flex-col w-56 bg-background transition-all duration-300 overflow-y-auto',
         isDrawer
           ? 'h-full shadow-lg backdrop-blur-sm bg-background/95'
           : 'sticky top-14 h-[calc(100vh-3.5rem)]'

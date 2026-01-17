@@ -10,7 +10,10 @@ import {
   parseDvmResultContent,
   parseCodecsFromMimetype,
   RESOLUTION_DIMENSIONS,
+  buildDvmEncryptedContent,
+  parseDvmEncryptedStatus,
   type DvmHandlerInfo,
+  type TranscodeCodec,
 } from '@/lib/dvm-utils'
 import { extractBlossomHash } from '@/utils/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
@@ -93,6 +96,13 @@ export interface UseDvmTranscodeResult {
 
 // 12 hour timeout for resumable jobs
 const TRANSCODE_JOB_TIMEOUT_MS = 12 * 60 * 60 * 1000
+
+/**
+ * Check if a Nostr event has the encrypted tag
+ */
+function hasEncryptedTag(event: NostrEvent): boolean {
+  return event.tags.some(t => t[0] === 'encrypted')
+}
 
 /**
  * Hook for managing DVM video transcoding workflow
@@ -211,13 +221,15 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
   /**
    * Subscribe to DVM responses for a job request
+   * Supports both encrypted (NIP-04) and unencrypted responses
    */
   const subscribeToDvmResponses = useCallback(
     (
       requestEventId: string,
       dvmPubkey: string,
       originalDuration?: number,
-      requestedResolution?: string
+      requestedResolution?: string,
+      wasEncrypted: boolean = false
     ): Promise<VideoVariant> => {
       const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
@@ -245,22 +257,65 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               const nostrEvent = event as NostrEvent
 
               if (nostrEvent.kind === DVM_FEEDBACK_KIND) {
-                // Handle feedback
-                const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
-                if (statusTag) {
-                  const [, feedbackStatus, statusExtraInfo] = statusTag
+                // Handle feedback - check if encrypted
+                const isEncrypted = hasEncryptedTag(nostrEvent)
 
-                  // Check for content tag (preferred) or fall back to status tag extra info
-                  const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
-                  const message =
-                    contentTag?.[1] ||
-                    statusExtraInfo ||
-                    (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+                if (import.meta.env.DEV) {
+                  console.log('[DVM] Received feedback event:', {
+                    isEncrypted,
+                    wasEncrypted,
+                    hasNip04: !!user?.signer.nip04,
+                    contentPreview: nostrEvent.content.substring(0, 100),
+                    tags: nostrEvent.tags,
+                  })
+                }
 
-                  // Check for eta tag
-                  const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
-                  const eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+                let feedbackStatus: string | undefined
+                let message: string | undefined
+                let eta: number | undefined
 
+                if (isEncrypted && wasEncrypted && user?.signer.nip04) {
+                  // Decrypt the status content
+                  try {
+                    const decrypted = await user.signer.nip04.decrypt(dvmPubkey, nostrEvent.content)
+                    if (import.meta.env.DEV) {
+                      console.log('[DVM] Decrypted feedback content:', decrypted)
+                    }
+                    const parsed = parseDvmEncryptedStatus(decrypted)
+                    if (parsed) {
+                      feedbackStatus = parsed.status
+                      message = parsed.message || undefined
+                      eta = parsed.eta || undefined
+                    } else if (import.meta.env.DEV) {
+                      console.warn('[DVM] Failed to parse decrypted status:', decrypted)
+                    }
+                  } catch (err) {
+                    console.warn('[DVM] Failed to decrypt status event:', err)
+                    // Try to fall back to tags if decryption fails
+                    const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
+                    if (statusTag) {
+                      const [, status, statusExtraInfo] = statusTag
+                      feedbackStatus = status
+                      message = statusExtraInfo || 'Processing...'
+                    }
+                  }
+                } else {
+                  // Parse from tags (unencrypted)
+                  const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
+                  if (statusTag) {
+                    const [, status, statusExtraInfo] = statusTag
+                    feedbackStatus = status
+                    const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
+                    message =
+                      contentTag?.[1] ||
+                      statusExtraInfo ||
+                      (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+                    const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
+                    eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+                  }
+                }
+
+                if (feedbackStatus) {
                   // Extract percentage from message if present
                   const percentMatch = message?.match(/(\d+)%/)
                   const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
@@ -270,48 +325,71 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
                       if (lastMsg?.message === message) {
-                        return { ...prev, status: 'transcoding', message, eta }
+                        return { ...prev, status: 'transcoding', message: message || '', eta }
                       }
                       return {
                         status: 'transcoding',
-                        message,
+                        message: message || 'Processing...',
                         eta,
                         statusMessages: [
                           ...prev.statusMessages,
-                          { timestamp: Date.now(), message },
+                          { timestamp: Date.now(), message: message || 'Processing...' },
                         ],
                       }
                     })
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
                     subscriptionRef.current?.unsubscribe()
-                    reject(new Error(contentTag?.[1] || statusExtraInfo || 'DVM processing error'))
+                    reject(new Error(message || 'DVM processing error'))
                   } else if (feedbackStatus === 'partial') {
                     setProgress(prev => {
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
                       if (lastMsg?.message === message) {
-                        return { ...prev, status: 'transcoding', message, percentage, eta }
+                        return {
+                          ...prev,
+                          status: 'transcoding',
+                          message: message || '',
+                          percentage,
+                          eta,
+                        }
                       }
                       return {
                         status: 'transcoding',
-                        message,
+                        message: message || 'Processing...',
                         percentage,
                         eta,
                         statusMessages: [
                           ...prev.statusMessages,
-                          { timestamp: Date.now(), message, percentage },
+                          {
+                            timestamp: Date.now(),
+                            message: message || 'Processing...',
+                            percentage,
+                          },
                         ],
                       }
                     })
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {
-                // Handle result
+                // Handle result - check if encrypted
                 clearTimeout(timeout)
                 subscriptionRef.current?.unsubscribe()
 
-                const result = parseDvmResultContent(nostrEvent.content)
+                let resultContent = nostrEvent.content
+                const isEncrypted = hasEncryptedTag(nostrEvent)
+
+                if (isEncrypted && wasEncrypted && user?.signer.nip04) {
+                  // Decrypt the result content
+                  try {
+                    resultContent = await user.signer.nip04.decrypt(dvmPubkey, nostrEvent.content)
+                  } catch {
+                    reject(new Error('Failed to decrypt DVM result'))
+                    return
+                  }
+                }
+
+                const result = parseDvmResultContent(resultContent)
                 if (!result || !result.urls || result.urls.length === 0) {
                   reject(new Error('Invalid DVM result: no URLs returned'))
                   return
@@ -359,7 +437,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           })
       })
     },
-    [config.relays]
+    [config.relays, user]
   )
 
   /**
@@ -556,6 +634,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
   /**
    * Process a single resolution transcode
+   * Supports NIP-04 encrypted requests when signer supports it
    */
   const processResolution = useCallback(
     async (
@@ -563,7 +642,8 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       resolution: string,
       dvm: DvmHandlerInfo,
       originalDuration?: number,
-      queueInfo?: { resolutions: string[]; currentIndex: number; completed: string[] }
+      queueInfo?: { resolutions: string[]; currentIndex: number; completed: string[] },
+      codec: TranscodeCodec = 'h264'
     ): Promise<VideoVariant> => {
       const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
@@ -578,17 +658,50 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         queue: queueInfo,
       }))
 
-      const jobRequest: EventTemplate = {
-        kind: DVM_REQUEST_KIND,
-        content: '',
-        created_at: nowInSecs(),
-        tags: [
-          ['i', inputVideoUrl, 'url'],
-          ['p', dvm.pubkey],
-          ['param', 'mode', 'mp4'],
-          ['param', 'resolution', resolution],
-          ['relays', ...writeRelays],
-        ],
+      // Determine if we should use encryption (if signer supports NIP-04)
+      const canEncrypt = !!user?.signer.nip04
+      let wasEncrypted = false
+
+      let jobRequest: EventTemplate
+
+      if (canEncrypt) {
+        // Build encrypted request - put input and params in encrypted content
+        const encryptedContent = buildDvmEncryptedContent(inputVideoUrl, 'mp4', resolution, codec)
+        const encryptedJson = await user!.signer.nip04!.encrypt(
+          dvm.pubkey,
+          JSON.stringify(encryptedContent)
+        )
+
+        jobRequest = {
+          kind: DVM_REQUEST_KIND,
+          content: encryptedJson,
+          created_at: nowInSecs(),
+          tags: [['p', dvm.pubkey], ['relays', ...writeRelays], ['encrypted']],
+        }
+        wasEncrypted = true
+
+        if (import.meta.env.DEV) {
+          console.log(`[DVM] Building encrypted ${resolution} request`)
+        }
+      } else {
+        // Build unencrypted request (fallback)
+        jobRequest = {
+          kind: DVM_REQUEST_KIND,
+          content: '',
+          created_at: nowInSecs(),
+          tags: [
+            ['i', inputVideoUrl, 'url'],
+            ['p', dvm.pubkey],
+            ['param', 'mode', 'mp4'],
+            ['param', 'resolution', resolution],
+            ['param', 'codec', codec],
+            ['relays', ...writeRelays],
+          ],
+        }
+
+        if (import.meta.env.DEV) {
+          console.log(`[DVM] Building unencrypted ${resolution} request (signer lacks NIP-04)`)
+        }
       }
 
       const signedRequest = await user!.signer.signEvent(jobRequest)
@@ -612,7 +725,11 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       onStateChange?.(persistedState)
 
       if (import.meta.env.DEV) {
-        console.log(`[DVM] Published ${resolution} job request:`, signedRequest.id)
+        console.log(
+          `[DVM] Published ${resolution} job request:`,
+          signedRequest.id,
+          wasEncrypted ? '(encrypted)' : '(unencrypted)'
+        )
       }
 
       // Check if cancelled
@@ -635,7 +752,8 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         signedRequest.id,
         dvm.pubkey,
         originalDuration,
-        resolution
+        resolution,
+        wasEncrypted
       )
 
       // Check if cancelled

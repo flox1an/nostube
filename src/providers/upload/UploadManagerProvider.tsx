@@ -53,7 +53,10 @@ import {
   parseDvmResultContent,
   parseCodecsFromMimetype,
   RESOLUTION_DIMENSIONS,
+  buildDvmEncryptedContent,
+  parseDvmEncryptedStatus,
   type DvmHandlerInfo,
+  type TranscodeCodec,
 } from '@/lib/dvm-utils'
 import { extractBlossomHash } from '@/utils/video-event'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
@@ -75,6 +78,13 @@ import {
 import { debounce } from './utils'
 
 const UploadManagerContext = createContext<UploadManagerContextType | undefined>(undefined)
+
+/**
+ * Check if a Nostr event has the encrypted tag
+ */
+function hasEncryptedTag(event: NostrEvent): boolean {
+  return event.tags.some(t => t[0] === 'encrypted')
+}
 
 interface UploadManagerProviderProps {
   children: ReactNode
@@ -667,13 +677,18 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   }, [])
 
   // Subscribe to DVM responses - returns a promise that resolves with the result
+  /**
+   * Subscribe to DVM responses for a job request
+   * Supports both encrypted (NIP-04) and unencrypted responses
+   */
   const subscribeToDvmResponses = useCallback(
     (
       taskId: string,
       requestEventId: string,
       dvmPubkey: string,
       originalDuration?: number,
-      requestedResolution?: string
+      requestedResolution?: string,
+      wasEncrypted: boolean = false
     ): Promise<VideoVariant> => {
       if (import.meta.env.DEV) {
         console.log('[UploadManager] subscribeToDvmResponses called for taskId:', taskId)
@@ -716,20 +731,51 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               if (typeof event === 'string') return
 
               const nostrEvent = event as NostrEvent
+              const currentUser = userRef.current
 
               if (nostrEvent.kind === DVM_FEEDBACK_KIND) {
-                const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
-                if (statusTag) {
-                  const [, feedbackStatus, statusExtraInfo] = statusTag
-                  const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
-                  const message =
-                    contentTag?.[1] ||
-                    statusExtraInfo ||
-                    (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+                // Handle feedback - check if encrypted
+                const isEncrypted = hasEncryptedTag(nostrEvent)
 
-                  const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
-                  const eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+                let feedbackStatus: string | undefined
+                let message: string | undefined
+                let eta: number | undefined
 
+                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
+                  // Decrypt the status content
+                  try {
+                    const decrypted = await currentUser.signer.nip04.decrypt(
+                      dvmPubkey,
+                      nostrEvent.content
+                    )
+                    const parsed = parseDvmEncryptedStatus(decrypted)
+                    if (parsed) {
+                      feedbackStatus = parsed.status
+                      message = parsed.message || undefined
+                      eta = parsed.eta || undefined
+                    }
+                  } catch (err) {
+                    if (import.meta.env.DEV) {
+                      console.warn('[UploadManager] Failed to decrypt status event:', err)
+                    }
+                  }
+                } else {
+                  // Parse from tags (unencrypted)
+                  const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
+                  if (statusTag) {
+                    const [, status, statusExtraInfo] = statusTag
+                    feedbackStatus = status
+                    const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
+                    message =
+                      contentTag?.[1] ||
+                      statusExtraInfo ||
+                      (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
+                    const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
+                    eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
+                  }
+                }
+
+                if (feedbackStatus) {
                   const percentMatch = message?.match(/(\d+)%/)
                   const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
 
@@ -739,7 +785,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                       transcodeState: {
                         ...tasks.get(taskId)?.transcodeState,
                         status: 'transcoding',
-                        message,
+                        message: message || 'Processing...',
                         percentage,
                         eta,
                       } as TranscodeState,
@@ -747,14 +793,30 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
                     subscription.unsubscribe()
-                    reject(new Error(contentTag?.[1] || statusExtraInfo || 'DVM processing error'))
+                    reject(new Error(message || 'DVM processing error'))
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {
                 clearTimeout(timeout)
                 subscription.unsubscribe()
 
-                const result = parseDvmResultContent(nostrEvent.content)
+                let resultContent = nostrEvent.content
+                const isEncrypted = hasEncryptedTag(nostrEvent)
+
+                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
+                  // Decrypt the result content
+                  try {
+                    resultContent = await currentUser.signer.nip04.decrypt(
+                      dvmPubkey,
+                      nostrEvent.content
+                    )
+                  } catch {
+                    reject(new Error('Failed to decrypt DVM result'))
+                    return
+                  }
+                }
+
+                const result = parseDvmResultContent(resultContent)
                 if (!result || !result.urls || result.urls.length === 0) {
                   reject(new Error('Invalid DVM result: no URLs returned'))
                   return
@@ -801,7 +863,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [updateTasksState, tasks]
   )
 
-  // Process a single resolution
+  /**
+   * Process a single resolution transcode
+   * Supports NIP-04 encrypted requests when signer supports it
+   */
   const processResolution = useCallback(
     async (
       taskId: string,
@@ -809,7 +874,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       resolution: string,
       dvm: DvmHandlerInfo,
       originalDuration?: number,
-      queueInfo?: ResolutionQueueInfo
+      queueInfo?: ResolutionQueueInfo,
+      codec: TranscodeCodec = 'h264'
     ): Promise<VideoVariant> => {
       const currentUser = userRef.current
       const currentConfig = configRef.current
@@ -852,17 +918,52 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         throw new Error('Invalid resolution')
       }
 
-      const jobRequest: EventTemplate = {
-        kind: DVM_REQUEST_KIND,
-        content: '',
-        created_at: nowInSecs(),
-        tags: [
-          ['i', inputVideoUrl, 'url'],
-          ['p', dvm.pubkey],
-          ['param', 'mode', 'mp4'],
-          ['param', 'resolution', resolution],
-          ['relays', ...writeRelays],
-        ],
+      // Determine if we should use encryption (if signer supports NIP-04)
+      const canEncrypt = !!currentUser.signer.nip04
+      let wasEncrypted = false
+
+      let jobRequest: EventTemplate
+
+      if (canEncrypt) {
+        // Build encrypted request - put input and params in encrypted content
+        const encryptedContent = buildDvmEncryptedContent(inputVideoUrl, 'mp4', resolution, codec)
+        const encryptedJson = await currentUser.signer.nip04!.encrypt(
+          dvm.pubkey,
+          JSON.stringify(encryptedContent)
+        )
+
+        jobRequest = {
+          kind: DVM_REQUEST_KIND,
+          content: encryptedJson,
+          created_at: nowInSecs(),
+          tags: [['p', dvm.pubkey], ['relays', ...writeRelays], ['encrypted']],
+        }
+        wasEncrypted = true
+
+        if (import.meta.env.DEV) {
+          console.log(`[UploadManager] Building encrypted ${resolution} request`)
+        }
+      } else {
+        // Build unencrypted request (fallback)
+        jobRequest = {
+          kind: DVM_REQUEST_KIND,
+          content: '',
+          created_at: nowInSecs(),
+          tags: [
+            ['i', inputVideoUrl, 'url'],
+            ['p', dvm.pubkey],
+            ['param', 'mode', 'mp4'],
+            ['param', 'resolution', resolution],
+            ['param', 'codec', codec],
+            ['relays', ...writeRelays],
+          ],
+        }
+
+        if (import.meta.env.DEV) {
+          console.log(
+            `[UploadManager] Building unencrypted ${resolution} request (signer lacks NIP-04)`
+          )
+        }
       }
 
       if (import.meta.env.DEV) {
@@ -873,7 +974,11 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       await relayPool.publish(writeRelays, signedRequest)
 
       if (import.meta.env.DEV) {
-        console.log(`[UploadManager] Published ${resolution} job request:`, signedRequest.id)
+        console.log(
+          `[UploadManager] Published ${resolution} job request:`,
+          signedRequest.id,
+          wasEncrypted ? '(encrypted)' : '(unencrypted)'
+        )
       }
 
       // Check if cancelled
@@ -897,7 +1002,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         signedRequest.id,
         dvm.pubkey,
         originalDuration,
-        resolution
+        resolution,
+        wasEncrypted
       )
 
       // Check if cancelled

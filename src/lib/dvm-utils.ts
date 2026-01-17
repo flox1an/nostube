@@ -1,6 +1,11 @@
 import type { VideoVariant } from './video-processing'
 
 /**
+ * Available codecs for transcoding
+ */
+export type TranscodeCodec = 'h264' | 'h265'
+
+/**
  * Resolution to dimension mapping for transcoding
  */
 export const RESOLUTION_DIMENSIONS: Record<string, string> = {
@@ -116,4 +121,64 @@ export interface DvmHandlerInfo {
   pubkey: string
   name?: string
   about?: string
+}
+
+/**
+ * Check if content appears to be NIP-04 encrypted (base64?iv=base64 format)
+ */
+export function isNip04Encrypted(content: string): boolean {
+  return content.includes('?iv=')
+}
+
+/**
+ * Encrypted content structure for DVM requests
+ */
+export interface DvmEncryptedContent {
+  i: [string, string] // [url, "url"]
+  params: string[][] // [["param", "mode", "mp4"], ["param", "resolution", "720p"], ...]
+}
+
+/**
+ * Encrypted status content structure from DVM
+ */
+export interface DvmEncryptedStatus {
+  status: string
+  message?: string | null
+  eta?: number | null
+}
+
+/**
+ * Build encrypted content JSON for DVM request
+ */
+export function buildDvmEncryptedContent(
+  videoUrl: string,
+  mode: 'mp4' | 'hls',
+  resolution: string,
+  codec: TranscodeCodec = 'h264'
+): DvmEncryptedContent {
+  const params: string[][] = [
+    ['param', 'mode', mode],
+    ['param', 'codec', codec],
+  ]
+
+  // Only add resolution param for MP4 mode
+  if (mode === 'mp4') {
+    params.push(['param', 'resolution', resolution])
+  }
+
+  return {
+    i: [videoUrl, 'url'],
+    params,
+  }
+}
+
+/**
+ * Parse encrypted status content from DVM
+ */
+export function parseDvmEncryptedStatus(decryptedContent: string): DvmEncryptedStatus | null {
+  try {
+    return JSON.parse(decryptedContent) as DvmEncryptedStatus
+  } catch {
+    return null
+  }
 }

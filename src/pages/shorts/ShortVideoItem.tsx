@@ -236,6 +236,16 @@ export const ShortVideoItem = memo(
       if (!isActive) return
 
       const handleKeyDown = (event: KeyboardEvent) => {
+        // Don't intercept space key when user is typing in an input or textarea
+        const target = event.target as HTMLElement
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return
+        }
+
         if (event.code === 'Space' || event.key === ' ') {
           event.preventDefault()
           handleVideoClick()

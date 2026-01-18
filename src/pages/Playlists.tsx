@@ -1,8 +1,16 @@
+import { useEffect } from 'react'
 import { PlaylistManager } from '@/components/PlaylistManager'
 import { useTranslation } from 'react-i18next'
 
 export default function PlaylistPage() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = `${t('playlists.myPlaylists')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
 
   return (
     <div className="container py-8 max-w-4xl mx-auto">

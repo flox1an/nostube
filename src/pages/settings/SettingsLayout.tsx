@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -82,6 +83,23 @@ export function SettingsLayout() {
   const { t } = useTranslation()
   const location = useLocation()
   const isIndex = location.pathname === '/settings'
+
+  // Find current section from path
+  const currentPath = location.pathname.replace('/settings/', '')
+  const currentMenuItem = menuItems.find(item => item.path === currentPath)
+
+  useEffect(() => {
+    if (isIndex) {
+      document.title = `${t('settings.title')} - nostube`
+    } else if (currentMenuItem) {
+      document.title = `${t(currentMenuItem.labelKey)} - nostube`
+    } else {
+      document.title = `${t('settings.title')} - nostube`
+    }
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t, isIndex, currentMenuItem])
 
   return (
     <div className="container mx-auto py-8 max-w-2xl px-4">

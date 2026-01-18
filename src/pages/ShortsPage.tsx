@@ -2,11 +2,18 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function ShortsPage() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = `${t('navigation.shorts')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
   const relays = useStableRelays()
 
   // Memoize the loader to prevent recreation on every render

@@ -1,11 +1,18 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useFollowedAuthors, useStableRelays, useTimelineLoader } from '@/hooks'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 
 export function SubscriptionsPage() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = `${t('navigation.subscriptions')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
   const { data: followedProfiles = [] } = useFollowedAuthors()
   const followedPubkeys = useMemo(
     () => followedProfiles.map(profile => profile.pubkey),

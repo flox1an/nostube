@@ -21,6 +21,13 @@ export function LikedVideosPage() {
 
   const readRelays = useReadRelays()
 
+  useEffect(() => {
+    document.title = `${t('pages.likedVideos.title')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
+
   // Convert likedEventIds to string for stable comparison
   // Note: Don't sort here - the order is already sorted by date from useLikedEvents
   const likedIdsString = useMemo(() => {

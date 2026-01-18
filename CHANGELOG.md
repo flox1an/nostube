@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: added "Edit Video" option for owners of replaceable video events (kinds 34235, 34236) allowing in-place editing of title, description, tags, language, and content warning; preserves all unknown tags for forward compatibility; publishes to all relays where video was seen; replaces "Label Video" option for video owners
 - DVM transcoding: added NIP-04 encryption support for DVM job requests and responses; when signer supports NIP-04, transcode requests are encrypted to protect video URLs from public visibility; status and result events from DVM are automatically decrypted; falls back to unencrypted requests for signers without NIP-04 support
 - DVM transcoding: added codec parameter support (h264/h265) for transcoding jobs
+- SEO: added proper HTML page titles across all pages (Home, Shorts, Playlists, Liked Videos, Subscriptions, Video Notes, Upload, Settings, 404); dynamic titles for video pages, author pages, search results, playlists, categories, and hashtags were already present
 
 ### Changed
 

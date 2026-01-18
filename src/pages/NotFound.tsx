@@ -7,8 +7,12 @@ const NotFound = () => {
   const location = useLocation()
 
   useEffect(() => {
+    document.title = `${t('pages.notFound.title')} - nostube`
     console.error('404 Error: User attempted to access non-existent route:', location.pathname)
-  }, [location.pathname])
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [location.pathname, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">

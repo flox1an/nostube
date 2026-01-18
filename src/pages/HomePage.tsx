@@ -3,11 +3,18 @@ import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function HomePage() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = `${t('navigation.home')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
   const relays = useStableRelays()
 
   // Memoize the loader to prevent recreation on every render

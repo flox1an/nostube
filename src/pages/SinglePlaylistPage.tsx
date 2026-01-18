@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,6 +27,17 @@ export default function SinglePlaylistPage() {
   const metadata = useProfile(playlistEvent?.pubkey ? { pubkey: playlistEvent.pubkey } : undefined)
   const name =
     metadata?.display_name || metadata?.name || playlistEvent?.pubkey?.slice(0, 8) || 'Unknown'
+
+  useEffect(() => {
+    if (playlistTitle) {
+      document.title = `${playlistTitle} - nostube`
+    } else {
+      document.title = 'nostube'
+    }
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [playlistTitle])
 
   if (isLoadingPlaylist) {
     return (

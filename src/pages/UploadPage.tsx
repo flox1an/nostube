@@ -7,6 +7,13 @@ import { useEffect, useCallback } from 'react'
 
 export function UploadPage() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = `${t('upload.title')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
   const { toast } = useToast()
   const {
     drafts,

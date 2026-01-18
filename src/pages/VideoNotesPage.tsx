@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
 import { useTranslation } from 'react-i18next'
@@ -157,6 +157,13 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
 export function VideoNotesPage() {
   const { t } = useTranslation()
   const { notes, loading } = useVideoNotes()
+
+  useEffect(() => {
+    document.title = `${t('pages.videoNotes.title')} - nostube`
+    return () => {
+      document.title = 'nostube'
+    }
+  }, [t])
 
   if (loading) {
     return (

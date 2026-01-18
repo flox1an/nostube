@@ -26,8 +26,8 @@ export function MainLayout() {
           </div>
         )}
 
-        {/* Floating Sidebar Drawer - Only for mobile/tablet (<LG) */}
-        <div className="lg:hidden">
+        {/* Floating Sidebar Drawer - For mobile/tablet (<LG) and all screen sizes on video pages */}
+        <div className={cn(isVideoPage ? '' : 'lg:hidden')}>
           {isSidebarOpen && (
             <>
               <div className="fixed inset-0 bg-black/50 z-[190]" onClick={toggleSidebar} />

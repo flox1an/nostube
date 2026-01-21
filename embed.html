@@ -8,6 +8,10 @@
     <meta property="og:title" content="Nostube Embed Player" />
     <meta property="og:description" content="Embeddable video player for Nostr video content" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <meta
+      http-equiv="content-security-policy"
+      content="default-src 'none'; upgrade-insecure-requests; script-src 'self' 'wasm-unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss: http://localhost:* https://localhost:*; img-src 'self' data: blob: https: http://localhost:* https://localhost:*; media-src 'self' https: blob: http://localhost:* https://localhost:*"
+    />
     <title>Nostube Embed Player</title>
   </head>
   <body>

@@ -1,18 +1,8 @@
 import { useEffect } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Settings,
-  Palette,
-  Radio,
-  Server,
-  Database,
-  Trash2,
-  AlertTriangle,
-  ChevronRight,
-  ChevronLeft,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Settings, Palette, Radio, Server, Database, Trash2, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface SettingsMenuItem {
   path: string
@@ -30,49 +20,36 @@ const menuItems: SettingsMenuItem[] = [
   { path: 'missing-videos', labelKey: 'settings.missingVideos.title', icon: AlertTriangle },
 ]
 
-function SettingsMenu() {
-  const { t } = useTranslation()
-
-  return (
-    <nav className="space-y-1">
-      {menuItems.map(item => (
-        <Link
-          key={item.path}
-          to={`/settings/${item.path}`}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors',
-            'hover:bg-accent hover:text-accent-foreground',
-            'text-foreground'
-          )}
-        >
-          <item.icon className="h-5 w-5 text-muted-foreground" />
-          <span className="flex-1">{t(item.labelKey)}</span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
-      ))}
-    </nav>
-  )
-}
-
-function SettingsHeader() {
+function SettingsTabs() {
   const { t } = useTranslation()
   const location = useLocation()
+  const navigate = useNavigate()
 
-  // Find current section from path
-  const currentPath = location.pathname.replace('/settings/', '')
-  const currentItem = menuItems.find(item => item.path === currentPath)
+  // Get current section from URL or default to general
+  const currentPath = location.pathname.split('/').pop() || 'general'
+  // Handle case where we might be at /settings (though we redirect, it's safe)
+  const activePath = location.pathname === '/settings' ? 'general' : currentPath
 
   return (
-    <div className="flex items-center gap-3 mb-6">
-      <Link
-        to="/settings"
-        className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-accent transition-colors"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Link>
-      <h1 className="text-2xl font-bold">
-        {currentItem ? t(currentItem.labelKey) : t('settings.title')}
-      </h1>
+    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 -mx-4 px-4 md:mx-0 md:px-0 mb-6 border-b md:border-none py-2">
+      <div className="flex gap-2 min-w-max">
+        {menuItems.map(item => {
+          const isActive = activePath === item.path
+
+          return (
+            <Button
+              key={item.path}
+              variant={isActive ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 rounded-full px-4 gap-2"
+              onClick={() => navigate(`/settings/${item.path}`)}
+            >
+              <item.icon className="h-4 w-4" />
+              {t(item.labelKey)}
+            </Button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -83,7 +60,7 @@ export function SettingsLayout() {
   const isIndex = location.pathname === '/settings'
 
   // Find current section from path
-  const currentPath = location.pathname.replace('/settings/', '')
+  const currentPath = location.pathname.split('/').pop()
   const currentMenuItem = menuItems.find(item => item.path === currentPath)
 
   useEffect(() => {
@@ -99,19 +76,21 @@ export function SettingsLayout() {
     }
   }, [t, isIndex, currentMenuItem])
 
+  if (isIndex) {
+    return <Navigate to="general" replace />
+  }
+
   return (
     <div className="container mx-auto py-8 max-w-2xl px-4">
-      {isIndex ? (
-        <>
-          <h1 className="text-3xl font-bold mb-6">{t('settings.title')}</h1>
-          <SettingsMenu />
-        </>
-      ) : (
-        <>
-          <SettingsHeader />
-          <Outlet />
-        </>
-      )}
+      <div className="flex items-center gap-3 mb-2">
+        <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
+      </div>
+
+      <SettingsTabs />
+
+      <div className="mt-6">
+        <Outlet />
+      </div>
     </div>
   )
 }

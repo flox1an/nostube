@@ -2,6 +2,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { processEvent, type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { buildVideoPath } from '@/utils/video-utils'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -72,7 +73,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   }
 
   // Link to shorts page for short videos, video page for regular videos
-  const linkTo = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
+  const linkTo = buildVideoPath(video.link, video.type === 'shorts' ? 'shorts' : 'video')
 
   return (
     <Link to={linkTo} className="group">
@@ -100,7 +101,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
           />
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
-            <div className="absolute bottom-1 right-1 bg-black/80 text-white px-1 rounded text-xs">
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1 rounded text-xs">
               {formatDuration(video.duration)}
             </div>
           )}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns/formatDistance'
 import { type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { buildVideoPath, buildVideoUrlObject } from '@/utils/video-utils'
 import { formatDuration } from '../lib/formatDuration'
 import { UserAvatar } from '@/components/UserAvatar'
 import { cn, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
@@ -92,28 +93,34 @@ export const VideoCard = React.memo(function VideoCard({
     return blurHashToDataURL(blurhash)
   }, [video.thumbnailVariants])
 
-  // Determine navigation path based on video type
-  const videoPath = video.type === 'shorts' ? `/short/${video.link}` : `/video/${video.link}`
+  // Determine video type for URL building
+  const videoType = video.type === 'shorts' ? 'shorts' : 'video'
 
-  // Build URL with author and video ID for shorts navigation
+  // Build URL with optional playlist or shorts navigation params
   const to = useMemo(() => {
-    if (playlistParam && videoPath.startsWith('/video/')) {
-      return {
-        pathname: videoPath,
-        search: `?playlist=${encodeURIComponent(playlistParam)}`,
-      }
+    if (playlistParam && videoType === 'video') {
+      return buildVideoUrlObject(video.link, 'video', { playlist: playlistParam })
     }
 
     if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
       // Pass author pubkey and video event ID (scalable approach)
       return {
-        pathname: videoPath,
+        pathname: buildVideoPath(video.link, 'shorts'),
         search: `?author=${video.pubkey}&video=${video.id}`,
       }
     }
 
-    return videoPath
-  }, [playlistParam, videoPath, video.type, video.pubkey, video.id, allVideos, videoIndex])
+    return buildVideoPath(video.link, videoType)
+  }, [
+    playlistParam,
+    videoType,
+    video.link,
+    video.type,
+    video.pubkey,
+    video.id,
+    allVideos,
+    videoIndex,
+  ])
 
   // Debug: Log navigation state for shorts (DEV only)
   if (import.meta.env.DEV && video.type === 'shorts') {
@@ -263,7 +270,7 @@ export const VideoCard = React.memo(function VideoCard({
               />
             )}
             {video.duration > 0 && (
-              <div className="absolute bottom-2 right-2 bg-black/80 text-white px-1 rounded text-sm">
+              <div className="absolute bottom-2 right-2 bg-black/50 text-white px-1 rounded text-sm">
                 {formatDuration(video.duration)}
               </div>
             )}

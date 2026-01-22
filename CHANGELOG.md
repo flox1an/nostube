@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Refactoring: centralized video URL building in `src/utils/video-utils.ts` with `buildVideoPath`, `buildVideoUrl`, and `buildVideoUrlObject` functions; standardized all video URLs to use `/v/{link}` for widescreen and `/short/{link}` for portrait videos with optional playlist, timestamp, comment, and autoplay parameters
 - Refactoring: new `useDialogState` hook for managing dialog open/close state with data support (reduces boilerplate across 50+ components)
 - Refactoring: new `src/lib/format-utils.ts` with `formatTimestamp`, `formatDateSimple`, `formatDateTime` functions
 - Refactoring: new `src/lib/array-utils.ts` with `chunk`, `uniqueBy`, `groupBy`, `interleave` functions
@@ -42,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Wallet: moved wallet configuration from settings page to user menu dropdown for easier access; wallet balance shown in menu when connected
 - Video feeds: all timelines and feeds now sorted by `published_at` date (with `created_at` as fallback) for correct video ordering; video page shows "updated X ago" in parentheses when video was edited after publishing
 - Video cards: hover effect changed from upward shift to centered zoom for smoother visual feedback
 - Sidebar: hide Subscriptions and Playlists menu items in mini sidebar when not logged in (matches full sidebar behavior)

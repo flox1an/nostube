@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, cn } from '@/lib/utils'
+import { buildVideoUrl } from '@/utils/video-utils'
 import { useProfile, useAppContext } from '@/hooks'
 import { useMemo, useState } from 'react'
 
@@ -145,8 +146,6 @@ export function PlaylistSidebar({
 
   if (!playlistParam) return null
 
-  const encodedPlaylistParam = encodeURIComponent(playlistParam)
-
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -170,8 +169,7 @@ export function PlaylistSidebar({
         ) : (
           videoEvents.map(item => {
             const isActive = currentVideoId === item.id
-            const pointer = item.link
-            const href = `/video/${pointer}?playlist=${encodedPlaylistParam}`
+            const href = buildVideoUrl(item.link, 'video', { playlist: playlistParam })
 
             return <PlaylistVideoItem key={item.id} item={item} isActive={isActive} href={href} />
           })

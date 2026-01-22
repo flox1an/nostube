@@ -3,6 +3,7 @@ import { usePlaylists, type Playlist, type Video, useAppContext } from '@/hooks'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent } from '@/utils/video-event'
+import { buildVideoUrl } from '@/utils/video-utils'
 import { imageProxyVideoPreview } from '@/lib/utils'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -78,7 +79,7 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
           id: video.id,
           kind: video.kind,
         })
-    navigate(`/video/${nevent}?playlist=${encodeURIComponent(playlistParam)}`)
+    navigate(buildVideoUrl(nevent, 'video', { playlist: playlistParam }))
   }
 
   return (

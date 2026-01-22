@@ -11,6 +11,7 @@ import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
 import { useEffect, useMemo, useRef, useCallback, startTransition } from 'react'
 import { processEvent, processEvents } from '@/utils/video-event'
+import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppContext, useReportedPubkeys, useReadRelays, useVideoHistory } from '@/hooks'
@@ -485,7 +486,7 @@ export function ShortsVideoPage() {
 
       // Debounce URL updates to avoid excessive history API calls during fast scrolling
       urlUpdateTimeoutRef.current = setTimeout(() => {
-        const newPath = `/short/${currentVideo.link}`
+        const newPath = buildVideoPath(currentVideo.link, 'shorts')
         pendingUrlUpdateRef.current = currentVideo.link
         // Use startTransition to make this non-blocking for scroll
         startTransition(() => {

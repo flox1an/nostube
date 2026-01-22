@@ -2,6 +2,88 @@
  * Video utility functions
  */
 
+// Video types for URL building
+export type VideoType = 'video' | 'shorts'
+
+export interface VideoUrlOptions {
+  playlist?: string
+  timestamp?: number
+  comment?: string
+  autoplay?: boolean
+}
+
+/**
+ * Build the path portion of a video URL
+ * @param link - The nevent or video identifier
+ * @param type - 'video' for widescreen, 'shorts' for portrait
+ */
+export function buildVideoPath(link: string, type: VideoType = 'video'): string {
+  return type === 'shorts' ? `/short/${link}` : `/v/${link}`
+}
+
+/**
+ * Build a complete video URL with optional query parameters
+ * @param link - The nevent or video identifier
+ * @param type - 'video' for widescreen, 'shorts' for portrait
+ * @param options - Optional query parameters (playlist, timestamp, comment, autoplay)
+ */
+export function buildVideoUrl(
+  link: string,
+  type: VideoType = 'video',
+  options?: VideoUrlOptions
+): string {
+  const path = buildVideoPath(link, type)
+
+  if (!options) return path
+
+  const params = new URLSearchParams()
+
+  if (options.playlist) {
+    params.set('playlist', options.playlist)
+  }
+  if (options.timestamp && options.timestamp > 0) {
+    params.set('t', String(Math.floor(options.timestamp)))
+  }
+  if (options.comment) {
+    params.set('comment', options.comment)
+  }
+  if (options.autoplay) {
+    params.set('autoplay', 'true')
+  }
+
+  const queryString = params.toString()
+  return queryString ? `${path}?${queryString}` : path
+}
+
+/**
+ * Build video URL as an object for react-router Link/navigate
+ * Returns { pathname, search } for use with react-router
+ */
+export function buildVideoUrlObject(
+  link: string,
+  type: VideoType = 'video',
+  options?: VideoUrlOptions
+): { pathname: string; search: string } {
+  const pathname = buildVideoPath(link, type)
+  const params = new URLSearchParams()
+
+  if (options?.playlist) {
+    params.set('playlist', options.playlist)
+  }
+  if (options?.timestamp && options.timestamp > 0) {
+    params.set('t', String(Math.floor(options.timestamp)))
+  }
+  if (options?.comment) {
+    params.set('comment', options.comment)
+  }
+  if (options?.autoplay) {
+    params.set('autoplay', 'true')
+  }
+
+  const search = params.toString()
+  return { pathname, search: search ? `?${search}` : '' }
+}
+
 // Constants for ultra-wide video detection
 export const SIXTEEN_NINE_RATIO = 16 / 9
 export const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.05
@@ -51,11 +133,12 @@ export function buildShareUrl(
   baseUrl: string,
   nevent: string,
   includeTimestamp: boolean,
-  currentTime: number
+  currentTime: number,
+  type: VideoType = 'video'
 ): string {
-  const videoUrl = `${baseUrl}/video/${nevent}`
+  const path = buildVideoPath(nevent, type)
   const timestamp = includeTimestamp ? Math.floor(currentTime) : 0
-  return timestamp > 0 ? `${videoUrl}?t=${timestamp}` : videoUrl
+  return timestamp > 0 ? `${baseUrl}${path}?t=${timestamp}` : `${baseUrl}${path}`
 }
 
 /**

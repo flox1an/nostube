@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
 import { memo, useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import {
   useAppContext,
@@ -288,7 +289,7 @@ export const ShortVideoItem = memo(
     }, [hasMoreVideoUrls, moveToNextVideo, video.id])
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    const shareUrl = `${baseUrl}/short/${video.link}`
+    const shareUrl = `${baseUrl}${buildVideoPath(video.link, 'shorts')}`
 
     // Calculate max-width based on aspect ratio (memoized to avoid recalculation)
     // For vertical videos (9:16), use standard width

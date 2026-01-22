@@ -1,4 +1,5 @@
 import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
+import { buildVideoPath } from '@/utils/video-utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -278,7 +279,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
         deleteDraft(draft.id)
         // Navigate to the video page
         const eventLink = generateEventLink(publishedEvent, publishedEvent.identifier)
-        navigate(`/video/${eventLink}`)
+        navigate(buildVideoPath(eventLink, 'video'))
       }
     } catch (error) {
       // Keep draft on error

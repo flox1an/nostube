@@ -1,5 +1,6 @@
 import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { buildVideoUrl } from '@/utils/video-utils'
 import { useAllNotifications } from '../hooks/useAllNotifications'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { NotificationDropdown } from './NotificationDropdown'
@@ -32,7 +33,9 @@ export function NotificationBell() {
       markVideoNotificationAsRead(notification.id)
 
       // Navigate to video page with comment query parameter
-      navigate(`/video/${notification.videoEventId}?comment=${notification.commentId}`)
+      navigate(
+        buildVideoUrl(notification.videoEventId, 'video', { comment: notification.commentId })
+      )
     } else if (isUploadNotification(notification)) {
       // Mark as read
       markUploadNotificationAsRead(notification.id)
@@ -44,7 +47,7 @@ export function NotificationBell() {
       markZapNotificationAsRead(notification.id)
 
       // Navigate to video page
-      navigate(`/video/${notification.videoEventId}`)
+      navigate(buildVideoUrl(notification.videoEventId, 'video'))
     }
   }
 

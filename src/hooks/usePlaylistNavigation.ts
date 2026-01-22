@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { buildVideoUrl } from '@/utils/video-utils'
 
 interface PlaylistVideo {
   id: string
@@ -51,14 +52,14 @@ export function usePlaylistNavigation({
   const navigateToPrevious = useCallback(() => {
     if (!playlistParam || !prevPlaylistVideo) return
     onPlayPosReset()
-    navigate(`/video/${prevPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}`)
+    navigate(buildVideoUrl(prevPlaylistVideo.link, 'video', { playlist: playlistParam }))
   }, [playlistParam, prevPlaylistVideo, navigate, onPlayPosReset])
 
   // Navigate to next video
   const navigateToNext = useCallback(() => {
     if (!playlistParam || !nextPlaylistVideo) return
     onPlayPosReset()
-    navigate(`/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}`)
+    navigate(buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam }))
   }, [playlistParam, nextPlaylistVideo, navigate, onPlayPosReset])
 
   // Handle video end (auto-advance to next video)
@@ -66,7 +67,7 @@ export function usePlaylistNavigation({
     if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
     onPlayPosReset()
     navigate(
-      `/video/${nextPlaylistVideo.link}?playlist=${encodeURIComponent(playlistParam)}&autoplay=true`
+      buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam, autoplay: true })
     )
   }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate, onPlayPosReset])
 

@@ -7,6 +7,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { genUserName } from '@/lib/genUserName'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { buildVideoUrl } from '@/utils/video-utils'
 
 interface SocialMediaPlatform {
   name: string
@@ -315,7 +316,6 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
 function renderTimestamps(text: string, videoLink: string, baseOffset: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
   const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g
-  const baseUrl = `/video/${videoLink}`
   let lastIndex = 0
   let match: RegExpExecArray | null
 
@@ -334,7 +334,7 @@ function renderTimestamps(text: string, videoLink: string, baseOffset: number): 
     const minutes = parseInt(m, 10)
     const seconds = parseInt(s, 10)
     const totalSeconds = hours * 3600 + minutes * 60 + seconds
-    const targetUrl = `${baseUrl}?t=${totalSeconds}`
+    const targetUrl = buildVideoUrl(videoLink, 'video', { timestamp: totalSeconds })
 
     // Push link
     parts.push(

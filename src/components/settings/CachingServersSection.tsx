@@ -54,10 +54,11 @@ export function CachingServersSection() {
   const normalizeServerUrl = (url: string): string => {
     const trimmed = url.trim()
     if (!trimmed) return trimmed
-    if (trimmed.startsWith('http')) {
-      return trimmed
+    let normalized = trimmed
+    if (!normalized.startsWith('http')) {
+      normalized = `https://${normalized}`
     }
-    return `https://${trimmed}`
+    return normalized.replace(/\/+$/, '')
   }
 
   const deriveServerName = (url: string): string => {

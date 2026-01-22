@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { normalizeRelayUrl } from '@/lib/utils'
 
 function RelayListEditor({
   value,
@@ -40,12 +41,14 @@ function RelayListEditor({
       return
     }
 
-    if (value.includes(input)) {
+    const normalized = normalizeRelayUrl(input)
+
+    if (value.includes(normalized)) {
       setError('Relay already in list')
       return
     }
 
-    onChange([...value, input])
+    onChange([...value, normalized])
     setInputValue('')
   }, [inputValue, value, onChange])
 
@@ -346,16 +349,24 @@ export function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Blossom Proxy */}
+        {/* Media Cache Server */}
         <Card>
           <CardHeader>
-            <CardTitle>Blossom Proxy</CardTitle>
-            <CardDescription>Optional proxy server for media content</CardDescription>
+            <CardTitle>Media Cache Server</CardTitle>
+            <CardDescription>
+              Optional server used for caching and proxying video content (Blossom Proxy)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Input
               value={formData.defaultBlossomProxy}
               onChange={e => setFormData(d => ({ ...d, defaultBlossomProxy: e.target.value }))}
+              onBlur={e =>
+                setFormData(d => ({
+                  ...d,
+                  defaultBlossomProxy: e.target.value.trim().replace(/\/+$/, ''),
+                }))
+              }
               placeholder="https://proxy.example.com"
             />
           </CardContent>
@@ -371,7 +382,13 @@ export function AdminPage() {
             <Input
               value={formData.defaultThumbResizeServer}
               onChange={e => setFormData(d => ({ ...d, defaultThumbResizeServer: e.target.value }))}
-              placeholder="https://imgproxy.nostu.be/"
+              onBlur={e =>
+                setFormData(d => ({
+                  ...d,
+                  defaultThumbResizeServer: e.target.value.trim().replace(/\/+$/, ''),
+                }))
+              }
+              placeholder="https://imgproxy.nostu.be"
             />
           </CardContent>
         </Card>

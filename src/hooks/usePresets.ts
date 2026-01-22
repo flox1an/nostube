@@ -34,6 +34,7 @@ export function parsePresetEvent(event: NostrEvent): NostubePreset | null {
       createdAt: event.created_at,
       defaultRelays: content.defaultRelays || [],
       defaultBlossomProxy: content.defaultBlossomProxy,
+      defaultThumbResizeServer: content.defaultThumbResizeServer,
       blockedPubkeys: content.blockedPubkeys || [],
       nsfwPubkeys: content.nsfwPubkeys || [],
       blockedEvents: content.blockedEvents || [],

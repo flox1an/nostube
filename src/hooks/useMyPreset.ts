@@ -116,8 +116,9 @@ export function useMyPreset() {
 
       const content: NostubePresetContent = {
         defaultRelays: formData.defaultRelays.filter(r => r.trim()),
-        defaultBlossomProxy: formData.defaultBlossomProxy.trim() || undefined,
-        defaultThumbResizeServer: formData.defaultThumbResizeServer.trim() || undefined,
+        defaultBlossomProxy: formData.defaultBlossomProxy.trim().replace(/\/+$/, '') || undefined,
+        defaultThumbResizeServer:
+          formData.defaultThumbResizeServer.trim().replace(/\/+$/, '') || undefined,
         blockedPubkeys: formData.blockedPubkeys.filter(p => p.trim()),
         nsfwPubkeys: formData.nsfwPubkeys.filter(p => p.trim()),
         blockedEvents: formData.blockedEvents.filter(e => e.trim()),

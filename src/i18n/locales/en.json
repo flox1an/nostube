@@ -529,7 +529,9 @@
       "descriptionLabel": "Description (optional)",
       "emptyNameError": "Playlist name cannot be empty.",
       "successMessage": "Your new playlist has been created successfully."
-    }
+    },
+    "failedVideos_one": "{{count}} video could not be loaded from any relay. It may have been deleted or is no longer available.",
+    "failedVideos_other": "{{count}} videos could not be loaded from any relay. They may have been deleted or are no longer available."
   },
   "pages": {
     "home": {

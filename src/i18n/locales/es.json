@@ -517,7 +517,9 @@
       "descriptionLabel": "Descripción (opcional)",
       "emptyNameError": "El nombre de la lista de reproducción no puede estar vacío.",
       "successMessage": "Su nueva lista de reproducción ha sido creada exitosamente."
-    }
+    },
+    "failedVideos_one": "{{count}} video no se pudo cargar desde ningún relay. Puede haber sido eliminado o ya no está disponible.",
+    "failedVideos_other": "{{count}} videos no se pudieron cargar desde ningún relay. Pueden haber sido eliminados o ya no están disponibles."
   },
   "pages": {
     "home": {

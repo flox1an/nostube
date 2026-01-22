@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoGrid } from '@/components/VideoGrid'
@@ -11,6 +12,7 @@ import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile } from '@/hooks'
 
 export default function SinglePlaylistPage() {
+  const { t } = useTranslation()
   const { nip19: nip19param } = useParams<{ nip19: string }>()
   const {
     playlistEvent,
@@ -85,22 +87,20 @@ export default function SinglePlaylistPage() {
         <div className="text-muted-foreground mt-2">{playlistDescription}</div>
       )}
 
-      {failedVideoIds.size > 0 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {failedVideoIds.size} video{failedVideoIds.size > 1 ? 's' : ''} could not be loaded from
-            any relay. {failedVideoIds.size > 1 ? 'They' : 'It'} may have been deleted or{' '}
-            {failedVideoIds.size > 1 ? 'are' : 'is'} no longer available.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <VideoGrid
         videos={videoEvents}
         isLoading={isLoadingVideos || loadingVideoIds.size > 0}
         playlistParam={nip19param}
       />
+
+      {failedVideoIds.size > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {t('playlists.failedVideos', { count: failedVideoIds.size })}
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }

@@ -516,7 +516,9 @@
       "descriptionLabel": "Description (optionnel)",
       "emptyNameError": "Le nom de la liste de lecture ne peut pas être vide.",
       "successMessage": "Votre nouvelle liste de lecture a été créée avec succès."
-    }
+    },
+    "failedVideos_one": "{{count}} vidéo n'a pas pu être chargée depuis aucun relais. Elle a peut-être été supprimée ou n'est plus disponible.",
+    "failedVideos_other": "{{count}} vidéos n'ont pas pu être chargées depuis aucun relais. Elles ont peut-être été supprimées ou ne sont plus disponibles."
   },
   "pages": {
     "home": {

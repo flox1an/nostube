@@ -11,7 +11,7 @@ import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useEventStore } from 'applesauce-react/hooks'
-import { nprofileFromEvent } from '@/lib/nprofile'
+import { buildProfileUrl } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
@@ -48,8 +48,8 @@ export const VideoCard = React.memo(function VideoCard({
 
   // Get the event from the store to access seenRelays
   const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
-  const authorNprofile = useMemo(
-    () => nprofileFromEvent(video.pubkey, event),
+  const authorProfileUrl = useMemo(
+    () => buildProfileUrl(video.pubkey, event),
     [video.pubkey, event]
   )
 
@@ -279,7 +279,7 @@ export const VideoCard = React.memo(function VideoCard({
         <div className="pt-3">
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
-              <Link to={`/author/${authorNprofile}`} className="shrink-0">
+              <Link to={authorProfileUrl} className="shrink-0">
                 <UserAvatar
                   picture={metadata?.picture}
                   pubkey={video.pubkey}
@@ -297,7 +297,7 @@ export const VideoCard = React.memo(function VideoCard({
                 {!hideAuthor && (
                   <>
                     <Link
-                      to={`/author/${authorNprofile}`}
+                      to={authorProfileUrl}
                       className="block text-muted-foreground hover:text-primary"
                     >
                       {name}

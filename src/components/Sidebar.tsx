@@ -16,7 +16,7 @@ import { useCurrentUser, useAppContext, useReadRelays, useIsMobile } from '@/hoo
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
-import { nip19 } from 'nostr-tools'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
 import { isBetaUser } from '@/lib/beta-users'
 import { useMemo } from 'react'
@@ -34,9 +34,9 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
   const readRelays = useReadRelays()
   const pubkey = user?.pubkey
 
-  const userNprofile = useMemo(() => {
+  const userProfileUrl = useMemo(() => {
     if (!pubkey) return ''
-    return nip19.nprofileEncode({ pubkey, relays: readRelays.slice(0, 5) })
+    return buildProfileUrlFromPubkey(pubkey, readRelays)
   }, [pubkey, readRelays])
 
   // Beta feature: only show video-notes for beta users
@@ -54,7 +54,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
     {
       name: t('navigation.yourVideos'),
       icon: Play,
-      href: `/author/${userNprofile}`,
+      href: userProfileUrl,
     },
     // Only show video-notes for beta users
     ...(isVideoNotesBetaUser

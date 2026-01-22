@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Search, X, User, Loader2 } from 'lucide-react'
 import { useSearchProfiles } from '@/hooks/useSearchProfiles'
 import { UserAvatar } from '@/components/UserAvatar'
-import { nprofileFromPubkey } from '@/lib/nprofile'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
 
 interface GlobalSearchBarProps {
@@ -80,11 +80,10 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
   }
 
   const handleProfileClick = (pubkey: string) => {
-    const nprofile = nprofileFromPubkey(pubkey)
     setIsOpen(false)
     onSearch?.()
     setSearchQuery('')
-    navigate(`/author/${nprofile}`)
+    navigate(buildProfileUrlFromPubkey(pubkey))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

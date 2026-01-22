@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Refactoring: centralized video URL building in `src/utils/video-utils.ts` with `buildVideoPath`, `buildVideoUrl`, and `buildVideoUrlObject` functions; standardized all video URLs to use `/v/{link}` for widescreen and `/short/{link}` for portrait videos with optional playlist, timestamp, comment, and autoplay parameters
+- Refactoring: centralized profile URL building in `src/lib/nprofile.ts` with `buildProfilePath`, `buildProfileUrl`, and `buildProfileUrlFromPubkey` functions; standardized all profile URLs to use `/p/{nprofile}` instead of `/author/{nprofile}`
 - Refactoring: new `useDialogState` hook for managing dialog open/close state with data support (reduces boilerplate across 50+ components)
 - Refactoring: new `src/lib/format-utils.ts` with `formatTimestamp`, `formatDateSimple`, `formatDateTime` functions
 - Refactoring: new `src/lib/array-utils.ts` with `chunk`, `uniqueBy`, `groupBy`, `interleave` functions

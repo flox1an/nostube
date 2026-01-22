@@ -1,6 +1,6 @@
-import { nip19 } from 'nostr-tools'
 import type { Profile } from '../lib/profile-fetcher'
 import { buildVideoPath } from '@/utils/video-utils'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
 interface TitleOverlayProps {
   title: string
@@ -21,8 +21,7 @@ export function TitleOverlay({
 }: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
   const watchUrl = `https://nostu.be${buildVideoPath(videoId, 'video')}`
-  const nprofile = nip19.nprofileEncode({ pubkey: authorPubkey })
-  const profileUrl = `https://nostu.be/p/${nprofile}`
+  const profileUrl = `https://nostu.be${buildProfileUrlFromPubkey(authorPubkey)}`
 
   const handleClick = () => {
     onOpenVideo?.()

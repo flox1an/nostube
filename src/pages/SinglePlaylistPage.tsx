@@ -7,7 +7,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 
-import { nprofileFromPubkey } from '@/lib/nprofile'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile } from '@/hooks'
 
 export default function SinglePlaylistPage() {
@@ -68,7 +68,7 @@ export default function SinglePlaylistPage() {
         <h1 className="text-2xl font-bold flex-grow">{playlistTitle}</h1>
 
         <Link
-          to={`/author/${nprofileFromPubkey(playlistEvent.pubkey, readRelays)}`}
+          to={buildProfileUrlFromPubkey(playlistEvent.pubkey, readRelays)}
           className="shrink-0 flex flex-row gap-2 items-center"
         >
           <UserAvatar

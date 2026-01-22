@@ -6,6 +6,7 @@ import { genUserName } from '@/lib/genUserName'
 import { cn } from '@/lib/utils'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { buildProfilePath, buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -163,11 +164,10 @@ function NostrMention({
     const relays = profilePointer.relays || seenRelays
 
     if (relays && relays.length > 0) {
-      const nprofile = nip19.nprofileEncode({ pubkey: profilePointer.pubkey, relays })
-      return `/author/${nprofile}`
+      return buildProfileUrlFromPubkey(profilePointer.pubkey, relays)
     } else {
       const npub = nip19.npubEncode(profilePointer.pubkey)
-      return `/author/${npub}`
+      return buildProfilePath(npub)
     }
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 

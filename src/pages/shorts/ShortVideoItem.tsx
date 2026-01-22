@@ -28,7 +28,7 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2 } from 'lucide-react'
 import { imageProxyVideoPreview, combineRelays } from '@/lib/utils'
-import { nprofileFromEvent } from '@/lib/nprofile'
+import { buildProfileUrl } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-common/models'
 import { useEventModel } from 'applesauce-react/hooks'
@@ -143,8 +143,8 @@ export const ShortVideoItem = memo(
 
     // Get the event from store to access seenRelays
     const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
-    const authorNprofile = useMemo(
-      () => nprofileFromEvent(video.pubkey, event),
+    const authorProfileUrl = useMemo(
+      () => buildProfileUrl(video.pubkey, event),
       [video.pubkey, event]
     )
 
@@ -456,7 +456,7 @@ export const ShortVideoItem = memo(
               <div className="flex flex-col gap-4">
                 <FollowButton pubkey={video.pubkey} className="text-white self-start" />
                 <div className="flex items-center gap-4">
-                  <Link to={`/author/${authorNprofile}`}>
+                  <Link to={authorProfileUrl}>
                     <UserAvatar
                       picture={authorPicture}
                       pubkey={video.pubkey}
@@ -466,7 +466,7 @@ export const ShortVideoItem = memo(
                     />
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <Link to={`/author/${authorNprofile}`}>
+                    <Link to={authorProfileUrl}>
                       <div className="text-white font-semibold truncate">{authorName}</div>
                     </Link>
                     <div className="text-white/70 text-sm">

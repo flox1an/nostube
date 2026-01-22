@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
-import { nip19, type NostrEvent } from 'nostr-tools'
+import { type NostrEvent } from 'nostr-tools'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from 'date-fns/formatDistance'
@@ -209,7 +210,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
         <div className="flex flex-col md:flex-row items-start justify-between">
           <Link
-            to={`/author/${nip19.nprofileEncode({ pubkey: video?.pubkey || '', relays: relaysToUse })}`}
+            to={buildProfileUrlFromPubkey(video?.pubkey || '', relaysToUse)}
             className="flex items-center gap-4"
           >
             <UserAvatar picture={metadata?.picture} pubkey={video?.pubkey} name={authorName} />

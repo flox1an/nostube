@@ -8,6 +8,7 @@ import { genUserName } from '@/lib/genUserName'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { buildVideoUrl } from '@/utils/video-utils'
+import { buildProfilePath, buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
 interface SocialMediaPlatform {
   name: string
@@ -146,11 +147,10 @@ function NostrMention({
     const relays = profilePointer.relays || seenRelays
 
     if (relays && relays.length > 0) {
-      const nprofile = nip19.nprofileEncode({ pubkey: profilePointer.pubkey, relays })
-      return `/author/${nprofile}`
+      return buildProfileUrlFromPubkey(profilePointer.pubkey, relays)
     } else {
       const npub = nip19.npubEncode(profilePointer.pubkey)
-      return `/author/${npub}`
+      return buildProfilePath(npub)
     }
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 

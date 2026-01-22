@@ -29,3 +29,36 @@ export function nprofileFromPubkey(pubkey: string, relays: string[] = []): strin
     relays: relays.slice(0, 5), // Limit to 5 relays to keep URL reasonable
   })
 }
+
+/**
+ * Build the path portion of a profile URL
+ * @param nprofile - The nprofile or npub string
+ */
+export function buildProfilePath(nprofile: string): string {
+  return `/p/${nprofile}`
+}
+
+/**
+ * Build a profile URL from an event (uses event's seen relays)
+ * @param pubkey - The author's pubkey
+ * @param event - Optional event to extract relay hints from
+ * @param fallbackRelays - Fallback relays if event has none
+ */
+export function buildProfileUrl(
+  pubkey: string,
+  event?: NostrEvent,
+  fallbackRelays: string[] = []
+): string {
+  const nprofile = nprofileFromEvent(pubkey, event, fallbackRelays)
+  return buildProfilePath(nprofile)
+}
+
+/**
+ * Build a profile URL from a pubkey with explicit relays
+ * @param pubkey - The author's pubkey
+ * @param relays - Relay hints to include
+ */
+export function buildProfileUrlFromPubkey(pubkey: string, relays: string[] = []): string {
+  const nprofile = nprofileFromPubkey(pubkey, relays)
+  return buildProfilePath(nprofile)
+}

@@ -28,17 +28,6 @@ export const INDEXER_RELAYS: string[] = [
   'wss://relay.snort.social', // Snort relay
 ]
 
-export const presetBlossomServers: BlossomServer[] = [
-  {
-    url: 'https://almond1.b-cdn.net',
-    name: 'almond1.b-cdn.net',
-    tags: ['initial upload'],
-  },
-]
+export const presetBlossomServers: BlossomServer[] = []
 
-export const presetCachingServers: CachingServer[] = [
-  {
-    url: 'https://almond1.b-cdn.net',
-    name: 'almond1.b-cdn.net',
-  },
-]
+export const presetCachingServers: CachingServer[] = []

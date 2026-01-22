@@ -93,6 +93,11 @@ export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from '
 export { useUserBlossomServers } from './useUserBlossomServers'
 
 // ============================================================================
+// CONFIG & PRESETS
+// ============================================================================
+export { useSelectedPreset } from './useSelectedPreset'
+
+// ============================================================================
 // RELAY & NOSTR
 // ============================================================================
 export { useAppContext } from './useAppContext'

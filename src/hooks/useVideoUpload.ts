@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
+import { useCurrentUser, useAppContext, useNostrPublish, useSelectedPreset } from '@/hooks'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
@@ -8,12 +8,13 @@ import {
 } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
-import { presetBlossomServers } from '@/constants/relays'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
 import type { UploadDraft, SubtitleVariant } from '@/types/upload-draft'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
+import { deriveServerName } from '@/lib/blossom-servers'
+import { type BlossomServerTag } from '@/contexts/AppContext'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -292,6 +293,7 @@ export function useVideoUpload(
 
   const { user } = useCurrentUser()
   const { config, updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const { publish, isPending: isPublishing } = useNostrPublish()
 
   const blossomInitalUploadServers = config.blossomServers?.filter(server =>
@@ -302,13 +304,20 @@ export function useVideoUpload(
   )
 
   const handleUseRecommendedServers = () => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      blossomServers: presetBlossomServers.map(server => ({
-        ...server,
-        tags: Array.from(new Set([...(server.tags || []), 'initial upload', 'mirror'])),
-      })),
-    }))
+    updateConfig(currentConfig => {
+      const servers: { url: string; name: string; tags: BlossomServerTag[] }[] = []
+      if (presetContent.defaultBlossomProxy) {
+        servers.push({
+          url: presetContent.defaultBlossomProxy,
+          name: deriveServerName(presetContent.defaultBlossomProxy),
+          tags: ['initial upload', 'mirror'] as BlossomServerTag[],
+        })
+      }
+      return {
+        ...currentConfig,
+        blossomServers: servers,
+      }
+    })
   }
 
   const addTagsFromInput = (input: string) => {

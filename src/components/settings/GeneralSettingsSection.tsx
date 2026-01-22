@@ -1,4 +1,4 @@
-import { useAppContext } from '@/hooks'
+import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
   const { t, i18n } = useTranslation()
 
@@ -116,7 +117,7 @@ export function GeneralSettingsSection() {
         <Input
           id="thumb-server"
           type="url"
-          placeholder={defaultResizeServer}
+          placeholder={presetContent.defaultThumbResizeServer || defaultResizeServer}
           value={config.thumbResizeServerUrl || ''}
           onChange={e => handleThumbServerChange(e.target.value)}
         />

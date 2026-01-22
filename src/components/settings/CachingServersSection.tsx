@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon } from 'lucide-react'
-import { presetCachingServers } from '@/constants/relays'
 
 export function CachingServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const [newServerUrl, setNewServerUrl] = useState('')
 
   const handleAddServer = () => {
@@ -36,10 +36,19 @@ export function CachingServersSection() {
   }
 
   const handleResetServers = () => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      cachingServers: [...presetCachingServers],
-    }))
+    updateConfig(currentConfig => {
+      const servers: { url: string; name: string }[] = []
+      if (presetContent.defaultBlossomProxy) {
+        servers.push({
+          url: presetContent.defaultBlossomProxy,
+          name: deriveServerName(presetContent.defaultBlossomProxy),
+        })
+      }
+      return {
+        ...currentConfig,
+        cachingServers: servers,
+      }
+    })
   }
 
   const normalizeServerUrl = (url: string): string => {

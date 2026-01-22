@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useSelectedPreset } from '@/hooks'
 import { type RelayTag } from '@/contexts/AppContext'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon, Cog } from 'lucide-react'
-import { presetRelays } from '@/constants/relays'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,6 +18,7 @@ import { Badge } from '../ui/badge'
 export function RelaySettingsSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const [newRelayUrl, setNewRelayUrl] = useState('')
 
   const handleAddRelay = () => {
@@ -53,9 +53,9 @@ export function RelaySettingsSection() {
   const handleResetRelays = () => {
     updateConfig(currentConfig => ({
       ...currentConfig,
-      relays: presetRelays.map(relay => ({
-        url: relay.url,
-        name: relay.name || relay.url.replace(/^wss:\/\//, '').replace(/\/$/, ''),
+      relays: presetContent.defaultRelays.map(url => ({
+        url,
+        name: url.replace(/^wss:\/\//, '').replace(/\/$/, ''),
         tags: ['read', 'write'] as RelayTag[],
       })),
     }))

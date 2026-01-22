@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppContext, useUserBlossomServers } from '@/hooks'
+import { useAppContext, useUserBlossomServers, useSelectedPreset } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -13,7 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu'
-import { presetBlossomServers, isBlossomServerBlocked } from '@/constants/relays'
+import { isBlossomServerBlocked } from '@/constants/relays'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/useToast'
 
@@ -22,6 +22,7 @@ const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 export function BlossomServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const [newServerUrl, setNewServerUrl] = useState('')
   const userBlossomServers = useUserBlossomServers()
 
@@ -85,10 +86,20 @@ export function BlossomServersSection() {
           })),
       }))
     } else {
-      updateConfig(currentConfig => ({
-        ...currentConfig,
-        blossomServers: [...presetBlossomServers],
-      }))
+      updateConfig(currentConfig => {
+        const servers: { url: string; name: string; tags: BlossomServerTag[] }[] = []
+        if (presetContent.defaultBlossomProxy) {
+          servers.push({
+            url: presetContent.defaultBlossomProxy,
+            name: deriveServerName(presetContent.defaultBlossomProxy),
+            tags: ['initial upload'] as BlossomServerTag[],
+          })
+        }
+        return {
+          ...currentConfig,
+          blossomServers: servers,
+        }
+      })
     }
   }
 

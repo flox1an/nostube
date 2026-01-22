@@ -19,12 +19,7 @@ import { useReadRelays } from './useReadRelays'
 import { useSelectedPreset } from './useSelectedPreset'
 
 // Constant fallback relays - defined outside component to prevent re-renders
-const VIDEO_RELAY_FALLBACKS = [
-  'wss://haven.slidestr.net',
-  'wss://strfry.apps3.slidestr.net',
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-]
+const VIDEO_RELAY_FALLBACKS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
 
 type NeventPointer = { id: string }
 type NaddrPointer = { identifier: string; pubkey: string; kind: number }

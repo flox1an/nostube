@@ -81,7 +81,8 @@ function generateProxyUrls(
   cachingServers: CachingServer[],
   proxyConfig?: MediaUrlOptions['proxyConfig'],
   authorPubkey?: string,
-  mirrorServers: BlossomServer[] = []
+  mirrorServers: BlossomServer[] = [],
+  mediaType?: MediaType
 ): { urls: string[]; metadata: UrlMetadata[] } {
   const urls: string[] = []
   const metadata: UrlMetadata[] = []
@@ -196,8 +197,8 @@ function generateProxyUrls(
       params.set('as', authorPubkey.toLowerCase())
     }
 
-    // Add size parameters for images
-    if (proxyConfig.maxSize && ['image', 'video'].includes(proxyConfig.maxSize.toString())) {
+    // Add size parameters for images and videos
+    if (proxyConfig.maxSize && mediaType && ['image', 'video'].includes(mediaType)) {
       if (proxyConfig.maxSize.width) {
         params.set('width', proxyConfig.maxSize.width.toString())
       }
@@ -246,6 +247,7 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
     cachingServers = [],
     proxyConfig,
     authorPubkey,
+    mediaType,
   } = options
 
   const allUrls: string[] = []
@@ -272,7 +274,8 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
         cachingServers,
         proxyConfig,
         authorPubkey,
-        mirrorServers
+        mirrorServers,
+        mediaType
       )
       allUrls.push(...proxyUrls)
       allMetadata.push(...proxyMetadata)

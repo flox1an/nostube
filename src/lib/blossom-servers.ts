@@ -121,7 +121,7 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
 /**
  * Default upload servers for new users
  */
-export const DEFAULT_UPLOAD_SERVERS = ['https://almond.slidestr.net']
+export const DEFAULT_UPLOAD_SERVERS: string[] = []
 
 /**
  * Default mirror servers for new users

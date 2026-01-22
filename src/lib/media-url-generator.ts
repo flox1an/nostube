@@ -53,13 +53,13 @@ function generateMirrorUrls(
   const metadata: UrlMetadata[] = []
 
   const { sha256, ext } = extractBlossomHash(originalUrl)
-  if (!sha256 || !ext) {
+  if (!sha256) {
     return { urls, metadata }
   }
 
   for (const server of mirrorServers) {
     const baseUrl = normalizeServerUrl(server.url)
-    const mirrorUrl = `${baseUrl}/${sha256}.${ext}`
+    const mirrorUrl = ext ? `${baseUrl}/${sha256}.${ext}` : `${baseUrl}/${sha256}`
 
     urls.push(mirrorUrl)
     metadata.push({
@@ -92,7 +92,7 @@ function generateProxyUrls(
   }
 
   const { sha256, ext } = extractBlossomHash(originalUrl)
-  if (!sha256 || !ext) {
+  if (!sha256) {
     return { urls, metadata }
   }
 
@@ -126,7 +126,7 @@ function generateProxyUrls(
     }
 
     // Build proxy URL
-    let proxyUrl = `${baseUrl}/${sha256}.${ext}`
+    let proxyUrl = ext ? `${baseUrl}/${sha256}.${ext}` : `${baseUrl}/${sha256}`
 
     // Add query parameters
     const params = new URLSearchParams()

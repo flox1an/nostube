@@ -41,9 +41,6 @@ const SettingsLayout = lazy(() =>
 const GeneralSettingsPage = lazy(() =>
   import('./pages/settings/GeneralSettingsPage').then(m => ({ default: m.GeneralSettingsPage }))
 )
-const WalletSettingsPage = lazy(() =>
-  import('./pages/settings/WalletSettingsPage').then(m => ({ default: m.WalletSettingsPage }))
-)
 const RelaysSettingsPage = lazy(() =>
   import('./pages/settings/RelaysSettingsPage').then(m => ({ default: m.RelaysSettingsPage }))
 )
@@ -121,7 +118,7 @@ function VideoPageLoader() {
         <div className="w-full p-2 md:p-0 space-y-3 mt-4 lg:mt-0">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex gap-2">
-              <Skeleton className="w-40 aspect-video rounded-lg flex-shrink-0" />
+              <Skeleton className="w-40 aspect-video rounded-lg shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-3 w-24" />
@@ -196,7 +193,15 @@ export function AppRouter() {
             }
           />
           <Route
-            path="/video/:nevent"
+            path="/v/:nevent"
+            element={
+              <Suspense fallback={<VideoPageLoader />}>
+                <VideoPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/v/:nevent"
             element={
               <Suspense fallback={<VideoPageLoader />}>
                 <VideoPage />
@@ -205,6 +210,14 @@ export function AppRouter() {
           />
           <Route
             path="/author/:nprofile"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <AuthorPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/p/:nprofile"
             element={
               <Suspense fallback={<PageLoader />}>
                 <AuthorPage />
@@ -296,14 +309,6 @@ export function AppRouter() {
               element={
                 <Suspense fallback={<SettingsContentLoader />}>
                   <PresetsSettingsPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="wallet"
-              element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <WalletSettingsPage />
                 </Suspense>
               }
             />

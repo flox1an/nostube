@@ -107,6 +107,15 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
     payment: 'free',
     notes: '',
   },
+  {
+    url: 'https://nostrmedia.com',
+    name: 'nostrmedia.com',
+    supportsMirror: true,
+    status: 'ok',
+    payment: 'paid',
+    notes: 'Subscriptions at https://nostrmedia.com/#plan',
+    price: 'from $2.99/month',
+  },
 ]
 
 /**

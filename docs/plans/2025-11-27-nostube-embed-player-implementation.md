@@ -2370,7 +2370,7 @@ export class BrandingLink {
       ? window.location.origin
       : 'https://nostu.be'
 
-    return `${baseUrl}/video/${this.config.videoId}`
+    return `${baseUrl}/v/${this.config.videoId}`
   }
 }
 ```

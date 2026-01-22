@@ -69,7 +69,7 @@ const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({
   duration: 120,
   searchText: 'test video',
   urls: ['https://example.com/video.mp4'],
-  link: '/video/test',
+  link: '/v/test',
   textTracks: [],
   contentWarning: undefined,
   videoVariants: [],

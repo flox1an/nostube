@@ -13,7 +13,9 @@ export function MainLayout() {
   // Hide sidebar and mobile bottom nav on individual video pages to save space
   // Note: /shorts feed page should show sidebar like homepage, only /short/:id hides it
   const isVideoPage =
-    location.pathname.startsWith('/video/') || location.pathname.startsWith('/short/')
+    location.pathname.startsWith('/v/') ||
+    location.pathname.startsWith('/video/') ||
+    location.pathname.startsWith('/short/')
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -30,8 +32,8 @@ export function MainLayout() {
         <div className={cn(isVideoPage ? '' : 'lg:hidden')}>
           {isSidebarOpen && (
             <>
-              <div className="fixed inset-0 bg-black/50 z-[190]" onClick={toggleSidebar} />
-              <div className="fixed left-0 top-0 z-[200] h-full">
+              <div className="fixed inset-0 bg-black/50 z-190" onClick={toggleSidebar} />
+              <div className="fixed left-0 top-0 z-200 h-full">
                 <Sidebar mode="drawer" />
               </div>
             </>

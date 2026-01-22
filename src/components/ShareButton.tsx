@@ -52,7 +52,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('link')
 
-  // Extract video ID from shareUrl (e.g., /video/nevent1... -> nevent1...)
+  // Extract video ID from shareUrl (e.g., /v/nevent1... -> nevent1...)
   const videoId = useMemo(() => {
     const match = shareUrl.match(/\/video\/([^?]+)/)
     return match ? match[1] : ''

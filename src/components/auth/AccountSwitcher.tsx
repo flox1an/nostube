@@ -16,6 +16,7 @@ import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext 
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { WalletMenuItem } from './WalletMenuItem'
 import { Button } from '../ui/button'
 import { useTranslation } from 'react-i18next'
 
@@ -107,6 +108,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <UserPlus className="w-4 h-4" />
           <span>{t('auth.account.playlists')}</span>
         </DropdownMenuItem>
+        <WalletMenuItem />
         <ThemeToggle />
         <DropdownMenuSeparator />
         {/* 

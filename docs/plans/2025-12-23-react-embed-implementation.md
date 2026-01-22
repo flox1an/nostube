@@ -1361,11 +1361,11 @@ interface TitleOverlayProps {
 
 export function TitleOverlay({ title, author, authorPubkey, visible, videoId }: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
-  const watchUrl = `https://nostu.be/video/${videoId}`
+  const watchUrl = `https://nostu.be/v/${videoId}`
 
   return (
     <div
-      className={`absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${
+      className={`absolute top-0 left-0 right-0 p-4 bg-linear-to-b from-black/80 to-transparent transition-opacity duration-300 ${
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >

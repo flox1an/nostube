@@ -1068,7 +1068,7 @@ export function NotificationBell() {
     markAsRead(notification.id)
 
     // Navigate to video page with comment hash
-    navigate(`/video/${notification.videoEventId}#comment-${notification.commentId}`)
+    navigate(`/v/${notification.videoEventId}#comment-${notification.commentId}`)
   }
 
   return (

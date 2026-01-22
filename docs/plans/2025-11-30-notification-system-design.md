@@ -153,7 +153,7 @@ interface VideoNotification {
 
 ### Comment Navigation & Highlighting
 
-When navigating to `/video/{eventId}#comment-{commentId}`:
+When navigating to `/v/{eventId}#comment-{commentId}`:
 
 1. VideoPage reads hash from URL
 2. Add `id="comment-{commentId}"` to CommentItem div

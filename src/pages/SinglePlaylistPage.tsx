@@ -65,7 +65,7 @@ export default function SinglePlaylistPage() {
   return (
     <div className="max-w-560 mx-auto p-8 flex flex-col gap-8">
       <div className="flex">
-        <h1 className="text-2xl font-bold flex-grow">{playlistTitle}</h1>
+        <h1 className="text-2xl font-bold grow">{playlistTitle}</h1>
 
         <Link
           to={buildProfileUrlFromPubkey(playlistEvent.pubkey, readRelays)}

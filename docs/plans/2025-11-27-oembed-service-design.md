@@ -83,10 +83,10 @@ https://oembed.nostu.be/api/oembed?url=<video-url>&format=json
 
 **Supported URL Patterns:**
 
-- `https://nostu.be/video/<nevent>`
-- `https://nostu.be/video/<naddr>`
-- `https://nostu.be/video/<note>`
-- `https://<custom-domain>/video/<identifier>` (if self-hosted)
+- `https://nostu.be/v/<nevent>`
+- `https://nostu.be/v/<naddr>`
+- `https://nostu.be/v/<note>`
+- `https://<custom-domain>/v/<identifier>` (if self-hosted)
 
 ### Request Flow
 
@@ -572,13 +572,13 @@ describe('oEmbed Endpoint', () => {
 **Regular video (nevent):**
 
 ```
-https://nostu.be/video/nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
+https://nostu.be/v/nevent1qvzqqqqqz5q3jamnwvaz7tmgv9mx2m3wwdkxjer9wd68ytnwv46z7qpq8r5f947gp2tnxap68ew8dau6lmahwvta8rjgz4tplad4tefnph2sx9sssk
 ```
 
 **Addressable video (naddr):**
 
 ```
-https://nostu.be/video/naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
+https://nostu.be/v/naddr1qvzqqqy9hvpzp3yw98cykjpvcqw2r7003jrwlqcccpv7p6f4xg63vtcgpunwznq3qy88wumn8ghj7mn0wvhxcmmv9uqrk4rgv5k5wun9v96z6snfw33k76tw94qhwcttv4hxjmn894qk6etjd93kzm3dfphkgmpdg4exj6edgdshxmmw9568g6pkxsusmx2zsj
 ```
 
 ## Conclusion

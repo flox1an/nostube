@@ -313,7 +313,7 @@ Video event has a `content-warning` tag
 - Small, semi-transparent button/link
 - Text: "Watch on Nostube"
 - Opens full video page in new tab
-- URL: `https://nostu.be/video/<nevent-or-naddr>`
+- URL: `https://nostu.be/v/<nevent-or-naddr>`
 - Uses accent color from `color` parameter
 
 **Behavior:**

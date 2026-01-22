@@ -44,7 +44,7 @@ export function VideoPageLayout({
         {/* Left column: video player + info together */}
         <div className={cn('flex flex-col', cinemaMode && 'col-span-full')}>
           {videoPlayer}
-          <div className={cn('pt-2', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
+          <div className={cn('pt-2 md:pt-3', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
             {videoInfo}
           </div>
         </div>
@@ -78,7 +78,7 @@ export function VideoPageLayout({
 
       {/* Sheet overlay for sidebar on lg-xl screens */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="right" className="w-[400px] overflow-y-auto p-4">
+        <SheetContent side="right" className="w-100 overflow-y-auto p-4">
           <VisuallyHidden>
             <SheetTitle>{t('video.suggestions', 'Suggestions')}</SheetTitle>
           </VisuallyHidden>

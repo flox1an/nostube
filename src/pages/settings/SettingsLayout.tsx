@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import {
   Settings,
   Palette,
-  Wallet,
   Radio,
   Server,
   Database,
@@ -24,7 +23,6 @@ interface SettingsMenuItem {
 const menuItems: SettingsMenuItem[] = [
   { path: 'general', labelKey: 'settings.general.title', icon: Settings },
   { path: 'presets', labelKey: 'settings.presets.title', icon: Palette },
-  { path: 'wallet', labelKey: 'wallet.title', icon: Wallet },
   { path: 'relays', labelKey: 'settings.relays.title', icon: Radio },
   { path: 'blossom', labelKey: 'settings.blossom.title', icon: Server },
   { path: 'caching', labelKey: 'settings.caching.title', icon: Database },

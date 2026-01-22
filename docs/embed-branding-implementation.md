@@ -42,7 +42,7 @@ static applyToPlayer(container: HTMLElement, videoId: string, params: Object): v
 
 **Features:**
 
-- ✅ Generates correct Nostube URLs (https://nostu.be/video/<id>)
+- ✅ Generates correct Nostube URLs (https://nostu.be/v/<id>)
 - ✅ Creates external link icon as inline SVG
 - ✅ Applies custom accent colors via CSS custom properties
 - ✅ Respects `branding=0` parameter to disable

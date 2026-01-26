@@ -29,6 +29,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import { ZAP_PRESET_AMOUNTS } from '@/constants/ui'
 
 // Default Cashu mints
 const DEFAULT_CASHU_MINTS = [
@@ -56,6 +57,8 @@ export function WalletSection() {
     cashuMints,
     cashuWalletEvent,
     isCashuWalletUnlocked,
+    defaultZapAmount,
+    setDefaultZapAmount,
     connectNWC,
     createCashuWallet,
     unlockCashuWallet,
@@ -116,8 +119,6 @@ export function WalletSection() {
   if (isConnected && walletType) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">{t('wallet.description')}</p>
-
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -152,6 +153,24 @@ export function WalletSection() {
                 </Button>
               </div>
             )}
+
+            {/* Default Zap Amount */}
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm">Default Zap Amount</Label>
+              <div className="flex flex-wrap gap-2">
+                {ZAP_PRESET_AMOUNTS.map(amount => (
+                  <Button
+                    key={amount}
+                    variant={defaultZapAmount === amount ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDefaultZapAmount(amount)}
+                    className="h-8"
+                  >
+                    {amount} sats
+                  </Button>
+                ))}
+              </div>
+            </div>
 
             {/* Cashu-specific: Show mints and balances */}
             {walletType === 'cashu' && cashuMints.length > 0 && (

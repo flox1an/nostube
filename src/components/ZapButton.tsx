@@ -2,9 +2,10 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Zap, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useZap, useEventZaps, useCurrentUser } from '@/hooks'
+import { useZap, useEventZaps, useCurrentUser, useWallet } from '@/hooks'
 import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ZapButtonProps {
   eventId?: string // Optional - not provided when zapping a profile directly
@@ -37,6 +38,7 @@ export const ZapButton = memo(function ZapButton({
     eventId,
     authorPubkey,
   })
+  const { defaultZapAmount } = useWallet()
   // Only fetch zap stats if we have an eventId (not for profile zaps)
   const { totalSats } = useEventZaps({
     eventId: eventId || '',
@@ -123,24 +125,35 @@ export const ZapButton = memo(function ZapButton({
 
     return (
       <>
-        <Button
-          variant="secondary"
-          className={cn(className)}
-          onClick={handleQuickZap}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
-          onContextMenu={handleContextMenu}
-          disabled={!user || isZapping}
-          aria-label="Zap"
-        >
-          {isZapping ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
-          )}
-          <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                className={cn(className)}
+                onClick={handleQuickZap}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerLeave}
+                onContextMenu={handleContextMenu}
+                disabled={!user || isZapping}
+                aria-label="Zap"
+              >
+                {isZapping ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
+                )}
+                <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>
+                {`Zap ${defaultZapAmount}`} sats or<br></br> long press for options...
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <ZapDialog
           open={showZapDialog}
@@ -173,24 +186,33 @@ export const ZapButton = memo(function ZapButton({
   return (
     <>
       <div className={cn('flex flex-col items-center gap-1', className)}>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full"
-          onClick={handleQuickZap}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
-          onContextMenu={handleContextMenu}
-          disabled={!user || isZapping}
-          aria-label="Zap"
-        >
-          {isZapping ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
-          )}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full"
+                onClick={handleQuickZap}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerLeave}
+                onContextMenu={handleContextMenu}
+                disabled={!user || isZapping}
+                aria-label="Zap"
+              >
+                {isZapping ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>{`Zapping ${defaultZapAmount} sats. Long press for options...`}</span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <span className="text-sm font-medium">{formatSats(displaySats)}</span>
       </div>
 

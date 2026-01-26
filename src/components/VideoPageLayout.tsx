@@ -36,7 +36,7 @@ export function VideoPageLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className={cn('pb-8', !cinemaMode && 'max-w-560 mx-auto sm:py-4 md:px-4')}>
+    <div className={cn('pb-8', !cinemaMode && 'max-w-560 mx-auto sm:py-2 md:px-4')}>
       {/* CSS Grid layout: single column on mobile/lg, two columns on xl+ (normal mode only) */}
       <div
         className={cn('grid grid-cols-1 gap-0', !cinemaMode && 'xl:grid-cols-[1fr_384px] xl:gap-4')}

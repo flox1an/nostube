@@ -30,6 +30,7 @@ import type { NostrEvent } from 'nostr-tools'
 const NWC_STORAGE_KEY = 'nwc-connection'
 const WALLET_TYPE_KEY = 'wallet-type'
 const CASHU_MINT_URL_KEY = 'cashu-mint-url'
+const DEFAULT_ZAP_AMOUNT_KEY = 'default-zap-amount'
 
 // Wallet types
 export type WalletType = 'nwc' | 'cashu' | null
@@ -66,6 +67,10 @@ interface WalletContextValue {
   isCashuWalletUnlocked: boolean
   isUnlocking: boolean
 
+  // Zap settings
+  defaultZapAmount: number
+  setDefaultZapAmount: (amount: number) => void
+
   // NWC connection
   connectNWC: (connectionString: string) => Promise<void>
 
@@ -99,6 +104,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cashuMints, setCashuMints] = useState<CashuMintInfo[]>([])
+  const [defaultZapAmount, setDefaultZapAmountState] = useState<number>(() => {
+    const stored = localStorage.getItem(DEFAULT_ZAP_AMOUNT_KEY)
+    return stored ? parseInt(stored, 10) : 21
+  })
 
   // Action runner for Cashu wallet operations
   const actionRunner = useMemo(() => {
@@ -276,6 +285,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [actionRunner, cashuWalletEvent]
   )
 
+  // Set default zap amount
+  const setDefaultZapAmount = useCallback((amount: number) => {
+    setDefaultZapAmountState(amount)
+    localStorage.setItem(DEFAULT_ZAP_AMOUNT_KEY, amount.toString())
+  }, [])
+
   // Disconnect wallet
   const disconnect = useCallback(() => {
     setNwcClient(null)
@@ -409,6 +424,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         cashuMints,
         cashuWalletEvent,
         isCashuWalletUnlocked,
+        defaultZapAmount,
+        setDefaultZapAmount,
         connectNWC,
         createCashuWallet,
         unlockCashuWallet,

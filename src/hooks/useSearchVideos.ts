@@ -14,9 +14,15 @@ import type { IEventStore } from 'applesauce-core'
 const SEARCH_LIMIT = 1000 // Max events to load from relays
 const VIDEO_KINDS = [21, 22, 34235, 34236]
 
+function extractHashtags(text: string): string[] {
+  const hashtagRegex = /#(\w+)/g
+  const matches = text.match(hashtagRegex)
+  return matches ? matches.map(match => match.substring(1)) : []
+}
+
 // MiniSearch instance - shared across searches for efficiency
 let searchIndex: MiniSearch<IndexedVideo> | null = null
-let indexedEventIds = new Set<string>()
+const indexedEventIds = new Set<string>()
 
 interface IndexedVideo {
   id: string
@@ -209,11 +215,32 @@ export function useSearchVideos({
     hasFetchedRef.current = true
     setLoading(true)
 
-    if (import.meta.env.DEV) {
-      console.log(`🔍 Fetching up to ${limit} video events for search indexing...`)
+    const hashtags = extractHashtags(query)
+
+    const filters: { kinds: number[]; limit: number; search?: string; '#t'?: string[] }[] = []
+
+    // Filter 1: Latest events (always include)
+    filters.push({ kinds, limit })
+
+    // Filter 2: NIP-50 search (if query has non-hashtag part)
+    const nonHashtagQuery = query.replace(/#(\w+)/g, '').trim()
+    if (nonHashtagQuery.length > 0) {
+      filters.push({ kinds, limit, search: nonHashtagQuery })
     }
 
-    const loader = createTimelineLoader(relayPool, readRelays, { kinds, limit }, { eventStore })
+    // Filter 3: Tag search (if hashtags are present)
+    if (hashtags.length > 0) {
+      filters.push({ kinds, limit, '#t': hashtags })
+    }
+
+    if (import.meta.env.DEV) {
+      console.log(
+        `🔍 Fetching up to ${limit} video events for search indexing with filters:`,
+        filters
+      )
+    }
+
+    const loader = createTimelineLoader(relayPool, readRelays, filters, { eventStore })
     let eventCount = 0
 
     // Set a timeout to mark loading as complete (relay subscriptions often don't "complete")

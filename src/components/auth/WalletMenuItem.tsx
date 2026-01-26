@@ -21,7 +21,10 @@ export function WalletMenuItem() {
   return (
     <>
       <DropdownMenuItem
-        onClick={() => setDialogOpen(true)}
+        onSelect={event => {
+          event.preventDefault()
+          setDialogOpen(true)
+        }}
         className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
       >
         <Wallet className="w-4 h-4" />

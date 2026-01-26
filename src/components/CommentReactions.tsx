@@ -7,7 +7,9 @@ import {
   useEventStats,
   useUserReactionStatus,
   useProfile,
+  useWallet,
 } from '@/hooks'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -76,6 +78,7 @@ export const CommentReactions = memo(function CommentReactions({
     eventId,
     authorPubkey,
   })
+  const { defaultZapAmount } = useWallet()
 
   const isOwnContent = user?.pubkey === authorPubkey
 
@@ -218,25 +221,34 @@ export const CommentReactions = memo(function CommentReactions({
         </Button>
 
         {/* Zap button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={handleQuickZap}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
-          onContextMenu={handleContextMenu}
-          disabled={!user || isZapping || isOwnContent}
-          aria-label="Zap"
-        >
-          {isZapping ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Zap className={cn('w-3 h-3', totalSats > 0 && 'text-yellow-500')} />
-          )}
-          {totalSats > 0 && <span className="ml-1">{formatSats(totalSats)}</span>}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleQuickZap}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerLeave}
+                onContextMenu={handleContextMenu}
+                disabled={!user || isZapping || isOwnContent}
+                aria-label="Zap"
+              >
+                {isZapping ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Zap className={cn('w-3 h-3', totalSats > 0 && 'text-yellow-500')} />
+                )}
+                {totalSats > 0 && <span className="ml-1">{formatSats(totalSats)}</span>}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>{`Zapping ${defaultZapAmount} sats. Long press for options...`}</span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Video author liked badge */}
         {videoAuthorLiked && videoAuthorPubkey && (

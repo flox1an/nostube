@@ -6,8 +6,6 @@ import { useUserRelays } from '@/hooks/useUserRelays'
 import { getRecipientZapEndpoint, createZapRequest, requestInvoice } from '@/lib/zap-utils'
 import { toast } from 'sonner'
 
-const DEFAULT_ZAP_AMOUNT = 21
-
 interface UseZapOptions {
   eventId?: string // Optional - not provided when zapping a profile directly
   authorPubkey: string
@@ -32,7 +30,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   const [isZapping, setIsZapping] = useState(false)
   const [needsWallet, setNeedsWallet] = useState(false)
   const { user } = useCurrentUser()
-  const { isConnected, payInvoice } = useWallet()
+  const { isConnected, payInvoice, defaultZapAmount } = useWallet()
   const { config } = useAppContext()
   const eventStore = useEventStore()
 
@@ -55,7 +53,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
 
   const zap = useCallback(
     async (params?: ZapParams): Promise<boolean> => {
-      const { amount = DEFAULT_ZAP_AMOUNT, comment, timestamp } = params || {}
+      const { amount = defaultZapAmount, comment, timestamp } = params || {}
 
       if (!user) {
         toast.error('Please log in to zap')
@@ -121,7 +119,16 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
         setIsZapping(false)
       }
     },
-    [user, isConnected, eventStore, authorPubkey, targetRelays, videoEvent, payInvoice]
+    [
+      user,
+      isConnected,
+      eventStore,
+      authorPubkey,
+      targetRelays,
+      videoEvent,
+      payInvoice,
+      defaultZapAmount,
+    ]
   )
 
   // Generate invoice without paying (for users without wallet)

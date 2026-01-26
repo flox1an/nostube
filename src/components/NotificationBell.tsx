@@ -51,20 +51,19 @@ export function NotificationBell() {
     }
   }
 
-  // Only disable if there are no notifications AND not loading
-  // Keep enabled if there are notifications (read or unread)
-  const isDisabled = notifications.length === 0 && !isLoading
+  // Render a disabled button without dropdown when there are no notifications
+  if (notifications.length === 0) {
+    return (
+      <Button variant="ghost" size="icon" className="relative" aria-label="Notifications" disabled>
+        <Bell className="h-5 w-5" />
+      </Button>
+    )
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          aria-label="Notifications"
-          disabled={isDisabled}
-        >
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span

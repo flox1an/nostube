@@ -42,6 +42,8 @@ export interface CommentItemProps {
   currentUserName?: string
   currentUserPubkey?: string
   onScrollToComment?: (commentId: string) => void
+  /** Video author's pubkey for showing "liked by creator" badge */
+  videoAuthorPubkey?: string
 }
 
 export const CommentItem = React.memo(function CommentItem({
@@ -61,6 +63,7 @@ export const CommentItem = React.memo(function CommentItem({
   currentUserName,
   currentUserPubkey,
   onScrollToComment,
+  videoAuthorPubkey,
 }: CommentItemProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: comment.pubkey })
@@ -126,7 +129,11 @@ export const CommentItem = React.memo(function CommentItem({
           />
           {/* Reactions, reply, and expand buttons in same row */}
           <div className="flex items-center gap-1 mt-1">
-            <CommentReactions eventId={comment.id} authorPubkey={comment.pubkey} />
+            <CommentReactions
+              eventId={comment.id}
+              authorPubkey={comment.pubkey}
+              videoAuthorPubkey={videoAuthorPubkey}
+            />
             {onReply && !isReplying && (
               <Button
                 variant="ghost"
@@ -208,6 +215,7 @@ export const CommentItem = React.memo(function CommentItem({
                       currentUserAvatar={currentUserAvatar}
                       currentUserName={currentUserName}
                       currentUserPubkey={currentUserPubkey}
+                      videoAuthorPubkey={videoAuthorPubkey}
                     />
                   </div>
                 </div>

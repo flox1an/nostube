@@ -395,6 +395,7 @@ export function VideoComments({
             currentUserAvatar={userProfile?.picture}
             currentUserName={userProfile?.name || user?.pubkey.slice(0, 8)}
             currentUserPubkey={user?.pubkey}
+            videoAuthorPubkey={authorPubkey}
           />
         ))}
       </div>

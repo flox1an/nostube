@@ -6,21 +6,25 @@ import {
   useZap,
   useEventStats,
   useUserReactionStatus,
+  useProfile,
 } from '@/hooks'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { ThumbsUp, ThumbsDown, Zap, Loader2 } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, Zap, Loader2, Heart } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { formatSats } from '@/lib/zap-utils'
 import { ZapDialog } from './ZapDialog'
+import { UserAvatar } from './UserAvatar'
 
 interface CommentReactionsProps {
   eventId: string
   authorPubkey: string
   kind?: number
   className?: string
+  /** Video author's pubkey to show "author liked" badge */
+  videoAuthorPubkey?: string
 }
 
 const LONG_PRESS_DELAY = 500
@@ -30,11 +34,15 @@ export const CommentReactions = memo(function CommentReactions({
   authorPubkey,
   kind = 1111,
   className = '',
+  videoAuthorPubkey,
 }: CommentReactionsProps) {
   const { user } = useCurrentUser()
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const { publish, isPending } = useNostrPublish()
+  const videoAuthorProfile = useProfile(
+    videoAuthorPubkey ? { pubkey: videoAuthorPubkey } : undefined
+  )
 
   const [showZapDialog, setShowZapDialog] = useState(false)
   const longPressTimer = useRef<number | null>(null)
@@ -56,6 +64,12 @@ export const CommentReactions = memo(function CommentReactions({
   // Check if current user has reacted
   const { hasUpvoted, hasDownvoted } = useUserReactionStatus(reactions, user?.pubkey)
   const hasReacted = hasUpvoted || hasDownvoted
+
+  // Check if video author has liked this comment
+  const videoAuthorLiked = useMemo(() => {
+    if (!videoAuthorPubkey || videoAuthorPubkey === authorPubkey) return false
+    return reactions.some(r => r.pubkey === videoAuthorPubkey && r.content === '+')
+  }, [reactions, videoAuthorPubkey, authorPubkey])
 
   // Use the useZap hook for zapping
   const { zap, generateInvoice, isZapping, isConnected } = useZap({
@@ -223,6 +237,19 @@ export const CommentReactions = memo(function CommentReactions({
           )}
           {totalSats > 0 && <span className="ml-1">{formatSats(totalSats)}</span>}
         </Button>
+
+        {/* Video author liked badge */}
+        {videoAuthorLiked && videoAuthorPubkey && (
+          <div className="relative ml-1" title="Liked by creator">
+            <UserAvatar
+              picture={videoAuthorProfile?.picture}
+              pubkey={videoAuthorPubkey}
+              name={videoAuthorProfile?.name}
+              className="h-6 w-6"
+            />
+            <Heart className="absolute -bottom-0.5 -right-0.5 h-3 w-3 fill-red-500 text-red-500" />
+          </div>
+        )}
       </div>
 
       <ZapDialog

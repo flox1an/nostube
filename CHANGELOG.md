@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Comments: "Liked by creator" badge - when the video author likes a comment, their avatar with a red heart icon is displayed next to the reaction buttons (similar to YouTube)
 - Refactoring: centralized video URL building in `src/utils/video-utils.ts` with `buildVideoPath`, `buildVideoUrl`, and `buildVideoUrlObject` functions; standardized all video URLs to use `/v/{link}` for widescreen and `/short/{link}` for portrait videos with optional playlist, timestamp, comment, and autoplay parameters
 - Refactoring: centralized profile URL building in `src/lib/nprofile.ts` with `buildProfilePath`, `buildProfileUrl`, and `buildProfileUrlFromPubkey` functions; standardized all profile URLs to use `/p/{nprofile}` instead of `/author/{nprofile}`
 - Refactoring: new `useDialogState` hook for managing dialog open/close state with data support (reduces boilerplate across 50+ components)

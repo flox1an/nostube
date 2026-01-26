@@ -207,16 +207,29 @@ export function useSearchVideos({
     if (readRelays.length === 0) return
 
     hasFetchedRef.current = true
-    queueMicrotask(() => setLoading(true))
+    setLoading(true)
 
     if (import.meta.env.DEV) {
       console.log(`🔍 Fetching up to ${limit} video events for search indexing...`)
     }
 
     const loader = createTimelineLoader(relayPool, readRelays, { kinds, limit }, { eventStore })
+    let eventCount = 0
+
+    // Set a timeout to mark loading as complete (relay subscriptions often don't "complete")
+    const timeoutId = setTimeout(() => {
+      setLoading(false)
+      setHasLoaded(true)
+      subscriptionRef.current?.unsubscribe()
+      if (import.meta.env.DEV) {
+        console.log(`🔍 Search timeout reached. Index has ${indexedEventIds.size} events`)
+      }
+    }, 10000) // 10 second timeout
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
+        eventCount++
+
         // Add to IEventStore
         eventStore.add(event)
 
@@ -228,8 +241,15 @@ export function useSearchVideos({
           if (prev.some(e => e.id === event.id)) return prev
           return [...prev, event]
         })
+
+        // Update search results periodically (every 50 events) for progressive display
+        if (eventCount % 50 === 0 && query) {
+          const matches = searchIndexForQuery(query)
+          setMatchingIds(matches)
+        }
       },
       complete: () => {
+        clearTimeout(timeoutId)
         setLoading(false)
         setHasLoaded(true)
 
@@ -238,11 +258,12 @@ export function useSearchVideos({
           const matches = searchIndexForQuery(query)
           setMatchingIds(matches)
           if (import.meta.env.DEV) {
-            console.log(`🔍 Search index built with ${indexedEventIds.size} events`)
+            console.log(`🔍 Search complete. Index has ${indexedEventIds.size} events`)
           }
         }
       },
       error: err => {
+        clearTimeout(timeoutId)
         console.error('Error fetching videos for search:', err)
         setLoading(false)
         setHasLoaded(true)
@@ -252,6 +273,7 @@ export function useSearchVideos({
     subscriptionRef.current = subscription
 
     return () => {
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [query, readRelays, eventStore, kinds, limit])

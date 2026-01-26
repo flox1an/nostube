@@ -203,10 +203,11 @@ export const VideoCard = React.memo(function VideoCard({
     >
       <div>
         <Link to={to} onClick={handleShortsClick}>
-          <div className="w-full overflow-hidden sm:rounded-lg relative">
+          {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
+          <div className={cn('w-full overflow-hidden sm:rounded-lg relative', aspectRatio)}>
             {/* Show error state if both thumbnail and fallback failed */}
             {fallbackFailed ? (
-              <div className={cn('w-full bg-muted flex items-center justify-center', aspectRatio)}>
+              <div className="absolute inset-0 bg-muted flex items-center justify-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <ImageOff className="h-12 w-12" />
                   <span className="text-sm">{t('video.thumbnailUnavailable')}</span>
@@ -221,10 +222,10 @@ export const VideoCard = React.memo(function VideoCard({
                       src={blurhashPlaceholder}
                       alt=""
                       aria-hidden="true"
-                      className={cn('w-full object-cover absolute', aspectRatio)}
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <Skeleton className={cn('w-full absolute', aspectRatio)} />
+                    <Skeleton className="absolute inset-0 w-full h-full" />
                   ))}
                 <img
                   src={thumbnailUrl}
@@ -233,9 +234,9 @@ export const VideoCard = React.memo(function VideoCard({
                   referrerPolicy="no-referrer"
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
-                    'w-full object-cover transition-opacity duration-300',
-                    aspectRatio,
-                    isHovered && videoLoaded ? 'opacity-0 absolute' : 'opacity-100'
+                    'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
+                    isHovered && videoLoaded ? 'opacity-0' : 'opacity-100',
+                    !thumbnailLoaded && 'opacity-0'
                   )}
                   onError={handleThumbnailError}
                   onLoad={handleThumbnailLoad}
@@ -263,8 +264,7 @@ export const VideoCard = React.memo(function VideoCard({
                 preload="metadata"
                 onLoadedData={handleVideoLoadedData}
                 className={cn(
-                  'w-full object-cover sm:rounded-lg transition-opacity duration-300',
-                  aspectRatio,
+                  'absolute inset-0 w-full h-full object-cover sm:rounded-lg transition-opacity duration-300',
                   videoLoaded ? 'opacity-100' : 'opacity-0 hidden'
                 )}
               />

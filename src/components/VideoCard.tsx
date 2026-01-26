@@ -59,7 +59,6 @@ export const VideoCard = React.memo(function VideoCard({
 
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
-  const maxWidth = format == 'vertical' && 'sm:max-w-[280px] mx-auto'
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isHovered, setIsHovered] = useState(false)
@@ -193,10 +192,7 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className={cn(
-        'p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
-        maxWidth
-      )}
+      className="p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
       style={{ contain: 'layout style paint' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

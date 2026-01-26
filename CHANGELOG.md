@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video page: video suggestions now display in 2-column grid in theater mode on desktop (single column in normal mode)
 - Video player: added explicit autoplay - calls play() when video is ready to ensure playback starts (fallback for browsers that block autoPlay attribute)
 - Video player: timeline zap markers hidden on mobile for cleaner touch interaction
+- Comments: long URLs are now shortened for display (first 20 chars + "..." + last 4 chars) while keeping full URL in href and tooltip; prevents long links from breaking layout
 - Video page: sidebar now appears as a sheet overlay on medium screens (1024-1280px) with a floating toggle button; two-column layout only kicks in at xl+ (1280px+) for better video viewing on smaller laptops
 - Updated dependencies: applesauce-react 5.0.1, globals 17.0.0, i18next 25.7.4, immer 11.1.3, react-hook-form 7.70.0, react-i18next 16.5.1, react-resizable-panels 4.3.1, react-router-dom 7.12.0, typescript-eslint 8.52.0, vite 7.3.1, zod 4.3.5
 

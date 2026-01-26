@@ -128,6 +128,16 @@ const detectSocialMedia = (url: string): SocialMediaPlatform | null => {
   return null
 }
 
+// Shorten long URLs for display while keeping them readable
+// Shows first 20 chars + "..." + last 4 chars for URLs longer than 30 chars
+const shortenUrl = (url: string, maxLength = 20, tailLength = 4): string => {
+  const threshold = maxLength + tailLength + 3 // 3 for "..."
+  if (url.length <= threshold) {
+    return url
+  }
+  return `${url.slice(0, maxLength)}...${url.slice(-tailLength)}`
+}
+
 // Helper component to display user mentions
 function NostrMention({
   profilePointer,
@@ -290,8 +300,9 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent-foreground hover:underline break-all"
+                title={url}
               >
-                {url}
+                {shortenUrl(url)}
               </a>
             )
           }

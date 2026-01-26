@@ -1,24 +1,94 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useEventStore, use$ } from 'applesauce-react/hooks'
+import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import MiniSearch from 'minisearch'
 import { processEvents, getPublishDate } from '@/utils/video-event'
-import { useAppContext, useReportedPubkeys } from '@/hooks'
+import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
-import { RelayPool } from 'applesauce-relay'
-import { of, type Subscription } from 'rxjs'
+import { relayPool } from '@/nostr/core'
 
-// Dedicated relay pool for search - only uses relay.nostr.band
-const SEARCH_RELAY = 'wss://relay.nostr.band'
-const SEARCH_RELAYS = [SEARCH_RELAY]
-let searchPool: RelayPool | null = null
+// Search configuration
+const SEARCH_LIMIT = 1000 // Max events to load from relays
+const VIDEO_KINDS = [21, 22, 34235, 34236]
 
-function getSearchPool(): RelayPool {
-  if (!searchPool) {
-    searchPool = new RelayPool()
+// MiniSearch instance - shared across searches for efficiency
+let searchIndex: MiniSearch<IndexedVideo> | null = null
+let indexedEventIds = new Set<string>()
+
+interface IndexedVideo {
+  id: string
+  title: string
+  description: string
+  tags: string
+  authorName?: string
+}
+
+/**
+ * Create or get the MiniSearch index
+ */
+function getSearchIndex(): MiniSearch<IndexedVideo> {
+  if (!searchIndex) {
+    searchIndex = new MiniSearch<IndexedVideo>({
+      fields: ['title', 'description', 'tags', 'authorName'],
+      storeFields: ['id'],
+      searchOptions: {
+        boost: { title: 3, tags: 2, description: 1, authorName: 0.5 },
+        fuzzy: 0.2,
+        prefix: true,
+      },
+    })
   }
-  return searchPool
+  return searchIndex
+}
+
+/**
+ * Extract searchable text from a Nostr event
+ */
+function extractSearchableFields(event: NostrEvent): IndexedVideo {
+  const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
+  const description =
+    event.tags.find(t => t[0] === 'summary')?.[1] || event.tags.find(t => t[0] === 'alt')?.[1] || ''
+  const hashtags = event.tags
+    .filter(t => t[0] === 't')
+    .map(t => t[1])
+    .join(' ')
+
+  return {
+    id: event.id,
+    title,
+    description,
+    tags: hashtags,
+  }
+}
+
+/**
+ * Add events to the search index
+ */
+function indexEvents(events: NostrEvent[]): void {
+  const index = getSearchIndex()
+  const newDocs: IndexedVideo[] = []
+
+  for (const event of events) {
+    if (!indexedEventIds.has(event.id)) {
+      indexedEventIds.add(event.id)
+      newDocs.push(extractSearchableFields(event))
+    }
+  }
+
+  if (newDocs.length > 0) {
+    index.addAll(newDocs)
+  }
+}
+
+/**
+ * Search the index and return matching event IDs
+ */
+function searchIndexForQuery(query: string): Set<string> {
+  const index = getSearchIndex()
+  const results = index.search(query)
+  return new Set(results.map(r => r.id))
 }
 
 interface UseSearchVideosOptions {
@@ -33,23 +103,25 @@ interface UseSearchVideosOptions {
   kinds?: number[]
 
   /**
-   * Optional limit for initial load (default: 50)
+   * Optional limit for relay fetch (default: 1000)
    */
   limit?: number
 }
 
 /**
- * Hook for searching videos using NIP-50 full-text search.
- * Uses a dedicated relay pool that only connects to relay.nostr.band.
- * Uses use$ to subscribe to EventStore for reactive updates.
+ * Hook for searching videos using client-side full-text search with MiniSearch.
+ * Hybrid approach:
+ * 1. Immediately search events already in EventStore
+ * 2. Fetch more events from relays (without NIP-50)
+ * 3. Index and search progressively as events arrive
  *
  * @example
  * const { videos, loading, loadMore } = useSearchVideos({ query: 'bitcoin' })
  */
 export function useSearchVideos({
   query,
-  kinds = [21, 22, 34235, 34236], // All video kinds
-  limit = 50,
+  kinds = VIDEO_KINDS,
+  limit = SEARCH_LIMIT,
 }: UseSearchVideosOptions): {
   videos: VideoEvent[]
   loading: boolean
@@ -60,137 +132,166 @@ export function useSearchVideos({
   const { config } = useAppContext()
   const blockedPubkeys = useReportedPubkeys()
   const { presetContent } = useSelectedPreset()
+  const readRelays = useReadRelays()
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
-  // Store subscription ref to keep it alive during loadMore
-  const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
+  const [matchingIds, setMatchingIds] = useState<Set<string>>(new Set())
+  const [allEvents, setAllEvents] = useState<NostrEvent[]>([])
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
+  const hasFetchedRef = useRef(false)
 
-  // Create NIP-50 search filter (without the search param for EventStore query)
-  const storeFilter = useMemo(() => {
-    if (!query) return null
-    return { kinds }
-  }, [query, kinds])
-
-  // Create full NIP-50 search filter for relay query
-  const searchFilter = useMemo(() => {
-    if (!query) return null
-
-    const filter = {
-      kinds,
-      search: query, // NIP-50 full-text search
+  // Index events already in EventStore and search immediately when query changes
+  useEffect(() => {
+    if (!query) {
+      queueMicrotask(() => setMatchingIds(new Set()))
+      return
     }
+
+    // Get events from EventStore synchronously if available
+    const storeEvents: NostrEvent[] = []
+    const timeline = eventStore.timeline({ kinds })
+
+    // Subscribe briefly to get current events
+    const sub = timeline.subscribe({
+      next: events => {
+        if (events && events.length > 0) {
+          storeEvents.push(...events)
+        }
+      },
+    })
+
+    // Unsubscribe after getting initial batch
+    queueMicrotask(() => {
+      sub.unsubscribe()
+
+      if (storeEvents.length > 0) {
+        // Index the events
+        indexEvents(storeEvents)
+        setAllEvents(prev => {
+          const existingIds = new Set(prev.map(e => e.id))
+          const newEvents = storeEvents.filter(e => !existingIds.has(e.id))
+          if (newEvents.length === 0) return prev
+          return [...prev, ...newEvents]
+        })
+
+        // Search and update matching IDs
+        const matches = searchIndexForQuery(query)
+        setMatchingIds(matches)
+      }
+    })
+  }, [query, kinds, eventStore])
+
+  // Fetch events from relays on first search
+  useEffect(() => {
+    if (!query || hasFetchedRef.current) return
+    if (readRelays.length === 0) return
+
+    hasFetchedRef.current = true
+    queueMicrotask(() => setLoading(true))
 
     if (import.meta.env.DEV) {
-      console.log('🔍 NIP-50 Search Filter:', JSON.stringify(filter, null, 2))
+      console.log(`🔍 Fetching up to ${limit} video events for search indexing...`)
     }
 
-    return filter
-  }, [query, kinds])
+    const loader = createTimelineLoader(relayPool, readRelays, { kinds, limit }, { eventStore })
 
-  // Subscribe to EventStore for reactive updates as events arrive
-  // Note: EventStore doesn't support NIP-50 search, so we query by kinds only
-  // and filter client-side based on what the search relay returned
-  const events = use$(() => {
-    if (!storeFilter) return of([])
-    return eventStore.timeline(storeFilter)
-  }, [eventStore, storeFilter])
+    const subscription = loader().subscribe({
+      next: (event: NostrEvent) => {
+        // Add to EventStore
+        eventStore.add(event)
 
-  // Process events - only use search relay for discovery
-  // Sort by publish date descending (newest first), fallback to created_at
+        // Index the event
+        indexEvents([event])
+
+        // Update allEvents
+        setAllEvents(prev => {
+          if (prev.some(e => e.id === event.id)) return prev
+          return [...prev, event]
+        })
+      },
+      complete: () => {
+        setLoading(false)
+        setHasLoaded(true)
+
+        // Re-run search with current query after all events loaded
+        if (query) {
+          const matches = searchIndexForQuery(query)
+          setMatchingIds(matches)
+          if (import.meta.env.DEV) {
+            console.log(`🔍 Search index built with ${indexedEventIds.size} events`)
+          }
+        }
+      },
+      error: err => {
+        console.error('Error fetching videos for search:', err)
+        setLoading(false)
+        setHasLoaded(true)
+      },
+    })
+
+    subscriptionRef.current = subscription
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [query, readRelays, eventStore, kinds, limit])
+
+  // Re-search when query changes (after initial load)
+  useEffect(() => {
+    if (!query) {
+      queueMicrotask(() => setMatchingIds(new Set()))
+      return
+    }
+
+    // Search existing index immediately
+    if (indexedEventIds.size > 0) {
+      queueMicrotask(() => {
+        const matches = searchIndexForQuery(query)
+        setMatchingIds(matches)
+      })
+    }
+  }, [query])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      subscriptionRef.current?.unsubscribe()
+    }
+  }, [])
+
+  // Filter and process matching events
   const videos = useMemo(() => {
-    const eventList = events ?? []
+    if (!query || matchingIds.size === 0) return []
+
+    // Filter events to only matching ones
+    const matchingEvents = allEvents.filter(e => matchingIds.has(e.id))
+
+    // Process into VideoEvent format
     const processed = processEvents(
-      eventList,
-      SEARCH_RELAYS,
+      matchingEvents,
+      readRelays,
       blockedPubkeys,
       config.blossomServers,
       undefined,
       presetContent.nsfwPubkeys
     )
+
+    // Sort by publish date descending (newest first)
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [events, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    query,
+    matchingIds,
+    allEvents,
+    readRelays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+  ])
 
-  // Reset hasLoaded when query changes to trigger reload
-  useEffect(() => {
-    if (query === undefined || query === null) return
-    queueMicrotask(() => {
-      setHasLoaded(false)
-      setLoading(true)
-    })
-  }, [query])
-
-  // Load initial events from search relay
-  useEffect(() => {
-    if (!searchFilter || hasLoaded) return
-
-    const pool = getSearchPool()
-    queueMicrotask(() => setLoading(true))
-
-    const loader = createTimelineLoader(pool, SEARCH_RELAYS, searchFilter, {
-      eventStore,
-      limit,
-    })
-
-    const subscription = loader().subscribe({
-      next: (event: NostrEvent) => {
-        eventStore.add(event)
-      },
-      complete: () => {
-        setLoading(false)
-        setHasLoaded(true)
-      },
-      error: err => {
-        console.error('Error searching videos:', err)
-        setLoading(false)
-        setHasLoaded(true)
-      },
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [searchFilter, eventStore, hasLoaded, limit])
-
-  // Cleanup loadMore subscription on unmount
-  useEffect(() => {
-    return () => {
-      loadMoreSubscriptionRef.current?.unsubscribe()
-    }
-  }, [])
-
-  // Load more videos (pagination)
+  // Load more is a no-op for now since we load all at once
   const loadMore = useCallback(() => {
-    if (!searchFilter || loading) return
-
-    // Clean up any previous loadMore subscription
-    loadMoreSubscriptionRef.current?.unsubscribe()
-
-    const pool = getSearchPool()
-    setLoading(true)
-    // Get the oldest event timestamp for pagination
-    const oldestEvent = videos.length > 0 ? videos[videos.length - 1] : null
-    const until = oldestEvent?.created_at
-
-    const paginatedFilters = until ? { ...searchFilter, until } : searchFilter
-
-    const loader = createTimelineLoader(pool, SEARCH_RELAYS, paginatedFilters, {
-      eventStore,
-      limit,
-    })
-
-    loadMoreSubscriptionRef.current = loader().subscribe({
-      next: (event: NostrEvent) => {
-        eventStore.add(event)
-      },
-      complete: () => {
-        setLoading(false)
-      },
-      error: err => {
-        console.error('Error loading more search results:', err)
-        setLoading(false)
-      },
-    })
-  }, [searchFilter, eventStore, loading, videos, limit])
+    // Could implement pagination in the future
+  }, [])
 
   return {
     videos,

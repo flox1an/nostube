@@ -112,10 +112,6 @@ export function AccountSwitcher() {
           <span>{t('settings.title')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {/* 
-        <div className="font-medium text-sm px-2 py-1.5">Switch Relay</div>
-        <RelaySelector className="w-full" />
-        */}
 
         {otherAccounts.length > 0 && (
           <>
@@ -130,7 +126,6 @@ export function AccountSwitcher() {
             ))}
           </>
         )}
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
             handleRemoveAccount(activeAccount)

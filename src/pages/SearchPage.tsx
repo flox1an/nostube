@@ -13,8 +13,8 @@ export function SearchPage() {
   // Memoize videoKinds to prevent unnecessary re-renders
   const videoKinds = useMemo(() => getKindsForType('all'), [])
 
-  // Use dedicated search hook that only queries relay.nostr.band
-  const { videos, loading, loadMore } = useSearchVideos({
+  // Use dedicated search hook with client-side MiniSearch
+  const { videos, loading, hasLoaded, loadMore } = useSearchVideos({
     query,
     kinds: videoKinds, // All video kinds: 21, 22, 34235, 34236
   })
@@ -48,7 +48,7 @@ export function SearchPage() {
       <VideoTimelinePage
         videos={videos}
         loading={loading}
-        exhausted={false}
+        exhausted={hasLoaded}
         onLoadMore={loadMore}
         layoutMode="auto"
         emptyMessage={t('pages.search.noResults', { query })}

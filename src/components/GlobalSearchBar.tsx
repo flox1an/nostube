@@ -122,7 +122,10 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn('flex gap-2 items-center w-full', !isMobileExpanded && 'hidden md:flex')}
+      className={cn(
+        'flex gap-2 items-center justify-center w-full',
+        !isMobileExpanded && 'hidden md:flex'
+      )}
     >
       <div
         className={cn(

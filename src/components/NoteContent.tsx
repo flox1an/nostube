@@ -56,7 +56,7 @@ export function NoteContent({ event, className }: NoteContentProps) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
+            className="text-accent-foreground hover:underline"
           >
             {url}
           </a>
@@ -99,7 +99,7 @@ export function NoteContent({ event, className }: NoteContentProps) {
             <Link
               key={`nostr-${keyCounter++}`}
               to={`/${nostrId}`}
-              className="text-blue-500 hover:underline"
+              className="text-accent-foreground hover:underline"
             >
               {fullMatch}
             </Link>
@@ -114,8 +114,8 @@ export function NoteContent({ event, className }: NoteContentProps) {
         parts.push(
           <Link
             key={`hashtag-${keyCounter++}`}
-            to={`/t/${tag}`}
-            className="text-blue-500 hover:underline"
+            to={`/tags/${tag}`}
+            className="text-accent-foreground hover:underline"
           >
             {hashtag}
           </Link>
@@ -172,7 +172,7 @@ function NostrMention({
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 
   return (
-    <Link to={nprofileLink} className="font-medium hover:underline text-primary">
+    <Link to={nprofileLink} className="font-medium hover:underline text-accent-foreground">
       @{displayName}
     </Link>
   )

@@ -165,7 +165,7 @@ function NostrMention({
   }, [eventStore, profilePointer.pubkey, profilePointer.relays])
 
   return (
-    <Link to={nprofileLink} className="font-medium hover:underline text-primary">
+    <Link to={nprofileLink} className="font-medium hover:underline text-accent-foreground">
       @{displayName}
     </Link>
   )
@@ -197,20 +197,20 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
   const renderContent = () => {
     const parts: React.ReactNode[] = []
 
-    // Combined regex to match URLs and nostr profile references
+    // Combined regex to match URLs, nostr profile references, and hashtags
     const combinedRegex =
-      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1)([023456789acdefghjklmnpqrstuvwxyz]+)/g
+      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1)([023456789acdefghjklmnpqrstuvwxyz]+)|(#\w+)/g
 
     const matches: Array<{
       start: number
       end: number
-      type: 'url' | 'npub' | 'nprofile'
+      type: 'url' | 'npub' | 'nprofile' | 'hashtag'
       data: string | { pubkey: string; relays?: string[] }
     }> = []
     let match: RegExpExecArray | null
 
     while ((match = combinedRegex.exec(content)) !== null) {
-      const [fullMatch, _openParen, url, _closeParen, nostrPrefix, nostrData] = match
+      const [fullMatch, _openParen, url, _closeParen, nostrPrefix, nostrData, hashtag] = match
 
       if (url) {
         matches.push({
@@ -241,6 +241,13 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
         } catch {
           // If decoding fails, skip this match
         }
+      } else if (hashtag) {
+        matches.push({
+          start: match.index,
+          end: match.index + fullMatch.length,
+          type: 'hashtag',
+          data: hashtag.slice(1), // Remove the # prefix
+        })
       }
     }
 
@@ -313,6 +320,17 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
               profilePointer={item.data as { pubkey: string; relays?: string[] }}
             />
           )
+        } else if (item.type === 'hashtag') {
+          const tag = item.data as string
+          parts.push(
+            <Link
+              key={`hashtag-${item.start}`}
+              to={`/tags/${tag}`}
+              className="text-accent-foreground hover:underline"
+            >
+              #{tag}
+            </Link>
+          )
         }
       }
     }
@@ -352,7 +370,7 @@ function renderTimestamps(text: string, videoLink: string, baseOffset: number): 
       <Link
         key={`ts-${baseOffset + start}`}
         to={targetUrl}
-        className="text-primary hover:text-primary/80 cursor-pointer"
+        className="text-accent-foreground hover:underline cursor-pointer"
         onClick={event => {
           if (typeof window === 'undefined') return
           const currentPath = `${window.location.pathname}${window.location.search}`

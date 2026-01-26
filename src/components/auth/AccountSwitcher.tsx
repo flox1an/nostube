@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserPlus } from 'lucide-react'
+import { ChevronDown, LogOut, UserPlus, Settings } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,14 +15,9 @@ import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
 import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext } from '@/hooks'
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { WalletMenuItem } from './WalletMenuItem'
 import { Button } from '../ui/button'
 import { useTranslation } from 'react-i18next'
-
-interface AccountSwitcherProps {
-  onAddAccountClick: () => void
-}
 
 function AccountSwitchItem({
   account,
@@ -55,7 +50,7 @@ function AccountSwitchItem({
   )
 }
 
-export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
+export function AccountSwitcher() {
   const { t } = useTranslation()
   const activeAccount = useActiveAccount()
   const accountManager = useAccountManager()
@@ -109,7 +104,13 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <span>{t('auth.account.playlists')}</span>
         </DropdownMenuItem>
         <WalletMenuItem />
-        <ThemeToggle />
+        <DropdownMenuItem
+          onClick={() => navigate('/settings')}
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+        >
+          <Settings className="w-4 h-4" />
+          <span>{t('settings.title')}</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {/* 
         <div className="font-medium text-sm px-2 py-1.5">Switch Relay</div>
@@ -131,13 +132,6 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={onAddAccountClick}
-          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>{t('auth.account.addAccount')}</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
           onClick={() => {
             handleRemoveAccount(activeAccount)
             // If there are other accounts, switch to the first one
@@ -148,7 +142,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
               saveActiveAccount(null)
             }
           }}
-          className="flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500"
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
         >
           <LogOut className="w-4 h-4" />
           <span>{t('auth.account.logout')}</span>

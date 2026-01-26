@@ -5,9 +5,10 @@ import MiniSearch from 'minisearch'
 import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { type NostrEvent } from 'nostr-tools'
+import { type NostrEvent, kinds } from 'nostr-tools'
 import type { VideoEvent } from '@/utils/video-event'
 import { relayPool } from '@/nostr/core'
+import type { IEventStore } from 'applesauce-core'
 
 // Search configuration
 const SEARCH_LIMIT = 1000 // Max events to load from relays
@@ -44,9 +45,26 @@ function getSearchIndex(): MiniSearch<IndexedVideo> {
 }
 
 /**
+ * Get author display name from profile in IEventStore
+ */
+function getAuthorName(pubkey: string, eventStore: IEventStore): string | undefined {
+  try {
+    // Try to get the profile event from the store
+    const profileEvent = eventStore.getReplaceable(kinds.Metadata, pubkey)
+    if (profileEvent) {
+      const profile = JSON.parse(profileEvent.content)
+      return profile.display_name || profile.name || undefined
+    }
+  } catch {
+    // Profile not found or invalid JSON
+  }
+  return undefined
+}
+
+/**
  * Extract searchable text from a Nostr event
  */
-function extractSearchableFields(event: NostrEvent): IndexedVideo {
+function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): IndexedVideo {
   const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
   const description =
     event.tags.find(t => t[0] === 'summary')?.[1] || event.tags.find(t => t[0] === 'alt')?.[1] || ''
@@ -54,26 +72,28 @@ function extractSearchableFields(event: NostrEvent): IndexedVideo {
     .filter(t => t[0] === 't')
     .map(t => t[1])
     .join(' ')
+  const authorName = getAuthorName(event.pubkey, eventStore)
 
   return {
     id: event.id,
     title,
     description,
     tags: hashtags,
+    authorName,
   }
 }
 
 /**
  * Add events to the search index
  */
-function indexEvents(events: NostrEvent[]): void {
+function indexEvents(events: NostrEvent[], eventStore: IEventStore): void {
   const index = getSearchIndex()
   const newDocs: IndexedVideo[] = []
 
   for (const event of events) {
     if (!indexedEventIds.has(event.id)) {
       indexedEventIds.add(event.id)
-      newDocs.push(extractSearchableFields(event))
+      newDocs.push(extractSearchableFields(event, eventStore))
     }
   }
 
@@ -111,7 +131,7 @@ interface UseSearchVideosOptions {
 /**
  * Hook for searching videos using client-side full-text search with MiniSearch.
  * Hybrid approach:
- * 1. Immediately search events already in EventStore
+ * 1. Immediately search events already in IEventStore
  * 2. Fetch more events from relays (without NIP-50)
  * 3. Index and search progressively as events arrive
  *
@@ -140,14 +160,14 @@ export function useSearchVideos({
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const hasFetchedRef = useRef(false)
 
-  // Index events already in EventStore and search immediately when query changes
+  // Index events already in IEventStore and search immediately when query changes
   useEffect(() => {
     if (!query) {
       queueMicrotask(() => setMatchingIds(new Set()))
       return
     }
 
-    // Get events from EventStore synchronously if available
+    // Get events from IEventStore synchronously if available
     const storeEvents: NostrEvent[] = []
     const timeline = eventStore.timeline({ kinds })
 
@@ -166,7 +186,7 @@ export function useSearchVideos({
 
       if (storeEvents.length > 0) {
         // Index the events
-        indexEvents(storeEvents)
+        indexEvents(storeEvents, eventStore)
         setAllEvents(prev => {
           const existingIds = new Set(prev.map(e => e.id))
           const newEvents = storeEvents.filter(e => !existingIds.has(e.id))
@@ -197,11 +217,11 @@ export function useSearchVideos({
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
-        // Add to EventStore
+        // Add to IEventStore
         eventStore.add(event)
 
         // Index the event
-        indexEvents([event])
+        indexEvents([event], eventStore)
 
         // Update allEvents
         setAllEvents(prev => {

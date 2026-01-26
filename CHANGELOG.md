@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Notifications: bell icon is now disabled and non-clickable when there are no notifications (prevents opening empty dropdown)
 - User menu: removed "Add another account" option, removed appearance/theme toggle, added Settings entry, changed logout text from red to normal
-- Search: replaced NIP-50 relay search with client-side full-text search using MiniSearch; loads up to 1000 video events from relays on first search, indexes title/description/tags with field boosting, supports fuzzy matching and prefix search
+- Search: replaced NIP-50 relay search with client-side full-text search using MiniSearch; loads up to 1000 video events from relays on first search, indexes title/description/tags/author name with field boosting, supports fuzzy matching and prefix search
 - Admin: renamed "Blossom Proxy" to "Media Cache Server" for clarity; ensured Media Cache Server and Thumbnail Resize Server URLs are normalized by removing trailing slashes in the preset editor and global settings
 - Wallet: moved wallet configuration from settings page to user menu dropdown for easier access; wallet balance shown in menu when connected
 - Video feeds: all timelines and feeds now sorted by `published_at` date (with `created_at` as fallback) for correct video ordering; video page shows "updated X ago" in parentheses when video was edited after publishing

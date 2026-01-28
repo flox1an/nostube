@@ -233,7 +233,6 @@ export function useVideoUpload(
     const draftTags = initialDraft?.tags || []
     return [...new Set(draftTags)]
   })
-  const [tagInput, setTagInput] = useState('')
   const [language, setLanguage] = useState(initialDraft?.language || 'en')
   const [inputMethod, setInputMethod] = useState<'file' | 'url'>(
     initialDraft?.inputMethod || 'file'
@@ -370,47 +369,6 @@ export function useVideoUpload(
     })
   }
 
-  const addTagsFromInput = (input: string) => {
-    const newTags = input
-      .split(/\s+/)
-      .filter(tag => tag.trim().length > 0)
-      .map(tag => tag.trim().replace(/^#/, '').toLowerCase())
-    // Deduplicate within pasted text
-    const deduplicatedNewTags = [...new Set(newTags)]
-
-    if (deduplicatedNewTags.length > 0) {
-      setTags(prevTags => {
-        // Filter out tags that already exist
-        const uniqueNewTags = deduplicatedNewTags.filter(tag => !prevTags.includes(tag))
-        return uniqueNewTags.length > 0 ? [...prevTags, ...uniqueNewTags] : prevTags
-      })
-    }
-  }
-
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault()
-      addTagsFromInput(tagInput)
-      setTagInput('')
-    }
-  }
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const pastedText = e.clipboardData.getData('text')
-    if (pastedText.includes(' ')) {
-      e.preventDefault()
-      if (tagInput.trim()) {
-        addTagsFromInput(tagInput)
-      }
-      addTagsFromInput(pastedText)
-      setTagInput('')
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(prevTags => prevTags.filter(tag => tag !== tagToRemove))
-  }
-
   const handleUrlVideoProcessing = async (url: string) => {
     if (!url) return
 
@@ -513,8 +471,10 @@ export function useVideoUpload(
 
     // Reset thumbnail state
     setThumbnail(null)
+    setThumbnailBlob(null)
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: false })
     setThumbnailBlurhash(undefined)
+    setThumbnailSource('upload')
   }
 
   const onDrop = async (acceptedFiles: File[]) => {
@@ -640,7 +600,6 @@ export function useVideoUpload(
     setTitle('')
     setDescription('')
     setTags([])
-    setTagInput('')
     setInputMethod('file')
     setVideoUrl('')
     setFile(null)
@@ -889,8 +848,8 @@ export function useVideoUpload(
       thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
     } else if (thumbnailSource === 'generated' && thumbnailBlob) {
       // Fallback for any legacy flow or auto-upload on publish
-      const thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', {
-        type: thumbnailBlob.type || 'image/jpeg',
+      const thumbnailFile = new File([thumbnailBlob], 'thumbnail.webp', {
+        type: thumbnailBlob.type || 'image/webp',
         lastModified: Date.now(),
       })
 
@@ -954,7 +913,6 @@ export function useVideoUpload(
       setFile(null)
       setThumbnail(null)
       setTags([])
-      setTagInput('')
       setLanguage('en')
 
       // Return event info for navigation
@@ -1039,7 +997,11 @@ export function useVideoUpload(
       draftId,
       thumbnailBlurhash,
       isPreview: true,
-      hasPendingThumbnail: (thumbnailSource === 'generated' && thumbnailBlob !== null) || (thumbnailSource === 'upload' && thumbnail !== null && thumbnailUploadInfo.uploadedBlobs.length === 0),
+      hasPendingThumbnail:
+        (thumbnailSource === 'generated' && thumbnailBlob !== null) ||
+        (thumbnailSource === 'upload' &&
+          thumbnail !== null &&
+          thumbnailUploadInfo.uploadedBlobs.length === 0),
       publishAt,
     })
 
@@ -1069,8 +1031,7 @@ export function useVideoUpload(
     description,
     setDescription,
     tags,
-    tagInput,
-    setTagInput,
+    setTags,
     language,
     setLanguage,
     inputMethod,
@@ -1108,9 +1069,6 @@ export function useVideoUpload(
 
     // Handlers
     handleUseRecommendedServers,
-    handleAddTag,
-    handlePaste,
-    removeTag,
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,

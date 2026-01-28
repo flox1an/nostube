@@ -91,6 +91,8 @@ export { useVideoUpload } from './useVideoUpload'
 export { useDvmTranscode } from './useDvmTranscode'
 export type { TranscodeStatus, TranscodeProgress, UseDvmTranscodeResult } from './useDvmTranscode'
 export { useUserBlossomServers } from './useUserBlossomServers'
+export { useTagIndex } from './useTagIndex'
+export type { TagIndexEntry } from './useTagIndex'
 
 // ============================================================================
 // CONFIG & PRESETS

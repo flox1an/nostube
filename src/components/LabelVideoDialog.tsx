@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { LanguageSelect } from '@/components/ui/language-select'
+import { TagInput } from '@/components/ui/tag-input'
 import { Tag, Loader2 } from 'lucide-react'
 import { useNostrPublish } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
@@ -38,7 +38,7 @@ export function LabelVideoDialog({
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
   const setOpen = isControlled ? onOpenChange! : setInternalOpen
-  const [hashtags, setHashtags] = useState('')
+  const [hashtags, setHashtags] = useState<string[]>([])
   const [language, setLanguage] = useState('')
   const [explanation, setExplanation] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -51,12 +51,7 @@ export function LabelVideoDialog({
       return
     }
 
-    const hashtagList = hashtags
-      .split(',')
-      .map(tag => tag.trim().toLowerCase().replace(/^#/, ''))
-      .filter(tag => tag.length > 0)
-
-    if (hashtagList.length === 0 && !language) {
+    if (hashtags.length === 0 && !language) {
       toast.error(t('labelVideo.noLabelsError'))
       return
     }
@@ -67,9 +62,9 @@ export function LabelVideoDialog({
       const tags: string[][] = []
 
       // Add hashtag labels
-      if (hashtagList.length > 0) {
+      if (hashtags.length > 0) {
         tags.push(['L', '#t'])
-        hashtagList.forEach(tag => {
+        hashtags.forEach(tag => {
           tags.push(['l', tag, '#t'])
         })
       }
@@ -97,7 +92,7 @@ export function LabelVideoDialog({
       setOpen(false)
 
       // Reset form
-      setHashtags('')
+      setHashtags([])
       setLanguage('')
       setExplanation('')
     } catch (error) {
@@ -120,13 +115,12 @@ export function LabelVideoDialog({
             {/* Hashtags Input */}
             <div className="space-y-2">
               <Label htmlFor="hashtags">{t('labelVideo.hashtagsLabel')}</Label>
-              <Input
+              <TagInput
                 id="hashtags"
-                value={hashtags}
-                onChange={e => setHashtags(e.target.value)}
+                tags={hashtags}
+                onTagsChange={setHashtags}
                 placeholder={t('labelVideo.hashtagsPlaceholder')}
               />
-              <p className="text-xs text-muted-foreground">{t('labelVideo.hashtagsHelp')}</p>
             </div>
 
             {/* Language Select */}
@@ -156,7 +150,7 @@ export function LabelVideoDialog({
           <DialogFooter>
             <Button
               type="submit"
-              disabled={isSubmitting || (!hashtags.trim() && !language)}
+              disabled={isSubmitting || (hashtags.length === 0 && !language)}
               className="cursor-pointer"
             >
               {isSubmitting ? (

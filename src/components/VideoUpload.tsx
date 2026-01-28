@@ -68,8 +68,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     description,
     setDescription,
     tags,
-    tagInput,
-    setTagInput,
+    setTags,
     language,
     setLanguage,
     inputMethod,
@@ -104,9 +103,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
 
     // Handlers
     handleUseRecommendedServers,
-    handleAddTag,
-    handlePaste,
-    removeTag,
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,
@@ -584,12 +580,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   description={description}
                   onDescriptionChange={setDescription}
                   tags={tags}
-                  tagInput={tagInput}
-                  onTagInputChange={setTagInput}
-                  onAddTag={handleAddTag}
-                  onPaste={handlePaste}
-                  onRemoveTag={removeTag}
-                  onTagInputBlur={() => {}}
+                  onTagsChange={setTags}
                   language={language}
                   onLanguageChange={setLanguage}
                 />

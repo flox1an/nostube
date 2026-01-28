@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- UI: new reusable `TagInput` component with autocomplete - suggests previously-used tags from videos in the event store; shows tag frequency (e.g., "bitcoin (42)"); supports keyboard navigation (arrow keys, Enter, Escape); handles paste of multiple space/comma-separated tags; used in upload form, edit video dialog, and label video dialog
 - Upload: redesigned thumbnail selection UI - replaced radio buttons with tabs for "Upload", "Enter URL", and "Generate from video"; options are hidden when a thumbnail is set, showing only the preview and a delete button; added support for importing thumbnails via URL
 - Relay URL sanitization: added `sanitizeRelayUrl` function to detect and filter out corrupted relay URLs that contain multiple concatenated URLs, URL-encoded spaces, or non-relay text; applied in both `processEvent` (video-event.ts) and `generateEventLink` (nostr.ts) to prevent malformed relay URLs from appearing in naddr/nevent identifiers
 - Upload: redesigned thumbnail frame selector with clearer UX - separated video scrubbing from thumbnail confirmation; users drag slider to browse frames while seeing real-time preview below the video, then click "Set as Thumbnail" button to confirm and upload; removed confusing mini overlay thumbnail and regenerate button; added helper text explaining the interaction; first frame is auto-uploaded as default thumbnail on video load

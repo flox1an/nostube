@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TagInput } from '@/components/ui/tag-input'
 import { Pencil, Loader2 } from 'lucide-react'
 import { LanguageSelect } from '@/components/ui/language-select'
 import { useNostrPublish } from '@/hooks'
@@ -48,7 +49,7 @@ export function EditVideoDialog({
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [language, setLanguage] = useState('')
   const [contentWarningEnabled, setContentWarningEnabled] = useState(false)
   const [contentWarningReason, setContentWarningReason] = useState('')
@@ -66,7 +67,7 @@ export function EditVideoDialog({
 
       // Extract hashtags
       const hashtagTags = videoEvent.tags.filter(t => t[0] === 't')
-      setTags(hashtagTags.map(t => t[1]).join(', '))
+      setTags(hashtagTags.map(t => t[1]))
 
       // Extract content warning
       const contentWarningTag = videoEvent.tags.find(t => t[0] === 'content-warning')
@@ -100,12 +101,6 @@ export function EditVideoDialog({
     setIsSubmitting(true)
 
     try {
-      // Parse hashtags
-      const hashtagList = tags
-        .split(',')
-        .map(tag => tag.trim().toLowerCase().replace(/^#/, ''))
-        .filter(tag => tag.length > 0)
-
       // Preserve all tags EXCEPT the ones we're replacing (for future compatibility)
       // We replace: title, alt, t (hashtags), L, l (language), content-warning
       const replacedTagKeys = ['title', 'alt', 't', 'L', 'l', 'content-warning']
@@ -116,7 +111,7 @@ export function EditVideoDialog({
         ...preservedTags,
         ['title', title.trim()],
         ['alt', description.trim() || title.trim()],
-        ...hashtagList.map(tag => ['t', tag]),
+        ...tags.map(tag => ['t', tag]),
         ...(language
           ? [
               ['L', 'ISO-639-1'],
@@ -184,13 +179,12 @@ export function EditVideoDialog({
             {/* Tags Input */}
             <div className="space-y-2">
               <Label htmlFor="edit-tags">{t('editVideo.tagsLabel')}</Label>
-              <Input
+              <TagInput
                 id="edit-tags"
-                value={tags}
-                onChange={e => setTags(e.target.value)}
+                tags={tags}
+                onTagsChange={setTags}
                 placeholder={t('editVideo.tagsPlaceholder')}
               />
-              <p className="text-xs text-muted-foreground">{t('editVideo.tagsHelp')}</p>
             </div>
 
             {/* Language */}

@@ -190,8 +190,10 @@ interface RichTextContentProps {
 /**
  * Renders text content with rich formatting:
  * - Clickable URLs with social media badge styling
+ * - Nostr profile mentions (npub/nprofile)
+ * - Hashtags
  * - Clickable timestamps (if videoLink is provided)
- * - Preserves whitespace and line breaks
+ * - Preserves line breaks (newlines are rendered as <br> tags)
  */
 export function RichTextContent({ content, className, videoLink }: RichTextContentProps) {
   const renderContent = () => {
@@ -265,7 +267,14 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
           const timestampParts = renderTimestamps(segment, videoLink, segmentStart)
           parts.push(...timestampParts)
         } else {
-          parts.push(segment)
+          // Split by newlines and add <br> tags
+          const lines = segment.split('\n')
+          lines.forEach((line, idx) => {
+            parts.push(line)
+            if (idx < lines.length - 1) {
+              parts.push(<br key={`br-${segmentStart}-${idx}`} />)
+            }
+          })
         }
       }
 
@@ -353,9 +362,16 @@ function renderTimestamps(text: string, videoLink: string, baseOffset: number): 
     const start = match.index
     const end = start + full.length
 
-    // Push preceding text
+    // Push preceding text with line breaks preserved
     if (start > lastIndex) {
-      parts.push(text.slice(lastIndex, start))
+      const precedingText = text.slice(lastIndex, start)
+      const lines = precedingText.split('\n')
+      lines.forEach((line, idx) => {
+        parts.push(line)
+        if (idx < lines.length - 1) {
+          parts.push(<br key={`br-${baseOffset + lastIndex}-${idx}`} />)
+        }
+      })
     }
 
     // Calculate seconds
@@ -388,9 +404,16 @@ function renderTimestamps(text: string, videoLink: string, baseOffset: number): 
     lastIndex = end
   }
 
-  // Push any remaining text
+  // Push any remaining text with line breaks preserved
   if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
+    const remainingText = text.slice(lastIndex)
+    const lines = remainingText.split('\n')
+    lines.forEach((line, idx) => {
+      parts.push(line)
+      if (idx < lines.length - 1) {
+        parts.push(<br key={`br-${baseOffset + lastIndex}-end-${idx}`} />)
+      }
+    })
   }
 
   return parts

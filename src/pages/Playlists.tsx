@@ -13,7 +13,7 @@ export default function PlaylistPage() {
   }, [t])
 
   return (
-    <div className="container py-8 max-w-4xl mx-auto">
+    <div className="container py-8 max-w-4xl mx-auto p-2 sm:p-4">
       <h1 className="text-3xl font-bold mb-6">{t('playlists.myPlaylists')}</h1>
       <PlaylistManager />
     </div>

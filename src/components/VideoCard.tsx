@@ -192,7 +192,7 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className="p-2 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
+      className="p-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
       style={{ contain: 'layout style paint' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

@@ -138,7 +138,9 @@
       "showReplies": "Mostrar respuestas",
       "hideReplies": "Ocultar respuestas",
       "replyingTo": "Respondiendo a",
-      "showMutedReply": "Mostrar respuesta oculta"
+      "showMutedReply": "Mostrar respuesta oculta",
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos"
     },
     "share": {
       "title": "Compartir este video",

@@ -32,12 +32,13 @@ export function generateQualityLabel(dimension: string): string {
   // as that's what the "p" value represents (e.g., 720p = 720 vertical lines)
   const resolution = Math.min(width, height)
 
-  if (resolution >= 3840) return '4K'
-  if (resolution >= 2560) return '2K'
-  if (resolution >= 1920) return '1080p'
-  if (resolution >= 1280) return '720p'
-  if (resolution >= 854) return '480p'
-  if (resolution >= 640) return '360p'
+  if (resolution >= 2160) return '4K'
+  if (resolution >= 1440) return '2K'
+  if (resolution >= 1080) return '1080p'
+  if (resolution >= 720) return '720p'
+  if (resolution >= 480) return '480p'
+  if (resolution >= 360) return '360p'
+  if (resolution >= 240) return '240p'
   return `${resolution}p`
 }
 

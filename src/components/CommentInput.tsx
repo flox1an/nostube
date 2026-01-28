@@ -34,7 +34,7 @@ export const CommentInput = React.memo(function CommentInput({
   const { t } = useTranslation()
   const [isFocused, setIsFocused] = useState(autoFocus ?? false)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const displayPlaceholder = placeholder ?? t('video.comments.addComment')
@@ -72,16 +72,36 @@ export const CommentInput = React.memo(function CommentInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Ctrl+Enter or Cmd+Enter to submit
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
         handleSubmit(e)
-      } else if (e.key === 'Escape') {
+      }
+      // Escape to cancel
+      else if (e.key === 'Escape') {
         e.preventDefault()
         handleCancel()
       }
+      // Allow plain Enter for new lines (default textarea behavior)
     },
     [handleSubmit, handleCancel]
   )
+
+  // Auto-grow textarea based on content
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = inputRef.current
+    if (textarea && isFocused) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto'
+      // Set height to scrollHeight to fit content
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
+  }, [isFocused])
+
+  // Adjust height when value changes
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [value, adjustTextareaHeight])
 
   const handleEmojiSelect = useCallback(
     (emoji: string) => {
@@ -135,28 +155,32 @@ export const CommentInput = React.memo(function CommentInput({
           />
 
           <div className="flex-1 min-w-0">
-            {/* Input field */}
-            <input
+            {/* Textarea for multi-line comments */}
+            <textarea
               ref={inputRef}
-              type="text"
               value={value}
               onChange={e => onChange(e.target.value)}
               onFocus={handleFocus}
               onKeyDown={handleKeyDown}
               placeholder={displayPlaceholder}
-              className="w-full bg-transparent border-0 border-b border-muted-foreground/30 focus:border-foreground px-0 pb-2 text-sm outline-none transition-colors placeholder:text-muted-foreground"
+              rows={1}
+              style={isFocused ? { height: 'auto', minHeight: '1.5rem' } : undefined}
+              className={`w-full bg-transparent border-0 border-b border-muted-foreground/30 focus:border-foreground px-0 pb-2 text-sm outline-none resize-none placeholder:text-muted-foreground ${isFocused ? '' : 'overflow-hidden h-[1.5rem]'}`}
               disabled={disabled}
             />
 
             {/* Controls - shown only when focused */}
             {isFocused && (
               <div className="flex items-center justify-between mt-2">
-                {/* Emoji picker */}
-                <EmojiPicker
-                  open={emojiPickerOpen}
-                  onOpenChange={setEmojiPickerOpen}
-                  onEmojiSelect={handleEmojiSelect}
-                />
+                {/* Emoji picker - hidden on mobile */}
+                <div className="hidden sm:block">
+                  <EmojiPicker
+                    open={emojiPickerOpen}
+                    onOpenChange={setEmojiPickerOpen}
+                    onEmojiSelect={handleEmojiSelect}
+                  />
+                </div>
+                <div className="sm:hidden" />
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2">

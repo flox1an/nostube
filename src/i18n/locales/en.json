@@ -140,7 +140,9 @@
       "showReplies": "Show replies",
       "hideReplies": "Hide replies",
       "replyingTo": "Replying to",
-      "showMutedReply": "Show hidden reply"
+      "showMutedReply": "Show hidden reply",
+      "showMore": "Show more",
+      "showLess": "Show less"
     },
     "share": {
       "title": "Share this video",

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { COMMON_LANGUAGES } from '@/lib/subtitle-utils'
+import { LANGUAGES } from '@/components/ui/language-select'
 
 interface SubtitlesTableProps {
   subtitles: SubtitleVariant[]
@@ -73,9 +73,10 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
                     <SelectItem value="none">
                       {t('upload.subtitles.selectLanguage', { defaultValue: 'Select...' })}
                     </SelectItem>
-                    {COMMON_LANGUAGES.map(lang => (
+                    {LANGUAGES.map(lang => (
                       <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name}
+                        {lang.flag} {lang.name}{' '}
+                        {lang.name !== lang.englishName && `(${lang.englishName})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

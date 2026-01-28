@@ -138,7 +138,9 @@
       "showReplies": "Antworten anzeigen",
       "hideReplies": "Antworten ausblenden",
       "replyingTo": "Antwort an",
-      "showMutedReply": "Ausgeblendete Antwort anzeigen"
+      "showMutedReply": "Ausgeblendete Antwort anzeigen",
+      "showMore": "Mehr anzeigen",
+      "showLess": "Weniger anzeigen"
     },
     "share": {
       "title": "Dieses Video teilen",

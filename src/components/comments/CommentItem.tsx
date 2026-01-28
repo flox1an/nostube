@@ -75,17 +75,22 @@ export const CommentItem = React.memo(function CommentItem({
   const hasReplies = comment.replies && comment.replies.length > 0
   const isHighlighted = highlightedCommentId === comment.id
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const [isCommentExpanded, setIsCommentExpanded] = useState(false)
 
   // Root comments (depth=0) have big avatars, nested have small avatars
   const isRootComment = depth === 0
   const avatarSize = isRootComment ? 'h-10 w-10' : 'h-6 w-6'
+
+  // Count lines in comment content
+  const lineCount = comment.content.split('\n').length
+  const hasMoreThan3Lines = lineCount > 3
 
   return (
     <div
       id={`comment-${comment.id}`}
       className={`transition-colors duration-500 ${isHighlighted ? 'highlight-comment' : ''}`}
     >
-      <div className="flex gap-3 pb-4">
+      <div className="flex gap-3 pb-4 relative">
         <UserAvatar
           picture={metadata?.picture}
           pubkey={comment.pubkey}
@@ -122,11 +127,25 @@ export const CommentItem = React.memo(function CommentItem({
               </DropdownMenu>
             </div>
           </div>
-          <RichTextContent
-            content={comment.content}
-            videoLink={link}
-            className="mt-1 break-all text-sm"
-          />
+          <div className="mt-1">
+            <RichTextContent
+              content={
+                hasMoreThan3Lines && !isCommentExpanded
+                  ? comment.content.split('\n').slice(0, 3).join('\n')
+                  : comment.content
+              }
+              videoLink={link}
+              className="break-all text-sm"
+            />
+            {hasMoreThan3Lines && (
+              <button
+                onClick={() => setIsCommentExpanded(!isCommentExpanded)}
+                className="text-xs text-muted-foreground hover:text-foreground mt-1"
+              >
+                {isCommentExpanded ? t('video.comments.showLess') : t('video.comments.showMore')}
+              </button>
+            )}
+          </div>
           {/* Reactions, reply, and expand buttons in same row */}
           <div className="flex items-center gap-1 mt-1">
             <CommentReactions
@@ -188,16 +207,10 @@ export const CommentItem = React.memo(function CommentItem({
 
           {/* Render replies: auto-show if only 1 reply, or if expanded for multiple */}
           {hasReplies && (isExpanded || comment.replies!.length === 1) && depth < maxDepth && (
-            <div className="mt-2 relative">
-              {comment.replies!.map((reply, index) => (
+            <div className="mt-2 relative -ml-[52px]">
+              {comment.replies!.map(reply => (
                 <div key={reply.id} className="relative flex">
-                  {/* Vertical continuation line for all but the last reply */}
-                  {index < comment.replies!.length - 1 && (
-                    <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
-                  )}
-                  {/* L-shaped connector from parent to reply */}
-                  <div className="absolute left-3 top-0 h-4 w-4 rounded-bl-lg border-l border-b border-border" />
-                  <div className="flex-1 pl-6">
+                  <div className="flex-1 pl-[52px]">
                     <CommentItem
                       comment={reply}
                       link={link}

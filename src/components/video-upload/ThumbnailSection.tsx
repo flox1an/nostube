@@ -45,7 +45,7 @@ export function ThumbnailSection({
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  
+
   // URL Input State
   const [urlInput, setUrlInput] = useState('')
   const [isProcessingUrl, setIsProcessingUrl] = useState(false)
@@ -54,7 +54,7 @@ export function ThumbnailSection({
   const uploadedThumbnailUrl = hasUploadedThumbnail
     ? thumbnailUploadInfo.uploadedBlobs[0].url
     : null
-  
+
   const hasThumbnail = !!(thumbnailBlob || uploadedThumbnailUrl)
 
   const handleDelete = async () => {
@@ -84,16 +84,20 @@ export function ThumbnailSection({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         // Convert canvas content to a Blob
-        canvas.toBlob(blob => {
-          if (blob) {
-            setPreviewBlob(blob)
-            if (callback) {
-              callback(blob)
-            } else {
-              setHasUnsavedChanges(true)
+        canvas.toBlob(
+          blob => {
+            if (blob) {
+              setPreviewBlob(blob)
+              if (callback) {
+                callback(blob)
+              } else {
+                setHasUnsavedChanges(true)
+              }
             }
-          }
-        }, 'image/png')
+          },
+          'image/webp',
+          0.85
+        )
       }
     }
   }, [])
@@ -105,7 +109,7 @@ export function ThumbnailSection({
   const handleSetThumbnail = useCallback(() => {
     if (previewBlob) {
       setIsUploading(true)
-      const thumbnailFile = new File([previewBlob], 'thumbnail.png', { type: 'image/png' })
+      const thumbnailFile = new File([previewBlob], 'thumbnail.webp', { type: 'image/webp' })
       onThumbnailDrop([thumbnailFile])
       setHasUnsavedChanges(false)
       // Reset uploading state after a short delay to show feedback
@@ -120,20 +124,25 @@ export function ThumbnailSection({
     try {
       const response = await fetch(urlInput)
       if (!response.ok) throw new Error('Failed to fetch image')
-      
+
       const blob = await response.blob()
       if (!blob.type.startsWith('image/')) {
         throw new Error('URL does not point to a valid image')
       }
 
-      const file = new File([blob], 'thumbnail.jpg', { type: blob.type })
+      // Preserve the original image type from the URL
+      const extension = blob.type.split('/')[1] || 'jpg'
+      const file = new File([blob], `thumbnail.${extension}`, { type: blob.type })
       onThumbnailDrop([file])
       setUrlInput('')
     } catch (error) {
       console.error('Error fetching thumbnail URL:', error)
       toast({
         title: t('upload.thumbnail.urlError', { defaultValue: 'Error fetching image' }),
-        description: t('upload.thumbnail.urlErrorDesc', { defaultValue: 'Could not load image from the provided URL. Please try another URL or upload a file.' }),
+        description: t('upload.thumbnail.urlErrorDesc', {
+          defaultValue:
+            'Could not load image from the provided URL. Please try another URL or upload a file.',
+        }),
         variant: 'destructive',
       })
     } finally {
@@ -203,10 +212,14 @@ export function ThumbnailSection({
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
           </Button>
         </div>
-        
+
         {/* Show upload server status for the existing thumbnail */}
         {hasUploadedThumbnail && (
           <UploadServer
@@ -227,9 +240,9 @@ export function ThumbnailSection({
       <Label htmlFor="thumbnail">
         {t('upload.thumbnail.title')} <span className="text-destructive">*</span>
       </Label>
-      
-      <Tabs 
-        defaultValue={videoUrl ? 'generated' : 'upload'} 
+
+      <Tabs
+        defaultValue={videoUrl ? 'generated' : 'upload'}
         onValueChange={handleTabChange}
         className="w-full"
       >
@@ -250,11 +263,7 @@ export function ThumbnailSection({
 
         <TabsContent value="upload" className="mt-0">
           <div className="space-y-4">
-            <FileDropzone
-              onDrop={onThumbnailDrop}
-              accept={{ 'image/*': [] }}
-              className="h-32"
-            />
+            <FileDropzone onDrop={onThumbnailDrop} accept={{ 'image/*': [] }} className="h-32" />
             {thumbnailUploadInfo.uploading && (
               <div className="text-sm text-muted-foreground">
                 {t('upload.thumbnail.uploading', { defaultValue: 'Uploading thumbnail...' })}
@@ -271,19 +280,15 @@ export function ThumbnailSection({
             <Input
               placeholder="https://example.com/image.jpg"
               value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => {
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
                   handleUrlSubmit()
                 }
               }}
             />
-            <Button 
-              type="button" 
-              onClick={handleUrlSubmit}
-              disabled={!urlInput || isProcessingUrl}
-            >
+            <Button type="button" onClick={handleUrlSubmit} disabled={!urlInput || isProcessingUrl}>
               {isProcessingUrl ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -292,7 +297,9 @@ export function ThumbnailSection({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {t('upload.thumbnail.urlHint', { defaultValue: 'Paste a direct link to an image file.' })}
+            {t('upload.thumbnail.urlHint', {
+              defaultValue: 'Paste a direct link to an image file.',
+            })}
           </p>
         </TabsContent>
 
@@ -301,9 +308,11 @@ export function ThumbnailSection({
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('upload.thumbnail.selectFrame')}
+                  </p>
                 </div>
-                
+
                 <video
                   ref={videoRef}
                   src={videoUrl}
@@ -315,7 +324,7 @@ export function ThumbnailSection({
                   crossOrigin="anonymous"
                 />
                 <canvas ref={canvasRef} className="hidden" />
-                
+
                 <div className="space-y-1 pt-2">
                   <Slider
                     value={[currentVideoTime]}

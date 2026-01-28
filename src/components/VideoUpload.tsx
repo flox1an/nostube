@@ -95,7 +95,6 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     blossomInitalUploadServers,
     blossomMirrorServers,
     isPublishing,
-    thumbnailUrl,
     previewEvent,
     videoToDelete,
     setVideoToDelete,
@@ -594,12 +593,12 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                 <ThumbnailSection
                   thumbnailSource={thumbnailSource}
                   onThumbnailSourceChange={handleThumbnailSourceChange}
-                  thumbnailUrl={thumbnailUrl}
                   onThumbnailDrop={handleThumbnailDrop}
                   onDeleteThumbnail={handleDeleteThumbnail}
                   thumbnailUploadInfo={thumbnailUploadInfo}
                   thumbnailBlob={thumbnailBlob}
                   isThumbDragActive={false}
+                  videoFile={file}
                 />
               </div>
             )}

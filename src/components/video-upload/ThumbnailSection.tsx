@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -6,13 +6,13 @@ import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { useTranslation } from 'react-i18next'
-import { Trash2 } from 'lucide-react'
+import { RotateCcw, Trash2 } from 'lucide-react'
+import { Slider } from '@/components/ui/slider'
 
 interface ThumbnailSectionProps {
   thumbnailSource: 'generated' | 'upload'
   onThumbnailSourceChange: (source: 'generated' | 'upload') => void
   thumbnailBlob: Blob | null
-  thumbnailUrl?: string
   onThumbnailDrop: (files: File[]) => void
   onDeleteThumbnail: () => Promise<void>
   isThumbDragActive: boolean
@@ -22,19 +22,24 @@ interface ThumbnailSectionProps {
     uploading: boolean
     error?: string
   }
+  videoFile?: File | null
 }
 
 export function ThumbnailSection({
   thumbnailSource,
   onThumbnailSourceChange,
   thumbnailBlob,
-  thumbnailUrl,
   onThumbnailDrop,
   onDeleteThumbnail,
   thumbnailUploadInfo,
+  videoFile,
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
   const [isDeleting, setIsDeleting] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const [currentVideoTime, setCurrentVideoTime] = useState(0)
 
   const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
   const uploadedThumbnailUrl = hasUploadedThumbnail
@@ -48,6 +53,60 @@ export function ThumbnailSection({
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const generateThumbnail = useCallback(() => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+
+      if (ctx) {
+        // Set canvas dimensions to video dimensions
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+
+        // Draw the current video frame onto the canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        // Convert canvas content to a Blob and trigger the onThumbnailDrop callback
+        canvas.toBlob(blob => {
+          if (blob) {
+            const thumbnailFile = new File([blob], 'thumbnail.png', { type: 'image/png' })
+            onThumbnailDrop([thumbnailFile])
+          }
+        }, 'image/png')
+      }
+    }
+  }, [onThumbnailDrop])
+
+  useEffect(() => {
+    if (videoRef.current && videoFile) {
+      videoRef.current.load() // Reload video when file changes
+      videoRef.current.currentTime = currentVideoTime // Set current time for accurate thumbnail generation
+    }
+  }, [videoFile, currentVideoTime])
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setVideoDuration(videoRef.current.duration)
+      // If no thumbnail is selected, generate one from the first frame
+      if (!thumbnailBlob && !uploadedThumbnailUrl) {
+        generateThumbnail()
+      }
+    }
+  }
+
+  const handleSliderChange = (value: number[]) => {
+    const newTime = value[0]
+    setCurrentVideoTime(newTime)
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime
+    }
+  }
+
+  const handleSeeked = () => {
+    generateThumbnail()
   }
 
   return (
@@ -71,13 +130,56 @@ export function ThumbnailSection({
         </div>
       </RadioGroup>
 
-      {thumbnailSource === 'generated' && thumbnailBlob && (
+      {thumbnailSource === 'generated' && (
         <div className="">
-          <img
-            src={thumbnailUrl}
-            alt={t('upload.thumbnail.generated')}
-            className="rounded border mt-2 max-h-80"
-          />
+          {videoFile ? (
+            <div className="relative">
+              <video
+                ref={videoRef}
+                src={URL.createObjectURL(videoFile)}
+                onLoadedMetadata={handleLoadedMetadata}
+                onSeeked={handleSeeked}
+                preload="metadata"
+                className="rounded border mt-2 w-full max-h-80 object-contain"
+                muted
+              />
+              <canvas ref={canvasRef} className="hidden" />
+              {thumbnailBlob && (
+                <img
+                  src={URL.createObjectURL(thumbnailBlob)}
+                  alt={t('upload.thumbnail.generated')}
+                  className="absolute top-2 left-2 rounded border max-h-20 object-contain pointer-events-none"
+                />
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                <Slider
+                  value={[currentVideoTime]}
+                  max={videoDuration}
+                  step={0.1}
+                  onValueChange={handleSliderChange}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-white mt-1">
+                  <span>{formatTime(currentVideoTime)}</span>
+                  <span>{formatTime(videoDuration)}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+                  onClick={generateThumbnail}
+                  title={t('upload.thumbnail.generateFromCurrentFrame')}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-sm mt-2">
+              {t('upload.thumbnail.noVideoFile')}
+            </div>
+          )}
         </div>
       )}
 
@@ -135,4 +237,11 @@ export function ThumbnailSection({
       )}
     </div>
   )
+}
+
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  const format = (num: number) => (num < 10 ? '0' + num : num)
+  return `${format(minutes)}:${format(remainingSeconds)}`
 }

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Relay URL sanitization: added `sanitizeRelayUrl` function to detect and filter out corrupted relay URLs that contain multiple concatenated URLs, URL-encoded spaces, or non-relay text; applied in both `processEvent` (video-event.ts) and `generateEventLink` (nostr.ts) to prevent malformed relay URLs from appearing in naddr/nevent identifiers
+- Upload: thumbnail frame selector with video scrubbing - users can now select which frame to use as thumbnail by scrubbing through the video with a slider; shows live video preview with overlay thumbnail, displays current time and duration, and includes manual regenerate button for fine control
 
 ### Changed
 

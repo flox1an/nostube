@@ -22,7 +22,7 @@ interface ThumbnailSectionProps {
     uploading: boolean
     error?: string
   }
-  videoFile?: File | null
+  videoUrl?: string
 }
 
 export function ThumbnailSection({
@@ -32,7 +32,7 @@ export function ThumbnailSection({
   onThumbnailDrop,
   onDeleteThumbnail,
   thumbnailUploadInfo,
-  videoFile,
+  videoUrl,
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
   const [isDeleting, setIsDeleting] = useState(false)
@@ -81,11 +81,11 @@ export function ThumbnailSection({
   }, [onThumbnailDrop])
 
   useEffect(() => {
-    if (videoRef.current && videoFile) {
-      videoRef.current.load() // Reload video when file changes
+    if (videoRef.current && videoUrl) {
+      videoRef.current.load() // Reload video when source changes
       videoRef.current.currentTime = currentVideoTime // Set current time for accurate thumbnail generation
     }
-  }, [videoFile, currentVideoTime])
+  }, [videoUrl, currentVideoTime])
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
@@ -132,16 +132,17 @@ export function ThumbnailSection({
 
       {thumbnailSource === 'generated' && (
         <div className="">
-          {videoFile ? (
+          {videoUrl ? (
             <div className="relative">
               <video
                 ref={videoRef}
-                src={URL.createObjectURL(videoFile)}
+                src={videoUrl}
                 onLoadedMetadata={handleLoadedMetadata}
                 onSeeked={handleSeeked}
                 preload="metadata"
                 className="rounded border mt-2 w-full max-h-80 object-contain"
                 muted
+                crossOrigin="anonymous"
               />
               <canvas ref={canvasRef} className="hidden" />
               {thumbnailBlob && (

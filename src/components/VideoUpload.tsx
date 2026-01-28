@@ -598,7 +598,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   thumbnailUploadInfo={thumbnailUploadInfo}
                   thumbnailBlob={thumbnailBlob}
                   isThumbDragActive={false}
-                  videoFile={file}
+                  videoUrl={file ? URL.createObjectURL(file) : videoUrl || undefined}
                 />
               </div>
             )}

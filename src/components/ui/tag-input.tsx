@@ -191,7 +191,7 @@ export function TagInput({
         </PopoverTrigger>
         {suggestions.length > 0 && (
           <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-1"
+            className="z-[80] w-[var(--radix-popover-trigger-width)] p-1"
             align="start"
             sideOffset={4}
             onOpenAutoFocus={e => e.preventDefault()}

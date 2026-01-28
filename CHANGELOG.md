@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Author page: banner image displayed at the top of profile pages with rounded corners and gradient fade to background; profile info (avatar, name, about) overlaps the banner's fade area; avatar has ring border for visibility against banner; about text is clamped to 3 lines with "show more" button to expand
+- User menu: added profile link as first item in dropdown, navigating to the logged-in user's profile page
+- Author page: replaced shadcn Tabs component with custom horizontally scrollable button bar (pill buttons), matching the settings page design for better mobile UX and consistent styling
 - UI: new reusable `TagInput` component with autocomplete - suggests previously-used tags from videos in the event store; shows tag frequency (e.g., "bitcoin (42)"); supports keyboard navigation (arrow keys, Enter, Escape); handles paste of multiple space/comma-separated tags; used in upload form, edit video dialog, and label video dialog
 - Upload: redesigned thumbnail selection UI - replaced radio buttons with tabs for "Upload", "Enter URL", and "Generate from video"; options are hidden when a thumbnail is set, showing only the preview and a delete button; added support for importing thumbnails via URL
 - Relay URL sanitization: added `sanitizeRelayUrl` function to detect and filter out corrupted relay URLs that contain multiple concatenated URLs, URL-encoded spaces, or non-relay text; applied in both `processEvent` (video-event.ts) and `generateEventLink` (nostr.ts) to prevent malformed relay URLs from appearing in naddr/nevent identifiers

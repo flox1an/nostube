@@ -94,6 +94,7 @@
       "accountCreatedMessage": "Ya ha iniciado sesión."
     },
     "account": {
+      "profile": "Perfil",
       "playlists": "Listas de reproducción",
       "switchAccount": "Cambiar Cuenta",
       "addAccount": "Agregar otra cuenta",
@@ -574,7 +575,9 @@
       "noMore": "No hay más videos para cargar.",
       "noShorts": "No se encontraron shorts.",
       "loadingMoreShorts": "Cargando más shorts...",
-      "noMoreShorts": "No hay más shorts para cargar."
+      "noMoreShorts": "No hay más shorts para cargar.",
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos"
     },
     "subscriptions": {
       "emptyState": "Siga algunos autores para ver sus videos aquí.",

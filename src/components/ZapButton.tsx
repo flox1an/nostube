@@ -15,6 +15,7 @@ interface ZapButtonProps {
   className?: string
   currentTime?: number // Current video playback position (for timestamped zaps)
   identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+  showZapText?: boolean // Show "zap" text instead of amount
 }
 
 const LONG_PRESS_DELAY = 500
@@ -27,6 +28,7 @@ export const ZapButton = memo(function ZapButton({
   className = '',
   currentTime,
   identifier,
+  showZapText = false,
 }: ZapButtonProps) {
   const [showZapDialog, setShowZapDialog] = useState(false)
   const [capturedTimestamp, setCapturedTimestamp] = useState<number | undefined>(undefined)
@@ -118,7 +120,8 @@ export const ZapButton = memo(function ZapButton({
       return (
         <div className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}>
           <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
-          <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
+          {!showZapText && <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>}
+          {showZapText && <span className="ml-1 md:ml-2">zap</span>}
         </div>
       )
     }
@@ -144,7 +147,8 @@ export const ZapButton = memo(function ZapButton({
                 ) : (
                   <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
                 )}
-                <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>
+                {!showZapText && <span className="ml-1 md:ml-2">{formatSats(displaySats)}</span>}
+                {showZapText && <span className="ml-1 md:ml-2">zap</span>}
               </Button>
             </TooltipTrigger>
             <TooltipContent>

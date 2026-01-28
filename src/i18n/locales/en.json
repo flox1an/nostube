@@ -96,6 +96,7 @@
       "accountCreatedMessage": "You are now logged in."
     },
     "account": {
+      "profile": "Profile",
       "playlists": "Playlists",
       "switchAccount": "Switch Account",
       "addAccount": "Add another account",
@@ -588,7 +589,9 @@
       "noMore": "No more videos to load.",
       "noShorts": "No shorts found.",
       "loadingMoreShorts": "Loading more shorts...",
-      "noMoreShorts": "No more shorts to load."
+      "noMoreShorts": "No more shorts to load.",
+      "showMore": "Show more",
+      "showLess": "Show less"
     },
     "subscriptions": {
       "emptyState": "Follow some authors to see their videos here.",

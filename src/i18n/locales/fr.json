@@ -94,6 +94,7 @@
       "accountCreatedMessage": "Vous êtes maintenant connecté."
     },
     "account": {
+      "profile": "Profil",
       "playlists": "Listes de lecture",
       "switchAccount": "Changer de compte",
       "addAccount": "Ajouter un autre compte",
@@ -573,7 +574,9 @@
       "noMore": "Plus de vidéos à charger.",
       "noShorts": "Aucun short trouvé.",
       "loadingMoreShorts": "Chargement de plus de shorts...",
-      "noMoreShorts": "Plus de shorts à charger."
+      "noMoreShorts": "Plus de shorts à charger.",
+      "showMore": "Afficher plus",
+      "showLess": "Afficher moins"
     },
     "subscriptions": {
       "emptyState": "Suivez quelques auteurs pour voir leurs vidéos ici.",

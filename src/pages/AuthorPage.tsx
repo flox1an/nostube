@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
@@ -21,7 +21,6 @@ import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
-import { getPublishDate } from '@/utils/video-event'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
@@ -29,37 +28,72 @@ import { useTranslation } from 'react-i18next'
 
 type Tabs = 'videos' | 'shorts' | 'tags' | string
 
-interface AuthorStats {
-  videoCount: number
-  totalViews: number
-  joinedDate: Date
+function AuthorBanner({ pubkey }: { pubkey: string }) {
+  const metadata = useProfile({ pubkey })
+  const banner = metadata?.banner
+
+  if (!banner) return null
+
+  return (
+    <div className="relative w-full h-32 sm:h-48 md:h-56 overflow-hidden rounded-lg">
+      <img
+        src={banner}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={e => {
+          // Hide the banner container if image fails to load
+          const target = e.target as HTMLImageElement
+          target.parentElement!.style.display = 'none'
+        }}
+      />
+      {/* Gradient fade to background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-background" />
+    </div>
+  )
 }
 
 function AuthorProfile({
   pubkey,
-  joinedDate,
+  hasBanner,
   className = '',
 }: {
   pubkey: string
-  joinedDate: Date
-  className: string
+  hasBanner: boolean
+  className?: string
 }) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false)
+  const [isAboutClamped, setIsAboutClamped] = useState(false)
+  const aboutRef = useRef<HTMLDivElement>(null)
 
   const isOwnProfile = user?.pubkey === pubkey
   const canZap = !isOwnProfile && hasLightningAddress(metadata)
 
+  // Check if about text is clamped (overflows 3 lines)
+  useEffect(() => {
+    const el = aboutRef.current
+    if (el) {
+      setIsAboutClamped(el.scrollHeight > el.clientHeight)
+    }
+  }, [metadata?.about])
+
   return (
-    <div className={cn(className, 'flex items-center space-x-4')}>
+    <div
+      className={cn(
+        'flex items-start space-x-4 relative',
+        hasBanner && '-mt-10 sm:-mt-12',
+        className
+      )}
+    >
       <div className="shrink-0">
         <img
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}
-          className="w-16 h-16 rounded-full"
+          className="w-16 h-16 rounded-full ring-2 ring-background"
           onError={e => {
             const target = e.target as HTMLImageElement
             target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
@@ -67,22 +101,29 @@ function AuthorProfile({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t('pages.author.joined', { date: joinedDate.toLocaleDateString() })}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
+          {canZap && <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} />}
+        </div>
         {metadata?.about && (
-          <RichTextContent
-            content={metadata.about}
-            className="text-sm text-muted-foreground mt-1"
-          />
+          <div className="mt-1">
+            <div
+              ref={aboutRef}
+              className={cn('text-sm text-muted-foreground', !isAboutExpanded && 'line-clamp-3')}
+            >
+              <RichTextContent content={metadata.about} />
+            </div>
+            {(isAboutClamped || isAboutExpanded) && (
+              <button
+                onClick={() => setIsAboutExpanded(!isAboutExpanded)}
+                className="text-sm text-primary hover:underline mt-1"
+              >
+                {isAboutExpanded ? t('pages.author.showLess') : t('pages.author.showMore')}
+              </button>
+            )}
+          </div>
         )}
       </div>
-      {canZap && (
-        <div className="shrink-0">
-          <ZapButton authorPubkey={pubkey} layout="inline" />
-        </div>
-      )}
     </div>
   )
 }
@@ -285,93 +326,113 @@ export function AuthorPage() {
     }
   }, [authorName])
 
-  // Get author stats
-  const stats: AuthorStats = {
-    videoCount: allVideos.length,
-    totalViews: 0, // Could be implemented with NIP-78 view counts
-    joinedDate:
-      allVideos.length > 0
-        ? new Date(Math.min(...allVideos.map(v => getPublishDate(v) * 1000)))
-        : new Date(),
-  }
+  const hasBanner = !!authorMeta?.banner
 
   if (!pubkey) return null
 
   return (
     <div className="max-w-560 mx-auto sm:p-4">
-      <AuthorProfile className="p-2" pubkey={pubkey} joinedDate={stats.joinedDate} />
+      <AuthorBanner pubkey={pubkey} />
+      <AuthorProfile className="p-2" pubkey={pubkey} hasBanner={hasBanner} />
 
-      <Tabs className="p-2" value={activeTab} onValueChange={v => setActiveTab(v as Tabs)}>
-        <TabsList>
-          {videos.length > 0 && (
-            <TabsTrigger value="videos" className="cursor-pointer">
-              {t('pages.author.allVideos', { count: videos.length })}
-            </TabsTrigger>
-          )}
-          {shorts.length > 0 && (
-            <TabsTrigger value="shorts" className="cursor-pointer">
-              {t('pages.author.allShorts', { count: shorts.length })}
-            </TabsTrigger>
-          )}
+      <div className="p-2">
+        {/* Scrollable tab bar */}
+        <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide -mx-2 px-2 py-2">
+          <div className="flex gap-2 min-w-max">
+            {videos.length > 0 && (
+              <Button
+                variant={activeTab === 'videos' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={() => setActiveTab('videos')}
+              >
+                {t('pages.author.allVideos', { count: videos.length })}
+              </Button>
+            )}
+            {shorts.length > 0 && (
+              <Button
+                variant={activeTab === 'shorts' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={() => setActiveTab('shorts')}
+              >
+                {t('pages.author.allShorts', { count: shorts.length })}
+              </Button>
+            )}
 
-          {isLoadingPlaylists && (
-            <TabsTrigger value="playlists-loading" disabled>
-              {t('pages.author.loadingPlaylists')}
-            </TabsTrigger>
-          )}
-          {playlists.map(playlist => (
-            <TabsTrigger
-              key={playlist.identifier}
-              value={playlist.identifier}
-              className="cursor-pointer"
-              onClick={async () => {
-                if (!playlistVideos[playlist.identifier]) {
-                  await fetchPlaylistVideos(playlist)
-                }
-              }}
+            {isLoadingPlaylists && (
+              <Button variant="outline" size="sm" className="shrink-0 rounded-full px-4" disabled>
+                {t('pages.author.loadingPlaylists')}
+              </Button>
+            )}
+            {playlists.map(playlist => (
+              <Button
+                key={playlist.identifier}
+                variant={activeTab === playlist.identifier ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={async () => {
+                  setActiveTab(playlist.identifier)
+                  if (!playlistVideos[playlist.identifier]) {
+                    await fetchPlaylistVideos(playlist)
+                  }
+                }}
+              >
+                {playlist.name}
+              </Button>
+            ))}
+            <Button
+              variant={activeTab === 'tags' ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 rounded-full px-4"
+              onClick={() => setActiveTab('tags')}
             >
-              {playlist.name}
-            </TabsTrigger>
-          ))}
-          <TabsTrigger value="tags" className="cursor-pointer">
-            {t('pages.author.tags')}
-          </TabsTrigger>
-        </TabsList>
+              {t('pages.author.tags')}
+            </Button>
+          </div>
+        </div>
 
-        <TabsContent value="videos" className="mt-6">
-          <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
+        {/* Tab content */}
+        {activeTab === 'videos' && (
+          <div className="mt-6">
+            <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
 
-          <InfiniteScrollTrigger
-            triggerRef={ref}
-            loading={loading && videos.length > 0}
-            exhausted={exhausted}
-            itemCount={videos.length}
-            emptyMessage={t('pages.author.noVideos')}
-            loadingMessage={t('pages.author.loadingMore')}
-            exhaustedMessage={t('pages.author.noMore')}
-          />
-        </TabsContent>
+            <InfiniteScrollTrigger
+              triggerRef={ref}
+              loading={loading && videos.length > 0}
+              exhausted={exhausted}
+              itemCount={videos.length}
+              emptyMessage={t('pages.author.noVideos')}
+              loadingMessage={t('pages.author.loadingMore')}
+              exhaustedMessage={t('pages.author.noMore')}
+            />
+          </div>
+        )}
 
-        <TabsContent value="shorts" className="mt-6">
-          <VideoGrid
-            videos={shorts}
-            isLoading={loading}
-            showSkeletons={true}
-            layoutMode="vertical"
-          />
+        {activeTab === 'shorts' && (
+          <div className="mt-6">
+            <VideoGrid
+              videos={shorts}
+              isLoading={loading}
+              showSkeletons={true}
+              layoutMode="vertical"
+            />
 
-          <InfiniteScrollTrigger
-            triggerRef={ref}
-            loading={loading && shorts.length > 0}
-            exhausted={exhausted}
-            itemCount={shorts.length}
-            emptyMessage={t('pages.author.noShorts')}
-            loadingMessage={t('pages.author.loadingMoreShorts')}
-            exhaustedMessage={t('pages.author.noMoreShorts')}
-          />
-        </TabsContent>
+            <InfiniteScrollTrigger
+              triggerRef={ref}
+              loading={loading && shorts.length > 0}
+              exhausted={exhausted}
+              itemCount={shorts.length}
+              emptyMessage={t('pages.author.noShorts')}
+              loadingMessage={t('pages.author.loadingMoreShorts')}
+              exhaustedMessage={t('pages.author.noMoreShorts')}
+            />
+          </div>
+        )}
 
         {playlists.map(playlist => {
+          if (activeTab !== playlist.identifier) return null
+
           const isLoading = loadingPlaylist === playlist.identifier
           const hasLoadedVideos = playlistVideos[playlist.identifier] !== undefined
           const hasAttemptedLoad = loadedPlaylistsRef.current.has(playlist.identifier)
@@ -384,7 +445,7 @@ export function AuthorPage() {
             isLoading || (playlistHasVideoIds && !hasLoadedVideos && !hasAttemptedLoad)
 
           return (
-            <TabsContent key={playlist.identifier} value={playlist.identifier} className="mt-6">
+            <div key={playlist.identifier} className="mt-6">
               <VideoGrid
                 videos={playlistVideos[playlist.identifier] || []}
                 isLoading={showSkeleton}
@@ -397,22 +458,24 @@ export function AuthorPage() {
                   relays: relays.slice(0, 3),
                 })}
               />
-            </TabsContent>
+            </div>
           )
         })}
 
-        <TabsContent value="tags" className="mt-6">
-          <div className="flex flex-wrap gap-2">
-            {uniqueTags.map(tag => (
-              <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm cursor-pointer hover:bg-muted/80 transition-colors">
-                  #{tag}
-                </span>
-              </Link>
-            ))}
+        {activeTab === 'tags' && (
+          <div className="mt-6">
+            <div className="flex flex-wrap gap-2">
+              {uniqueTags.map(tag => (
+                <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
+                  <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm cursor-pointer hover:bg-muted/80 transition-colors">
+                    #{tag}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   )
 }

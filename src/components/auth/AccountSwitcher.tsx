@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserPlus, Settings } from 'lucide-react'
+import { ChevronDown, LogOut, UserPlus, Settings, User } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import type { IAccount } from 'applesauce-accounts'
 import { WalletMenuItem } from './WalletMenuItem'
 import { Button } from '../ui/button'
 import { useTranslation } from 'react-i18next'
+import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
 function AccountSwitchItem({
   account,
@@ -96,6 +97,13 @@ export function AccountSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 p-2 animate-scale-in">
+        <DropdownMenuItem
+          onClick={() => navigate(buildProfileUrlFromPubkey(activeAccount.pubkey))}
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+        >
+          <User className="w-4 h-4" />
+          <span>{t('auth.account.profile')}</span>
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => navigate('/playlists')}
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md"

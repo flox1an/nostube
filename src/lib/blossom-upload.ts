@@ -805,6 +805,12 @@ export async function deleteBlobFromServer(
     })
 
     if (!response.ok) {
+      if (response.status === 404) {
+        if (import.meta.env.DEV) {
+          console.log(`[DELETE] Blob already gone from ${normalizedServer} (404)`)
+        }
+        return true
+      }
       console.warn(
         `[DELETE] Failed to delete blob from ${normalizedServer}: ${response.status} ${response.statusText}`
       )

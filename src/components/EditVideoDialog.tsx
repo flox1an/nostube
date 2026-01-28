@@ -145,7 +145,7 @@ export function EditVideoDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-h-[100dvh] overflow-y-auto sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{t('editVideo.title')}</DialogTitle>
           <DialogDescription>{t('editVideo.description')}</DialogDescription>

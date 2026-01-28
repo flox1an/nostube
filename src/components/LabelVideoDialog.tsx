@@ -105,7 +105,7 @@ export function LabelVideoDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-h-[100dvh] overflow-y-auto sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{t('labelVideo.title')}</DialogTitle>
           <DialogDescription>{t('labelVideo.description')}</DialogDescription>

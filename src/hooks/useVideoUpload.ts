@@ -291,6 +291,56 @@ export function useVideoUpload(
     onDraftChangeRef.current = onDraftChange
   }, [onDraftChange])
 
+  // Auto-populate form fields from extracted metadata
+  const metadataAppliedRef = useRef(false)
+  const [metadataDetected, setMetadataDetected] = useState(false)
+
+  useEffect(() => {
+    const firstVideo = uploadInfo.videos[0]
+
+    // Only apply metadata once, when video is first uploaded
+    if (!firstVideo?.extractedMetadata || metadataAppliedRef.current) {
+      return
+    }
+
+    const meta = firstVideo.extractedMetadata
+    let applied = false
+
+    if (import.meta.env.DEV) {
+      console.log('[useVideoUpload] Auto-populating from metadata:', meta)
+    }
+
+    // Only populate if fields are empty (don't overwrite user input)
+    if (!title && meta.title) {
+      setTitle(meta.title)
+      applied = true
+    }
+
+    if (!description && meta.description) {
+      setDescription(meta.description)
+      applied = true
+    }
+
+    if (tags.length === 0 && meta.tags && meta.tags.length > 0) {
+      setTags(meta.tags)
+      applied = true
+    }
+
+    if (!publishAt && meta.publishAt) {
+      setPublishAt(meta.publishAt)
+      applied = true
+    }
+
+    // Mark as applied and notify
+    if (applied) {
+      metadataAppliedRef.current = true
+      setMetadataDetected(true)
+      if (import.meta.env.DEV) {
+        console.log('[useVideoUpload] Metadata auto-populated successfully')
+      }
+    }
+  }, [uploadInfo.videos, title, description, tags.length, publishAt])
+
   const { user } = useCurrentUser()
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
@@ -1134,6 +1184,7 @@ export function useVideoUpload(
     setVideoToDelete,
     subtitles,
     subtitleUploading,
+    metadataDetected,
 
     // Handlers
     handleUseRecommendedServers,

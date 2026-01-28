@@ -100,6 +100,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     setVideoToDelete,
     subtitles,
     subtitleUploading,
+    metadataDetected,
 
     // Handlers
     handleUseRecommendedServers,
@@ -240,6 +241,17 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     // Navigate back to draft picker
     if (onBack) onBack()
   }, [user, draft, deleteDraft, removeByDraftId, toast, t, onBack])
+
+  // Show toast when metadata is auto-populated
+  useEffect(() => {
+    if (metadataDetected) {
+      toast({
+        title: t('upload.metadata_detected'),
+        description: t('upload.metadata_auto_populated'),
+        duration: 5000,
+      })
+    }
+  }, [metadataDetected, toast, t])
 
   // Wrap handleSubmit to delete draft on success and navigate to video page
   const handleSubmit = async (e: React.FormEvent) => {

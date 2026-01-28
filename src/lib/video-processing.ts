@@ -1,5 +1,7 @@
 import { type BlobDescriptor } from 'blossom-client-sdk'
-import { getCodecsFromFile, getCodecsFromUrl } from './codec-detection'
+import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from './codec-detection'
+import { extractMetadataFromFile, extractMetadataFromUrl } from './metadata-extraction'
+import type { VideoMetadata } from './metadata-extraction'
 
 /**
  * Interface representing a single video variant (e.g., different quality levels)
@@ -17,6 +19,7 @@ export interface VideoVariant {
   inputMethod: 'file' | 'url' // How this video was added
   file?: File // Original file (only for uploaded files)
   qualityLabel?: string // e.g., "1080p", "720p", "480p"
+  extractedMetadata?: VideoMetadata // iTunes metadata from moov/udta/meta/ilst
 }
 
 /**
@@ -77,14 +80,27 @@ export async function processUploadedVideo(
     let videoCodec: string | undefined
     let audioCodec: string | undefined
     let bitrate: number | undefined
+    let extractedMetadata: VideoMetadata | undefined
 
-    try {
-      const codecs = await getCodecsFromFile(file)
-      videoCodec = codecs.videoCodec
-      audioCodec = codecs.audioCodec
-      bitrate = codecs.bitrate
-    } catch (error) {
-      console.warn('Failed to extract codecs from file:', error)
+    // Extract codecs and metadata in parallel
+    const [codecs, metadata] = await Promise.all([
+      getCodecsFromFile(file).catch(err => {
+        console.warn('Failed to extract codecs from file:', err)
+        return {} as CodecInfo
+      }),
+      extractMetadataFromFile(file).catch(err => {
+        console.warn('Failed to extract metadata from file:', err)
+        return {} as VideoMetadata
+      }),
+    ])
+
+    videoCodec = codecs.videoCodec
+    audioCodec = codecs.audioCodec
+    bitrate = codecs.bitrate
+
+    // Only include metadata if we found something
+    if (Object.keys(metadata).length > 0) {
+      extractedMetadata = metadata
     }
 
     return {
@@ -100,6 +116,7 @@ export async function processUploadedVideo(
       inputMethod: 'file',
       file,
       qualityLabel,
+      extractedMetadata,
     }
   } finally {
     URL.revokeObjectURL(video.src)
@@ -149,14 +166,27 @@ export async function processVideoUrl(
   let videoCodec: string | undefined
   let audioCodec: string | undefined
   let bitrate: number | undefined
+  let extractedMetadata: VideoMetadata | undefined
 
-  try {
-    const codecs = await getCodecsFromUrl(url)
-    videoCodec = codecs.videoCodec
-    audioCodec = codecs.audioCodec
-    bitrate = codecs.bitrate
-  } catch (error) {
-    console.warn('Failed to extract codecs from URL:', error)
+  // Extract codecs and metadata in parallel
+  const [codecs, metadata] = await Promise.all([
+    getCodecsFromUrl(url).catch(err => {
+      console.warn('Failed to extract codecs from URL:', err)
+      return {} as CodecInfo
+    }),
+    extractMetadataFromUrl(url).catch(err => {
+      console.warn('Failed to extract metadata from URL:', err)
+      return {} as VideoMetadata
+    }),
+  ])
+
+  videoCodec = codecs.videoCodec
+  audioCodec = codecs.audioCodec
+  bitrate = codecs.bitrate
+
+  // Only include metadata if we found something
+  if (Object.keys(metadata).length > 0) {
+    extractedMetadata = metadata
   }
 
   return {
@@ -171,5 +201,6 @@ export async function processVideoUrl(
     mirroredBlobs,
     inputMethod: 'url',
     qualityLabel,
+    extractedMetadata,
   }
 }

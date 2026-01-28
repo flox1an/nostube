@@ -317,7 +317,13 @@
       "title": "Vorschaubild",
       "useGenerated": "Generiertes Vorschaubild verwenden",
       "uploadCustom": "Eigenes Vorschaubild hochladen",
-      "generated": "Generiertes Vorschaubild"
+      "generated": "Generiertes Vorschaubild",
+      "thumbnailPreview": "Vorschaubild-Vorschau",
+      "selectFrame": "Ziehen Sie den Schieberegler, um durch Ihr Video zu navigieren und ein Bild auszuwählen",
+      "setAsThumbnail": "Als Vorschaubild festlegen",
+      "currentThumbnail": "Aktuelles Vorschaubild",
+      "uploadingThumbnail": "Vorschaubild wird hochgeladen...",
+      "thumbnailSet": "Vorschaubild aktualisiert!"
     },
     "videoTable": {
       "quality": "Qualität",

@@ -6,7 +6,7 @@ import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { useTranslation } from 'react-i18next'
-import { RotateCcw, Trash2 } from 'lucide-react'
+import { Trash2, Check } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 
 interface ThumbnailSectionProps {
@@ -36,10 +36,13 @@ export function ThumbnailSection({
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
   const uploadedThumbnailUrl = hasUploadedThumbnail
@@ -55,7 +58,7 @@ export function ThumbnailSection({
     }
   }
 
-  const generateThumbnail = useCallback(() => {
+  const captureCurrentFrame = useCallback((callback?: (blob: Blob) => void) => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current
       const canvas = canvasRef.current
@@ -69,16 +72,35 @@ export function ThumbnailSection({
         // Draw the current video frame onto the canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-        // Convert canvas content to a Blob and trigger the onThumbnailDrop callback
+        // Convert canvas content to a Blob
         canvas.toBlob(blob => {
           if (blob) {
-            const thumbnailFile = new File([blob], 'thumbnail.png', { type: 'image/png' })
-            onThumbnailDrop([thumbnailFile])
+            setPreviewBlob(blob)
+            if (callback) {
+              callback(blob)
+            } else {
+              setHasUnsavedChanges(true)
+            }
           }
         }, 'image/png')
       }
     }
-  }, [onThumbnailDrop])
+  }, [])
+
+  const updatePreview = useCallback(() => {
+    captureCurrentFrame()
+  }, [captureCurrentFrame])
+
+  const handleSetThumbnail = useCallback(() => {
+    if (previewBlob) {
+      setIsUploading(true)
+      const thumbnailFile = new File([previewBlob], 'thumbnail.png', { type: 'image/png' })
+      onThumbnailDrop([thumbnailFile])
+      setHasUnsavedChanges(false)
+      // Reset uploading state after a short delay to show feedback
+      setTimeout(() => setIsUploading(false), 500)
+    }
+  }, [previewBlob, onThumbnailDrop])
 
   useEffect(() => {
     if (videoRef.current && videoUrl) {
@@ -86,15 +108,28 @@ export function ThumbnailSection({
     }
   }, [videoUrl])
 
-  const handleLoadedMetadata = () => {
+  // Reset unsaved changes when thumbnail is uploaded
+  useEffect(() => {
+    if (thumbnailBlob || uploadedThumbnailUrl) {
+      setHasUnsavedChanges(false)
+    }
+  }, [thumbnailBlob, uploadedThumbnailUrl])
+
+  const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration)
-      // If no thumbnail is selected, generate one from the first frame
+      // If no thumbnail exists yet, auto-upload the first frame
       if (!thumbnailBlob && !uploadedThumbnailUrl) {
-        generateThumbnail()
+        captureCurrentFrame(blob => {
+          const thumbnailFile = new File([blob], 'thumbnail.png', { type: 'image/png' })
+          onThumbnailDrop([thumbnailFile])
+        })
+      } else {
+        // Just update preview
+        updatePreview()
       }
     }
-  }
+  }, [thumbnailBlob, uploadedThumbnailUrl, captureCurrentFrame, onThumbnailDrop, updatePreview])
 
   const handleSliderChange = (value: number[]) => {
     const newTime = value[0]
@@ -105,7 +140,8 @@ export function ThumbnailSection({
   }
 
   const handleSeeked = () => {
-    generateThumbnail()
+    // Update preview when user seeks to a new position
+    updatePreview()
   }
 
   return (
@@ -130,51 +166,71 @@ export function ThumbnailSection({
       </RadioGroup>
 
       {thumbnailSource === 'generated' && (
-        <div className="">
+        <div className="space-y-4">
           {videoUrl ? (
-            <div className="relative">
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                onLoadedMetadata={handleLoadedMetadata}
-                onSeeked={handleSeeked}
-                preload="metadata"
-                className="rounded border mt-2 w-full max-h-80 object-contain"
-                muted
-                crossOrigin="anonymous"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              {thumbnailBlob && (
-                <img
-                  src={URL.createObjectURL(thumbnailBlob)}
-                  alt={t('upload.thumbnail.generated')}
-                  className="absolute top-2 left-2 rounded border max-h-20 object-contain pointer-events-none"
+            <>
+              {/* Video Scrubber Section */}
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onSeeked={handleSeeked}
+                  preload="metadata"
+                  className="rounded border w-full max-h-80 object-contain bg-black"
+                  muted
+                  crossOrigin="anonymous"
                 />
-              )}
-              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                <Slider
-                  value={[currentVideoTime]}
-                  max={videoDuration}
-                  step={0.1}
-                  onValueChange={handleSliderChange}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-white mt-1">
-                  <span>{formatTime(currentVideoTime)}</span>
-                  <span>{formatTime(videoDuration)}</span>
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="space-y-1">
+                  <Slider
+                    value={[currentVideoTime]}
+                    max={videoDuration}
+                    step={0.1}
+                    onValueChange={handleSliderChange}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{formatTime(currentVideoTime)}</span>
+                    <span>{formatTime(videoDuration)}</span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Thumbnail Preview Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  {t('upload.thumbnail.thumbnailPreview')}
+                </Label>
+                {previewBlob && (
+                  <div className="relative inline-block">
+                    <img
+                      src={URL.createObjectURL(previewBlob)}
+                      alt={t('upload.thumbnail.thumbnailPreview')}
+                      className="rounded border max-h-60 object-contain"
+                    />
+                  </div>
+                )}
                 <Button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white"
-                  onClick={generateThumbnail}
-                  title={t('upload.thumbnail.generateFromCurrentFrame')}
+                  onClick={handleSetThumbnail}
+                  disabled={!hasUnsavedChanges || isUploading}
+                  className="w-full"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  {isUploading ? (
+                    t('upload.thumbnail.uploadingThumbnail')
+                  ) : hasUnsavedChanges ? (
+                    t('upload.thumbnail.setAsThumbnail')
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      {t('upload.thumbnail.currentThumbnail')}
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
+            </>
           ) : (
             <div className="text-muted-foreground text-sm mt-2">
               {t('upload.thumbnail.noVideoFile')}

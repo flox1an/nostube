@@ -317,7 +317,13 @@
       "title": "Miniature",
       "useGenerated": "Utiliser la miniature générée",
       "uploadCustom": "Télécharger une miniature personnalisée",
-      "generated": "Miniature générée"
+      "generated": "Miniature générée",
+      "thumbnailPreview": "Aperçu de la miniature",
+      "selectFrame": "Faites glisser le curseur pour parcourir votre vidéo et sélectionner une image",
+      "setAsThumbnail": "Définir comme miniature",
+      "currentThumbnail": "Miniature actuelle",
+      "uploadingThumbnail": "Téléchargement de la miniature...",
+      "thumbnailSet": "Miniature mise à jour !"
     },
     "videoTable": {
       "quality": "Qualité",

@@ -64,6 +64,9 @@ const PresetsSettingsPage = lazy(() =>
   }))
 )
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const Mp4DebugPage = lazy(() =>
+  import('./pages/Mp4DebugPage').then(m => ({ default: m.Mp4DebugPage }))
+)
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
@@ -358,6 +361,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <AdminPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/mp4-debug"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <Mp4DebugPage />
               </Suspense>
             }
           />

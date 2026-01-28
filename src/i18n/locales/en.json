@@ -292,6 +292,8 @@
       "descriptionNow": "Your video will be published as soon as you click Publish.",
       "descriptionScheduled": "Your video will be published with the selected date/time. Note: The video will be visible immediately but dated for the scheduled time."
     },
+    "metadata_detected": "Video metadata detected",
+    "metadata_auto_populated": "Title, description, and publish date have been auto-filled from the video file. You can edit them as needed.",
     "form": {
       "title": "Title",
       "description": "Description",
@@ -321,7 +323,13 @@
       "title": "Thumbnail",
       "useGenerated": "Use generated thumbnail",
       "uploadCustom": "Upload custom thumbnail",
-      "generated": "Generated thumbnail"
+      "generated": "Generated thumbnail",
+      "thumbnailPreview": "Thumbnail Preview",
+      "selectFrame": "Drag the slider to browse through your video and select a frame",
+      "setAsThumbnail": "Set as Thumbnail",
+      "currentThumbnail": "Current Thumbnail",
+      "uploadingThumbnail": "Uploading thumbnail...",
+      "thumbnailSet": "Thumbnail updated!"
     },
     "videoTable": {
       "quality": "Quality",

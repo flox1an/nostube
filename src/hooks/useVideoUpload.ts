@@ -623,80 +623,6 @@ export function useVideoUpload(
     setUploadProgress(null)
   }
 
-  const currentVideoUrl = useMemo(() => {
-    if (uploadInfo.videos.length === 0) return undefined
-    const firstVideo = uploadInfo.videos[0]
-    if (firstVideo.inputMethod === 'url' && firstVideo.url) {
-      return firstVideo.url
-    }
-    return firstVideo.uploadedBlobs && firstVideo.uploadedBlobs.length > 0
-      ? firstVideo.uploadedBlobs[0].url
-      : undefined
-  }, [uploadInfo.videos])
-
-  useEffect(() => {
-    async function createThumbnailFromUrl(videoUrl: string, seekTime = 1): Promise<Blob | null> {
-      return new Promise<Blob | null>((resolve, reject) => {
-        const video = document.createElement('video')
-        video.src = videoUrl
-        video.crossOrigin = 'anonymous'
-        video.muted = true
-        video.playsInline = true
-        video.preload = 'auto'
-
-        video.addEventListener(
-          'loadedmetadata',
-          () => {
-            const time = Math.min(seekTime, video.duration - 0.1)
-            video.currentTime = time > 0 ? time : 0
-          },
-          { once: true }
-        )
-
-        video.addEventListener(
-          'seeked',
-          () => {
-            const canvas = document.createElement('canvas')
-            canvas.width = video.videoWidth
-            canvas.height = video.videoHeight
-            const ctx = canvas.getContext('2d')
-            ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
-            canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8)
-          },
-          { once: true }
-        )
-
-        video.addEventListener(
-          'error',
-          () => {
-            reject(new Error('Failed to load video for thumbnail'))
-          },
-          { once: true }
-        )
-      })
-    }
-
-    if (currentVideoUrl) {
-      createThumbnailFromUrl(currentVideoUrl, 1)
-        .then(async blob => {
-          if (blob) {
-            setThumbnailBlob(blob)
-            // Generate blurhash for the thumbnail
-            const blurhash = await generateBlurhash(blob)
-            setThumbnailBlurhash(blurhash)
-          }
-          return undefined
-        })
-        .catch(() => {})
-    } else {
-      setTimeout(() => {
-        setThumbnailBlob(null)
-        setThumbnailBlurhash(undefined)
-      }, 0)
-    }
-    return undefined
-  }, [currentVideoUrl])
-
   const thumbnailUrl = useMemo(() => {
     if (!thumbnailBlob) return undefined
     return URL.createObjectURL(thumbnailBlob as Blob)
@@ -954,13 +880,16 @@ export function useVideoUpload(
     // Validate that we have at least one video
     if (uploadInfo.videos.length === 0) return undefined
 
-    let thumbnailFile: File | null = null
     let thumbnailUploadedBlobs: BlobDescriptor[] = []
     let thumbnailMirroredBlobs: BlobDescriptor[] = []
 
-    if (thumbnailSource === 'generated') {
-      if (!thumbnailBlob) return undefined
-      thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', {
+    // If we have uploaded blobs already (from manual upload or "Set as Thumbnail"), use them
+    if (thumbnailUploadInfo.uploadedBlobs.length > 0) {
+      thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
+      thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
+    } else if (thumbnailSource === 'generated' && thumbnailBlob) {
+      // Fallback for any legacy flow or auto-upload on publish
+      const thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', {
         type: thumbnailBlob.type || 'image/jpeg',
         lastModified: Date.now(),
       })
@@ -982,15 +911,6 @@ export function useVideoUpload(
       } catch (error) {
         console.error('Failed to upload generated thumbnail:', error)
         throw new Error('Failed to upload generated thumbnail')
-      }
-    } else {
-      // For upload source, use already uploaded blobs
-      if (thumbnailUploadInfo.uploadedBlobs.length > 0) {
-        thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
-        thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
-      } else {
-        // No thumbnail available
-        return undefined
       }
     }
 
@@ -1101,8 +1021,8 @@ export function useVideoUpload(
     if (uploadInfo.videos.length === 0) return null
 
     // For preview, use existing thumbnail blobs if available, or placeholder
-    const thumbUploadedBlobs = thumbnailSource === 'upload' ? thumbnailUploadInfo.uploadedBlobs : []
-    const thumbMirroredBlobs = thumbnailSource === 'upload' ? thumbnailUploadInfo.mirroredBlobs : []
+    const thumbUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
+    const thumbMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
 
     const result = buildVideoEvent({
       videos: uploadInfo.videos,
@@ -1119,7 +1039,7 @@ export function useVideoUpload(
       draftId,
       thumbnailBlurhash,
       isPreview: true,
-      hasPendingThumbnail: thumbnailSource === 'generated' && thumbnailBlob !== null,
+      hasPendingThumbnail: (thumbnailSource === 'generated' && thumbnailBlob !== null) || (thumbnailSource === 'upload' && thumbnail !== null && thumbnailUploadInfo.uploadedBlobs.length === 0),
       publishAt,
     })
 

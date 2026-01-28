@@ -403,14 +403,11 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const canProceedToStep2 = uploadInfo.videos.length > 0
   const canProceedToStep3 = title.trim().length > 0
   const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
-  const canProceedToStep4 =
-    thumbnailSource === 'generated' ? thumbnailBlob : thumbnail || hasUploadedThumbnail
+  const hasThumbnailSet = thumbnailBlob || thumbnail || hasUploadedThumbnail
+  const canProceedToStep4 = hasThumbnailSet
   const isTranscoding = transcodeStatus === 'transcoding' || transcodeStatus === 'mirroring'
   const canPublish =
-    uploadInfo.videos.length > 0 &&
-    title.trim().length > 0 &&
-    (thumbnailSource === 'generated' ? thumbnailBlob : thumbnail || hasUploadedThumbnail) &&
-    !isTranscoding
+    uploadInfo.videos.length > 0 && title.trim().length > 0 && hasThumbnailSet && !isTranscoding
 
   return (
     <>

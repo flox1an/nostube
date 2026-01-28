@@ -83,9 +83,8 @@ export function ThumbnailSection({
   useEffect(() => {
     if (videoRef.current && videoUrl) {
       videoRef.current.load() // Reload video when source changes
-      videoRef.current.currentTime = currentVideoTime // Set current time for accurate thumbnail generation
     }
-  }, [videoUrl, currentVideoTime])
+  }, [videoUrl])
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {

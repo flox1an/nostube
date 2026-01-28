@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, X, User, Loader2 } from 'lucide-react'
-import { useSearchProfiles } from '@/hooks/useSearchProfiles'
+import { useSearchVideoAuthors } from '@/hooks/useSearchVideoAuthors'
 import { UserAvatar } from '@/components/UserAvatar'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
@@ -28,7 +28,7 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
     }
   }, [isMobileExpanded])
 
-  const { profiles, loading } = useSearchProfiles({
+  const { profiles, loading } = useSearchVideoAuthors({
     query: searchQuery,
     limit: 5,
   })
@@ -144,7 +144,7 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           className="pl-10"
-          placeholder="Search videos and people..."
+          placeholder="Search videos and creators..."
         />
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         {searchQuery && (
@@ -170,7 +170,7 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
               <div className="p-2">
                 <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
                   <User className="h-3 w-3" />
-                  People
+                  Creators
                   {loading && <Loader2 className="h-3 w-3 animate-spin" />}
                 </div>
                 {profiles.map((result, index) => (
@@ -202,7 +202,7 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
                   </button>
                 ))}
                 {!loading && profiles.length === 0 && searchQuery.trim().length >= 2 && (
-                  <div className="px-2 py-2 text-sm text-muted-foreground">No people found</div>
+                  <div className="px-2 py-2 text-sm text-muted-foreground">No creators found</div>
                 )}
               </div>
             )}

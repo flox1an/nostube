@@ -1,4 +1,5 @@
 import { nip19 } from 'nostr-tools'
+import { sanitizeRelayUrl } from './utils'
 
 /**
  * Helper function to generate NIP-19 encoded link for a video event
@@ -12,12 +13,15 @@ export function generateEventLink(
 ): string {
   const isAddressable = event.kind === 34235 || event.kind === 34236
 
+  // Sanitize relay URLs to filter out corrupted ones
+  const sanitizedRelays = relays.flatMap(url => sanitizeRelayUrl(url))
+
   if (isAddressable && identifier) {
     return nip19.naddrEncode({
       kind: event.kind,
       pubkey: event.pubkey,
       identifier,
-      relays,
+      relays: sanitizedRelays,
     })
   }
 
@@ -25,6 +29,6 @@ export function generateEventLink(
     kind: event.kind,
     id: event.id,
     author: event.pubkey,
-    relays,
+    relays: sanitizedRelays,
   })
 }

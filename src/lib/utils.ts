@@ -8,6 +8,38 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Detects and filters out corrupted relay URLs that may contain:
+ * - Multiple URLs concatenated together
+ * - URL-encoded spaces (%20)
+ * - Non-relay text mixed in (e.g., "avatar")
+ *
+ * Returns an array with the valid relay URL, or an empty array if corrupted.
+ */
+export function sanitizeRelayUrl(url: string): string[] {
+  const trimmed = url.trim()
+  if (!trimmed) return []
+
+  // Check for corruption patterns:
+  // - Multiple wss:// or ws:// protocols (concatenated URLs)
+  // - URL-encoded spaces (%20)
+  // - Whitespace in the URL
+  // - Suspicious keywords like "avatar"
+  const wssCount = (trimmed.match(/wss:\/\//g) || []).length
+  const wsCount = (trimmed.match(/ws:\/\//g) || []).length
+  const hasMultipleProtocols = wssCount > 1 || wsCount > 1 || wssCount + wsCount > 1
+  const hasCorruptionPatterns =
+    trimmed.includes('%20') || trimmed.includes('avatar') || /\s/.test(trimmed)
+
+  // If the URL shows signs of corruption, ignore it completely
+  if (hasMultipleProtocols || hasCorruptionPatterns) {
+    return [] // Corrupted - ignore
+  }
+
+  // Normal relay URL - normalize and return
+  return [normalizeRelayUrl(trimmed)]
+}
+
+/**
  * Normalizes a relay URL:
  * - Removes trailing slashes
  * - Ensures wss:// protocol (adds if missing)

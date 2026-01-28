@@ -7,6 +7,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
 import { filterCompatibleVariants } from '@/lib/codec-compatibility'
+import { sanitizeRelayUrl } from '@/lib/utils'
 
 // Define a simple Event interface that matches what we need
 interface Event {
@@ -310,7 +311,10 @@ export function processEvent(
 ): VideoEvent | undefined {
   // Get relays from applesauce's seenRelays tracking
   const seenRelays = getSeenRelays(event)
-  const eventRelays = seenRelays ? Array.from(seenRelays) : relays
+  let eventRelays = seenRelays ? Array.from(seenRelays) : relays
+
+  // Sanitize relay URLs to fix corruption issues (multiple URLs concatenated, etc.)
+  eventRelays = eventRelays.flatMap(url => sanitizeRelayUrl(url))
 
   // Find ALL imeta tags
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')

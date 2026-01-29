@@ -294,8 +294,8 @@
     },
     "publishDate": {
       "title": "Publish Date",
-      "now": "Publish immediately",
-      "scheduled": "Set publishing time",
+      "now": "Use current date",
+      "scheduled": "Set custom date",
       "pickDate": "Pick a date",
       "descriptionNow": "Your video will be published as soon as you click Publish.",
       "descriptionScheduled": "Your video will be published with the selected date/time. Note: The video will be visible immediately but dated for the scheduled time."

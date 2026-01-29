@@ -275,8 +275,8 @@
     },
     "publishDate": {
       "title": "Veröffentlichungsdatum",
-      "now": "Sofort veröffentlichen",
-      "scheduled": "Veröffentlichungszeit festlegen",
+      "now": "Aktuelles Datum verwenden",
+      "scheduled": "Datum wählen",
       "pickDate": "Datum auswählen",
       "descriptionNow": "Dein Video wird veröffentlicht, sobald du auf Veröffentlichen klickst.",
       "descriptionScheduled": "Dein Video wird mit dem ausgewählten Datum/Uhrzeit veröffentlicht. Hinweis: Das Video ist sofort sichtbar, aber mit dem geplanten Zeitpunkt datiert."

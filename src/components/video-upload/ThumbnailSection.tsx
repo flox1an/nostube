@@ -325,13 +325,10 @@ export function ThumbnailSection({
 
         <TabsContent value="generated" className="mt-0">
           {videoUrl ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {t('upload.thumbnail.selectFrame')}
-                  </p>
-                </div>
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Video scrubbing section */}
+              <div className="flex-1 space-y-2">
+                <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
 
                 <video
                   ref={videoRef}
@@ -360,20 +357,21 @@ export function ThumbnailSection({
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* Thumbnail preview section */}
+              <div className="lg:w-72 space-y-2">
                 <Label className="text-sm font-medium">
                   {t('upload.thumbnail.thumbnailPreview')}
                 </Label>
                 {previewBlob && (
-                  <div className="flex flex-col gap-4">
-                    <div className="relative inline-block w-fit min-w-32 min-h-20">
+                  <div className="flex flex-col gap-3">
+                    <div className="relative w-full min-h-20">
                       {!isPreviewImageLoaded && (
                         <div className="absolute inset-0 rounded border bg-muted animate-pulse" />
                       )}
                       <img
                         src={URL.createObjectURL(previewBlob)}
                         alt={t('upload.thumbnail.thumbnailPreview')}
-                        className={`rounded border max-h-40 object-contain transition-opacity duration-200 ${isPreviewImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        className={`rounded border w-full object-contain transition-opacity duration-200 ${isPreviewImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                         onLoad={() => setIsPreviewImageLoaded(true)}
                       />
                     </div>

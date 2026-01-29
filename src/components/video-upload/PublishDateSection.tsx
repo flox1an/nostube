@@ -75,13 +75,13 @@ export function PublishDateSection({ value, onChange }: PublishDateSectionProps)
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="now" id="publish-now" />
           <Label htmlFor="publish-now" className="font-normal cursor-pointer">
-            {t('upload.publishDate.now', { defaultValue: 'Publish immediately' })}
+            {t('upload.publishDate.now', { defaultValue: 'Use current date' })}
           </Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="scheduled" id="publish-scheduled" />
           <Label htmlFor="publish-scheduled" className="font-normal cursor-pointer">
-            {t('upload.publishDate.scheduled', { defaultValue: 'Set publishing time' })}
+            {t('upload.publishDate.scheduled', { defaultValue: 'Set custom date' })}
           </Label>
         </div>
       </RadioGroup>

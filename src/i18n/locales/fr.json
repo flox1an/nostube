@@ -275,8 +275,8 @@
     },
     "publishDate": {
       "title": "Date de publication",
-      "now": "Publier immédiatement",
-      "scheduled": "Définir l'heure de publication",
+      "now": "Utiliser la date actuelle",
+      "scheduled": "Choisir une date",
       "pickDate": "Choisir une date",
       "descriptionNow": "Votre vidéo sera publiée dès que vous cliquerez sur Publier.",
       "descriptionScheduled": "Votre vidéo sera publiée avec la date/heure sélectionnée. Note : La vidéo sera visible immédiatement mais datée à l'heure programmée."

@@ -9,7 +9,7 @@ import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
 import { FollowingList } from '@/components/FollowingList'
-import { Plus, Minus } from 'lucide-react'
+import { Plus, Minus, Loader2 } from 'lucide-react'
 import {
   useProfile,
   useUserPlaylists,
@@ -127,13 +127,14 @@ function AuthorProfile({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 pr-4">
             {canFollow && (
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 onClick={handleFollowClick}
                 disabled={isFollowLoading}
+                className=" bg-white/10 backdrop-blur-md hover:bg-white/30"
               >
                 {isFollowing ? (
                   <>
@@ -149,7 +150,13 @@ function AuthorProfile({
               </Button>
             )}
             {canZap && (
-              <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} size="sm" />
+              <ZapButton
+                authorPubkey={pubkey}
+                className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+                layout="inline"
+                showZapText={true}
+                size="sm"
+              />
             )}
           </div>
         </div>
@@ -422,10 +429,12 @@ export function AuthorPage() {
   const hasSetInitialTab = useRef(false)
   useEffect(() => {
     if (hasSetInitialTab.current) return
+    // Wait for at least one type of content to load
     if (videos.length === 0 && shorts.length === 0) return
 
     hasSetInitialTab.current = true
-    if (videos.length > shorts.length) {
+    // Prefer videos over shorts, but select whichever has content
+    if (videos.length >= shorts.length) {
       setActiveTab('videos')
     } else {
       setActiveTab('shorts')
@@ -481,9 +490,9 @@ export function AuthorPage() {
             )}
 
             {isLoadingPlaylists && (
-              <Button variant="outline" size="sm" className="shrink-0 rounded-full px-4" disabled>
-                {t('pages.author.loadingPlaylists')}
-              </Button>
+              <div className="flex items-center shrink-0">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
             )}
             {playlists
               .filter(playlist => playlist.videos && playlist.videos.length > 0)

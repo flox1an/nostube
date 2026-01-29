@@ -1,5 +1,11 @@
 import { VideoGrid } from '@/components/VideoGrid'
-import { useAppContext, useLikedEvents, useZappedEvents, useReadRelays, useReportedPubkeys } from '@/hooks'
+import {
+  useAppContext,
+  useLikedEvents,
+  useZappedEvents,
+  useReadRelays,
+  useReportedPubkeys,
+} from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'

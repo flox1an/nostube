@@ -171,7 +171,9 @@ export function GeneralSettingsSection() {
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
               {importProgress.withVideos > 0
-                ? t('onboarding.followImport.successWithCount', { count: importProgress.withVideos })
+                ? t('onboarding.followImport.successWithCount', {
+                    count: importProgress.withVideos,
+                  })
                 : t('onboarding.followImport.noVideosFound')}
             </div>
           ) : isImporting ? (
@@ -196,7 +198,9 @@ export function GeneralSettingsSection() {
               />
               {importProgress.withVideos > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {t('onboarding.followImport.foundWithVideos', { count: importProgress.withVideos })}
+                  {t('onboarding.followImport.foundWithVideos', {
+                    count: importProgress.withVideos,
+                  })}
                 </p>
               )}
               <Button

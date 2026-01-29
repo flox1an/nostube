@@ -335,7 +335,12 @@ export function useFollowSet(): UseFollowSetReturn {
       }
 
       if (pubkeysWithVideos.length === 0) {
-        setImportProgress({ phase: 'done', checked: allPubkeys.length, total: allPubkeys.length, withVideos: 0 })
+        setImportProgress({
+          phase: 'done',
+          checked: allPubkeys.length,
+          total: allPubkeys.length,
+          withVideos: 0,
+        })
         return true
       }
 

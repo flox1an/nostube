@@ -19,8 +19,14 @@ const STORAGE_KEY = 'nostube_onboarding_follow_import'
 export function FollowImportDialog() {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
-  const { hasFollowSet, hasKind3Contacts, importFromKind3, kind3PubkeyCount, importProgress, cancelImport } =
-    useFollowSet()
+  const {
+    hasFollowSet,
+    hasKind3Contacts,
+    importFromKind3,
+    kind3PubkeyCount,
+    importProgress,
+    cancelImport,
+  } = useFollowSet()
   const [isOpen, setIsOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState(false)
@@ -86,7 +92,9 @@ export function FollowImportDialog() {
             <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
             <p className="text-center font-medium">
               {importProgress.withVideos > 0
-                ? t('onboarding.followImport.successWithCount', { count: importProgress.withVideos })
+                ? t('onboarding.followImport.successWithCount', {
+                    count: importProgress.withVideos,
+                  })
                 : t('onboarding.followImport.noVideosFound')}
             </p>
           </div>
@@ -129,7 +137,12 @@ export function FollowImportDialog() {
             )}
 
             <DialogFooter className="flex-row gap-2 sm:gap-2">
-              <Button variant="outline" onClick={handleSkip} disabled={isImporting} className="flex-1">
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                disabled={isImporting}
+                className="flex-1"
+              >
                 {t('onboarding.followImport.skip')}
               </Button>
               <Button onClick={handleImport} disabled={isImporting} className="flex-1">

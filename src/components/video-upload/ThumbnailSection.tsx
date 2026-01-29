@@ -39,6 +39,8 @@ export function ThumbnailSection({
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isImageLoaded, setIsImageLoaded] = useState(false)
+  const [isPreviewImageLoaded, setIsPreviewImageLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoDuration, setVideoDuration] = useState(0)
@@ -163,6 +165,16 @@ export function ThumbnailSection({
     }
   }, [thumbnailBlob, uploadedThumbnailUrl])
 
+  // Reset image loaded state when thumbnail source changes
+  useEffect(() => {
+    setIsImageLoaded(false)
+  }, [uploadedThumbnailUrl, thumbnailBlob])
+
+  // Reset preview image loaded state when preview blob changes
+  useEffect(() => {
+    setIsPreviewImageLoaded(false)
+  }, [previewBlob])
+
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration)
@@ -195,29 +207,37 @@ export function ThumbnailSection({
   }
 
   if (hasThumbnail) {
+    const thumbnailSrc =
+      uploadedThumbnailUrl || (thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : '')
     return (
       <div className="flex flex-col gap-2">
         <Label>{t('upload.thumbnail.title')}</Label>
-        <div className="relative inline-block w-fit">
+        <div className="relative inline-block w-fit min-w-32 min-h-20">
+          {!isImageLoaded && (
+            <div className="absolute inset-0 rounded border bg-muted animate-pulse" />
+          )}
           <img
-            src={uploadedThumbnailUrl || (thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : '')}
+            src={thumbnailSrc}
             alt={t('upload.thumbnail.uploaded', { defaultValue: 'Thumbnail' })}
-            className="rounded border max-h-80 object-contain"
+            className={`rounded border max-h-80 object-contain transition-opacity duration-200 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setIsImageLoaded(true)}
           />
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            className="absolute top-2 right-2 shadow-sm"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          {isImageLoaded && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute top-2 right-2 shadow-sm"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Show upload server status for the existing thumbnail */}
@@ -346,11 +366,15 @@ export function ThumbnailSection({
                 </Label>
                 {previewBlob && (
                   <div className="flex flex-col gap-4">
-                    <div className="relative inline-block w-fit">
+                    <div className="relative inline-block w-fit min-w-32 min-h-20">
+                      {!isPreviewImageLoaded && (
+                        <div className="absolute inset-0 rounded border bg-muted animate-pulse" />
+                      )}
                       <img
                         src={URL.createObjectURL(previewBlob)}
                         alt={t('upload.thumbnail.thumbnailPreview')}
-                        className="rounded border max-h-40 object-contain"
+                        className={`rounded border max-h-40 object-contain transition-opacity duration-200 ${isPreviewImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        onLoad={() => setIsPreviewImageLoaded(true)}
                       />
                     </div>
                     <Button

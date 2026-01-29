@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upload: renamed publish date options from "Publish immediately" / "Set publishing time" to "Use current date" / "Set custom date" for clearer wording (the feature sets the `published_at` timestamp, not scheduling)
 - Updated dependencies: upgraded 26 packages including React 19.2.4, applesauce-core 5.0.3, applesauce-loaders 5.0.2, nostr-tools 2.20.0, react-router-dom 7.13.0, typescript-eslint 8.54.0, vitest 4.0.18, i18next 25.8.0, and other minor updates
 - Comments: "Liked by creator" badge - when the video author likes a comment, their avatar with a red heart icon is displayed next to the reaction buttons (similar to YouTube)
 - Refactoring: centralized video URL building in `src/utils/video-utils.ts` with `buildVideoPath`, `buildVideoUrl`, and `buildVideoUrlObject` functions; standardized all video URLs to use `/v/{link}` for widescreen and `/short/{link}` for portrait videos with optional playlist, timestamp, comment, and autoplay parameters
@@ -124,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shorts grid: fixed inconsistent card sizes during loading - thumbnail container now has fixed aspect ratio regardless of thumbnail load state; skeleton, blurhash placeholder, error state, and thumbnail all use absolute positioning within the container; removed max-width constraint so cards fill their grid columns
 - Comments: fixed comments being lost when editing addressable video events (kinds 34235, 34236) - now uses NIP-22 address tags (`A`/`a`) for proper linking that persists across edits; also queries by both event ID and address for backwards compatibility
 - Reactions/Zaps: fixed reactions and zaps being lost when editing addressable video events (kinds 34235, 34236) - now publishes with both `a` tag (address) and `e` tag (event ID) for NIP-25 reactions; queries zap receipts by both `#e` and `#a` filters; liked videos list now extracts both event IDs and addresses from reaction events
+- Upload: fixed thumbnail preview layout jumping while image loads - added skeleton placeholder with min dimensions, image fades in on load, delete button only appears after image loads
 
 ## [1.0.0] - 2025-01-08
 

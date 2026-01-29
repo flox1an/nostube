@@ -626,6 +626,8 @@
       "loadingMoreShorts": "Loading more shorts...",
       "noMoreShorts": "No more shorts to load.",
       "noLikedVideos": "No liked or zapped videos found.",
+      "following": "Following ({{count}})",
+      "noFollowing": "Not following anyone on nostube.",
       "showMore": "Show more",
       "showLess": "Show less"
     },

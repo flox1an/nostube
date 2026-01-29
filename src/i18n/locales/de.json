@@ -589,6 +589,8 @@
       "loadingMoreShorts": "Lädt mehr Shorts...",
       "noMoreShorts": "Keine weiteren Shorts zum Laden.",
       "noLikedVideos": "Keine gelikten oder gezappten Videos gefunden.",
+      "following": "Folgt ({{count}})",
+      "noFollowing": "Folgt niemandem auf nostube.",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen"
     },

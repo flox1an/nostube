@@ -588,6 +588,8 @@
       "loadingMoreShorts": "Chargement de plus de shorts...",
       "noMoreShorts": "Plus de shorts à charger.",
       "noLikedVideos": "Aucune vidéo aimée ou zappée trouvée.",
+      "following": "Abonnements ({{count}})",
+      "noFollowing": "Ne suit personne sur nostube.",
       "showMore": "Afficher plus",
       "showLess": "Afficher moins"
     },

@@ -8,6 +8,7 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
+import { FollowingList } from '@/components/FollowingList'
 import { Plus, Minus } from 'lucide-react'
 import {
   useProfile,
@@ -21,6 +22,7 @@ import {
   useUserRelays,
   useAuthorLikedVideos,
   useReportedPubkeys,
+  useAuthorFollowing,
 } from '@/hooks'
 import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
@@ -146,7 +148,9 @@ function AuthorProfile({
                 )}
               </Button>
             )}
-            {canZap && <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} size="sm" />}
+            {canZap && (
+              <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} size="sm" />
+            )}
           </div>
         </div>
         {metadata?.about && (
@@ -214,11 +218,21 @@ export function AuthorPage() {
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)
 
   // Fetch liked/zapped video IDs for this author
-  const { eventIds: likedEventIds, isLoading: isLoadingLiked, count: likedCount } = useAuthorLikedVideos(pubkey)
+  const {
+    eventIds: likedEventIds,
+    isLoading: isLoadingLiked,
+    count: likedCount,
+  } = useAuthorLikedVideos(pubkey)
   const [likedVideos, setLikedVideos] = useState<any[]>([])
   const [loadingLikedVideos, setLoadingLikedVideos] = useState(false)
   const likedVideosLoadedRef = useRef(false)
   const blockedPubkeys = useReportedPubkeys()
+
+  // Fetch author's following list (kind 30000 nostube-follows)
+  const { followedPubkeys: authorFollowing, isLoading: isLoadingFollowing } = useAuthorFollowing(
+    pubkey,
+    relays
+  )
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -316,7 +330,10 @@ export function AuthorPage() {
       const missingIds = likedEventIds.filter(id => !eventStoreInstance.getEvent(id))
 
       if (missingIds.length > 0) {
-        const loader = createEventLoader(pool, { eventStore: eventStoreInstance, extraRelays: relays })
+        const loader = createEventLoader(pool, {
+          eventStore: eventStoreInstance,
+          extraRelays: relays,
+        })
 
         // Load in chunks
         const CHUNK_SIZE = 50
@@ -334,7 +351,9 @@ export function AuthorPage() {
       }
 
       // Get all events from store
-      const events = likedEventIds.map(id => eventStoreInstance.getEvent(id)).filter(Boolean) as any[]
+      const events = likedEventIds
+        .map(id => eventStoreInstance.getEvent(id))
+        .filter(Boolean) as any[]
 
       const processedVideos = processEvents(
         events,
@@ -352,7 +371,15 @@ export function AuthorPage() {
     } finally {
       setLoadingLikedVideos(false)
     }
-  }, [likedEventIds, eventStoreInstance, pool, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    likedEventIds,
+    eventStoreInstance,
+    pool,
+    relays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+  ])
 
   // Auto-fetch video events for all playlists when playlists are loaded
   useEffect(() => {
@@ -458,21 +485,6 @@ export function AuthorPage() {
                 {t('pages.author.loadingPlaylists')}
               </Button>
             )}
-            {likedCount > 0 && (
-              <Button
-                variant={activeTab === 'liked' ? 'default' : 'outline'}
-                size="sm"
-                className="shrink-0 rounded-full px-4"
-                onClick={async () => {
-                  setActiveTab('liked')
-                  if (!likedVideosLoadedRef.current) {
-                    await fetchLikedVideos()
-                  }
-                }}
-              >
-                {t('pages.author.liked', { count: likedCount })}
-              </Button>
-            )}
             {playlists
               .filter(playlist => playlist.videos && playlist.videos.length > 0)
               .sort((a, b) => b.videos.length - a.videos.length)
@@ -492,6 +504,31 @@ export function AuthorPage() {
                   {playlist.name}
                 </Button>
               ))}
+            {likedCount > 0 && (
+              <Button
+                variant={activeTab === 'liked' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={async () => {
+                  setActiveTab('liked')
+                  if (!likedVideosLoadedRef.current) {
+                    await fetchLikedVideos()
+                  }
+                }}
+              >
+                {t('pages.author.liked', { count: likedCount })}
+              </Button>
+            )}
+            {authorFollowing.length > 0 && (
+              <Button
+                variant={activeTab === 'following' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={() => setActiveTab('following')}
+              >
+                {t('pages.author.following', { count: authorFollowing.length })}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -580,6 +617,21 @@ export function AuthorPage() {
             </div>
           )
         })}
+
+        {activeTab === 'following' && (
+          <div className="mt-6">
+            <FollowingList
+              pubkeys={authorFollowing}
+              relays={relays}
+              isLoading={isLoadingFollowing}
+            />
+            {authorFollowing.length === 0 && !isLoadingFollowing && (
+              <div className="text-center py-12 text-muted-foreground">
+                {t('pages.author.noFollowing')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

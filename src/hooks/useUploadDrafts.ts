@@ -154,6 +154,7 @@ export function useUploadDrafts() {
       description: '',
       tags: [],
       language: 'en',
+      people: [],
       contentWarning: { enabled: false, reason: '' },
       expiration: 'none',
       inputMethod: 'file',

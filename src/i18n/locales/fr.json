@@ -291,6 +291,11 @@
       "1year": "1 an",
       "description": "Définissez quand cette vidéo doit expirer et être supprimée par les relais. Ce n'est pas une fonctionnalité de sécurité."
     },
+    "people": {
+      "label": "Identifier des personnes",
+      "description": "Ajoutez des contributeurs ou des personnes présentées dans cette vidéo",
+      "placeholder": "Rechercher des personnes..."
+    },
     "form": {
       "title": "Titre",
       "description": "Description",

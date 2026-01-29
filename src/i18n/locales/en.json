@@ -253,6 +253,11 @@
       "1year": "1 year",
       "description": "Set when this video should expire and be deleted by relays. This is not a security feature."
     },
+    "people": {
+      "label": "Tag People",
+      "description": "Add contributors, collaborators, or people featured in this video",
+      "placeholder": "Search for people..."
+    },
     "loginRequired": "Please log in to upload videos",
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",
     "useRecommended": "Use recommended servers",

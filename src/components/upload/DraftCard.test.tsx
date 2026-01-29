@@ -14,6 +14,7 @@ const mockDraft: UploadDraft = {
   description: 'Test description',
   tags: ['test'],
   language: 'en',
+  people: [],
   contentWarning: { enabled: false, reason: '' },
   expiration: 'none',
   inputMethod: 'file',

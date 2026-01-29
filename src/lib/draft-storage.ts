@@ -89,6 +89,7 @@ export function createEmptyDraft(): UploadDraft {
     description: '',
     tags: [],
     language: 'en',
+    people: [],
     contentWarning: { enabled: false, reason: '' },
     expiration: 'none',
     inputMethod: 'file',

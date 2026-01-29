@@ -16,6 +16,7 @@ import {
   DvmTranscodeAlert,
   EventPreview,
   SubtitleSection,
+  PeoplePickerSection,
 } from './video-upload'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
@@ -71,6 +72,8 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     setTags,
     language,
     setLanguage,
+    people,
+    setPeople,
     inputMethod,
     setInputMethod,
     videoUrl,
@@ -129,6 +132,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       description,
       tags,
       language,
+      people,
       inputMethod,
       videoUrl,
       uploadInfo,
@@ -160,6 +164,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     description,
     tags,
     language,
+    people,
     inputMethod,
     videoUrl,
     uploadInfo,
@@ -620,6 +625,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
             {currentStep === 5 && (
               <div className="space-y-6">
                 <PublishDateSection value={publishAt} onChange={setPublishAt} />
+                <PeoplePickerSection people={people} onPeopleChange={setPeople} />
                 <ContentWarning
                   enabled={contentWarningEnabled}
                   onEnabledChange={setContentWarningEnabled}

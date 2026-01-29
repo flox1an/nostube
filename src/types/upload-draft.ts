@@ -4,6 +4,16 @@ import type { BlobDescriptor } from 'blossom-client-sdk'
 import type { VideoVariant } from '@/lib/video-processing'
 
 /**
+ * A person tagged in the video (contributor, creator, etc.)
+ */
+export interface TaggedPerson {
+  pubkey: string
+  name: string
+  picture?: string
+  relays?: string[]
+}
+
+/**
  * Subtitle variant for VTT/SRT files
  */
 export interface SubtitleVariant {
@@ -43,6 +53,7 @@ export interface UploadDraft {
   description: string
   tags: string[]
   language: string
+  people: TaggedPerson[]
 
   // Content warning
   contentWarning: {

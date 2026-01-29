@@ -291,6 +291,11 @@
       "1year": "1 año",
       "description": "Establezca cuándo este video debe expirar y ser eliminado por los relays. Esta no es una función de seguridad."
     },
+    "people": {
+      "label": "Etiquetar personas",
+      "description": "Agregue colaboradores o personas que aparecen en este video",
+      "placeholder": "Buscar personas..."
+    },
     "form": {
       "title": "Título",
       "description": "Descripción",

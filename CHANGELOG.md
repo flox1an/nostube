@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload: redesigned thumbnail selection UI - replaced radio buttons with tabs for "Upload", "Enter URL", and "Generate from video"; options are hidden when a thumbnail is set, showing only the preview and a delete button; added support for importing thumbnails via URL
 - Relay URL sanitization: added `sanitizeRelayUrl` function to detect and filter out corrupted relay URLs that contain multiple concatenated URLs, URL-encoded spaces, or non-relay text; applied in both `processEvent` (video-event.ts) and `generateEventLink` (nostr.ts) to prevent malformed relay URLs from appearing in naddr/nevent identifiers
 - Upload: redesigned thumbnail frame selector with clearer UX - separated video scrubbing from thumbnail confirmation; users drag slider to browse frames while seeing real-time preview below the video, then click "Set as Thumbnail" button to confirm and upload; removed confusing mini overlay thumbnail and regenerate button; added helper text explaining the interaction; first frame is auto-uploaded as default thumbnail on video load
+- Upload: new `PeoplePicker` component for tagging people in videos - search for Nostr users with autocomplete (via Primal search), displays user avatars and display names, supports multiple selections with keyboard navigation; adds NIP-71 compliant 'p' tags to video events for contributor/collaborator attribution; available in step 5 of the upload wizard
 
 ### Changed
 

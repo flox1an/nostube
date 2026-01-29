@@ -9,7 +9,7 @@ import {
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
-import type { UploadDraft, SubtitleVariant } from '@/types/upload-draft'
+import type { UploadDraft, SubtitleVariant, TaggedPerson } from '@/types/upload-draft'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
@@ -22,6 +22,7 @@ interface BuildVideoEventParams {
   description: string
   tags: string[]
   language: string
+  people: TaggedPerson[]
   contentWarningEnabled: boolean
   contentWarningReason: string
   expiration: 'none' | '1day' | '7days' | '1month' | '1year'
@@ -57,6 +58,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     description,
     tags,
     language,
+    people,
     contentWarningEnabled,
     contentWarningReason,
     expiration,
@@ -192,6 +194,11 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
         : []),
       ...(getExpirationTimestamp() ? [['expiration', getExpirationTimestamp()!]] : []),
       ...tags.map(tag => ['t', tag]),
+      ...people.map(person =>
+        person.relays && person.relays.length > 0
+          ? ['p', person.pubkey, person.relays[0]]
+          : ['p', person.pubkey]
+      ),
       ['L', 'ISO-639-1'],
       ['l', language, 'ISO-639-1'],
       ['client', 'nostube'],
@@ -234,6 +241,7 @@ export function useVideoUpload(
     return [...new Set(draftTags)]
   })
   const [language, setLanguage] = useState(initialDraft?.language || 'en')
+  const [people, setPeople] = useState<TaggedPerson[]>(initialDraft?.people || [])
   const [inputMethod, setInputMethod] = useState<'file' | 'url'>(
     initialDraft?.inputMethod || 'file'
   )
@@ -885,6 +893,7 @@ export function useVideoUpload(
         description,
         tags,
         language,
+        people,
         contentWarningEnabled,
         contentWarningReason,
         expiration,
@@ -936,6 +945,7 @@ export function useVideoUpload(
         description,
         tags,
         language,
+        people,
         inputMethod,
         videoUrl,
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
@@ -950,6 +960,7 @@ export function useVideoUpload(
     description,
     tags,
     language,
+    people,
     inputMethod,
     videoUrl,
     contentWarningEnabled,
@@ -988,6 +999,7 @@ export function useVideoUpload(
       description,
       tags,
       language,
+      people,
       contentWarningEnabled,
       contentWarningReason,
       expiration,
@@ -1012,6 +1024,7 @@ export function useVideoUpload(
     description,
     tags,
     language,
+    people,
     contentWarningEnabled,
     contentWarningReason,
     expiration,
@@ -1034,6 +1047,8 @@ export function useVideoUpload(
     setTags,
     language,
     setLanguage,
+    people,
+    setPeople,
     inputMethod,
     setInputMethod,
     videoUrl,

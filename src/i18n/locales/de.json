@@ -291,6 +291,11 @@
       "1year": "1 Jahr",
       "description": "Lege fest, wann dieses Video ablaufen und von Relays gelöscht werden soll. Dies ist keine Sicherheitsfunktion."
     },
+    "people": {
+      "label": "Personen markieren",
+      "description": "Füge Mitwirkende oder im Video gezeigte Personen hinzu",
+      "placeholder": "Nach Personen suchen..."
+    },
     "form": {
       "title": "Titel",
       "description": "Beschreibung",

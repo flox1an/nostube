@@ -27,7 +27,8 @@
     "close": "Close",
     "selectAll": "Select All",
     "selectNone": "Select None",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "done": "Done"
   },
   "navigation": {
     "home": "Home",
@@ -537,14 +538,37 @@
   },
   "playlists": {
     "myPlaylists": "My Playlists",
+    "loginRequired": "Please log in to manage your playlists",
+    "edit": "Edit playlist",
+    "delete": "Delete playlist",
     "create": {
       "button": "Create Playlist",
       "title": "Create New Playlist",
       "description": "Enter a name and optional description for your new playlist.",
       "name": "Name",
+      "namePlaceholder": "My Playlist",
       "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "A collection of my favorite videos",
       "emptyNameError": "Playlist name cannot be empty.",
-      "successMessage": "Your new playlist has been created successfully."
+      "successMessage": "Your new playlist has been created successfully.",
+      "newPlaylist": "New Playlist"
+    },
+    "editDialog": {
+      "title": "Edit Playlist",
+      "description": "Change the name or description of your playlist."
+    },
+    "deleteConfirm": {
+      "title": "Delete Playlist",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete Playlist"
+    },
+    "emptyState": {
+      "helper": "Create your first playlist to organize videos"
+    },
+    "removeVideo": {
+      "title": "Remove Video",
+      "description": "Are you sure you want to remove this video from the playlist?",
+      "confirm": "Remove"
     },
     "failedVideos_one": "{{count}} video could not be loaded from any relay. It may have been deleted or is no longer available.",
     "failedVideos_other": "{{count}} videos could not be loaded from any relay. They may have been deleted or are no longer available."

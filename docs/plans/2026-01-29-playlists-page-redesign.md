@@ -12,14 +12,14 @@ Redesign the `/playlists` page from a dense accordion-based management interface
 
 ## Design Decisions
 
-| Decision | Choice |
-|----------|--------|
+| Decision         | Choice                                  |
+| ---------------- | --------------------------------------- |
 | Primary use case | Playlist management (CRUD on playlists) |
-| Card design | Thumbnail collage cover (1-4 videos) |
-| Layout | Responsive grid (2-4 columns) |
-| Card actions | Hover to reveal edit/delete |
-| Create action | "+" card in grid (no header button) |
-| Card click | Navigate to playlist detail page |
+| Card design      | Thumbnail collage cover (1-4 videos)    |
+| Layout           | Responsive grid (2-4 columns)           |
+| Card actions     | Hover to reveal edit/delete             |
+| Create action    | "+" card in grid (no header button)     |
+| Card click       | Navigate to playlist detail page        |
 
 ---
 
@@ -47,7 +47,9 @@ Redesign the `/playlists` page from a dense accordion-based management interface
 
 ```tsx
 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-  {playlists.map(playlist => <PlaylistCard key={playlist.identifier} />)}
+  {playlists.map(playlist => (
+    <PlaylistCard key={playlist.identifier} />
+  ))}
   <CreatePlaylistCard />
 </div>
 ```
@@ -55,6 +57,7 @@ Redesign the `/playlists` page from a dense accordion-based management interface
 ### Empty State
 
 When no playlists exist:
+
 - Shows only the "+" create card
 - Helper text below: "Create your first playlist to organize videos"
 
@@ -81,6 +84,7 @@ When no playlists exist:
 Based on video count:
 
 **0 videos:**
+
 ```
 ┌─────────────────┐
 │                 │
@@ -90,6 +94,7 @@ Based on video count:
 ```
 
 **1 video:**
+
 ```
 ┌─────────────────┐
 │                 │
@@ -99,6 +104,7 @@ Based on video count:
 ```
 
 **2 videos:**
+
 ```
 ┌────────┬────────┐
 │        │        │
@@ -108,6 +114,7 @@ Based on video count:
 ```
 
 **3 videos:**
+
 ```
 ┌────────┬────────┐
 │        │   2    │
@@ -117,6 +124,7 @@ Based on video count:
 ```
 
 **4+ videos:**
+
 ```
 ┌────────┬────────┐
 │   1    │   2    │
@@ -210,6 +218,7 @@ Using `@dnd-kit/core` and `@dnd-kit/sortable`:
 ```
 
 On drag end:
+
 1. Reorder video array locally
 2. Call `updatePlaylist` with new video order
 3. Publishes updated kind 30005 event
@@ -230,10 +239,10 @@ src/components/playlists/
 
 ### Modified Files
 
-| File | Changes |
-|------|---------|
-| `src/pages/Playlists.tsx` | Simplify to render PlaylistGrid |
-| `src/pages/SinglePlaylistPage.tsx` | Add edit mode, drag-drop, delete |
+| File                                 | Changes                             |
+| ------------------------------------ | ----------------------------------- |
+| `src/pages/Playlists.tsx`            | Simplify to render PlaylistGrid     |
+| `src/pages/SinglePlaylistPage.tsx`   | Add edit mode, drag-drop, delete    |
 | `src/components/PlaylistManager.tsx` | Delete (replaced by new components) |
 
 ### Reused Components
@@ -287,15 +296,15 @@ These are lightweight, accessible, and well-maintained.
 
 Using existing Tailwind classes for consistency:
 
-| Element | Classes |
-|---------|---------|
-| Card container | `rounded-lg overflow-hidden bg-card` |
-| Thumbnail area | `aspect-video relative` |
-| Hover overlay | `absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100` |
-| Action buttons | `p-1.5 rounded-full bg-black/60 hover:bg-black/80` |
-| Card title | `font-medium line-clamp-1` |
-| Video count | `text-sm text-muted-foreground` |
-| Dashed border | `border-2 border-dashed border-muted-foreground/30` |
+| Element        | Classes                                                          |
+| -------------- | ---------------------------------------------------------------- |
+| Card container | `rounded-lg overflow-hidden bg-card`                             |
+| Thumbnail area | `aspect-video relative`                                          |
+| Hover overlay  | `absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100` |
+| Action buttons | `p-1.5 rounded-full bg-black/60 hover:bg-black/80`               |
+| Card title     | `font-medium line-clamp-1`                                       |
+| Video count    | `text-sm text-muted-foreground`                                  |
+| Dashed border  | `border-2 border-dashed border-muted-foreground/30`              |
 
 ---
 

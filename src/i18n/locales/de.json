@@ -25,7 +25,10 @@
     "required": "Erforderlich",
     "available": "Verfügbar",
     "close": "Schließen",
-    "notSet": "Nicht gesetzt"
+    "notSet": "Nicht gesetzt",
+    "done": "Fertig",
+    "follow": "Folgen",
+    "following": "Gefolgt"
   },
   "navigation": {
     "home": "Startseite",
@@ -446,7 +449,10 @@
       "nsfwFilterDescription": "Steuere, wie NSFW (Not Safe For Work) Inhalte in der App angezeigt werden.",
       "language": "Sprache",
       "selectLanguage": "Sprache auswählen",
-      "languageDescription": "Wähle die Sprache für die Benutzeroberfläche."
+      "languageDescription": "Wähle die Sprache für die Benutzeroberfläche.",
+      "importFollows": "Abonnements importieren",
+      "importFollowsButton": "Von Nostr-Kontakten importieren ({{count}})",
+      "importFollowsDescription": "Importiere deine Nostr-Kontaktliste erneut. Nur Ersteller, die Videos veröffentlicht haben, werden zu deinen Nostube-Abonnements hinzugefügt."
     },
     "relays": {
       "title": "Relays",
@@ -573,6 +579,7 @@
       "joined": "Beigetreten {{date}}",
       "allVideos": "Alle Videos ({{count}})",
       "allShorts": "Alle Shorts ({{count}})",
+      "liked": "Gefällt mir ({{count}})",
       "loadingPlaylists": "Lädt Playlists...",
       "tags": "Tags",
       "noVideos": "Keine Videos gefunden.",
@@ -581,6 +588,7 @@
       "noShorts": "Keine Shorts gefunden.",
       "loadingMoreShorts": "Lädt mehr Shorts...",
       "noMoreShorts": "Keine weiteren Shorts zum Laden.",
+      "noLikedVideos": "Keine gelikten oder gezappten Videos gefunden.",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen"
     },
@@ -691,7 +699,13 @@
       "count": "{{count}} Folge-Kontakte bereit zum Importieren",
       "import": "Folge-Liste importieren",
       "skip": "Vorerst überspringen",
-      "success": "Folge-Liste erfolgreich importiert!"
+      "success": "Folge-Liste erfolgreich importiert!",
+      "successWithCount": "{{count}} Ersteller mit Videos importiert!",
+      "noVideosFound": "Keine Ersteller mit Videos in Ihrer Folgeliste gefunden.",
+      "checking": "Suche nach Video-Erstellern...",
+      "importing": "Importiere Folgeliste...",
+      "foundWithVideos": "{{count}} Ersteller mit Videos gefunden",
+      "onlyWithVideos": "Nur Ersteller, die Videos veröffentlicht haben, werden importiert"
     },
     "blossom": {
       "title": "Upload-Server konfigurieren",

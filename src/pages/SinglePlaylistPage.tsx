@@ -286,18 +286,20 @@ export default function SinglePlaylistPage() {
             </Button>
           )}
 
-          <Link
-            to={buildProfileUrlFromPubkey(playlistEvent.pubkey, readRelays)}
-            className="flex flex-row gap-2 items-center"
-          >
-            <UserAvatar
-              picture={metadata?.picture}
-              pubkey={playlistEvent.pubkey}
-              name={name}
-              className="h-10 w-10"
-            />
-            {name}
-          </Link>
+          {!isOwner && (
+            <Link
+              to={buildProfileUrlFromPubkey(playlistEvent.pubkey, readRelays)}
+              className="flex flex-row gap-2 items-center"
+            >
+              <UserAvatar
+                picture={metadata?.picture}
+                pubkey={playlistEvent.pubkey}
+                name={name}
+                className="h-10 w-10"
+              />
+              {name}
+            </Link>
+          )}
         </div>
       </div>
 

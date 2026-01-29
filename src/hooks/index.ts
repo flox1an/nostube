@@ -37,6 +37,7 @@ export { useFollowedAuthors } from './useFollowedAuthors'
 export { useFollowSet } from './useFollowSet'
 export { useReactions } from './useReactions'
 export { useLikedEvents } from './useLikedEvents'
+export { useAuthorLikedVideos } from './useAuthorLikedVideos'
 export { useCommentCount } from './useCommentCount'
 export { useReportedPubkeys } from './useReportedPubkeys'
 export type { ReportedPubkeys } from './useReportedPubkeys'
@@ -83,6 +84,7 @@ export { usePlaylistNavigation } from './usePlaylistNavigation'
 export { useWallet } from './useWallet'
 export { useZap } from './useZap'
 export { useEventZaps, useVideoZaps } from './useEventZaps'
+export { useZappedEvents } from './useZappedEvents'
 
 // ============================================================================
 // UPLOAD & TRANSCODING

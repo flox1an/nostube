@@ -25,7 +25,10 @@
     "required": "Obligatoire",
     "available": "Disponible",
     "close": "Fermer",
-    "notSet": "Non défini"
+    "notSet": "Non défini",
+    "done": "Terminé",
+    "follow": "Suivre",
+    "following": "Abonné"
   },
   "navigation": {
     "home": "Accueil",
@@ -445,7 +448,10 @@
       "nsfwFilterDescription": "Contrôlez comment le contenu NSFW (Not Safe For Work) est affiché dans l'application.",
       "language": "Langue",
       "selectLanguage": "Sélectionner la langue",
-      "languageDescription": "Choisissez la langue de l'interface utilisateur."
+      "languageDescription": "Choisissez la langue de l'interface utilisateur.",
+      "importFollows": "Importer les abonnements",
+      "importFollowsButton": "Importer depuis les contacts Nostr ({{count}})",
+      "importFollowsDescription": "Réimportez votre liste de contacts Nostr. Seuls les créateurs ayant publié des vidéos seront ajoutés à vos abonnements Nostube."
     },
     "relays": {
       "title": "Relais",
@@ -572,6 +578,7 @@
       "joined": "Inscrit le {{date}}",
       "allVideos": "Toutes les vidéos ({{count}})",
       "allShorts": "Tous les shorts ({{count}})",
+      "liked": "Aimés ({{count}})",
       "loadingPlaylists": "Chargement des listes de lecture...",
       "tags": "Tags",
       "noVideos": "Aucune vidéo trouvée.",
@@ -580,6 +587,7 @@
       "noShorts": "Aucun short trouvé.",
       "loadingMoreShorts": "Chargement de plus de shorts...",
       "noMoreShorts": "Plus de shorts à charger.",
+      "noLikedVideos": "Aucune vidéo aimée ou zappée trouvée.",
       "showMore": "Afficher plus",
       "showLess": "Afficher moins"
     },
@@ -690,7 +698,13 @@
       "count": "{{count}} abonnements prêts à être importés",
       "import": "Importer les abonnements",
       "skip": "Ignorer pour l'instant",
-      "success": "Abonnements importés avec succès !"
+      "success": "Abonnements importés avec succès !",
+      "successWithCount": "{{count}} créateurs avec des vidéos importés !",
+      "noVideosFound": "Aucun créateur avec des vidéos trouvé dans votre liste d'abonnements.",
+      "checking": "Recherche de créateurs de vidéos...",
+      "importing": "Importation des abonnements...",
+      "foundWithVideos": "{{count}} créateurs avec des vidéos trouvés",
+      "onlyWithVideos": "Seuls les créateurs ayant publié des vidéos seront importés"
     },
     "blossom": {
       "title": "Configurer les serveurs de téléchargement",

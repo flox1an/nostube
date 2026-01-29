@@ -1,5 +1,5 @@
 import { VideoGrid } from '@/components/VideoGrid'
-import { useAppContext, useLikedEvents, useReadRelays, useReportedPubkeys } from '@/hooks'
+import { useAppContext, useLikedEvents, useZappedEvents, useReadRelays, useReportedPubkeys } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -10,13 +10,14 @@ import { useTranslation } from 'react-i18next'
 export function LikedVideosPage() {
   const { t } = useTranslation()
   const { data: likedEventIds = [], isLoading: isLoadingReactions } = useLikedEvents()
+  const { data: zappedEventIds = [], isLoading: isLoadingZaps } = useZappedEvents()
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
   const blockedPubkeys = useReportedPubkeys()
   const { presetContent } = useSelectedPreset()
   const [loadingVideos, setLoadingVideos] = useState(false)
   const loadingRef = useRef(false)
-  const likedIdsStringRef = useRef<string>('')
+  const combinedIdsStringRef = useRef<string>('')
   const [, forceUpdate] = useState(0)
 
   const readRelays = useReadRelays()
@@ -28,22 +29,35 @@ export function LikedVideosPage() {
     }
   }, [t])
 
-  // Convert likedEventIds to string for stable comparison
-  // Note: Don't sort here - the order is already sorted by date from useLikedEvents
-  const likedIdsString = useMemo(() => {
-    return likedEventIds.join(',')
-  }, [likedEventIds])
+  // Combine liked and zapped event IDs, removing duplicates
+  // Both arrays are already sorted by date, so we merge and dedupe
+  const combinedEventIds = useMemo(() => {
+    const seen = new Set<string>()
+    const combined: string[] = []
+
+    // Interleave liked and zapped, keeping rough date order
+    // Since both are sorted by date desc, we can just concat and dedupe
+    for (const id of [...likedEventIds, ...zappedEventIds]) {
+      if (!seen.has(id)) {
+        seen.add(id)
+        combined.push(id)
+      }
+    }
+    return combined
+  }, [likedEventIds, zappedEventIds])
+
+  // Convert combinedEventIds to string for stable comparison
+  const combinedIdsString = useMemo(() => {
+    return combinedEventIds.join(',')
+  }, [combinedEventIds])
 
   // Get video events directly from EventStore by IDs
-  // Recalculate when likedIdsString changes or when we finish loading (via forceUpdate state)
+  // Recalculate when combinedIdsString changes or when we finish loading (via forceUpdate state)
   const videos = useMemo(() => {
-    if (likedEventIds.length === 0) return []
-
-    // Deduplicate liked event IDs (safety check in case duplicates slip through)
-    const uniqueLikedIds = Array.from(new Set(likedEventIds))
+    if (combinedEventIds.length === 0) return []
 
     // Get events directly from EventStore
-    const events = uniqueLikedIds.map(id => eventStore.getEvent(id)).filter(Boolean)
+    const events = combinedEventIds.map(id => eventStore.getEvent(id)).filter(Boolean)
 
     const processed = processEvents(
       events,
@@ -64,7 +78,7 @@ export function LikedVideosPage() {
       return true
     })
   }, [
-    likedIdsString,
+    combinedIdsString,
     forceUpdate,
     eventStore,
     readRelays,
@@ -75,18 +89,18 @@ export function LikedVideosPage() {
 
   // Load missing video events from relays
   useEffect(() => {
-    // Reset loading state when liked IDs change
-    if (likedIdsString !== likedIdsStringRef.current) {
-      likedIdsStringRef.current = likedIdsString
+    // Reset loading state when combined IDs change
+    if (combinedIdsString !== combinedIdsStringRef.current) {
+      combinedIdsStringRef.current = combinedIdsString
       loadingRef.current = false
       setLoadingVideos(false)
     }
 
     // Only proceed if IDs changed or if we're not already loading
-    if (likedEventIds.length === 0 || loadingRef.current) return
+    if (combinedEventIds.length === 0 || loadingRef.current) return
 
     // Find missing event IDs (only check EventStore)
-    const missingIds = likedEventIds.filter(id => !eventStore.getEvent(id))
+    const missingIds = combinedEventIds.filter(id => !eventStore.getEvent(id))
 
     if (missingIds.length === 0) {
       setLoadingVideos(false)
@@ -147,11 +161,11 @@ export function LikedVideosPage() {
       subscriptions.forEach(sub => sub.unsubscribe())
       loadingRef.current = false
     }
-    // Only depend on the stable string, but use likedEventIds inside the effect
+    // Only depend on the stable string, but use combinedEventIds inside the effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [likedIdsString, eventStore, pool])
+  }, [combinedIdsString, eventStore, pool])
 
-  const isLoading = isLoadingReactions || loadingVideos
+  const isLoading = isLoadingReactions || isLoadingZaps || loadingVideos
 
   return (
     <div className="max-w-560 mx-auto sm:p-4">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
@@ -8,6 +8,7 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
+import { Plus, Minus } from 'lucide-react'
 import {
   useProfile,
   useUserPlaylists,
@@ -16,6 +17,10 @@ import {
   useInfiniteScroll,
   useAuthorPageRelays,
   useCurrentUser,
+  useFollowSet,
+  useUserRelays,
+  useAuthorLikedVideos,
+  useReportedPubkeys,
 } from '@/hooks'
 import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
@@ -26,7 +31,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { useTranslation } from 'react-i18next'
 
-type Tabs = 'videos' | 'shorts' | 'tags' | string
+type Tabs = 'videos' | 'shorts' | string
 
 function AuthorBanner({ pubkey }: { pubkey: string }) {
   const metadata = useProfile({ pubkey })
@@ -73,6 +78,23 @@ function AuthorProfile({
   const isOwnProfile = user?.pubkey === pubkey
   const canZap = !isOwnProfile && hasLightningAddress(metadata)
 
+  // Follow state
+  const { followedPubkeys, addFollow, removeFollow, isLoading: isFollowLoading } = useFollowSet()
+  const isFollowing = followedPubkeys.includes(pubkey)
+  const canFollow = !!user && !isOwnProfile
+
+  // Get author's outbox relays for relay hint
+  const { data: authorRelays } = useUserRelays(pubkey)
+  const outboxRelay = authorRelays.find(r => r.write)?.url
+
+  const handleFollowClick = async () => {
+    if (isFollowing) {
+      await removeFollow(pubkey)
+    } else {
+      await addFollow(pubkey, outboxRelay)
+    }
+  }
+
   // Check if about text is clamped (overflows 3 lines)
   useEffect(() => {
     const el = aboutRef.current
@@ -85,7 +107,7 @@ function AuthorProfile({
     <div
       className={cn(
         'flex items-start space-x-4 relative',
-        hasBanner && '-mt-10 sm:-mt-12',
+        hasBanner && 'ml-6 -mt-10 sm:-mt-12',
         className
       )}
     >
@@ -103,7 +125,29 @@ function AuthorProfile({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
-          {canZap && <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} />}
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+            {canFollow && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleFollowClick}
+                disabled={isFollowLoading}
+              >
+                {isFollowing ? (
+                  <>
+                    <Minus className="h-4 w-4 mr-1" />
+                    {t('common.following')}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t('common.follow')}
+                  </>
+                )}
+              </Button>
+            )}
+            {canZap && <ZapButton authorPubkey={pubkey} layout="inline" showZapText={true} size="sm" />}
+          </div>
         </div>
         {metadata?.about && (
           <div className="mt-1">
@@ -168,6 +212,13 @@ export function AuthorPage() {
 
   // Fetch playlists and videos for this author using the reactive relay set
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)
+
+  // Fetch liked/zapped video IDs for this author
+  const { eventIds: likedEventIds, isLoading: isLoadingLiked, count: likedCount } = useAuthorLikedVideos(pubkey)
+  const [likedVideos, setLikedVideos] = useState<any[]>([])
+  const [loadingLikedVideos, setLoadingLikedVideos] = useState(false)
+  const likedVideosLoadedRef = useRef(false)
+  const blockedPubkeys = useReportedPubkeys()
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
@@ -252,6 +303,57 @@ export function AuthorPage() {
     [config, pool, eventStoreInstance, relays, presetContent.nsfwPubkeys]
   )
 
+  // Helper to fetch liked/zapped video events
+  const fetchLikedVideos = useCallback(async () => {
+    if (likedEventIds.length === 0 || likedVideosLoadedRef.current) return
+    setLoadingLikedVideos(true)
+
+    try {
+      const { createEventLoader } = await import('applesauce-loaders/loaders')
+      const { processEvents } = await import('@/utils/video-event')
+
+      // Check which events are missing from store
+      const missingIds = likedEventIds.filter(id => !eventStoreInstance.getEvent(id))
+
+      if (missingIds.length > 0) {
+        const loader = createEventLoader(pool, { eventStore: eventStoreInstance, extraRelays: relays })
+
+        // Load in chunks
+        const CHUNK_SIZE = 50
+        for (let i = 0; i < missingIds.length; i += CHUNK_SIZE) {
+          const chunk = missingIds.slice(i, i + CHUNK_SIZE)
+          await Promise.all(
+            chunk.map(id =>
+              loader({ id })
+                .toPromise()
+                .then(e => e && eventStoreInstance.add(e))
+                .catch(() => {})
+            )
+          )
+        }
+      }
+
+      // Get all events from store
+      const events = likedEventIds.map(id => eventStoreInstance.getEvent(id)).filter(Boolean) as any[]
+
+      const processedVideos = processEvents(
+        events,
+        relays,
+        blockedPubkeys,
+        config.blossomServers,
+        undefined,
+        presetContent.nsfwPubkeys
+      )
+
+      setLikedVideos(processedVideos)
+      likedVideosLoadedRef.current = true
+    } catch (error) {
+      console.error('Failed to fetch liked videos:', error)
+    } finally {
+      setLoadingLikedVideos(false)
+    }
+  }, [likedEventIds, eventStoreInstance, pool, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+
   // Auto-fetch video events for all playlists when playlists are loaded
   useEffect(() => {
     // Only start fetching videos after playlists have finished loading
@@ -278,15 +380,6 @@ export function AuthorPage() {
     loading,
     exhausted,
   })
-
-  // Get unique tags from all videos
-  const uniqueTags = useMemo(
-    () =>
-      Array.from(new Set(allVideos.flatMap(video => video.tags)))
-        .filter(Boolean)
-        .sort(),
-    [allVideos]
-  )
 
   const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos])
 
@@ -365,30 +458,40 @@ export function AuthorPage() {
                 {t('pages.author.loadingPlaylists')}
               </Button>
             )}
-            {playlists.map(playlist => (
+            {likedCount > 0 && (
               <Button
-                key={playlist.identifier}
-                variant={activeTab === playlist.identifier ? 'default' : 'outline'}
+                variant={activeTab === 'liked' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
                 onClick={async () => {
-                  setActiveTab(playlist.identifier)
-                  if (!playlistVideos[playlist.identifier]) {
-                    await fetchPlaylistVideos(playlist)
+                  setActiveTab('liked')
+                  if (!likedVideosLoadedRef.current) {
+                    await fetchLikedVideos()
                   }
                 }}
               >
-                {playlist.name}
+                {t('pages.author.liked', { count: likedCount })}
               </Button>
-            ))}
-            <Button
-              variant={activeTab === 'tags' ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4"
-              onClick={() => setActiveTab('tags')}
-            >
-              {t('pages.author.tags')}
-            </Button>
+            )}
+            {playlists
+              .filter(playlist => playlist.videos && playlist.videos.length > 0)
+              .sort((a, b) => b.videos.length - a.videos.length)
+              .map(playlist => (
+                <Button
+                  key={playlist.identifier}
+                  variant={activeTab === playlist.identifier ? 'default' : 'outline'}
+                  size="sm"
+                  className="shrink-0 rounded-full px-4"
+                  onClick={async () => {
+                    setActiveTab(playlist.identifier)
+                    if (!playlistVideos[playlist.identifier]) {
+                      await fetchPlaylistVideos(playlist)
+                    }
+                  }}
+                >
+                  {playlist.name}
+                </Button>
+              ))}
           </div>
         </div>
 
@@ -430,6 +533,22 @@ export function AuthorPage() {
           </div>
         )}
 
+        {activeTab === 'liked' && (
+          <div className="mt-6">
+            <VideoGrid
+              videos={likedVideos}
+              isLoading={loadingLikedVideos || isLoadingLiked}
+              showSkeletons={true}
+              layoutMode="auto"
+            />
+            {likedVideos.length === 0 && !loadingLikedVideos && !isLoadingLiked && (
+              <div className="text-center py-12 text-muted-foreground">
+                {t('pages.author.noLikedVideos')}
+              </div>
+            )}
+          </div>
+        )}
+
         {playlists.map(playlist => {
           if (activeTab !== playlist.identifier) return null
 
@@ -461,20 +580,6 @@ export function AuthorPage() {
             </div>
           )
         })}
-
-        {activeTab === 'tags' && (
-          <div className="mt-6">
-            <div className="flex flex-wrap gap-2">
-              {uniqueTags.map(tag => (
-                <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                  <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm cursor-pointer hover:bg-muted/80 transition-colors">
-                    #{tag}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

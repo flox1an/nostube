@@ -28,7 +28,9 @@
     "selectAll": "Select All",
     "selectNone": "Select None",
     "notSet": "Not set",
-    "done": "Done"
+    "done": "Done",
+    "follow": "Follow",
+    "following": "Following"
   },
   "navigation": {
     "home": "Home",
@@ -461,7 +463,10 @@
       "selectLanguage": "Select language",
       "languageDescription": "Choose the language for the user interface.",
       "hoverPreview": "Hover Previews",
-      "hoverPreviewDescription": "Enable muted video playback when hovering over video thumbnails."
+      "hoverPreviewDescription": "Enable muted video playback when hovering over video thumbnails.",
+      "importFollows": "Import Subscriptions",
+      "importFollowsButton": "Import from Nostr contacts ({{count}})",
+      "importFollowsDescription": "Re-import your Nostr contact list. Only creators who have posted videos will be added to your Nostube subscriptions."
     },
     "relays": {
       "title": "Relays",
@@ -611,6 +616,7 @@
       "joined": "Joined {{date}}",
       "allVideos": "All videos ({{count}})",
       "allShorts": "All shorts ({{count}})",
+      "liked": "Liked ({{count}})",
       "loadingPlaylists": "Loading playlists...",
       "tags": "Tags",
       "noVideos": "No videos found.",
@@ -619,6 +625,7 @@
       "noShorts": "No shorts found.",
       "loadingMoreShorts": "Loading more shorts...",
       "noMoreShorts": "No more shorts to load.",
+      "noLikedVideos": "No liked or zapped videos found.",
       "showMore": "Show more",
       "showLess": "Show less"
     },
@@ -729,7 +736,13 @@
       "count": "{{count}} follows ready to import",
       "import": "Import Follows",
       "skip": "Skip for Now",
-      "success": "Follows imported successfully!"
+      "success": "Follows imported successfully!",
+      "successWithCount": "Imported {{count}} creators with videos!",
+      "noVideosFound": "No creators with videos found in your follow list.",
+      "checking": "Checking for video creators...",
+      "importing": "Importing follows...",
+      "foundWithVideos": "Found {{count}} creators with videos",
+      "onlyWithVideos": "Only creators who have posted videos will be imported"
     },
     "blossom": {
       "title": "Configure Upload Servers",

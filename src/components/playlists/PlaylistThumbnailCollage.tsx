@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
+import { useMemo, useState, useEffect } from 'react'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { List } from 'lucide-react'
 import { cn, imageProxyVideoPreview } from '@/lib/utils'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useStableRelays } from '@/hooks'
 import { processEvent } from '@/utils/video-event'
+import { createEventLoader } from 'applesauce-loaders/loaders'
 
 interface ThumbnailItemProps {
   videoId: string
@@ -12,15 +13,31 @@ interface ThumbnailItemProps {
 
 function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
   const eventStore = useEventStore()
-  const { config } = useAppContext()
+  const { config, pool } = useAppContext()
+  const relays = useStableRelays()
   const [error, setError] = useState(false)
 
+  // Subscribe to event changes reactively
+  const event = use$(() => eventStore.event(videoId), [eventStore, videoId])
+
+  // Load event if not in store
+  useEffect(() => {
+    if (!videoId || eventStore.getEvent(videoId)) return
+
+    const loader = createEventLoader(pool, { eventStore, extraRelays: relays })
+    const sub = loader({ id: videoId }).subscribe({
+      next: e => eventStore.add(e),
+      error: () => {}, // Ignore errors silently
+    })
+
+    return () => sub.unsubscribe()
+  }, [videoId, eventStore, pool, relays])
+
   const thumbnailUrl = useMemo(() => {
-    const event = eventStore.getEvent(videoId)
     if (!event) return null
     const processed = processEvent(event, [], config.blossomServers)
     return processed?.images?.[0] || null
-  }, [eventStore, videoId, config.blossomServers])
+  }, [event, config.blossomServers])
 
   if (!thumbnailUrl || error) {
     return (

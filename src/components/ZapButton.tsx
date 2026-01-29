@@ -16,6 +16,7 @@ interface ZapButtonProps {
   currentTime?: number // Current video playback position (for timestamped zaps)
   identifier?: string // d-tag for addressable events (kinds 34235, 34236)
   showZapText?: boolean // Show "zap" text instead of amount
+  size?: 'default' | 'sm' | 'lg' | 'icon' // Button size for inline layout
 }
 
 const LONG_PRESS_DELAY = 500
@@ -29,6 +30,7 @@ export const ZapButton = memo(function ZapButton({
   currentTime,
   identifier,
   showZapText = false,
+  size,
 }: ZapButtonProps) {
   const [showZapDialog, setShowZapDialog] = useState(false)
   const [capturedTimestamp, setCapturedTimestamp] = useState<number | undefined>(undefined)
@@ -133,6 +135,7 @@ export const ZapButton = memo(function ZapButton({
             <TooltipTrigger asChild>
               <Button
                 variant="secondary"
+                size={size}
                 className={cn(className)}
                 onClick={handleQuickZap}
                 onPointerDown={handlePointerDown}

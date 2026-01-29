@@ -1,4 +1,5 @@
-import { useAppContext, useSelectedPreset } from '@/hooks'
+import { useState } from 'react'
+import { useAppContext, useSelectedPreset, useFollowSet, useCurrentUser } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -13,13 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import { useTranslation } from 'react-i18next'
+import { Download, CheckCircle2, X } from 'lucide-react'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
   const { t, i18n } = useTranslation()
+  const { user } = useCurrentUser()
+  const { hasKind3Contacts, kind3PubkeyCount, importFromKind3, importProgress, cancelImport } =
+    useFollowSet()
+  const [isImporting, setIsImporting] = useState(false)
+  const [importDone, setImportDone] = useState(false)
 
   const handleThumbServerChange = (value: string) => {
     updateConfig(currentConfig => ({
@@ -153,6 +162,80 @@ export function GeneralSettingsSection() {
           {t('settings.general.nsfwFilterDescription')}
         </p>
       </div>
+
+      {/* Import Follows from Nostr Contacts */}
+      {user && hasKind3Contacts && (
+        <div className="space-y-3">
+          <Label>{t('settings.general.importFollows')}</Label>
+          {importDone && importProgress.phase === 'done' ? (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              {importProgress.withVideos > 0
+                ? t('onboarding.followImport.successWithCount', { count: importProgress.withVideos })
+                : t('onboarding.followImport.noVideosFound')}
+            </div>
+          ) : isImporting ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  {importProgress.phase === 'checking'
+                    ? t('onboarding.followImport.checking')
+                    : t('onboarding.followImport.importing')}
+                </span>
+                <span>
+                  {importProgress.checked}/{importProgress.total}
+                </span>
+              </div>
+              <Progress
+                value={
+                  importProgress.total > 0
+                    ? Math.round((importProgress.checked / importProgress.total) * 100)
+                    : 0
+                }
+                className="h-2"
+              />
+              {importProgress.withVideos > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {t('onboarding.followImport.foundWithVideos', { count: importProgress.withVideos })}
+                </p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  cancelImport()
+                  setIsImporting(false)
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t('common.cancel')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setIsImporting(true)
+                  setImportDone(false)
+                  try {
+                    await importFromKind3()
+                    setImportDone(true)
+                  } finally {
+                    setIsImporting(false)
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t('settings.general.importFollowsButton', { count: kind3PubkeyCount })}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.general.importFollowsDescription')}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

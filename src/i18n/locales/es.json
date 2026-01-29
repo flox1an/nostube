@@ -25,7 +25,10 @@
     "required": "Requerido",
     "available": "Disponible",
     "close": "Cerrar",
-    "notSet": "No establecido"
+    "notSet": "No establecido",
+    "done": "Listo",
+    "follow": "Seguir",
+    "following": "Siguiendo"
   },
   "navigation": {
     "home": "Inicio",
@@ -446,7 +449,10 @@
       "nsfwFilterDescription": "Controle cómo se muestra el contenido NSFW (No Apto Para el Trabajo) en la aplicación.",
       "language": "Idioma",
       "selectLanguage": "Seleccionar idioma",
-      "languageDescription": "Elija el idioma para la interfaz de usuario."
+      "languageDescription": "Elija el idioma para la interfaz de usuario.",
+      "importFollows": "Importar suscripciones",
+      "importFollowsButton": "Importar desde contactos de Nostr ({{count}})",
+      "importFollowsDescription": "Vuelva a importar su lista de contactos de Nostr. Solo los creadores que hayan publicado videos se agregarán a sus suscripciones de Nostube."
     },
     "relays": {
       "title": "Relays",
@@ -573,6 +579,7 @@
       "joined": "Se unió {{date}}",
       "allVideos": "Todos los videos ({{count}})",
       "allShorts": "Todos los shorts ({{count}})",
+      "liked": "Me gusta ({{count}})",
       "loadingPlaylists": "Cargando listas de reproducción...",
       "tags": "Etiquetas",
       "noVideos": "No se encontraron videos.",
@@ -581,6 +588,7 @@
       "noShorts": "No se encontraron shorts.",
       "loadingMoreShorts": "Cargando más shorts...",
       "noMoreShorts": "No hay más shorts para cargar.",
+      "noLikedVideos": "No se encontraron videos con me gusta o zapeados.",
       "showMore": "Mostrar más",
       "showLess": "Mostrar menos"
     },
@@ -691,7 +699,13 @@
       "count": "{{count}} seguidos listos para importar",
       "import": "Importar Seguidos",
       "skip": "Omitir por Ahora",
-      "success": "¡Seguidos importados exitosamente!"
+      "success": "¡Seguidos importados exitosamente!",
+      "successWithCount": "¡{{count}} creadores con videos importados!",
+      "noVideosFound": "No se encontraron creadores con videos en tu lista de seguidos.",
+      "checking": "Buscando creadores de videos...",
+      "importing": "Importando seguidos...",
+      "foundWithVideos": "{{count}} creadores con videos encontrados",
+      "onlyWithVideos": "Solo se importarán los creadores que hayan publicado videos"
     },
     "blossom": {
       "title": "Configurar servidores de carga",

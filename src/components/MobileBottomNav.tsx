@@ -2,10 +2,12 @@ import { Home, Play, Users, ListVideo } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks'
 
 export function MobileBottomNav() {
   const { t } = useTranslation()
   const location = useLocation()
+  const { user } = useCurrentUser()
 
   const navItems = [
     {
@@ -18,16 +20,21 @@ export function MobileBottomNav() {
       icon: Play,
       href: '/shorts',
     },
-    {
-      label: t('navigation.subscriptions'),
-      icon: Users,
-      href: '/subscriptions',
-    },
-    {
-      label: t('navigation.playlists'),
-      icon: ListVideo,
-      href: '/playlists',
-    },
+    // Only show Subscriptions and Playlists when logged in
+    ...(user
+      ? [
+          {
+            label: t('navigation.subscriptions'),
+            icon: Users,
+            href: '/subscriptions',
+          },
+          {
+            label: t('navigation.playlists'),
+            icon: ListVideo,
+            href: '/playlists',
+          },
+        ]
+      : []),
   ]
 
   return (

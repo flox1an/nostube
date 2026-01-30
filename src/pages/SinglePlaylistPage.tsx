@@ -27,6 +27,13 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,7 +46,9 @@ import {
 
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile, useCurrentUser, usePlaylists } from '@/hooks'
-import type { VideoEvent } from '@/utils/video-event'
+import { type VideoEvent, getPublishDate } from '@/utils/video-event'
+
+type SortOrder = 'playlist' | 'published_at' | 'created_at'
 
 interface SortableVideoCardProps {
   video: VideoEvent
@@ -114,6 +123,7 @@ export default function SinglePlaylistPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [removingVideoId, setRemovingVideoId] = useState<string | null>(null)
   const [videoToRemove, setVideoToRemove] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<SortOrder>('playlist')
 
   const metadata = useProfile(playlistEvent?.pubkey ? { pubkey: playlistEvent.pubkey } : undefined)
   const name =
@@ -148,6 +158,21 @@ export default function SinglePlaylistPage() {
       .map(id => videoEventMap.get(id))
       .filter((v): v is VideoEvent => v !== undefined)
   }, [orderedVideoIds, videoEventMap])
+
+  // Get sorted video events based on sortOrder
+  const sortedVideoEvents = useMemo(() => {
+    if (sortOrder === 'playlist') {
+      return orderedVideoEvents
+    }
+
+    const sorted = [...orderedVideoEvents]
+    if (sortOrder === 'published_at') {
+      sorted.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    } else if (sortOrder === 'created_at') {
+      sorted.sort((a, b) => b.created_at - a.created_at)
+    }
+    return sorted
+  }, [orderedVideoEvents, sortOrder])
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -270,6 +295,19 @@ export default function SinglePlaylistPage() {
         </div>
 
         <div className="shrink-0 flex flex-row gap-2 items-center">
+          {!isEditMode && (
+            <Select value={sortOrder} onValueChange={v => setSortOrder(v as SortOrder)}>
+              <SelectTrigger className="h-9 w-[180px] text-sm">
+                <SelectValue placeholder={t('playlists.sortOrder.label')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="playlist">{t('playlists.sortOrder.playlistOrder')}</SelectItem>
+                <SelectItem value="published_at">{t('playlists.sortOrder.publishDate')}</SelectItem>
+                <SelectItem value="created_at">{t('playlists.sortOrder.lastChanged')}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
           {isOwner && (
             <Button
               variant={isEditMode ? 'default' : 'outline'}
@@ -321,7 +359,7 @@ export default function SinglePlaylistPage() {
         </DndContext>
       ) : (
         <VideoGrid
-          videos={orderedVideoEvents.length > 0 ? orderedVideoEvents : videoEvents}
+          videos={sortedVideoEvents.length > 0 ? sortedVideoEvents : videoEvents}
           isLoading={isLoadingVideos || loadingVideoIds.size > 0}
           playlistParam={nip19param}
         />

@@ -546,6 +546,12 @@
     "loginRequired": "Please log in to manage your playlists",
     "edit": "Edit playlist",
     "delete": "Delete playlist",
+    "sortOrder": {
+      "label": "Sort by",
+      "playlistOrder": "Playlist order",
+      "publishDate": "Publish date",
+      "lastChanged": "Last changed"
+    },
     "create": {
       "button": "Create Playlist",
       "title": "Create New Playlist",

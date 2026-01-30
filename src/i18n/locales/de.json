@@ -529,6 +529,12 @@
   },
   "playlists": {
     "myPlaylists": "Meine Playlists",
+    "sortOrder": {
+      "label": "Sortieren nach",
+      "playlistOrder": "Playlist-Reihenfolge",
+      "publishDate": "Veröffentlichungsdatum",
+      "lastChanged": "Zuletzt geändert"
+    },
     "create": {
       "button": "Playlist erstellen",
       "title": "Neue Playlist erstellen",

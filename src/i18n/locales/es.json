@@ -529,6 +529,12 @@
   },
   "playlists": {
     "myPlaylists": "Mis Listas de Reproducción",
+    "sortOrder": {
+      "label": "Ordenar por",
+      "playlistOrder": "Orden de la lista",
+      "publishDate": "Fecha de publicación",
+      "lastChanged": "Última modificación"
+    },
     "create": {
       "button": "Crear Lista de Reproducción",
       "title": "Crear Nueva Lista de Reproducción",

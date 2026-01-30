@@ -528,6 +528,12 @@
   },
   "playlists": {
     "myPlaylists": "Mes listes de lecture",
+    "sortOrder": {
+      "label": "Trier par",
+      "playlistOrder": "Ordre de la liste",
+      "publishDate": "Date de publication",
+      "lastChanged": "Dernière modification"
+    },
     "create": {
       "button": "Créer une liste de lecture",
       "title": "Créer une nouvelle liste de lecture",

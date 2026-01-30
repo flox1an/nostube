@@ -78,7 +78,7 @@ function AuthorProfile({
   const aboutRef = useRef<HTMLDivElement>(null)
 
   const isOwnProfile = user?.pubkey === pubkey
-  const canZap = !isOwnProfile && hasLightningAddress(metadata)
+  const canZap = !!user && !isOwnProfile && hasLightningAddress(metadata)
 
   // Follow state
   const { followedPubkeys, addFollow, removeFollow, isLoading: isFollowLoading } = useFollowSet()

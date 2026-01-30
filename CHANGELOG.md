@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upload: new `PeoplePicker` component for tagging people in videos - search for Nostr users with autocomplete (via Primal search), displays user avatars and display names, supports multiple selections with keyboard navigation; adds NIP-71 compliant 'p' tags to video events for contributor/collaborator attribution; available in step 5 of the upload wizard
 - Author page: new "Following" tab shows the pubkeys a user follows from their kind 30000 nostube-follows list; displays as a responsive grid of user cards with avatars, names, and NIP-05 identifiers; tab is hidden when the follow list is empty; new `useAuthorFollowing` hook and `FollowingList` component; "Liked" and "Following" tabs are now positioned at the end of the tab bar after playlists
 - Single playlist page: added sort order dropdown allowing users to sort videos by playlist order (default), publish date, or last changed (created_at); dropdown is hidden in edit mode since drag-and-drop manages the playlist order
+- Author page: increased profile avatar size from 64px to 96px (w-16 to w-24) and moved avatar/text further up into the banner area (-mt-16 sm:-mt-20)
 
 ### Changed
 

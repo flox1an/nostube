@@ -109,7 +109,7 @@ function AuthorProfile({
     <div
       className={cn(
         'flex items-start space-x-4 relative',
-        hasBanner && 'ml-6 -mt-10 sm:-mt-12',
+        hasBanner && 'ml-6 -mt-16 sm:-mt-20',
         className
       )}
     >
@@ -117,7 +117,7 @@ function AuthorProfile({
         <img
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}
-          className="w-16 h-16 rounded-full ring-2 ring-background"
+          className="w-24 h-24 rounded-full ring-2 ring-background"
           onError={e => {
             const target = e.target as HTMLImageElement
             target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`

@@ -4,6 +4,26 @@ A Nostr-based video sharing platform built with React 18.x, TailwindCSS 3.x, Vit
 
 Support for both landscape and portrait videos (shorts in 9:16 format).
 
+## Screenshots
+
+![Home](https://blossom.primal.net/aa15a77306743f24d6f8d36f29ad3633429ba6d25aafc362e1363f2e4ded74bb.png)
+
+![Video Player](https://blossom.primal.net/788fbb198bd84bb17937a5d793576c2f931b0a229dbaf78a6285400c484db818.png)
+
+![Shorts](https://blossom.primal.net/a9f56395d8c326de805198597f1a3010d8f708cb8ce1eeb549777c76309d5bf8.png)
+
+![Playlists](https://blossom.primal.net/d9e0a273077f0df5cd0cb05a74409b3956e28280fec1f39cb40c6f7d0affe458.png)
+
+![Upload](https://blossom.primal.net/9489e675046e5a26417bb8f8f767c9717e6a14f8db228ad5ed4ab56d2be07e1e.png)
+
+![Mobile Home](https://blossom.primal.net/dbf80c54f60307d20590023e2d3083780690424a885719d3cc44664965921ea9.png)
+
+![Mobile Video](https://blossom.primal.net/326d18020def625ff48099bbce5e2d299a5696e7fc128568b9ffcd5c4470e505.png)
+
+![Mobile Shorts](https://blossom.primal.net/55b0c242fd77106d3ef0e808959f538d03a5900aa625e019e3aa7715b72dd940.png)
+
+![Mobile Profile](https://blossom.primal.net/58ab786d8ec1bcb18f7e8fe9b23f744cf53a7cfc8d65191355414044411555c2.png)
+
 ## Embeddable Video Player
 
 nostube includes a standalone embeddable video player that can be embedded on any website via iframe, similar to YouTube's embed player.

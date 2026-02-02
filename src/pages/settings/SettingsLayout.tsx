@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Radio, Server, Database, Trash2, AlertTriangle } from 'lucide-react'
+import { Settings, Palette, Radio, HardDrive, Play, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface SettingsMenuItem {
@@ -14,8 +14,8 @@ const menuItems: SettingsMenuItem[] = [
   { path: 'general', labelKey: 'settings.general.title', icon: Settings },
   { path: 'presets', labelKey: 'settings.presets.title', icon: Palette },
   { path: 'relays', labelKey: 'settings.relays.title', icon: Radio },
-  { path: 'blossom', labelKey: 'settings.blossom.title', icon: Server },
-  { path: 'caching', labelKey: 'settings.caching.title', icon: Database },
+  { path: 'blossom', labelKey: 'settings.blossom.title', icon: HardDrive },
+  { path: 'caching', labelKey: 'settings.caching.title', icon: Play },
   { path: 'cache', labelKey: 'settings.cache.title', icon: Trash2 },
   { path: 'missing-videos', labelKey: 'settings.missingVideos.title', icon: AlertTriangle },
 ]

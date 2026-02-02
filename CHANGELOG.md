@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- i18n: updated English translations with user-friendly hosting terminology - replaced technical Blossom terms with "Video Hosting" / "Primary" / "Backup" for servers, and "Streaming Servers" for caching; updated error messages, onboarding dialogs, and picker dialogs to use clearer language
+- Settings: redesigned Blossom terminology for non-technical users - renamed "Blossom Servers" to "Video Hosting" with "Primary"/"Backup" badges (was "initial upload"/"mirror"); renamed "Media Caching Servers" to "Streaming Servers"; marked Thumbnail Resize Server as advanced setting; changed settings icons from Server/Database to HardDrive/Play for clearer visual metaphor
+- i18n: updated all languages (EN/DE/FR/ES) with new hosting terminology throughout upload flows, error messages, onboarding dialogs, and server picker dialogs
 - Upload: renamed publish date options from "Publish immediately" / "Set publishing time" to "Use current date" / "Set custom date" for clearer wording (the feature sets the `published_at` timestamp, not scheduling)
 - Updated dependencies: upgraded 26 packages including React 19.2.4, applesauce-core 5.0.3, applesauce-loaders 5.0.2, nostr-tools 2.20.0, react-router-dom 7.13.0, typescript-eslint 8.54.0, vitest 4.0.18, i18next 25.8.0, and other minor updates
 - Comments: "Liked by creator" badge - when the video author likes a comment, their avatar with a red heart icon is displayed next to the reaction buttons (similar to YouTube)

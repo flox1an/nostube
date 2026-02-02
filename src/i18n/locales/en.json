@@ -166,24 +166,24 @@
     },
     "availability": {
       "alertTitle": "Limited Availability",
-      "alertDescription": "This video is available on {{count}} blossom server. Consider mirroring it to your servers for better redundancy.",
-      "alertDescription_other": "This video is available on {{count}} blossom servers. Consider mirroring it to your servers for better redundancy.",
+      "alertDescription": "This video is available on {{count}} server. Consider mirroring it to your servers for better redundancy.",
+      "alertDescription_other": "This video is available on {{count}} servers. Consider mirroring it to your servers for better redundancy.",
       "mirrorButton": "Mirror"
     },
     "mirror": {
       "title": "Mirror Video",
-      "description": "Copy this video to additional blossom servers for better redundancy and availability.",
+      "description": "Copy this video to additional servers for better redundancy and availability.",
       "filesTo": "Files to Mirror",
       "selectBlobs": "Please select at least one file to mirror.",
       "currentlyHosted": "Currently Hosted On",
       "availableServers": "Available Servers",
-      "noServers": "No blossom servers configured. Add servers in your settings or publish a kind 10063 event with your preferred servers.",
+      "noServers": "No hosting servers configured. Add servers in your settings or publish a kind 10063 event with your preferred servers.",
       "noSelection": "No servers selected",
       "noSelectionMessage": "Please select at least one server to mirror to.",
       "notLoggedIn": "Not logged in",
       "notLoggedInMessage": "Please log in to mirror videos.",
       "invalidVideo": "Invalid video",
-      "noBlossomUrl": "No valid blossom URL found.",
+      "noBlossomUrl": "No valid URL found.",
       "noVideoHash": "Could not extract video hash.",
       "failed": "Mirror failed",
       "failedMessage": "Could not mirror to any servers. Please try again.",
@@ -267,8 +267,8 @@
     "advanced": "Advanced",
     "uploadFile": "Upload File",
     "fromUrl": "From URL",
-    "noUploadServers": "You do not have any Blossom server tagged with \"initial upload\".",
-    "configureServers": "Please go to Settings and assign the \"initial upload\" tag to at least one server.",
+    "noUploadServers": "No hosting servers are set as Primary.",
+    "configureServers": "Go to Settings → Video Hosting and mark at least one server as Primary.",
     "uploading": "Uploading...",
     "publishVideo": "Publish Video",
     "publishing": "Publishing...",
@@ -480,24 +480,24 @@
       "write": "write"
     },
     "blossom": {
-      "title": "Blossom Servers",
-      "description": "Manage the Blossom servers used for file uploads.",
-      "noServers": "No Blossom servers configured. Add some below or reset to defaults.",
-      "addPlaceholder": "Add new Blossom server URL (e.g., https://blossom.nostr.build)",
+      "title": "Video Hosting",
+      "description": "Manage servers where your videos are stored.",
+      "noServers": "No hosting servers configured. Add some below or reset to defaults.",
+      "addPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
       "addButton": "Add Server",
-      "resetButton": "Reset to Default Servers",
-      "mirror": "mirror",
-      "initialUpload": "initial upload",
+      "resetButton": "Reset to Defaults",
+      "mirror": "Backup",
+      "initialUpload": "Primary",
       "blockedServer": "Server Blocked",
       "blockedServerDescription": "This server re-encodes videos and serves low-quality content. It cannot be added."
     },
     "caching": {
-      "title": "Media Caching Servers",
-      "description": "Manage servers used for caching and proxying video content. These servers provide faster playback and reduce load on origin servers.",
-      "noServers": "No caching servers configured. Add some below or reset to defaults.",
-      "addPlaceholder": "Add new caching server URL (e.g., https://cache.example.com)",
+      "title": "Streaming Servers",
+      "description": "Servers that deliver videos for playback. Optional - improves streaming speed.",
+      "noServers": "No streaming servers configured. Videos will play directly from hosting servers.",
+      "addPlaceholder": "Add streaming server URL",
       "addButton": "Add Server",
-      "resetButton": "Reset to Default Servers"
+      "resetButton": "Reset to Defaults"
     },
     "cache": {
       "title": "Cache Management",
@@ -651,7 +651,7 @@
       "alreadyReposted": "Already reposted",
       "repostAsVideo": "Repost as video",
       "multipleVideos": "{{count}} videos",
-      "blossomUrl": "{{count}} Blossom URL"
+      "blossomUrl": "{{count}} Server URL"
     },
     "notFound": {
       "code": "404",
@@ -753,20 +753,20 @@
       "onlyWithVideos": "Only creators who have posted videos will be imported"
     },
     "blossom": {
-      "title": "Configure Upload Servers",
+      "title": "Configure Video Hosting",
       "uploadSection": {
-        "title": "Upload Servers",
-        "description": "Choose where to upload your videos. Select at least one server.",
-        "required": "At least one upload server is required"
+        "title": "Primary Servers",
+        "description": "Where your videos are uploaded. Select at least one.",
+        "required": "At least one primary server is required"
       },
       "mirrorSection": {
-        "title": "Mirror Servers (Optional)",
-        "description": "Add backup servers for redundancy and faster global access."
+        "title": "Backup Servers (Optional)",
+        "description": "Additional servers for redundancy and faster access worldwide."
       },
       "serverInfo": {
         "free": "Free",
         "paid": "Paid",
-        "supportsMirror": "Supports mirroring",
+        "supportsMirror": "Supports backup",
         "maxSize": "Max size",
         "retention": "Retention",
         "unlimited": "Unlimited",
@@ -777,36 +777,36 @@
     }
   },
   "uploadOnboarding": {
-    "title": "Configure Upload Servers",
+    "title": "Configure Video Hosting",
     "description": "Choose where to upload and store your videos.",
     "uploadServers": {
-      "title": "Upload Servers",
+      "title": "Primary Servers",
       "description": "Required - At least one server needed",
       "emptyState": "Click + to add server",
-      "required": "At least one upload server is required"
+      "required": "At least one primary server is required"
     },
     "mirrorServers": {
-      "title": "Mirror Servers",
-      "description": "Optional - Backup copies for redundancy",
+      "title": "Backup Servers",
+      "description": "Optional - Extra copies for reliability",
       "emptyState": "Click + to add server"
     },
     "continue": "Continue to Upload"
   },
   "blossomPicker": {
     "upload": {
-      "title": "Select Upload Server",
-      "description": "Choose a server from the recommended list or add a custom URL."
+      "title": "Select Primary Server",
+      "description": "Choose a server from the list or add a custom URL."
     },
     "mirror": {
-      "title": "Select Mirror Server",
-      "description": "Choose a server to create backup copies of your videos."
+      "title": "Select Backup Server",
+      "description": "Choose a server to store backup copies of your videos."
     },
     "noServersAvailable": "All available servers have been added.",
     "customUrl": {
       "label": "Custom Server URL",
-      "placeholder": "https://your-blossom-server.com",
+      "placeholder": "https://your-server.com",
       "add": "Add",
-      "hint": "Enter the full URL of a Blossom-compatible server"
+      "hint": "Enter the full URL of a compatible server"
     }
   },
   "languages": {

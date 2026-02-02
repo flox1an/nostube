@@ -164,22 +164,22 @@
     },
     "availability": {
       "alertTitle": "Disponibilité Limitée",
-      "alertDescription": "Cette vidéo est disponible sur {{count}} serveur blossom. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
-      "alertDescription_other": "Cette vidéo est disponible sur {{count}} serveurs blossom. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
+      "alertDescription": "Cette vidéo est disponible sur {{count}} serveur. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
+      "alertDescription_other": "Cette vidéo est disponible sur {{count}} serveurs. Envisagez de la dupliquer sur vos serveurs pour une meilleure redondance.",
       "mirrorButton": "Dupliquer"
     },
     "mirror": {
       "title": "Dupliquer la vidéo",
-      "description": "Copiez cette vidéo vers des serveurs Blossom supplémentaires pour une meilleure redondance et disponibilité.",
+      "description": "Copiez cette vidéo vers des serveurs supplémentaires pour une meilleure redondance et disponibilité.",
       "currentlyHosted": "Actuellement hébergé sur",
       "availableServers": "Serveurs disponibles",
-      "noServers": "Aucun serveur Blossom configuré. Ajoutez des serveurs dans vos paramètres ou publiez un événement de type 10063 avec vos serveurs préférés.",
+      "noServers": "Aucun serveur d'hébergement configuré. Ajoutez des serveurs dans vos paramètres ou publiez un événement de type 10063 avec vos serveurs préférés.",
       "noSelection": "Aucun serveur sélectionné",
       "noSelectionMessage": "Veuillez sélectionner au moins un serveur vers lequel dupliquer.",
       "notLoggedIn": "Non connecté",
       "notLoggedInMessage": "Veuillez vous connecter pour dupliquer des vidéos.",
       "invalidVideo": "Vidéo invalide",
-      "noBlossomUrl": "Aucune URL Blossom valide trouvée.",
+      "noBlossomUrl": "Aucune URL valide trouvée.",
       "noVideoHash": "Impossible d'extraire le hash de la vidéo.",
       "failed": "Échec de la duplication",
       "failedMessage": "Impossible de dupliquer vers aucun serveur. Veuillez réessayer.",
@@ -248,8 +248,8 @@
     "advanced": "Avancé",
     "uploadFile": "Télécharger un fichier",
     "fromUrl": "Depuis une URL",
-    "noUploadServers": "Vous n'avez aucun serveur Blossom marqué avec \"mise en ligne initiale\".",
-    "configureServers": "Veuillez aller dans les Paramètres et attribuer le tag \"mise en ligne initiale\" à au moins un serveur.",
+    "noUploadServers": "Aucun serveur d'hébergement n'est défini comme Principal.",
+    "configureServers": "Allez dans Paramètres → Hébergement vidéo et marquez au moins un serveur comme Principal.",
     "uploading": "Mise en ligne...",
     "publishVideo": "Publier la vidéo",
     "publishing": "Publication...",
@@ -465,24 +465,24 @@
       "write": "écriture"
     },
     "blossom": {
-      "title": "Serveurs Blossom",
-      "description": "Gérez les serveurs Blossom utilisés pour les mises en ligne de fichiers.",
-      "noServers": "Aucun serveur Blossom configuré. Ajoutez-en ci-dessous ou réinitialisez aux valeurs par défaut.",
-      "addPlaceholder": "Ajouter une nouvelle URL de serveur Blossom (par ex., https://blossom.nostr.build)",
+      "title": "Hébergement vidéo",
+      "description": "Gérez les serveurs où vos vidéos sont stockées.",
+      "noServers": "Aucun serveur d'hébergement configuré. Ajoutez-en ci-dessous ou réinitialisez aux valeurs par défaut.",
+      "addPlaceholder": "Ajouter l'URL du serveur (ex: https://blossom.primal.net)",
       "addButton": "Ajouter un serveur",
-      "resetButton": "Réinitialiser aux serveurs par défaut",
-      "mirror": "duplication",
-      "initialUpload": "mise en ligne initiale",
+      "resetButton": "Réinitialiser",
+      "mirror": "Sauvegarde",
+      "initialUpload": "Principal",
       "blockedServer": "Serveur bloqué",
-      "blockedServerDescription": "Ce serveur réencode les vidéos et sert du contenu de faible qualité. Il ne peut pas être ajouté."
+      "blockedServerDescription": "Ce serveur réencode les vidéos et fournit un contenu de mauvaise qualité. Il ne peut pas être ajouté."
     },
     "caching": {
-      "title": "Serveurs de mise en cache multimédia",
-      "description": "Gérez les serveurs utilisés pour la mise en cache et le proxy du contenu vidéo. Ces serveurs offrent une lecture plus rapide et réduisent la charge sur les serveurs d'origine.",
-      "noServers": "Aucun serveur de mise en cache configuré. Ajoutez-en ci-dessous ou réinitialisez aux valeurs par défaut.",
-      "addPlaceholder": "Ajouter une nouvelle URL de serveur de mise en cache (par ex., https://cache.example.com)",
+      "title": "Serveurs de streaming",
+      "description": "Serveurs pour la lecture vidéo. Optionnel - améliore la vitesse de streaming.",
+      "noServers": "Aucun serveur de streaming configuré. Les vidéos seront lues directement depuis les serveurs d'hébergement.",
+      "addPlaceholder": "Ajouter l'URL du serveur de streaming",
       "addButton": "Ajouter un serveur",
-      "resetButton": "Réinitialiser aux serveurs par défaut"
+      "resetButton": "Réinitialiser"
     },
     "cache": {
       "title": "Gestion du cache",
@@ -613,7 +613,7 @@
       "alreadyReposted": "Déjà republié",
       "repostAsVideo": "Republier en tant que vidéo",
       "multipleVideos": "{{count}} vidéos",
-      "blossomUrl": "{{count}} URL Blossom"
+      "blossomUrl": "{{count}} URL serveur"
     },
     "notFound": {
       "code": "404",
@@ -715,20 +715,20 @@
       "onlyWithVideos": "Seuls les créateurs ayant publié des vidéos seront importés"
     },
     "blossom": {
-      "title": "Configurer les serveurs de téléchargement",
+      "title": "Configurer l'hébergement vidéo",
       "uploadSection": {
-        "title": "Serveurs de téléchargement",
-        "description": "Choisissez où télécharger vos vidéos. Sélectionnez au moins un serveur.",
-        "required": "Au moins un serveur de téléchargement est requis"
+        "title": "Serveurs principaux",
+        "description": "Où vos vidéos sont téléchargées. Sélectionnez au moins un.",
+        "required": "Au moins un serveur principal est requis"
       },
       "mirrorSection": {
-        "title": "Serveurs miroirs (Optionnel)",
-        "description": "Ajoutez des serveurs de sauvegarde pour la redondance et un accès mondial plus rapide."
+        "title": "Serveurs de sauvegarde (Optionnel)",
+        "description": "Serveurs supplémentaires pour la redondance et un accès mondial plus rapide."
       },
       "serverInfo": {
         "free": "Gratuit",
         "paid": "Payant",
-        "supportsMirror": "Supporte la mise en miroir",
+        "supportsMirror": "Supporte la sauvegarde",
         "maxSize": "Taille max",
         "retention": "Rétention",
         "unlimited": "Illimité",
@@ -739,36 +739,36 @@
     }
   },
   "uploadOnboarding": {
-    "title": "Configurer les serveurs de téléchargement",
+    "title": "Configurer l'hébergement vidéo",
     "description": "Choisissez où télécharger et stocker vos vidéos.",
     "uploadServers": {
-      "title": "Serveurs de téléchargement",
+      "title": "Serveurs principaux",
       "description": "Requis - Au moins un serveur nécessaire",
       "emptyState": "Cliquez sur + pour ajouter un serveur",
-      "required": "Au moins un serveur de téléchargement est requis"
+      "required": "Au moins un serveur principal est requis"
     },
     "mirrorServers": {
-      "title": "Serveurs miroir",
-      "description": "Optionnel - Copies de sauvegarde pour la redondance",
+      "title": "Serveurs de sauvegarde",
+      "description": "Optionnel - Copies supplémentaires pour la fiabilité",
       "emptyState": "Cliquez sur + pour ajouter un serveur"
     },
     "continue": "Continuer vers le téléchargement"
   },
   "blossomPicker": {
     "upload": {
-      "title": "Sélectionner un serveur de téléchargement",
-      "description": "Choisissez un serveur dans la liste recommandée ou ajoutez une URL personnalisée."
+      "title": "Sélectionner un serveur principal",
+      "description": "Choisissez un serveur dans la liste ou ajoutez une URL personnalisée."
     },
     "mirror": {
-      "title": "Sélectionner un serveur miroir",
-      "description": "Choisissez un serveur pour créer des copies de sauvegarde de vos vidéos."
+      "title": "Sélectionner un serveur de sauvegarde",
+      "description": "Choisissez un serveur pour stocker des copies de sauvegarde de vos vidéos."
     },
     "noServersAvailable": "Tous les serveurs disponibles ont été ajoutés.",
     "customUrl": {
       "label": "URL de serveur personnalisée",
-      "placeholder": "https://votre-serveur-blossom.com",
+      "placeholder": "https://votre-serveur.com",
       "add": "Ajouter",
-      "hint": "Entrez l'URL complète d'un serveur compatible Blossom"
+      "hint": "Entrez l'URL complète d'un serveur compatible"
     }
   },
   "languages": {

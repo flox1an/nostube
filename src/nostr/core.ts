@@ -26,8 +26,13 @@ async function ensureCache() {
 ensureCache()
 
 export async function cacheRequest(filters: Filter[]) {
-  const cache = await ensureCache()
-  return getEventsForFilters(cache, filters)
+  try {
+    const cache = await ensureCache()
+    return getEventsForFilters(cache, filters)
+  } catch (error) {
+    console.warn('Cache unavailable (possibly iOS lockdown mode):', error)
+    return [] // Return empty array to continue with relay fetching
+  }
 }
 
 // Initialize EventStore

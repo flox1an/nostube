@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { getTimelineLoader } from '@/nostr/core'
 import { processEvents, getPublishDate, type VideoEvent } from '@/utils/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
@@ -39,7 +39,7 @@ export function useCategoryVideos({
   videoKinds,
   limit = 50,
 }: UseCategoryVideosOptions): UseCategoryVideosResult {
-  const { pool, config } = useAppContext()
+  const { config } = useAppContext()
   const eventStore = useEventStore()
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
@@ -98,14 +98,16 @@ export function useCategoryVideos({
 
   // Load initial events from relays into EventStore
   useEffect(() => {
-    if (!pool || !relays || relays.length === 0 || !filters || hasLoaded) {
+    if (!relays || relays.length === 0 || !filters || hasLoaded) {
       if (!filters) queueMicrotask(() => setLoading(false))
       return
     }
 
     queueMicrotask(() => setLoading(true))
 
-    const loader = createTimelineLoader(pool, relays, filters, { eventStore, limit })
+    // Create unique cache key for this category filter
+    const cacheKey = `category:${normalizedTags.sort().join(',')}`
+    const loader = getTimelineLoader(cacheKey, filters, relays)
 
     let eventCount = 0
     const subscription = loader().subscribe({
@@ -131,7 +133,7 @@ export function useCategoryVideos({
     return () => {
       subscription.unsubscribe()
     }
-  }, [filters, pool, relays, eventStore, hasLoaded, limit])
+  }, [filters, relays, eventStore, hasLoaded, limit, normalizedTags])
 
   // Cleanup loadMore subscription on unmount
   useEffect(() => {
@@ -142,7 +144,7 @@ export function useCategoryVideos({
 
   // Load more videos (pagination)
   const loadMore = useCallback(() => {
-    if (!filters || !pool || loading || exhausted || videos.length === 0) return
+    if (!filters || loading || exhausted || videos.length === 0) return
 
     // Clean up any previous loadMore subscription
     loadMoreSubscriptionRef.current?.unsubscribe()
@@ -155,7 +157,9 @@ export function useCategoryVideos({
     const until = oldestVideo.created_at
 
     const paginatedFilter = { ...filters, until }
-    const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
+    // Create unique cache key for paginated request
+    const cacheKey = `category:${normalizedTags.sort().join(',')}:until:${until}`
+    const loader = getTimelineLoader(cacheKey, paginatedFilter, relays)
 
     let eventCount = 0
     loadMoreSubscriptionRef.current = loader().subscribe({
@@ -175,7 +179,7 @@ export function useCategoryVideos({
         setLoading(false)
       },
     })
-  }, [filters, pool, relays, eventStore, loading, exhausted, videos, limit])
+  }, [filters, relays, eventStore, loading, exhausted, videos, limit, normalizedTags])
 
   return {
     videos,

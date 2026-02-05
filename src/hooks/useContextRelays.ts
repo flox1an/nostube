@@ -67,13 +67,14 @@ export function useContextRelays(options: RelayOptions = {}): string[] {
       }
     }
 
-    // 4. Author's NIP-65 outbox relays
+    // 4. Author's NIP-65 write relays (outbox - where the author publishes their events)
+    // Per NIP-65: "When downloading events FROM a user, clients SHOULD use the write relays"
     if (authorRelays && authorRelays.length > 0) {
-      const outboxRelays = authorRelays
-        .filter(r => r.write) // Use write relays as outbox
+      const authorWriteRelays = authorRelays
+        .filter(r => r.write) // Author's outbox - where they write/publish events
         .map(r => r.url)
-      if (outboxRelays.length > 0) {
-        relaySources.push(outboxRelays)
+      if (authorWriteRelays.length > 0) {
+        relaySources.push(authorWriteRelays)
       }
     }
 

@@ -44,10 +44,12 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
   }, [eventStore, eventId])
 
   // Compute target relays: video seenRelays + author inbox + user write relays
+  // NIP-65: Use both write and read relays for mentions (where author checks)
   const targetRelays = useMemo(() => {
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
     const videoSeenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
-    const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    const authorInboxRelays =
+      authorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
     return Array.from(new Set([...videoSeenRelays, ...authorInboxRelays, ...writeRelays]))
   }, [config.relays, videoEvent, authorRelays.data])
 

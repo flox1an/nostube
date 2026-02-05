@@ -191,8 +191,11 @@ export function VideoComments({
     // Get user's write relays
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
-    // Get video author's inbox relays (write relays from their NIP-65 relay list)
-    const videoAuthorInbox = videoAuthorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    // Get video author's inbox relays (NIP-65: use both write and read relays for mentions)
+    // Write relays = where author publishes (inbox)
+    // Read relays = where author checks for mentions
+    const videoAuthorInbox =
+      videoAuthorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
 
     // Combine relays: video event relays + video author's inbox + user's write relays
     // Use Set to remove duplicates
@@ -264,8 +267,11 @@ export function VideoComments({
     // Get user's write relays
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
-    // Get comment author's inbox relays (write relays from their NIP-65 relay list)
-    const replyToAuthorInbox = replyToAuthorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    // Get comment author's inbox relays (NIP-65: use both write and read relays for mentions)
+    // Write relays = where author publishes (inbox)
+    // Read relays = where author checks for mentions
+    const replyToAuthorInbox =
+      replyToAuthorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
 
     // Get relays where the parent comment is hosted
     const parentCommentEvent = eventStore.getEvent(replyTo.id)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
+import { useEventStore } from 'applesauce-react/hooks'
 import { type EventTemplate, type Event } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
 import { relayPool } from '@/nostr/core'
@@ -19,6 +20,7 @@ interface PublishResult {
 export function useNostrPublish(): PublishResult {
   const { user } = useCurrentUser()
   const { config } = useAppContext()
+  const eventStore = useEventStore()
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
@@ -52,6 +54,18 @@ export function useNostrPublish(): PublishResult {
       const relaysToUse = args.relays || config.relays.map(r => r.url)
 
       await relayPool.publish(relaysToUse, signedEvent)
+
+      // NIP-65: Re-broadcast user's kind:10002 relay list to the same relays
+      // This improves discoverability of the user's relay preferences
+      const userRelayList = eventStore.getReplaceable(10002, user.pubkey)
+      if (userRelayList) {
+        try {
+          await relayPool.publish(relaysToUse, userRelayList)
+        } catch (err) {
+          // Don't fail the main publish if relay list re-broadcast fails
+          console.warn('[useNostrPublish] Failed to re-broadcast kind:10002:', err)
+        }
+      }
 
       return signedEvent
     } catch (err) {

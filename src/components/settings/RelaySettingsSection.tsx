@@ -73,9 +73,28 @@ export function RelaySettingsSection() {
   }
 
   const availableTags: RelayTag[] = ['read', 'write']
+
+  // Calculate relay counts for NIP-65 size guideline
+  const readRelayCount = config.relays.filter(r => r.tags.includes('read')).length
+  const writeRelayCount = config.relays.filter(r => r.tags.includes('write')).length
+  const showSizeWarning = readRelayCount > 4 || writeRelayCount > 4
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{t('settings.relays.description')}</p>
+
+      {/* NIP-65 size guideline warning */}
+      {showSizeWarning && (
+        <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3">
+          <p className="text-sm text-yellow-600 dark:text-yellow-400">
+            <strong>NIP-65 Recommendation:</strong> Consider keeping your relay list small (2-4
+            read, 2-4 write relays) for optimal performance and reliability.
+            {readRelayCount > 4 && ` Currently: ${readRelayCount} read relays.`}
+            {writeRelayCount > 4 && ` Currently: ${writeRelayCount} write relays.`}
+          </p>
+        </div>
+      )}
+
       <div>
         {config.relays.length === 0 ? (
           <p className="text-muted-foreground">{t('settings.relays.noRelays')}</p>

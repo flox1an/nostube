@@ -83,10 +83,12 @@ export const CommentReactions = memo(function CommentReactions({
   const isOwnContent = user?.pubkey === authorPubkey
 
   // Compute target relays: comment seenRelays + author inbox + user write relays
+  // NIP-65: Use both write and read relays for mentions (where author checks)
   const targetRelays = useMemo(() => {
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
     const commentSeenRelays = storedEvent ? Array.from(getSeenRelays(storedEvent) || []) : []
-    const authorInboxRelays = authorRelays.data?.filter(r => r.write).map(r => r.url) || []
+    const authorInboxRelays =
+      authorRelays.data?.filter(r => r.write || r.read).map(r => r.url) || []
     return Array.from(new Set([...commentSeenRelays, ...authorInboxRelays, ...writeRelays]))
   }, [config.relays, storedEvent, authorRelays.data])
 

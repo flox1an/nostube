@@ -648,9 +648,9 @@
       "loginRequired": "Please log in to view your video notes.",
       "empty": "No video notes found. Post some notes with video URLs to see them here.",
       "preview": "Video Preview",
-      "reposted": "Reposted",
-      "alreadyReposted": "Already reposted",
-      "repostAsVideo": "Repost as video",
+      "imported": "Imported",
+      "alreadyImported": "Already imported",
+      "import": "Import",
       "multipleVideos": "{{count}} videos",
       "blossomUrl": "{{count}} Server URL"
     },

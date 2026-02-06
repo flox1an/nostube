@@ -11,7 +11,7 @@ import { formatFileSize } from '@/lib/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play, Upload, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
+import { Play, Import, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -108,8 +108,8 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
     config.thumbResizeServerUrl,
   ])
 
-  const handleRepost = () => {
-    // Navigate to upload page with URL and description prefilled
+  const handleImport = () => {
+    // Navigate to upload page with URL and description prefilled, jump to step 2
     const url = note.videoUrls[0]
 
     // Remove all video URLs from the content to use as description
@@ -122,6 +122,7 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
 
     const params = new URLSearchParams({
       url,
+      step: '2',
       ...(description && { description }),
     })
     navigate(`/upload?${params.toString()}`)
@@ -206,7 +207,7 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
                   <div className="absolute top-2 right-2">
                     <Badge variant="default" className="bg-green-500 text-white">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {t('pages.videoNotes.reposted')}
+                      {t('pages.videoNotes.imported')}
                     </Badge>
                   </div>
                 )}
@@ -253,16 +254,16 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={handleRepost}
+                    onClick={handleImport}
                     className="cursor-pointer"
                   >
-                    <Upload className="h-4 w-4 mr-1" />
-                    {t('pages.videoNotes.repostAsVideo')}
+                    <Import className="h-4 w-4 mr-1" />
+                    {t('pages.videoNotes.import')}
                   </Button>
                 )}
                 {note.isReposted && (
                   <Button size="sm" variant="outline" disabled>
-                    {t('pages.videoNotes.alreadyReposted')}
+                    {t('pages.videoNotes.alreadyImported')}
                   </Button>
                 )}
               </div>

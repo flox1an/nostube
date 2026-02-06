@@ -318,7 +318,14 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
   const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
   const [showUploadPicker, setShowUploadPicker] = useState(false)
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1) // 1: Video Upload, 2: Form, 3: Thumbnail
+  const [currentStep, setCurrentStep] = useState(() => {
+    const stepParam = searchParams.get('step')
+    if (stepParam) {
+      const parsed = parseInt(stepParam, 10)
+      if (parsed >= 1 && parsed <= 5) return parsed
+    }
+    return 1
+  }) // 1: Video Upload, 2: Form, 3: Thumbnail
   const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
   const [justArrivedAtStep5, setJustArrivedAtStep5] = useState(false)
 

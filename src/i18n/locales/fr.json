@@ -610,9 +610,9 @@
       "loginRequired": "Veuillez vous connecter pour voir vos notes vidéo.",
       "empty": "Aucune note vidéo trouvée. Publiez quelques notes avec des URLs vidéo pour les voir ici.",
       "preview": "Aperçu vidéo",
-      "reposted": "Republié",
-      "alreadyReposted": "Déjà republié",
-      "repostAsVideo": "Republier en tant que vidéo",
+      "imported": "Importé",
+      "alreadyImported": "Déjà importé",
+      "import": "Importer",
       "multipleVideos": "{{count}} vidéos",
       "blossomUrl": "{{count}} URL serveur"
     },

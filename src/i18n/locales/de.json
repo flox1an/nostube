@@ -611,9 +611,9 @@
       "loginRequired": "Bitte melde dich an, um deine Video-Notizen zu sehen.",
       "empty": "Keine Video-Notizen gefunden. Poste einige Notizen mit Video-URLs, um sie hier zu sehen.",
       "preview": "Videovorschau",
-      "reposted": "Geteilt",
-      "alreadyReposted": "Bereits geteilt",
-      "repostAsVideo": "Als Video teilen",
+      "imported": "Importiert",
+      "alreadyImported": "Bereits importiert",
+      "import": "Importieren",
       "multipleVideos": "{{count}} Videos",
       "blossomUrl": "{{count}} Server-URL"
     },

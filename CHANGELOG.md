@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - README: added screenshots section showcasing home page, video player, shorts, playlists, upload wizard, and mobile views
+- Video Notes page: improved thumbnails using imgproxy (optimized WebP via `imageProxyVideoPreview`/`imageProxyVideoThumbnail`) with fallback chain (proxy image -> proxy video frame -> error icon); inline click-to-play video replaces dialog preview; client-side pagination with "Load more" button (20 notes per page)
 
 - Playlists page: redesigned from accordion-based list to visual card-based gallery with thumbnail collages (0-4+ videos displayed in different layouts); new `PlaylistCard`, `PlaylistGrid`, `PlaylistThumbnailCollage`, and `CreatePlaylistCard` components in `src/components/playlists/`; hover actions for edit/delete; "+" card to create new playlists; responsive grid layout (2/3/4 columns)
 - Single playlist page: added edit mode with drag-and-drop reordering using `@dnd-kit`; playlist owner can toggle edit mode to reorder videos (auto-saves on drop) and remove videos with confirmation dialog; drag handles and delete buttons appear on video cards in edit mode

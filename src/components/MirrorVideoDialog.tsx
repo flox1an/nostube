@@ -15,6 +15,13 @@ import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { formatFileSize } from '@/lib/blossom-utils'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import {
+  publishMirrorAnnouncements,
+  getMirrorAnnouncementRelays,
+  type MirrorAnnouncementOptions,
+} from '@/lib/mirror-announcements'
+import { useAppContext } from '@/hooks/useAppContext'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
 import {
   extractAllBlossomBlobs,
@@ -69,6 +76,7 @@ export function MirrorVideoDialog({
   const { t } = useTranslation()
   const { toast } = useToast()
   const { user } = useCurrentUser()
+  const { config } = useAppContext()
 
   // Extract all blobs from the video event
   const allBlobs = useMemo(() => extractAllBlossomBlobs(video), [video])
@@ -197,6 +205,12 @@ export function MirrorVideoDialog({
     let totalSuccess = 0
     let totalFailed = 0
 
+    // Track mirror results per blob for 1063 publishing
+    const mirrorResultsPerBlob: Array<{
+      blob: (typeof allBlobs)[number]
+      results: BlobDescriptor[]
+    }> = []
+
     try {
       // Mirror each selected blob to each selected server
       for (const blobIndex of selectedBlobs) {
@@ -236,12 +250,58 @@ export function MirrorVideoDialog({
 
           totalSuccess += results.length
           totalFailed += selectedServers.size - results.length
+
+          // Track results for 1063 publishing
+          if (results.length > 0) {
+            mirrorResultsPerBlob.push({ blob, results })
+          }
         } catch {
           totalFailed += selectedServers.size
         }
       }
 
       const totalAttempted = selectedBlobs.size * selectedServers.size
+
+      // Publish kind 1063 events for successful mirrors
+      if (mirrorResultsPerBlob.length > 0 && video) {
+        try {
+          // Get relay hint from video event's seen relays or user's relays
+          const videoEventRelays = video.id
+            ? Array.from(getSeenRelays({ id: video.id } as never) || [])
+            : []
+          const userWriteRelays = config.relays
+            .filter(r => r.tags.includes('write'))
+            .map(r => r.url)
+
+          const publishRelays = getMirrorAnnouncementRelays(userWriteRelays, videoEventRelays)
+          const relayHint = publishRelays[0] || ''
+
+          // Build announcement options
+          const announcements: MirrorAnnouncementOptions[] = mirrorResultsPerBlob.map(
+            ({ blob, results }) => ({
+              blob,
+              mirrorResults: results,
+              videoEvent: {
+                id: video.id,
+                kind: video.kind,
+                pubkey: video.pubkey,
+                dTag: video.identifier,
+              },
+              relayHint,
+            })
+          )
+
+          // Publish 1063 events (non-blocking, errors are logged but don't fail the mirror)
+          await publishMirrorAnnouncements(
+            announcements,
+            { signEvent: async event => await user.signer.signEvent(event) },
+            publishRelays
+          )
+        } catch (err) {
+          // Log but don't fail - the mirror itself succeeded
+          console.warn('[MirrorVideoDialog] Failed to publish 1063 announcements:', err)
+        }
+      }
 
       if (totalSuccess === 0) {
         toast({

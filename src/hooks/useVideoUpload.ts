@@ -15,6 +15,11 @@ import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-u
 import { generateBlurhash } from '@/lib/blurhash-encode'
 import { deriveServerName } from '@/lib/blossom-servers'
 import { type BlossomServerTag } from '@/contexts/AppContext'
+import {
+  publishMirrorAnnouncements,
+  getMirrorAnnouncementRelays,
+  type MirrorAnnouncementOptions,
+} from '@/lib/mirror-announcements'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -906,10 +911,118 @@ export function useVideoUpload(
         publishAt,
       })
 
+      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+
       const publishedEvent = await publish({
         event: event as { kind: number; content: string; created_at: number; tags: string[][] },
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+        relays: writeRelays,
       })
+
+      // Publish kind 1063 events for mirrored blobs (non-blocking)
+      // This announces the new file locations so other viewers can discover them
+      try {
+        // Build announcements directly from uploadInfo (more efficient than building VideoEvent)
+        const announcements: MirrorAnnouncementOptions[] = []
+        const relayHint = writeRelays[0] || ''
+
+        // Add video mirrored blobs
+        for (const video of uploadInfo.videos) {
+          if (video.mirroredBlobs.length > 0 && video.uploadedBlobs[0]?.sha256 && video.url) {
+            announcements.push({
+              blob: {
+                type: 'video',
+                variant: {
+                  url: video.url,
+                  hash: video.uploadedBlobs[0].sha256,
+                  size: video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined,
+                  dimensions: video.dimension,
+                  mimeType: video.file?.type,
+                  quality: video.qualityLabel,
+                  fallbackUrls: video.mirroredBlobs.map(b => b.url),
+                },
+                label: `Video ${video.qualityLabel || video.dimension}`,
+                hash: video.uploadedBlobs[0].sha256,
+                ext: 'mp4',
+              },
+              mirrorResults: video.mirroredBlobs,
+              videoEvent: {
+                id: publishedEvent.id,
+                kind: publishedEvent.kind,
+                pubkey: publishedEvent.pubkey,
+                dTag: draftId,
+              },
+              relayHint,
+            })
+          }
+        }
+
+        // Add thumbnail mirrored blobs
+        if (thumbnailMirroredBlobs.length > 0 && thumbnailUploadedBlobs[0]?.sha256) {
+          announcements.push({
+            blob: {
+              type: 'thumbnail',
+              variant: {
+                url: thumbnailUploadedBlobs[0].url,
+                hash: thumbnailUploadedBlobs[0].sha256,
+                size: thumbnailUploadedBlobs[0].size,
+                fallbackUrls: thumbnailMirroredBlobs.map(b => b.url),
+              },
+              label: 'Thumbnail',
+              hash: thumbnailUploadedBlobs[0].sha256,
+              ext: 'webp',
+            },
+            mirrorResults: thumbnailMirroredBlobs,
+            videoEvent: {
+              id: publishedEvent.id,
+              kind: publishedEvent.kind,
+              pubkey: publishedEvent.pubkey,
+              dTag: draftId,
+            },
+            relayHint,
+          })
+        }
+
+        // Add subtitle mirrored blobs
+        for (const subtitle of subtitles) {
+          if (subtitle.mirroredBlobs.length > 0 && subtitle.uploadedBlobs[0]?.sha256) {
+            announcements.push({
+              blob: {
+                type: 'subtitle',
+                variant: {
+                  url: subtitle.uploadedBlobs[0].url,
+                  hash: subtitle.uploadedBlobs[0].sha256,
+                  mimeType: 'text/vtt',
+                  fallbackUrls: subtitle.mirroredBlobs.map(b => b.url),
+                },
+                label: `Subtitle (${subtitle.lang})`,
+                hash: subtitle.uploadedBlobs[0].sha256,
+                ext: 'vtt',
+              },
+              mirrorResults: subtitle.mirroredBlobs,
+              videoEvent: {
+                id: publishedEvent.id,
+                kind: publishedEvent.kind,
+                pubkey: publishedEvent.pubkey,
+                dTag: draftId,
+              },
+              relayHint,
+            })
+          }
+        }
+
+        // Publish 1063 events if we have any announcements
+        if (announcements.length > 0 && user) {
+          const publishRelays = getMirrorAnnouncementRelays(writeRelays, writeRelays)
+          await publishMirrorAnnouncements(
+            announcements,
+            { signEvent: async eventTemplate => await user.signer.signEvent(eventTemplate) },
+            publishRelays
+          )
+        }
+      } catch (err) {
+        // Log but don't fail - the video publish already succeeded
+        console.warn('[useVideoUpload] Failed to publish 1063 mirror announcements:', err)
+      }
 
       setPublishSummary({
         eventId: publishedEvent.id,

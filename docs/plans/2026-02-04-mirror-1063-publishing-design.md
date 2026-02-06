@@ -30,17 +30,17 @@ One kind 1063 event per blob (video file, thumbnail, or subtitle track). Each ev
 
 ### Tags
 
-| Tag        | Required | Description                                              |
-| ---------- | -------- | -------------------------------------------------------- |
-| `url`      | Yes      | Primary mirror URL (first successful mirror server)      |
-| `fallback` | No       | One tag per additional mirror URL (zero or more)         |
-| `x`        | Yes      | SHA256 hex hash of the file                              |
-| `m`        | Yes      | MIME type (e.g., `video/mp4`, `image/webp`, `text/vtt`)  |
-| `size`     | Yes      | File size in bytes                                       |
-| `dim`      | When known | Dimensions as `<width>x<height>` (video and thumbnails) |
-| `e`        | Yes      | Video event ID + relay hint                              |
+| Tag        | Required         | Description                                               |
+| ---------- | ---------------- | --------------------------------------------------------- |
+| `url`      | Yes              | Primary mirror URL (first successful mirror server)       |
+| `fallback` | No               | One tag per additional mirror URL (zero or more)          |
+| `x`        | Yes              | SHA256 hex hash of the file                               |
+| `m`        | Yes              | MIME type (e.g., `video/mp4`, `image/webp`, `text/vtt`)   |
+| `size`     | Yes              | File size in bytes                                        |
+| `dim`      | When known       | Dimensions as `<width>x<height>` (video and thumbnails)   |
+| `e`        | Yes              | Video event ID + relay hint                               |
 | `a`        | Addressable only | Address for kinds 34235/34236 (`<kind>:<pubkey>:<d-tag>`) |
-| `k`        | Addressable only | Kind of the referenced video event                |
+| `k`        | Addressable only | Kind of the referenced video event                        |
 
 ### Tags NOT included
 
@@ -97,17 +97,18 @@ A single function that takes mirror results and publishes kind 1063 events:
 
 ```typescript
 interface MirrorAnnouncementOptions {
-  blob: BlossomBlob              // The mirrored blob (hash, variant metadata)
+  blob: BlossomBlob // The mirrored blob (hash, variant metadata)
   mirrorResults: BlobDescriptor[] // Successful mirror results with URLs
-  videoEvent: {                   // Source video event info
+  videoEvent: {
+    // Source video event info
     id: string
     kind: number
     pubkey: string
-    dTag?: string                 // For addressable events
+    dTag?: string // For addressable events
   }
-  relayHint: string               // Best relay hint for e/a tags
+  relayHint: string // Best relay hint for e/a tags
   signer: Signer
-  publishRelays: string[]         // Where to publish the 1063
+  publishRelays: string[] // Where to publish the 1063
 }
 
 function buildFileMetadataEvent(options: MirrorAnnouncementOptions): EventTemplate
@@ -126,6 +127,7 @@ Two places call `mirrorBlobsToServers()` today. Both get updated to publish 1063
 **1. `MirrorVideoDialog` (manual mirror)**
 
 After `handleMirror()` completes successfully:
+
 - Has full access to the `VideoEvent` object (video event ID, kind, pubkey, d-tag)
 - Has the blob metadata from `extractAllBlossomBlobs()`
 - Has the mirror results (which servers succeeded)
@@ -134,6 +136,7 @@ After `handleMirror()` completes successfully:
 **2. `UploadManagerProvider` (automatic mirror during upload)**
 
 After automatic mirroring completes in `publishEvent()`:
+
 - Has the video event that was just published (ID, kind, pubkey, d-tag)
 - Has the blob descriptors from upload/mirror results
 - Calls `publishMirrorAnnouncements()` as a non-blocking follow-up
@@ -142,6 +145,7 @@ After automatic mirroring completes in `publishEvent()`:
 ### Relay selection
 
 Publish to the union of:
+
 - User's write relays (from NIP-65 relay list)
 - Video event relays (relays where the video event was seen/published)
 
@@ -182,12 +186,12 @@ The `DiscoveredUrl` interface and `discoverUrls()` function are updated to retur
 
 ## Files Changed
 
-| File | Change |
-| ---- | ------ |
-| `src/lib/mirror-announcements.ts` | **New.** Build and publish kind 1063 events |
-| `src/lib/url-discovery.ts` | Extract `fallback` tags in addition to `url` |
-| `src/components/MirrorVideoDialog.tsx` | Call `publishMirrorAnnouncements()` after successful mirror |
-| `src/providers/upload/UploadManagerProvider.tsx` | Call `publishMirrorAnnouncements()` after automatic mirror |
+| File                                             | Change                                                      |
+| ------------------------------------------------ | ----------------------------------------------------------- |
+| `src/lib/mirror-announcements.ts`                | **New.** Build and publish kind 1063 events                 |
+| `src/lib/url-discovery.ts`                       | Extract `fallback` tags in addition to `url`                |
+| `src/components/MirrorVideoDialog.tsx`           | Call `publishMirrorAnnouncements()` after successful mirror |
+| `src/providers/upload/UploadManagerProvider.tsx` | Call `publishMirrorAnnouncements()` after automatic mirror  |
 
 ## Testing
 

@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Author page: new "Following" tab shows the pubkeys a user follows from their kind 30000 nostube-follows list; displays as a responsive grid of user cards with avatars, names, and NIP-05 identifiers; tab is hidden when the follow list is empty; new `useAuthorFollowing` hook and `FollowingList` component; "Liked" and "Following" tabs are now positioned at the end of the tab bar after playlists
 - Single playlist page: added sort order dropdown allowing users to sort videos by playlist order (default), publish date, or last changed (created_at); dropdown is hidden in edit mode since drag-and-drop manages the playlist order
 - Author page: increased profile avatar size from 64px to 96px (w-16 to w-24) and moved avatar/text further up into the banner area (-mt-16 sm:-mt-20)
+- Mirror announcements: after successful mirror operations, NIP-94 kind 1063 File Metadata events are published to announce new file locations to the network; other viewers can discover additional fallback URLs via the url-discovery system; works for both manual mirroring (MirrorVideoDialog) and upload-time mirroring; new `src/lib/mirror-announcements.ts` module with `buildFileMetadataEvent()` and `publishMirrorAnnouncements()` functions
+- URL discovery: now extracts both `url` and `fallback` tags from kind 1063 events, enabling discovery of all announced mirror locations for a file
 
 ### Changed
 

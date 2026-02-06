@@ -24,15 +24,25 @@ export interface DiscoveredUrl {
 }
 
 /**
- * Extract URL from a kind 1063 event
+ * Extract all URLs from a kind 1063 event (primary + fallbacks)
  */
-function extractUrlFromEvent(event: NostrEvent): string | null {
-  // Check for 'url' tag
+function extractUrlsFromEvent(event: NostrEvent): string[] {
+  const urls: string[] = []
+
+  // Primary URL
   const urlTag = event.tags.find(t => t[0] === 'url')
-  if (urlTag && urlTag[1]) {
-    return urlTag[1]
+  if (urlTag?.[1]) {
+    urls.push(urlTag[1])
   }
-  return null
+
+  // Fallback URLs
+  for (const tag of event.tags) {
+    if (tag[0] === 'fallback' && tag[1]) {
+      urls.push(tag[1])
+    }
+  }
+
+  return urls
 }
 
 /**
@@ -53,7 +63,7 @@ function extractServerUrl(url: string): string | null {
  *
  * Algorithm:
  * 1. Query relays for kind 1063 events with matching `x` tag (sha256)
- * 2. Extract `url` tag from each event
+ * 2. Extract `url` and `fallback` tags from each event
  * 3. Return sorted by timestamp (newest first)
  *
  * Note: URL validation is NOT done here - that's handled by the url-validator
@@ -85,29 +95,37 @@ export async function discoverUrls(options: DiscoveryOptions): Promise<Discovere
       )
       .subscribe({
         next: event => {
-          const url = extractUrlFromEvent(event)
-          if (!url || seenUrls.has(url)) {
+          const urls = extractUrlsFromEvent(event)
+          if (urls.length === 0) {
             return
           }
 
-          const serverUrl = extractServerUrl(url)
-          if (!serverUrl) {
-            return
-          }
+          // Add all URLs from this event that we haven't seen yet
+          for (const url of urls) {
+            if (seenUrls.has(url)) {
+              continue
+            }
 
-          seenUrls.add(url)
-          discovered.push({
-            url,
-            serverUrl,
-            pubkey: event.pubkey,
-            timestamp: event.created_at,
-          })
+            const serverUrl = extractServerUrl(url)
+            if (!serverUrl) {
+              continue
+            }
 
-          // Stop if we've reached max results
-          if (discovered.length >= maxResults) {
-            clearTimeout(timeoutId)
-            subscription.unsubscribe()
-            resolve(sortByTimestamp(discovered))
+            seenUrls.add(url)
+            discovered.push({
+              url,
+              serverUrl,
+              pubkey: event.pubkey,
+              timestamp: event.created_at,
+            })
+
+            // Stop if we've reached max results
+            if (discovered.length >= maxResults) {
+              clearTimeout(timeoutId)
+              subscription.unsubscribe()
+              resolve(sortByTimestamp(discovered))
+              return
+            }
           }
         },
         error: err => {

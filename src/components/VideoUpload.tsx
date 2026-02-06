@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/useToast'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
@@ -377,31 +377,19 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     setMirrorServers(prev => prev.filter(s => s !== url))
   }
 
-  // Handle URL and description prefilling from query params (e.g., /upload?url=...&description=...)
+  // Auto-process video URL from draft if loaded with a URL but no videos yet
+  const autoProcessed = useRef(false)
   useEffect(() => {
-    const urlParam = searchParams.get('url')
-    const descriptionParam = searchParams.get('description')
-
-    if (urlParam && urlParam.trim() && videoUrl !== urlParam) {
-      setInputMethod('url')
-      setVideoUrl(urlParam)
-      // Auto-process the URL
-      handleUrlVideoProcessing(urlParam)
+    if (
+      !autoProcessed.current &&
+      inputMethod === 'url' &&
+      videoUrl &&
+      uploadInfo.videos.length === 0
+    ) {
+      autoProcessed.current = true
+      handleUrlVideoProcessing(videoUrl)
     }
-
-    // Prefill description if provided
-    if (descriptionParam && descriptionParam.trim() && description !== descriptionParam) {
-      setDescription(descriptionParam)
-    }
-  }, [
-    searchParams,
-    videoUrl,
-    description,
-    setInputMethod,
-    setVideoUrl,
-    setDescription,
-    handleUrlVideoProcessing,
-  ])
+  }, [inputMethod, videoUrl, uploadInfo.videos.length, handleUrlVideoProcessing])
 
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>

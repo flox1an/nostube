@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
+import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { useAppContext } from '@/hooks'
+import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
 import { getDateLocale } from '@/lib/date-locale'
@@ -15,9 +17,14 @@ import { Play, Import, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } fr
 
 const PAGE_SIZE = 20
 
-function VideoNoteCard({ note }: { note: VideoNote }) {
+function VideoNoteCard({
+  note,
+  onImport,
+}: {
+  note: VideoNote
+  onImport: (note: VideoNote) => void
+}) {
   const { t, i18n } = useTranslation()
-  const navigate = useNavigate()
   const { config } = useAppContext()
   const [isPlaying, setIsPlaying] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
@@ -108,25 +115,7 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
     config.thumbResizeServerUrl,
   ])
 
-  const handleImport = () => {
-    // Navigate to upload page with URL and description prefilled, jump to step 2
-    const url = note.videoUrls[0]
-
-    // Remove all video URLs from the content to use as description
-    let description = note.content
-    note.videoUrls.forEach(videoUrl => {
-      description = description.replace(videoUrl, '')
-    })
-    // Clean up extra whitespace
-    description = description.replace(/\s+/g, ' ').trim()
-
-    const params = new URLSearchParams({
-      url,
-      step: '2',
-      ...(description && { description }),
-    })
-    navigate(`/upload?${params.toString()}`)
-  }
+  const handleImport = () => onImport(note)
 
   const handleStopPlaying = useCallback(
     (e: React.MouseEvent) => {
@@ -277,7 +266,10 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
 
 export function VideoNotesPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const { notes, loading } = useVideoNotes()
+  const { createDraft, updateDraft } = useUploadDrafts()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
@@ -286,6 +278,38 @@ export function VideoNotesPage() {
       document.title = 'nostube'
     }
   }, [t])
+
+  const handleImport = useCallback(
+    (note: VideoNote) => {
+      try {
+        const draft = createDraft()
+
+        // Remove all video URLs from the content to use as description
+        let description = note.content
+        note.videoUrls.forEach(videoUrl => {
+          description = description.replace(videoUrl, '')
+        })
+        description = description.replace(/\s+/g, ' ').trim()
+
+        // Fill the draft with video URL, description, and publish date
+        updateDraft(draft.id, {
+          inputMethod: 'url',
+          videoUrl: note.videoUrls[0],
+          description,
+          publishAt: note.created_at,
+        })
+
+        navigate(`/upload?draft=${draft.id}&step=2`)
+      } catch {
+        toast({
+          title: t('upload.draft.maxDraftsReached'),
+          variant: 'destructive',
+          duration: 5000,
+        })
+      }
+    },
+    [createDraft, updateDraft, navigate, toast, t]
+  )
 
   const visibleNotes = useMemo(() => notes.slice(0, visibleCount), [notes, visibleCount])
   const hasMore = visibleCount < notes.length
@@ -318,7 +342,7 @@ export function VideoNotesPage() {
       ) : (
         <div className="space-y-4">
           {visibleNotes.map(note => (
-            <VideoNoteCard key={note.id} note={note} />
+            <VideoNoteCard key={note.id} note={note} onImport={handleImport} />
           ))}
           {hasMore && (
             <div className="flex justify-center pt-4">

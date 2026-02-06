@@ -11,9 +11,25 @@ import type { NostrEvent } from 'nostr-tools'
 // Popular relays that typically have zap receipts
 const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
 
-/** NIP-25: A reaction with content '-' is a downvote. Everything else ('+', emoji, custom text) is an upvote. */
-export const isUpvoteReaction = (content: string) => content !== '-'
-export const isDownvoteReaction = (content: string) => content === '-'
+/** Emoji reactions treated as negative/downvote */
+const NEGATIVE_REACTION_EMOJI = new Set([
+  '-',
+  '\u{1F44E}',
+  '\u{1F4A9}',
+  '\u{274C}',
+  '\u{1F6AB}',
+  '\u{1F4C9}',
+  '\u{1F92E}',
+  '\u{1F5D1}\u{FE0F}',
+  '\u{1F480}',
+])
+// 👎 💩 ❌ 🚫 📉 🤮 🗑️ 💀
+
+/** Check if a reaction is a downvote (negative emoji or '-') */
+export const isDownvoteReaction = (content: string) => NEGATIVE_REACTION_EMOJI.has(content)
+
+/** Check if a reaction is an upvote (anything not in the negative set) */
+export const isUpvoteReaction = (content: string) => !NEGATIVE_REACTION_EMOJI.has(content)
 
 const STATS_CACHE_KEY = 'event-stats-cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour

@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mirror announcements: after successful mirror operations, NIP-94 kind 1063 File Metadata events are published to announce new file locations to the network; other viewers can discover additional fallback URLs via the url-discovery system; works for both manual mirroring (MirrorVideoDialog) and upload-time mirroring; new `src/lib/mirror-announcements.ts` module with `buildFileMetadataEvent()` and `publishMirrorAnnouncements()` functions
 - URL discovery: now extracts both `url` and `fallback` tags from kind 1063 events, enabling discovery of all announced mirror locations for a file
 - Reactions: clickable reaction counts on video pages and shorts - clicking the upvote/downvote count (when > 0) opens a dialog listing all reactions with user avatar, name, timestamp, and reaction symbol (thumbs up/down or emoji); new `ReactionsDialog` component with memoized `ReactionItem` entries, sorted newest first in a scrollable list
+- Reactions: expanded negative reaction detection beyond just `-` to include emoji downvotes (👎, 💩, ❌, 🚫, 📉, 🤮, 🗑️, 💀); these now count as downvotes in reaction counts, liked videos lists, and "liked by creator" badges; ReactionsDialog displays negative emoji in red styling
 
 ### Changed
 

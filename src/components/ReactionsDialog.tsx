@@ -36,6 +36,7 @@ const ReactionItem = React.memo(function ReactionItem({ reaction }: ReactionItem
 
   const isDownvote = isDownvoteReaction(reaction.content)
   const isPlainUpvote = reaction.content === '+' || reaction.content === ''
+  const isPlainDownvote = reaction.content === '-'
 
   return (
     <div className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/50">
@@ -59,14 +60,14 @@ const ReactionItem = React.memo(function ReactionItem({ reaction }: ReactionItem
       <div className="flex shrink-0 flex-col items-end gap-0.5">
         <span className="text-sm text-muted-foreground">{formatDateTime(reaction.created_at)}</span>
         <span className="text-lg">
-          {isDownvote ? (
+          {isPlainDownvote ? (
             <ThumbsDown className="h-5 w-5 text-red-500" />
           ) : isPlainUpvote ? (
             <ThumbsUp className="h-5 w-5 text-green-500" />
+          ) : isDownvote ? (
+            <span className="text-red-500">{reaction.content}</span>
           ) : (
-            <span className="flex items-center gap-1">
-              <span>{reaction.content}</span>
-            </span>
+            <span>{reaction.content}</span>
           )}
         </span>
       </div>

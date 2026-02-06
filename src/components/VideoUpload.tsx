@@ -41,9 +41,10 @@ import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
 interface UploadFormProps {
   draft: UploadDraft
   onBack?: () => void
+  onPersist?: () => void
 }
 
-export function VideoUpload({ draft, onBack }: UploadFormProps) {
+export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -299,12 +300,22 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
     }
   }
 
+  // Wrap file drop to persist ephemeral draft before processing
+  const wrappedOnDrop = useCallback(
+    (files: File[]) => {
+      onPersist?.()
+      onDrop(files)
+    },
+    [onPersist, onDrop]
+  )
+
   // Dropzone for adding additional videos
   const onDropAdditional = useCallback(
     (acceptedFiles: File[]) => {
+      onPersist?.()
       handleAddVideo(acceptedFiles)
     },
-    [handleAddVideo]
+    [onPersist, handleAddVideo]
   )
 
   const { getRootProps: getRootPropsAdditional, getInputProps: getInputPropsAdditional } =
@@ -387,9 +398,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
       uploadInfo.videos.length === 0
     ) {
       autoProcessed.current = true
+      onPersist?.()
       handleUrlVideoProcessing(videoUrl)
     }
-  }, [inputMethod, videoUrl, uploadInfo.videos.length, handleUrlVideoProcessing])
+  }, [inputMethod, videoUrl, uploadInfo.videos.length, handleUrlVideoProcessing, onPersist])
 
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>
@@ -493,7 +505,10 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   <UrlInputSection
                     videoUrl={videoUrl}
                     onVideoUrlChange={setVideoUrl}
-                    onProcess={() => handleUrlVideoProcessing(videoUrl)}
+                    onProcess={() => {
+                      onPersist?.()
+                      handleUrlVideoProcessing(videoUrl)
+                    }}
                     isProcessing={uploadState === 'uploading'}
                   />
                 )}
@@ -503,7 +518,7 @@ export function VideoUpload({ draft, onBack }: UploadFormProps) {
                   blossomInitalUploadServers &&
                   blossomInitalUploadServers.length > 0 ? (
                   <FileDropzone
-                    onDrop={onDrop}
+                    onDrop={wrappedOnDrop}
                     accept={{ 'video/*': [] }}
                     selectedFile={file}
                     className="mb-4"

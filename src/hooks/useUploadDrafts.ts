@@ -140,13 +140,8 @@ export function useUploadDrafts() {
     [setVersion]
   )
 
-  const createDraft = useCallback((): UploadDraft => {
-    const currentDrafts = getDraftsFromStorage()
-    if (currentDrafts.length >= MAX_DRAFTS) {
-      throw new Error('Maximum 10 drafts allowed')
-    }
-
-    const newDraft: UploadDraft = {
+  const createDraftInMemory = useCallback((): UploadDraft => {
+    return {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -163,12 +158,27 @@ export function useUploadDrafts() {
       subtitles: [],
       thumbnailSource: 'generated',
     }
+  }, [])
 
-    const updated = [...currentDrafts, newDraft]
-    saveToLocalStorage(updated)
+  const persistDraft = useCallback(
+    (draft: UploadDraft): void => {
+      const currentDrafts = getDraftsFromStorage()
+      if (currentDrafts.length >= MAX_DRAFTS) {
+        throw new Error('Maximum 10 drafts allowed')
+      }
+      // Already persisted, skip
+      if (currentDrafts.some(d => d.id === draft.id)) return
+      const updated = [...currentDrafts, { ...draft, updatedAt: Date.now() }]
+      saveToLocalStorage(updated)
+    },
+    [saveToLocalStorage]
+  )
 
+  const createDraft = useCallback((): UploadDraft => {
+    const newDraft = createDraftInMemory()
+    persistDraft(newDraft)
     return newDraft
-  }, [saveToLocalStorage])
+  }, [createDraftInMemory, persistDraft])
 
   const saveToNostr = useCallback(
     async (draftsToSave: UploadDraft[]) => {
@@ -281,6 +291,11 @@ export function useUploadDrafts() {
   const updateDraft = useCallback(
     (draftId: string, updates: Partial<UploadDraft>) => {
       const currentDrafts = getDraftsFromStorage()
+      const draftIndex = currentDrafts.findIndex(d => d.id === draftId)
+
+      // Draft not persisted yet (ephemeral), skip save
+      if (draftIndex === -1) return
+
       const updated = currentDrafts.map(d =>
         d.id === draftId ? { ...d, ...updates, updatedAt: Date.now() } : d
       )
@@ -434,6 +449,8 @@ export function useUploadDrafts() {
     currentDraft,
     setCurrentDraft,
     createDraft,
+    createDraftInMemory,
+    persistDraft,
     updateDraft,
     deleteDraft,
     refreshDrafts,

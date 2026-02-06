@@ -1,9 +1,10 @@
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
+import type { UploadDraft } from '@/types/upload-draft'
 import { VideoUpload } from '@/components/VideoUpload'
 import { DraftPicker } from '@/components/upload/DraftPicker'
 import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 export function UploadPage() {
@@ -22,10 +23,15 @@ export function UploadPage() {
     currentDraft,
     setCurrentDraft,
     createDraft,
+    createDraftInMemory,
+    persistDraft,
     deleteDraft,
     refreshDrafts,
     flushNostrSync,
   } = useUploadDrafts()
+
+  // Track ephemeral (not yet persisted) draft
+  const ephemeralDraftRef = useRef<UploadDraft | null>(null)
 
   // When navigating back to draft picker, force a refresh to get latest data
   useEffect(() => {
@@ -49,13 +55,24 @@ export function UploadPage() {
     }
   }, [drafts, currentDraft, searchParams, setCurrentDraft, setSearchParams])
 
-  // Auto-create and select a draft when there are no drafts
+  // Auto-create an ephemeral (in-memory) draft when there are no drafts
+  // It won't be persisted to localStorage until the user takes a meaningful action
   useEffect(() => {
     if (drafts.length === 0 && !currentDraft && !searchParams.get('draft')) {
-      const newDraft = createDraft()
-      setCurrentDraft(newDraft)
+      if (!ephemeralDraftRef.current) {
+        ephemeralDraftRef.current = createDraftInMemory()
+      }
+      setCurrentDraft(ephemeralDraftRef.current)
     }
-  }, [drafts.length, currentDraft, createDraft, setCurrentDraft, searchParams])
+  }, [drafts.length, currentDraft, createDraftInMemory, setCurrentDraft, searchParams])
+
+  // Persist an ephemeral draft to localStorage when user takes a meaningful action
+  const handlePersist = useCallback(() => {
+    if (ephemeralDraftRef.current) {
+      persistDraft(ephemeralDraftRef.current)
+      ephemeralDraftRef.current = null
+    }
+  }, [persistDraft])
 
   // Handle back navigation with Nostr sync flush
   const handleBack = useCallback(async () => {
@@ -94,5 +111,5 @@ export function UploadPage() {
     )
   }
 
-  return <VideoUpload draft={currentDraft} onBack={handleBack} />
+  return <VideoUpload draft={currentDraft} onBack={handleBack} onPersist={handlePersist} />
 }

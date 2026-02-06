@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upload: deferred draft creation - navigating to `/upload` with 0 drafts no longer immediately persists an empty draft to localStorage and Nostr; instead, an ephemeral in-memory draft is created and only persisted when the user takes a meaningful action (drops a file, processes a URL, or imports from Video Notes); added `createDraftInMemory()` and `persistDraft()` to `useUploadDrafts` hook; `updateDraft()` now skips no-op writes for ephemeral drafts
 - Settings: redesigned Blossom terminology for non-technical users - renamed "Blossom Servers" to "Video Hosting" with "Primary"/"Backup" badges (was "initial upload"/"mirror"); renamed "Media Caching Servers" to "Streaming Servers"; marked Thumbnail Resize Server as advanced setting; changed settings icons from Server/Database to HardDrive/Play for clearer visual metaphor
 - i18n: updated all languages (EN/DE/FR/ES) with new hosting terminology throughout upload flows, error messages, onboarding dialogs, and server picker dialogs
 - Upload: renamed publish date options from "Publish immediately" / "Set publishing time" to "Use current date" / "Set custom date" for clearer wording (the feature sets the `published_at` timestamp, not scheduling)

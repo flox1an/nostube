@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
 import { useAppContext } from '@/hooks'
@@ -6,10 +6,12 @@ import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
 import { getDateLocale } from '@/lib/date-locale'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
+import { formatDuration } from '@/lib/formatDuration'
+import { formatFileSize } from '@/lib/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play, Upload, CheckCircle2, Loader2, X, ImageOff } from 'lucide-react'
+import { Play, Upload, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -20,7 +22,58 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
   const [proxyThumbnailError, setProxyThumbnailError] = useState(false)
+  const [duration, setDuration] = useState<number | undefined>(undefined)
+  const [sizeBytes, setSizeBytes] = useState<number | undefined>(note.sizeBytes)
+  const metadataProbed = useRef(false)
   const dateLocale = getDateLocale(i18n.language)
+
+  // Probe video metadata (duration + size via HEAD) on mount
+  useEffect(() => {
+    if (metadataProbed.current || !note.videoUrls[0]) return
+    metadataProbed.current = true
+
+    const url = note.videoUrls[0]
+
+    // Probe duration via a hidden video element with preload="metadata"
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.crossOrigin = 'anonymous'
+    video.src = url
+
+    const handleMetadata = () => {
+      if (video.duration && isFinite(video.duration)) {
+        setDuration(Math.round(video.duration))
+      }
+      cleanup()
+    }
+    const handleError = () => cleanup()
+    const cleanup = () => {
+      video.removeEventListener('loadedmetadata', handleMetadata)
+      video.removeEventListener('error', handleError)
+      video.src = ''
+      video.load()
+    }
+
+    video.addEventListener('loadedmetadata', handleMetadata)
+    video.addEventListener('error', handleError)
+
+    // If no size from imeta, try HEAD request for Content-Length
+    if (!note.sizeBytes) {
+      fetch(url, { method: 'HEAD' })
+        .then(res => {
+          const cl = res.headers.get('content-length')
+          if (cl) {
+            const bytes = parseInt(cl, 10)
+            if (!isNaN(bytes) && bytes > 0) setSizeBytes(bytes)
+          }
+        })
+        .catch(() => {
+          // Ignore - size will just not be shown
+        })
+    }
+
+    return () => cleanup()
+  }, [note.videoUrls, note.sizeBytes])
 
   // Build optimized thumbnail URL with fallback chain
   const thumbnailSrc = useMemo(() => {
@@ -74,6 +127,14 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
     navigate(`/upload?${params.toString()}`)
   }
 
+  const handleStopPlaying = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setIsPlaying(false)
+    },
+    [setIsPlaying]
+  )
+
   // Truncate content for preview
   const contentPreview =
     note.content.length > 200 ? note.content.substring(0, 200) + '...' : note.content
@@ -100,10 +161,7 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
                   variant="secondary"
                   size="sm"
                   className="absolute top-1 right-1 rounded-full h-6 w-6 p-0 opacity-80 hover:opacity-100"
-                  onClick={e => {
-                    e.stopPropagation()
-                    setIsPlaying(false)
-                  }}
+                  onClick={handleStopPlaying}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -139,6 +197,11 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
                     <Play className="h-5 w-5" />
                   </Button>
                 </div>
+                {duration !== undefined && duration > 0 && (
+                  <div className="absolute bottom-1 left-1 bg-black/70 text-white px-1 rounded text-[10px] font-mono">
+                    {formatDuration(duration)}
+                  </div>
+                )}
                 {note.isReposted && (
                   <div className="absolute top-2 right-2">
                     <Badge variant="default" className="bg-green-500 text-white">
@@ -162,6 +225,18 @@ function VideoNoteCard({ note }: { note: VideoNote }) {
                     locale: dateLocale,
                   })}
                 </span>
+                {duration !== undefined && duration > 0 && (
+                  <Badge variant="outline" className="gap-1 text-xs font-mono">
+                    <Clock className="h-3 w-3" />
+                    {formatDuration(duration)}
+                  </Badge>
+                )}
+                {sizeBytes !== undefined && sizeBytes > 0 && (
+                  <Badge variant="outline" className="gap-1 text-xs font-mono">
+                    <HardDrive className="h-3 w-3" />
+                    {formatFileSize(sizeBytes)}
+                  </Badge>
+                )}
                 {note.videoUrls.length > 1 && (
                   <Badge variant="outline">
                     {t('pages.videoNotes.multipleVideos', { count: note.videoUrls.length })}

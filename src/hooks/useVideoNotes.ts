@@ -16,6 +16,7 @@ export interface VideoNote {
   imetaTags: string[][]
   blossomHashes: string[]
   thumbnailUrl?: string
+  sizeBytes?: number
   isReposted: boolean
 }
 
@@ -158,15 +159,19 @@ export function useVideoNotes() {
             .map(url => extractBlossomHash(url).sha256)
             .filter((hash): hash is string => !!hash)
 
-          // Get thumbnail from imeta or first video URL
+          // Get thumbnail and size from imeta or first video URL
           let thumbnailUrl: string | undefined
+          let sizeBytes: number | undefined
           if (imetaTags.length > 0) {
             const firstImeta = imetaTags[0]
             for (let i = 1; i < firstImeta.length; i++) {
               const [key, value] = firstImeta[i].split(' ', 2)
-              if (key === 'image' && value) {
+              if (key === 'image' && value && !thumbnailUrl) {
                 thumbnailUrl = value
-                break
+              }
+              if (key === 'size' && value) {
+                const parsed = parseInt(value, 10)
+                if (!isNaN(parsed) && parsed > 0) sizeBytes = parsed
               }
             }
           }
@@ -185,6 +190,7 @@ export function useVideoNotes() {
             imetaTags,
             blossomHashes,
             thumbnailUrl,
+            sizeBytes,
             isReposted,
           } as VideoNote
         })

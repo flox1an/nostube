@@ -6,6 +6,7 @@ import {
   useEventStats,
   useUserReactionStatus,
   useProfile,
+  useDialogState,
 } from '@/hooks'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -14,6 +15,7 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ZapButton } from './ZapButton'
+import { ReactionsDialog } from './ReactionsDialog'
 
 interface VideoReactionButtonsProps {
   eventId: string
@@ -62,6 +64,16 @@ export function VideoReactionButtons({
   // Check if current user has reacted
   const { hasUpvoted, hasDownvoted } = useUserReactionStatus(reactions, user?.pubkey)
   const hasReacted = hasUpvoted || hasDownvoted
+
+  // Dialog state for reactions list
+  const reactionsDialog = useDialogState()
+  const totalReactions = upvoteCount + downvoteCount
+
+  const handleCountClick = () => {
+    if (totalReactions > 0) {
+      reactionsDialog.openDialog()
+    }
+  }
 
   // Get video event from store to access seenRelays
   const videoEvent = useMemo(() => {
@@ -163,13 +175,27 @@ export function VideoReactionButtons({
             className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
           >
             <ThumbsUp className="h-5 w-5" />
-            <span className="ml-1 md:ml-2">{upvoteCount}</span>
+            <button
+              type="button"
+              className={cn('ml-1 md:ml-2', totalReactions > 0 && 'cursor-pointer hover:underline')}
+              onClick={handleCountClick}
+              disabled={totalReactions === 0}
+            >
+              {upvoteCount}
+            </button>
           </div>
           <div
             className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
           >
             <ThumbsDown className="h-5 w-5" />
-            <span className="ml-1 md:ml-2">{downvoteCount}</span>
+            <button
+              type="button"
+              className={cn('ml-1 md:ml-2', totalReactions > 0 && 'cursor-pointer hover:underline')}
+              onClick={handleCountClick}
+              disabled={totalReactions === 0}
+            >
+              {downvoteCount}
+            </button>
           </div>
           {hasLightningAddress && (
             <ZapButton
@@ -180,32 +206,61 @@ export function VideoReactionButtons({
               className={className}
             />
           )}
+          <ReactionsDialog
+            open={reactionsDialog.open}
+            onOpenChange={reactionsDialog.setOpen}
+            reactions={reactions}
+          />
         </>
       )
     }
 
     return (
       <>
-        <Button
-          variant="ghost"
-          className={className}
-          onClick={handleUpvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label="Upvote"
-        >
-          <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
-          <span className="ml-1 md:ml-2">{upvoteCount}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className={className}
-          onClick={handleDownvote}
-          disabled={!user || isPending || hasReacted}
-          aria-label="Downvote"
-        >
-          <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
-          <span className="ml-1 md:ml-2">{downvoteCount}</span>
-        </Button>
+        <div className="inline-flex items-center">
+          <Button
+            variant="ghost"
+            className={cn('pr-0', className)}
+            onClick={handleUpvote}
+            disabled={!user || isPending || hasReacted}
+            aria-label="Upvote"
+          >
+            <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
+          </Button>
+          <button
+            type="button"
+            className={cn(
+              'px-1 py-2 text-sm md:px-2',
+              totalReactions > 0 && 'cursor-pointer hover:underline'
+            )}
+            onClick={handleCountClick}
+            disabled={totalReactions === 0}
+          >
+            {upvoteCount}
+          </button>
+        </div>
+        <div className="inline-flex items-center">
+          <Button
+            variant="ghost"
+            className={cn('pr-0', className)}
+            onClick={handleDownvote}
+            disabled={!user || isPending || hasReacted}
+            aria-label="Downvote"
+          >
+            <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
+          </Button>
+          <button
+            type="button"
+            className={cn(
+              'px-1 py-2 text-sm md:px-2',
+              totalReactions > 0 && 'cursor-pointer hover:underline'
+            )}
+            onClick={handleCountClick}
+            disabled={totalReactions === 0}
+          >
+            {downvoteCount}
+          </button>
+        </div>
         {hasLightningAddress && (
           <ZapButton
             eventId={eventId}
@@ -216,6 +271,11 @@ export function VideoReactionButtons({
             currentTime={currentTime}
           />
         )}
+        <ReactionsDialog
+          open={reactionsDialog.open}
+          onOpenChange={reactionsDialog.setOpen}
+          reactions={reactions}
+        />
       </>
     )
   }
@@ -229,13 +289,33 @@ export function VideoReactionButtons({
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
             <ThumbsUp className="h-5 w-5" />
           </div>
-          <span className="text-sm font-medium">{upvoteCount}</span>
+          <button
+            type="button"
+            className={cn(
+              'text-sm font-medium',
+              totalReactions > 0 && 'cursor-pointer hover:underline'
+            )}
+            onClick={handleCountClick}
+            disabled={totalReactions === 0}
+          >
+            {upvoteCount}
+          </button>
         </div>
         <div className={cn('flex flex-col items-center gap-1', className)}>
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
             <ThumbsDown className="h-5 w-5" />
           </div>
-          <span className="text-sm font-medium">{downvoteCount}</span>
+          <button
+            type="button"
+            className={cn(
+              'text-sm font-medium',
+              totalReactions > 0 && 'cursor-pointer hover:underline'
+            )}
+            onClick={handleCountClick}
+            disabled={totalReactions === 0}
+          >
+            {downvoteCount}
+          </button>
         </div>
         {hasLightningAddress && (
           <ZapButton
@@ -247,6 +327,11 @@ export function VideoReactionButtons({
             currentTime={currentTime}
           />
         )}
+        <ReactionsDialog
+          open={reactionsDialog.open}
+          onOpenChange={reactionsDialog.setOpen}
+          reactions={reactions}
+        />
       </>
     )
   }
@@ -265,7 +350,17 @@ export function VideoReactionButtons({
         >
           <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
         </Button>
-        <span className="text-sm font-medium">{upvoteCount}</span>
+        <button
+          type="button"
+          className={cn(
+            'text-sm font-medium',
+            totalReactions > 0 && 'cursor-pointer hover:underline'
+          )}
+          onClick={handleCountClick}
+          disabled={totalReactions === 0}
+        >
+          {upvoteCount}
+        </button>
       </div>
 
       {/* Downvote button */}
@@ -280,7 +375,17 @@ export function VideoReactionButtons({
         >
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
         </Button>
-        <span className="text-sm font-medium">{downvoteCount}</span>
+        <button
+          type="button"
+          className={cn(
+            'text-sm font-medium',
+            totalReactions > 0 && 'cursor-pointer hover:underline'
+          )}
+          onClick={handleCountClick}
+          disabled={totalReactions === 0}
+        >
+          {downvoteCount}
+        </button>
       </div>
       {hasLightningAddress && (
         <ZapButton
@@ -291,6 +396,11 @@ export function VideoReactionButtons({
           className={className}
         />
       )}
+      <ReactionsDialog
+        open={reactionsDialog.open}
+        onOpenChange={reactionsDialog.setOpen}
+        reactions={reactions}
+      />
     </>
   )
 }

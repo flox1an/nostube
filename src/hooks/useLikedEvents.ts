@@ -3,6 +3,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { isUpvoteReaction } from './useEventStats'
 
 export function useLikedEvents() {
   const { user } = useCurrentUser()
@@ -66,7 +67,7 @@ export function useLikedEvents() {
 
     // Sort reaction events by created_at in descending order (most recent first)
     const sortedReactions = [...reactionEvents]
-      .filter(event => event.content === '+')
+      .filter(event => isUpvoteReaction(event.content))
       .sort((a, b) => b.created_at - a.created_at)
 
     const eventIds: string[] = []

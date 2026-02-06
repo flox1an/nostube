@@ -4,6 +4,7 @@ import { useAppContext } from './useAppContext'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useStableRelays } from './useStableRelays'
 import { getKindsForType } from '@/lib/video-types'
+import { isUpvoteReaction } from './useEventStats'
 
 // Video event kinds
 const VIDEO_KINDS = new Set(getKindsForType('all'))
@@ -120,7 +121,7 @@ export function useAuthorLikedVideos(pubkey: string | undefined) {
 
     // From reactions (only positive reactions for video events)
     for (const event of reactionEvents) {
-      if (event.content === '+' && isVideoTarget(event)) {
+      if (isUpvoteReaction(event.content) && isVideoTarget(event)) {
         const eTag = event.tags.find(tag => tag[0] === 'e')
         if (eTag?.[1]) ids.add(eTag[1])
       }

@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reactions: emoji reactions (e.g., 💜, 🤙) now count as likes; per NIP-25, only `-` content is a downvote, everything else (including `+`, emoji, and custom text) counts as an upvote; previously only `+` was counted, causing emoji reactions to be silently ignored in like counts, liked videos lists, and "liked by creator" badges
 - Author page: fixed avatar and profile info disappearing above the page when user has no banner image or banner image fails to load; negative margin was applied based on metadata banner URL existence rather than actual image load state; banner now only renders after successful image load, preventing layout issues with broken or missing banner URLs
 - Upload: fixed `created_at` being set to the custom publish date instead of the current time; `created_at` now always reflects when the event was actually published, while the custom date only goes into the `published_at` tag
 - Upload: relay hints from `p` tags and `nostr:nprofile` mentions are now preserved and included in video event `p` tags; previously relay hints were discarded when importing people from video notes; PeoplePicker also extracts relay hints from the person's NIP-65 relay list (kind 10002) when available in the event store

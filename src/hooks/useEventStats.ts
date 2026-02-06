@@ -11,6 +11,10 @@ import type { NostrEvent } from 'nostr-tools'
 // Popular relays that typically have zap receipts
 const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
 
+/** NIP-25: A reaction with content '-' is a downvote. Everything else ('+', emoji, custom text) is an upvote. */
+export const isUpvoteReaction = (content: string) => content !== '-'
+export const isDownvoteReaction = (content: string) => content === '-'
+
 const STATS_CACHE_KEY = 'event-stats-cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour
 
@@ -286,10 +290,10 @@ export function useEventStats({
     const downvoters = new Set<string>()
 
     for (const reaction of reactions) {
-      if (reaction.content === '+') {
-        upvoters.add(reaction.pubkey)
-      } else if (reaction.content === '-') {
+      if (isDownvoteReaction(reaction.content)) {
         downvoters.add(reaction.pubkey)
+      } else {
+        upvoters.add(reaction.pubkey)
       }
     }
 
@@ -347,8 +351,8 @@ export function useUserReactionStatus(
 
     for (const reaction of reactions) {
       if (reaction.pubkey === userPubkey) {
-        if (reaction.content === '+') hasUpvoted = true
-        if (reaction.content === '-') hasDownvoted = true
+        if (isDownvoteReaction(reaction.content)) hasDownvoted = true
+        else hasUpvoted = true
       }
     }
 

@@ -9,6 +9,7 @@ import {
   useProfile,
   useWallet,
 } from '@/hooks'
+import { isUpvoteReaction } from '@/hooks/useEventStats'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
@@ -70,7 +71,7 @@ export const CommentReactions = memo(function CommentReactions({
   // Check if video author has liked this comment
   const videoAuthorLiked = useMemo(() => {
     if (!videoAuthorPubkey || videoAuthorPubkey === authorPubkey) return false
-    return reactions.some(r => r.pubkey === videoAuthorPubkey && r.content === '+')
+    return reactions.some(r => r.pubkey === videoAuthorPubkey && isUpvoteReaction(r.content))
   }, [reactions, videoAuthorPubkey, authorPubkey])
 
   // Use the useZap hook for zapping

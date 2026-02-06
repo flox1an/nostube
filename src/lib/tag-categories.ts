@@ -17,6 +17,8 @@ export const TAG_CATEGORIES: TagCategory[] = [
       'proof of work',
       'lightning',
       'fiat',
+      'rhr',
+      'rabbitholerecap',
     ],
   },
   {
@@ -71,7 +73,20 @@ export const TAG_CATEGORIES: TagCategory[] = [
   {
     name: 'Entertainment',
     slug: 'entertainment',
-    tags: ['comedy', 'funny', 'memes', 'meme', 'animation', 'anime', 'foamy', 'cartoon', 'lol'],
+    tags: [
+      'comedy',
+      'funny',
+      'memes',
+      'meme',
+      'animation',
+      'anime',
+      'foamy',
+      'cartoon',
+      'lol',
+      'film',
+      'movie',
+      'kinostr',
+    ],
   },
   {
     name: 'Technology & Innovation',

@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Categories: added `rhr` and `rabbitholerecap` tags to Bitcoin category; added `film`, `movie`, and `kinostr` tags to Entertainment category
 - Notifications: bell icon is now disabled and non-clickable when there are no notifications (prevents opening empty dropdown)
 - User menu: removed "Add another account" option, removed appearance/theme toggle, added Settings entry, changed logout text from red to normal
 - Search: replaced NIP-50 relay search with client-side full-text search using MiniSearch; loads up to 1000 video events from relays on first search, indexes title/description/tags/author name with field boosting, supports fuzzy matching and prefix search

@@ -35,24 +35,27 @@ import { useTranslation } from 'react-i18next'
 
 type Tabs = 'videos' | 'shorts' | string
 
-function AuthorBanner({ pubkey }: { pubkey: string }) {
+function AuthorBanner({
+  pubkey,
+  onLoad,
+  onError,
+}: {
+  pubkey: string
+  onLoad: () => void
+  onError: () => void
+}) {
   const metadata = useProfile({ pubkey })
   const banner = metadata?.banner
 
   if (!banner) return null
 
+  return <img src={banner} alt="" className="hidden" onLoad={onLoad} onError={onError} />
+}
+
+function AuthorBannerDisplay({ banner }: { banner: string }) {
   return (
     <div className="relative w-full h-32 sm:h-48 md:h-56 overflow-hidden rounded-lg">
-      <img
-        src={banner}
-        alt=""
-        className="w-full h-full object-cover"
-        onError={e => {
-          // Hide the banner container if image fails to load
-          const target = e.target as HTMLImageElement
-          target.parentElement!.style.display = 'none'
-        }}
-      />
+      <img src={banner} alt="" className="w-full h-full object-cover" />
       {/* Gradient fade to background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-background" />
     </div>
@@ -455,14 +458,19 @@ export function AuthorPage() {
     }
   }, [authorName])
 
-  const hasBanner = !!authorMeta?.banner
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const handleBannerLoad = useCallback(() => {
+    if (authorMeta?.banner) setBannerUrl(authorMeta.banner)
+  }, [authorMeta?.banner])
+  const handleBannerError = useCallback(() => setBannerUrl(null), [])
 
   if (!pubkey) return null
 
   return (
     <div className="max-w-560 mx-auto sm:p-4">
-      <AuthorBanner pubkey={pubkey} />
-      <AuthorProfile className="p-2" pubkey={pubkey} hasBanner={hasBanner} />
+      <AuthorBanner pubkey={pubkey} onLoad={handleBannerLoad} onError={handleBannerError} />
+      {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} />}
+      <AuthorProfile className="p-2" pubkey={pubkey} hasBanner={!!bannerUrl} />
 
       <div className="p-2">
         {/* Scrollable tab bar */}

@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Author page: fixed avatar and profile info disappearing above the page when user has no banner image or banner image fails to load; negative margin was applied based on metadata banner URL existence rather than actual image load state; banner now only renders after successful image load, preventing layout issues with broken or missing banner URLs
 - Upload: fixed `created_at` being set to the custom publish date instead of the current time; `created_at` now always reflects when the event was actually published, while the custom date only goes into the `published_at` tag
 - Upload: relay hints from `p` tags and `nostr:nprofile` mentions are now preserved and included in video event `p` tags; previously relay hints were discarded when importing people from video notes; PeoplePicker also extracts relay hints from the person's NIP-65 relay list (kind 10002) when available in the event store
 - PeoplePicker: fixed programmatically added people (e.g., from video import) not loading profile names and avatars; the profile loader was using an empty relay array, now falls back to DEFAULT_RELAYS + METADATA_RELAY; also fixed potential infinite re-renders by tracking loaded pubkeys in a ref and using refs for stale closure prevention

@@ -107,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Mirror dialog: fixed button showing wrong server count (displayed total operations = files × servers instead of just selected server count); also improved i18n with proper pluralization for all languages
 - Upload: fixed thumbnail deletion failing when the file was already missing from the server (now ignores 404 errors)
 - Admin: fixed `defaultThumbResizeServer` not being parsed when loading presets from Nostr events
 - Admin: fixed relay URLs not being normalized when added in the preset editor

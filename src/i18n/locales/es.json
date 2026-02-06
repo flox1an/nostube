@@ -190,7 +190,8 @@
       "errorTitle": "Error de replicación",
       "errorMessage": "Error al replicar el vídeo.",
       "mirroring": "Replicando...",
-      "mirrorButton": "Replicar en {{count}} servidor(es)"
+      "mirrorButton_one": "Replicar en {{count}} servidor",
+      "mirrorButton_other": "Replicar en {{count}} servidores"
     },
     "transform": {
       "alertTitle": "Transformación de Video Necesaria",

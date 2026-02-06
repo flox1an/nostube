@@ -190,7 +190,8 @@
       "errorTitle": "Spiegelungsfehler",
       "errorMessage": "Video konnte nicht gespiegelt werden.",
       "mirroring": "Wird gespiegelt...",
-      "mirrorButton": "Auf {{count}} Server spiegeln"
+      "mirrorButton_one": "Auf {{count}} Server spiegeln",
+      "mirrorButton_other": "Auf {{count}} Server spiegeln"
     },
     "transform": {
       "alertTitle": "Videotransformation erforderlich",

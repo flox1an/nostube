@@ -190,7 +190,8 @@
       "errorTitle": "Erreur de duplication",
       "errorMessage": "Échec de la duplication de la vidéo.",
       "mirroring": "Duplication...",
-      "mirrorButton": "Dupliquer vers {{count}} serveur(s)"
+      "mirrorButton_one": "Dupliquer vers {{count}} serveur",
+      "mirrorButton_other": "Dupliquer vers {{count}} serveurs"
     },
     "transform": {
       "alertTitle": "Transformation Vidéo Nécessaire",

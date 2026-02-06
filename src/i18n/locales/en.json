@@ -194,7 +194,8 @@
       "errorTitle": "Mirror error",
       "errorMessage": "Failed to mirror video.",
       "mirroring": "Mirroring...",
-      "mirrorButton": "Mirror to {{count}} server(s)"
+      "mirrorButton_one": "Mirror to {{count}} server",
+      "mirrorButton_other": "Mirror to {{count}} servers"
     },
     "transform": {
       "alertTitle": "Video Transformation Needed",

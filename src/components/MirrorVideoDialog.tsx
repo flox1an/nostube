@@ -496,7 +496,7 @@ export function MirrorVideoDialog({
               <>
                 <Copy className="mr-2 h-4 w-4" />
                 {t('video.mirror.mirrorButton', {
-                  count: selectedBlobs.size * selectedServers.size,
+                  count: selectedServers.size,
                 })}
               </>
             )}

@@ -7,6 +7,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { UserAvatar } from '@/components/UserAvatar'
 import { useSearchProfiles, type ProfileResult } from '@/hooks/useSearchProfiles'
 import { nip19 } from 'nostr-tools'
+import { useEventStore } from 'applesauce-react/hooks'
+import { useAppContext } from '@/hooks/useAppContext'
+import { kinds } from 'nostr-tools'
+import { getProfileContent } from 'applesauce-core/helpers'
+import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { DEFAULT_RELAYS } from '@/nostr/core'
+import { METADATA_RELAY } from '@/constants/relays'
 
 export interface SelectedPerson {
   pubkey: string
@@ -36,11 +43,112 @@ export function PeoplePicker({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
+  const eventStore = useEventStore()
+  const { pool } = useAppContext()
+
   const { profiles, loading } = useSearchProfiles({
     query: inputValue,
     debounceMs: 300,
     limit: 8,
   })
+
+  // Track which pubkeys we've already attempted to load to prevent duplicate loads
+  const loadingPubkeysRef = useRef<Set<string>>(new Set())
+  // Keep a ref to the latest people & callback to avoid stale closures in async callbacks
+  const peopleRef = useRef(people)
+  const onPeopleChangeRef = useRef(onPeopleChange)
+  useEffect(() => {
+    peopleRef.current = people
+  }, [people])
+  useEffect(() => {
+    onPeopleChangeRef.current = onPeopleChange
+  }, [onPeopleChange])
+
+  // Auto-load missing profile data for programmatically added people
+  useEffect(() => {
+    const pubkeysToLoad: string[] = []
+
+    for (const person of people) {
+      // Skip if already loaded/loading
+      if (loadingPubkeysRef.current.has(person.pubkey)) continue
+      // Skip if profile data is already present
+      if (person.picture && person.name !== person.pubkey.slice(0, 8)) continue
+
+      // Check if profile exists in the event store already
+      const existingEvent = eventStore.getReplaceable(kinds.Metadata, person.pubkey)
+      if (existingEvent) {
+        const profile = getProfileContent(existingEvent)
+        if (profile && (profile.picture !== person.picture || profile.name !== person.name)) {
+          loadingPubkeysRef.current.add(person.pubkey)
+          // Defer the state update to avoid updating during render
+          queueMicrotask(() => {
+            const currentPeople = peopleRef.current
+            onPeopleChangeRef.current(
+              currentPeople.map(p =>
+                p.pubkey === person.pubkey
+                  ? {
+                      ...p,
+                      name: profile.name || profile.display_name || p.name,
+                      picture: profile.picture || p.picture,
+                    }
+                  : p
+              )
+            )
+          })
+        }
+      } else {
+        pubkeysToLoad.push(person.pubkey)
+      }
+    }
+
+    if (pubkeysToLoad.length === 0) return
+
+    // Mark all as loading to prevent duplicate requests
+    pubkeysToLoad.forEach(pk => loadingPubkeysRef.current.add(pk))
+
+    // Use fallback relays (including metadata-specialized relay) when person has no relay hints
+    const relays = [...DEFAULT_RELAYS, METADATA_RELAY]
+
+    const loader = createTimelineLoader(
+      pool,
+      relays,
+      {
+        kinds: [kinds.Metadata],
+        authors: pubkeysToLoad,
+      },
+      {
+        eventStore,
+        limit: pubkeysToLoad.length,
+      }
+    )
+
+    const subscription = loader().subscribe({
+      next: event => {
+        const profile = getProfileContent(event)
+        if (profile && event.pubkey) {
+          const currentPeople = peopleRef.current
+          onPeopleChangeRef.current(
+            currentPeople.map(p =>
+              p.pubkey === event.pubkey
+                ? {
+                    ...p,
+                    name: profile.name || profile.display_name || p.name,
+                    picture: profile.picture || p.picture,
+                  }
+                : p
+            )
+          )
+        }
+      },
+      error: err => {
+        console.error('[PeoplePicker] Error loading profiles:', err)
+      },
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [people, eventStore, pool])
 
   // Filter out already selected people
   const filteredProfiles = React.useMemo(() => {

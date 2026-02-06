@@ -3,6 +3,7 @@ import { useAppContext, useReadRelays } from '@/hooks'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@/utils/video-event'
+import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 
 // Test npub: npub10uthwp4ddc9w5adfuv69m8la4enkwma07fymuetmt93htcww6wgs55xdlq
@@ -17,11 +18,47 @@ export interface VideoNote {
   blossomHashes: string[]
   thumbnailUrl?: string
   sizeBytes?: number
+  /** Pubkeys referenced via p tags or nostr:npub/nprofile mentions in content */
+  pubkeys: string[]
   isReposted: boolean
 }
 
 // URL regex to extract URLs from content
 const URL_REGEX = /https?:\/\/[^\s]+/g
+
+// Regex to match nostr:npub1... and nostr:nprofile1... mentions in content
+const NOSTR_MENTION_REGEX = /nostr:(npub1[a-z0-9]+|nprofile1[a-z0-9]+)/g
+
+/**
+ * Extract unique pubkeys from event p tags and nostr: mentions in content
+ */
+function extractPubkeys(content: string, tags: string[][]): string[] {
+  const pubkeys = new Set<string>()
+
+  // Extract from p tags
+  for (const tag of tags) {
+    if (tag[0] === 'p' && tag[1]) {
+      pubkeys.add(tag[1])
+    }
+  }
+
+  // Extract from nostr:npub1... and nostr:nprofile1... in content
+  const matches = content.matchAll(NOSTR_MENTION_REGEX)
+  for (const match of matches) {
+    try {
+      const decoded = nip19.decode(match[1])
+      if (decoded.type === 'npub') {
+        pubkeys.add(decoded.data)
+      } else if (decoded.type === 'nprofile') {
+        pubkeys.add(decoded.data.pubkey)
+      }
+    } catch {
+      // Invalid nostr identifier, skip
+    }
+  }
+
+  return Array.from(pubkeys)
+}
 
 /**
  * Extract video URLs from Kind 1 note content
@@ -179,6 +216,9 @@ export function useVideoNotes() {
             thumbnailUrl = videoUrls[0]
           }
 
+          // Extract referenced pubkeys from p tags and nostr: mentions
+          const pubkeys = extractPubkeys(event.content, event.tags)
+
           // Check if any of the video URLs have been reposted
           const isReposted = videoUrls.some(url => videoUrlSet.has(url))
 
@@ -191,6 +231,7 @@ export function useVideoNotes() {
             blossomHashes,
             thumbnailUrl,
             sizeBytes,
+            pubkeys,
             isReposted,
           } as VideoNote
         })

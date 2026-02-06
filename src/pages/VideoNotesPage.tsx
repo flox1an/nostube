@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { useAppContext } from '@/hooks'
+import type { TaggedPerson } from '@/types/upload-draft'
 import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
@@ -291,12 +292,19 @@ export function VideoNotesPage() {
         })
         description = description.replace(/\s+/g, ' ').trim()
 
-        // Fill the draft with video URL, description, and publish date
+        // Convert referenced pubkeys to people tags
+        const people: TaggedPerson[] = note.pubkeys.map(pubkey => ({
+          pubkey,
+          name: '',
+        }))
+
+        // Fill the draft with video URL, description, publish date, and people
         updateDraft(draft.id, {
           inputMethod: 'url',
           videoUrl: note.videoUrls[0],
           description,
           publishAt: note.created_at,
+          ...(people.length > 0 && { people }),
         })
 
         navigate(`/upload?draft=${draft.id}&step=2`)

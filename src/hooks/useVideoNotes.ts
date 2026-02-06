@@ -5,8 +5,8 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
 
-// Test npub: npub1cj8znuztfqkvq89pl8hceph0svvvqk0qay6nydgk9uyq7fhpfsgsqwrz4u
-const TEST_PUBKEY = 'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11'
+// Test npub: npub10uthwp4ddc9w5adfuv69m8la4enkwma07fymuetmt93htcww6wgs55xdlq
+const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
 
 export interface VideoNote {
   id: string

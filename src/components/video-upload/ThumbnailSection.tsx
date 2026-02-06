@@ -178,10 +178,13 @@ export function ThumbnailSection({
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration)
-      // If no thumbnail exists yet AND we are in generated mode (checked by parent usually, but here we just update preview)
-      // We don't auto-upload anymore as per new flow, user must explicitly set it from slider
-      updatePreview()
     }
+  }, [])
+
+  const handleLoadedData = useCallback(() => {
+    // Capture the first frame once actual pixel data is available
+    // (loadedmetadata only guarantees dimensions, not frame pixels)
+    updatePreview()
   }, [updatePreview])
 
   const handleSliderChange = (value: number[]) => {
@@ -334,8 +337,9 @@ export function ThumbnailSection({
                   ref={videoRef}
                   src={videoUrl}
                   onLoadedMetadata={handleLoadedMetadata}
+                  onLoadedData={handleLoadedData}
                   onSeeked={handleSeeked}
-                  preload="metadata"
+                  preload="auto"
                   className="rounded border w-full max-h-80 object-contain bg-black"
                   muted
                   crossOrigin="anonymous"

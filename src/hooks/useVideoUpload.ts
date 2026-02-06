@@ -168,14 +168,14 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     return (now + durations[expiration]).toString()
   }
 
-  // Use publishAt if scheduled, otherwise use current time
-  const timestamp = publishAt ?? nowInSecs()
-  const createdAt = isPreview ? (publishAt ? publishAt : '<generated on publish>') : timestamp
+  // created_at is always the current time (when the event is actually published)
+  // published_at carries the user-chosen publish date (or current time if not scheduled)
+  const createdAt = isPreview ? '<generated on publish>' : nowInSecs()
   const publishedAt = isPreview
     ? publishAt
       ? publishAt.toString()
       : '<generated on publish>'
-    : timestamp.toString()
+    : (publishAt ?? nowInSecs()).toString()
 
   // Build text-track tags for subtitles
   const textTrackTags: string[][] = subtitles

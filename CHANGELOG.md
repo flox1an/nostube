@@ -109,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: fixed `created_at` being set to the custom publish date instead of the current time; `created_at` now always reflects when the event was actually published, while the custom date only goes into the `published_at` tag
 - PeoplePicker: fixed programmatically added people (e.g., from video import) not loading profile names and avatars; the profile loader was using an empty relay array, now falls back to DEFAULT_RELAYS + METADATA_RELAY; also fixed potential infinite re-renders by tracking loaded pubkeys in a ref and using refs for stale closure prevention
 - Upload: fixed thumbnail preview empty at initial video position (0:00) in frame selector - the first frame was captured on `loadedmetadata` when pixel data wasn't available yet; now captures on `loadeddata` event and uses `preload="auto"` to ensure the frame is fully decoded before canvas capture
 - Mirror dialog: fixed button showing wrong server count (displayed total operations = files × servers instead of just selected server count); also improved i18n with proper pluralization for all languages

@@ -9,6 +9,12 @@ import type { NostrEvent } from 'nostr-tools'
 // Test npub: npub10uthwp4ddc9w5adfuv69m8la4enkwma07fymuetmt93htcww6wgs55xdlq
 const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
 
+/** A pubkey with optional relay hints extracted from p tags or nprofile links */
+export interface PubkeyWithRelays {
+  pubkey: string
+  relays: string[]
+}
+
 export interface VideoNote {
   id: string
   content: string
@@ -19,7 +25,7 @@ export interface VideoNote {
   thumbnailUrl?: string
   sizeBytes?: number
   /** Pubkeys referenced via p tags or nostr:npub/nprofile mentions in content */
-  pubkeys: string[]
+  pubkeys: PubkeyWithRelays[]
   isReposted: boolean
 }
 
@@ -30,15 +36,25 @@ const URL_REGEX = /https?:\/\/[^\s]+/g
 const NOSTR_MENTION_REGEX = /nostr:(npub1[a-z0-9]+|nprofile1[a-z0-9]+)/g
 
 /**
- * Extract unique pubkeys from event p tags and nostr: mentions in content
+ * Extract unique pubkeys with relay hints from event p tags and nostr: mentions in content.
+ * Relay hints are preserved from p tag[2] and nprofile relay data.
  */
-function extractPubkeys(content: string, tags: string[][]): string[] {
-  const pubkeys = new Set<string>()
+function extractPubkeys(content: string, tags: string[][]): PubkeyWithRelays[] {
+  const pubkeyMap = new Map<string, Set<string>>()
 
-  // Extract from p tags
+  const addPubkey = (pubkey: string, relays: string[]) => {
+    const existing = pubkeyMap.get(pubkey)
+    if (existing) {
+      relays.forEach(r => existing.add(r))
+    } else {
+      pubkeyMap.set(pubkey, new Set(relays))
+    }
+  }
+
+  // Extract from p tags (relay hint in tag[2])
   for (const tag of tags) {
     if (tag[0] === 'p' && tag[1]) {
-      pubkeys.add(tag[1])
+      addPubkey(tag[1], tag[2] ? [tag[2]] : [])
     }
   }
 
@@ -48,16 +64,19 @@ function extractPubkeys(content: string, tags: string[][]): string[] {
     try {
       const decoded = nip19.decode(match[1])
       if (decoded.type === 'npub') {
-        pubkeys.add(decoded.data)
+        addPubkey(decoded.data, [])
       } else if (decoded.type === 'nprofile') {
-        pubkeys.add(decoded.data.pubkey)
+        addPubkey(decoded.data.pubkey, decoded.data.relays ?? [])
       }
     } catch {
       // Invalid nostr identifier, skip
     }
   }
 
-  return Array.from(pubkeys)
+  return Array.from(pubkeyMap.entries()).map(([pubkey, relays]) => ({
+    pubkey,
+    relays: Array.from(relays),
+  }))
 }
 
 /**

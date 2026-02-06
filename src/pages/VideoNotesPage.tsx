@@ -292,10 +292,11 @@ export function VideoNotesPage() {
         })
         description = description.replace(/\s+/g, ' ').trim()
 
-        // Convert referenced pubkeys to people tags
-        const people: TaggedPerson[] = note.pubkeys.map(pubkey => ({
+        // Convert referenced pubkeys to people tags (preserving relay hints)
+        const people: TaggedPerson[] = note.pubkeys.map(({ pubkey, relays }) => ({
           pubkey,
           name: '',
+          relays: relays.length > 0 ? relays : undefined,
         }))
 
         // Fill the draft with video URL, description, publish date, and people

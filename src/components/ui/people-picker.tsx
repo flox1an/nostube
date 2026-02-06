@@ -181,18 +181,32 @@ export function PeoplePicker({
 
   const addPerson = useCallback(
     (profile: ProfileResult) => {
+      // Extract relay hints from the person's NIP-65 relay list (kind 10002)
+      const relayListEvent = eventStore.getReplaceable(10002, profile.pubkey)
+      const relayHints: string[] = []
+      if (relayListEvent) {
+        for (const tag of relayListEvent.tags) {
+          if (tag[0] === 'r' && tag[1]) {
+            // Prefer write relays, but accept any relay
+            const marker = tag[2]
+            if (!marker || marker === 'write') {
+              relayHints.push(tag[1])
+            }
+          }
+        }
+      }
+
       const person: SelectedPerson = {
         pubkey: profile.pubkey,
         name: profile.profile.name || profile.profile.display_name || profile.pubkey.slice(0, 8),
         picture: profile.profile.picture,
-        // TODO: Extract relay hints from profile event if available
-        relays: [],
+        relays: relayHints.length > 0 ? relayHints : [],
       }
       onPeopleChange([...people, person])
       setInputValue('')
       setIsOpen(false)
     },
-    [people, onPeopleChange]
+    [people, onPeopleChange, eventStore]
   )
 
   const removePerson = useCallback(

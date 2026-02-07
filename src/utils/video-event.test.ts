@@ -26,6 +26,11 @@ vi.mock('@/lib/video-types', () => ({
     if (kind === 22 || kind === 34236) return 'vertical'
     return 'horizontal'
   }),
+  getKindsForType: vi.fn((type: string) => {
+    if (type === 'shorts') return [34236, 22]
+    if (type === 'videos') return [34235, 21]
+    return [34235, 34236, 21, 22]
+  }),
 }))
 
 vi.mock('@/lib/media-url-generator', () => ({
@@ -476,57 +481,62 @@ describe('processEvent', () => {
     })
 
     it('should automatically mark videos from NSFW authors as NSFW', () => {
+      const nsfwPubkey = 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400'
       const nsfwAuthorEvent = {
         ...nostubeEvent,
-        pubkey: 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400', // NSFW author
+        pubkey: nsfwPubkey,
       }
 
-      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+      const result = processEvent(nsfwAuthorEvent, defaultRelays, undefined, [nsfwPubkey])
 
       expect(result?.contentWarning).toBe('NSFW')
     })
 
     it('should mark videos from second NSFW author as NSFW', () => {
+      const nsfwPubkey = 'f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0'
       const nsfwAuthorEvent = {
         ...nostubeEvent,
-        pubkey: 'f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0', // NSFW author
+        pubkey: nsfwPubkey,
       }
 
-      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+      const result = processEvent(nsfwAuthorEvent, defaultRelays, undefined, [nsfwPubkey])
 
       expect(result?.contentWarning).toBe('NSFW')
     })
 
     it('should mark videos from third NSFW author as NSFW', () => {
+      const nsfwPubkey = '0c9fb0a86f622b23e7802fbccf3c676cd4562ba267df4b3048f7dc77e9124a90'
       const nsfwAuthorEvent = {
         ...nostubeEvent,
-        pubkey: '0c9fb0a86f622b23e7802fbccf3c676cd4562ba267df4b3048f7dc77e9124a90', // NSFW author
+        pubkey: nsfwPubkey,
       }
 
-      const result = processEvent(nsfwAuthorEvent, defaultRelays)
+      const result = processEvent(nsfwAuthorEvent, defaultRelays, undefined, [nsfwPubkey])
 
       expect(result?.contentWarning).toBe('NSFW')
     })
 
     it('should preserve existing content-warning tag for NSFW authors', () => {
+      const nsfwPubkey = 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400'
       const nsfwAuthorWithWarning = {
         ...nostubeEvent,
-        pubkey: 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400', // NSFW author
+        pubkey: nsfwPubkey,
         tags: [...nostubeEvent.tags, ['content-warning', 'Custom Warning']],
       }
 
-      const result = processEvent(nsfwAuthorWithWarning, defaultRelays)
+      const result = processEvent(nsfwAuthorWithWarning, defaultRelays, undefined, [nsfwPubkey])
 
       expect(result?.contentWarning).toBe('Custom Warning')
     })
 
     it('should not mark videos from non-NSFW authors', () => {
+      const nsfwPubkeys = ['e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400']
       const normalEvent = {
         ...nostubeEvent,
         pubkey: 'b7c6f6915cfa9a62fff6a1f02604de88c23c6c6c6d1b8f62c7cc10749f307e81', // Normal author
       }
 
-      const result = processEvent(normalEvent, defaultRelays)
+      const result = processEvent(normalEvent, defaultRelays, undefined, nsfwPubkeys)
 
       expect(result?.contentWarning).toBeUndefined()
     })

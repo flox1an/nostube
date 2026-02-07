@@ -110,8 +110,8 @@ describe('NoteContent', () => {
 
     expect(nostrHashtag).toBeInTheDocument()
     expect(bitcoinHashtag).toBeInTheDocument()
-    expect(nostrHashtag).toHaveAttribute('href', '/t/nostr')
-    expect(bitcoinHashtag).toHaveAttribute('href', '/t/bitcoin')
+    expect(nostrHashtag).toHaveAttribute('href', '/tags/nostr')
+    expect(bitcoinHashtag).toHaveAttribute('href', '/tags/bitcoin')
   })
 
   it('generates deterministic names for users without metadata and styles them differently', () => {
@@ -136,8 +136,8 @@ describe('NoteContent', () => {
     const mention = screen.getByRole('link')
     expect(mention).toBeInTheDocument()
 
-    // Should use primary color styling
-    expect(mention).toHaveClass('text-primary')
+    // Should use accent color styling
+    expect(mention).toHaveClass('text-accent-foreground')
     expect(mention).toHaveClass('font-medium')
     expect(mention).toHaveClass('hover:underline')
 

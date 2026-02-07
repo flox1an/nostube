@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import langs from 'langs'
-import { defaultResizeServer } from '../App'
+import { defaultResizeServer } from '@/constants/servers'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

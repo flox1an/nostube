@@ -28,8 +28,9 @@ import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
+import { defaultResizeServer } from '@/constants/servers'
 
-export const defaultResizeServer = 'https://imgproxy.nostu.be/'
+export { defaultResizeServer }
 
 const defaultConfig: AppConfig = {
   theme: 'dark',

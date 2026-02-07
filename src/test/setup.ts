@@ -41,6 +41,10 @@ i18n.use(initReactI18next).init({
   },
 })
 
+// Mock applesauce-wallet/helpers which transitively imports @gandlaf21/bc-ur
+// (broken ESM with extensionless imports). No tests need wallet functionality.
+vi.mock('applesauce-wallet/helpers', () => ({}))
+
 // Mock nostr-idb module since it's only used as a cache
 // This prevents IndexedDB initialization errors in tests
 vi.mock('nostr-idb', () => ({

@@ -6,7 +6,7 @@ import { AccountManager } from 'applesauce-accounts'
 import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
-import { defaultResizeServer } from '@/App'
+import { defaultResizeServer } from '@/constants/servers'
 import { SearchPage } from './SearchPage'
 import * as useSearchVideos from '@/hooks/useSearchVideos'
 

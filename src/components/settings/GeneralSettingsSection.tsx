@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { type NsfwFilter } from '@/contexts/AppContext'
-import { defaultResizeServer } from '../../App'
+import { defaultResizeServer } from '@/constants/servers'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
 import {

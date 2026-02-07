@@ -549,6 +549,22 @@
       "ready": "Ready to retry"
     }
   },
+  "addToPlaylist": {
+    "title": "Add to Playlist",
+    "chooseDescription": "Choose a playlist to add this video to.",
+    "createDescription": "Enter a name for your new playlist.",
+    "playlist": "Playlist",
+    "adding": "Adding...",
+    "added": "Video added to playlist",
+    "addedDescription": "Successfully added to \"{{name}}\"",
+    "error": "Error adding to playlist",
+    "errorDescription": "Failed to add video to playlist. Please try again.",
+    "createNew": "Create new playlist",
+    "createError": "Error creating playlist",
+    "createErrorDescription": "Failed to create playlist. Please try again.",
+    "noPlaylists": "No playlists yet. Create one below!",
+    "back": "Back"
+  },
   "playlists": {
     "myPlaylists": "My Playlists",
     "loginRequired": "Please log in to manage your playlists",

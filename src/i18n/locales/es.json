@@ -535,6 +535,22 @@
       "ready": "Listo para reintentar"
     }
   },
+  "addToPlaylist": {
+    "title": "Agregar a lista de reproducción",
+    "chooseDescription": "Elige una lista de reproducción para agregar este video.",
+    "createDescription": "Ingresa un nombre para tu nueva lista de reproducción.",
+    "playlist": "Lista de reproducción",
+    "adding": "Agregando...",
+    "added": "Video agregado a la lista de reproducción",
+    "addedDescription": "Agregado exitosamente a \"{{name}}\"",
+    "error": "Error al agregar a la lista de reproducción",
+    "errorDescription": "No se pudo agregar el video a la lista de reproducción. Inténtalo de nuevo.",
+    "createNew": "Crear nueva lista de reproducción",
+    "createError": "Error al crear la lista de reproducción",
+    "createErrorDescription": "No se pudo crear la lista de reproducción. Inténtalo de nuevo.",
+    "noPlaylists": "Aún no hay listas de reproducción. ¡Crea una abajo!",
+    "back": "Volver"
+  },
   "playlists": {
     "myPlaylists": "Mis Listas de Reproducción",
     "sortOrder": {

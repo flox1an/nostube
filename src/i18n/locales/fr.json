@@ -534,6 +534,22 @@
       "ready": "Prêt à réessayer"
     }
   },
+  "addToPlaylist": {
+    "title": "Ajouter à la liste de lecture",
+    "chooseDescription": "Choisissez une liste de lecture pour ajouter cette vidéo.",
+    "createDescription": "Entrez un nom pour votre nouvelle liste de lecture.",
+    "playlist": "Liste de lecture",
+    "adding": "Ajout en cours...",
+    "added": "Vidéo ajoutée à la liste de lecture",
+    "addedDescription": "Ajoutée avec succès à \"{{name}}\"",
+    "error": "Erreur lors de l'ajout à la liste de lecture",
+    "errorDescription": "Impossible d'ajouter la vidéo à la liste de lecture. Veuillez réessayer.",
+    "createNew": "Créer une nouvelle liste de lecture",
+    "createError": "Erreur lors de la création de la liste de lecture",
+    "createErrorDescription": "Impossible de créer la liste de lecture. Veuillez réessayer.",
+    "noPlaylists": "Pas encore de listes de lecture. Créez-en une ci-dessous !",
+    "back": "Retour"
+  },
   "playlists": {
     "myPlaylists": "Mes listes de lecture",
     "sortOrder": {

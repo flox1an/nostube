@@ -535,6 +535,22 @@
       "ready": "Bereit zum Wiederholen"
     }
   },
+  "addToPlaylist": {
+    "title": "Zur Playlist hinzufügen",
+    "chooseDescription": "Wähle eine Playlist, um dieses Video hinzuzufügen.",
+    "createDescription": "Gib einen Namen für deine neue Playlist ein.",
+    "playlist": "Playlist",
+    "adding": "Wird hinzugefügt...",
+    "added": "Video zur Playlist hinzugefügt",
+    "addedDescription": "Erfolgreich zu \"{{name}}\" hinzugefügt",
+    "error": "Fehler beim Hinzufügen zur Playlist",
+    "errorDescription": "Video konnte nicht zur Playlist hinzugefügt werden. Bitte versuche es erneut.",
+    "createNew": "Neue Playlist erstellen",
+    "createError": "Fehler beim Erstellen der Playlist",
+    "createErrorDescription": "Playlist konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "noPlaylists": "Noch keine Playlists. Erstelle eine unten!",
+    "back": "Zurück"
+  },
   "playlists": {
     "myPlaylists": "Meine Playlists",
     "sortOrder": {

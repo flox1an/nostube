@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Playlists: "Add to Playlist" dialog on video page now includes a "Create new playlist" option; users can create a new playlist inline without leaving the dialog; shows a name input with Enter-to-submit and Back button to return to the playlist list; all strings i18n-translated (EN/DE/FR/ES); hardcoded English strings replaced with translation keys
 - README: added screenshots section showcasing home page, video player, shorts, playlists, upload wizard, and mobile views
 - Video Notes page: improved thumbnails using imgproxy (optimized WebP via `imageProxyVideoPreview`/`imageProxyVideoThumbnail`) with fallback chain (proxy image -> proxy video frame -> error icon); inline click-to-play video replaces dialog preview; client-side pagination with "Load more" button (20 notes per page); shows video duration (probed via `preload="metadata"`) on thumbnail overlay and as badge; shows file size from imeta tags or HEAD request `Content-Length`; renamed "Repost as video" to "Import" - clicking programmatically creates an upload draft with video URL, description, and publish date (from note timestamp), then opens it directly at step 2 (Video Details); UploadPage supports `?draft=<id>&step=<n>` query params for deep-linking to specific drafts; extracts people tags from kind 1 event `p` tags and `nostr:npub1`/`nostr:nprofile1` mentions in content, adding them as tagged people on the imported video draft
 

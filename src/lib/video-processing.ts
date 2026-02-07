@@ -30,16 +30,19 @@ export function generateQualityLabel(dimension: string): string {
   const [width, height] = dimension.split('x').map(Number)
   // Use the shorter dimension (height for landscape, width for portrait)
   // as that's what the "p" value represents (e.g., 720p = 720 vertical lines)
-  const resolution = Math.min(width, height)
+  const shorter = Math.min(width, height)
+  const longer = Math.max(width, height)
 
-  if (resolution >= 2160) return '4K'
-  if (resolution >= 1440) return '2K'
-  if (resolution >= 1080) return '1080p'
-  if (resolution >= 720) return '720p'
-  if (resolution >= 480) return '480p'
-  if (resolution >= 360) return '360p'
-  if (resolution >= 240) return '240p'
-  return `${resolution}p`
+  // For 4K/2K, also check the longer dimension to handle non-standard aspect ratios
+  // e.g., 3840x2124 should be 4K even though 2124 < 2160
+  if (shorter >= 2160 || longer >= 3840) return '4K'
+  if (shorter >= 1440 || longer >= 2560) return '2K'
+  if (shorter >= 1080) return '1080p'
+  if (shorter >= 720) return '720p'
+  if (shorter >= 480) return '480p'
+  if (shorter >= 360) return '360p'
+  if (shorter >= 240) return '240p'
+  return `${shorter}p`
 }
 
 /**

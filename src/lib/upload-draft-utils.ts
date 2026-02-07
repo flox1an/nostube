@@ -1,4 +1,5 @@
 import type { UploadDraft } from '@/types/upload-draft'
+import { generateQualityLabel } from '@/lib/video-processing'
 
 export function getSmartStatus(draft: UploadDraft): string {
   if (draft.uploadInfo.videos.length === 0) {
@@ -20,15 +21,7 @@ export function getSmartStatus(draft: UploadDraft): string {
 export function getVideoQualityInfo(draft: UploadDraft): string {
   if (draft.uploadInfo.videos.length === 0) return ''
 
-  const qualities = draft.uploadInfo.videos.map(v => {
-    const [, height] = v.dimension.split('x').map(Number)
-    if (height >= 2160) return '4K'
-    if (height >= 1440) return '1440p'
-    if (height >= 1080) return '1080p'
-    if (height >= 720) return '720p'
-    if (height >= 480) return '480p'
-    return '360p'
-  })
+  const qualities = draft.uploadInfo.videos.map(v => generateQualityLabel(v.dimension))
 
   const totalSizeMB = draft.uploadInfo.videos.reduce((sum, v) => sum + (v.sizeMB || 0), 0)
   const sizeStr =

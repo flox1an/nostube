@@ -112,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: fixed resolution detection misclassifying near-4K videos (e.g., 3840x2124) as 2K; now checks both dimensions so non-standard aspect ratios with 3840+ width are correctly labeled 4K; same fix applied for 2K detection with 2560+ width; also deduplicated resolution label logic in `getVideoQualityInfo` to use shared `generateQualityLabel` function
 - Reactions: emoji reactions (e.g., 💜, 🤙) now count as likes; per NIP-25, only `-` content is a downvote, everything else (including `+`, emoji, and custom text) counts as an upvote; previously only `+` was counted, causing emoji reactions to be silently ignored in like counts, liked videos lists, and "liked by creator" badges
 - Author page: fixed avatar and profile info disappearing above the page when user has no banner image or banner image fails to load; negative margin was applied based on metadata banner URL existence rather than actual image load state; banner now only renders after successful image load, preventing layout issues with broken or missing banner URLs
 - Upload: fixed `created_at` being set to the custom publish date instead of the current time; `created_at` now always reflects when the event was actually published, while the custom date only goes into the `published_at` tag

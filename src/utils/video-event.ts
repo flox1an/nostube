@@ -65,7 +65,8 @@ export interface VideoEvent {
   textTracks: TextTrack[]
   contentWarning: string | undefined
   x?: string
-  origin?: VideoOrigin
+  origin?: VideoOrigin // Deprecated: use origins instead
+  origins: VideoOrigin[]
   // New fields for multi-video support
   videoVariants: VideoVariant[] // Compatible video variants (filtered for current platform)
   thumbnailVariants: VideoVariant[] // All thumbnail variants
@@ -414,16 +415,15 @@ export function processEvent(
     const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0')
     const identifier = event.tags.find(t => t[0] === 'd')?.[1]
 
-    // Extract origin tag if present
-    const originTag = event.tags.find(t => t[0] === 'origin')
-    const origin: VideoOrigin | undefined = originTag
-      ? {
-          platform: originTag[1],
-          externalId: originTag[2],
-          originalUrl: originTag[3],
-          metadata: originTag[4],
-        }
-      : undefined
+    // Extract all origin tags
+    const originTags = event.tags.filter(t => t[0] === 'origin')
+    const origins: VideoOrigin[] = originTags.map(tag => ({
+      platform: tag[1],
+      externalId: tag[2],
+      originalUrl: tag[3],
+      metadata: tag[4],
+    }))
+    const origin = origins[0]
 
     // Only process if it's a video
     //if (!url || !mimeType?.startsWith('video/')) return null;
@@ -493,6 +493,7 @@ export function processEvent(
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,
+      origins,
       videoVariants,
       thumbnailVariants,
       allVideoVariants,
@@ -513,16 +514,15 @@ export function processEvent(
     let url = event.tags.find(t => t[0] === 'url')?.[1] || ''
     const mimeType = event.tags.find(t => t[0] === 'm')?.[1] || ''
 
-    // Extract origin tag if present
-    const originTag = event.tags.find(t => t[0] === 'origin')
-    const origin: VideoOrigin | undefined = originTag
-      ? {
-          platform: originTag[1],
-          externalId: originTag[2],
-          originalUrl: originTag[3],
-          metadata: originTag[4],
-        }
-      : undefined
+    // Extract all origin tags
+    const originTags = event.tags.filter(t => t[0] === 'origin')
+    const origins: VideoOrigin[] = originTags.map(tag => ({
+      platform: tag[1],
+      externalId: tag[2],
+      originalUrl: tag[3],
+      metadata: tag[4],
+    }))
+    const origin = origins[0]
 
     // There are some events that have the whole imeta data in the first string.
     if (url.includes(' ')) {
@@ -584,6 +584,7 @@ export function processEvent(
       type: getTypeForKind(event.kind),
       contentWarning,
       origin,
+      origins,
       videoVariants,
       thumbnailVariants,
       allVideoVariants: videoVariants, // In old format, all variants are the same

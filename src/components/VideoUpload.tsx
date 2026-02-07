@@ -638,17 +638,21 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
             {/* Step 5: Additional Settings */}
             {currentStep === 5 && (
-              <div className="space-y-6">
-                <PublishDateSection value={publishAt} onChange={setPublishAt} />
-                <PeoplePickerSection people={people} onPeopleChange={setPeople} />
-                <OriginManager origins={origins} onOriginsChange={setOrigins} />
-                <ContentWarning
-                  enabled={contentWarningEnabled}
-                  onEnabledChange={setContentWarningEnabled}
-                  reason={contentWarningReason}
-                  onReasonChange={setContentWarningReason}
-                />
-                <ExpirationSection value={expiration} onChange={setExpiration} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <PublishDateSection value={publishAt} onChange={setPublishAt} />
+                  <PeoplePickerSection people={people} onPeopleChange={setPeople} />
+                  <OriginManager origins={origins} onOriginsChange={setOrigins} />
+                </div>
+                <div className="space-y-6">
+                  <ContentWarning
+                    enabled={contentWarningEnabled}
+                    onEnabledChange={setContentWarningEnabled}
+                    reason={contentWarningReason}
+                    onReasonChange={setContentWarningReason}
+                  />
+                  <ExpirationSection value={expiration} onChange={setExpiration} />
+                </div>
               </div>
             )}
 

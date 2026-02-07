@@ -21,6 +21,7 @@ describe('filterVideoSuggestions', () => {
     contentWarning: undefined,
     videoVariants: [],
     thumbnailVariants: [],
+    origins: [],
     ...overrides,
   })
 

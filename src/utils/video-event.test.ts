@@ -291,6 +291,21 @@ const eventWithOriginOldFormat = {
   ],
 }
 
+const eventWithMultipleOrigins = {
+  content: 'Multiple origins',
+  created_at: 1763300200,
+  id: 'multiple-origins-id',
+  kind: 34235,
+  pubkey: 'test-pubkey-3',
+  sig: 'test-signature-3',
+  tags: [
+    ['d', 'multiple-origins'],
+    ['url', 'https://example.com/video.mp4'],
+    ['origin', 'youtube', '123', 'https://youtube.com/watch?v=123'],
+    ['origin', 'tiktok', '456', 'https://tiktok.com/@u/video/456'],
+  ],
+}
+
 describe('extractBlossomHash', () => {
   it('should extract hash and extension from valid Blossom URL', () => {
     const url =
@@ -707,6 +722,17 @@ describe('processEvent', () => {
 
       expect(result).toBeDefined()
       expect(result?.origin).toBeUndefined()
+      expect(result?.origins).toHaveLength(0)
+    })
+
+    it('should extract multiple origin tags', () => {
+      const result = processEvent(eventWithMultipleOrigins, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.origins).toHaveLength(2)
+      expect(result?.origins[0].platform).toBe('youtube')
+      expect(result?.origins[1].platform).toBe('tiktok')
+      expect(result?.origin?.platform).toBe('youtube') // First one for compat
     })
   })
 

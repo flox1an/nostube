@@ -6,78 +6,12 @@ import { X, Plus, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/useToast'
-
-const PLATFORMS = [
-  {
-    name: 'youtube',
-    color: 'bg-[#FF0000] text-white',
-    regex:
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i,
-  },
-  { name: 'tiktok', color: 'bg-[#000000] text-white', regex: /tiktok\.com\/.*\/video\/(\d+)/i },
-  {
-    name: 'instagram',
-    color: 'bg-[#E1306C] text-white',
-    regex: /instagram\.com\/(?:p|reels|reel)\/([a-zA-Z0-9_-]+)/i,
-  },
-  {
-    name: 'twitter',
-    color: 'bg-[#1DA1F2] text-white',
-    regex: /(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i,
-  },
-  { name: 'twitch', color: 'bg-[#9146FF] text-white', regex: /twitch\.tv\/videos\/(\d+)/i },
-]
-
-const NOSTR = [
-  {
-    type: 'e',
-    regex:
-      /(?:nostr:|https?:\/\/(?:njump\.me|primal\.net\/e)\/)?(nevent1[a-z0-9]+|note1[a-z0-9]+|[a-f0-9]{64})/i,
-  },
-  { type: 'a', regex: /(?:nostr:|https?:\/\/(?:njump\.me|primal\.net\/p)\/)?(naddr1[a-z0-9]+)/i },
-  {
-    type: 'p',
-    regex:
-      /(?:nostr:|https?:\/\/(?:njump\.me|primal\.net\/p)\/)?(npub1[a-z0-9]+|nprofile1[a-z0-9]+)/i,
-  },
-]
-
-// Helper to get identity from tags
-function getIdentity(tags: string[][]): string {
-  const originTag = tags.find(t => t[0] === 'origin')
-  if (originTag) return `${originTag[1]}:${originTag[2]}`
-
-  const eTag = tags.find(t => t[0] === 'e')
-  if (eTag) return `nostr:${eTag[1]}`
-
-  const aTag = tags.find(t => t[0] === 'a')
-  if (aTag) return `nostr:${aTag[1]}`
-
-  const pTag = tags.find(t => t[0] === 'p')
-  if (pTag) return `nostr:${pTag[1]}`
-
-  const rTag = tags.find(t => t[0] === 'r')
-  if (rTag) return rTag[1]
-
-  return ''
-}
-
-function getPlatformName(tags: string[][]): string {
-  const originTag = tags.find(t => t[0] === 'origin')
-  if (originTag) return originTag[1]
-
-  const nostrTag = tags.find(t => ['e', 'p', 'a'].includes(t[0]))
-  if (nostrTag) return 'nostr'
-
-  return 'web'
-}
-
-function getPlatformColor(name: string): string {
-  const platform = PLATFORMS.find(p => p.name === name)
-  if (platform) return platform.color
-  if (name === 'nostr') return 'bg-purple-600 text-white'
-  return 'bg-gray-500 text-white'
-}
+import {
+  parseOriginInput,
+  getIdentity,
+  getPlatformName,
+  getPlatformColor,
+} from '@/utils/origin-utils'
 
 interface OriginManagerProps {
   origins: string[][][] // Array of tag sets
@@ -91,38 +25,10 @@ export function OriginManager({ origins, onOriginsChange }: OriginManagerProps) 
   const [isShaking, setIsShaking] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const parseInput = (input: string): string[][] | null => {
-    const trimmed = input.trim()
-    if (!trimmed) return null
-
-    // Every unique input must generate an r (reference) tag
-    const tags: string[][] = [['r', trimmed]]
-
-    // Check platforms
-    for (const platform of PLATFORMS) {
-      const match = trimmed.match(platform.regex)
-      if (match && match[1]) {
-        tags.push(['origin', platform.name, match[1], trimmed])
-        return tags
-      }
-    }
-
-    // Check Nostr
-    for (const nostr of NOSTR) {
-      const match = trimmed.match(nostr.regex)
-      if (match && match[1]) {
-        tags.push([nostr.type, match[1]])
-        return tags
-      }
-    }
-
-    return tags
-  }
-
   const handleAdd = useCallback(() => {
     if (!inputValue.trim()) return
 
-    const newTags = parseInput(inputValue)
+    const newTags = parseOriginInput(inputValue)
     if (!newTags) return
 
     const newIdentity = getIdentity(newTags)
@@ -194,10 +100,14 @@ export function OriginManager({ origins, onOriginsChange }: OriginManagerProps) 
           {origins.map((group, index) => {
             const platform = getPlatformName(group)
             const identity = getIdentity(group)
+            const rTag = group.find(t => t[0] === 'r')
+            const fullUrl = rTag ? rTag[1] : identity
+
             return (
               <Badge
                 key={index}
                 variant="secondary"
+                title={fullUrl}
                 className={cn(
                   'pl-0 pr-1 py-0 h-7 flex items-center gap-1 overflow-hidden max-w-[200px] sm:max-w-[300px]',
                   getPlatformColor(platform)
@@ -212,7 +122,7 @@ export function OriginManager({ origins, onOriginsChange }: OriginManagerProps) 
                   onClick={() => handleRemove(index)}
                   className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
                 >
-                  <X className="h-3.3 w-3.3" />
+                  <X className="h-3 w-3" />
                 </button>
               </Badge>
             )

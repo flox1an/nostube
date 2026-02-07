@@ -13,7 +13,11 @@ export const PLATFORMS = [
     color: 'bg-[#E1306C] text-white',
     regex: /instagram\.com\/(?:p|reels|reel)\/([a-zA-Z0-9_-]+)/i,
   },
-  { name: 'twitter', color: 'bg-[#1DA1F2] text-white', regex: /(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i },
+  {
+    name: 'twitter',
+    color: 'bg-[#1DA1F2] text-white',
+    regex: /(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i,
+  },
   { name: 'twitch', color: 'bg-[#9146FF] text-white', regex: /twitch\.tv\/videos\/(\d+)/i },
 ]
 

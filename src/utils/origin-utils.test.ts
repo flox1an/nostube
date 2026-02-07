@@ -57,10 +57,13 @@ describe('parseOriginInput', () => {
   it('should parse naddr correctly', () => {
     // naddr1qqrhs5rdxptnxeszyzyxthe56904ceg2gu8huh83gcawf85lqtj3dnu3q9h68804fdapqqcyqqqgtwcu7y26n
     // kind: 34235, pubkey: 8865df34d15f5c650a470f7e5cf1463ae49e9f02e516cf91016fa39df54b7a10, identifier: xPm0W3f
-    const naddr = 'naddr1qqrhs5rdxptnxeszyzyxthe56904ceg2gu8huh83gcawf85lqtj3dnu3q9h68804fdapqqcyqqqgtwcu7y26n'
+    const naddr =
+      'naddr1qqrhs5rdxptnxeszyzyxthe56904ceg2gu8huh83gcawf85lqtj3dnu3q9h68804fdapqqcyqqqgtwcu7y26n'
     const tags = parseOriginInput(naddr)
     expect(tags?.[0][0]).toBe('a')
-    expect(tags?.[0][1]).toBe('34235:8865df34d15f5c650a470f7e5cf1463ae49e9f02e516cf91016fa39df54b7a10:xPm0W3f')
+    expect(tags?.[0][1]).toBe(
+      '34235:8865df34d15f5c650a470f7e5cf1463ae49e9f02e516cf91016fa39df54b7a10:xPm0W3f'
+    )
   })
 
   it('should reject invalid text', () => {
@@ -81,7 +84,10 @@ describe('parseOriginInput', () => {
 
 describe('getIdentity', () => {
   it('should return identity for youtube origin', () => {
-    const tags = [['r', 'url'], ['origin', 'youtube', 'ID', 'url']]
+    const tags = [
+      ['r', 'url'],
+      ['origin', 'youtube', 'ID', 'url'],
+    ]
     expect(getIdentity(tags)).toBe('youtube:ID')
   })
 

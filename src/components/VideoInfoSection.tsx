@@ -26,8 +26,19 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, TrashIcon, Bug, Copy, MapPin, Tag, Flag, Clock, Pencil } from 'lucide-react'
-import { nowInSecs } from '@/lib/utils'
+import {
+  MoreVertical,
+  TrashIcon,
+  Bug,
+  Copy,
+  MapPin,
+  Tag,
+  Flag,
+  Clock,
+  Pencil,
+  ExternalLink,
+} from 'lucide-react'
+import { nowInSecs, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
@@ -38,6 +49,7 @@ import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
 import { type VideoEvent, isAddressableKind, getPublishDate } from '../utils/video-event'
+import { getPlatformColor } from '@/utils/origin-utils'
 import { type BlossomServer } from '@/contexts/AppContext'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -326,12 +338,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           <Separator />
         )}
 
-        {/* Display tags, languages, and location */}
+        {/* Display tags, languages, location, and origins */}
         {(video && video.tags.length > 0) ||
         (video &&
           'languages' in video &&
           Array.isArray(video.languages) &&
           video.languages.length > 0) ||
+        (video && video.origins && video.origins.length > 0) ||
         geohash ? (
           <div className="flex flex-wrap gap-2 pb-1">
             {/* Language badges with flag + shortcode */}
@@ -361,6 +374,28 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     #{tag}
                   </Badge>
                 </Link>
+              ))}
+            {/* Origin badges */}
+            {video &&
+              video.origins &&
+              video.origins.map((origin, index) => (
+                <a
+                  key={`origin-${index}`}
+                  href={origin.originalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={origin.platform}
+                >
+                  <Badge
+                    className={cn(
+                      'shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 border-none hover:opacity-80',
+                      getPlatformColor(origin.platform)
+                    )}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                  </Badge>
+                </a>
               ))}
             {geohash && (
               <a

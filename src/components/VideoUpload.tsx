@@ -641,10 +641,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-6">
                   <PublishDateSection value={publishAt} onChange={setPublishAt} />
-                  <PeoplePickerSection people={people} onPeopleChange={setPeople} />
-                  <OriginManager origins={origins} onOriginsChange={setOrigins} />
-                </div>
-                <div className="space-y-6">
                   <ContentWarning
                     enabled={contentWarningEnabled}
                     onEnabledChange={setContentWarningEnabled}
@@ -652,6 +648,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     onReasonChange={setContentWarningReason}
                   />
                   <ExpirationSection value={expiration} onChange={setExpiration} />
+                </div>
+                <div className="space-y-6">
+                  <PeoplePickerSection people={people} onPeopleChange={setPeople} />
+                  <OriginManager origins={origins} onOriginsChange={setOrigins} />
                 </div>
               </div>
             )}

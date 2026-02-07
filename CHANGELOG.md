@@ -117,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- UI: fixed origin badges vertically misaligned with tag badges on video page; added `items-center` to the tags/badges flex container for consistent vertical alignment
 - Upload: fixed metadata extraction not picking up `desc`/`ldes` (description/synopsis) atoms from video files; MP4Box.js treats these as standard ISO box types instead of metadata entries, so they end up in `ilst.boxes` rather than `ilst.list`; now always scans both sources with multi-strategy text extraction (value, data atom, sub-box, raw text)
 - Upload: fixed "Set as Thumbnail" button spinner disappearing after 500ms regardless of actual upload status; now uses real `thumbnailUploadInfo.uploading` state so spinner persists until upload completes
 - Upload: added spinner to thumbnail loading placeholder for clearer feedback on slow connections; increased minimum skeleton size from 128×80 to 192×112 pixels

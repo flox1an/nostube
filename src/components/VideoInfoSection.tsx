@@ -345,7 +345,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           video.languages.length > 0) ||
         (video && video.origins && video.origins.length > 0) ||
         geohash ? (
-          <div className="flex flex-wrap gap-2 pb-1">
+          <div className="flex flex-wrap items-center gap-2 pb-1">
             {/* Language badges with flag + shortcode */}
             {video &&
               'languages' in video &&

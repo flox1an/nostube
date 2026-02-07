@@ -7,8 +7,9 @@ import {
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { type BlobDescriptor } from 'blossom-client-sdk'
-import { buildAdvancedMimeType, nowInSecs } from '@/lib/utils'
+import { nowInSecs } from '@/lib/utils'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
+import { buildImetaTags } from '@/lib/imeta-builder'
 import type { UploadDraft, SubtitleVariant, TaggedPerson } from '@/types/upload-draft'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
@@ -84,76 +85,15 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
   // Use addressable event kinds (NIP-71): 34235 for normal videos, 34236 for shorts
   const kind = height > width ? 34236 : 34235
 
-  // Create multiple imeta tags - one for each video variant
-  const imetaTags: string[][] = []
-  const allFallbackUrls: string[] = []
-
-  for (const video of videos) {
-    const imetaTag = ['imeta', `dim ${video.dimension}`]
-
-    // Ensure arrays exist (might be undefined when loading from draft)
-    const uploadedBlobs = video.uploadedBlobs || []
-    const mirroredBlobs = video.mirroredBlobs || []
-
-    // Add primary URL
-    const primaryUrl = video.inputMethod === 'url' ? video.url : uploadedBlobs[0]?.url
-    if (primaryUrl) {
-      imetaTag.push(`url ${primaryUrl}`)
-    }
-
-    // Add SHA256 hash from uploaded/mirrored blobs
-    if (uploadedBlobs[0]?.sha256) {
-      imetaTag.push(`x ${uploadedBlobs[0].sha256}`)
-    }
-
-    // Add MIME type with codecs
-    // Note: video.file may be undefined when loading from draft (File objects can't be serialized)
-    const fileType = video.file?.type
-    imetaTag.push(`m ${buildAdvancedMimeType(fileType, video.videoCodec, video.audioCodec)}`)
-
-    // Add bitrate if available
-    if (video.bitrate) {
-      imetaTag.push(`bitrate ${video.bitrate}`)
-    }
-
-    // Add size if available (in bytes)
-    if (video.sizeMB) {
-      const sizeBytes = Math.round(video.sizeMB * 1024 * 1024)
-      imetaTag.push(`size ${sizeBytes}`)
-    }
-
-    // Add thumbnail URLs (shared across all videos)
-    thumbnailUploadedBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
-    thumbnailMirroredBlobs.forEach(blob => imetaTag.push(`image ${blob.url}`))
-
-    // Add blurhash for thumbnail placeholder (NIP-92)
-    if (thumbnailBlurhash) {
-      imetaTag.push(`blurhash ${thumbnailBlurhash}`)
-    }
-
-    // For preview mode, show placeholder for pending thumbnail
-    if (isPreview && hasPendingThumbnail && thumbnailUploadedBlobs.length === 0) {
-      imetaTag.push(`image <will be uploaded on publish>`)
-    }
-
-    // Add fallback URLs from multiple upload servers
-    if (video.inputMethod === 'file') {
-      if (uploadedBlobs.length > 1) {
-        for (const blob of uploadedBlobs.slice(1)) {
-          imetaTag.push(`fallback ${blob.url}`)
-          allFallbackUrls.push(blob.url)
-        }
-      }
-      if (mirroredBlobs.length > 0) {
-        for (const blob of mirroredBlobs) {
-          imetaTag.push(`fallback ${blob.url}`)
-          allFallbackUrls.push(blob.url)
-        }
-      }
-    }
-
-    imetaTags.push(imetaTag)
-  }
+  // Create multiple imeta tags - one for each video variant (using shared builder)
+  const { imetaTags, allFallbackUrls } = buildImetaTags({
+    videos,
+    thumbnailUploadedBlobs,
+    thumbnailMirroredBlobs,
+    thumbnailBlurhash,
+    isPreview,
+    hasPendingThumbnail,
+  })
 
   // Calculate expiration timestamp
   const getExpirationTimestamp = (): string | null => {

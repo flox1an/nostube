@@ -538,6 +538,50 @@ function atomNumberToString(num: number): string {
 }
 
 /**
+ * Extract text from an ilst entry box
+ * Handles multiple formats that MP4Box.js may produce:
+ * 1. Direct .data on box (generic/unknown box)
+ * 2. Container box with a data sub-box (standard ilst format)
+ * 3. Box with .value already decoded
+ */
+function extractTextFromIlstEntry(box: any): string | null {
+  try {
+    // Strategy 1: already-decoded value (some MP4Box.js versions)
+    if (box.value && typeof box.value === 'string') {
+      return box.value
+    }
+
+    // Strategy 2: direct data on the box (iTunes data atom format)
+    const direct = parseDataAtom(box)
+    if (direct) return direct
+
+    // Strategy 3: container box with a data sub-box
+    if (box.boxes) {
+      const dataBox = box.boxes.find((b: any) => b.type === 'data')
+      if (dataBox) {
+        return parseDataAtom(dataBox)
+      }
+    }
+
+    // Strategy 4: raw data without iTunes header (simple text box)
+    if (box.data && box.data.length > 0) {
+      try {
+        return new TextDecoder('utf-8').decode(box.data)
+      } catch {
+        return null
+      }
+    }
+
+    return null
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('[MP4BOX-ATOMS] Error extracting text from ilst entry:', error)
+    }
+    return null
+  }
+}
+
+/**
  * Parse all iTunes metadata from an ilst box
  * Returns a map of metadata fields to their values
  *
@@ -579,16 +623,23 @@ export function parseIlstMetadata(ilst: any): Record<string, any> {
       }
     }
 
-    // Fallback: try parsing from boxes array if list is not available
-    if (ilst.boxes && Object.keys(metadata).length === 0) {
-      if (import.meta.env.DEV) {
-        console.log('[MP4BOX-ATOMS] Falling back to ilst.boxes parsing')
-      }
-
+    // Also scan ilst.boxes for metadata atoms not found in ilst.list
+    // Some atoms (desc, ldes, keyw, catg) collide with standard ISO box
+    // type names, so MP4Box.js parses them as structured boxes rather than
+    // putting them in ilst.list as metadata entries.
+    if (ilst.boxes) {
       for (const box of ilst.boxes) {
-        const value = parseDataAtom(box)
+        // Skip atoms we already extracted from list
+        if (metadata[box.type]) continue
+
+        const value = extractTextFromIlstEntry(box)
         if (value) {
           metadata[box.type] = value
+          if (import.meta.env.DEV) {
+            console.log(
+              `[MP4BOX-ATOMS] Extracted ${box.type} from ilst.boxes: ${value.substring(0, 50)}...`
+            )
+          }
         }
       }
     }

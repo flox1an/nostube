@@ -38,7 +38,6 @@ export function ThumbnailSection({
   const { t } = useTranslation()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [isImageLoaded, setIsImageLoaded] = useState(false)
   const [isPreviewImageLoaded, setIsPreviewImageLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -110,12 +109,9 @@ export function ThumbnailSection({
 
   const handleSetThumbnail = useCallback(() => {
     if (previewBlob) {
-      setIsUploading(true)
       const thumbnailFile = new File([previewBlob], 'thumbnail.webp', { type: 'image/webp' })
       onThumbnailDrop([thumbnailFile])
       setHasUnsavedChanges(false)
-      // Reset uploading state after a short delay to show feedback
-      setTimeout(() => setIsUploading(false), 500)
     }
   }, [previewBlob, onThumbnailDrop])
 
@@ -215,45 +211,49 @@ export function ThumbnailSection({
     return (
       <div className="flex flex-col gap-2">
         <Label>{t('upload.thumbnail.title')}</Label>
-        <div className="relative inline-block w-fit min-w-32 min-h-20">
-          {!isImageLoaded && (
-            <div className="absolute inset-0 rounded border bg-muted animate-pulse" />
-          )}
-          <img
-            src={thumbnailSrc}
-            alt={t('upload.thumbnail.uploaded', { defaultValue: 'Thumbnail' })}
-            className={`rounded border max-h-80 object-contain transition-opacity duration-200 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setIsImageLoaded(true)}
-          />
-          {isImageLoaded && (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              className="absolute top-2 right-2 shadow-sm"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative inline-block w-fit min-w-48 min-h-28">
+            {!isImageLoaded && (
+              <div className="absolute inset-0 rounded border bg-muted animate-pulse flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            <img
+              src={thumbnailSrc}
+              alt={t('upload.thumbnail.uploaded', { defaultValue: 'Thumbnail' })}
+              className={`rounded border max-h-80 object-contain transition-opacity duration-200 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setIsImageLoaded(true)}
+            />
+            {isImageLoaded && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 shadow-sm"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Show upload server status for the existing thumbnail */}
+          {hasUploadedThumbnail && (
+            <UploadServer
+              inputMethod="file"
+              uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
+              uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
+              mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
+              hasInitialUploadServers={true}
+              forceShow={true}
+            />
           )}
         </div>
-
-        {/* Show upload server status for the existing thumbnail */}
-        {hasUploadedThumbnail && (
-          <UploadServer
-            inputMethod="file"
-            uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
-            uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
-            mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
-            hasInitialUploadServers={true}
-            forceShow={true}
-          />
-        )}
       </div>
     )
   }
@@ -288,7 +288,8 @@ export function ThumbnailSection({
           <div className="space-y-4">
             <FileDropzone onDrop={onThumbnailDrop} accept={{ 'image/*': [] }} className="h-32" />
             {thumbnailUploadInfo.uploading && (
-              <div className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 {t('upload.thumbnail.uploading', { defaultValue: 'Uploading thumbnail...' })}
               </div>
             )}
@@ -382,10 +383,10 @@ export function ThumbnailSection({
                     <Button
                       type="button"
                       onClick={handleSetThumbnail}
-                      disabled={!hasUnsavedChanges || isUploading}
+                      disabled={!hasUnsavedChanges || thumbnailUploadInfo.uploading}
                       className="w-full"
                     >
-                      {isUploading ? (
+                      {thumbnailUploadInfo.uploading ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           {t('upload.thumbnail.uploadingThumbnail')}

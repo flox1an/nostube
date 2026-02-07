@@ -112,6 +112,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: fixed metadata extraction not picking up `desc`/`ldes` (description/synopsis) atoms from video files; MP4Box.js treats these as standard ISO box types instead of metadata entries, so they end up in `ilst.boxes` rather than `ilst.list`; now always scans both sources with multi-strategy text extraction (value, data atom, sub-box, raw text)
+- Upload: fixed "Set as Thumbnail" button spinner disappearing after 500ms regardless of actual upload status; now uses real `thumbnailUploadInfo.uploading` state so spinner persists until upload completes
+- Upload: added spinner to thumbnail loading placeholder for clearer feedback on slow connections; increased minimum skeleton size from 128×80 to 192×112 pixels
+- Upload: thumbnail and upload server info ("Uploaded to... / Mirrored to...") now display side-by-side on desktop (column on mobile)
+- Progress bar: fixed 0% progress showing no visible bar; now renders a minimum 1% sliver to indicate upload has started
 - Upload: fixed resolution detection misclassifying near-4K videos (e.g., 3840x2124) as 2K; now checks both dimensions so non-standard aspect ratios with 3840+ width are correctly labeled 4K; same fix applied for 2K detection with 2560+ width; also deduplicated resolution label logic in `getVideoQualityInfo` to use shared `generateQualityLabel` function
 - Tests: fixed 13 failing test suites (0 → 215 tests passing); extracted `defaultResizeServer` constant from `App.tsx` to `src/constants/servers.ts` to break transitive import chain to `applesauce-wallet` → `@gandlaf21/bc-ur` (broken ESM); mocked `applesauce-wallet/helpers` in test setup for remaining paths; fixed `video-event.test.ts` mock missing `getKindsForType` export and NSFW tests not passing `nsfwPubkeys` parameter; updated `NoteContent.test.tsx` expectations for current hashtag URLs (`/tags/`) and mention styling (`text-accent-foreground`)
 - Reactions: emoji reactions (e.g., 💜, 🤙) now count as likes; per NIP-25, only `-` content is a downvote, everything else (including `+`, emoji, and custom text) counts as an upvote; previously only `+` was counted, causing emoji reactions to be silently ignored in like counts, liked videos lists, and "liked by creator" badges

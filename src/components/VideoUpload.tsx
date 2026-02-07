@@ -17,6 +17,7 @@ import {
   EventPreview,
   SubtitleSection,
   PeoplePickerSection,
+  OriginManager,
 } from './video-upload'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
@@ -75,6 +76,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     setLanguage,
     people,
     setPeople,
+    origins,
+    setOrigins,
     inputMethod,
     setInputMethod,
     videoUrl,
@@ -134,6 +137,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
       tags,
       language,
       people,
+      origins,
       inputMethod,
       videoUrl,
       uploadInfo,
@@ -176,6 +180,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     expiration,
     publishAt,
     thumbnailSource,
+    origins,
     onBack,
   ])
 
@@ -636,6 +641,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               <div className="space-y-6">
                 <PublishDateSection value={publishAt} onChange={setPublishAt} />
                 <PeoplePickerSection people={people} onPeopleChange={setPeople} />
+                <OriginManager origins={origins} onOriginsChange={setOrigins} />
                 <ContentWarning
                   enabled={contentWarningEnabled}
                   onEnabledChange={setContentWarningEnabled}

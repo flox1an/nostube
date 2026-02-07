@@ -84,6 +84,9 @@ export interface UploadDraft {
   // Subtitles (VTT/SRT files)
   subtitles: SubtitleVariant[]
 
+  // External origins (references to other platforms/nostr events)
+  origins?: string[][][]
+
   // Metadata
   thumbnailSource: 'generated' | 'upload'
 

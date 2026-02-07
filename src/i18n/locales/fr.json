@@ -368,6 +368,13 @@
     "addAnotherQualityHint": "Téléchargez la même vidéo dans une résolution différente (par ex. 1080p, 720p, 480p)",
     "uploadingVideo": "Téléchargement de la vidéo...",
     "processingVideo": "Traitement de la vidéo...",
+    "origins": {
+      "label": "Références externes",
+      "description": "Lien vers YouTube, TikTok ou d'autres événements Nostr.",
+      "placeholder": "URL ou URI Nostr...",
+      "add": "Ajouter",
+      "alreadyAdded": "Déjà ajouté"
+    },
     "draft": {
       "newUpload": "Nouveau téléchargement",
       "yourDrafts": "Vos brouillons ({{count}})",

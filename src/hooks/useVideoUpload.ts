@@ -39,6 +39,7 @@ interface BuildVideoEventParams {
   isPreview?: boolean
   hasPendingThumbnail?: boolean
   publishAt?: number // Scheduled publish timestamp (seconds), undefined = now
+  origins?: string[][][] // External platform references
 }
 
 interface BuildVideoEventResult {
@@ -75,6 +76,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     isPreview = false,
     hasPendingThumbnail = false,
     publishAt,
+    origins = [],
   } = params
 
   const firstVideo = videos[0]
@@ -204,6 +206,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
           ? ['p', person.pubkey, person.relays[0]]
           : ['p', person.pubkey]
       ),
+      ...origins.flat(),
       ['L', 'ISO-639-1'],
       ['l', language, 'ISO-639-1'],
       ['client', 'nostube'],
@@ -247,6 +250,7 @@ export function useVideoUpload(
   })
   const [language, setLanguage] = useState(initialDraft?.language || 'en')
   const [people, setPeople] = useState<TaggedPerson[]>(initialDraft?.people || [])
+  const [origins, setOrigins] = useState<string[][][]>(initialDraft?.origins || [])
   const [inputMethod, setInputMethod] = useState<'file' | 'url'>(
     initialDraft?.inputMethod || 'file'
   )
@@ -613,6 +617,7 @@ export function useVideoUpload(
     setTitle('')
     setDescription('')
     setTags([])
+    setOrigins([])
     setInputMethod('file')
     setVideoUrl('')
     setFile(null)
@@ -909,6 +914,7 @@ export function useVideoUpload(
         thumbnailBlurhash,
         isPreview: false,
         publishAt,
+        origins,
       })
 
       const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
@@ -1059,6 +1065,7 @@ export function useVideoUpload(
         tags,
         language,
         people,
+        origins,
         inputMethod,
         videoUrl,
         contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
@@ -1081,6 +1088,7 @@ export function useVideoUpload(
     expiration,
     publishAt,
     thumbnailSource,
+    origins,
   ])
 
   // Sync upload milestone changes separately (immediate in useUploadDrafts)
@@ -1128,6 +1136,7 @@ export function useVideoUpload(
           thumbnail !== null &&
           thumbnailUploadInfo.uploadedBlobs.length === 0),
       publishAt,
+      origins,
     })
 
     return result.event
@@ -1148,6 +1157,7 @@ export function useVideoUpload(
     subtitles,
     draftId,
     publishAt,
+    origins,
   ])
 
   return {
@@ -1162,6 +1172,8 @@ export function useVideoUpload(
     setLanguage,
     people,
     setPeople,
+    origins,
+    setOrigins,
     inputMethod,
     setInputMethod,
     videoUrl,

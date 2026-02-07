@@ -368,6 +368,13 @@
     "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
     "uploadingVideo": "Subiendo vídeo...",
     "processingVideo": "Procesando vídeo...",
+    "origins": {
+      "label": "Referencias externas",
+      "description": "Enlace a YouTube, TikTok u otros eventos de Nostr.",
+      "placeholder": "URL o URI de Nostr...",
+      "add": "Añadir",
+      "alreadyAdded": "Ya añadido"
+    },
     "draft": {
       "newUpload": "Nueva subida",
       "yourDrafts": "Tus borradores ({{count}})",

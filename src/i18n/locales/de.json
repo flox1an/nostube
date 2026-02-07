@@ -365,9 +365,16 @@
       "deletedFailed": "Löschen von Servern fehlgeschlagen"
     },
     "addAnotherQuality": "Weitere Qualität/Auflösung hinzufügen",
-    "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z.B. 1080p, 720p, 480p)",
+    "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z. B. 1080p, 720p, 480p)",
     "uploadingVideo": "Video wird hochgeladen...",
     "processingVideo": "Video wird verarbeitet...",
+    "origins": {
+      "label": "Externe Referenzen",
+      "description": "Link zu YouTube, TikTok oder anderen Nostr-Events.",
+      "placeholder": "URL oder Nostr-URI...",
+      "add": "Hinzufügen",
+      "alreadyAdded": "Bereits hinzugefügt"
+    },
     "draft": {
       "newUpload": "Neuer Upload",
       "yourDrafts": "Ihre Entwürfe ({{count}})",

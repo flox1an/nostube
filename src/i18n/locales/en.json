@@ -379,6 +379,13 @@
     "addAnotherQualityHint": "Upload the same video in a different resolution (e.g., 1080p, 720p, 480p)",
     "uploadingVideo": "Uploading video...",
     "processingVideo": "Processing video...",
+    "origins": {
+      "label": "External References",
+      "description": "Link to YouTube, TikTok, or other Nostr events.",
+      "placeholder": "URL or Nostr URI...",
+      "add": "Add",
+      "alreadyAdded": "Already Added"
+    },
     "draft": {
       "newUpload": "New Upload",
       "yourDrafts": "Your Drafts ({{count}})",

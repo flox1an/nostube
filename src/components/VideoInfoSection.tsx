@@ -38,7 +38,7 @@ import {
   Pencil,
   ExternalLink,
 } from 'lucide-react'
-import { nowInSecs, cn } from '@/lib/utils'
+import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
@@ -49,7 +49,6 @@ import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
 import { type VideoEvent, isAddressableKind, getPublishDate } from '../utils/video-event'
-import { getPlatformColor } from '@/utils/origin-utils'
 import { type BlossomServer } from '@/contexts/AppContext'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
@@ -385,12 +384,11 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                   target="_blank"
                   rel="noopener noreferrer"
                   title={origin.platform}
+                  className="inline-flex"
                 >
                   <Badge
-                    className={cn(
-                      'shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 border-none hover:opacity-80',
-                      getPlatformColor(origin.platform)
-                    )}
+                    variant="secondary"
+                    className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
                   >
                     <ExternalLink className="w-3 h-3" />
                     {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}

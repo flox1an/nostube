@@ -27,7 +27,7 @@ import {
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2, ExternalLink } from 'lucide-react'
-import { imageProxyVideoPreview, combineRelays, cn } from '@/lib/utils'
+import { imageProxyVideoPreview, combineRelays } from '@/lib/utils'
 import { buildProfileUrl } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-common/models'
@@ -37,8 +37,6 @@ import { VideoComments } from '@/components/VideoComments'
 import { presetRelays } from '@/constants/relays'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
 import { getDateLocale } from '@/lib/date-locale'
-import { Badge } from '@/components/ui/badge'
-import { getPlatformColor } from '@/utils/origin-utils'
 
 // Extract preset relay URLs at module level to avoid recreation on every render
 const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)
@@ -504,16 +502,10 @@ export const ShortVideoItem = memo(
                         target="_blank"
                         rel="noopener noreferrer"
                         title={origin.platform}
+                        className="text-blue-400 text-sm hover:underline inline-flex items-center gap-1"
                       >
-                        <Badge
-                          className={cn(
-                            'shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 border-none hover:opacity-80 h-5 px-1.5 text-[10px]',
-                            getPlatformColor(origin.platform)
-                          )}
-                        >
-                          <ExternalLink className="w-2.5 h-2.5" />
-                          {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
-                        </Badge>
+                        <ExternalLink className="w-3 h-3" />
+                        {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
                       </a>
                     ))}
                 </div>

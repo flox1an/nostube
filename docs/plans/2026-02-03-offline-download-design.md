@@ -50,32 +50,32 @@ A separate IndexedDB table `offline-downloads` stores download metadata:
 
 ```typescript
 interface OfflineDownload {
-  id: string;                    // unique download ID
-  videoEventId: string;          // Nostr event ID
-  videoEventKind: number;        // 21, 22, 34235, 34236
-  videoLink: string;             // naddr or nevent link for navigation
-  variantUrl: string;            // chosen variant URL
-  cacheKey: string;              // SHA256 hash
-  quality: string;               // e.g., "720p", "480p"
-  mimeType: string;              // e.g., "video/mp4"
-  fileSize: number;              // bytes
-  status: DownloadStatus;
-  progress: number;              // 0-100
-  dvmJobId?: string;             // if transcoding was requested
-  createdAt: number;             // timestamp
-  completedAt?: number;          // timestamp
-  error?: string;                // error message if failed
-  thumbnailCacheKey?: string;    // cached thumbnail hash
-  subtitleCacheKeys?: string[];  // cached subtitle hashes
+  id: string // unique download ID
+  videoEventId: string // Nostr event ID
+  videoEventKind: number // 21, 22, 34235, 34236
+  videoLink: string // naddr or nevent link for navigation
+  variantUrl: string // chosen variant URL
+  cacheKey: string // SHA256 hash
+  quality: string // e.g., "720p", "480p"
+  mimeType: string // e.g., "video/mp4"
+  fileSize: number // bytes
+  status: DownloadStatus
+  progress: number // 0-100
+  dvmJobId?: string // if transcoding was requested
+  createdAt: number // timestamp
+  completedAt?: number // timestamp
+  error?: string // error message if failed
+  thumbnailCacheKey?: string // cached thumbnail hash
+  subtitleCacheKeys?: string[] // cached subtitle hashes
 }
 
 type DownloadStatus =
-  | "pending"
-  | "downloading"
-  | "transcoding"       // waiting for DVM
-  | "complete"
-  | "error"
-  | "paused";
+  | 'pending'
+  | 'downloading'
+  | 'transcoding' // waiting for DVM
+  | 'complete'
+  | 'error'
+  | 'paused'
 ```
 
 ### Nostr Events: Already Cached
@@ -196,14 +196,14 @@ When playing a video from the offline library:
 
 ### Browser Limits
 
-| Browser          | Typical Limit                        | Notes                                    |
-| ---------------- | ------------------------------------ | ---------------------------------------- |
-| Chrome (Desktop) | Up to 80% of disk                    | Very generous                            |
-| Chrome (Android) | Up to 80% of disk                    | Very generous                            |
-| Firefox          | Up to 50% of disk                    | Per-origin limit of 2 GB (configurable)  |
-| Safari (iOS tab) | ~50 MB soft limit                    | Aggressive eviction after 7 days         |
-| Safari (iOS PWA) | 1+ GB                                | Much more generous when installed         |
-| Safari (macOS)   | Up to 80% of disk (recent versions)  | Reasonable                               |
+| Browser          | Typical Limit                       | Notes                                   |
+| ---------------- | ----------------------------------- | --------------------------------------- |
+| Chrome (Desktop) | Up to 80% of disk                   | Very generous                           |
+| Chrome (Android) | Up to 80% of disk                   | Very generous                           |
+| Firefox          | Up to 50% of disk                   | Per-origin limit of 2 GB (configurable) |
+| Safari (iOS tab) | ~50 MB soft limit                   | Aggressive eviction after 7 days        |
+| Safari (iOS PWA) | 1+ GB                               | Much more generous when installed       |
+| Safari (macOS)   | Up to 80% of disk (recent versions) | Reasonable                              |
 
 ### PWA Hint
 
@@ -222,37 +222,37 @@ When available storage is low or on Safari iOS in a normal tab, show a non-block
 
 ### New Files
 
-| File                                     | Purpose                                          |
-| ---------------------------------------- | ------------------------------------------------ |
-| `src/workers/service-worker.ts`          | Service Worker with cache intercept logic         |
-| `src/hooks/useOfflineDownload.ts`        | Hook: trigger download, track progress            |
-| `src/hooks/useOfflineLibrary.ts`         | Hook: list downloads, storage stats               |
-| `src/lib/offline-db.ts`                  | IndexedDB wrapper for offline-downloads table     |
-| `src/lib/offline-cache.ts`              | Cache API operations (store, retrieve, delete)     |
-| `src/pages/DownloadsPage.tsx`            | Downloads page with active/library sections       |
-| `src/components/offline/DownloadDialog.tsx`   | Quality selection dialog                     |
-| `src/components/offline/ActiveDownloads.tsx`  | Active downloads list with progress          |
-| `src/components/offline/OfflineLibrary.tsx`   | Offline video grid                           |
-| `src/components/offline/StorageBar.tsx`       | Storage usage indicator                      |
+| File                                         | Purpose                                        |
+| -------------------------------------------- | ---------------------------------------------- |
+| `src/workers/service-worker.ts`              | Service Worker with cache intercept logic      |
+| `src/hooks/useOfflineDownload.ts`            | Hook: trigger download, track progress         |
+| `src/hooks/useOfflineLibrary.ts`             | Hook: list downloads, storage stats            |
+| `src/lib/offline-db.ts`                      | IndexedDB wrapper for offline-downloads table  |
+| `src/lib/offline-cache.ts`                   | Cache API operations (store, retrieve, delete) |
+| `src/pages/DownloadsPage.tsx`                | Downloads page with active/library sections    |
+| `src/components/offline/DownloadDialog.tsx`  | Quality selection dialog                       |
+| `src/components/offline/ActiveDownloads.tsx` | Active downloads list with progress            |
+| `src/components/offline/OfflineLibrary.tsx`  | Offline video grid                             |
+| `src/components/offline/StorageBar.tsx`      | Storage usage indicator                        |
 
 ### Modified Files
 
-| File                                     | Change                                           |
-| ---------------------------------------- | ------------------------------------------------ |
-| `src/components/player/VideoPlayer.tsx`  | No changes needed (Service Worker is transparent) |
+| File                                    | Change                                            |
+| --------------------------------------- | ------------------------------------------------- |
+| `src/components/player/VideoPlayer.tsx` | No changes needed (Service Worker is transparent) |
 | `src/hooks/useMediaUrls.ts`             | No changes needed (Service Worker is transparent) |
-| `src/components/layout/Sidebar.tsx`      | Add "Downloads" entry (conditional)               |
-| `src/components/video/VideoActions.tsx`  | Add "Save Offline" to three-dot menu              |
-| `src/AppRouter.tsx`                      | Add /downloads route                              |
-| `vite.config.ts`                         | Service Worker registration setup                 |
-| `index.html`                             | Service Worker registration script                |
+| `src/components/layout/Sidebar.tsx`     | Add "Downloads" entry (conditional)               |
+| `src/components/video/VideoActions.tsx` | Add "Save Offline" to three-dot menu              |
+| `src/AppRouter.tsx`                     | Add /downloads route                              |
+| `vite.config.ts`                        | Service Worker registration setup                 |
+| `index.html`                            | Service Worker registration script                |
 
 ### Dependencies
 
-| Package                    | Purpose                              |
-| -------------------------- | ------------------------------------ |
-| `idb`                      | IndexedDB wrapper (or use raw API)   |
-| `vite-plugin-pwa` (maybe)  | Service Worker build integration     |
+| Package                   | Purpose                            |
+| ------------------------- | ---------------------------------- |
+| `idb`                     | IndexedDB wrapper (or use raw API) |
+| `vite-plugin-pwa` (maybe) | Service Worker build integration   |
 
 ## Implementation Phases
 

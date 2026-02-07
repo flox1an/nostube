@@ -287,7 +287,7 @@ export const VideoCard = React.memo(function VideoCard({
             )}
             <div className="min-w-0 flex-1">
               <Link to={to}>
-                <h3 className="font-medium line-clamp-2 break-all">{video.title}</h3>
+                <h3 className="font-medium line-clamp-2 break-words">{video.title}</h3>
               </Link>
               <div className="flex items-center text-xs">
                 {!hideAuthor && (

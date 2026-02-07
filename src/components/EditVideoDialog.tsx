@@ -17,6 +17,7 @@ import { TagInput } from '@/components/ui/tag-input'
 import { Pencil, Loader2 } from 'lucide-react'
 import { LanguageSelect } from '@/components/ui/language-select'
 import { VideoVariantsList } from '@/components/edit-video/VideoVariantsList'
+import { EventPreviewDiff } from '@/components/edit-video/EventPreviewDiff'
 import { useNostrPublish } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
 import { useAppContext } from '@/hooks'
@@ -151,6 +152,84 @@ export function EditVideoDialog({
     setImetaTags(prev => prev.filter((_, i) => i !== index))
   }
 
+  /**
+   * Build the updated event from current form state.
+   * Extracted so it can be used for both preview and actual publish.
+   */
+  const buildUpdatedEvent = () => {
+    // Preserve all tags EXCEPT the ones we're replacing
+    const replacedTagKeys = ['title', 'alt', 't', 'L', 'l', 'content-warning', 'imeta']
+    const preservedTags = videoEvent.tags.filter(tag => !replacedTagKeys.includes(tag[0]))
+
+    // Get current imeta tags (mix of original preserved + newly built)
+    const currentImetaTags = imetaTags.map(imeta => imeta.raw)
+
+    // Check if any imeta tag was replaced by comparing serialized forms
+    const originalImetaSerialized = new Set(
+      videoEvent.tags.filter(t => t[0] === 'imeta').map(t => JSON.stringify(t))
+    )
+    const needsDurationUpdate = currentImetaTags.some(
+      tag => !originalImetaSerialized.has(JSON.stringify(tag))
+    )
+
+    // If duration needs updating, remove it from preserved tags
+    const finalPreservedTags = needsDurationUpdate
+      ? preservedTags.filter(tag => tag[0] !== 'duration')
+      : preservedTags
+
+    // Determine kind based on first variant dimensions
+    let kind = videoEvent.kind
+    if (imetaTags.length > 0 && imetaTags[0].dimensions) {
+      const [w, h] = imetaTags[0].dimensions.split('x').map(Number)
+      if (w > 0 && h > 0) {
+        const isAddressable = kind === 34235 || kind === 34236
+        if (isAddressable) {
+          kind = h > w ? 34236 : 34235
+        }
+      }
+    }
+
+    // Build new tags array
+    const newTags: string[][] = [
+      ...finalPreservedTags,
+      ...currentImetaTags,
+      ['title', title.trim()],
+      ['alt', description.trim() || title.trim()],
+      ...tags.map(tag => ['t', tag]),
+      ...(language
+        ? [
+            ['L', 'ISO-639-1'],
+            ['l', language, 'ISO-639-1'],
+          ]
+        : []),
+      ...(contentWarningEnabled
+        ? [['content-warning', contentWarningReason.trim() || 'NSFW']]
+        : []),
+    ]
+
+    return {
+      kind,
+      content: description.trim(),
+      tags: newTags,
+    }
+  }
+
+  // Compute preview event reactively for the diff view
+  const previewEvent = useMemo(
+    () => buildUpdatedEvent(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      imetaTags,
+      title,
+      description,
+      tags,
+      language,
+      contentWarningEnabled,
+      contentWarningReason,
+      videoEvent,
+    ]
+  )
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -167,68 +246,11 @@ export function EditVideoDialog({
     setIsSubmitting(true)
 
     try {
-      // Preserve all tags EXCEPT the ones we're replacing
-      // Now also replacing imeta tags (for variant management)
-      const replacedTagKeys = ['title', 'alt', 't', 'L', 'l', 'content-warning', 'imeta']
-      const preservedTags = videoEvent.tags.filter(tag => !replacedTagKeys.includes(tag[0]))
+      const { kind, content, tags: newTags } = buildUpdatedEvent()
 
-      // Get current imeta tags (mix of original preserved + newly built)
-      const currentImetaTags = imetaTags.map(imeta => imeta.raw)
-
-      // Check if duration needs updating from replaced variants
-      // Find the longest duration among all variants for the duration tag
-      let needsDurationUpdate = false
-      for (const imeta of imetaTags) {
-        // If any variant was replaced (raw tag changed), we may need to update duration
-        const originalImeta = videoEvent.tags.find(
-          t => t[0] === 'imeta' && t.join('') !== imeta.raw.join('')
-        )
-        if (originalImeta) {
-          needsDurationUpdate = true
-          break
-        }
-      }
-
-      // If duration needs updating, remove it from preserved tags and we'll re-add if needed
-      const finalPreservedTags = needsDurationUpdate
-        ? preservedTags.filter(tag => tag[0] !== 'duration')
-        : preservedTags
-
-      // Determine kind based on first variant dimensions
-      // (orientation change may require kind change)
-      let kind = videoEvent.kind
-      if (imetaTags.length > 0 && imetaTags[0].dimensions) {
-        const [w, h] = imetaTags[0].dimensions.split('x').map(Number)
-        if (w > 0 && h > 0) {
-          const isAddressable = kind === 34235 || kind === 34236
-          if (isAddressable) {
-            kind = h > w ? 34236 : 34235
-          }
-        }
-      }
-
-      // Build new tags array
-      const newTags: string[][] = [
-        ...finalPreservedTags,
-        ...currentImetaTags,
-        ['title', title.trim()],
-        ['alt', description.trim() || title.trim()],
-        ...tags.map(tag => ['t', tag]),
-        ...(language
-          ? [
-              ['L', 'ISO-639-1'],
-              ['l', language, 'ISO-639-1'],
-            ]
-          : []),
-        ...(contentWarningEnabled
-          ? [['content-warning', contentWarningReason.trim() || 'NSFW']]
-          : []),
-      ]
-
-      // Create the updated event
       const updatedEvent = {
         kind,
-        content: description.trim(),
+        content,
         created_at: nowInSecs(),
         tags: newTags,
       }
@@ -349,6 +371,15 @@ export function EditVideoDialog({
               </div>
             </div>
           </div>
+          {/* Event Preview Diff */}
+          <EventPreviewDiff
+            originalTags={videoEvent.tags}
+            newTags={previewEvent.tags}
+            originalKind={videoEvent.kind}
+            newKind={previewEvent.kind}
+            newContent={previewEvent.content}
+          />
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {t('common.cancel')}

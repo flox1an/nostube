@@ -39,7 +39,7 @@ export function FollowImportDialog() {
     const completed = localStorage.getItem(STORAGE_KEY)
     if (completed) return
 
-    // Show dialog if user has kind 3 but no kind 30000
+    // Show dialog if user has kind 3 but no kind 10020 media follows
     if (!hasFollowSet && hasKind3Contacts) {
       setIsOpen(true)
     }

@@ -5,7 +5,8 @@ import { useAppContext } from './useAppContext'
 import { METADATA_RELAY } from '@/constants/relays'
 import type { NostrEvent } from 'nostr-tools'
 
-const FOLLOW_SET_IDENTIFIER = 'nostube-follows'
+/** NIP-51 multimedia (photos, short video) follow list */
+const MEDIA_FOLLOWS_KIND = 10020
 
 interface UseAuthorFollowingReturn {
   followedPubkeys: string[]
@@ -14,7 +15,7 @@ interface UseAuthorFollowingReturn {
 }
 
 /**
- * Hook to fetch another user's kind 30000 follow set (nostube-follows).
+ * Hook to fetch another user's kind 10020 media follows list (NIP-51).
  * Returns the list of pubkeys they are following.
  */
 export function useAuthorFollowing(
@@ -32,15 +33,14 @@ export function useAuthorFollowing(
     return Array.from(uniqueRelays)
   }, [relays])
 
-  // Load kind 30000 follow set for the author (fetch from relays)
+  // Load kind 10020 media follows list for the author (fetch from relays)
   useEffect(() => {
     if (!pubkey) return
 
     const loader = createAddressLoader(pool)
     const subscription = loader({
-      kind: 30000,
+      kind: MEDIA_FOLLOWS_KIND,
       pubkey,
-      identifier: FOLLOW_SET_IDENTIFIER,
       relays: relaysToUse,
     }).subscribe({
       next: event => {
@@ -54,19 +54,13 @@ export function useAuthorFollowing(
     return () => subscription.unsubscribe()
   }, [pubkey, eventStore, pool, relaysToUse])
 
-  // Subscribe to event store changes for this address
+  // Subscribe to event store changes for this replaceable event
   useEffect(() => {
     if (!pubkey) return
 
-    const sub = eventStore
-      .addressable({
-        kind: 30000,
-        pubkey,
-        identifier: FOLLOW_SET_IDENTIFIER,
-      })
-      .subscribe(event => {
-        setFollowSetEvent(event ?? null)
-      })
+    const sub = eventStore.replaceable(MEDIA_FOLLOWS_KIND, pubkey).subscribe(event => {
+      setFollowSetEvent(event ?? null)
+    })
 
     return () => sub.unsubscribe()
   }, [pubkey, eventStore])

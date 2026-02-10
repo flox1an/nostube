@@ -238,7 +238,7 @@ export function AuthorPage() {
   const likedVideosLoadedRef = useRef(false)
   const blockedPubkeys = useReportedPubkeys()
 
-  // Fetch author's following list (kind 30000 nostube-follows)
+  // Fetch author's media follows list (kind 10020, NIP-51)
   const { followedPubkeys: authorFollowing, isLoading: isLoadingFollowing } = useAuthorFollowing(
     pubkey,
     relays

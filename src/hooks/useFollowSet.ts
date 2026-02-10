@@ -9,7 +9,8 @@ import { useNostrPublish } from './useNostrPublish'
 import { nowInSecs } from '@/lib/utils'
 import { getKindsForType } from '@/lib/video-types'
 
-const FOLLOW_SET_IDENTIFIER = 'nostube-follows'
+/** NIP-51 multimedia (photos, short video) follow list */
+const MEDIA_FOLLOWS_KIND = 10020
 const BATCH_SIZE = 50 // Number of pubkeys to check per query
 
 export interface ImportProgress {
@@ -58,14 +59,13 @@ export function useFollowSet(): UseFollowSetReturn {
     return [...readRelays, METADATA_RELAY]
   }, [readRelays])
 
-  // Load kind 30000 follow set
+  // Load kind 10020 media follows list (NIP-51)
   useEffect(() => {
     if (user?.pubkey) {
       const loader = createAddressLoader(pool)
       const subscription = loader({
-        kind: 30000,
+        kind: MEDIA_FOLLOWS_KIND,
         pubkey: user.pubkey,
-        identifier: FOLLOW_SET_IDENTIFIER,
         relays: relaysWithMetadata,
       }).subscribe(e => eventStore.add(e))
 
@@ -97,16 +97,10 @@ export function useFollowSet(): UseFollowSetReturn {
       return
     }
 
-    // Subscribe to follow set event changes using AddressPointer object
-    const sub = eventStore
-      .addressable({
-        kind: 30000,
-        pubkey: user.pubkey,
-        identifier: FOLLOW_SET_IDENTIFIER,
-      })
-      .subscribe(event => {
-        setFollowSetEvent(event ?? null)
-      })
+    // Subscribe to follow set event changes (kind 10020 is replaceable)
+    const sub = eventStore.replaceable(MEDIA_FOLLOWS_KIND, user.pubkey).subscribe(event => {
+      setFollowSetEvent(event ?? null)
+    })
 
     return () => sub.unsubscribe()
   }, [user?.pubkey, eventStore])
@@ -148,13 +142,9 @@ export function useFollowSet(): UseFollowSetReturn {
         // Get current follow set or create new one
         const currentEvent = followSetEvent
 
-        // Build tags
-        const tags: string[][] = [
-          ['d', FOLLOW_SET_IDENTIFIER],
-          ['title', 'Nostube Follows'],
-        ]
+        // Build tags - carry over existing p tags (excluding the one we're adding)
+        const tags: string[][] = []
 
-        // Add existing follows (excluding the one we're adding)
         if (currentEvent) {
           const existingPTags = currentEvent.tags.filter(tag => tag[0] === 'p' && tag[1] !== pubkey)
           tags.push(...existingPTags)
@@ -172,7 +162,7 @@ export function useFollowSet(): UseFollowSetReturn {
         // Publish the updated follow set
         const signedEvent = await publish({
           event: {
-            kind: 30000,
+            kind: MEDIA_FOLLOWS_KIND,
             created_at: nowInSecs(),
             content: '',
             tags,
@@ -200,19 +190,14 @@ export function useFollowSet(): UseFollowSetReturn {
 
       try {
         // Build tags without the removed pubkey
-        const tags: string[][] = [
-          ['d', FOLLOW_SET_IDENTIFIER],
-          ['title', 'Nostube Follows'],
-        ]
-
-        // Add existing follows (excluding the one we're removing)
-        const existingPTags = followSetEvent.tags.filter(tag => tag[0] === 'p' && tag[1] !== pubkey)
-        tags.push(...existingPTags)
+        const tags: string[][] = followSetEvent.tags.filter(
+          tag => tag[0] === 'p' && tag[1] !== pubkey
+        )
 
         // Publish the updated follow set
         const signedEvent = await publish({
           event: {
-            kind: 30000,
+            kind: MEDIA_FOLLOWS_KIND,
             created_at: nowInSecs(),
             content: '',
             tags,
@@ -344,26 +329,28 @@ export function useFollowSet(): UseFollowSetReturn {
         return true
       }
 
-      // Phase 2: Import only pubkeys with videos
+      // Phase 2: Import only pubkeys with videos (append to existing list)
       setImportProgress(prev => ({ ...prev, phase: 'importing' }))
 
-      // Build new follow set with only pubkeys that have videos
-      // Include relay hints from original kind 3 if available
-      const tags: string[][] = [
-        ['d', FOLLOW_SET_IDENTIFIER],
-        ['title', 'Nostube Follows'],
-      ]
+      // Start with existing follows to preserve them
+      const existingPubkeys = new Set(followedPubkeys)
+      const tags: string[][] = followSetEvent
+        ? followSetEvent.tags.filter(tag => tag[0] === 'p' && tag[1])
+        : []
 
+      // Append new pubkeys that aren't already followed
       pubkeysWithVideos.forEach(pubkey => {
-        const originalTag = kind3PTags.find(t => t[1] === pubkey)
-        const relayHint = originalTag?.[2]
-        tags.push(relayHint ? ['p', pubkey, relayHint] : ['p', pubkey])
+        if (!existingPubkeys.has(pubkey)) {
+          const originalTag = kind3PTags.find(t => t[1] === pubkey)
+          const relayHint = originalTag?.[2]
+          tags.push(relayHint ? ['p', pubkey, relayHint] : ['p', pubkey])
+        }
       })
 
-      // Publish the new follow set
+      // Publish the updated follow set
       const signedEvent = await publish({
         event: {
-          kind: 30000,
+          kind: MEDIA_FOLLOWS_KIND,
           created_at: nowInSecs(),
           content: '',
           tags,
@@ -389,7 +376,17 @@ export function useFollowSet(): UseFollowSetReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [user?.pubkey, kind3Event, publish, writeRelays, eventStore, pool, readRelays])
+  }, [
+    user?.pubkey,
+    kind3Event,
+    followSetEvent,
+    followedPubkeys,
+    publish,
+    writeRelays,
+    eventStore,
+    pool,
+    readRelays,
+  ])
 
   return {
     followedPubkeys,

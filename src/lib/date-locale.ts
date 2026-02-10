@@ -1,4 +1,4 @@
-import { enUS, de, fr, es } from 'date-fns/locale'
+import { enUS, de, fr, es, ru } from 'date-fns/locale'
 import type { Locale } from 'date-fns'
 
 /**
@@ -14,6 +14,8 @@ export function getDateLocale(languageCode: string): Locale {
       return fr
     case 'es':
       return es
+    case 'ru':
+      return ru
     default:
       return enUS
   }

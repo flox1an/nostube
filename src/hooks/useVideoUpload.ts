@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useCurrentUser, useAppContext, useNostrPublish, useSelectedPreset } from '@/hooks'
+import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
@@ -14,8 +14,6 @@ import type { UploadDraft, SubtitleVariant, TaggedPerson } from '@/types/upload-
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
-import { deriveServerName } from '@/lib/blossom-servers'
-import { type BlossomServerTag } from '@/contexts/AppContext'
 import {
   publishMirrorAnnouncements,
   getMirrorAnnouncementRelays,
@@ -298,8 +296,7 @@ export function useVideoUpload(
   }, [uploadInfo.videos, title, description, tags.length, publishAt])
 
   const { user } = useCurrentUser()
-  const { config, updateConfig } = useAppContext()
-  const { presetContent } = useSelectedPreset()
+  const { config } = useAppContext()
   const { publish, isPending: isPublishing } = useNostrPublish()
 
   const blossomInitalUploadServers = config.blossomServers?.filter(server =>
@@ -308,23 +305,6 @@ export function useVideoUpload(
   const blossomMirrorServers = config.blossomServers?.filter(server =>
     server.tags.includes('mirror')
   )
-
-  const handleUseRecommendedServers = () => {
-    updateConfig(currentConfig => {
-      const servers: { url: string; name: string; tags: BlossomServerTag[] }[] = []
-      if (presetContent.defaultBlossomProxy) {
-        servers.push({
-          url: presetContent.defaultBlossomProxy,
-          name: deriveServerName(presetContent.defaultBlossomProxy),
-          tags: ['initial upload', 'mirror'] as BlossomServerTag[],
-        })
-      }
-      return {
-        ...currentConfig,
-        blossomServers: servers,
-      }
-    })
-  }
 
   const handleUrlVideoProcessing = async (url: string) => {
     if (!url) return
@@ -1148,7 +1128,6 @@ export function useVideoUpload(
     metadataDetected,
 
     // Handlers
-    handleUseRecommendedServers,
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,

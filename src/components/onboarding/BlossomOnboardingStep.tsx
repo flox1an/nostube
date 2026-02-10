@@ -13,6 +13,7 @@ interface BlossomOnboardingStepProps {
   onComplete: () => void
   onOpenUploadPicker: () => void
   onOpenMirrorPicker: () => void
+  allowEmpty?: boolean
 }
 
 export function BlossomOnboardingStep({
@@ -23,10 +24,11 @@ export function BlossomOnboardingStep({
   onComplete,
   onOpenUploadPicker,
   onOpenMirrorPicker,
+  allowEmpty = false,
 }: BlossomOnboardingStepProps) {
   const { t } = useTranslation()
 
-  const isValid = uploadServers.length > 0
+  const isValid = allowEmpty || uploadServers.length > 0
 
   // Helper to get server info for display
   const getServerInfo = (url: string) => {

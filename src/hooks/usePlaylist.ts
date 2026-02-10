@@ -133,7 +133,7 @@ export function usePlaylists() {
       const descTag = event.tags.find(t => t[0] === 'description')
       const name = titleTag ? titleTag[1] : 'Untitled Playlist'
       const description = descTag ? descTag[1] : undefined
-      const isPrivate = event.content !== ''
+      const isPrivate = event.tags.some(t => t[0] === 'encrypted') || event.content !== ''
 
       const videos: Video[] = event.tags
         .filter(t => t[0] === 'e')
@@ -237,9 +237,10 @@ export function usePlaylists() {
             throw new Error('Signer does not support NIP-44 encryption')
           }
 
-          // Private: only d + client in public tags
+          // Private: only d + encrypted + client in public tags
           tags = [
             ['d', playlist.identifier],
+            ['encrypted', ''],
             ['client', 'nostube'],
           ]
 

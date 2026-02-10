@@ -173,7 +173,8 @@ export function usePlaylistDetails(
     }
   }, [playlistPointer, eventStore, eventLoader, addressLoader])
 
-  const isPrivate = Boolean(playlistEvent?.content)
+  const isPrivate =
+    playlistEvent?.tags.some(t => t[0] === 'encrypted') || Boolean(playlistEvent?.content)
 
   // Decrypt private playlist content when owner views it
   useEffect(() => {

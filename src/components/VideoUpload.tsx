@@ -19,6 +19,7 @@ import {
   PeoplePickerSection,
   OriginManager,
 } from './video-upload'
+import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
 import { deleteBlobsFromServers } from '@/lib/blossom-upload'
@@ -37,6 +38,7 @@ import { generateEventLink } from '@/lib/nostr'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
+import { isBetaUser } from '@/lib/beta-users'
 import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
 
 interface UploadFormProps {
@@ -109,7 +111,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     metadataDetected,
 
     // Handlers
-    handleUseRecommendedServers,
     handleUrlVideoProcessing,
     handleThumbnailDrop,
     handleThumbnailSourceChange,
@@ -331,6 +332,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     })
 
   const { config, updateConfig } = useAppContext()
+  const betaUser = isBetaUser(user?.pubkey)
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false)
   const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
   const [showUploadPicker, setShowUploadPicker] = useState(false)
   const [showMirrorPicker, setShowMirrorPicker] = useState(false)
@@ -345,7 +348,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
   const [justArrivedAtStep5, setJustArrivedAtStep5] = useState(false)
 
-  // Initialize with existing configured servers
+  // Local server lists for the BlossomOnboardingStep dialog editor.
+  // Re-derived from config each time the dialog opens.
   const [uploadServers, setUploadServers] = useState<string[]>(() => {
     return (
       config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
@@ -354,6 +358,17 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
     return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
   })
+
+  // Open the server config dialog, syncing local state from current config
+  const openBlossomOnboarding = () => {
+    setUploadServers(
+      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
+    )
+    setMirrorServers(
+      config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+    )
+    setShowBlossomOnboarding(true)
+  }
 
   // Handlers for server management
   const handleBlossomOnboardingComplete = () => {
@@ -479,20 +494,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    {(!blossomInitalUploadServers || blossomInitalUploadServers.length === 0) && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={handleUseRecommendedServers}
-                        className="cursor-pointer"
-                      >
-                        {t('upload.useRecommended')}
-                      </Button>
-                    )}
                     <Button
                       type="button"
-                      onClick={() => setShowBlossomOnboarding(true)}
-                      variant={'outline'}
+                      onClick={() => openBlossomOnboarding()}
+                      variant="outline"
                       className="cursor-pointer"
                     >
                       {t('upload.advanced')}
@@ -519,24 +524,14 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 )}
 
                 {/* File upload */}
-                {uploadInfo.videos.length > 0 ? null : inputMethod === 'file' &&
-                  blossomInitalUploadServers &&
-                  blossomInitalUploadServers.length > 0 ? (
+                {uploadInfo.videos.length === 0 && inputMethod === 'file' && (
                   <FileDropzone
                     onDrop={wrappedOnDrop}
                     accept={{ 'video/*': [] }}
                     selectedFile={file}
                     className="mb-4"
                   />
-                ) : inputMethod === 'file' ? (
-                  <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-3 mb-2">
-                    <span>
-                      {t('upload.noUploadServers')}
-                      <br />
-                      {t('upload.configureServers')}
-                    </span>
-                  </div>
-                ) : null}
+                )}
 
                 {/* Upload progress */}
                 {uploadProgress && (
@@ -727,6 +722,18 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         <EventPreview event={previewEvent} />
       </div>
 
+      {/* Upload Onboarding Dialog - appears when no servers configured */}
+      <UploadOnboardingDialog
+        open={
+          !onboardingSkipped &&
+          (!blossomInitalUploadServers || blossomInitalUploadServers.length === 0)
+        }
+        onComplete={() => {}}
+        onChooseOwn={() => openBlossomOnboarding()}
+        allowSkip={betaUser}
+        onSkip={() => setOnboardingSkipped(true)}
+      />
+
       {/* Blossom Server Configuration Dialog */}
       <Dialog open={showBlossomOnboarding} onOpenChange={setShowBlossomOnboarding}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -738,6 +745,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
             onComplete={handleBlossomOnboardingComplete}
             onOpenUploadPicker={() => setShowUploadPicker(true)}
             onOpenMirrorPicker={() => setShowMirrorPicker(true)}
+            allowEmpty={betaUser}
           />
         </DialogContent>
       </Dialog>

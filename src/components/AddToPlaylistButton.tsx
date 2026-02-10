@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Check, ListPlus, Loader2, Plus } from 'lucide-react'
+import { ArrowLeft, Check, ListPlus, Loader2, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -198,6 +198,9 @@ export function AddToPlaylistButton({
                         disabled={hasVideo || isAdding}
                         onSelect={() => handleAddToPlaylist(playlist.identifier, playlist.name)}
                       >
+                        {playlist.isPrivate && (
+                          <Lock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                        )}
                         {playlist.name}
                         {hasVideo && <Check className="ml-2 h-4 w-4" />}
                       </CommandItem>

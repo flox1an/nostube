@@ -263,9 +263,16 @@
       "placeholder": "Search for people..."
     },
     "loginRequired": "Please log in to upload videos",
+    "onboarding": {
+      "yourDevice": "Your Device",
+      "primaryServer": "Primary Server",
+      "backupServers": "Backup Servers",
+      "explanation": "You upload your video once to a primary server. It's then automatically copied to backup servers for resilience — no extra bandwidth on your end. You can change servers anytime in Settings > Video Hosting.",
+      "getStarted": "Get Started",
+      "chooseOwn": "Choose my own servers"
+    },
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",
-    "useRecommended": "Use recommended servers",
-    "advanced": "Advanced",
+    "advanced": "Video Hosting",
     "uploadFile": "Upload File",
     "fromUrl": "From URL",
     "noUploadServers": "No hosting servers are set as Primary.",
@@ -606,7 +613,14 @@
       "confirm": "Remove"
     },
     "failedVideos_one": "{{count}} video could not be loaded from any relay. It may have been deleted or is no longer available.",
-    "failedVideos_other": "{{count}} videos could not be loaded from any relay. They may have been deleted or are no longer available."
+    "failedVideos_other": "{{count}} videos could not be loaded from any relay. They may have been deleted or are no longer available.",
+    "private": {
+      "label": "Private playlist",
+      "description": "Only you can see the contents of this playlist",
+      "noEncryptionSupport": "Your signer does not support encryption. Private playlists require NIP-44 support.",
+      "privatePlaylist": "Private Playlist",
+      "cannotView": "This playlist is private. Only the owner can view its contents."
+    }
   },
   "pages": {
     "home": {

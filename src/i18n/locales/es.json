@@ -244,9 +244,16 @@
       "description": "Configure ajustes opcionales para su video"
     },
     "loginRequired": "Por favor, inicie sesión para subir videos",
+    "onboarding": {
+      "yourDevice": "Tu Dispositivo",
+      "primaryServer": "Servidor Principal",
+      "backupServers": "Servidores de Respaldo",
+      "explanation": "Subes tu video una vez a un servidor principal. Luego se copia automáticamente a los servidores de respaldo — sin ancho de banda adicional de tu parte. Puedes cambiar los servidores en cualquier momento en Ajustes > Alojamiento de Vídeo.",
+      "getStarted": "Empezar",
+      "chooseOwn": "Elegir mis propios servidores"
+    },
     "uploadInfo": "Subiendo directamente a {{upload}} servidor(es). Replicando a {{mirror}} servidor(es).",
-    "useRecommended": "Usar servidores recomendados",
-    "advanced": "Avanzado",
+    "advanced": "Alojamiento de Vídeo",
     "uploadFile": "Subir Archivo",
     "fromUrl": "Desde URL",
     "noUploadServers": "Ningún servidor de alojamiento está marcado como Principal.",
@@ -569,7 +576,14 @@
       "successMessage": "Su nueva lista de reproducción ha sido creada exitosamente."
     },
     "failedVideos_one": "{{count}} video no se pudo cargar desde ningún relay. Puede haber sido eliminado o ya no está disponible.",
-    "failedVideos_other": "{{count}} videos no se pudieron cargar desde ningún relay. Pueden haber sido eliminados o ya no están disponibles."
+    "failedVideos_other": "{{count}} videos no se pudieron cargar desde ningún relay. Pueden haber sido eliminados o ya no están disponibles.",
+    "private": {
+      "label": "Playlist privada",
+      "description": "Solo tú puedes ver el contenido de esta playlist",
+      "noEncryptionSupport": "Tu firmante no admite cifrado. Las playlists privadas requieren soporte de NIP-44.",
+      "privatePlaylist": "Playlist privada",
+      "cannotView": "Esta playlist es privada. Solo el propietario puede ver su contenido."
+    }
   },
   "pages": {
     "home": {

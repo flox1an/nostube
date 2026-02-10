@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -14,17 +15,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useCurrentUser } from '@/hooks'
 
 interface CreatePlaylistCardProps {
-  onCreatePlaylist: (name: string, description?: string) => Promise<void>
+  onCreatePlaylist: (name: string, description?: string, isPrivate?: boolean) => Promise<void>
 }
 
 export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps) {
   const { t } = useTranslation()
+  const { user } = useCurrentUser()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const hasNip44 = Boolean(user?.signer?.nip44)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,10 +38,11 @@ export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps
 
     setIsSubmitting(true)
     try {
-      await onCreatePlaylist(name.trim(), description.trim() || undefined)
+      await onCreatePlaylist(name.trim(), description.trim() || undefined, isPrivate)
       setDialogOpen(false)
       setName('')
       setDescription('')
+      setIsPrivate(false)
     } finally {
       setIsSubmitting(false)
     }
@@ -92,6 +99,28 @@ export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps
                   rows={3}
                 />
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="private-toggle">{t('playlists.private.label')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('playlists.private.description')}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="private-toggle"
+                  checked={isPrivate}
+                  onCheckedChange={setIsPrivate}
+                  disabled={!hasNip44}
+                />
+              </div>
+              {!hasNip44 && (
+                <p className="text-xs text-yellow-600">
+                  {t('playlists.private.noEncryptionSupport')}
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit" disabled={!name.trim() || isSubmitting}>

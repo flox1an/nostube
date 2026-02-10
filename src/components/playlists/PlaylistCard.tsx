@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Loader2, Lock } from 'lucide-react'
 import { nip19 } from 'nostr-tools'
 import { useTranslation } from 'react-i18next'
 
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import {
 
 import { PlaylistThumbnailCollage } from './PlaylistThumbnailCollage'
 import type { Playlist } from '@/hooks/usePlaylist'
+import { useCurrentUser } from '@/hooks'
 
 interface PlaylistCardProps {
   playlist: Playlist
@@ -46,12 +48,16 @@ export function PlaylistCard({
   onUpdate,
 }: PlaylistCardProps) {
   const { t } = useTranslation()
+  const { user } = useCurrentUser()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(playlist.name)
   const [editDescription, setEditDescription] = useState(playlist.description || '')
+  const [editIsPrivate, setEditIsPrivate] = useState(playlist.isPrivate || false)
+
+  const hasNip44 = Boolean(user?.signer?.nip44)
 
   const playlistNaddr = nip19.naddrEncode({
     kind: 30005,
@@ -81,6 +87,7 @@ export function PlaylistCard({
         ...playlist,
         name: editName,
         description: editDescription,
+        isPrivate: editIsPrivate,
       })
       setEditDialogOpen(false)
     } finally {
@@ -93,6 +100,7 @@ export function PlaylistCard({
     e.stopPropagation()
     setEditName(playlist.name)
     setEditDescription(playlist.description || '')
+    setEditIsPrivate(playlist.isPrivate || false)
     setEditDialogOpen(true)
   }
 
@@ -137,7 +145,10 @@ export function PlaylistCard({
 
         {/* Card content */}
         <div className="p-3">
-          <h3 className="font-medium line-clamp-1">{playlist.name}</h3>
+          <h3 className="font-medium line-clamp-1 flex items-center gap-1.5">
+            {playlist.isPrivate && <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+            {playlist.name}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {playlist.videos.length} {playlist.videos.length === 1 ? 'video' : 'videos'}
           </p>
@@ -194,6 +205,28 @@ export function PlaylistCard({
                   rows={3}
                 />
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="edit-private-toggle">{t('playlists.private.label')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('playlists.private.description')}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="edit-private-toggle"
+                  checked={editIsPrivate}
+                  onCheckedChange={setEditIsPrivate}
+                  disabled={!hasNip44}
+                />
+              </div>
+              {!hasNip44 && (
+                <p className="text-xs text-yellow-600">
+                  {t('playlists.private.noEncryptionSupport')}
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit" disabled={!editName.trim() || isEditing}>

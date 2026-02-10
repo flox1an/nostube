@@ -18,7 +18,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, Trash2, AlertCircle, Loader2 } from 'lucide-react'
+import { GripVertical, Lock, Pencil, Trash2, AlertCircle, Loader2 } from 'lucide-react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoGrid } from '@/components/VideoGrid'
@@ -116,6 +116,8 @@ export default function SinglePlaylistPage() {
     isLoadingVideos,
     failedVideoIds,
     loadingVideoIds,
+    isPrivate,
+    decryptionFailed,
   } = usePlaylistDetails(nip19param)
 
   const [isEditMode, setIsEditMode] = useState(false)
@@ -201,14 +203,12 @@ export default function SinglePlaylistPage() {
         if (playlistIdentifier && playlistEvent) {
           setIsSaving(true)
           try {
-            const titleTag = playlistEvent.tags.find(t => t[0] === 'title')
-            const descTag = playlistEvent.tags.find(t => t[0] === 'description')
-
             await updatePlaylist({
               eventId: playlistEvent.id,
               identifier: playlistIdentifier,
-              name: titleTag?.[1] || 'Untitled Playlist',
-              description: descTag?.[1],
+              name: playlistTitle || 'Untitled Playlist',
+              description: playlistDescription || undefined,
+              isPrivate,
               videos: newOrder.map(id => {
                 const ref = videoRefs.find(r => r.id === id)
                 return {
@@ -229,7 +229,16 @@ export default function SinglePlaylistPage() {
         }
       }
     },
-    [orderedVideoIds, playlistIdentifier, playlistEvent, videoRefs, updatePlaylist]
+    [
+      orderedVideoIds,
+      playlistIdentifier,
+      playlistEvent,
+      playlistTitle,
+      playlistDescription,
+      isPrivate,
+      videoRefs,
+      updatePlaylist,
+    ]
   )
 
   const handleRemoveVideo = useCallback(
@@ -284,11 +293,27 @@ export default function SinglePlaylistPage() {
     )
   }
 
+  // Show locked message for non-owner viewing a private playlist
+  if (isPrivate && decryptionFailed) {
+    return (
+      <div className="max-w-560 mx-auto p-8">
+        <div className="text-center py-12 flex flex-col items-center gap-3">
+          <Lock className="h-12 w-12 text-muted-foreground" />
+          <h1 className="text-xl font-bold">{t('playlists.private.privatePlaylist')}</h1>
+          <p className="text-muted-foreground">{t('playlists.private.cannotView')}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-560 mx-auto p-8 flex flex-col gap-8">
       <div className="flex items-start gap-4">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{playlistTitle}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {isPrivate && <Lock className="h-5 w-5 shrink-0 text-muted-foreground" />}
+            {playlistTitle}
+          </h1>
           {playlistDescription && (
             <p className="text-muted-foreground mt-2">{playlistDescription}</p>
           )}

@@ -22,6 +22,7 @@ export interface Playlist {
   name: string
   description?: string
   videos: Video[]
+  isPrivate?: boolean
 }
 
 // NIP-51 kind 30005 is for mutable lists including playlists
@@ -116,37 +117,98 @@ export function usePlaylists() {
     }
   }, [user?.pubkey, eventStore, loader])
 
-  const playlists = playlistEvents.map(event => {
-    // Find the title from tags
-    const titleTag = event.tags.find(t => t[0] === 'title')
-    const descTag = event.tags.find(t => t[0] === 'description')
-    const name = titleTag ? titleTag[1] : 'Untitled Playlist'
-    const description = descTag ? descTag[1] : undefined
+  // Parse playlists from events, with async decryption for private ones
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
 
-    // Get video references from 'e' tags (event IDs)
-    const videos: Video[] = event.tags
-      .filter(t => t[0] === 'e')
-      .map(t => ({
-        id: t[1], // Event ID
-        kind: 0, // Kind will be determined when event is loaded
-        title: undefined, // Title will be fetched from the actual event
-        added_at: event.created_at,
-        relayHint: (() => {
-          if (t[2]) return t[2]
-          const referencedEvent = eventStore.getEvent(t[1])
-          const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-          return seenRelays ? Array.from(seenRelays)[0] : undefined
-        })(),
-      }))
+  useEffect(() => {
+    let cancelled = false
 
-    return {
-      identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
-      name,
-      description,
-      videos,
-      eventId: event.id, // Keep eventId for deletion
+    const parsePlaylist = (event: {
+      tags: string[][]
+      content: string
+      id: string
+      created_at: number
+    }): Playlist => {
+      const titleTag = event.tags.find(t => t[0] === 'title')
+      const descTag = event.tags.find(t => t[0] === 'description')
+      const name = titleTag ? titleTag[1] : 'Untitled Playlist'
+      const description = descTag ? descTag[1] : undefined
+      const isPrivate = event.content !== ''
+
+      const videos: Video[] = event.tags
+        .filter(t => t[0] === 'e')
+        .map(t => ({
+          id: t[1],
+          kind: 0,
+          title: undefined,
+          added_at: event.created_at,
+          relayHint: (() => {
+            if (t[2]) return t[2]
+            const referencedEvent = eventStore.getEvent(t[1])
+            const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+            return seenRelays ? Array.from(seenRelays)[0] : undefined
+          })(),
+        }))
+
+      return {
+        identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
+        name: isPrivate ? name || 'Private Playlist' : name,
+        description,
+        videos,
+        eventId: event.id,
+        isPrivate,
+      }
     }
-  })
+
+    const decryptAndParse = async () => {
+      const results: Playlist[] = []
+
+      for (const event of playlistEvents) {
+        const playlist = parsePlaylist(event)
+
+        // Attempt decryption for private playlists
+        if (playlist.isPrivate && user?.signer?.nip44) {
+          try {
+            const plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
+            const decryptedTags: string[][] = JSON.parse(plaintext)
+
+            const titleTag = decryptedTags.find(t => t[0] === 'title')
+            const descTag = decryptedTags.find(t => t[0] === 'description')
+            const videoTags = decryptedTags.filter(t => t[0] === 'e')
+
+            if (titleTag) playlist.name = titleTag[1]
+            if (descTag) playlist.description = descTag[1]
+            playlist.videos = videoTags.map(t => ({
+              id: t[1],
+              kind: 0,
+              title: undefined,
+              added_at: event.created_at,
+              relayHint: (() => {
+                if (t[2]) return t[2]
+                const referencedEvent = eventStore.getEvent(t[1])
+                const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+                return seenRelays ? Array.from(seenRelays)[0] : undefined
+              })(),
+            }))
+          } catch (err) {
+            console.warn('[usePlaylist] Failed to decrypt private playlist:', err)
+          }
+        }
+
+        results.push(playlist)
+      }
+
+      if (!cancelled) {
+        setPlaylists(results)
+      }
+    }
+
+    decryptAndParse()
+
+    return () => {
+      cancelled = true
+    }
+  }, [playlistEvents, user?.pubkey, user?.signer, eventStore])
 
   const updatePlaylist = useCallback(
     async (playlist: Playlist) => {
@@ -154,33 +216,56 @@ export function usePlaylists() {
       setIsLoading(true)
 
       try {
-        // Create tags array following NIP-51 format
-        const tags = [
-          ['d', playlist.identifier],
-          ['title', playlist.name],
-          ['description', playlist.description || ''],
-          // Add video references as 'e' tags (event IDs) with relay hints
-          ...playlist.videos.map(video => {
-            // Get relay hint from where this event has been seen
-            const referencedEvent = eventStore.getEvent(video.id)
-            const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-            const relayHint =
-              video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
+        // Build video e-tags with relay hints
+        const videoTags = playlist.videos.map(video => {
+          const referencedEvent = eventStore.getEvent(video.id)
+          const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+          const relayHint = video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
 
-            const tag: string[] = ['e', video.id]
-            if (relayHint) {
-              tag.push(relayHint)
-            }
-            return tag
-          }),
-          ['client', 'nostube'],
-        ]
+          const tag: string[] = ['e', video.id]
+          if (relayHint) {
+            tag.push(relayHint)
+          }
+          return tag
+        })
+
+        let tags: string[][]
+        let content = ''
+
+        if (playlist.isPrivate) {
+          if (!user.signer?.nip44) {
+            throw new Error('Signer does not support NIP-44 encryption')
+          }
+
+          // Private: only d + client in public tags
+          tags = [
+            ['d', playlist.identifier],
+            ['client', 'nostube'],
+          ]
+
+          // Encrypt title, description, and e-tags into content
+          const privateTags: string[][] = [
+            ['title', playlist.name],
+            ['description', playlist.description || ''],
+            ...videoTags,
+          ]
+          content = await user.signer.nip44.encrypt(user.pubkey, JSON.stringify(privateTags))
+        } else {
+          // Public: all tags visible, empty content
+          tags = [
+            ['d', playlist.identifier],
+            ['title', playlist.name],
+            ['description', playlist.description || ''],
+            ...videoTags,
+            ['client', 'nostube'],
+          ]
+        }
 
         const draftEvent = {
           kind: PLAYLIST_KIND,
           created_at: nowInSecs(),
           tags,
-          content: '', // Content can be empty as per NIP-51
+          content,
         }
 
         const signedEvent = await publish({
@@ -196,17 +281,18 @@ export function usePlaylists() {
         setIsLoading(false)
       }
     },
-    [user?.pubkey, publish, config.relays, eventStore]
+    [user?.pubkey, user?.signer, publish, config.relays, eventStore]
   )
 
   const createPlaylist = useCallback(
-    async (name: string, description?: string) => {
+    async (name: string, description?: string, isPrivate?: boolean) => {
       const playlist: Playlist = {
         eventId: undefined,
         identifier: 'nostube-' + crypto.randomUUID(),
         name,
         description,
         videos: [],
+        isPrivate: isPrivate || false,
       }
 
       await updatePlaylist(playlist)
@@ -393,7 +479,13 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     }
   }, [pubkey, loader, eventStore])
 
-  const playlists = playlistEvents?.map(event => {
+  // Filter out private playlists (non-empty content = encrypted, can't decrypt other users')
+  const publicPlaylistEvents = useMemo(
+    () => playlistEvents?.filter(event => !event.content) ?? [],
+    [playlistEvents]
+  )
+
+  const playlists = publicPlaylistEvents.map(event => {
     const titleTag = event.tags.find(t => t[0] === 'title')
     const descTag = event.tags.find(t => t[0] === 'description')
     const name = titleTag ? titleTag[1] : 'Untitled Playlist'
@@ -401,9 +493,9 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     const videos: Video[] = event.tags
       .filter(t => t[0] === 'e')
       .map(t => ({
-        id: t[1], // Event ID
-        kind: 0, // Kind will be determined when event is loaded
-        title: undefined, // Title will be fetched from the actual event
+        id: t[1],
+        kind: 0,
+        title: undefined,
         added_at: event.created_at,
       }))
     return {
@@ -412,6 +504,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
       description,
       videos,
       eventId: event.id,
+      isPrivate: false,
     }
   })
 

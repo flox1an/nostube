@@ -244,9 +244,16 @@
       "description": "Configurez les paramètres optionnels pour votre vidéo"
     },
     "loginRequired": "Veuillez vous connecter pour mettre en ligne des vidéos",
+    "onboarding": {
+      "yourDevice": "Votre Appareil",
+      "primaryServer": "Serveur Principal",
+      "backupServers": "Serveurs de Sauvegarde",
+      "explanation": "Vous téléchargez votre vidéo une seule fois sur un serveur principal. Elle est ensuite automatiquement copiée sur les serveurs de sauvegarde — sans bande passante supplémentaire de votre côté. Vous pouvez changer de serveurs à tout moment dans Paramètres > Hébergement Vidéo.",
+      "getStarted": "Commencer",
+      "chooseOwn": "Choisir mes propres serveurs"
+    },
     "uploadInfo": "Mise en ligne directe vers {{upload}} serveur(s). Duplication vers {{mirror}} serveur(s).",
-    "useRecommended": "Utiliser les serveurs recommandés",
-    "advanced": "Avancé",
+    "advanced": "Hébergement Vidéo",
     "uploadFile": "Télécharger un fichier",
     "fromUrl": "Depuis une URL",
     "noUploadServers": "Aucun serveur d'hébergement n'est défini comme Principal.",
@@ -568,7 +575,14 @@
       "successMessage": "Votre nouvelle liste de lecture a été créée avec succès."
     },
     "failedVideos_one": "{{count}} vidéo n'a pas pu être chargée depuis aucun relais. Elle a peut-être été supprimée ou n'est plus disponible.",
-    "failedVideos_other": "{{count}} vidéos n'ont pas pu être chargées depuis aucun relais. Elles ont peut-être été supprimées ou ne sont plus disponibles."
+    "failedVideos_other": "{{count}} vidéos n'ont pas pu être chargées depuis aucun relais. Elles ont peut-être été supprimées ou ne sont plus disponibles.",
+    "private": {
+      "label": "Playlist privée",
+      "description": "Vous seul pouvez voir le contenu de cette playlist",
+      "noEncryptionSupport": "Votre signataire ne prend pas en charge le chiffrement. Les playlists privées nécessitent la prise en charge de NIP-44.",
+      "privatePlaylist": "Playlist privée",
+      "cannotView": "Cette playlist est privée. Seul le propriétaire peut en voir le contenu."
+    }
   },
   "pages": {
     "home": {

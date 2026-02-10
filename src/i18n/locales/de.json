@@ -244,9 +244,16 @@
       "description": "Konfiguriere optionale Einstellungen für dein Video"
     },
     "loginRequired": "Bitte melde dich an, um Videos hochzuladen",
+    "onboarding": {
+      "yourDevice": "Dein Gerät",
+      "primaryServer": "Primärer Server",
+      "backupServers": "Backup-Server",
+      "explanation": "Du lädst dein Video einmal auf einen primären Server hoch. Es wird dann automatisch auf Backup-Server kopiert — ohne zusätzlichen Datenverbrauch auf deiner Seite. Du kannst die Server jederzeit in Einstellungen > Video-Hosting ändern.",
+      "getStarted": "Los geht's",
+      "chooseOwn": "Eigene Server wählen"
+    },
     "uploadInfo": "Wird direkt auf {{upload}} Server hochgeladen. Spiegelt auf {{mirror}} Server.",
-    "useRecommended": "Empfohlene Server verwenden",
-    "advanced": "Erweitert",
+    "advanced": "Video-Hosting",
     "uploadFile": "Datei hochladen",
     "fromUrl": "Von URL",
     "noUploadServers": "Kein Hosting-Server ist als Primär markiert.",
@@ -569,7 +576,14 @@
       "successMessage": "Deine neue Playlist wurde erfolgreich erstellt."
     },
     "failedVideos_one": "{{count}} Video konnte von keinem Relay geladen werden. Es wurde möglicherweise gelöscht oder ist nicht mehr verfügbar.",
-    "failedVideos_other": "{{count}} Videos konnten von keinem Relay geladen werden. Sie wurden möglicherweise gelöscht oder sind nicht mehr verfügbar."
+    "failedVideos_other": "{{count}} Videos konnten von keinem Relay geladen werden. Sie wurden möglicherweise gelöscht oder sind nicht mehr verfügbar.",
+    "private": {
+      "label": "Private Playlist",
+      "description": "Nur du kannst den Inhalt dieser Playlist sehen",
+      "noEncryptionSupport": "Dein Signer unterstützt keine Verschlüsselung. Private Playlists erfordern NIP-44-Unterstützung.",
+      "privatePlaylist": "Private Playlist",
+      "cannotView": "Diese Playlist ist privat. Nur der Eigentümer kann ihren Inhalt sehen."
+    }
   },
   "pages": {
     "home": {

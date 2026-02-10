@@ -15,6 +15,7 @@ import { combineRelays } from '@/lib/utils'
 import { processEvents } from '@/utils/video-event'
 
 import { useAppContext } from './useAppContext'
+import { useCurrentUser } from './useCurrentUser'
 import { useReadRelays } from './useReadRelays'
 import { useSelectedPreset } from './useSelectedPreset'
 
@@ -42,6 +43,8 @@ interface PlaylistDetailsResult {
   isLoadingVideos: boolean
   failedVideoIds: Set<string>
   loadingVideoIds: Set<string>
+  isPrivate: boolean
+  decryptionFailed: boolean
 }
 
 function isNeventPointer(ptr: unknown): ptr is NeventPointer {
@@ -65,12 +68,15 @@ export function usePlaylistDetails(
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
   const { presetContent } = useSelectedPreset()
+  const { user } = useCurrentUser()
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
 
   const [failedVideoIds, setFailedVideoIds] = useState<Set<string>>(new Set())
   const [loadingVideoIds, setLoadingVideoIds] = useState<Set<string>>(new Set())
+  const [decryptedTags, setDecryptedTags] = useState<string[][] | null>(null)
+  const [decryptionFailed, setDecryptionFailed] = useState(false)
 
   const playlistPointer = useMemo(() => {
     if (!nip19param) return null
@@ -167,6 +173,61 @@ export function usePlaylistDetails(
     }
   }, [playlistPointer, eventStore, eventLoader, addressLoader])
 
+  const isPrivate = Boolean(playlistEvent?.content)
+
+  // Decrypt private playlist content when owner views it
+  useEffect(() => {
+    let cancelled = false
+
+    if (!playlistEvent || !playlistEvent.content) {
+      ;(async () => {
+        await Promise.resolve()
+        if (!cancelled) {
+          setDecryptedTags(null)
+          setDecryptionFailed(false)
+        }
+      })()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    // Only the owner can decrypt
+    if (!user?.pubkey || playlistEvent.pubkey !== user.pubkey || !user.signer?.nip44) {
+      ;(async () => {
+        await Promise.resolve()
+        if (!cancelled) {
+          setDecryptedTags(null)
+          setDecryptionFailed(true)
+        }
+      })()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    ;(async () => {
+      try {
+        const plaintext = await user.signer!.nip44!.decrypt(user.pubkey, playlistEvent.content)
+        const tags: string[][] = JSON.parse(plaintext)
+        if (!cancelled) {
+          setDecryptedTags(tags)
+          setDecryptionFailed(false)
+        }
+      } catch (err) {
+        console.warn('[usePlaylistDetails] Failed to decrypt private playlist:', err)
+        if (!cancelled) {
+          setDecryptedTags(null)
+          setDecryptionFailed(true)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [playlistEvent, user?.pubkey, user?.signer])
+
   const { playlistTitle, playlistDescription, videoRefs } = useMemo(() => {
     if (!playlistEvent) {
       return {
@@ -176,11 +237,15 @@ export function usePlaylistDetails(
       }
     }
 
-    const title =
-      playlistEvent.tags.find((t: string[]) => t[0] === 'title')?.[1] || 'Untitled Playlist'
-    const description = playlistEvent.tags.find((t: string[]) => t[0] === 'description')?.[1] || ''
+    // Merge public tags with decrypted private tags
+    const allTags = decryptedTags ? [...playlistEvent.tags, ...decryptedTags] : playlistEvent.tags
 
-    const refs = playlistEvent.tags
+    const title =
+      allTags.find((t: string[]) => t[0] === 'title')?.[1] ||
+      (isPrivate ? 'Private Playlist' : 'Untitled Playlist')
+    const description = allTags.find((t: string[]) => t[0] === 'description')?.[1] || ''
+
+    const refs = allTags
       .filter((t: string[]) => t[0] === 'e')
       .map((t: string[]) => {
         const tagRelayHint = t[2] || ''
@@ -201,7 +266,7 @@ export function usePlaylistDetails(
       playlistDescription: description,
       videoRefs: refs,
     }
-  }, [playlistEvent, eventStore])
+  }, [playlistEvent, eventStore, decryptedTags, isPrivate])
 
   useEffect(() => {
     if (!playlistEvent || videoRefs.length === 0) {
@@ -344,6 +409,8 @@ export function usePlaylistDetails(
     playlistDescription,
     videoRefs,
     videoEvents,
+    isPrivate,
+    decryptionFailed,
     readRelays,
     isLoadingPlaylist,
     isLoadingVideos,

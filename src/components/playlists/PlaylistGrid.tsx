@@ -13,7 +13,7 @@ interface PlaylistGridProps {
   playlists: Playlist[]
   userPubkey: string
   isLoading: boolean
-  onCreatePlaylist: (name: string, description?: string) => Promise<void>
+  onCreatePlaylist: (name: string, description?: string, isPrivate?: boolean) => Promise<void>
   onDeletePlaylist: (eventId: string) => Promise<void>
   onUpdatePlaylist: (playlist: Playlist) => Promise<Playlist | void>
 }

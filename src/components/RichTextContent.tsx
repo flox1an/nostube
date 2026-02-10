@@ -334,7 +334,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
           parts.push(
             <Link
               key={`hashtag-${item.start}`}
-              to={`/tags/${tag}`}
+              to={`/tag/${tag}`}
               className="text-accent-foreground hover:underline"
             >
               #{tag}

@@ -120,6 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Routing: fixed hashtag links in NoteContent and RichTextContent pointing to `/tags/<tag>` instead of `/tag/<tag>`, causing 404s; updated links and tests to match the actual route definition
 - UI: fixed origin badges vertically misaligned with tag badges on video page; added `items-center` to the tags/badges flex container for consistent vertical alignment
 - Upload: fixed metadata extraction not picking up `desc`/`ldes` (description/synopsis) atoms from video files; MP4Box.js treats these as standard ISO box types instead of metadata entries, so they end up in `ilst.boxes` rather than `ilst.list`; now always scans both sources with multi-strategy text extraction (value, data atom, sub-box, raw text)
 - Upload: fixed "Set as Thumbnail" button spinner disappearing after 500ms regardless of actual upload status; now uses real `thumbnailUploadInfo.uploading` state so spinner persists until upload completes

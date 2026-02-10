@@ -114,7 +114,7 @@ export function NoteContent({ event, className }: NoteContentProps) {
         parts.push(
           <Link
             key={`hashtag-${keyCounter++}`}
-            to={`/tags/${tag}`}
+            to={`/tag/${tag}`}
             className="text-accent-foreground hover:underline"
           >
             {hashtag}

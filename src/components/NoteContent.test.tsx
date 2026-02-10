@@ -110,8 +110,8 @@ describe('NoteContent', () => {
 
     expect(nostrHashtag).toBeInTheDocument()
     expect(bitcoinHashtag).toBeInTheDocument()
-    expect(nostrHashtag).toHaveAttribute('href', '/tags/nostr')
-    expect(bitcoinHashtag).toHaveAttribute('href', '/tags/bitcoin')
+    expect(nostrHashtag).toHaveAttribute('href', '/tag/nostr')
+    expect(bitcoinHashtag).toHaveAttribute('href', '/tag/bitcoin')
   })
 
   it('generates deterministic names for users without metadata and styles them differently', () => {

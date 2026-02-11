@@ -100,11 +100,12 @@ type FilterKey = string
 export function getTimelineLoader(
   _key: FilterKey,
   baseFilters: Filter,
-  relays: string[] = DEFAULT_RELAYS
+  relays: string[] = DEFAULT_RELAYS,
+  options?: { skipCache?: boolean }
 ) {
   const loader = createTimelineLoader(relayPool, relays, baseFilters, {
     eventStore,
-    cache: cacheRequest, // cache-first
+    ...(options?.skipCache ? {} : { cache: cacheRequest }),
     limit: 50,
   })
   return loader

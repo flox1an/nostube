@@ -7,6 +7,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
+import { insertEventIntoDescendingList } from 'nostr-tools/utils'
 import { of, type Subscription } from 'rxjs'
 
 interface UseCategoryVideosOptions {
@@ -14,6 +15,7 @@ interface UseCategoryVideosOptions {
   relays: string[]
   videoKinds: number[]
   limit?: number // Optional limit for pagination (default: 50)
+  directMode?: boolean // When true, bypass EventStore and use loader events directly
 }
 
 interface UseCategoryVideosResult {
@@ -32,12 +34,18 @@ interface UseCategoryVideosResult {
  * - Relays handle OR semantics natively
  * - Uses use$ to subscribe to EventStore for reactive updates
  * - Supports infinite scroll pagination via loadMore
+ *
+ * When directMode is true (e.g. single relay override):
+ * - Skips EventStore cache and subscription
+ * - Collects events directly from the loader into local state
+ * - Ensures only events from the specified relays are shown
  */
 export function useCategoryVideos({
   tags,
   relays,
   videoKinds,
   limit = 50,
+  directMode = false,
 }: UseCategoryVideosOptions): UseCategoryVideosResult {
   const { config } = useAppContext()
   const eventStore = useEventStore()
@@ -47,6 +55,9 @@ export function useCategoryVideos({
   const [loading, setLoading] = useState(true)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [exhausted, setExhausted] = useState(false)
+
+  // Local event state for directMode (bypass EventStore)
+  const [directEvents, setDirectEvents] = useState<NostrEvent[]>([])
 
   // Track the count of videos before loading more to detect exhaustion
   const prevVideoCountRef = useRef(0)
@@ -65,11 +76,14 @@ export function useCategoryVideos({
     }
   }, [videoKinds, normalizedTags])
 
-  // Subscribe to EventStore for reactive updates as events arrive
-  const events = use$(() => {
-    if (!filters) return of([])
+  // Subscribe to EventStore for reactive updates as events arrive (normal mode only)
+  const storeEvents = use$(() => {
+    if (directMode || !filters) return of([])
     return eventStore.timeline(filters)
-  }, [eventStore, filters])
+  }, [eventStore, filters, directMode])
+
+  // Use store events in normal mode, direct events in direct mode
+  const events = directMode ? directEvents : storeEvents
 
   // Process events separately so relay/blockedPubkeys changes don't recreate observable
   // Sort by publish date descending (newest first), fallback to created_at
@@ -92,9 +106,10 @@ export function useCategoryVideos({
       setHasLoaded(false)
       setLoading(true)
       setExhausted(false)
+      setDirectEvents([])
       prevVideoCountRef.current = 0
     })
-  }, [normalizedTags, relays])
+  }, [normalizedTags, relays, directMode])
 
   // Load initial events from relays into EventStore
   useEffect(() => {
@@ -107,12 +122,21 @@ export function useCategoryVideos({
 
     // Create unique cache key for this category filter
     const cacheKey = `category:${normalizedTags.sort().join(',')}:r:${relays.sort().join(',')}`
-    const loader = getTimelineLoader(cacheKey, filters, relays)
+    const loader = getTimelineLoader(
+      cacheKey,
+      filters,
+      relays,
+      directMode ? { skipCache: true } : undefined
+    )
 
     let eventCount = 0
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
-        eventStore.add(event)
+        if (directMode) {
+          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+        } else {
+          eventStore.add(event)
+        }
         eventCount++
       },
       complete: () => {
@@ -133,7 +157,7 @@ export function useCategoryVideos({
     return () => {
       subscription.unsubscribe()
     }
-  }, [filters, relays, eventStore, hasLoaded, limit, normalizedTags])
+  }, [filters, relays, eventStore, hasLoaded, limit, normalizedTags, directMode])
 
   // Cleanup loadMore subscription on unmount
   useEffect(() => {
@@ -159,12 +183,21 @@ export function useCategoryVideos({
     const paginatedFilter = { ...filters, until }
     // Create unique cache key for paginated request
     const cacheKey = `category:${normalizedTags.sort().join(',')}:r:${relays.sort().join(',')}:until:${until}`
-    const loader = getTimelineLoader(cacheKey, paginatedFilter, relays)
+    const loader = getTimelineLoader(
+      cacheKey,
+      paginatedFilter,
+      relays,
+      directMode ? { skipCache: true } : undefined
+    )
 
     let eventCount = 0
     loadMoreSubscriptionRef.current = loader().subscribe({
       next: (event: NostrEvent) => {
-        eventStore.add(event)
+        if (directMode) {
+          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+        } else {
+          eventStore.add(event)
+        }
         eventCount++
       },
       complete: () => {
@@ -179,7 +212,7 @@ export function useCategoryVideos({
         setLoading(false)
       },
     })
-  }, [filters, relays, eventStore, loading, exhausted, videos, limit, normalizedTags])
+  }, [filters, relays, eventStore, loading, exhausted, videos, limit, normalizedTags, directMode])
 
   return {
     videos,

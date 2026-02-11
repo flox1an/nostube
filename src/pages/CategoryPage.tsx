@@ -29,10 +29,12 @@ export function CategoryPage() {
   )
 
   // Use category videos hook with all tags in the category
+  // When relay override is active, use directMode to bypass EventStore
   const { videos, loading, exhausted, loadMore } = useCategoryVideos({
     tags: category?.tags || [],
     relays: effectiveRelays,
     videoKinds,
+    directMode: !!relayOverride,
   })
 
   // Update document title

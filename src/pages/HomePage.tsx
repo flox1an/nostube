@@ -24,8 +24,12 @@ export function HomePage() {
   )
 
   // Memoize the loader to prevent recreation on every render
-  // Include relay info in the key so switching relays creates a new loader
-  const loader = useMemo(() => videoTypeLoader('videos', effectiveRelays), [effectiveRelays])
+  // When relay override is active, skip EventStore cache to show only that relay's events
+  const loader = useMemo(
+    () =>
+      videoTypeLoader('videos', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
+    [effectiveRelays, relayOverride]
+  )
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
 

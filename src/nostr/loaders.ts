@@ -31,11 +31,16 @@ export const authorVideoLoader = (pubkey: string, relays: string[]) => {
 }
 
 // By video type
-export const videoTypeLoader = (type: VideoType, relays?: string[]) => {
+export const videoTypeLoader = (
+  type: VideoType,
+  relays?: string[],
+  options?: { skipCache?: boolean }
+) => {
   const loader = getTimelineLoader(
     `k21:type:${type}`,
     { kinds: getKindsForType(type), limit: 20 },
-    relays
+    relays,
+    options
   )
   return () => loader
 }

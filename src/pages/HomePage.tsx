@@ -3,11 +3,13 @@ import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
-import { useMemo, useEffect, useState } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function HomePage() {
   const { t } = useTranslation()
+  const { relayOverride, setRelayOverride } = useAppContext()
 
   useEffect(() => {
     document.title = `${t('navigation.home')} - nostube`
@@ -16,7 +18,6 @@ export function HomePage() {
     }
   }, [t])
   const relays = useStableRelays()
-  const [relayOverride, setRelayOverride] = useState<string | null>(null)
 
   const effectiveRelays = useMemo(
     () => (relayOverride ? [relayOverride] : relays),

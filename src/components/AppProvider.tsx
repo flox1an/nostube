@@ -30,6 +30,7 @@ export function AppProvider(props: AppProviderProps) {
   }, [config.nsfwFilter, setConfig])
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [relayOverride, setRelayOverride] = useState<string | null>(null)
 
   //const { user } = useCurrentUser();
   // const userRelays = useUserRelays(user?.pubkey);
@@ -98,6 +99,8 @@ export function AppProvider(props: AppProviderProps) {
     presetRelays,
     isSidebarOpen,
     toggleSidebar,
+    relayOverride,
+    setRelayOverride,
     pool: relayPool,
   }
 

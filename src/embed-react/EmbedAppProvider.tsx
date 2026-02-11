@@ -69,6 +69,8 @@ export function EmbedAppProvider({ children, authorBlossomServers = [] }: EmbedA
       updateConfig: () => {}, // No-op for embed
       isSidebarOpen: false,
       toggleSidebar: () => {}, // No-op for embed
+      relayOverride: null,
+      setRelayOverride: () => {}, // No-op for embed
       pool: embedRelayPool,
     }
   }, [authorBlossomServers])

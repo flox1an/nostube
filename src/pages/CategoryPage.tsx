@@ -2,8 +2,9 @@ import { useParams } from 'react-router-dom'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useStableRelays } from '@/hooks'
+import { useAppContext } from '@/hooks/useAppContext'
 import { useCategoryVideos } from '@/hooks/useCategoryVideos'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +13,7 @@ export function CategoryPage() {
   const { t } = useTranslation()
   const { category: categorySlug } = useParams<{ category: string }>()
   const relays = useStableRelays()
-  const [relayOverride, setRelayOverride] = useState<string | null>(null)
+  const { relayOverride, setRelayOverride } = useAppContext()
 
   const effectiveRelays = useMemo(
     () => (relayOverride ? [relayOverride] : relays),

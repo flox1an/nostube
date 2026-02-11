@@ -1,12 +1,15 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
+import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
+import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function ShortsPage() {
   const { t } = useTranslation()
+  const { relayOverride, setRelayOverride } = useAppContext()
 
   useEffect(() => {
     document.title = `${t('navigation.shorts')} - nostube`
@@ -16,13 +19,26 @@ export function ShortsPage() {
   }, [t])
   const relays = useStableRelays()
 
-  // Memoize the loader to prevent recreation on every render
-  const loader = useMemo(() => videoTypeLoader('shorts', relays), [relays])
+  const effectiveRelays = useMemo(
+    () => (relayOverride ? [relayOverride] : relays),
+    [relayOverride, relays]
+  )
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
+  // Memoize the loader to prevent recreation on every render
+  // When relay override is active, skip EventStore cache to show only that relay's events
+  const loader = useMemo(
+    () =>
+      videoTypeLoader('shorts', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
+    [effectiveRelays, relayOverride]
+  )
+
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
 
   return (
     <div className="max-w-560 mx-auto">
+      <div className="sm:px-2">
+        <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
+      </div>
       <VideoTimelinePage
         videos={videos}
         loading={loading}

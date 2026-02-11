@@ -79,6 +79,10 @@ export interface AppContextType {
   isSidebarOpen: boolean
   /** Toggle the sidebar open/close state */
   toggleSidebar: () => void
+  /** Relay override for filtering feeds (null = global/all read relays) */
+  relayOverride: string | null
+  /** Set the relay override */
+  setRelayOverride: (relay: string | null) => void
 
   pool: RelayPool
 }

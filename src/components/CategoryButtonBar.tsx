@@ -29,7 +29,7 @@ export function CategoryButtonBar({
 }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { config } = useAppContext()
+  const { config, updateConfig } = useAppContext()
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
@@ -61,6 +61,15 @@ export function CategoryButtonBar({
 
   const handleAddCustomRelay = (url: string) => {
     const normalized = normalizeRelayUrl(url)
+    // Persist the custom relay as a read relay in app config
+    const alreadyExists = config.relays.some(r => r.url === normalized)
+    if (!alreadyExists) {
+      const shortName = normalized.replace(/^wss?:\/\//, '').replace(/\/$/, '')
+      updateConfig(current => ({
+        ...current,
+        relays: [...current.relays, { url: normalized, name: shortName, tags: ['read'] }],
+      }))
+    }
     onRelayChange(normalized)
     setOpen(false)
     setInputValue('')

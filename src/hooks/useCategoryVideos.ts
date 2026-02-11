@@ -86,7 +86,7 @@ export function useCategoryVideos({
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
 
-  // Reset state when tags change to trigger reload
+  // Reset state when tags or relays change to trigger reload
   useEffect(() => {
     queueMicrotask(() => {
       setHasLoaded(false)
@@ -94,7 +94,7 @@ export function useCategoryVideos({
       setExhausted(false)
       prevVideoCountRef.current = 0
     })
-  }, [normalizedTags])
+  }, [normalizedTags, relays])
 
   // Load initial events from relays into EventStore
   useEffect(() => {
@@ -106,7 +106,7 @@ export function useCategoryVideos({
     queueMicrotask(() => setLoading(true))
 
     // Create unique cache key for this category filter
-    const cacheKey = `category:${normalizedTags.sort().join(',')}`
+    const cacheKey = `category:${normalizedTags.sort().join(',')}:r:${relays.sort().join(',')}`
     const loader = getTimelineLoader(cacheKey, filters, relays)
 
     let eventCount = 0
@@ -158,7 +158,7 @@ export function useCategoryVideos({
 
     const paginatedFilter = { ...filters, until }
     // Create unique cache key for paginated request
-    const cacheKey = `category:${normalizedTags.sort().join(',')}:until:${until}`
+    const cacheKey = `category:${normalizedTags.sort().join(',')}:r:${relays.sort().join(',')}:until:${until}`
     const loader = getTimelineLoader(cacheKey, paginatedFilter, relays)
 
     let eventCount = 0

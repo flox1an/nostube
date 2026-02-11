@@ -908,5 +908,13 @@
     "noLightningAddress": "Author cannot receive zaps",
     "loginRequired": "Please log in to zap",
     "failed": "Zap failed"
+  },
+  "relaySource": {
+    "global": "Global",
+    "globalDescription": "All configured relays ({{count}})",
+    "searchPlaceholder": "Search relays or type URL...",
+    "addCustom": "Add custom relay",
+    "invalidUrl": "Invalid relay URL",
+    "noResults": "No relay found."
   }
 }

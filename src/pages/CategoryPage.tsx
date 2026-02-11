@@ -3,7 +3,7 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useStableRelays } from '@/hooks'
 import { useCategoryVideos } from '@/hooks/useCategoryVideos'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +12,12 @@ export function CategoryPage() {
   const { t } = useTranslation()
   const { category: categorySlug } = useParams<{ category: string }>()
   const relays = useStableRelays()
+  const [relayOverride, setRelayOverride] = useState<string | null>(null)
+
+  const effectiveRelays = useMemo(
+    () => (relayOverride ? [relayOverride] : relays),
+    [relayOverride, relays]
+  )
 
   // Memoize videoKinds to prevent infinite re-renders
   const videoKinds = useMemo(() => getKindsForType('all'), [])
@@ -25,7 +31,7 @@ export function CategoryPage() {
   // Use category videos hook with all tags in the category
   const { videos, loading, exhausted, loadMore } = useCategoryVideos({
     tags: category?.tags || [],
-    relays,
+    relays: effectiveRelays,
     videoKinds,
   })
 
@@ -45,7 +51,11 @@ export function CategoryPage() {
   if (categorySlug && !category) {
     return (
       <div className="max-w-560 mx-auto px-4">
-        <CategoryButtonBar activeSlug={categorySlug} />
+        <CategoryButtonBar
+          activeSlug={categorySlug}
+          selectedRelay={relayOverride}
+          onRelayChange={setRelayOverride}
+        />
         <div className="p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Category not found</h1>
           <p className="text-muted-foreground">
@@ -62,7 +72,11 @@ export function CategoryPage() {
 
   return (
     <div className="max-w-560 mx-auto sm:px-2">
-      <CategoryButtonBar activeSlug={categorySlug} />
+      <CategoryButtonBar
+        activeSlug={categorySlug}
+        selectedRelay={relayOverride}
+        onRelayChange={setRelayOverride}
+      />
 
       <VideoTimelinePage
         videos={videos}

@@ -844,5 +844,13 @@
     "it": "Italien",
     "tr": "Turc",
     "nl": "Néerlandais"
+  },
+  "relaySource": {
+    "global": "Global",
+    "globalDescription": "Tous les relais configurés ({{count}})",
+    "searchPlaceholder": "Chercher un relais ou saisir une URL...",
+    "addCustom": "Ajouter un relais personnalisé",
+    "invalidUrl": "URL de relais invalide",
+    "noResults": "Aucun relais trouvé."
   }
 }

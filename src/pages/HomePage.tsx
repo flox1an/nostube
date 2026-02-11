@@ -3,7 +3,7 @@ import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function HomePage() {
@@ -16,18 +16,25 @@ export function HomePage() {
     }
   }, [t])
   const relays = useStableRelays()
+  const [relayOverride, setRelayOverride] = useState<string | null>(null)
+
+  const effectiveRelays = useMemo(
+    () => (relayOverride ? [relayOverride] : relays),
+    [relayOverride, relays]
+  )
 
   // Memoize the loader to prevent recreation on every render
-  const loader = useMemo(() => videoTypeLoader('videos', relays), [relays])
+  // Include relay info in the key so switching relays creates a new loader
+  const loader = useMemo(() => videoTypeLoader('videos', effectiveRelays), [effectiveRelays])
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
 
   if (!videos) return null
 
   return (
     <div className="max-w-560 mx-auto">
       <div className="sm:px-2">
-        <CategoryButtonBar />
+        <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
       </div>
       <VideoTimelinePage
         videos={videos}

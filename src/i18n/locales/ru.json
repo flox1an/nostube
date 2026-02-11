@@ -908,5 +908,13 @@
     "noLightningAddress": "Автор не может получать заппы",
     "loginRequired": "Пожалуйста, войдите для заппинга",
     "failed": "Зап не удался"
+  },
+  "relaySource": {
+    "global": "Глобально",
+    "globalDescription": "Все настроенные реле ({{count}})",
+    "searchPlaceholder": "Поиск реле или введите URL...",
+    "addCustom": "Добавить своё реле",
+    "invalidUrl": "Недействительный URL реле",
+    "noResults": "Реле не найдено."
   }
 }

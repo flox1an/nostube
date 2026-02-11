@@ -845,5 +845,13 @@
     "it": "Italienisch",
     "tr": "Türkisch",
     "nl": "Niederländisch"
+  },
+  "relaySource": {
+    "global": "Global",
+    "globalDescription": "Alle konfigurierten Relays ({{count}})",
+    "searchPlaceholder": "Relays suchen oder URL eingeben...",
+    "addCustom": "Eigenes Relay hinzufügen",
+    "invalidUrl": "Ungültige Relay-URL",
+    "noResults": "Kein Relay gefunden."
   }
 }

@@ -44,6 +44,16 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
+      <footer className="py-4 text-center text-xs text-muted-foreground">
+        <a
+          href="https://github.com/flox1an/nostube"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-foreground transition-colors"
+        >
+          made with 💜 and vibes
+        </a>
+      </footer>
       {!isVideoPage && <MobileBottomNav />}
     </div>
   )

@@ -95,7 +95,7 @@ export function UploadPage() {
   }
 
   // Show loading state while auto-creating draft
-  if (drafts.length === 0 && !currentDraft) {
+  if ((!drafts || drafts.length === 0) && !currentDraft) {
     return null
   }
 

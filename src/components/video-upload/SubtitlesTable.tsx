@@ -91,7 +91,7 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
               <TableCell>
                 <TooltipProvider>
                   <div className="flex items-center gap-2">
-                    {subtitle.uploadedBlobs.length > 0 && (
+                    {(subtitle.uploadedBlobs?.length ?? 0) > 0 && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1 cursor-help">
@@ -118,7 +118,7 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    {subtitle.mirroredBlobs.length > 0 && (
+                    {(subtitle.mirroredBlobs?.length ?? 0) > 0 && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1 cursor-help">
@@ -145,11 +145,12 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    {subtitle.uploadedBlobs.length === 0 && subtitle.mirroredBlobs.length === 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {t('upload.subtitles.pending', { defaultValue: 'Pending' })}
-                      </span>
-                    )}
+                    {(subtitle.uploadedBlobs?.length ?? 0) === 0 &&
+                      (subtitle.mirroredBlobs?.length ?? 0) === 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {t('upload.subtitles.pending', { defaultValue: 'Pending' })}
+                        </span>
+                      )}
                   </div>
                 </TooltipProvider>
               </TableCell>

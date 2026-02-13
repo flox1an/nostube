@@ -152,7 +152,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                     <TableCell>
                       <TooltipProvider>
                         <div className="flex items-center gap-2">
-                          {video.uploadedBlobs.length > 0 && (
+                          {(video.uploadedBlobs?.length ?? 0) > 0 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1 cursor-help">
@@ -179,7 +179,7 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {video.mirroredBlobs.length > 0 && (
+                          {(video.mirroredBlobs?.length ?? 0) > 0 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1 cursor-help">

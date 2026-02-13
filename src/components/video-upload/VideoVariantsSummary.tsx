@@ -54,8 +54,8 @@ export function VideoVariantsSummary({ videos, onRemove, onPreview }: VideoVaria
   )
 
   // Count uploaded and mirrored
-  const totalUploaded = videos.reduce((sum, v) => sum + v.uploadedBlobs.length, 0)
-  const totalMirrored = videos.reduce((sum, v) => sum + v.mirroredBlobs.length, 0)
+  const totalUploaded = videos.reduce((sum, v) => sum + (v.uploadedBlobs?.length ?? 0), 0)
+  const totalMirrored = videos.reduce((sum, v) => sum + (v.mirroredBlobs?.length ?? 0), 0)
 
   return (
     <div className="space-y-2">

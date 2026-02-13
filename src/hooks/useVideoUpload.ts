@@ -119,7 +119,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
 
   // Build text-track tags for subtitles
   const textTrackTags: string[][] = subtitles
-    .filter(s => s.uploadedBlobs.length > 0 && s.lang)
+    .filter(s => (s.uploadedBlobs?.length ?? 0) > 0 && s.lang)
     .map(s => ['text-track', s.uploadedBlobs[0].url, s.lang])
 
   const event = {
@@ -400,7 +400,10 @@ export function useVideoUpload(
   const handleDeleteThumbnail = async () => {
     if (!user) return
 
-    const allBlobs = [...thumbnailUploadInfo.uploadedBlobs, ...thumbnailUploadInfo.mirroredBlobs]
+    const allBlobs = [
+      ...(thumbnailUploadInfo.uploadedBlobs || []),
+      ...(thumbnailUploadInfo.mirroredBlobs || []),
+    ]
 
     if (allBlobs.length > 0) {
       await deleteBlobsFromServers(allBlobs, async draft => await user.signer.signEvent(draft))
@@ -781,7 +784,7 @@ export function useVideoUpload(
     let thumbnailMirroredBlobs: BlobDescriptor[] = []
 
     // If we have uploaded blobs already (from manual upload or "Set as Thumbnail"), use them
-    if (thumbnailUploadInfo.uploadedBlobs.length > 0) {
+    if ((thumbnailUploadInfo.uploadedBlobs?.length ?? 0) > 0) {
       thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
       thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
     } else if (thumbnailSource === 'generated' && thumbnailBlob) {
@@ -1054,7 +1057,7 @@ export function useVideoUpload(
         (thumbnailSource === 'generated' && thumbnailBlob !== null) ||
         (thumbnailSource === 'upload' &&
           thumbnail !== null &&
-          thumbnailUploadInfo.uploadedBlobs.length === 0),
+          (thumbnailUploadInfo.uploadedBlobs?.length ?? 0) === 0),
       publishAt,
       origins,
     })

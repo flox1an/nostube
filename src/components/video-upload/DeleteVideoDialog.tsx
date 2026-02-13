@@ -51,10 +51,10 @@ export function DeleteVideoDialog({
   if (!video) return null
 
   // Check if video has any uploaded blobs
-  const hasUploadedBlobs = video.uploadedBlobs.length > 0
-  const hasMirroredBlobs = video.mirroredBlobs.length > 0
+  const hasUploadedBlobs = (video.uploadedBlobs?.length ?? 0) > 0
+  const hasMirroredBlobs = (video.mirroredBlobs?.length ?? 0) > 0
   const hasBlobs = hasUploadedBlobs || hasMirroredBlobs
-  const totalServers = video.uploadedBlobs.length + video.mirroredBlobs.length
+  const totalServers = (video.uploadedBlobs?.length ?? 0) + (video.mirroredBlobs?.length ?? 0)
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

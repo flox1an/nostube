@@ -373,7 +373,7 @@ export function DvmTranscodeAlert({
 
   // Complete state (briefly shown before component unmounts)
   if (status === 'complete') {
-    const completedCount = progress.queue?.completed.length || 1
+    const completedCount = progress.queue?.completed?.length || 1
     return (
       <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
         <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -435,7 +435,7 @@ function QueueStatus({
 /**
  * Component to display scrollable status message log
  */
-function StatusLog({ messages }: { messages: StatusMessage[] }) {
+function StatusLog({ messages = [] }: { messages?: StatusMessage[] }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when new messages arrive
@@ -443,9 +443,9 @@ function StatusLog({ messages }: { messages: StatusMessage[] }) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages.length])
+  }, [messages?.length])
 
-  if (messages.length === 0) {
+  if (!messages || messages.length === 0) {
     return null
   }
 

@@ -51,7 +51,7 @@ export function ThumbnailSection({
   const [urlInput, setUrlInput] = useState('')
   const [isProcessingUrl, setIsProcessingUrl] = useState(false)
 
-  const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
+  const hasUploadedThumbnail = (thumbnailUploadInfo.uploadedBlobs?.length ?? 0) > 0
   const uploadedThumbnailUrl = hasUploadedThumbnail
     ? thumbnailUploadInfo.uploadedBlobs[0].url
     : null

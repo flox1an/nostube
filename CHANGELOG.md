@@ -122,6 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Upload: fixed DVM transcode "Create Additional Versions" showing already-transcoded resolutions as both strikethrough and checked; stale `selectedResolutions` state persisted after transcoding completed, causing re-encoding of existing versions on the next DVM call; now derives effective selections by filtering out `existingResolutions` during render (`DvmTranscodeAlert`)
 - Routing: fixed hashtag links in NoteContent and RichTextContent pointing to `/tags/<tag>` instead of `/tag/<tag>`, causing 404s; updated links and tests to match the actual route definition
 - UI: fixed origin badges vertically misaligned with tag badges on video page; added `items-center` to the tags/badges flex container for consistent vertical alignment
 - Upload: fixed metadata extraction not picking up `desc`/`ldes` (description/synopsis) atoms from video files; MP4Box.js treats these as standard ISO box types instead of metadata entries, so they end up in `ilst.boxes` rather than `ilst.list`; now always scans both sources with multi-strategy text extraction (value, data atom, sub-box, raw text)

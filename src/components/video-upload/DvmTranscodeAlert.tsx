@@ -89,13 +89,11 @@ export function DvmTranscodeAlert({
 
   // Don't show if not needed or dismissed (unless we're resuming)
   if ((!transcodeCheck.needed && !isResuming) || dismissed) {
-
     return null
   }
 
   // Don't show if still checking for DVM availability (unless resuming)
   if (!isResuming && isDvmLoading) {
-
     return null
   }
 
@@ -121,9 +119,9 @@ export function DvmTranscodeAlert({
 
   const handleStartTranscode = () => {
     const inputUrl = getInputVideoUrl()
-    if (inputUrl && selectedResolutions.length > 0) {
+    if (inputUrl && effectiveSelectedResolutions.length > 0) {
       // Sort resolutions high to low using AVAILABLE_RESOLUTIONS order
-      const sortedResolutions = [...selectedResolutions].sort((a, b) => {
+      const sortedResolutions = [...effectiveSelectedResolutions].sort((a, b) => {
         const aIndex = AVAILABLE_RESOLUTIONS.indexOf(a as (typeof AVAILABLE_RESOLUTIONS)[number])
         const bIndex = AVAILABLE_RESOLUTIONS.indexOf(b as (typeof AVAILABLE_RESOLUTIONS)[number])
         return aIndex - bIndex
@@ -141,6 +139,11 @@ export function DvmTranscodeAlert({
   const isResolutionDisabled = (resolution: string) => {
     return existingResolutions.includes(resolution)
   }
+
+  // Derive effective selections: exclude any resolutions that now exist
+  const effectiveSelectedResolutions = selectedResolutions.filter(
+    r => !existingResolutions.includes(r)
+  )
 
   const hasSelectableResolutions = AVAILABLE_RESOLUTIONS.some(r => !isResolutionDisabled(r))
 
@@ -164,7 +167,7 @@ export function DvmTranscodeAlert({
               <div className="flex flex-wrap gap-4 mb-4">
                 {AVAILABLE_RESOLUTIONS.map(resolution => {
                   const disabled = isResolutionDisabled(resolution)
-                  const checked = selectedResolutions.includes(resolution)
+                  const checked = effectiveSelectedResolutions.includes(resolution)
                   return (
                     <label
                       key={resolution}
@@ -199,13 +202,13 @@ export function DvmTranscodeAlert({
                 <Button
                   size="sm"
                   onClick={handleStartTranscode}
-                  disabled={selectedResolutions.length === 0}
+                  disabled={effectiveSelectedResolutions.length === 0}
                   className="cursor-pointer"
                 >
                   <Wand2 className="h-4 w-4 mr-2" />
                   {t('upload.transcode.createSelected', {
                     defaultValue: 'Create Selected',
-                    count: selectedResolutions.length,
+                    count: effectiveSelectedResolutions.length,
                   })}
                 </Button>
                 <Button
@@ -237,7 +240,9 @@ export function DvmTranscodeAlert({
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
           {t('upload.transcode.discovering', { defaultValue: 'Finding transcoding service...' })}
-          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">({t('common.pleaseWait', { defaultValue: 'Please wait...' })})</span>
+          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
+            ({t('common.pleaseWait', { defaultValue: 'Please wait...' })})
+          </span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.message}
@@ -254,7 +259,9 @@ export function DvmTranscodeAlert({
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
           {t('upload.transcode.resuming', { defaultValue: 'Reconnecting to transcode...' })}
-          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">({t('common.pleaseWait', { defaultValue: 'Please wait...' })})</span>
+          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
+            ({t('common.pleaseWait', { defaultValue: 'Please wait...' })})
+          </span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.queue && <QueueStatus queue={progress.queue} />}
@@ -285,7 +292,11 @@ export function DvmTranscodeAlert({
             : t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
           {progress.percentage === undefined && progress.eta === undefined && (
             <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
-              ({t('upload.transcode.waitingForFeedback', { defaultValue: 'waiting for DVM feedback' })})
+              (
+              {t('upload.transcode.waitingForFeedback', {
+                defaultValue: 'waiting for DVM feedback',
+              })}
+              )
             </span>
           )}
         </AlertTitle>
@@ -328,7 +339,8 @@ export function DvmTranscodeAlert({
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           <p className="mb-3">
             {t('upload.transcode.mirroringDescription', {
-              defaultValue: 'Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access.',
+              defaultValue:
+                'Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access.',
             })}
           </p>
           {progress.queue && <QueueStatus queue={progress.queue} />}

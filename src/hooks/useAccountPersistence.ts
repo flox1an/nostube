@@ -2,7 +2,7 @@ import type { IAccount } from 'applesauce-accounts'
 import { type AccountManager } from 'applesauce-accounts'
 import { ExtensionAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { ExtensionSigner, NostrConnectSigner, PrivateKeySigner } from 'applesauce-signers'
-import { bytesToHex } from '@noble/hashes/utils'
+import { bytesToHex } from 'nostr-tools/utils'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'

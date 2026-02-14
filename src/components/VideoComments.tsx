@@ -9,9 +9,10 @@ export {
   VideoComments,
   CommentItem,
   CommentSkeleton,
-  mapEventToComment,
-  buildCommentTree,
-  type Comment,
-  type VideoCommentsProps,
-  type CommentItemProps,
+} from './comments'
+export { mapEventToComment, buildCommentTree } from './comments/utils'
+export type {
+  Comment,
+  VideoCommentsProps,
+  CommentItemProps,
 } from './comments'

@@ -46,7 +46,7 @@ export function ReportDialog({
     // TODO: Implement actual report submission (NIP-56 or similar)
     // For now, just close the dialog and reset state
     if (import.meta.env.DEV) {
-      console.log('Report submitted:', {
+      console.debug('Report submitted:', {
         type: reportType,
         reason,
         details,

@@ -121,6 +121,7 @@ export interface DvmHandlerInfo {
   pubkey: string
   name?: string
   about?: string
+  createdAt: number // Add createdAt to sort by newest DVM announcement
 }
 
 /**

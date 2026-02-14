@@ -143,34 +143,38 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       throw new Error('No read relays configured')
     }
 
+    // Use a custom promise to handle collecting multiple DVM events and then selecting the newest
     return new Promise((resolve, reject) => {
-      let resolved = false
+      let dvmHandlers: (DvmHandlerInfo & { createdAt: number })[] = []
+      let timer: number | undefined
+      let sub: any // Subscription object
 
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          sub.unsubscribe()
-          reject(new Error('DVM discovery timed out'))
+      // Timeout to resolve after a certain period if no DVMs are found or all relays have sent EOSE
+      timer = window.setTimeout(() => {
+        sub?.unsubscribe() // Ensure the subscription is cleaned up
+        if (dvmHandlers.length > 0) {
+          // Sort by createdAt descending and pick the newest
+          const newestDvm = dvmHandlers.sort((a, b) => b.createdAt - a.createdAt)[0]
+          resolve(newestDvm)
+        } else {
+          resolve(null) // No DVMs found
         }
-      }, 10000)
+      }, 5000) // 5 second timeout for DVM discovery
 
-      const sub = relayPool
+      sub = relayPool
         .request(readRelays, [
           {
             kinds: [HANDLER_INFO_KIND],
             '#k': ['5207'],
             '#d': ['video-transform-hls'],
-            limit: 1,
+            // No limit here, we want to collect all
           },
         ])
         .subscribe({
           next: event => {
             if (typeof event === 'string') return // EOSE
-            if (resolved) return // Already resolved
-
             const nostrEvent = event as NostrEvent
 
-            // Parse name/about from content (JSON) or tags
             let name: string | undefined
             let about: string | undefined
 
@@ -182,37 +186,30 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               // Content is not JSON, check tags
             }
 
-            // Also check tags for name/about (NIP-89 allows both)
             const nameTag = nostrEvent.tags.find(t => t[0] === 'name')
             const aboutTag = nostrEvent.tags.find(t => t[0] === 'about')
             if (nameTag?.[1]) name = nameTag[1]
             if (aboutTag?.[1]) about = aboutTag[1]
 
-            const handler: DvmHandlerInfo = {
+            dvmHandlers.push({
               pubkey: nostrEvent.pubkey,
               name,
               about,
-            }
-
-            // Resolve immediately when we find a handler (don't wait for complete)
-            resolved = true
-            clearTimeout(timeout)
-            sub.unsubscribe()
-            resolve(handler)
+              createdAt: nostrEvent.created_at, // Capture created_at for sorting
+            })
           },
           error: err => {
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              reject(err)
-            }
+            clearTimeout(timer)
+            reject(err)
           },
           complete: () => {
-            // If we reach complete without finding a handler, resolve with null
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              resolve(null)
+            clearTimeout(timer)
+            if (dvmHandlers.length > 0) {
+              // Sort by createdAt descending and pick the newest
+              const newestDvm = dvmHandlers.sort((a, b) => b.createdAt - a.createdAt)[0]
+              resolve(newestDvm)
+            } else {
+              resolve(null) // No DVMs found
             }
           },
         })

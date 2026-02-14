@@ -568,7 +568,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             resolved = true
             clearTimeout(timeout)
             sub.unsubscribe()
-            resolve({ pubkey: nostrEvent.pubkey, name, about })
+            resolve({ pubkey: nostrEvent.pubkey, name, about, createdAt: nostrEvent.created_at })
           },
           error: err => {
             if (!resolved) {

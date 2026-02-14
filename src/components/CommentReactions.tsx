@@ -7,8 +7,8 @@ import {
   useEventStats,
   useUserReactionStatus,
   useProfile,
-  useWallet,
 } from '@/hooks'
+import { useWallet } from '@/hooks/useWallet'
 import { isUpvoteReaction } from '@/hooks/useEventStats'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUserRelays } from '@/hooks/useUserRelays'

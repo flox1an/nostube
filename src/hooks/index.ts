@@ -82,7 +82,7 @@ export { usePlaylistNavigation } from './usePlaylistNavigation'
 // ============================================================================
 // WALLET & ZAPS
 // ============================================================================
-export { useWallet } from './useWallet'
+// export { useWallet } from './useWallet';
 export { useZap } from './useZap'
 export { useEventZaps, useVideoZaps } from './useEventZaps'
 export { useZappedEvents } from './useZappedEvents'

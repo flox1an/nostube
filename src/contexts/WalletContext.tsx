@@ -25,12 +25,12 @@ import {
 } from '@/nostr/core'
 import { useCurrentUser } from '@/hooks'
 import type { NostrEvent } from 'nostr-tools'
-
-// Storage keys
-const NWC_STORAGE_KEY = 'nwc-connection'
-const WALLET_TYPE_KEY = 'wallet-type'
-const CASHU_MINT_URL_KEY = 'cashu-mint-url'
-const DEFAULT_ZAP_AMOUNT_KEY = 'default-zap-amount'
+import {
+  NWC_STORAGE_KEY,
+  WALLET_TYPE_KEY,
+  CASHU_MINT_URL_KEY,
+  DEFAULT_ZAP_AMOUNT_KEY,
+} from '@/constants/wallet'
 
 // Wallet types
 export type WalletType = 'nwc' | 'cashu' | null

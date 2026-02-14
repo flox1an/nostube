@@ -163,7 +163,7 @@ export function VideoGrid({
   if (layoutMode === 'auto') {
     // Debug: Log auto layout rendering (DEV only)
     if (import.meta.env.DEV && portraitVideos.length > 0) {
-      console.log('[VideoGrid] Rendering auto layout with shorts:', {
+      console.debug('[VideoGrid] Rendering auto layout with shorts:', {
         layoutMode,
         wideVideosCount: wideVideos.length,
         portraitVideosCount: portraitVideos.length,

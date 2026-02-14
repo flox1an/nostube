@@ -23,7 +23,13 @@ import {
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { getCachedPreset, setCachedPreset, CACHE_KEY, LOAD_TIMEOUT, type CacheResult } from '@/lib/preset-storage'
+import {
+  getCachedPreset,
+  setCachedPreset,
+  CACHE_KEY,
+  LOAD_TIMEOUT,
+  type CacheResult,
+} from '@/lib/preset-storage'
 
 type PresetStatus = 'loading' | 'loaded' | 'error'
 

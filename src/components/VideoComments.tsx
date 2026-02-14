@@ -5,14 +5,6 @@
  * This file exists for backward compatibility with existing imports.
  */
 
-export {
-  VideoComments,
-  CommentItem,
-  CommentSkeleton,
-} from './comments'
+export { VideoComments, CommentItem, CommentSkeleton } from './comments'
 export { mapEventToComment, buildCommentTree } from './comments/utils'
-export type {
-  Comment,
-  VideoCommentsProps,
-  CommentItemProps,
-} from './comments'
+export type { Comment, VideoCommentsProps, CommentItemProps } from './comments'

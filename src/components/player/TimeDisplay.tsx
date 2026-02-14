@@ -35,5 +35,3 @@ export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: 
     </button>
   )
 })
-
-

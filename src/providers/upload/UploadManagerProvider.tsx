@@ -300,9 +300,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   const updateDraftFn = useCallback(
     (id: string, updates: Partial<UploadDraft>) => {
       const updatedDraft = updateDraftInStorage(id, updates)
-          if (!updatedDraft) {
-            console.debug('[UploadManager] updateDraft - draft not found:', id)
-            return      }
+      if (!updatedDraft) {
+        console.debug('[UploadManager] updateDraft - draft not found:', id)
+        return
+      }
 
       setDraftsVersion(v => v + 1)
 
@@ -1054,10 +1055,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       }
       jobsRef.current.set(taskId, job)
 
-              if (import.meta.env.DEV) {
-                console.debug('[UploadManager] startTranscode - Created job for taskId:', taskId)
-                console.debug('[UploadManager] jobsRef now has keys:', Array.from(jobsRef.current.keys()))
-              }
+      if (import.meta.env.DEV) {
+        console.debug('[UploadManager] startTranscode - Created job for taskId:', taskId)
+        console.debug('[UploadManager] jobsRef now has keys:', Array.from(jobsRef.current.keys()))
+      }
       const completedResolutions: string[] = []
 
       try {
@@ -1147,14 +1148,15 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               const freshDrafts = getDraftsFromStorage()
               saveToNostr(freshDrafts)
 
-                          if (import.meta.env.DEV) {
-                            console.debug(
-                              '[UploadManager] Added transcoded video to draft:',
-                              mirroredVideo.qualityLabel,
-                              'total:',
-                              updatedVideos.length
-                            )
-                          }            }
+              if (import.meta.env.DEV) {
+                console.debug(
+                  '[UploadManager] Added transcoded video to draft:',
+                  mirroredVideo.qualityLabel,
+                  'total:',
+                  updatedVideos.length
+                )
+              }
+            }
           }
 
           // Notify completion for this resolution (may be stale callback, but draft is already updated)
@@ -1189,9 +1191,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     ) => {
       // Skip if job already exists (task is already being processed)
       if (jobsRef.current.has(taskId)) {
-              if (import.meta.env.DEV) {
-                console.debug('[UploadManager] resumeTranscode - job already exists for:', taskId)
-              }        return
+        if (import.meta.env.DEV) {
+          console.debug('[UploadManager] resumeTranscode - job already exists for:', taskId)
+        }
+        return
       }
 
       const task = tasks.get(taskId)
@@ -1493,7 +1496,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         }
         if (jobsRef.current.has(task.id)) {
           if (import.meta.env.DEV) {
-            console.debug('[UploadManager] Skipping auto-resume for task with existing job:', task.id)
+            console.debug(
+              '[UploadManager] Skipping auto-resume for task with existing job:',
+              task.id
+            )
           }
           continue
         }

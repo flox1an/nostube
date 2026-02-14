@@ -27,7 +27,6 @@ interface PlayPositionData {
   duration: number
 }
 
-
 interface UseVideoPlayPositionProps {
   user: { pubkey: string } | undefined
   videoId: string | undefined

@@ -28,7 +28,8 @@
     "notSet": "Non défini",
     "done": "Terminé",
     "follow": "Suivre",
-    "following": "Abonné"
+    "following": "Abonné",
+    "pleaseWait": "Veuillez patienter..."
   },
   "navigation": {
     "home": "Accueil",
@@ -397,7 +398,9 @@
       "complete": "Transcodage terminé !",
       "completeMessage": "Une nouvelle version a été ajoutée à votre vidéo.",
       "completeMessageMulti": "{{count}} versions ont été ajoutées à votre vidéo.",
-      "createMore": "Créer plus"
+      "createMore": "Créer plus",
+      "waitingForFeedback": "en attente de retour DVM",
+      "mirroringDescription": "Vos nouvelles versions vidéo sont copiées sur vos serveurs Blossom configurés pour la redondance et un accès mondial plus rapide."
     },
     "origins": {
       "label": "Références externes",

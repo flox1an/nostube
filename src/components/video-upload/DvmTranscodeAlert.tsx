@@ -237,6 +237,7 @@ export function DvmTranscodeAlert({
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
           {t('upload.transcode.discovering', { defaultValue: 'Finding transcoding service...' })}
+          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">({t('common.pleaseWait', { defaultValue: 'Please wait...' })})</span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.message}
@@ -253,6 +254,7 @@ export function DvmTranscodeAlert({
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
           {t('upload.transcode.resuming', { defaultValue: 'Reconnecting to transcode...' })}
+          <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">({t('common.pleaseWait', { defaultValue: 'Please wait...' })})</span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.queue && <QueueStatus queue={progress.queue} />}
@@ -281,6 +283,11 @@ export function DvmTranscodeAlert({
                 resolution: currentResolution,
               })
             : t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
+          {progress.percentage === undefined && (
+            <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
+              ({t('upload.transcode.waitingForFeedback', { defaultValue: 'waiting for DVM feedback' })})
+            </span>
+          )}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.percentage !== undefined && (
@@ -319,6 +326,11 @@ export function DvmTranscodeAlert({
           {t('upload.transcode.mirroring', { defaultValue: 'Copying to your servers...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
+          <p className="mb-3">
+            {t('upload.transcode.mirroringDescription', {
+              defaultValue: 'Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access.',
+            })}
+          </p>
           {progress.queue && <QueueStatus queue={progress.queue} />}
           <StatusLog messages={progress.statusMessages} />
           <div className="mt-3">

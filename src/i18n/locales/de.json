@@ -28,7 +28,8 @@
     "notSet": "Nicht gesetzt",
     "done": "Fertig",
     "follow": "Folgen",
-    "following": "Gefolgt"
+    "following": "Gefolgt",
+    "pleaseWait": "Bitte warten..."
   },
   "navigation": {
     "home": "Startseite",
@@ -397,7 +398,9 @@
       "complete": "Transkodierung abgeschlossen!",
       "completeMessage": "Die neue Version wurde zu Ihrem Video hinzugefügt.",
       "completeMessageMulti": "{{count}} Versionen wurden zu Ihrem Video hinzugefügt.",
-      "createMore": "Weitere erstellen"
+      "createMore": "Weitere erstellen",
+      "waitingForFeedback": "warte auf DVM-Rückmeldung",
+      "mirroringDescription": "Ihre neuen Videoversionen werden für Redundanz und schnelleren globalen Zugriff auf Ihre konfigurierten Blossom-Server kopiert."
     },
     "origins": {
       "label": "Externe Referenzen",

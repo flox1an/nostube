@@ -10,7 +10,7 @@ interface CachedPreset {
   cachedAt: number
 }
 
-interface CacheResult {
+export interface CacheResult {
   preset: NostubePreset
   stale: boolean
 }

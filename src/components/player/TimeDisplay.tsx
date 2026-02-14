@@ -1,6 +1,11 @@
 import { useState, memo } from 'react'
 import { formatTimestamp } from '@/lib/format-utils'
 
+interface TimeDisplayProps {
+  currentTime: number
+  duration: number
+}
+
 /**
  * Time display showing current time / duration
  * Click to toggle between elapsed and remaining time
@@ -26,10 +31,9 @@ export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: 
         {formatTimestamp(displayTime)}
       </span>
       <span className="mx-1 text-white/60">/</span>
-      <span className="text-white/80">{formatTime(duration)}</span>
+      <span className="text-white/80">{formatTimestamp(duration)}</span>
     </button>
   )
 })
 
-// Export formatTime for use in other components (e.g., progress bar tooltip)
-export { formatTime }
+

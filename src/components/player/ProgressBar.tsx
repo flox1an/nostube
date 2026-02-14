@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
-import { formatTime } from './TimeDisplay'
+import { formatTimestamp } from '@/lib/format-utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { TimelineMarkers } from './TimelineMarkers'
 
@@ -224,7 +224,7 @@ export const ProgressBar = memo(function ProgressBar({
             willChange: isSeeking ? 'left' : 'auto',
           }}
         >
-          {formatTime(hoverTime)}
+          {formatTimestamp(hoverTime)}
         </div>
       )}
 

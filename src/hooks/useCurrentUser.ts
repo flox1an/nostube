@@ -1,7 +1,8 @@
 import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
 import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers/signers'
+import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers'
 import { useProfile } from './useProfile'
+import { saveAccountToStorage, saveActiveAccount } from './useAccountPersistence'
 
 export function useCurrentUser() {
   const accountManager = useAccountManager(false)
@@ -31,6 +32,10 @@ export function useCurrentUser() {
     const account = new ExtensionAccount(pubkey, signer)
 
     await accountManager.addAccount(account)
+    accountManager.setActive(account)
+
+    saveAccountToStorage(account, 'extension')
+    saveActiveAccount(pubkey)
   }
 
   const loginWithNsec = async (nsec: string) => {
@@ -41,6 +46,10 @@ export function useCurrentUser() {
     const account = new SimpleAccount(pubkey, signer)
 
     await accountManager.addAccount(account)
+    accountManager.setActive(account)
+
+    saveAccountToStorage(account, 'nsec')
+    saveActiveAccount(pubkey)
   }
 
   const loginWithBunker = async (bunkerUri: string) => {
@@ -51,11 +60,16 @@ export function useCurrentUser() {
     const account = new NostrConnectAccount(pubkey, signer)
 
     await accountManager.addAccount(account)
+    accountManager.setActive(account)
+
+    saveAccountToStorage(account, 'bunker', bunkerUri)
+    saveActiveAccount(pubkey)
   }
 
   const logout = () => {
     if (activeAccount && accountManager) {
       accountManager.removeAccount(activeAccount.pubkey)
+      saveActiveAccount(null)
     }
   }
 

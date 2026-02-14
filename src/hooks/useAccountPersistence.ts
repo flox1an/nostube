@@ -1,7 +1,8 @@
 import type { IAccount } from 'applesauce-accounts'
 import { type AccountManager } from 'applesauce-accounts'
 import { ExtensionAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, NostrConnectSigner } from 'applesauce-signers'
+import { ExtensionSigner, NostrConnectSigner, PrivateKeySigner } from 'applesauce-signers'
+import { bytesToHex } from '@noble/hashes/utils'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'
@@ -12,6 +13,7 @@ export interface PersistedAccount {
   pubkey: string
   method: AccountMethod
   data?: string // nsec (for nsec accounts) or bunker URI (for bunker accounts)
+  clientKey?: string // hex encoded client private key for bunker
   createdAt: number
 }
 
@@ -35,6 +37,11 @@ export function saveAccountToStorage(
       method,
       data: method === 'nsec' ? undefined : data, // Don't store nsec for security
       createdAt: existingIndex >= 0 ? accounts[existingIndex].createdAt : Date.now(),
+    }
+
+    // Store client key for bunker accounts so the session can be restored
+    if (method === 'bunker' && account.signer instanceof NostrConnectSigner) {
+      accountData.clientKey = bytesToHex(account.signer.signer.key)
     }
 
     if (existingIndex >= 0) {
@@ -202,7 +209,12 @@ export async function restoreAccount(
           return null
         }
         try {
-          const signer = await NostrConnectSigner.fromBunkerURI(accountData.data)
+          const options: any = {}
+          if (accountData.clientKey) {
+            options.signer = PrivateKeySigner.fromKey(accountData.clientKey)
+          }
+
+          const signer = await NostrConnectSigner.fromBunkerURI(accountData.data, options)
           const pubkey = await signer.getPublicKey()
           // Verify pubkey matches stored pubkey
           if (pubkey !== accountData.pubkey) {

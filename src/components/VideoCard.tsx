@@ -123,7 +123,7 @@ export const VideoCard = React.memo(function VideoCard({
 
   // Debug: Log navigation state for shorts (DEV only)
   if (import.meta.env.DEV && video.type === 'shorts') {
-    console.log('[VideoCard] Creating shorts link:', {
+    console.debug('[VideoCard] Creating shorts link:', {
       videoTitle: video.title,
       videoType: video.type,
       hasAllVideos: !!allVideos,
@@ -159,7 +159,7 @@ export const VideoCard = React.memo(function VideoCard({
   }
 
   const handleThumbnailError = () => {
-    console.warn('Thumbnail failed to load:', video.images[0])
+    console.debug('Thumbnail failed to load:', video.images[0])
     // Only try video fallback once to avoid infinite loops
     if (!thumbnailError) {
       setThumbnailError(true)
@@ -178,7 +178,7 @@ export const VideoCard = React.memo(function VideoCard({
   const handleShortsClick = () => {
     if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
       if (import.meta.env.DEV) {
-        console.log('[VideoCard] Populating store with shorts:', {
+        console.debug('[VideoCard] Populating store with shorts:', {
           videoCount: allVideos.length,
           startIndex: videoIndex,
           clickedTitle: video.title,

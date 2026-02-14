@@ -283,7 +283,7 @@ export function DvmTranscodeAlert({
                 resolution: currentResolution,
               })
             : t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
-          {progress.percentage === undefined && (
+          {progress.percentage === undefined && progress.eta === undefined && (
             <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
               ({t('upload.transcode.waitingForFeedback', { defaultValue: 'waiting for DVM feedback' })})
             </span>

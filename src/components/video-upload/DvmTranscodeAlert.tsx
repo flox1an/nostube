@@ -211,7 +211,6 @@ export function DvmTranscodeAlert({
                     defaultValue: 'Create Selected',
                     count: selectedResolutions.length,
                   })}
-                  {selectedResolutions.length > 0 && ` (${selectedResolutions.length})`}
                 </Button>
                 <Button
                   size="sm"

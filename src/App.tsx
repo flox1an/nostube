@@ -30,7 +30,7 @@ import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
 import { defaultResizeServer } from '@/constants/servers'
 
-export { defaultResizeServer }
+
 
 const defaultConfig: AppConfig = {
   theme: 'dark',

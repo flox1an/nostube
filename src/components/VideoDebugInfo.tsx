@@ -96,7 +96,7 @@ export function VideoDebugInfo({
 
   // Debug: Log what variants we have
   if (import.meta.env.DEV && open) {
-    console.log('[VideoDebugInfo] Input data:', {
+    console.debug('[VideoDebugInfo] Input data:', {
       allVideoVariants: video?.allVideoVariants?.length || 0,
       thumbnailVariants: video?.thumbnailVariants?.length || 0,
       deduplicatedThumbnails: deduplicatedThumbnails.length,
@@ -118,7 +118,7 @@ export function VideoDebugInfo({
 
   // Debug: Log what the hook returns
   if (import.meta.env.DEV && open) {
-    console.log('[VideoDebugInfo] Hook output:', {
+    console.debug('[VideoDebugInfo] Hook output:', {
       allVariantsCount: allVariants.length,
       allVariants: allVariants.map(v => ({ label: v.label, mimeType: v.variant.mimeType })),
     })

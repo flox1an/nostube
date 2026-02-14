@@ -19,8 +19,7 @@ import { processEvents } from '@/utils/video-event'
 import { finalize, map } from 'rxjs'
 import { hashObjectBigInt } from '@/lib/utils'
 import { type Filter } from 'nostr-tools'
-
-const lastLoadedTimestamp = new Map<string, number>()
+import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
 
 interface TimelineState {
   videos: VideoEvent[]

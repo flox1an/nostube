@@ -77,7 +77,7 @@ export function DvmTranscodeAlert({
 
   // Debug logging
   if (import.meta.env.DEV) {
-    console.log('[DvmTranscodeAlert] State:', {
+    console.debug('[DvmTranscodeAlert] State:', {
       transcodeCheck,
       isResuming,
       isDvmAvailable,
@@ -89,17 +89,13 @@ export function DvmTranscodeAlert({
 
   // Don't show if not needed or dismissed (unless we're resuming)
   if ((!transcodeCheck.needed && !isResuming) || dismissed) {
-    if (import.meta.env.DEV) {
-      console.log('[DvmTranscodeAlert] Hidden: transcode not needed or dismissed')
-    }
+
     return null
   }
 
   // Don't show if still checking for DVM availability (unless resuming)
   if (!isResuming && isDvmLoading) {
-    if (import.meta.env.DEV) {
-      console.log('[DvmTranscodeAlert] Hidden: still checking DVM availability')
-    }
+
     return null
   }
 

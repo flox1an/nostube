@@ -78,17 +78,17 @@ All URLs (primary + mirrors) are stored directly in the imeta tags as `url` and 
 
 When flags are omitted, `upload` resolves them in order:
 
-| Missing flag | Resolution chain |
-|---|---|
-| `--title` | MP4 metadata atoms -> interactive prompt |
-| `--description` | MP4 `desc`/`ldes` atoms -> interactive prompt |
-| `--tags` | MP4 `keyw` atom -> interactive prompt |
-| `--server` | Config file -> user's Blossom server list (kind 10063) from relays -> interactive prompt |
-| `--mirror` | Config file -> skip if none |
-| `--thumbnail` | Extract frame from video (ffmpeg at ~10% duration) |
-| `--sec` | `NOSTR_SECRET_KEY` env -> config file -> interactive prompt |
-| `--relay` | Config file -> NIP-65 relay list from user profile -> default relays |
-| `--language` | Config file default -> interactive prompt |
+| Missing flag    | Resolution chain                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `--title`       | MP4 metadata atoms -> interactive prompt                                                 |
+| `--description` | MP4 `desc`/`ldes` atoms -> interactive prompt                                            |
+| `--tags`        | MP4 `keyw` atom -> interactive prompt                                                    |
+| `--server`      | Config file -> user's Blossom server list (kind 10063) from relays -> interactive prompt |
+| `--mirror`      | Config file -> skip if none                                                              |
+| `--thumbnail`   | Extract frame from video (ffmpeg at ~10% duration)                                       |
+| `--sec`         | `NOSTR_SECRET_KEY` env -> config file -> interactive prompt                              |
+| `--relay`       | Config file -> NIP-65 relay list from user profile -> default relays                     |
+| `--language`    | Config file default -> interactive prompt                                                |
 
 ### Output
 
@@ -111,6 +111,7 @@ nosvid probe https://blossom.primal.net/abc123def
 ```
 
 Output:
+
 ```json
 {
   "dimension": "1920x1080",
@@ -170,6 +171,7 @@ nak req -k 34235 wss://relay | nosvid inspect
 ```
 
 Output:
+
 ```
 Title:     Bitcoin Talk at PlebLab
 Author:    npub1abc... (satoshi)
@@ -203,6 +205,7 @@ nosvid edit naddr1... --add-person npub1... --remove-person npub1...
 Preserves all unknown tags for forward compatibility (same pattern as NosTube: filter out replaced keys, keep everything else).
 
 Composable:
+
 ```bash
 nosvid fetch naddr1... | nosvid edit --title "New" --dry-run | nosvid publish wss://relay
 ```
@@ -237,6 +240,7 @@ nosvid announce --hash abc123... --url https://primary/abc123 \
 ```
 
 Kind 1063 event structure:
+
 ```json
 {
   "kind": 1063,
@@ -326,12 +330,14 @@ nosvid delete naddr1... --blobs --event
 ### Signing (nak-compatible)
 
 Resolution order:
+
 1. `--sec` flag
 2. `NOSTR_SECRET_KEY` environment variable
 3. Config file `secret_key`
 4. Interactive prompt (unless `--no-interactive`)
 
 Supported formats:
+
 - Hex private key
 - `nsec1...` (NIP-19 encoded)
 - `ncryptsec1...` (NIP-49 encrypted, prompts for password)
@@ -385,7 +391,8 @@ encrypt = true
     ["alt", "<description>"],
     ["published_at", "<unix timestamp>"],
 
-    ["imeta",
+    [
+      "imeta",
       "dim 1920x1080",
       "url https://primary.server/<sha256>",
       "x <sha256>",
@@ -399,7 +406,8 @@ encrypt = true
       "fallback https://mirror1.server/<sha256>",
       "fallback https://mirror2.server/<sha256>"
     ],
-    ["imeta",
+    [
+      "imeta",
       "dim 1280x720",
       "url https://primary.server/<sha256-720>",
       "x <sha256-720>",
@@ -467,6 +475,7 @@ JSON line-delimited events on stdin/stdout, same format as nak.
 ## Implementation Priority
 
 ### Phase 1: Core Upload
+
 - `probe` command (ffprobe wrapper)
 - `upload` command (full pipeline without transcode)
 - Config file support
@@ -474,24 +483,28 @@ JSON line-delimited events on stdin/stdout, same format as nak.
 - Blossom upload + mirror
 
 ### Phase 2: Read Operations
+
 - `fetch` command
 - `req` command
 - `inspect` command
 - `download` command
 
 ### Phase 3: Mutations
+
 - `edit` command
 - `delete` command
 - `mirror` command (standalone)
 - `announce` command (kind 1063)
 
 ### Phase 4: DVM Integration
+
 - `transcode` command
 - NIP-04 encrypted DVM requests
 - Progress polling
 - Auto-upload transcoded variants
 
 ### Phase 5: Advanced
+
 - Bunker signing (NIP-46)
 - ncryptsec support (NIP-49)
 - NIP-65 relay discovery

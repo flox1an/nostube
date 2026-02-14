@@ -342,31 +342,41 @@ export function DvmTranscodeAlert({
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>
-          {t('upload.transcode.error', { defaultValue: 'Transcoding failed' })}
-        </AlertTitle>
-        <AlertDescription>
-          <p className="mb-3">{error}</p>
-          <div className="flex gap-2">
+        <div className="flex-1">
+          <AlertTitle className="flex justify-between items-center">
+            {t('upload.transcode.error', { defaultValue: 'Transcoding failed' })}
             <Button
+              variant="ghost"
               size="sm"
-              variant="outline"
-              onClick={handleStartTranscode}
-              className="cursor-pointer"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {t('upload.transcode.retry', { defaultValue: 'Retry' })}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
               onClick={() => setDismissed(true)}
-              className="cursor-pointer"
+              className="h-6 w-6 p-0 hover:bg-destructive/10"
             >
-              {t('upload.transcode.dismiss', { defaultValue: 'Dismiss' })}
+              <X className="h-4 w-4" />
             </Button>
-          </div>
-        </AlertDescription>
+          </AlertTitle>
+          <AlertDescription>
+            <p className="mb-3">{error}</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStartTranscode}
+                className="cursor-pointer bg-transparent border-destructive-foreground/20"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {t('upload.transcode.retry', { defaultValue: 'Retry' })}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancel}
+                className="cursor-pointer bg-transparent border-destructive-foreground/20"
+              >
+                {t('upload.transcode.back', { defaultValue: 'Back' })}
+              </Button>
+            </div>
+          </AlertDescription>
+        </div>
       </Alert>
     )
   }
@@ -377,19 +387,40 @@ export function DvmTranscodeAlert({
     return (
       <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
         <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-        <AlertTitle className="text-green-800 dark:text-green-200">
-          {t('upload.transcode.complete', { defaultValue: 'Transcode complete!' })}
-        </AlertTitle>
-        <AlertDescription className="text-green-700 dark:text-green-300">
-          {completedCount > 1
-            ? t('upload.transcode.completeMessageMulti', {
-                defaultValue: '{{count}} versions have been added to your video.',
-                count: completedCount,
-              })
-            : t('upload.transcode.completeMessage', {
-                defaultValue: 'New version has been added to your video.',
-              })}
-        </AlertDescription>
+        <div className="flex-1">
+          <AlertTitle className="text-green-800 dark:text-green-200 flex justify-between items-center">
+            {t('upload.transcode.complete', { defaultValue: 'Transcode complete!' })}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDismissed(true)}
+              className="h-6 w-6 p-0 hover:bg-green-100 dark:hover:bg-green-900"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-300">
+            <p className="mb-3">
+              {completedCount > 1
+                ? t('upload.transcode.completeMessageMulti', {
+                    defaultValue: '{{count}} versions have been added to your video.',
+                    count: completedCount,
+                  })
+                : t('upload.transcode.completeMessage', {
+                    defaultValue: 'New version has been added to your video.',
+                  })}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={cancel}
+              className="cursor-pointer border-green-300 hover:bg-green-100 dark:border-green-800 dark:hover:bg-green-900"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {t('upload.transcode.createMore', { defaultValue: 'Create More' })}
+            </Button>
+          </AlertDescription>
+        </div>
       </Alert>
     )
   }

@@ -109,7 +109,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   const drafts = useMemo(() => {
     const freshDrafts = getDraftsFromStorage()
     if (import.meta.env.DEV) {
-      console.log(
+      console.debug(
         '[UploadManager] Reading drafts, version:',
         draftsVersion,
         'count:',
@@ -153,11 +153,11 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Cleanup subscriptions on unmount (only when app closes)
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log('[UploadManager] Provider mounted')
+      console.debug('[UploadManager] Provider mounted')
     }
     return () => {
       if (import.meta.env.DEV) {
-        console.log(
+        console.debug(
           '[UploadManager] Provider unmounting! Clearing jobs:',
           Array.from(jobsRef.current.keys())
         )
@@ -179,7 +179,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
     if (!currentUser?.signer?.nip44) {
       if (import.meta.env.DEV) {
-        console.log('[UploadManager] saveToNostr - no signer or nip44')
+        console.debug('[UploadManager] saveToNostr - no signer or nip44')
       }
       return
     }
@@ -192,7 +192,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         // Skip if content hasn't changed
         if (draftsContent === lastSyncedContentRef.current) {
           if (import.meta.env.DEV) {
-            console.log('[UploadManager] saveToNostr - skipping, content unchanged')
+            console.debug('[UploadManager] saveToNostr - skipping, content unchanged')
           }
           return
         }
@@ -217,7 +217,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           .map(r => r.url)
 
         if (import.meta.env.DEV) {
-          console.log('[UploadManager] saveToNostr - publishing to', writeRelays.length, 'relays')
+          console.debug('[UploadManager] saveToNostr - publishing to', writeRelays.length, 'relays')
         }
 
         const signedEvent = await currentUser.signer.signEvent(event)
@@ -227,7 +227,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         lastSyncedContentRef.current = draftsContent
 
         if (import.meta.env.DEV) {
-          console.log('[UploadManager] saveToNostr - published successfully')
+          console.debug('[UploadManager] saveToNostr - published successfully')
         }
       } catch (error) {
         console.error('[UploadManager] Failed to sync to Nostr:', error)
@@ -266,7 +266,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Trigger re-read from localStorage
   const refreshDrafts = useCallback(() => {
     if (import.meta.env.DEV) {
-      console.log('[UploadManager] refreshDrafts - forcing re-fetch')
+      console.debug('[UploadManager] refreshDrafts - forcing re-fetch')
     }
     setDraftsVersion(v => v + 1)
   }, [])
@@ -274,7 +274,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Flush any pending Nostr sync
   const flushNostrSync = useCallback(async () => {
     if (import.meta.env.DEV) {
-      console.log('[UploadManager] flushNostrSync')
+      console.debug('[UploadManager] flushNostrSync')
     }
     debouncedSaveToNostr.flush()
     if (inflightSaveRef.current) {
@@ -300,10 +300,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   const updateDraftFn = useCallback(
     (id: string, updates: Partial<UploadDraft>) => {
       const updatedDraft = updateDraftInStorage(id, updates)
-      if (!updatedDraft) {
-        console.warn('[UploadManager] updateDraft - draft not found:', id)
-        return
-      }
+          if (!updatedDraft) {
+            console.debug('[UploadManager] updateDraft - draft not found:', id)
+            return      }
 
       setDraftsVersion(v => v + 1)
 
@@ -941,7 +940,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         wasEncrypted = true
 
         if (import.meta.env.DEV) {
-          console.log(`[UploadManager] Building encrypted ${resolution} request`)
+          console.debug(`[UploadManager] Building encrypted ${resolution} request`)
         }
       } else {
         // Build unencrypted request (fallback)
@@ -960,7 +959,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         }
 
         if (import.meta.env.DEV) {
-          console.log(
+          console.debug(
             `[UploadManager] Building unencrypted ${resolution} request (signer lacks NIP-04)`
           )
         }
@@ -1055,11 +1054,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       }
       jobsRef.current.set(taskId, job)
 
-      if (import.meta.env.DEV) {
-        console.log('[UploadManager] startTranscode - Created job for taskId:', taskId)
-        console.log('[UploadManager] jobsRef now has keys:', Array.from(jobsRef.current.keys()))
-      }
-
+              if (import.meta.env.DEV) {
+                console.debug('[UploadManager] startTranscode - Created job for taskId:', taskId)
+                console.debug('[UploadManager] jobsRef now has keys:', Array.from(jobsRef.current.keys()))
+              }
       const completedResolutions: string[] = []
 
       try {
@@ -1149,15 +1147,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               const freshDrafts = getDraftsFromStorage()
               saveToNostr(freshDrafts)
 
-              if (import.meta.env.DEV) {
-                console.log(
-                  '[UploadManager] Added transcoded video to draft:',
-                  mirroredVideo.qualityLabel,
-                  'total:',
-                  updatedVideos.length
-                )
-              }
-            }
+                          if (import.meta.env.DEV) {
+                            console.debug(
+                              '[UploadManager] Added transcoded video to draft:',
+                              mirroredVideo.qualityLabel,
+                              'total:',
+                              updatedVideos.length
+                            )
+                          }            }
           }
 
           // Notify completion for this resolution (may be stale callback, but draft is already updated)
@@ -1192,15 +1189,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     ) => {
       // Skip if job already exists (task is already being processed)
       if (jobsRef.current.has(taskId)) {
-        if (import.meta.env.DEV) {
-          console.log('[UploadManager] resumeTranscode - job already exists for:', taskId)
-        }
-        return
+              if (import.meta.env.DEV) {
+                console.debug('[UploadManager] resumeTranscode - job already exists for:', taskId)
+              }        return
       }
 
       const task = tasks.get(taskId)
       if (!task || !task.transcodeState) {
-        console.warn('[UploadManager] Cannot resume - no transcode state')
+        console.debug('[UploadManager] Cannot resume - no transcode state')
         return
       }
 
@@ -1482,7 +1478,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
     const resumable = getResumableTasks()
     if (resumable.length > 0 && import.meta.env.DEV) {
-      console.log('[UploadManager] Found resumable tasks:', resumable.length)
+      console.debug('[UploadManager] Found resumable tasks:', resumable.length)
     }
 
     // Auto-resume transcoding tasks
@@ -1491,13 +1487,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         // Skip if task is currently being started or already has a job
         if (startingTasksRef.current.has(task.id)) {
           if (import.meta.env.DEV) {
-            console.log('[UploadManager] Skipping auto-resume for task being started:', task.id)
+            console.debug('[UploadManager] Skipping auto-resume for task being started:', task.id)
           }
           continue
         }
         if (jobsRef.current.has(task.id)) {
           if (import.meta.env.DEV) {
-            console.log('[UploadManager] Skipping auto-resume for task with existing job:', task.id)
+            console.debug('[UploadManager] Skipping auto-resume for task with existing job:', task.id)
           }
           continue
         }

@@ -12,6 +12,9 @@ export const DVM_FEEDBACK_KIND = 7000
 // 12 hour timeout for resumable jobs
 export const TRANSCODE_JOB_TIMEOUT_MS = 12 * 60 * 60 * 1000
 
+// DVM event expiration (24 hours)
+export const DVM_EVENT_EXPIRATION_SECS = 24 * 60 * 60
+
 // DVM job timeout (10 minutes per resolution)
 export const DVM_JOB_TIMEOUT_MS = 10 * 60 * 1000
 

@@ -26,6 +26,9 @@ const DVM_REQUEST_KIND = 5207
 const DVM_RESULT_KIND = 6207
 const DVM_FEEDBACK_KIND = 7000
 
+// DVM event expiration (24 hours)
+const DVM_EVENT_EXPIRATION_SECS = 24 * 60 * 60
+
 export type TranscodeStatus =
   | 'idle'
   | 'discovering'
@@ -268,6 +271,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           ['e', requestEventId],
           ['p', dvmPubkey],
           ['status', 'approved'],
+          ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
         ],
       }
 
@@ -742,7 +746,12 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           kind: DVM_REQUEST_KIND,
           content: encryptedJson,
           created_at: nowInSecs(),
-          tags: [['p', dvm.pubkey], ['relays', ...writeRelays], ['encrypted']],
+          tags: [
+            ['p', dvm.pubkey],
+            ['relays', ...writeRelays],
+            ['encrypted'],
+            ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
+          ],
         }
         wasEncrypted = true
 
@@ -761,6 +770,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
             ['param', 'resolution', resolution],
             ['param', 'codec', codec],
             ['relays', ...writeRelays],
+            ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
           ],
         }
 

@@ -73,6 +73,7 @@ import {
   DVM_RESULT_KIND,
   DVM_FEEDBACK_KIND,
   TRANSCODE_JOB_TIMEOUT_MS,
+  DVM_EVENT_EXPIRATION_SECS,
   NOSTR_SYNC_DEBOUNCE_MS,
   ACTIVE_TASK_STATUSES,
 } from './constants'
@@ -567,6 +568,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         ['e', requestEventId],
         ['p', dvmPubkey],
         ['status', 'approved'],
+        ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
       ],
     }
 
@@ -910,7 +912,12 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           kind: DVM_REQUEST_KIND,
           content: encryptedJson,
           created_at: nowInSecs(),
-          tags: [['p', dvm.pubkey], ['relays', ...writeRelays], ['encrypted']],
+          tags: [
+            ['p', dvm.pubkey],
+            ['relays', ...writeRelays],
+            ['encrypted'],
+            ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
+          ],
         }
 
         if (import.meta.env.DEV) {
@@ -930,6 +937,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             ['param', 'resolution', resolution],
             ['param', 'codec', codec],
             ['relays', ...writeRelays],
+            ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
           ],
         }
 

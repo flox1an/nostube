@@ -125,6 +125,39 @@ export interface DvmHandlerInfo {
 }
 
 /**
+ * DVM bid from kind:7000 status event
+ */
+export interface DvmBid {
+  pubkey: string
+  amount: string
+  message?: string
+  cashu?: string
+  eventId: string
+}
+
+/**
+ * Parse a bid from a kind:7000 status event
+ */
+export function parseDvmBid(event: any): DvmBid | null {
+  const statusTag = event.tags.find((t: string[]) => t[0] === 'status')
+  if (statusTag?.[1] !== 'payment-required') return null
+
+  const amountTag = event.tags.find((t: string[]) => t[0] === 'amount')
+  const amount = amountTag?.[1] || '0'
+
+  const message = statusTag[2] || event.content || undefined
+  const cashuTag = event.tags.find((t: string[]) => t[0] === 'cashu')
+
+  return {
+    pubkey: event.pubkey,
+    amount,
+    message,
+    cashu: cashuTag?.[1],
+    eventId: event.id,
+  }
+}
+
+/**
  * Check if content appears to be NIP-04 encrypted (base64?iv=base64 format)
  */
 export function isNip04Encrypted(content: string): boolean {

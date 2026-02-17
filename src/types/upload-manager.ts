@@ -24,7 +24,7 @@ export interface UploadProgress {
 }
 
 export interface TranscodeState {
-  status: 'discovering' | 'transcoding' | 'mirroring'
+  status: 'discovering' | 'bidding' | 'transcoding' | 'mirroring'
   requestEventId?: string
   dvmPubkey?: string
   inputVideoUrl?: string

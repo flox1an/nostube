@@ -13,6 +13,7 @@ import type { UploadTask } from '@/types/upload-manager'
 export type TranscodeStatus =
   | 'idle'
   | 'discovering'
+  | 'bidding'
   | 'transcoding'
   | 'resuming'
   | 'mirroring'
@@ -81,6 +82,7 @@ function mapTaskStatusToTranscodeStatus(task: UploadTask | undefined): Transcode
       return 'idle'
     case 'transcoding':
       if (task.transcodeState?.status === 'discovering') return 'discovering'
+      if (task.transcodeState?.status === 'bidding') return 'bidding'
       if (task.transcodeState?.status === 'mirroring') return 'mirroring'
       return 'transcoding'
     case 'mirroring':

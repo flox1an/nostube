@@ -234,12 +234,14 @@ export function DvmTranscodeAlert({
   }
 
   // Discovering state
-  if (status === 'discovering') {
+  if (status === 'discovering' || status === 'bidding') {
     return (
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
-          {t('upload.transcode.discovering', { defaultValue: 'Finding transcoding service...' })}
+          {status === 'bidding'
+            ? t('upload.transcode.bidding', { defaultValue: 'Waiting for DVM bids...' })
+            : t('upload.transcode.discovering', { defaultValue: 'Finding transcoding service...' })}
           <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
             ({t('common.pleaseWait', { defaultValue: 'Please wait...' })})
           </span>

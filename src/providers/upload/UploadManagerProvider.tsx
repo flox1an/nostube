@@ -55,6 +55,8 @@ import {
   RESOLUTION_DIMENSIONS,
   buildDvmEncryptedContent,
   parseDvmEncryptedStatus,
+  parseDvmBid,
+  type DvmBid,
   type DvmHandlerInfo,
   type TranscodeCodec,
 } from '@/lib/dvm-utils'
@@ -70,7 +72,6 @@ import {
   DVM_REQUEST_KIND,
   DVM_RESULT_KIND,
   DVM_FEEDBACK_KIND,
-  HANDLER_INFO_KIND,
   TRANSCODE_JOB_TIMEOUT_MS,
   NOSTR_SYNC_DEBOUNCE_MS,
   ACTIVE_TASK_STATUSES,
@@ -514,78 +515,64 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   // ========== DVM OPERATIONS ==========
 
-  // Discover DVM handler
-  const discoverDvm = useCallback(async (): Promise<DvmHandlerInfo | null> => {
-    const readRelays = configRef.current.relays
-      .filter(r => r.tags.includes('read') && r.url)
+  // Collect bids for a job request
+  const collectBids = useCallback(
+    async (requestEventId: string, timeoutMs: number = 5000): Promise<DvmBid[]> => {
+      const readRelays = configRef.current.relays
+        .filter(r => r.tags.includes('read') && r.url)
+        .map(r => r.url)
+
+      return new Promise(resolve => {
+        const bids: DvmBid[] = []
+        const sub = relayPool
+          .subscription(readRelays, [
+            {
+              kinds: [DVM_FEEDBACK_KIND],
+              '#e': [requestEventId],
+            },
+          ])
+          .subscribe({
+            next: event => {
+              if (typeof event === 'string') return
+              const bid = parseDvmBid(event)
+              if (bid) {
+                bids.push(bid)
+              }
+            },
+          })
+
+        setTimeout(() => {
+          sub.unsubscribe()
+          resolve(bids)
+        }, timeoutMs)
+      })
+    },
+    []
+  )
+
+  // Approve a DVM bid
+  const approveBid = useCallback(async (requestEventId: string, dvmPubkey: string) => {
+    const currentUser = userRef.current
+    if (!currentUser) throw new Error('User not logged in')
+
+    const writeRelays = configRef.current.relays
+      .filter(r => r.tags.includes('write') && r.url)
       .map(r => r.url)
-    if (readRelays.length === 0) {
-      throw new Error('No read relays configured')
+
+    const approvalEvent: EventTemplate = {
+      kind: DVM_FEEDBACK_KIND,
+      content: '',
+      created_at: nowInSecs(),
+      tags: [
+        ['e', requestEventId],
+        ['p', dvmPubkey],
+        ['status', 'approved'],
+      ],
     }
 
-    return new Promise((resolve, reject) => {
-      let resolved = false
-
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          sub.unsubscribe()
-          reject(new Error('DVM discovery timed out'))
-        }
-      }, 10000)
-
-      const sub = relayPool
-        .request(readRelays, [
-          {
-            kinds: [HANDLER_INFO_KIND],
-            '#k': ['5207'],
-            '#d': ['video-transform-hls'],
-            limit: 1,
-          },
-        ])
-        .subscribe({
-          next: event => {
-            if (typeof event === 'string') return
-            if (resolved) return
-
-            const nostrEvent = event as NostrEvent
-            let name: string | undefined
-            let about: string | undefined
-
-            try {
-              const content = JSON.parse(nostrEvent.content || '{}')
-              name = content.name
-              about = content.about
-            } catch {
-              // Content is not JSON
-            }
-
-            const nameTag = nostrEvent.tags.find(t => t[0] === 'name')
-            const aboutTag = nostrEvent.tags.find(t => t[0] === 'about')
-            if (nameTag?.[1]) name = nameTag[1]
-            if (aboutTag?.[1]) about = aboutTag[1]
-
-            resolved = true
-            clearTimeout(timeout)
-            sub.unsubscribe()
-            resolve({ pubkey: nostrEvent.pubkey, name, about, createdAt: nostrEvent.created_at })
-          },
-          error: err => {
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              reject(err)
-            }
-          },
-          complete: () => {
-            if (!resolved) {
-              resolved = true
-              clearTimeout(timeout)
-              resolve(null)
-            }
-          },
-        })
-    })
+    const signedApproval = await currentUser.signer.signEvent(approvalEvent)
+    await relayPool.publish(writeRelays, signedApproval)
+    return signedApproval
   }, [])
 
   // Mirror transcoded video to user's servers
@@ -872,17 +859,16 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       taskId: string,
       inputVideoUrl: string,
       resolution: string,
-      dvm: DvmHandlerInfo,
+      dvm?: DvmHandlerInfo,
       originalDuration?: number,
       queueInfo?: ResolutionQueueInfo,
       codec: TranscodeCodec = 'h264'
-    ): Promise<VideoVariant> => {
+    ): Promise<VideoVariant & { dvmPubkey: string }> => {
       const currentUser = userRef.current
       const currentConfig = configRef.current
 
       if (!currentUser) throw new Error('User not logged in')
 
-      // Filter relays and ensure no undefined values
       const writeRelays = currentConfig.relays
         .filter(r => r.tags.includes('write') && r.url)
         .map(r => r.url)
@@ -895,39 +881,27 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       updateTasksState(taskId, {
         status: 'transcoding',
         transcodeState: {
-          status: 'transcoding',
-          dvmPubkey: dvm.pubkey,
+          status: dvm ? 'transcoding' : 'bidding',
+          dvmPubkey: dvm?.pubkey,
           inputVideoUrl,
           originalDuration,
           startedAt: Date.now(),
           currentResolution: resolution,
           resolutionQueue: queueInfo?.resolutions || [resolution],
           completedResolutions: queueInfo?.completed || [],
-          message: `Submitting ${resolution} transcode job...`,
+          message: dvm
+            ? `Submitting ${resolution} transcode job...`
+            : `Broadcasting ${resolution} transcode request...`,
         },
       })
 
-      // Validate all tag values are strings
-      if (!inputVideoUrl || typeof inputVideoUrl !== 'string') {
-        throw new Error('Invalid input video URL')
-      }
-      if (!dvm.pubkey || typeof dvm.pubkey !== 'string') {
-        throw new Error('Invalid DVM pubkey')
-      }
-      if (!resolution || typeof resolution !== 'string') {
-        throw new Error('Invalid resolution')
-      }
-
-      // Determine if we should use encryption (if signer supports NIP-04)
-      const canEncrypt = !!currentUser.signer.nip04
-      let wasEncrypted = false
-
+      // Build request - if no DVM specified, it's a broadcast
       let jobRequest: EventTemplate
 
-      if (canEncrypt) {
-        // Build encrypted request - put input and params in encrypted content
+      if (dvm && currentUser.signer.nip04) {
+        // Build encrypted request for specific DVM
         const encryptedContent = buildDvmEncryptedContent(inputVideoUrl, 'mp4', resolution, codec)
-        const encryptedJson = await currentUser.signer.nip04!.encrypt(
+        const encryptedJson = await currentUser.signer.nip04.encrypt(
           dvm.pubkey,
           JSON.stringify(encryptedContent)
         )
@@ -938,20 +912,20 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           created_at: nowInSecs(),
           tags: [['p', dvm.pubkey], ['relays', ...writeRelays], ['encrypted']],
         }
-        wasEncrypted = true
 
         if (import.meta.env.DEV) {
-          console.debug(`[UploadManager] Building encrypted ${resolution} request`)
+          console.debug(
+            `[UploadManager] Building encrypted ${resolution} request for ${dvm.pubkey}`
+          )
         }
       } else {
-        // Build unencrypted request (fallback)
+        // Build unencrypted request (broadcast or fallback)
         jobRequest = {
           kind: DVM_REQUEST_KIND,
           content: '',
           created_at: nowInSecs(),
           tags: [
             ['i', inputVideoUrl, 'url'],
-            ['p', dvm.pubkey],
             ['param', 'mode', 'mp4'],
             ['param', 'resolution', resolution],
             ['param', 'codec', codec],
@@ -959,26 +933,66 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           ],
         }
 
+        // Add p tag only if we have a specific DVM
+        if (dvm) {
+          jobRequest.tags.push(['p', dvm.pubkey])
+        }
+
         if (import.meta.env.DEV) {
           console.debug(
-            `[UploadManager] Building unencrypted ${resolution} request (signer lacks NIP-04)`
+            `[UploadManager] Building unencrypted ${resolution} ${dvm ? 'directed' : 'broadcast'} request`
           )
         }
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('[UploadManager] Signing job request:', jobRequest)
       }
 
       const signedRequest = await currentUser.signer.signEvent(jobRequest)
       await relayPool.publish(writeRelays, signedRequest)
 
-      if (import.meta.env.DEV) {
-        console.log(
-          `[UploadManager] Published ${resolution} job request:`,
-          signedRequest.id,
-          wasEncrypted ? '(encrypted)' : '(unencrypted)'
-        )
+      // Update task state with request ID
+      updateTasksState(taskId, {
+        transcodeState: {
+          ...tasks.get(taskId)?.transcodeState,
+          requestEventId: signedRequest.id,
+        } as TranscodeState,
+      })
+
+      let selectedDvmPubkey = dvm?.pubkey
+
+      // Step 2: If broadcast, collect bids and approve one
+      if (!selectedDvmPubkey) {
+        updateTasksState(taskId, {
+          transcodeState: {
+            ...tasks.get(taskId)?.transcodeState,
+            status: 'bidding',
+            message: 'Waiting for DVM bids...',
+          } as TranscodeState,
+        })
+
+        const bids = await collectBids(signedRequest.id)
+        if (bids.length === 0) {
+          throw new Error('No DVMs responded to the request')
+        }
+
+        // Pick the best bid (for now, first one with amount 0)
+        // In the future, we can add a selection UI or more complex logic
+        const freeBid = bids.find(b => b.amount === '0') || bids[0]
+        selectedDvmPubkey = freeBid.pubkey
+
+        if (import.meta.env.DEV) {
+          console.log('[UploadManager] Selected DVM from bids:', selectedDvmPubkey)
+        }
+
+        // Approve the bid
+        await approveBid(signedRequest.id, selectedDvmPubkey)
+
+        updateTasksState(taskId, {
+          transcodeState: {
+            ...tasks.get(taskId)?.transcodeState,
+            status: 'transcoding',
+            dvmPubkey: selectedDvmPubkey,
+            message: `Selected DVM ${selectedDvmPubkey.substring(0, 8)}...`,
+          } as TranscodeState,
+        })
       }
 
       // Check if cancelled
@@ -987,23 +1001,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         throw new Error('Cancelled')
       }
 
-      // Update state with request ID
-      updateTasksState(taskId, {
-        transcodeState: {
-          ...tasks.get(taskId)?.transcodeState,
-          requestEventId: signedRequest.id,
-          message: `Transcoding ${resolution}...`,
-        } as TranscodeState,
-      })
-
       // Subscribe and wait for result
       const transcodedResult = await subscribeToDvmResponses(
         taskId,
         signedRequest.id,
-        dvm.pubkey,
+        selectedDvmPubkey,
         originalDuration,
         resolution,
-        wasEncrypted
+        jobRequest.tags.some(t => t[0] === 'encrypted')
       )
 
       // Check if cancelled
@@ -1023,9 +1028,16 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
 
-      return mirroredVideo
+      return { ...mirroredVideo, dvmPubkey: selectedDvmPubkey }
     },
-    [updateTasksState, tasks, subscribeToDvmResponses, mirrorTranscodedVideo]
+    [
+      updateTasksState,
+      tasks,
+      collectBids,
+      approveBid,
+      subscribeToDvmResponses,
+      mirrorTranscodedVideo,
+    ]
   )
 
   // Start transcode - the main entry point
@@ -1062,27 +1074,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       const completedResolutions: string[] = []
 
       try {
-        // Discover DVM
-        updateTasksState(taskId, {
-          status: 'transcoding',
-          transcodeState: {
-            status: 'discovering',
-            resolutionQueue: resolutions,
-            completedResolutions: [],
-            message: 'Finding transcoding service...',
-          },
-        })
-
-        const dvm = await discoverDvm()
-        if (!dvm) {
-          throw new Error('No DVM transcoding service found')
-        }
-
-        if (job.abortController.signal.aborted) {
-          return
-        }
-
         // Process each resolution
+        let selectedDvm: DvmHandlerInfo | undefined = undefined
+
         for (let i = 0; i < resolutions.length; i++) {
           const resolution = resolutions[i]
           const queueInfo: ResolutionQueueInfo = {
@@ -1091,14 +1085,24 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             completed: [...completedResolutions],
           }
 
-          const mirroredVideo = await processResolution(
+          const mirroredVideoResult = await processResolution(
             taskId,
             inputVideoUrl,
             resolution,
-            dvm,
+            selectedDvm,
             originalDuration,
             queueInfo
           )
+
+          // Remember the DVM for subsequent resolutions
+          if (!selectedDvm) {
+            selectedDvm = {
+              pubkey: mirroredVideoResult.dvmPubkey,
+              createdAt: nowInSecs(),
+            }
+          }
+
+          const mirroredVideo = mirroredVideoResult
 
           completedResolutions.push(resolution)
 
@@ -1179,7 +1183,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         startingTasksRef.current.delete(taskId)
       }
     },
-    [updateTasksState, tasks, discoverDvm, processResolution, completeTask, failTask, saveToNostr]
+    [updateTasksState, tasks, processResolution, completeTask, failTask, saveToNostr]
   )
 
   // Resume transcode from persisted state
@@ -1344,10 +1348,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         const remainingResolutions = resolutionQueue.slice(currentIndex >= 0 ? currentIndex + 1 : 0)
 
         if (remainingResolutions.length > 0) {
-          const dvm = await discoverDvm()
-          if (!dvm) {
-            throw new Error('No DVM transcoding service found')
-          }
+          let selectedDvm: DvmHandlerInfo | undefined = undefined
 
           for (let i = 0; i < remainingResolutions.length; i++) {
             const resolution = remainingResolutions[i]
@@ -1357,15 +1358,23 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               completed: [...completedResolutions],
             }
 
-            const video = await processResolution(
+            const videoResult = await processResolution(
               taskId,
               state.inputVideoUrl!,
               resolution,
-              dvm,
+              selectedDvm,
               state.originalDuration,
               queueInfo
             )
 
+            if (!selectedDvm) {
+              selectedDvm = {
+                pubkey: videoResult.dvmPubkey,
+                createdAt: nowInSecs(),
+              }
+            }
+
+            const video = videoResult
             completedResolutions.push(resolution)
 
             // DIRECTLY UPDATE DRAFT
@@ -1402,7 +1411,6 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [
       tasks,
       updateTasksState,
-      discoverDvm,
       processResolution,
       subscribeToDvmResponses,
       mirrorTranscodedVideo,

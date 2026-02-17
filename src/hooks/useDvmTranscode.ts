@@ -12,6 +12,8 @@ import {
   RESOLUTION_DIMENSIONS,
   buildDvmEncryptedContent,
   parseDvmEncryptedStatus,
+  parseDvmBid,
+  type DvmBid,
   type DvmHandlerInfo,
   type TranscodeCodec,
 } from '@/lib/dvm-utils'
@@ -24,12 +26,10 @@ const DVM_REQUEST_KIND = 5207
 const DVM_RESULT_KIND = 6207
 const DVM_FEEDBACK_KIND = 7000
 
-// NIP-89 handler info kind
-const HANDLER_INFO_KIND = 31990
-
 export type TranscodeStatus =
   | 'idle'
   | 'discovering'
+  | 'bidding'
   | 'transcoding'
   | 'resuming'
   | 'mirroring'
@@ -164,7 +164,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       sub = relayPool
         .request(readRelays, [
           {
-            kinds: [HANDLER_INFO_KIND],
+            kinds: [31990],
             '#k': ['5207'],
             '#d': ['video-transform-hls'],
             // No limit here, we want to collect all
@@ -215,6 +215,68 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         })
     })
   }, [config.relays])
+
+  /**
+   * Collect bids for a job request
+   */
+  const collectBids = useCallback(
+    async (requestEventId: string, timeoutMs: number = 5000): Promise<DvmBid[]> => {
+      const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+
+      return new Promise(resolve => {
+        const bids: DvmBid[] = []
+        const sub = relayPool
+          .subscription(readRelays, [
+            {
+              kinds: [DVM_FEEDBACK_KIND],
+              '#e': [requestEventId],
+            },
+          ])
+          .subscribe({
+            next: event => {
+              if (typeof event === 'string') return
+              const bid = parseDvmBid(event)
+              if (bid) {
+                bids.push(bid)
+              }
+            },
+          })
+
+        setTimeout(() => {
+          sub.unsubscribe()
+          resolve(bids)
+        }, timeoutMs)
+      })
+    },
+    [config.relays]
+  )
+
+  /**
+   * Approve a DVM bid
+   */
+  const approveBid = useCallback(
+    async (requestEventId: string, dvmPubkey: string) => {
+      if (!user) throw new Error('User not logged in')
+
+      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+
+      const approvalEvent: EventTemplate = {
+        kind: DVM_FEEDBACK_KIND,
+        content: '',
+        created_at: nowInSecs(),
+        tags: [
+          ['e', requestEventId],
+          ['p', dvmPubkey],
+          ['status', 'approved'],
+        ],
+      }
+
+      const signedApproval = await user.signer.signEvent(approvalEvent)
+      await relayPool.publish(writeRelays, signedApproval)
+      return signedApproval
+    },
+    [user, config.relays]
+  )
 
   /**
    * Subscribe to DVM responses for a job request
@@ -637,31 +699,38 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
     async (
       inputVideoUrl: string,
       resolution: string,
-      dvm: DvmHandlerInfo,
+      dvm?: DvmHandlerInfo,
       originalDuration?: number,
       queueInfo?: { resolutions: string[]; currentIndex: number; completed: string[] },
       codec: TranscodeCodec = 'h264'
-    ): Promise<VideoVariant> => {
+    ): Promise<VideoVariant & { dvmPubkey: string }> => {
       const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
 
       // Update progress with queue info
       setProgress(prev => ({
-        status: 'transcoding',
-        message: `Submitting ${resolution} transcode job...`,
+        status: dvm ? 'transcoding' : 'bidding',
+        message: dvm
+          ? `Submitting ${resolution} transcode job...`
+          : `Broadcasting ${resolution} transcode request...`,
         statusMessages: [
           ...prev.statusMessages,
-          { timestamp: Date.now(), message: `Submitting ${resolution} transcode job...` },
+          {
+            timestamp: Date.now(),
+            message: dvm
+              ? `Submitting ${resolution} transcode job...`
+              : `Broadcasting ${resolution} transcode request...`,
+          },
         ],
         queue: queueInfo,
       }))
 
       // Determine if we should use encryption (if signer supports NIP-04)
-      const canEncrypt = !!user?.signer.nip04
+      const canEncrypt = !!(dvm && user?.signer.nip04)
       let wasEncrypted = false
 
       let jobRequest: EventTemplate
 
-      if (canEncrypt) {
+      if (canEncrypt && dvm) {
         // Build encrypted request - put input and params in encrypted content
         const encryptedContent = buildDvmEncryptedContent(inputVideoUrl, 'mp4', resolution, codec)
         const encryptedJson = await user!.signer.nip04!.encrypt(
@@ -681,14 +750,13 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           console.log(`[DVM] Building encrypted ${resolution} request`)
         }
       } else {
-        // Build unencrypted request (fallback)
+        // Build unencrypted request (broadcast or fallback)
         jobRequest = {
           kind: DVM_REQUEST_KIND,
           content: '',
           created_at: nowInSecs(),
           tags: [
             ['i', inputVideoUrl, 'url'],
-            ['p', dvm.pubkey],
             ['param', 'mode', 'mp4'],
             ['param', 'resolution', resolution],
             ['param', 'codec', codec],
@@ -696,8 +764,14 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           ],
         }
 
+        if (dvm) {
+          jobRequest.tags.push(['p', dvm.pubkey])
+        }
+
         if (import.meta.env.DEV) {
-          console.log(`[DVM] Building unencrypted ${resolution} request (signer lacks NIP-04)`)
+          console.log(
+            `[DVM] Building unencrypted ${resolution} ${dvm ? 'directed' : 'broadcast'} request`
+          )
         }
       }
 
@@ -706,10 +780,56 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
       requestEventIdRef.current = signedRequest.id
 
-      // Persist state after successful publish
+      let selectedDvmPubkey = dvm?.pubkey
+
+      // Step 2: If broadcast, collect bids and approve one
+      if (!selectedDvmPubkey) {
+        setStatus('bidding')
+        setProgress(prev => ({
+          ...prev,
+          status: 'bidding',
+          message: 'Waiting for DVM bids...',
+          statusMessages: [
+            ...prev.statusMessages,
+            { timestamp: Date.now(), message: 'Waiting for DVM bids...' },
+          ],
+        }))
+
+        const bids = await collectBids(signedRequest.id)
+        if (bids.length === 0) {
+          throw new Error('No DVMs responded to the request')
+        }
+
+        // Pick best bid (first free one)
+        const freeBid = bids.find(b => b.amount === '0') || bids[0]
+        selectedDvmPubkey = freeBid.pubkey
+
+        if (import.meta.env.DEV) {
+          console.log('[DVM] Selected DVM from bids:', selectedDvmPubkey)
+        }
+
+        // Approve
+        await approveBid(signedRequest.id, selectedDvmPubkey!)
+
+        setStatus('transcoding')
+        setProgress(prev => ({
+          ...prev,
+          status: 'transcoding',
+          message: `Selected DVM ${selectedDvmPubkey!.substring(0, 8)}...`,
+          statusMessages: [
+            ...prev.statusMessages,
+            {
+              timestamp: Date.now(),
+              message: `Selected DVM ${selectedDvmPubkey!.substring(0, 8)}...`,
+            },
+          ],
+        }))
+      }
+
+      // Persist state after successful publish/selection
       const persistedState: PersistableTranscodeState = {
         requestEventId: signedRequest.id,
-        dvmPubkey: dvm.pubkey,
+        dvmPubkey: selectedDvmPubkey!,
         inputVideoUrl,
         originalDuration,
         startedAt: Date.now(),
@@ -747,7 +867,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
       const transcodedResult = await subscribeToDvmResponses(
         signedRequest.id,
-        dvm.pubkey,
+        selectedDvmPubkey!,
         originalDuration,
         resolution,
         wasEncrypted
@@ -781,9 +901,17 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
       const mirroredVideo = await mirrorTranscodedVideo(transcodedResult)
 
-      return mirroredVideo
+      return { ...mirroredVideo, dvmPubkey: selectedDvmPubkey! }
     },
-    [config.relays, user, subscribeToDvmResponses, mirrorTranscodedVideo, onStateChange]
+    [
+      config.relays,
+      user,
+      collectBids,
+      approveBid,
+      subscribeToDvmResponses,
+      mirrorTranscodedVideo,
+      onStateChange,
+    ]
   )
 
   /**
@@ -946,10 +1074,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           }))
 
           // Discover DVM and continue with remaining resolutions
-          const dvm = await discoverDvm()
-          if (!dvm) {
-            throw new Error('No DVM transcoding service found')
-          }
+          let selectedDvm: DvmHandlerInfo | undefined = undefined
 
           for (let i = currentIndex + 1; i < resolutionQueue.length; i++) {
             const resolution = resolutionQueue[i]
@@ -959,14 +1084,22 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               completed: [...completedResolutions],
             }
 
-            const video = await processResolution(
+            const videoResult = await processResolution(
               persistedState.inputVideoUrl,
               resolution,
-              dvm,
+              selectedDvm,
               persistedState.originalDuration,
               newQueueInfo
             )
 
+            if (!selectedDvm) {
+              selectedDvm = {
+                pubkey: videoResult.dvmPubkey,
+                createdAt: nowInSecs(),
+              }
+            }
+
+            const video = videoResult
             completedResolutions.push(resolution)
             setTranscodedVideo(video)
             onComplete?.(video)
@@ -1059,36 +1192,10 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       const completedResolutions: string[] = []
 
       try {
-        // Step 1: Discover DVM
-        setStatus('discovering')
-        setProgress({
-          status: 'discovering',
-          message: 'Finding transcoding service...',
-          statusMessages: [],
-          queue: {
-            resolutions,
-            currentIndex: 0,
-            completed: [],
-          },
-        })
-
-        const dvm = await discoverDvm()
-        if (!dvm) {
-          throw new Error('No DVM transcoding service found')
-        }
-
-        if (import.meta.env.DEV) {
-          console.log('[DVM] Found handler:', dvm)
-        }
-
-        // Check if cancelled
-        if (abortControllerRef.current?.signal.aborted) {
-          setStatus('idle')
-          return
-        }
-
         // Process each resolution sequentially
         setStatus('transcoding')
+
+        let selectedDvm: DvmHandlerInfo | undefined = undefined
 
         for (let i = 0; i < resolutions.length; i++) {
           const resolution = resolutions[i]
@@ -1099,13 +1206,23 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           }
 
           // Process this resolution
-          const mirroredVideo = await processResolution(
+          const videoResult = await processResolution(
             inputVideoUrl,
             resolution,
-            dvm,
+            selectedDvm,
             originalDuration,
             queueInfo
           )
+
+          // Remember the DVM for subsequent resolutions
+          if (!selectedDvm) {
+            selectedDvm = {
+              pubkey: videoResult.dvmPubkey,
+              createdAt: nowInSecs(),
+            }
+          }
+
+          const mirroredVideo = videoResult
 
           // Add to completed list
           completedResolutions.push(resolution)
@@ -1178,7 +1295,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }))
       }
     },
-    [user, discoverDvm, processResolution, onComplete, onAllComplete, onStateChange]
+    [user, processResolution, onComplete, onAllComplete, onStateChange]
   )
 
   /**

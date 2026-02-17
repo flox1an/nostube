@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react'
 import { useAppContext } from './useAppContext'
 import { relayPool } from '@/nostr/core'
 
-// NIP-89 handler info kind
-const HANDLER_INFO_KIND = 31990
-
 /**
  * Hook to check if a video transform DVM is available
  * Queries for NIP-89 handler announcements
@@ -49,7 +46,7 @@ export function useDvmAvailability(): {
     const sub = relayPool
       .request(readRelays, [
         {
-          kinds: [HANDLER_INFO_KIND],
+          kinds: [31990],
           '#k': ['5207'],
           '#d': ['video-transform-hls'],
           limit: 1,

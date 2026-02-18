@@ -22,7 +22,7 @@ import {
   type ReactNode,
 } from 'react'
 import { type NostrEvent, type EventTemplate } from 'nostr-tools'
-import type { UploadTask, TranscodeState } from '@/types/upload-manager'
+import type { UploadTask, TranscodeState, TranscodePhase } from '@/types/upload-manager'
 import type { UploadDraft, UploadDraftsData } from '@/types/upload-draft'
 import {
   getUploadTasks,
@@ -86,6 +86,15 @@ const UploadManagerContext = createContext<UploadManagerContextType | undefined>
  */
 function hasEncryptedTag(event: NostrEvent): boolean {
   return event.tags.some(t => t[0] === 'encrypted')
+}
+
+/**
+ * Detect the current transcode phase from a DVM feedback message.
+ * DVM sends "Transcoding..." during re-encoding and "Uploading..." when uploading results.
+ */
+function detectPhaseFromMessage(message?: string): TranscodePhase {
+  if (message && /^uploading/i.test(message)) return 'uploading'
+  return 'transcoding'
 }
 
 interface UploadManagerProviderProps {
@@ -769,11 +778,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                   const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
 
                   if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
+                    const phase = detectPhaseFromMessage(message)
                     // Update task state
                     updateTasksState(taskId, {
                       transcodeState: {
                         ...tasks.get(taskId)?.transcodeState,
                         status: 'transcoding',
+                        phase,
                         message: message || 'Processing...',
                         percentage,
                         eta,
@@ -1030,7 +1041,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         transcodeState: {
           ...tasks.get(taskId)?.transcodeState,
           status: 'mirroring',
+          phase: 'mirroring',
           message: `Copying ${resolution} to your servers...`,
+          percentage: undefined,
+          eta: undefined,
         } as TranscodeState,
       })
 

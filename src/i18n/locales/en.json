@@ -411,7 +411,11 @@
       "completeMessageMulti": "{{count}} versions have been added to your video.",
       "createMore": "Create More",
       "waitingForFeedback": "waiting for DVM feedback",
-      "mirroringDescription": "Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access."
+      "mirroringDescription": "Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access.",
+      "phaseReencoding": "Re-encoding",
+      "phaseUploading": "Uploading",
+      "phaseCopying": "Copying",
+      "waiting": "Waiting"
     },
     "origins": {
       "label": "External References",

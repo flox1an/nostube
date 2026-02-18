@@ -400,7 +400,11 @@
       "completeMessageMulti": "Se han añadido {{count}} versiones a tu video.",
       "createMore": "Crear más",
       "waitingForFeedback": "esperando respuesta DVM",
-      "mirroringDescription": "Sus nuevas versiones de vídeo se están copiando a sus servidores Blossom configurados para redundancia y un acceso global más rápido."
+      "mirroringDescription": "Sus nuevas versiones de vídeo se están copiando a sus servidores Blossom configurados para redundancia y un acceso global más rápido.",
+      "phaseReencoding": "Recodificando",
+      "phaseUploading": "Subiendo",
+      "phaseCopying": "Copiando",
+      "waiting": "Esperando"
     },
     "origins": {
       "label": "Referencias externas",

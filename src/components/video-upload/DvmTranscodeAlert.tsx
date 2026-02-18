@@ -248,7 +248,6 @@ export function DvmTranscodeAlert({
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
           {progress.message}
-          {progress.queue && <QueueStatus queue={progress.queue} />}
         </AlertDescription>
       </Alert>
     )
@@ -266,86 +265,46 @@ export function DvmTranscodeAlert({
           </span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
-          {progress.queue && <QueueStatus queue={progress.queue} />}
           <StatusLog messages={progress.statusMessages} />
         </AlertDescription>
       </Alert>
     )
   }
 
-  // Transcoding state
-  if (status === 'transcoding') {
+  // Active transcoding/mirroring state - show per-variant progress
+  if (status === 'transcoding' || status === 'mirroring') {
     const queue = progress.queue
-    const currentResolution = queue?.resolutions?.[queue?.currentIndex ?? 0]
-    const totalCount = queue?.resolutions?.length || 1
-    const currentNum = (queue?.currentIndex ?? 0) + 1
+    const resolutions = queue?.resolutions || []
+    const currentIndex = queue?.currentIndex ?? 0
+    const completed = queue?.completed || []
 
     return (
       <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
         <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
         <AlertTitle className="text-blue-800 dark:text-blue-200">
-          {totalCount > 1
-            ? t('upload.transcode.transcodingMulti', {
-                defaultValue: 'Resolution {{current}} of {{total}}: {{resolution}}',
-                current: currentNum,
-                total: totalCount,
-                resolution: currentResolution,
-              })
-            : t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
-          {progress.percentage === undefined && progress.eta === undefined && (
-            <span className="ml-1 text-sm text-blue-700 dark:text-blue-300">
-              (
-              {t('upload.transcode.waitingForFeedback', {
-                defaultValue: 'waiting for DVM feedback',
-              })}
+          {t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
+        </AlertTitle>
+        <AlertDescription className="text-blue-700 dark:text-blue-300">
+          <div className="divide-y divide-blue-200/50 dark:divide-blue-800/50">
+            {resolutions.map((resolution, index) => {
+              const isCompleted = completed.includes(resolution)
+              const isCurrent = index === currentIndex && !isCompleted
+              const isWaiting = index > currentIndex && !isCompleted
+
+              return (
+                <TranscodeVariantProgress
+                  key={resolution}
+                  resolution={resolution}
+                  isActive={isCurrent}
+                  isCompleted={isCompleted}
+                  isWaiting={isWaiting}
+                  phase={isCurrent ? progress.phase : undefined}
+                  percentage={isCurrent ? progress.percentage : undefined}
+                  eta={isCurrent ? progress.eta : undefined}
+                />
               )
-            </span>
-          )}
-        </AlertTitle>
-        <AlertDescription className="text-blue-700 dark:text-blue-300">
-          {progress.percentage !== undefined && (
-            <div className="space-y-1 mb-3">
-              <Progress value={progress.percentage} className="h-2" />
-              <p className="text-xs text-right">{progress.percentage}%</p>
-            </div>
-          )}
-          {progress.eta !== undefined && (
-            <p className="text-xs mb-3">
-              {t('upload.transcode.eta', {
-                defaultValue: 'Estimated time remaining: {{time}}',
-                time: formatEta(progress.eta),
-              })}
-            </p>
-          )}
-          {queue && <QueueStatus queue={queue} />}
-          <StatusLog messages={progress.statusMessages} />
-          <div className="mt-3">
-            <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
-              <X className="h-4 w-4 mr-2" />
-              {t('upload.transcode.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-          </div>
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
-  // Mirroring state
-  if (status === 'mirroring') {
-    return (
-      <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
-        <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
-        <AlertTitle className="text-blue-800 dark:text-blue-200">
-          {t('upload.transcode.mirroring', { defaultValue: 'Copying to your servers...' })}
-        </AlertTitle>
-        <AlertDescription className="text-blue-700 dark:text-blue-300">
-          <p className="mb-3">
-            {t('upload.transcode.mirroringDescription', {
-              defaultValue:
-                'Your new video versions are being copied to your configured Blossom servers for redundancy and faster global access.',
             })}
-          </p>
-          {progress.queue && <QueueStatus queue={progress.queue} />}
+          </div>
           <StatusLog messages={progress.statusMessages} />
           <div className="mt-3">
             <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
@@ -449,37 +408,107 @@ export function DvmTranscodeAlert({
   return null
 }
 
-/**
- * Component to display queue status with icons
- */
-function QueueStatus({
-  queue,
-}: {
-  queue: { resolutions?: string[]; currentIndex?: number; completed?: string[] }
-}) {
-  if (!queue.resolutions || queue.resolutions.length <= 1) {
-    return null
-  }
+type PhaseStep = 'transcoding' | 'uploading' | 'mirroring'
+
+const PHASE_ORDER: PhaseStep[] = ['transcoding', 'uploading', 'mirroring']
+
+function getPhaseIndex(phase?: PhaseStep): number {
+  if (!phase) return 0
+  return PHASE_ORDER.indexOf(phase)
+}
+
+interface VariantProgressProps {
+  resolution: string
+  isActive: boolean
+  isCompleted: boolean
+  isWaiting: boolean
+  phase?: PhaseStep
+  percentage?: number
+  eta?: number
+}
+
+function TranscodeVariantProgress({
+  resolution,
+  isActive,
+  isCompleted,
+  isWaiting,
+  phase,
+  percentage,
+  eta,
+}: VariantProgressProps) {
+  const { t } = useTranslation()
+
+  const phaseLabels = [
+    t('upload.transcode.phaseReencoding', { defaultValue: 'Re-encoding' }),
+    t('upload.transcode.phaseUploading', { defaultValue: 'Uploading' }),
+    t('upload.transcode.phaseCopying', { defaultValue: 'Copying' }),
+  ]
+
+  const activePhaseIndex = isActive ? getPhaseIndex(phase) : -1
 
   return (
-    <div className="flex flex-wrap gap-2 mb-3 text-xs">
-      {queue.resolutions.map((resolution, index) => {
-        const isCompleted = queue.completed?.includes(resolution) ?? false
-        const isCurrent = index === (queue.currentIndex ?? 0)
-        const isWaiting = index > (queue.currentIndex ?? 0)
+    <div className="py-2">
+      {/* Resolution label */}
+      <div className="text-sm font-medium mb-1.5">{resolution}</div>
 
-        return (
-          <span key={resolution} className="flex items-center gap-1">
-            {isCompleted && <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />}
-            {isCurrent && <Loader2 className="h-3 w-3 animate-spin" />}
-            {isWaiting && <Circle className="h-3 w-3 opacity-50" />}
-            <span className={isCompleted ? 'text-green-600 dark:text-green-400' : ''}>
-              {resolution}
-            </span>
-            {index < (queue.resolutions?.length ?? 0) - 1 && <span className="mx-1">•</span>}
-          </span>
-        )
-      })}
+      {/* Phase steps */}
+      <div className="flex items-center gap-1 mb-1.5">
+        {PHASE_ORDER.map((step, index) => {
+          const isStepComplete = isCompleted || (isActive && activePhaseIndex > index)
+          const isStepActive = isActive && activePhaseIndex === index
+          const isStepWaiting = isWaiting || (isActive && activePhaseIndex < index)
+
+          return (
+            <div key={step} className="flex items-center gap-1">
+              {index > 0 && (
+                <div
+                  className={`h-px w-4 ${isStepComplete ? 'bg-green-500 dark:bg-green-400' : 'bg-muted-foreground/30'}`}
+                />
+              )}
+              <div className="flex items-center gap-1">
+                {isStepComplete && (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 dark:text-green-400 shrink-0" />
+                )}
+                {isStepActive && (
+                  <Loader2 className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 animate-spin shrink-0" />
+                )}
+                {isStepWaiting && (
+                  <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                )}
+                <span
+                  className={`text-xs ${
+                    isStepComplete
+                      ? 'text-green-600 dark:text-green-400'
+                      : isStepActive
+                        ? 'text-blue-600 dark:text-blue-400 font-medium'
+                        : 'text-muted-foreground/50'
+                  }`}
+                >
+                  {phaseLabels[index]}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Progress bar for active variant */}
+      {isActive && percentage !== undefined && (
+        <div className="space-y-0.5">
+          <Progress value={percentage} className="h-1.5" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{percentage}%</span>
+            {eta !== undefined && <span>{formatEta(eta)}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Waiting label */}
+      {isWaiting && (
+        <p className="text-xs text-muted-foreground/50">
+          {t('upload.transcode.waiting', { defaultValue: 'Waiting' })}
+        </p>
+      )}
     </div>
   )
 }

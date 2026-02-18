@@ -23,8 +23,11 @@ export interface UploadProgress {
   totalChunks?: number
 }
 
+export type TranscodePhase = 'transcoding' | 'uploading' | 'mirroring'
+
 export interface TranscodeState {
   status: 'discovering' | 'bidding' | 'transcoding' | 'mirroring'
+  phase?: TranscodePhase
   requestEventId?: string
   dvmPubkey?: string
   inputVideoUrl?: string

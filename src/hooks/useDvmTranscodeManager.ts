@@ -31,6 +31,7 @@ export interface TranscodeProgress {
   message: string
   eta?: number
   percentage?: number
+  phase?: 'transcoding' | 'uploading' | 'mirroring'
   statusMessages: StatusMessage[]
   queue?: {
     resolutions: string[]
@@ -117,6 +118,7 @@ function mapTaskToProgress(task: UploadTask | undefined): TranscodeProgress {
     message: state.message || '',
     eta: state.eta,
     percentage: state.percentage,
+    phase: state.phase,
     statusMessages: [], // Manager doesn't track status messages individually
     queue: {
       resolutions: state.resolutionQueue || [],

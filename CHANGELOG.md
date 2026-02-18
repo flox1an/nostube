@@ -124,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Video player: fixed fullscreen button not working on iPad Pro; the player was always calling `webkitEnterFullscreen()` on the video element (which silently fails on iPad when triggered from a button click), even on iPadOS 16+ where the standard `requestFullscreen()` API is fully supported; now prefers `requestFullscreen` and only falls back to `webkitEnterFullscreen` on older iPhone/iPad; also added `webkitbeginfullscreen`/`webkitendfullscreen` event listeners on the video element and `webkitExitFullscreen`/`webkitDisplayingFullscreen` support so fullscreen state is tracked correctly when the webkit path is used (iPhone)
 - Upload: fixed DVM transcode "Create Additional Versions" showing already-transcoded resolutions as both strikethrough and checked; stale `selectedResolutions` state persisted after transcoding completed, causing re-encoding of existing versions on the next DVM call; now derives effective selections by filtering out `existingResolutions` during render (`DvmTranscodeAlert`)
 - Routing: fixed hashtag links in NoteContent and RichTextContent pointing to `/tags/<tag>` instead of `/tag/<tag>`, causing 404s; updated links and tests to match the actual route definition
 - UI: fixed origin badges vertically misaligned with tag badges on video page; added `items-center` to the tags/badges flex container for consistent vertical alignment

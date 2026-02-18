@@ -312,7 +312,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       }
 
       const signedApproval = await user.signer.signEvent(approvalEvent)
-      
+
       console.log('[DVM] Sending bid approval:', {
         requestEventId,
         dvmPubkey,
@@ -376,7 +376,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                       dvmPubkey,
                       nostrEvent.content
                     )
-                    
+
                     // Log the unencrypted event content
                     console.log('[DVM] Decrypted feedback event:', {
                       id: nostrEvent.id,
@@ -442,8 +442,19 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                     setProgress(prev => {
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
-                      if (lastMsg?.message === message && prev.percentage === percentage && prev.phase === phase) {
-                        return { ...prev, status: 'transcoding', message: message || '', eta, percentage, phase }
+                      if (
+                        lastMsg?.message === message &&
+                        prev.percentage === percentage &&
+                        prev.phase === phase
+                      ) {
+                        return {
+                          ...prev,
+                          status: 'transcoding',
+                          message: message || '',
+                          eta,
+                          percentage,
+                          phase,
+                        }
                       }
                       return {
                         status: 'transcoding',
@@ -453,7 +464,11 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                         phase,
                         statusMessages: [
                           ...prev.statusMessages,
-                          { timestamp: Date.now(), message: message || 'Processing...', percentage },
+                          {
+                            timestamp: Date.now(),
+                            message: message || 'Processing...',
+                            percentage,
+                          },
                         ],
                       }
                     })

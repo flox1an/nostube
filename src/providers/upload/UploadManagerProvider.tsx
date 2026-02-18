@@ -829,10 +829,18 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                     const currentTask = tasks.get(taskId)
                     const prevMessages = currentTask?.transcodeState?.statusMessages || []
                     const lastMsg = prevMessages[prevMessages.length - 1]
-                    
-                    const newMessages = lastMsg?.message === message
-                      ? prevMessages
-                      : [...prevMessages, { timestamp: Date.now(), message: message || 'Processing...', percentage }]
+
+                    const newMessages =
+                      lastMsg?.message === message
+                        ? prevMessages
+                        : [
+                            ...prevMessages,
+                            {
+                              timestamp: Date.now(),
+                              message: message || 'Processing...',
+                              percentage,
+                            },
+                          ]
 
                     updateTasksState(taskId, {
                       transcodeState: {
@@ -1360,7 +1368,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             ...state,
             status: 'transcoding',
             message: resumeMsg,
-            statusMessages: [...(state.statusMessages || []), { timestamp: Date.now(), message: resumeMsg }],
+            statusMessages: [
+              ...(state.statusMessages || []),
+              { timestamp: Date.now(), message: resumeMsg },
+            ],
           },
         })
 
@@ -1448,6 +1459,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                 ...currentTask?.transcodeState,
                 status: 'mirroring',
                 message: mirrorMsg,
+                resolutionQueue: currentTask?.transcodeState?.resolutionQueue || resolutionQueue,
+                completedResolutions:
+                  currentTask?.transcodeState?.completedResolutions || completedResolutions,
                 statusMessages: [
                   ...(currentTask?.transcodeState?.statusMessages || []),
                   { timestamp: Date.now(), message: mirrorMsg },

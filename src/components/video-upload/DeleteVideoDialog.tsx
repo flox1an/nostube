@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -18,7 +17,7 @@ interface DeleteVideoDialogProps {
   onOpenChange: (open: boolean) => void
   video: VideoVariant | null
   onDeleteFromFormOnly: () => void
-  onDeleteWithBlobs: () => Promise<unknown>
+  onDeleteWithBlobs: () => void
 }
 
 export function DeleteVideoDialog({
@@ -29,19 +28,6 @@ export function DeleteVideoDialog({
   onDeleteWithBlobs,
 }: DeleteVideoDialogProps) {
   const { t } = useTranslation()
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const handleDeleteWithBlobs = async () => {
-    setIsDeleting(true)
-    try {
-      await onDeleteWithBlobs()
-      onOpenChange(false)
-    } catch (error) {
-      console.error('Failed to delete video blobs:', error)
-    } finally {
-      setIsDeleting(false)
-    }
-  }
 
   const handleDeleteFromFormOnly = () => {
     onDeleteFromFormOnly()
@@ -79,14 +65,11 @@ export function DeleteVideoDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-col gap-2">
-          <AlertDialogCancel disabled={isDeleting}>
-            {t('common.cancel', { defaultValue: 'Cancel' })}
-          </AlertDialogCancel>
+          <AlertDialogCancel>{t('common.cancel', { defaultValue: 'Cancel' })}</AlertDialogCancel>
           {hasBlobs && (
             <Button
               variant="outline"
               onClick={handleDeleteFromFormOnly}
-              disabled={isDeleting}
               className="w-full sm:w-auto"
             >
               {t('upload.deleteVideoDialog.removeFromForm', {
@@ -94,17 +77,12 @@ export function DeleteVideoDialog({
               })}
             </Button>
           )}
-          <AlertDialogAction
-            onClick={hasBlobs ? handleDeleteWithBlobs : handleDeleteFromFormOnly}
-            disabled={isDeleting}
-          >
-            {isDeleting
-              ? t('common.deleting', { defaultValue: 'Deleting...' })
-              : hasBlobs
-                ? t('upload.deleteVideoDialog.deleteFromServers', {
-                    defaultValue: 'Delete from Servers',
-                  })
-                : t('upload.deleteVideoDialog.remove', { defaultValue: 'Remove' })}
+          <AlertDialogAction onClick={hasBlobs ? onDeleteWithBlobs : handleDeleteFromFormOnly}>
+            {hasBlobs
+              ? t('upload.deleteVideoDialog.deleteFromServers', {
+                  defaultValue: 'Delete from Servers',
+                })
+              : t('upload.deleteVideoDialog.remove', { defaultValue: 'Remove' })}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

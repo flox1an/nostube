@@ -11,6 +11,7 @@ interface VideoVariantsSummaryProps {
   videos: VideoVariant[]
   onRemove?: (index: number) => void
   onPreview?: (video: VideoVariant) => void
+  deletingIndex?: number | null
 }
 
 function getCodecWarning(videoCodec?: string): 'error' | 'warning' | 'success' | null {
@@ -33,7 +34,12 @@ function getCodecWarning(videoCodec?: string): 'error' | 'warning' | 'success' |
   return null
 }
 
-export function VideoVariantsSummary({ videos, onRemove, onPreview }: VideoVariantsSummaryProps) {
+export function VideoVariantsSummary({
+  videos,
+  onRemove,
+  onPreview,
+  deletingIndex,
+}: VideoVariantsSummaryProps) {
   const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -154,7 +160,12 @@ export function VideoVariantsSummary({ videos, onRemove, onPreview }: VideoVaria
 
       {/* Expanded details */}
       {isExpanded && (
-        <VideoVariantsTable videos={videos} onRemove={onRemove} onPreview={onPreview} />
+        <VideoVariantsTable
+          videos={videos}
+          onRemove={onRemove}
+          onPreview={onPreview}
+          deletingIndex={deletingIndex}
+        />
       )}
     </div>
   )

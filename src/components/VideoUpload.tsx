@@ -106,6 +106,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     previewEvent,
     videoToDelete,
     setVideoToDelete,
+    deletingIndex,
     subtitles,
     subtitleUploading,
     metadataDetected,
@@ -547,7 +548,11 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 {/* Video variants table */}
                 {uploadInfo.videos.length > 0 && (
                   <div className="space-y-4">
-                    <VideoVariantsTable videos={uploadInfo.videos} onRemove={handleRemoveVideo} />
+                    <VideoVariantsTable
+                      videos={uploadInfo.videos}
+                      onRemove={handleRemoveVideo}
+                      deletingIndex={deletingIndex}
+                    />
 
                     {/* DVM Transcode Alert - shown for high-res or incompatible videos */}
                     {(uploadState === 'finished' && uploadInfo.videos[0]) ||

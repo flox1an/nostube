@@ -237,6 +237,9 @@ export function useVideoUpload(
     video: VideoVariant
   } | null>(null)
 
+  // Index of the video variant currently being deleted from servers
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
+
   // Use ref to store callback to prevent infinite loop
   const onDraftChangeRef = useRef(onDraftChange)
 
@@ -652,25 +655,34 @@ export function useVideoUpload(
 
     const { video, index } = videoToDelete
 
-    // If removing a 720p video, clear the DVM transcode state
-    if (video.qualityLabel === '720p' && onDraftChangeRef.current) {
-      onDraftChangeRef.current({ dvmTranscodeState: undefined })
-    }
-
-    // Delete all blobs from their servers
-    const allBlobs = [...video.uploadedBlobs, ...video.mirroredBlobs]
-    const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
-      allBlobs,
-      async draft => await user.signer.signEvent(draft)
-    )
-
-    // Remove video from form state
-    setUploadInfo(ui => ({
-      videos: ui.videos.filter((_, i) => i !== index),
-    }))
+    // Close the dialog immediately and show spinner on the table row
     setVideoToDelete(null)
+    setDeletingIndex(index)
 
-    return { successful: totalSuccessful, failed: totalFailed }
+    try {
+      // If removing a 720p video, clear the DVM transcode state
+      if (video.qualityLabel === '720p' && onDraftChangeRef.current) {
+        onDraftChangeRef.current({ dvmTranscodeState: undefined })
+      }
+
+      // Delete all blobs from their servers
+      const allBlobs = [...video.uploadedBlobs, ...video.mirroredBlobs]
+      const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+        allBlobs,
+        async draft => await user.signer.signEvent(draft)
+      )
+
+      // Remove video from form state
+      setUploadInfo(ui => ({
+        videos: ui.videos.filter((_, i) => i !== index),
+      }))
+
+      return { successful: totalSuccessful, failed: totalFailed }
+    } catch (error) {
+      console.error('Failed to delete video blobs:', error)
+    } finally {
+      setDeletingIndex(null)
+    }
   }
 
   // Handler to add a transcoded video variant (from DVM)
@@ -1126,6 +1138,7 @@ export function useVideoUpload(
     previewEvent,
     videoToDelete,
     setVideoToDelete,
+    deletingIndex,
     subtitles,
     subtitleUploading,
     metadataDetected,

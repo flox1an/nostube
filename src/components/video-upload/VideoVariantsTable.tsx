@@ -1,7 +1,16 @@
 import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Trash2, Play, AlertTriangle, CheckCircle, Info, Copy, LucideBookUp } from 'lucide-react'
+import {
+  Trash2,
+  Play,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Copy,
+  LucideBookUp,
+  Loader2,
+} from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -19,6 +28,7 @@ interface VideoVariantsTableProps {
   videos: VideoVariant[]
   onRemove?: (index: number) => void
   onPreview?: (video: VideoVariant) => void
+  deletingIndex?: number | null
 }
 
 function getCodecWarning(
@@ -56,7 +66,12 @@ function getCodecWarning(
   return null
 }
 
-export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariantsTableProps) {
+export function VideoVariantsTable({
+  videos,
+  onRemove,
+  onPreview,
+  deletingIndex,
+}: VideoVariantsTableProps) {
   const { t } = useTranslation()
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
@@ -227,10 +242,15 @@ export function VideoVariantsTable({ videos, onRemove, onPreview }: VideoVariant
                             variant="ghost"
                             size="sm"
                             onClick={() => onRemove(index)}
+                            disabled={deletingIndex != null}
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                             title={t('upload.videoTable.remove')}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {deletingIndex === index ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                         )}
                       </div>

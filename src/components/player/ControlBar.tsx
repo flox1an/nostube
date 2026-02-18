@@ -125,6 +125,10 @@ export const ControlBar = memo(function ControlBar({
 }: ControlBarProps) {
   // Use hook directly for reliable mobile detection
   const isMobile = useIsMobile()
+  // Theater mode is useful on tablets (iPad) — only suppress it on narrow phone screens.
+  // useIsMobile returns true for iPad due to user-agent detection, so we check viewport
+  // width separately here instead of reusing isMobile for this specific condition.
+  const isPhoneScreen = window.matchMedia('(max-width: 767px)').matches
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
@@ -210,8 +214,8 @@ export const ControlBar = memo(function ControlBar({
             onToggleLoop={onToggleLoop}
           />
 
-          {/* Theater mode button - hidden in fullscreen */}
-          {!isMobile && !isFullscreen && onToggleCinemaMode && (
+          {/* Theater mode button - hidden in fullscreen and on narrow phone screens */}
+          {!isPhoneScreen && !isFullscreen && onToggleCinemaMode && (
             <ControlButton
               onClick={onToggleCinemaMode}
               icon={<MoveHorizontal className="w-5 h-5" />}

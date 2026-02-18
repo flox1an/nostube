@@ -456,9 +456,21 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement)
     }
+    // webkitbeginfullscreen / webkitendfullscreen fire on the video element when
+    // webkitEnterFullscreen() is used (iPhone, older iPad) — standard fullscreenchange
+    // does NOT fire in that path, so we need these to keep isFullscreen in sync.
+    const handleWebkitBeginFullscreen = () => setIsFullscreen(true)
+    const handleWebkitEndFullscreen = () => setIsFullscreen(false)
 
+    const video = videoRef.current
     document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    video?.addEventListener('webkitbeginfullscreen', handleWebkitBeginFullscreen)
+    video?.addEventListener('webkitendfullscreen', handleWebkitEndFullscreen)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      video?.removeEventListener('webkitbeginfullscreen', handleWebkitBeginFullscreen)
+      video?.removeEventListener('webkitendfullscreen', handleWebkitEndFullscreen)
+    }
   }, [])
 
   const enterFullscreen = useCallback(async () => {
@@ -467,17 +479,22 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (!container || document.fullscreenElement) return
 
     try {
-      // iOS Safari doesn't support Fullscreen API on containers
-      // Use webkit fullscreen on video element instead
+      // Prefer standard Fullscreen API — supported on desktop, iPad (iPadOS 16+), and modern browsers.
+      // webkitEnterFullscreen exists on iPad too but silently fails when triggered from a button
+      // click (requires gesture on the video element itself), so we only use it as a last resort
+      // for older iPhone/iPad where requestFullscreen is unavailable.
+      if (container.requestFullscreen) {
+        await container.requestFullscreen()
+        return
+      }
+
+      // Fallback: iPhone and older iPad where the standard API is not available
       const videoEl = video as HTMLVideoElement & {
         webkitEnterFullscreen?: () => void
       }
       if (videoEl?.webkitEnterFullscreen) {
         videoEl.webkitEnterFullscreen()
-        return
       }
-
-      await container.requestFullscreen()
     } catch (err) {
       if (import.meta.env.DEV) {
         console.log('Fullscreen error:', err)
@@ -486,10 +503,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const exitFullscreen = useCallback(async () => {
-    if (!document.fullscreenElement) return
-
     try {
-      await document.exitFullscreen()
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+        return
+      }
+      // Handle exit for webkit fullscreen path (iPhone, older iPad)
+      const videoEl = videoRef.current as HTMLVideoElement & {
+        webkitExitFullscreen?: () => void
+      }
+      videoEl?.webkitExitFullscreen?.()
     } catch (err) {
       if (import.meta.env.DEV) {
         console.log('Exit fullscreen error:', err)
@@ -498,7 +521,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
-    if (document.fullscreenElement) {
+    const videoEl = videoRef.current as HTMLVideoElement & {
+      webkitDisplayingFullscreen?: boolean
+    }
+    if (document.fullscreenElement || videoEl?.webkitDisplayingFullscreen) {
       await exitFullscreen()
     } else {
       await enterFullscreen()

@@ -25,6 +25,12 @@ export interface UploadProgress {
 
 export type TranscodePhase = 'transcoding' | 'uploading' | 'mirroring'
 
+export interface StatusMessage {
+  timestamp: number
+  message: string
+  percentage?: number
+}
+
 export interface TranscodeState {
   status: 'discovering' | 'bidding' | 'transcoding' | 'mirroring'
   phase?: TranscodePhase
@@ -39,6 +45,7 @@ export interface TranscodeState {
   percentage?: number
   eta?: number
   message?: string
+  statusMessages: StatusMessage[]
   // Completed video variants (persisted for delivery on remount)
   completedVideos?: Array<{
     url: string

@@ -119,7 +119,7 @@ function mapTaskToProgress(task: UploadTask | undefined): TranscodeProgress {
     eta: state.eta,
     percentage: state.percentage,
     phase: state.phase,
-    statusMessages: [], // Manager doesn't track status messages individually
+    statusMessages: state.statusMessages || [],
     queue: {
       resolutions: state.resolutionQueue || [],
       currentIndex: currentIndex >= 0 ? currentIndex : 0,

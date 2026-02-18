@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
-import { relayPool } from '@/nostr/core'
+import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import { type EventTemplate, type NostrEvent } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
 import { type BlobDescriptor } from 'blossom-client-sdk'
@@ -20,6 +20,7 @@ import {
 import { extractBlossomHash } from '@/utils/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { Subscription } from 'rxjs'
+import { useMemo } from 'react'
 
 // DVM kinds for video transform
 const DVM_REQUEST_KIND = 5207
@@ -68,6 +69,7 @@ export interface TranscodeProgress {
   message: string
   eta?: number // seconds remaining
   percentage?: number
+  phase?: 'transcoding' | 'uploading' | 'mirroring'
   statusMessages: StatusMessage[]
   // Multi-resolution queue info
   queue?: {
@@ -75,6 +77,18 @@ export interface TranscodeProgress {
     currentIndex: number
     completed: string[]
   }
+}
+
+/**
+ * Detect the current transcode phase from a DVM feedback message.
+ * DVM sends "Transcoding..." during re-encoding and "Uploading..." when uploading results.
+ */
+function detectPhaseFromMessage(message?: string): 'transcoding' | 'uploading' | 'mirroring' {
+  if (!message) return 'transcoding'
+  const lower = message.toLowerCase()
+  if (lower.startsWith('uploading')) return 'uploading'
+  if (lower.startsWith('transcoding') || lower.startsWith('re-encoding')) return 'transcoding'
+  return 'transcoding'
 }
 
 export interface UseDvmTranscodeOptions {
@@ -114,7 +128,7 @@ function hasEncryptedTag(event: NostrEvent): boolean {
 export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTranscodeResult {
   const { onComplete, onAllComplete, onStateChange } = options
   const { user } = useCurrentUser()
-  const { config } = useAppContext()
+  const { config, relayOverride } = useAppContext()
   const [status, setStatus] = useState<TranscodeStatus>('idle')
   const [progress, setProgress] = useState<TranscodeProgress>({
     status: 'idle',
@@ -129,6 +143,15 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
   const requestEventIdRef = useRef<string | null>(null)
   const currentStateRef = useRef<PersistableTranscodeState | null>(null)
 
+  // Combined relays for DVM tracking (read + write + override + defaults)
+  const dvmRelays = useMemo(() => {
+    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+    const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+    const combined = new Set([...readRelays, ...writeRelays, ...DEFAULT_RELAYS])
+    if (relayOverride) combined.add(relayOverride)
+    return Array.from(combined)
+  }, [config.relays, relayOverride])
+
   // Cleanup subscriptions on unmount
   useEffect(() => {
     return () => {
@@ -141,9 +164,8 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
    * Discover available DVM handlers for video transform
    */
   const discoverDvm = useCallback(async (): Promise<DvmHandlerInfo | null> => {
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-    if (readRelays.length === 0) {
-      throw new Error('No read relays configured')
+    if (dvmRelays.length === 0) {
+      throw new Error('No relays configured')
     }
 
     // Use a custom promise to handle collecting multiple DVM events and then selecting the newest
@@ -165,7 +187,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       }, 5000) // 5 second timeout for DVM discovery
 
       sub = relayPool
-        .request(readRelays, [
+        .request(dvmRelays, [
           {
             kinds: [31990],
             '#k': ['5207'],
@@ -200,6 +222,12 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               about,
               createdAt: nostrEvent.created_at, // Capture created_at for sorting
             })
+
+            console.log('[DVM] Discovered DVM handler:', {
+              pubkey: nostrEvent.pubkey,
+              name,
+              about,
+            })
           },
           error: err => {
             clearTimeout(timer)
@@ -217,19 +245,17 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           },
         })
     })
-  }, [config.relays])
+  }, [dvmRelays])
 
   /**
    * Collect bids for a job request
    */
   const collectBids = useCallback(
     async (requestEventId: string, timeoutMs: number = 5000): Promise<DvmBid[]> => {
-      const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
       return new Promise(resolve => {
         const bids: DvmBid[] = []
         const sub = relayPool
-          .subscription(readRelays, [
+          .subscription(dvmRelays, [
             {
               kinds: [DVM_FEEDBACK_KIND],
               '#e': [requestEventId],
@@ -238,6 +264,16 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           .subscribe({
             next: event => {
               if (typeof event === 'string') return
+              const nostrEvent = event as NostrEvent
+
+              // Log the feedback event (bids are usually unencrypted)
+              console.log('[DVM] Bid feedback event:', {
+                id: nostrEvent.id,
+                pubkey: nostrEvent.pubkey,
+                content: nostrEvent.content,
+                tags: nostrEvent.tags,
+              })
+
               const bid = parseDvmBid(event)
               if (bid) {
                 bids.push(bid)
@@ -251,7 +287,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }, timeoutMs)
       })
     },
-    [config.relays]
+    [dvmRelays]
   )
 
   /**
@@ -276,6 +312,13 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       }
 
       const signedApproval = await user.signer.signEvent(approvalEvent)
+      
+      console.log('[DVM] Sending bid approval:', {
+        requestEventId,
+        dvmPubkey,
+        tags: signedApproval.tags,
+      })
+
       await relayPool.publish(writeRelays, signedApproval)
       return signedApproval
     },
@@ -294,8 +337,6 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       requestedResolution?: string,
       wasEncrypted: boolean = false
     ): Promise<VideoVariant> => {
-      const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(
           () => {
@@ -306,7 +347,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         ) // 10 minute timeout
 
         subscriptionRef.current = relayPool
-          .subscription(readRelays, [
+          .subscription(dvmRelays, [
             {
               kinds: [DVM_FEEDBACK_KIND, DVM_RESULT_KIND],
               authors: [dvmPubkey],
@@ -318,32 +359,32 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               if (typeof event === 'string') return // EOSE
 
               const nostrEvent = event as NostrEvent
+              const currentUser = user // user from outer scope
 
               if (nostrEvent.kind === DVM_FEEDBACK_KIND) {
                 // Handle feedback - check if encrypted
                 const isEncrypted = hasEncryptedTag(nostrEvent)
 
-                if (import.meta.env.DEV) {
-                  console.log('[DVM] Received feedback event:', {
-                    isEncrypted,
-                    wasEncrypted,
-                    hasNip04: !!user?.signer.nip04,
-                    contentPreview: nostrEvent.content.substring(0, 100),
-                    tags: nostrEvent.tags,
-                  })
-                }
-
                 let feedbackStatus: string | undefined
                 let message: string | undefined
                 let eta: number | undefined
 
-                if (isEncrypted && wasEncrypted && user?.signer.nip04) {
+                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
                   // Decrypt the status content
                   try {
-                    const decrypted = await user.signer.nip04.decrypt(dvmPubkey, nostrEvent.content)
-                    if (import.meta.env.DEV) {
-                      console.log('[DVM] Decrypted feedback content:', decrypted)
-                    }
+                    const decrypted = await currentUser.signer.nip04.decrypt(
+                      dvmPubkey,
+                      nostrEvent.content
+                    )
+                    
+                    // Log the unencrypted event content
+                    console.log('[DVM] Decrypted feedback event:', {
+                      id: nostrEvent.id,
+                      pubkey: nostrEvent.pubkey,
+                      content: decrypted,
+                      tags: nostrEvent.tags,
+                    })
+
                     const parsed = parseDvmEncryptedStatus(decrypted)
                     if (parsed) {
                       feedbackStatus = parsed.status
@@ -363,6 +404,14 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                     }
                   }
                 } else {
+                  // Log the unencrypted event
+                  console.log('[DVM] Feedback event:', {
+                    id: nostrEvent.id,
+                    pubkey: nostrEvent.pubkey,
+                    content: nostrEvent.content,
+                    tags: nostrEvent.tags,
+                  })
+
                   // Parse from tags (unencrypted)
                   const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
                   if (statusTag) {
@@ -379,24 +428,32 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                 }
 
                 if (feedbackStatus) {
-                  // Extract percentage from message if present
-                  const percentMatch = message?.match(/(\d+)%/)
-                  const percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
+                  // Extract percentage from progress tag first, then fallback to message regex
+                  const progressTag = nostrEvent.tags.find(t => t[0] === 'progress')
+                  let percentage = progressTag?.[1] ? parseInt(progressTag[1], 10) : undefined
 
-                  if (feedbackStatus === 'processing') {
+                  if (percentage === undefined) {
+                    const percentMatch = message?.match(/(\d+)%/)
+                    percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
+                  }
+
+                  if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
+                    const phase = detectPhaseFromMessage(message)
                     setProgress(prev => {
                       // Skip duplicate consecutive messages
                       const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
-                      if (lastMsg?.message === message) {
-                        return { ...prev, status: 'transcoding', message: message || '', eta }
+                      if (lastMsg?.message === message && prev.percentage === percentage && prev.phase === phase) {
+                        return { ...prev, status: 'transcoding', message: message || '', eta, percentage, phase }
                       }
                       return {
                         status: 'transcoding',
                         message: message || 'Processing...',
                         eta,
+                        percentage,
+                        phase,
                         statusMessages: [
                           ...prev.statusMessages,
-                          { timestamp: Date.now(), message: message || 'Processing...' },
+                          { timestamp: Date.now(), message: message || 'Processing...', percentage },
                         ],
                       }
                     })
@@ -404,34 +461,6 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                     clearTimeout(timeout)
                     subscriptionRef.current?.unsubscribe()
                     reject(new Error(message || 'DVM processing error'))
-                  } else if (feedbackStatus === 'partial') {
-                    setProgress(prev => {
-                      // Skip duplicate consecutive messages
-                      const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
-                      if (lastMsg?.message === message) {
-                        return {
-                          ...prev,
-                          status: 'transcoding',
-                          message: message || '',
-                          percentage,
-                          eta,
-                        }
-                      }
-                      return {
-                        status: 'transcoding',
-                        message: message || 'Processing...',
-                        percentage,
-                        eta,
-                        statusMessages: [
-                          ...prev.statusMessages,
-                          {
-                            timestamp: Date.now(),
-                            message: message || 'Processing...',
-                            percentage,
-                          },
-                        ],
-                      }
-                    })
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {
@@ -442,14 +471,33 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
                 let resultContent = nostrEvent.content
                 const isEncrypted = hasEncryptedTag(nostrEvent)
 
-                if (isEncrypted && wasEncrypted && user?.signer.nip04) {
+                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
                   // Decrypt the result content
                   try {
-                    resultContent = await user.signer.nip04.decrypt(dvmPubkey, nostrEvent.content)
+                    resultContent = await currentUser.signer.nip04.decrypt(
+                      dvmPubkey,
+                      nostrEvent.content
+                    )
+
+                    // Log the unencrypted result
+                    console.log('[DVM] Decrypted result event:', {
+                      id: nostrEvent.id,
+                      pubkey: nostrEvent.pubkey,
+                      content: resultContent,
+                      tags: nostrEvent.tags,
+                    })
                   } catch {
                     reject(new Error('Failed to decrypt DVM result'))
                     return
                   }
+                } else {
+                  // Log the unencrypted result
+                  console.log('[DVM] Result event:', {
+                    id: nostrEvent.id,
+                    pubkey: nostrEvent.pubkey,
+                    content: nostrEvent.content,
+                    tags: nostrEvent.tags,
+                  })
                 }
 
                 const result = parseDvmResultContent(resultContent)
@@ -500,7 +548,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           })
       })
     },
-    [config.relays, user]
+    [dvmRelays, user]
   )
 
   /**
@@ -508,8 +556,6 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
    */
   const queryForExistingResult = useCallback(
     async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
-      const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
       return new Promise(resolve => {
         let found = false
         const timeout = setTimeout(() => {
@@ -520,7 +566,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }, 5000)
 
         const sub = relayPool
-          .request(readRelays, [
+          .request(dvmRelays, [
             {
               kinds: [DVM_RESULT_KIND],
               authors: [dvmPubkey],
@@ -534,7 +580,16 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
               found = true
               clearTimeout(timeout)
               sub.unsubscribe()
-              resolve(event as NostrEvent)
+
+              const nostrEvent = event as NostrEvent
+              console.log('[DVM] Found existing result event:', {
+                id: nostrEvent.id,
+                pubkey: nostrEvent.pubkey,
+                content: nostrEvent.content,
+                tags: nostrEvent.tags,
+              })
+
+              resolve(nostrEvent)
             },
             complete: () => {
               if (!found) {
@@ -545,7 +600,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           })
       })
     },
-    [config.relays]
+    [dvmRelays]
   )
 
   /**
@@ -755,9 +810,11 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }
         wasEncrypted = true
 
-        if (import.meta.env.DEV) {
-          console.log(`[DVM] Building encrypted ${resolution} request`)
-        }
+        console.log('[DVM] Sending encrypted transcode request:', {
+          resolution,
+          dvm: dvm.pubkey,
+          unencryptedContent: encryptedContent,
+        })
       } else {
         // Build unencrypted request (broadcast or fallback)
         jobRequest = {
@@ -778,11 +835,11 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           jobRequest.tags.push(['p', dvm.pubkey])
         }
 
-        if (import.meta.env.DEV) {
-          console.log(
-            `[DVM] Building unencrypted ${resolution} ${dvm ? 'directed' : 'broadcast'} request`
-          )
-        }
+        console.log('[DVM] Sending unencrypted transcode request:', {
+          resolution,
+          dvm: dvm?.pubkey || 'broadcast',
+          tags: jobRequest.tags,
+        })
       }
 
       const signedRequest = await user!.signer.signEvent(jobRequest)
@@ -902,6 +959,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       setProgress(prev => ({
         status: 'mirroring',
         message: `Copying ${resolution} to your servers...`,
+        phase: 'mirroring',
         statusMessages: [
           ...prev.statusMessages,
           { timestamp: Date.now(), message: `Copying ${resolution} to your servers...` },
@@ -997,6 +1055,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           setProgress(prev => ({
             status: 'mirroring',
             message: `Copying ${currentResolution} to your servers...`,
+            phase: 'mirroring',
             statusMessages: [
               ...prev.statusMessages,
               {
@@ -1049,6 +1108,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           setProgress(prev => ({
             status: 'mirroring',
             message: `Copying ${currentResolution} to your servers...`,
+            phase: 'mirroring',
             statusMessages: [
               ...prev.statusMessages,
               { timestamp: Date.now(), message: `Copying ${currentResolution} to your servers...` },

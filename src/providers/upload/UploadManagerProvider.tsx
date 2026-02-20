@@ -61,6 +61,7 @@ import {
   type TranscodeCodec,
 } from '@/lib/dvm-utils'
 import { extractBlossomHash } from '@/utils/video-event'
+import { getTrackedDvms } from '@/hooks/useDvmTracker'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BlobDescriptor } from 'blossom-client-sdk'
@@ -1200,8 +1201,33 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       const completedResolutions: string[] = []
 
       try {
-        // Process each resolution
+        // Pre-select a DVM from the background tracker if available (skips bidding phase)
         let selectedDvm: DvmHandlerInfo | undefined = undefined
+        const trackedDvms = getTrackedDvms()
+        if (trackedDvms.size > 0) {
+          let best:
+            | { pubkey: string; name?: string; about?: string; lastSeenAt: number }
+            | undefined
+          for (const dvm of trackedDvms.values()) {
+            if (!best || dvm.lastSeenAt > best.lastSeenAt) {
+              best = dvm
+            }
+          }
+          if (best) {
+            selectedDvm = {
+              pubkey: best.pubkey,
+              name: best.name,
+              about: best.about,
+              createdAt: best.lastSeenAt,
+            }
+            if (import.meta.env.DEV) {
+              console.log('[UploadManager] Using pre-tracked DVM:', {
+                pubkey: best.pubkey,
+                name: best.name,
+              })
+            }
+          }
+        }
 
         for (let i = 0; i < resolutions.length; i++) {
           const resolution = resolutions[i]

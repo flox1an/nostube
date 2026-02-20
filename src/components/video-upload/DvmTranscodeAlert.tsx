@@ -7,7 +7,7 @@ import {
   type TranscodeStatus,
   type StatusMessage,
 } from '@/hooks/useDvmTranscodeManager'
-import { useDvmAvailability } from '@/hooks/useDvmAvailability'
+import { useDvmTracker } from '@/hooks/useDvmTracker'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
 import { shouldOfferTranscode, AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
@@ -48,7 +48,7 @@ export function DvmTranscodeAlert({
   const hasResumedRef = useRef(false)
 
   // Check if a DVM is available (only check if not resuming)
-  const { isAvailable: isDvmAvailable, isLoading: isDvmLoading } = useDvmAvailability()
+  const { isDvmAvailable, isLoading: isDvmLoading } = useDvmTracker()
 
   // Use the manager-backed hook for background transcoding
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =

@@ -125,6 +125,16 @@ export interface DvmHandlerInfo {
 }
 
 /**
+ * Tracked DVM with activity timestamp for availability tracking
+ */
+export interface TrackedDvm {
+  pubkey: string
+  name?: string
+  about?: string
+  lastSeenAt: number // unix timestamp of most recent event from this DVM
+}
+
+/**
  * DVM bid from kind:7000 status event
  */
 export interface DvmBid {

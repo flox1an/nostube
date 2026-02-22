@@ -6,6 +6,7 @@ import { getInvoiceAmount } from '@/lib/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'
 import { createReactionsLoader } from 'applesauce-loaders/loaders'
 import { combineRelays } from '@/lib/utils'
+import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
 // Popular relays that typically have zap receipts
@@ -182,6 +183,17 @@ export function useEventStats({
 
   // ============ ZAP LOADING ============
 
+  // Collect all known event IDs (current + old replaced ones) for zap queries
+  const allEventIds = useMemo(() => {
+    const ids = [eventId]
+    if (videoAddress) {
+      for (const id of getReplacedEventIds(videoAddress)) {
+        if (!ids.includes(id)) ids.push(id)
+      }
+    }
+    return ids
+  }, [eventId, videoAddress])
+
   // Fetch zap receipts from relays
   // Query by both #e (event ID) and #a (address) for addressable events
   useEffect(() => {
@@ -189,7 +201,7 @@ export function useEventStats({
 
     // Build filters for both event ID and address (for addressable events)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filters: any[] = [{ kinds: [9735], '#e': [eventId] }]
+    const filters: any[] = [{ kinds: [9735], '#e': allEventIds }]
 
     // For addressable events, also query by address
     if (videoAddress) {
@@ -206,7 +218,7 @@ export function useEventStats({
     })
 
     return () => sub.unsubscribe()
-  }, [eventId, videoAddress, pool, eventStore])
+  }, [eventId, allEventIds, videoAddress, pool, eventStore])
 
   // Subscribe to zap receipts from store
   // Query by both #e and #a for addressable events
@@ -214,9 +226,9 @@ export function useEventStats({
     () =>
       eventStore.timeline({
         kinds: [9735],
-        '#e': [eventId],
+        '#e': allEventIds,
       }),
-    [eventStore, eventId]
+    [eventStore, allEventIds]
   )
 
   const zapsByAddress = use$(

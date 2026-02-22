@@ -25,6 +25,7 @@ import { parseImetaTag, type ParsedImeta } from '@/lib/imeta-builder'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { nowInSecs } from '@/lib/utils'
+import { trackReplacedEventId } from '@/lib/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
 interface EditVideoDialogProps {
@@ -253,6 +254,13 @@ export function EditVideoDialog({
         content,
         created_at: nowInSecs(),
         tags: newTags,
+      }
+
+      // Track old event ID so kind 1 comments referencing it can still be found
+      const dTag = videoEvent.tags.find(t => t[0] === 'd')?.[1]
+      if (dTag && (videoEvent.kind === 34235 || videoEvent.kind === 34236)) {
+        const address = `${videoEvent.kind}:${videoEvent.pubkey}:${dTag}`
+        trackReplacedEventId(address, videoEvent.id)
       }
 
       await publish({ event: updatedEvent, relays: writeRelays })

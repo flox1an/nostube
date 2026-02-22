@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Comments/Zaps: preserve kind 1 comments and zap receipts after editing addressable video events (kinds 34235, 34236); when a video is edited it gets a new event ID, but kind 1 comments and zaps reference the old event ID via `e` tags; new `replaced-events` tracker stores old event IDs in localStorage keyed by address; `VideoComments`, `useEventZaps`, and `useEventStats` now query all known event IDs so comments and zaps on previous versions are still found
+
 ### Added
 
 - Reporting: functional video reporting via NIP-56 kind 1984 events; users can report videos and shorts with NIP-56 standard reasons (spam, nudity, profanity, illegal, impersonation, harassment); reported videos are immediately hidden from all feeds by storing reported event IDs in local config and filtering them in `processEvents`; report button added to shorts sidebar; ReportDialog now publishes signed report events to relays with `e` and `p` tags; success/error toast notifications; i18n support in EN/DE/FR/ES/RU

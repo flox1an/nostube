@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { CommentInput } from '@/components/CommentInput'
 import { nowInSecs } from '@/lib/utils'
 import { useCommentHighlightStore } from '@/stores/commentHighlightStore'
+import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { Comment, VideoCommentsProps } from './types'
 import { mapEventToComment, buildCommentTree } from './utils'
 import { CommentItem } from './CommentItem'
@@ -132,11 +133,21 @@ export function VideoComments({
   // Build filters to query comments
   // For addressable events: query by both address (#A/#a) and event ID (#E/#e) for compatibility
   // For regular events: query by event ID only
+  // Also include old event IDs for kind 1 comments that reference previous versions
   const filters = useMemo(() => {
+    // Collect all known event IDs (current + old replaced ones)
+    const allEventIds = [videoId]
+    if (videoAddress) {
+      const oldIds = getReplacedEventIds(videoAddress)
+      for (const id of oldIds) {
+        if (!allEventIds.includes(id)) allEventIds.push(id)
+      }
+    }
+
     // Query by event ID (for backwards compatibility and non-addressable events)
     const baseFilters = [
-      { kinds: [1], '#e': [videoId], limit: 100 },
-      { kinds: [1111], '#E': [videoId], limit: 100 },
+      { kinds: [1], '#e': allEventIds, limit: 100 },
+      { kinds: [1111], '#E': allEventIds, limit: 100 },
     ] as Filter[]
 
     // For addressable events, also query by address

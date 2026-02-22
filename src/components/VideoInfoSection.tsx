@@ -263,6 +263,8 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 videoId={video.id}
                 videoKind={video.kind}
                 videoTitle={video.title}
+                videoPubkey={video.pubkey}
+                videoIdentifier={video.identifier}
               />
             )}
             <ShareButton

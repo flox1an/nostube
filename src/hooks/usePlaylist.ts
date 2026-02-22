@@ -14,6 +14,7 @@ export interface Video {
   title?: string
   added_at: number
   relayHint?: string
+  address?: string // "kind:pubkey:d-tag" for addressable events (34235/34236)
 }
 
 export interface Playlist {
@@ -27,6 +28,49 @@ export interface Playlist {
 
 // NIP-51 kind 30005 is for mutable lists including playlists
 const PLAYLIST_KIND = 30005
+
+/** Parse both 'e' and 'a' tags from a playlist event into Video objects */
+function parseVideoTags(
+  tags: string[][],
+  created_at: number,
+  eventStore: { getEvent: (id: string) => import('nostr-tools').Event | undefined }
+): Video[] {
+  const videos: Video[] = []
+
+  for (const t of tags) {
+    if (t[0] === 'e') {
+      const referencedEvent = eventStore.getEvent(t[1])
+      const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+      const relayHint = t[2] || (seenRelays ? Array.from(seenRelays)[0] : undefined)
+      videos.push({
+        id: t[1],
+        kind: 0,
+        title: undefined,
+        added_at: created_at,
+        relayHint,
+      })
+    } else if (t[0] === 'a') {
+      // Addressable event reference: "kind:pubkey:d-tag"
+      const parts = t[1]?.split(':')
+      if (parts && parts.length >= 3) {
+        const kind = parseInt(parts[0])
+        const pubkey = parts[1]
+        const identifier = parts.slice(2).join(':')
+        const relayHint = t[2] || undefined
+        videos.push({
+          id: `${kind}:${pubkey}:${identifier}`, // Use address as temporary ID until resolved
+          kind,
+          title: undefined,
+          added_at: created_at,
+          relayHint,
+          address: t[1],
+        })
+      }
+    }
+  }
+
+  return videos
+}
 
 export function usePlaylists() {
   const eventStore = useEventStore()
@@ -135,20 +179,7 @@ export function usePlaylists() {
       const description = descTag ? descTag[1] : undefined
       const isPrivate = event.tags.some(t => t[0] === 'encrypted') || event.content !== ''
 
-      const videos: Video[] = event.tags
-        .filter(t => t[0] === 'e')
-        .map(t => ({
-          id: t[1],
-          kind: 0,
-          title: undefined,
-          added_at: event.created_at,
-          relayHint: (() => {
-            if (t[2]) return t[2]
-            const referencedEvent = eventStore.getEvent(t[1])
-            const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-            return seenRelays ? Array.from(seenRelays)[0] : undefined
-          })(),
-        }))
+      const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
 
       return {
         identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
@@ -174,22 +205,10 @@ export function usePlaylists() {
 
             const titleTag = decryptedTags.find(t => t[0] === 'title')
             const descTag = decryptedTags.find(t => t[0] === 'description')
-            const videoTags = decryptedTags.filter(t => t[0] === 'e')
 
             if (titleTag) playlist.name = titleTag[1]
             if (descTag) playlist.description = descTag[1]
-            playlist.videos = videoTags.map(t => ({
-              id: t[1],
-              kind: 0,
-              title: undefined,
-              added_at: event.created_at,
-              relayHint: (() => {
-                if (t[2]) return t[2]
-                const referencedEvent = eventStore.getEvent(t[1])
-                const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-                return seenRelays ? Array.from(seenRelays)[0] : undefined
-              })(),
-            }))
+            playlist.videos = parseVideoTags(decryptedTags, event.created_at, eventStore)
           } catch (err) {
             console.warn('[usePlaylist] Failed to decrypt private playlist:', err)
           }
@@ -216,8 +235,17 @@ export function usePlaylists() {
       setIsLoading(true)
 
       try {
-        // Build video e-tags with relay hints
+        // Build video tags with relay hints: 'a' for addressable events, 'e' for regular
         const videoTags = playlist.videos.map(video => {
+          if (video.address) {
+            // Addressable event: use 'a' tag
+            const tag: string[] = ['a', video.address]
+            if (video.relayHint) {
+              tag.push(video.relayHint)
+            }
+            return tag
+          }
+          // Regular event: use 'e' tag
           const referencedEvent = eventStore.getEvent(video.id)
           const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
           const relayHint = video.relayHint || (seenRelays ? Array.from(seenRelays)[0] : undefined)
@@ -302,14 +330,29 @@ export function usePlaylists() {
   )
 
   const addVideo = useCallback(
-    async (playlistId: string, videoId: string, videoKind?: number, videoTitle?: string) => {
+    async (
+      playlistId: string,
+      videoId: string,
+      videoKind?: number,
+      videoTitle?: string,
+      videoPubkey?: string,
+      videoIdentifier?: string
+    ) => {
       const playlist = playlists.find(p => p.identifier === playlistId)
       if (!playlist) throw new Error('Playlist not found')
 
-      // Don't add if already exists
-      if (playlist.videos.some(v => v.id === videoId)) {
+      const isAddressable =
+        (videoKind === 34235 || videoKind === 34236) && videoIdentifier && videoPubkey
+      const address = isAddressable ? `${videoKind}:${videoPubkey}:${videoIdentifier}` : undefined
+
+      // Don't add if already exists (check by id or address)
+      if (playlist.videos.some(v => v.id === videoId || (address && v.address === address))) {
         return
       }
+
+      const referencedEvent = eventStore.getEvent(videoId)
+      const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
+      const relayHint = seenRelays ? Array.from(seenRelays)[0] : undefined
 
       const updatedPlaylist = {
         ...playlist,
@@ -317,14 +360,11 @@ export function usePlaylists() {
           ...playlist.videos,
           {
             id: videoId,
-            kind: videoKind || 0, // Kind is optional, will be determined when event is loaded
+            kind: videoKind || 0,
             title: videoTitle,
             added_at: nowInSecs(),
-            relayHint: (() => {
-              const referencedEvent = eventStore.getEvent(videoId)
-              const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
-              return seenRelays ? Array.from(seenRelays)[0] : undefined
-            })(),
+            relayHint,
+            address,
           },
         ],
       }
@@ -341,7 +381,7 @@ export function usePlaylists() {
 
       const updatedPlaylist = {
         ...playlist,
-        videos: playlist.videos.filter(video => video.id !== videoId),
+        videos: playlist.videos.filter(video => video.id !== videoId && video.address !== videoId),
       }
 
       await updatePlaylist(updatedPlaylist)
@@ -491,14 +531,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     const descTag = event.tags.find(t => t[0] === 'description')
     const name = titleTag ? titleTag[1] : 'Untitled Playlist'
     const description = descTag ? descTag[1] : undefined
-    const videos: Video[] = event.tags
-      .filter(t => t[0] === 'e')
-      .map(t => ({
-        id: t[1],
-        kind: 0,
-        title: undefined,
-        added_at: event.created_at,
-      }))
+    const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
     return {
       identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
       name,

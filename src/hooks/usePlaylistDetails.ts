@@ -29,6 +29,7 @@ interface VideoRef {
   id: string
   kind: number
   relayHints: string[]
+  address?: string // "kind:pubkey:d-tag" for addressable events
 }
 
 interface PlaylistDetailsResult {
@@ -246,21 +247,36 @@ export function usePlaylistDetails(
       (isPrivate ? 'Private Playlist' : 'Untitled Playlist')
     const description = allTags.find((t: string[]) => t[0] === 'description')?.[1] || ''
 
-    const refs = allTags
-      .filter((t: string[]) => t[0] === 'e')
-      .map((t: string[]) => {
+    const refs: VideoRef[] = []
+    for (const t of allTags) {
+      if (t[0] === 'e') {
         const tagRelayHint = t[2] || ''
         const tagRelayHints = tagRelayHint ? [tagRelayHint] : []
         const referencedEvent = eventStore.getEvent(t[1])
         const seenRelaysSet = referencedEvent ? getSeenRelays(referencedEvent) : undefined
         const seenRelayHints = seenRelaysSet ? Array.from(seenRelaysSet) : []
         const relayHints = combineRelays([tagRelayHints, seenRelayHints])
-        return {
-          id: t[1],
-          kind: 0,
-          relayHints,
+        refs.push({ id: t[1], kind: 0, relayHints })
+      } else if (t[0] === 'a') {
+        // Addressable event reference: "kind:pubkey:d-tag"
+        const parts = t[1]?.split(':')
+        if (parts && parts.length >= 3) {
+          const addrKind = parseInt(parts[0])
+          const addrPubkey = parts[1]
+          const addrIdentifier = parts.slice(2).join(':')
+          const tagRelayHints = t[2] ? [t[2]] : []
+          // Try to resolve event ID from the replaceable store
+          const resolved = eventStore.getReplaceable(addrKind, addrPubkey, addrIdentifier)
+          const resolvedId = resolved?.id
+          refs.push({
+            id: resolvedId || t[1], // Use resolved event ID if available, else address as placeholder
+            kind: addrKind,
+            relayHints: tagRelayHints,
+            address: t[1],
+          })
         }
-      })
+      }
+    }
 
     return {
       playlistTitle: title,
@@ -274,102 +290,151 @@ export function usePlaylistDetails(
       return
     }
 
-    const missingRefs = videoRefs.filter(ref => !eventStore.hasEvent(ref.id))
+    // Split refs into addressable (a-tag) and regular (e-tag)
+    const addressRefs = videoRefs.filter(ref => ref.address)
+    const eventRefs = videoRefs.filter(ref => !ref.address)
 
-    if (missingRefs.length === 0) {
+    // Check which refs are missing: for address refs, check replaceable store
+    const missingAddressRefs = addressRefs.filter(ref => {
+      const parts = ref.address!.split(':')
+      if (parts.length < 3) return true
+      const resolved = eventStore.getReplaceable(
+        parseInt(parts[0]),
+        parts[1],
+        parts.slice(2).join(':')
+      )
+      return !resolved
+    })
+    const missingEventRefs = eventRefs.filter(ref => !eventStore.hasEvent(ref.id))
+
+    if (missingAddressRefs.length === 0 && missingEventRefs.length === 0) {
       return
     }
 
     let cancelled = false
+    const allMissingIds = [...missingEventRefs.map(r => r.id), ...missingAddressRefs.map(r => r.id)]
 
     ;(async () => {
       await Promise.resolve()
-      if (cancelled) {
-        return
-      }
-      setLoadingVideoIds(new Set(missingRefs.map(r => r.id)))
+      if (cancelled) return
+      setLoadingVideoIds(new Set(allMissingIds))
     })()
 
     const playlistSeenRelaysSet = getSeenRelays(playlistEvent)
     const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
-
-    // Collect all relay hints from all missing refs
-    const allRelayHints = missingRefs.flatMap(ref => ref.relayHints || [])
-
-    // Combine all relays for the batch request
+    const allRelayHints = [...missingEventRefs, ...missingAddressRefs].flatMap(
+      ref => ref.relayHints || []
+    )
     const batchRelays = combineRelays([allRelayHints, playlistSeenRelays, relaysToUse])
 
-    // Create a single batch request for all missing video IDs
-    const missingIds = missingRefs.map(r => r.id)
     const completedIds = new Set<string>()
+    const subscriptions: { unsubscribe: () => void }[] = []
 
     const timeoutId = setTimeout(() => {
-      if (cancelled) {
-        return
-      }
-      missingRefs.forEach(ref => {
-        if (!eventStore.hasEvent(ref.id)) {
-          setFailedVideoIds(prev => new Set([...prev, ref.id]))
+      if (cancelled) return
+      allMissingIds.forEach(id => {
+        if (!completedIds.has(id)) {
+          setFailedVideoIds(prev => new Set([...prev, id]))
         }
       })
       setLoadingVideoIds(new Set())
     }, 10000)
 
-    // Use timeline loader with ids filter for batch fetching
-    const batchLoader = createTimelineLoader(pool, batchRelays, { ids: missingIds }, { eventStore })
+    const markCompleted = (refId: string) => {
+      completedIds.add(refId)
+      setLoadingVideoIds(prev => {
+        const next = new Set(prev)
+        next.delete(refId)
+        return next
+      })
+      setFailedVideoIds(prev => {
+        const next = new Set(prev)
+        next.delete(refId)
+        return next
+      })
+    }
 
-    const subscription = batchLoader().subscribe({
-      next: event => {
-        if (!cancelled && event && missingIds.includes(event.id)) {
-          eventStore.add(event)
-          completedIds.add(event.id)
-          setLoadingVideoIds(prev => {
-            const next = new Set(prev)
-            next.delete(event.id)
-            return next
-          })
-          setFailedVideoIds(prev => {
-            const next = new Set(prev)
-            next.delete(event.id)
-            return next
-          })
-        }
-      },
-      complete: () => {
-        // Mark any events that didn't load as failed
-        if (cancelled) {
-          return
-        }
-        missingRefs.forEach(ref => {
-          if (!completedIds.has(ref.id) && !eventStore.hasEvent(ref.id)) {
-            setFailedVideoIds(prev => new Set([...prev, ref.id]))
-            setLoadingVideoIds(prev => {
-              const next = new Set(prev)
-              next.delete(ref.id)
-              return next
+    // Load regular event refs via batch timeline loader
+    if (missingEventRefs.length > 0) {
+      const missingIds = missingEventRefs.map(r => r.id)
+      const batchLoader = createTimelineLoader(
+        pool,
+        batchRelays,
+        { ids: missingIds },
+        { eventStore }
+      )
+
+      subscriptions.push(
+        batchLoader().subscribe({
+          next: event => {
+            if (!cancelled && event && missingIds.includes(event.id)) {
+              eventStore.add(event)
+              markCompleted(event.id)
+            }
+          },
+          complete: () => {
+            if (cancelled) return
+            missingEventRefs.forEach(ref => {
+              if (!completedIds.has(ref.id) && !eventStore.hasEvent(ref.id)) {
+                setFailedVideoIds(prev => new Set([...prev, ref.id]))
+                setLoadingVideoIds(prev => {
+                  const next = new Set(prev)
+                  next.delete(ref.id)
+                  return next
+                })
+              }
             })
+          },
+          error: err => {
+            console.error('[usePlaylistDetails] Failed to load playlist videos:', err)
+            if (cancelled) return
+            missingEventRefs.forEach(ref => {
+              setFailedVideoIds(prev => new Set([...prev, ref.id]))
+            })
+          },
+        })
+      )
+    }
+
+    // Load addressable refs via address loader
+    for (const ref of missingAddressRefs) {
+      const parts = ref.address!.split(':')
+      if (parts.length < 3) continue
+      const addrKind = parseInt(parts[0])
+      const addrPubkey = parts[1]
+      const addrIdentifier = parts.slice(2).join(':')
+
+      subscriptions.push(
+        addressLoader({ kind: addrKind, pubkey: addrPubkey, identifier: addrIdentifier }).subscribe(
+          {
+            next: event => {
+              if (!cancelled && event) {
+                eventStore.add(event)
+                markCompleted(ref.id)
+              }
+            },
+            error: err => {
+              console.error('[usePlaylistDetails] Failed to load addressable video:', err)
+              if (!cancelled) {
+                setFailedVideoIds(prev => new Set([...prev, ref.id]))
+                setLoadingVideoIds(prev => {
+                  const next = new Set(prev)
+                  next.delete(ref.id)
+                  return next
+                })
+              }
+            },
           }
-        })
-      },
-      error: err => {
-        console.error('[usePlaylistDetails] Failed to load playlist videos:', err)
-        if (cancelled) {
-          return
-        }
-        // Mark all as failed on error
-        missingRefs.forEach(ref => {
-          setFailedVideoIds(prev => new Set([...prev, ref.id]))
-        })
-        setLoadingVideoIds(new Set())
-      },
-    })
+        )
+      )
+    }
 
     return () => {
       cancelled = true
       clearTimeout(timeoutId)
-      subscription.unsubscribe()
+      subscriptions.forEach(sub => sub.unsubscribe())
     }
-  }, [videoRefs, eventStore, pool, relaysToUse, playlistEvent])
+  }, [videoRefs, eventStore, pool, relaysToUse, playlistEvent, addressLoader])
 
   // Observe each video event reactively
   const videoEventsObservable = useMemo(() => {
@@ -378,9 +443,21 @@ export function usePlaylistDetails(
     }
 
     // Use combineLatest to observe all video events
-    const observables = videoRefs.map(ref =>
-      eventStore.event(ref.id).pipe(switchMap(event => of(event)))
-    )
+    const observables = videoRefs.map(ref => {
+      if (ref.address) {
+        // For addressable refs, observe via replaceable()
+        const parts = ref.address.split(':')
+        if (parts.length >= 3) {
+          const addrKind = parseInt(parts[0])
+          const addrPubkey = parts[1]
+          const addrIdentifier = parts.slice(2).join(':')
+          return eventStore
+            .replaceable(addrKind, addrPubkey, addrIdentifier)
+            .pipe(switchMap(event => of(event)))
+        }
+      }
+      return eventStore.event(ref.id).pipe(switchMap(event => of(event)))
+    })
 
     return combineLatest(observables).pipe(
       switchMap(events => {

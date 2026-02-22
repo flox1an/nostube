@@ -213,9 +213,10 @@ export default function SinglePlaylistPage() {
                 const ref = videoRefs.find(r => r.id === id)
                 return {
                   id,
-                  kind: 0,
+                  kind: ref?.kind || 0,
                   added_at: playlistEvent.created_at,
                   relayHint: ref?.relayHints?.[0],
+                  address: ref?.address,
                 }
               }),
             })

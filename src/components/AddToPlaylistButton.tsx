@@ -28,6 +28,8 @@ interface AddToPlaylistButtonProps {
   videoId: string
   videoKind: number
   videoTitle?: string
+  videoPubkey?: string
+  videoIdentifier?: string
   asMenuItem?: boolean
 }
 
@@ -35,6 +37,8 @@ export function AddToPlaylistButton({
   videoId,
   videoTitle,
   videoKind,
+  videoPubkey,
+  videoIdentifier,
   asMenuItem = false,
 }: AddToPlaylistButtonProps) {
   const { user } = useCurrentUser()
@@ -56,7 +60,7 @@ export function AddToPlaylistButton({
   const handleAddToPlaylist = async (playlistId: string, playlistName: string) => {
     try {
       setIsAdding(true)
-      await addVideo(playlistId, videoId, videoKind, videoTitle)
+      await addVideo(playlistId, videoId, videoKind, videoTitle, videoPubkey, videoIdentifier)
       toast({
         title: t('addToPlaylist.added'),
         description: t('addToPlaylist.addedDescription', { name: playlistName }),
@@ -191,7 +195,13 @@ export function AddToPlaylistButton({
               ) : (
                 <CommandGroup>
                   {playlists.map(playlist => {
-                    const hasVideo = playlist.videos.some(v => v.id === videoId)
+                    const address =
+                      (videoKind === 34235 || videoKind === 34236) && videoPubkey && videoIdentifier
+                        ? `${videoKind}:${videoPubkey}:${videoIdentifier}`
+                        : undefined
+                    const hasVideo = playlist.videos.some(
+                      v => v.id === videoId || (address && v.address === address)
+                    )
                     return (
                       <CommandItem
                         key={playlist.identifier}

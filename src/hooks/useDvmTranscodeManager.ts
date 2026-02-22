@@ -33,6 +33,7 @@ export interface TranscodeProgress {
   percentage?: number
   phase?: 'transcoding' | 'uploading' | 'mirroring'
   statusMessages: StatusMessage[]
+  dvmPubkey?: string
   queue?: {
     resolutions: string[]
     currentIndex: number
@@ -120,6 +121,7 @@ function mapTaskToProgress(task: UploadTask | undefined): TranscodeProgress {
     percentage: state.percentage,
     phase: state.phase,
     statusMessages: state.statusMessages || [],
+    dvmPubkey: state.dvmPubkey,
     queue: {
       resolutions: state.resolutionQueue || [],
       currentIndex: currentIndex >= 0 ? currentIndex : 0,

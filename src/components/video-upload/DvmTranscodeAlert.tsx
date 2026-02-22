@@ -11,7 +11,8 @@ import { useDvmTracker } from '@/hooks/useDvmTracker'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
 import { shouldOfferTranscode, AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
-import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle } from 'lucide-react'
+import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle, Bot } from 'lucide-react'
+import type { TrackedDvm } from '@/lib/dvm-utils'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useRef } from 'react'
 
@@ -48,7 +49,7 @@ export function DvmTranscodeAlert({
   const hasResumedRef = useRef(false)
 
   // Check if a DVM is available (only check if not resuming)
-  const { isDvmAvailable, isLoading: isDvmLoading } = useDvmTracker()
+  const { isDvmAvailable, isLoading: isDvmLoading, dvmHandlers } = useDvmTracker()
 
   // Use the manager-backed hook for background transcoding
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
@@ -233,6 +234,9 @@ export function DvmTranscodeAlert({
     )
   }
 
+  // Resolve the active DVM info from the tracker
+  const activeDvm = progress.dvmPubkey ? dvmHandlers.get(progress.dvmPubkey) : undefined
+
   // Discovering state
   if (status === 'discovering' || status === 'bidding') {
     return (
@@ -265,6 +269,7 @@ export function DvmTranscodeAlert({
           </span>
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
+          {activeDvm && <DvmInfoBanner dvm={activeDvm} />}
           <StatusLog messages={progress.statusMessages} />
         </AlertDescription>
       </Alert>
@@ -285,6 +290,7 @@ export function DvmTranscodeAlert({
           {t('upload.transcode.transcoding', { defaultValue: 'Transcoding video...' })}
         </AlertTitle>
         <AlertDescription className="text-blue-700 dark:text-blue-300">
+          {activeDvm && <DvmInfoBanner dvm={activeDvm} />}
           <div className="divide-y divide-blue-200/50 dark:divide-blue-800/50">
             {resolutions.map((resolution, index) => {
               const isCompleted = completed.includes(resolution)
@@ -406,6 +412,25 @@ export function DvmTranscodeAlert({
   }
 
   return null
+}
+
+/**
+ * Banner showing DVM name and description above progress
+ */
+function DvmInfoBanner({ dvm }: { dvm: TrackedDvm }) {
+  return (
+    <div className="flex items-start gap-2 mb-3 rounded bg-blue-100/50 dark:bg-blue-900/30 p-2">
+      <Bot className="h-4 w-4 mt-0.5 shrink-0 text-blue-500 dark:text-blue-400" />
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+          {dvm.name || dvm.pubkey.substring(0, 12) + '...'}
+        </div>
+        {dvm.about && (
+          <div className="text-xs text-blue-600 dark:text-blue-400 line-clamp-2">{dvm.about}</div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 type PhaseStep = 'transcoding' | 'uploading' | 'mirroring'

@@ -162,8 +162,27 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
         authorPubkey,
       })
 
-      setGeneratedUrls(generated)
-      setCurrentIndex(0)
+      setGeneratedUrls(prev => {
+        // If we already have URLs and the current one is still in the new list,
+        // merge new URLs without disrupting playback. This prevents glitches when
+        // config changes (e.g. blossom servers loading from relays after video started).
+        if (prev.urls.length > 0) {
+          const existingSet = new Set(prev.urls)
+          const newUrls = generated.urls.filter(u => !existingSet.has(u))
+          if (newUrls.length > 0) {
+            // Append newly discovered mirror/proxy URLs without resetting index
+            return {
+              urls: [...prev.urls, ...newUrls],
+              metadata: [...prev.metadata, ...newUrls.map(() => ({ source: 'mirror' as const }))],
+            }
+          }
+          // No new URLs, keep everything as-is (don't reset index)
+          return prev
+        }
+        // First load: full reset
+        setCurrentIndex(0)
+        return generated
+      })
       setIsLoading(false)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to generate URLs')

@@ -399,11 +399,25 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [hasMoreVideoUrls, moveToNextVideo, onAllSourcesFailed, urls])
 
   // Stall detection - move to next URL if loading takes too long
+  // Store moveToNextVideo in a ref so the effect only re-runs when videoUrl changes,
+  // not when URL discovery updates the callback reference or hasMore flag.
+  const moveToNextVideoRef = useRef(moveToNextVideo)
+  const hasMoreVideoUrlsRef = useRef(hasMoreVideoUrls)
   useEffect(() => {
-    if (!videoUrl || !hasMoreVideoUrls) return
+    moveToNextVideoRef.current = moveToNextVideo
+    hasMoreVideoUrlsRef.current = hasMoreVideoUrls
+  }, [moveToNextVideo, hasMoreVideoUrls])
+
+  useEffect(() => {
+    if (!videoUrl) return
 
     const el = videoRef.current
     if (!el) return
+
+    // If video is already playing successfully, skip stall detection.
+    // This prevents false triggers when the effect re-runs due to videoUrl
+    // being set to the same value after URL regeneration.
+    if (el.readyState >= 3 && !el.paused) return
 
     let stallTimeout: ReturnType<typeof setTimeout> | null = null
     let hasStartedLoading = false
@@ -426,11 +440,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
       // If no progress within 5 seconds, try next URL
       stallTimeout = setTimeout(() => {
-        if (!hasStartedLoading && hasMoreVideoUrls) {
+        // Re-check: if video started playing in the meantime, don't switch
+        if (el.readyState >= 3 && !el.paused) return
+
+        if (!hasStartedLoading && hasMoreVideoUrlsRef.current) {
           if (import.meta.env.DEV) {
             console.log('Video stalled (no progress in 5s), trying next URL...')
           }
-          moveToNextVideo()
+          moveToNextVideoRef.current()
         }
       }, 5000)
     }
@@ -442,14 +459,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     el.addEventListener('loadedmetadata', handleLoadProgress)
     el.addEventListener('canplay', handleLoadProgress)
     el.addEventListener('progress', handleLoadProgress)
+    el.addEventListener('playing', handleLoadProgress)
 
     return () => {
       clearStallTimeout()
       el.removeEventListener('loadedmetadata', handleLoadProgress)
       el.removeEventListener('canplay', handleLoadProgress)
       el.removeEventListener('progress', handleLoadProgress)
+      el.removeEventListener('playing', handleLoadProgress)
     }
-  }, [videoUrl, hasMoreVideoUrls, moveToNextVideo])
+  }, [videoUrl])
 
   // Fullscreen handling
   useEffect(() => {

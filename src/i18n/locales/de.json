@@ -772,14 +772,20 @@
     "reasonLabel": "Grund für die Meldung",
     "reasons": {
       "spam": "Spam oder irreführend",
+      "nudity": "Nacktheit oder sexuelle Inhalte",
+      "profanity": "Beleidigungen oder anstößige Sprache",
       "illegal": "Illegaler Inhalt",
-      "nsfw": "Unangemessen oder NSFW",
       "impersonation": "Identitätsmissbrauch",
-      "other": "Sonstiges"
+      "harassment": "Belästigung oder Missbrauch"
     },
     "detailsLabel": "Zusätzliche Details (optional)",
     "detailsPlaceholder": "Bitte geben Sie weitere Informationen darüber an, warum Sie diesen Inhalt melden...",
-    "submit": "Meldung absenden"
+    "submit": "Meldung absenden",
+    "submitting": "Wird gesendet...",
+    "successTitle": "Meldung gesendet",
+    "successDescription": "Vielen Dank für Ihre Meldung. Das Video wurde aus Ihrem Feed ausgeblendet.",
+    "errorTitle": "Meldung fehlgeschlagen",
+    "errorDescription": "Die Meldung konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
   },
   "errors": {
     "connectionError": "Verbindungsfehler",

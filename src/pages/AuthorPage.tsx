@@ -309,7 +309,8 @@ export function AuthorPage() {
           undefined,
           config.blossomServers,
           undefined,
-          presetContent.nsfwPubkeys
+          presetContent.nsfwPubkeys,
+          config.reportedEventIds
         )
 
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
@@ -371,7 +372,8 @@ export function AuthorPage() {
         blockedPubkeys,
         config.blossomServers,
         undefined,
-        presetContent.nsfwPubkeys
+        presetContent.nsfwPubkeys,
+        config.reportedEventIds
       )
 
       setLikedVideos(processedVideos)

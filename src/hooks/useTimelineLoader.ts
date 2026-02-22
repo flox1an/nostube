@@ -80,10 +80,18 @@ export function useTimelineLoader({
       blockedPubkeys,
       config.blossomServers,
       undefined,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    events,
+    relays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+    config.reportedEventIds,
+  ])
 
   // Load initial events from relays
   useEffect(() => {

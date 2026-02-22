@@ -14,6 +14,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
 import { memo, useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { type VideoEvent, getPublishDate } from '@/utils/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
@@ -26,7 +27,8 @@ import {
 } from '@/hooks'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { MessageCircle, Share2, ExternalLink } from 'lucide-react'
+import { MessageCircle, Share2, ExternalLink, Flag } from 'lucide-react'
+import { ReportDialog } from '@/components/ReportDialog'
 import { imageProxyVideoPreview, combineRelays } from '@/lib/utils'
 import { buildProfileUrl } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
@@ -69,6 +71,8 @@ export const ShortVideoItem = memo(
     const { config } = useAppContext()
     const [aspectRatio, setAspectRatio] = useState<number | null>(null)
     const [commentsOpen, setCommentsOpen] = useState(false)
+    const [showReportDialog, setShowReportDialog] = useState(false)
+    const { user } = useCurrentUser()
 
     // Get comment count
     const commentCount = useCommentCount({ videoId: video.id })
@@ -447,6 +451,21 @@ export const ShortVideoItem = memo(
               </Button>
               <span className="text-sm font-medium">Share</span>
             </div>
+
+            {/* Report button */}
+            {user && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => setShowReportDialog(true)}
+                  aria-label="Report"
+                >
+                  <Flag className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Bottom info overlay */}
@@ -513,6 +532,15 @@ export const ShortVideoItem = memo(
             </div>
           </div>
         </div>
+
+        {/* Report Dialog */}
+        <ReportDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          reportType="video"
+          contentId={video.id}
+          contentAuthor={video.pubkey}
+        />
 
         {/* Comments Sheet */}
         <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>

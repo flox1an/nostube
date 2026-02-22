@@ -94,9 +94,17 @@ export function useHashtagVideos({
       blockedPubkeys,
       config.blossomServers,
       undefined,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
-  }, [nativeEvents, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    nativeEvents,
+    relays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+    config.reportedEventIds,
+  ])
 
   // Reset state when tag changes
   useEffect(() => {

@@ -809,14 +809,20 @@
     "reasonLabel": "Reason for report",
     "reasons": {
       "spam": "Spam or misleading",
+      "nudity": "Nudity or sexual content",
+      "profanity": "Profanity or offensive language",
       "illegal": "Illegal content",
-      "nsfw": "Inappropriate or NSFW",
       "impersonation": "Impersonation",
-      "other": "Other"
+      "harassment": "Harassment or abuse"
     },
     "detailsLabel": "Additional details (optional)",
     "detailsPlaceholder": "Please provide more information about why you're reporting this content...",
-    "submit": "Submit Report"
+    "submit": "Submit Report",
+    "submitting": "Submitting...",
+    "successTitle": "Report submitted",
+    "successDescription": "Thank you for your report. The video has been hidden from your feed.",
+    "errorTitle": "Report failed",
+    "errorDescription": "Could not submit your report. Please try again."
   },
   "errors": {
     "connectionError": "Connection Error",

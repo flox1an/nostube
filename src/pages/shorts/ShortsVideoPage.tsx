@@ -318,7 +318,8 @@ export function ShortsVideoPage() {
             blockedPubkeys,
             config.blossomServers,
             undefined,
-            presetContent.nsfwPubkeys
+            presetContent.nsfwPubkeys,
+            config.reportedEventIds
           ).filter(v => v.type === 'shorts')
         })
       )

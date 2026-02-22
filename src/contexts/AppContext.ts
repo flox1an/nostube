@@ -66,6 +66,8 @@ export interface AppConfig {
   selectedPresetPubkey?: string | null
   /** Enable hover previews for videos */
   hoverPreview?: boolean
+  /** Event IDs the user has reported (hidden from feeds) */
+  reportedEventIds?: string[]
 }
 
 export interface AppContextType {

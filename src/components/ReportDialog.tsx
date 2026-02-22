@@ -12,6 +12,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useTranslation } from 'react-i18next'
+import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useToast } from '@/hooks/useToast'
+import { nowInSecs } from '@/lib/utils'
+
+type ReportReason = 'spam' | 'nudity' | 'profanity' | 'illegal' | 'impersonation' | 'harassment'
+
+const REPORT_REASONS: Record<ReportReason, string> = {
+  spam: 'report.reasons.spam',
+  nudity: 'report.reasons.nudity',
+  profanity: 'report.reasons.profanity',
+  illegal: 'report.reasons.illegal',
+  impersonation: 'report.reasons.impersonation',
+  harassment: 'report.reasons.harassment',
+}
 
 interface ReportDialogProps {
   open: boolean
@@ -21,42 +36,60 @@ interface ReportDialogProps {
   contentAuthor?: string
 }
 
-const REPORT_REASONS = {
-  spam: 'report.reasons.spam',
-  illegal: 'report.reasons.illegal',
-  nsfw: 'report.reasons.nsfw',
-  impersonation: 'report.reasons.impersonation',
-  other: 'report.reasons.other',
-}
-
 export function ReportDialog({
   open,
   onOpenChange,
   reportType,
-  contentId: _contentId,
-  contentAuthor: _contentAuthor,
+  contentId,
+  contentAuthor,
 }: ReportDialogProps) {
   const { t } = useTranslation()
-  const [reason, setReason] = useState<keyof typeof REPORT_REASONS>('spam')
+  const { publish, isPending } = useNostrPublish()
+  const { updateConfig } = useAppContext()
+  const { toast } = useToast()
+  const [reason, setReason] = useState<ReportReason>('spam')
   const [details, setDetails] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // TODO: Implement actual report submission (NIP-56 or similar)
-    // For now, just close the dialog and reset state
-    if (import.meta.env.DEV) {
-      console.debug('Report submitted:', {
-        type: reportType,
-        reason,
-        details,
-      })
+    const tags: string[][] = [['e', contentId, reason]]
+    if (contentAuthor) {
+      tags.push(['p', contentAuthor, reason])
     }
 
-    // Reset state and close
-    setReason('spam')
-    setDetails('')
-    onOpenChange(false)
+    try {
+      await publish({
+        event: {
+          kind: 1984,
+          content: details,
+          tags,
+          created_at: nowInSecs(),
+        },
+      })
+
+      // Add to local reported event IDs for immediate hiding
+      updateConfig(config => ({
+        ...config,
+        reportedEventIds: [...(config.reportedEventIds ?? []), contentId],
+      }))
+
+      toast({
+        title: t('report.successTitle'),
+        description: t('report.successDescription'),
+      })
+
+      setReason('spam')
+      setDetails('')
+      onOpenChange(false)
+    } catch (err) {
+      console.error('Failed to publish report:', err)
+      toast({
+        title: t('report.errorTitle'),
+        description: t('report.errorDescription'),
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleCancel = () => {
@@ -79,10 +112,7 @@ export function ReportDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>{t('report.reasonLabel')}</Label>
-              <RadioGroup
-                value={reason}
-                onValueChange={value => setReason(value as keyof typeof REPORT_REASONS)}
-              >
+              <RadioGroup value={reason} onValueChange={value => setReason(value as ReportReason)}>
                 {Object.entries(REPORT_REASONS).map(([key, translationKey]) => (
                   <div key={key} className="flex items-center space-x-2">
                     <RadioGroupItem value={key} id={key} />
@@ -111,8 +141,8 @@ export function ReportDialog({
             <Button type="button" variant="outline" onClick={handleCancel}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" variant="destructive">
-              {t('report.submit')}
+            <Button type="submit" variant="destructive" disabled={isPending}>
+              {isPending ? t('report.submitting') : t('report.submit')}
             </Button>
           </DialogFooter>
         </form>

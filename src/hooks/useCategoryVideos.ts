@@ -95,10 +95,18 @@ export function useCategoryVideos({
       blockedPubkeys,
       config.blossomServers,
       undefined,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [events, relays, blockedPubkeys, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    events,
+    relays,
+    blockedPubkeys,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+    config.reportedEventIds,
+  ])
 
   // Reset state when tags or relays change to trigger reload
   useEffect(() => {

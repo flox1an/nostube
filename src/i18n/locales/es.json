@@ -772,14 +772,20 @@
     "reasonLabel": "Motivo del reporte",
     "reasons": {
       "spam": "Spam o engañoso",
+      "nudity": "Desnudez o contenido sexual",
+      "profanity": "Lenguaje ofensivo o vulgar",
       "illegal": "Contenido ilegal",
-      "nsfw": "Inapropiado o NSFW",
       "impersonation": "Suplantación de identidad",
-      "other": "Otro"
+      "harassment": "Acoso o abuso"
     },
     "detailsLabel": "Detalles adicionales (opcional)",
     "detailsPlaceholder": "Por favor proporcione más información sobre por qué está reportando este contenido...",
-    "submit": "Enviar reporte"
+    "submit": "Enviar reporte",
+    "submitting": "Enviando...",
+    "successTitle": "Reporte enviado",
+    "successDescription": "Gracias por tu reporte. El video ha sido ocultado de tu feed.",
+    "errorTitle": "Error al reportar",
+    "errorDescription": "No se pudo enviar tu reporte. Por favor intenta de nuevo."
   },
   "errors": {
     "connectionError": "Error de Conexión",

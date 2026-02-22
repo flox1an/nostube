@@ -50,7 +50,8 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
           blockedPubkeys,
           config.blossomServers,
           missingVideoIds,
-          presetContent.nsfwPubkeys
+          presetContent.nsfwPubkeys,
+          config.reportedEventIds
         )
         // Sort by publish date descending (newest first), fallback to created_at
         return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
@@ -65,6 +66,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
     config.blossomServers,
     missingVideoIds,
     presetContent.nsfwPubkeys,
+    config.reportedEventIds,
   ])
 
   const videos = use$(() => videos$, [videos$]) ?? []

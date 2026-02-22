@@ -342,7 +342,8 @@ export function useSearchVideos({
       blockedPubkeys,
       config.blossomServers,
       undefined,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
 
     // Sort by publish date descending (newest first)
@@ -355,6 +356,7 @@ export function useSearchVideos({
     blockedPubkeys,
     config.blossomServers,
     presetContent.nsfwPubkeys,
+    config.reportedEventIds,
   ])
 
   // Load more is a no-op for now since we load all at once

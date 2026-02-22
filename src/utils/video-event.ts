@@ -284,8 +284,10 @@ export function processEvents(
   blockPubkeys?: ReportedPubkeys,
   blossomServers?: BlossomServer[],
   missingVideoIds?: Set<string>,
-  nsfwPubkeys?: string[]
+  nsfwPubkeys?: string[],
+  reportedEventIds?: string[]
 ): VideoEvent[] {
+  const reportedSet = reportedEventIds?.length ? new Set(reportedEventIds) : undefined
   const processed = events
     .filter((event): event is Event => event !== undefined)
     .map(event => processEvent(event, relays, blossomServers, nsfwPubkeys))
@@ -297,7 +299,8 @@ export function processEvents(
         video?.urls !== undefined &&
         video.urls[0]?.indexOf('youtube.com') < 0 &&
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
-        (!missingVideoIds || !missingVideoIds.has(video.id))
+        (!missingVideoIds || !missingVideoIds.has(video.id)) &&
+        (!reportedSet || !reportedSet.has(video.id))
     )
 
   // Deduplicate videos posted as both addressable (34235/34236) and regular (21/22) events

@@ -71,7 +71,8 @@ export function LikedVideosPage() {
       blockedPubkeys,
       config.blossomServers,
       undefined,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
 
     // Final deduplication: filter out any duplicate videos by ID (just in case)

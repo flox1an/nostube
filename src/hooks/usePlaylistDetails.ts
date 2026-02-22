@@ -392,12 +392,20 @@ export function usePlaylistDetails(
             undefined,
             config.blossomServers,
             undefined,
-            presetContent.nsfwPubkeys
+            presetContent.nsfwPubkeys,
+            config.reportedEventIds
           )
         )
       })
     )
-  }, [videoRefs, eventStore, readRelays, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [
+    videoRefs,
+    eventStore,
+    readRelays,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+    config.reportedEventIds,
+  ])
 
   const videoEvents = use$(() => videoEventsObservable, [videoEventsObservable]) ?? []
 

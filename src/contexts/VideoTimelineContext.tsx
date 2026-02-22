@@ -97,7 +97,8 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
               blockedPubkeys,
               config.blossomServers,
               undefined,
-              presetContent.nsfwPubkeys
+              presetContent.nsfwPubkeys,
+              config.reportedEventIds
             )
           )
         )
@@ -138,6 +139,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       eventStore,
       config.relays,
       config.blossomServers,
+      config.reportedEventIds,
       pool,
       presetContent.nsfwPubkeys,
     ]

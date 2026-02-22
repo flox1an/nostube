@@ -771,14 +771,20 @@
     "reasonLabel": "Raison du signalement",
     "reasons": {
       "spam": "Spam ou trompeur",
+      "nudity": "Nudité ou contenu sexuel",
+      "profanity": "Grossièretés ou langage offensant",
       "illegal": "Contenu illégal",
-      "nsfw": "Inapproprié ou NSFW",
       "impersonation": "Usurpation d'identité",
-      "other": "Autre"
+      "harassment": "Harcèlement ou abus"
     },
     "detailsLabel": "Détails supplémentaires (optionnel)",
     "detailsPlaceholder": "Veuillez fournir plus d'informations sur les raisons pour lesquelles vous signalez ce contenu...",
-    "submit": "Envoyer le signalement"
+    "submit": "Envoyer le signalement",
+    "submitting": "Envoi en cours...",
+    "successTitle": "Signalement envoyé",
+    "successDescription": "Merci pour votre signalement. La vidéo a été masquée de votre fil.",
+    "errorTitle": "Échec du signalement",
+    "errorDescription": "Impossible d'envoyer votre signalement. Veuillez réessayer."
   },
   "errors": {
     "connectionError": "Erreur de connexion",

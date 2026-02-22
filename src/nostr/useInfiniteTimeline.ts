@@ -139,7 +139,8 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       blockedPubkeys,
       config.blossomServers,
       missingVideoIds,
-      presetContent.nsfwPubkeys
+      presetContent.nsfwPubkeys,
+      config.reportedEventIds
     )
     // Sort by publish date descending (newest first), fallback to created_at
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
@@ -150,6 +151,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     config.blossomServers,
     missingVideoIds,
     presetContent.nsfwPubkeys,
+    config.reportedEventIds,
   ])
   /*
   const videos = useObservableMemo(

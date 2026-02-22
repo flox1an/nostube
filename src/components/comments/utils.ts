@@ -9,9 +9,10 @@ import type { Comment } from './types'
 
 /**
  * Map a Nostr event to a Comment structure.
- * Handles NIP-22 comment format with:
- * - lowercase 'e' tags for parent reference (event ID)
- * - lowercase 'a' tags for parent reference (address, for addressable events)
+ *
+ * Supports two tagging conventions:
+ * - Kind 1111 (NIP-22): lowercase 'e' tag = parent reference, uppercase 'E'/'A' = root scope
+ * - Kind 1 (NIP-10): multiple 'e' tags with markers in position [3]: 'root' = video, 'reply' = parent comment
  *
  * @param event - The Nostr event to map
  * @param videoId - The event ID of the video
@@ -22,46 +23,62 @@ export function mapEventToComment(
   videoId: string,
   videoAddress?: string
 ): Comment {
-  // NIP-22: Find the parent comment ID from lowercase 'e' tag
-  // The lowercase 'e' tag points to the parent (the comment being replied to)
-  // If it points to the video ID or uses address tag for video, this is a top-level comment
   const eTags = event.tags.filter(t => t[0] === 'e')
   const aTags = event.tags.filter(t => t[0] === 'a')
   let replyToId: string | undefined
 
-  // Check if this is a top-level comment by looking at lowercase 'a' or 'e' tags
-  // For addressable events, top-level comments use 'a' tag pointing to video address
-  // For all events, replies to comments use 'e' tag pointing to comment ID
+  if (event.kind === 1) {
+    // NIP-10 threading for kind 1 events:
+    // e tags can have markers in position [3]: "root", "reply", "mention"
+    // "reply" marker = the comment being replied to (parent)
+    // "root" marker = the original post (the video)
+    // If no markers, fall back to positional: last e tag = reply, first = root
+    const replyTag = eTags.find(t => t[3] === 'reply')
+    const rootTag = eTags.find(t => t[3] === 'root')
 
-  if (eTags.length > 0) {
-    const parentTag = eTags[0]
-    const parentId = parentTag[1]
-
-    // If parent is the video ID, this is a top-level comment
-    if (parentId === videoId) {
-      // Top-level comment (replyToId stays undefined)
-    } else if (videoAddress && aTags.length > 0) {
-      // For addressable events, check if 'a' tag points to video address
-      const aTag = aTags[0]
-      const aValue = aTag[1]
-      if (aValue === videoAddress) {
-        // 'a' tag points to video, but 'e' tag points to something else
-        // This is a reply to a comment (the 'e' tag is the parent comment ID)
-        replyToId = parentId
-      } else {
-        // 'a' tag points elsewhere, treat 'e' tag as parent
+    if (replyTag) {
+      // Has explicit reply marker — this is a reply to another comment
+      const parentId = replyTag[1]
+      if (parentId !== videoId) {
         replyToId = parentId
       }
-    } else {
-      // No address tag or doesn't match video - this is a reply to a comment
-      replyToId = parentId
+    } else if (rootTag) {
+      // Has root but no reply — top-level comment on the video
+      // replyToId stays undefined
+    } else if (eTags.length > 1) {
+      // No markers (deprecated positional scheme):
+      // first e tag = root, last e tag = reply
+      const lastTag = eTags[eTags.length - 1]
+      if (lastTag[1] !== videoId) {
+        replyToId = lastTag[1]
+      }
     }
-  } else if (videoAddress && aTags.length > 0) {
-    // No 'e' tags but has 'a' tags
-    const aTag = aTags[0]
-    const aValue = aTag[1]
-    if (aValue === videoAddress) {
-      // Top-level comment on addressable event (replyToId stays undefined)
+    // Single e tag with no markers = top-level comment
+  } else {
+    // Kind 1111 (NIP-22): lowercase 'e' tag is the parent reference
+    // If it points to the video ID, it's top-level
+    if (eTags.length > 0) {
+      const parentTag = eTags[0]
+      const parentId = parentTag[1]
+
+      if (parentId === videoId) {
+        // Top-level comment (replyToId stays undefined)
+      } else if (videoAddress && aTags.length > 0) {
+        const aTag = aTags[0]
+        if (aTag[1] === videoAddress) {
+          // 'a' tag points to video, 'e' tag points to parent comment
+          replyToId = parentId
+        } else {
+          replyToId = parentId
+        }
+      } else {
+        replyToId = parentId
+      }
+    } else if (videoAddress && aTags.length > 0) {
+      const aTag = aTags[0]
+      if (aTag[1] === videoAddress) {
+        // Top-level comment on addressable event (replyToId stays undefined)
+      }
     }
   }
 

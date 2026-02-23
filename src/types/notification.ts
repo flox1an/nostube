@@ -1,4 +1,5 @@
 export interface VideoNotification {
+  notificationType: 'video' // discriminator
   id: string // comment event ID
   commentId: string // same as id, for clarity
   videoId: string // the video that was commented on (event ID)
@@ -29,6 +30,7 @@ export interface UploadNotification {
 }
 
 export interface ZapNotification {
+  notificationType: 'zap' // discriminator
   id: string // zap receipt event ID
   zapperPubkey: string // who sent the zap
   amount: number // sats
@@ -60,7 +62,7 @@ export interface ZapNotificationStorage {
 
 // Type guards
 export function isVideoNotification(n: Notification): n is VideoNotification {
-  return 'commentId' in n
+  return 'notificationType' in n && n.notificationType === 'video'
 }
 
 export function isUploadNotification(n: Notification): n is UploadNotification {
@@ -73,5 +75,5 @@ export function isUploadNotification(n: Notification): n is UploadNotification {
 }
 
 export function isZapNotification(n: Notification): n is ZapNotification {
-  return 'zapperPubkey' in n && 'amount' in n
+  return 'notificationType' in n && n.notificationType === 'zap'
 }

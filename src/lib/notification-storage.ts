@@ -19,7 +19,13 @@ export function getNotificationStorage(): NotificationStorage {
         lastFetchTime: 0,
       }
     }
-    return JSON.parse(stored)
+    const parsed = JSON.parse(stored) as NotificationStorage
+    // Migrate old notifications missing notificationType
+    parsed.notifications = parsed.notifications.map(n => ({
+      ...n,
+      notificationType: 'video' as const,
+    }))
+    return parsed
   } catch (error) {
     console.error('Failed to parse notification storage:', error)
     return {
@@ -62,7 +68,13 @@ export function getZapNotificationStorage(): ZapNotificationStorage {
         lastFetchTime: 0,
       }
     }
-    return JSON.parse(stored)
+    const parsed = JSON.parse(stored) as ZapNotificationStorage
+    // Migrate old notifications missing notificationType
+    parsed.notifications = parsed.notifications.map(n => ({
+      ...n,
+      notificationType: 'zap' as const,
+    }))
+    return parsed
   } catch (error) {
     console.error('Failed to parse zap notification storage:', error)
     return {

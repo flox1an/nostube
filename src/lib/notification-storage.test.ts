@@ -41,7 +41,11 @@ describe('notification-storage', () => {
       localStorage.setItem('nostube_notifications', JSON.stringify(stored))
 
       const result = getNotificationStorage()
-      expect(result).toEqual(stored)
+      // Migration adds notificationType to stored notifications
+      expect(result).toEqual({
+        ...stored,
+        notifications: stored.notifications.map(n => ({ ...n, notificationType: 'video' })),
+      })
     })
 
     it('should handle corrupted data gracefully', () => {
@@ -76,6 +80,7 @@ describe('notification-storage', () => {
 
       const notifications: VideoNotification[] = [
         {
+          notificationType: 'video',
           id: 'recent',
           commentId: 'recent',
           videoId: 'v1',
@@ -86,6 +91,7 @@ describe('notification-storage', () => {
           videoEventId: 'ne1',
         },
         {
+          notificationType: 'video',
           id: 'old',
           commentId: 'old',
           videoId: 'v2',
@@ -105,6 +111,7 @@ describe('notification-storage', () => {
     it('should limit to 100 most recent notifications', () => {
       const now = Date.now() / 1000
       const notifications: VideoNotification[] = Array.from({ length: 150 }, (_, i) => ({
+        notificationType: 'video' as const,
         id: `note${i}`,
         commentId: `note${i}`,
         videoId: `v${i}`,
@@ -123,6 +130,7 @@ describe('notification-storage', () => {
       const now = Date.now() / 1000
       const notifications: VideoNotification[] = [
         {
+          notificationType: 'video',
           id: 'n1',
           commentId: 'n1',
           videoId: 'v1',
@@ -133,6 +141,7 @@ describe('notification-storage', () => {
           videoEventId: 'ne1',
         },
         {
+          notificationType: 'video',
           id: 'n2',
           commentId: 'n2',
           videoId: 'v2',

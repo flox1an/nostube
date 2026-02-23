@@ -214,6 +214,7 @@ export function useNotifications() {
 
         // Create notification
         const notification: VideoNotification = {
+          notificationType: 'video',
           id: comment.id,
           commentId: comment.id,
           videoId,

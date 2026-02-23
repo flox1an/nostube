@@ -228,6 +228,7 @@ export function useZapNotifications() {
 
         // Create notification
         const notification: ZapNotification = {
+          notificationType: 'zap',
           id: zapReceipt.id,
           zapperPubkey: zapRequest.zapperPubkey,
           amount,

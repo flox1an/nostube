@@ -172,12 +172,12 @@ export function VideoReactionButtons({
       return (
         <>
           <div
-            className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
+            className={cn('inline-flex items-center gap-2 p-2 text-muted-foreground', className)}
           >
             <ThumbsUp className="h-5 w-5" />
             <button
               type="button"
-              className={cn('ml-1 md:ml-2', totalReactions > 0 && 'cursor-pointer hover:underline')}
+              className={cn(totalReactions > 0 && 'cursor-pointer hover:underline')}
               onClick={handleCountClick}
               disabled={totalReactions === 0}
             >
@@ -185,12 +185,12 @@ export function VideoReactionButtons({
             </button>
           </div>
           <div
-            className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}
+            className={cn('inline-flex items-center gap-2 p-2 text-muted-foreground', className)}
           >
             <ThumbsDown className="h-5 w-5" />
             <button
               type="button"
-              className={cn('ml-1 md:ml-2', totalReactions > 0 && 'cursor-pointer hover:underline')}
+              className={cn(totalReactions > 0 && 'cursor-pointer hover:underline')}
               onClick={handleCountClick}
               disabled={totalReactions === 0}
             >
@@ -217,7 +217,7 @@ export function VideoReactionButtons({
 
     return (
       <>
-        <div className="inline-flex items-center">
+        <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
             className={cn('pr-0', className)}
@@ -229,17 +229,14 @@ export function VideoReactionButtons({
           </Button>
           <button
             type="button"
-            className={cn(
-              'px-1 py-2 text-sm md:px-2',
-              totalReactions > 0 && 'cursor-pointer hover:underline'
-            )}
+            className={cn('py-2 text-sm', totalReactions > 0 && 'cursor-pointer hover:underline')}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
           >
             {upvoteCount}
           </button>
         </div>
-        <div className="inline-flex items-center">
+        <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
             className={cn('pr-0', className)}
@@ -251,10 +248,7 @@ export function VideoReactionButtons({
           </Button>
           <button
             type="button"
-            className={cn(
-              'px-1 py-2 text-sm md:px-2',
-              totalReactions > 0 && 'cursor-pointer hover:underline'
-            )}
+            className={cn('py-2 text-sm', totalReactions > 0 && 'cursor-pointer hover:underline')}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
           >

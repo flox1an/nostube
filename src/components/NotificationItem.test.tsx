@@ -33,6 +33,7 @@ vi.mock('@/lib/utils', async () => {
 
 describe('NotificationItem', () => {
   const mockNotification: VideoNotification = {
+    notificationType: 'video',
     id: 'note1',
     commentId: 'note1',
     videoId: 'video1',

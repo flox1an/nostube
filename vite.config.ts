@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 // https://vite.dev/config/
@@ -19,6 +20,19 @@ export default defineConfig({
       filename: 'dist/stats.html',
       gzipSize: true,
       brotliSize: true,
+    }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        globIgnores: ['embed.html', 'stats.html', 'embed-*.html'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/embed/],
+        skipWaiting: true,
+        clientsClaim: true,
+      },
+      manifest: false,
+      injectRegister: 'auto',
     }),
     viteSingleFile({
       useRecommendedBuildConfig: false,

@@ -1,7 +1,7 @@
 {
   "name": "nostube",
   "private": false,
-  "version": "0.1.6",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "npm i && vite",
@@ -124,6 +124,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^7.1.11",
+    "vite-plugin-pwa": "^1.2.0",
     "vite-plugin-singlefile": "^2.3.0",
     "vitest": "^4.0.10"
   },

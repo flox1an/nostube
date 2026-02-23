@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-23
+
+### Changed
+
+- Sidebar and mini sidebar now highlight the current page with `bg-accent` background
+- Mini sidebar items have rounded right corners
+- Removed "Watch Later" from sidebar (disabled/unused feature)
+
 ## [0.2.0] - 2026-02-23
 
 ### Added

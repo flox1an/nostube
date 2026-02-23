@@ -46,8 +46,10 @@ export function MiniSidebar() {
             key={item.href}
             to={item.href}
             className={cn(
-              'flex flex-col items-center justify-center py-4 px-1 gap-1 hover:bg-accent transition-colors',
-              isActive ? 'text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+              'flex flex-col items-center justify-center py-4 px-1 gap-1 rounded-r-lg transition-colors',
+              isActive
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             )}
           >
             <item.icon className={cn('h-6 w-6', isActive && 'fill-current')} />

@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback, useEffect } from 'react'
+import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
@@ -36,9 +36,12 @@ export function AppProvider(props: AppProviderProps) {
   // const userRelays = useUserRelays(user?.pubkey);
 
   // Generic config updater with callback pattern
-  const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
-    setConfig(updater)
-  }
+  const updateConfig = useCallback(
+    (updater: (currentConfig: AppConfig) => AppConfig) => {
+      setConfig(updater)
+    },
+    [setConfig]
+  )
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => {
@@ -93,16 +96,19 @@ export function AppProvider(props: AppProviderProps) {
     }
   }, [config.relays]);
 */
-  const appContextValue: AppContextType = {
-    config,
-    updateConfig,
-    presetRelays,
-    isSidebarOpen,
-    toggleSidebar,
-    relayOverride,
-    setRelayOverride,
-    pool: relayPool,
-  }
+  const appContextValue: AppContextType = useMemo(
+    () => ({
+      config,
+      updateConfig,
+      presetRelays,
+      isSidebarOpen,
+      toggleSidebar,
+      relayOverride,
+      setRelayOverride,
+      pool: relayPool,
+    }),
+    [config, updateConfig, presetRelays, isSidebarOpen, toggleSidebar, relayOverride]
+  )
 
   return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
 }

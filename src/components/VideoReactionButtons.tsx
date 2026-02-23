@@ -220,7 +220,7 @@ export function VideoReactionButtons({
         <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
-            className={cn('pr-0', className)}
+            className={cn('px-2', className)}
             onClick={handleUpvote}
             disabled={!user || isPending || hasReacted}
             aria-label="Upvote"
@@ -239,7 +239,7 @@ export function VideoReactionButtons({
         <div className="inline-flex items-center gap-2">
           <Button
             variant="ghost"
-            className={cn('pr-0', className)}
+            className={cn('px-2', className)}
             onClick={handleDownvote}
             disabled={!user || isPending || hasReacted}
             aria-label="Downvote"

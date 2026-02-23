@@ -618,7 +618,14 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                   thumbnailUploadInfo={thumbnailUploadInfo}
                   thumbnailBlob={thumbnailBlob}
                   isThumbDragActive={false}
-                  videoUrl={file ? URL.createObjectURL(file) : videoUrl || undefined}
+                  videoUrl={
+                    file
+                      ? URL.createObjectURL(file)
+                      : videoUrl ||
+                        uploadInfo.videos[0]?.url ||
+                        uploadInfo.videos[0]?.uploadedBlobs[0]?.url ||
+                        undefined
+                  }
                 />
               </div>
             )}
@@ -664,8 +671,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
                 disabled={currentStep === 1}
               >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                {t('upload.previous', { defaultValue: 'Previous' })}
+                <ChevronLeft className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">
+                  {t('upload.previous', { defaultValue: 'Previous' })}
+                </span>
               </Button>
 
               <div className="flex gap-2">
@@ -680,8 +689,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <Button type="button" variant="secondary" onClick={handleBack}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
+                      <Save className="h-4 w-4 md:mr-2" />
+                      <span className="hidden md:inline">
+                        {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
+                      </span>
                     </Button>
                   </>
                 )}
@@ -705,8 +716,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                       // Step 4 (Subtitles) is optional - always can proceed
                     }
                   >
-                    {t('upload.next', { defaultValue: 'Next' })}
-                    <ChevronRight className="h-4 w-4 ml-2" />
+                    <span className="hidden md:inline">
+                      {t('upload.next', { defaultValue: 'Next' })}
+                    </span>
+                    <ChevronRight className="h-4 w-4 md:ml-2" />
                   </Button>
                 ) : (
                   <Button

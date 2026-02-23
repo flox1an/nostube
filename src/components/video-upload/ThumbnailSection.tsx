@@ -39,7 +39,6 @@ export function ThumbnailSection({
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isImageLoaded, setIsImageLoaded] = useState(false)
-  const [isPreviewImageLoaded, setIsPreviewImageLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoDuration, setVideoDuration] = useState(0)
@@ -166,11 +165,6 @@ export function ThumbnailSection({
     setIsImageLoaded(false)
   }, [uploadedThumbnailUrl, thumbnailBlob])
 
-  // Reset preview image loaded state when preview blob changes
-  useEffect(() => {
-    setIsPreviewImageLoaded(false)
-  }, [previewBlob])
-
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration)
@@ -264,23 +258,25 @@ export function ThumbnailSection({
         {t('upload.thumbnail.title')} <span className="text-destructive">*</span>
       </Label>
 
-      <Tabs
-        defaultValue={videoUrl ? 'generated' : 'upload'}
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
+      <Tabs defaultValue="generated" onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="generated" className="flex gap-2" disabled={!videoUrl}>
+            <Film className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">
+              {t('upload.thumbnail.generate', { defaultValue: 'Generate from video' })}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="upload" className="flex gap-2">
-            <UploadIcon className="h-4 w-4" />
-            {t('upload.thumbnail.uploadCustom', { defaultValue: 'Upload' })}
+            <UploadIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">
+              {t('upload.thumbnail.uploadCustom', { defaultValue: 'Upload' })}
+            </span>
           </TabsTrigger>
           <TabsTrigger value="url" className="flex gap-2">
-            <LinkIcon className="h-4 w-4" />
-            {t('upload.thumbnail.enterUrl', { defaultValue: 'Enter URL' })}
-          </TabsTrigger>
-          <TabsTrigger value="generated" className="flex gap-2" disabled={!videoUrl}>
-            <Film className="h-4 w-4" />
-            {t('upload.thumbnail.generate', { defaultValue: 'Generate from video' })}
+            <LinkIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">
+              {t('upload.thumbnail.enterUrl', { defaultValue: 'Enter URL' })}
+            </span>
           </TabsTrigger>
         </TabsList>
 
@@ -329,78 +325,53 @@ export function ThumbnailSection({
 
         <TabsContent value="generated" className="mt-0">
           {videoUrl ? (
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Video scrubbing section */}
-              <div className="flex-1 space-y-2">
-                <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{t('upload.thumbnail.selectFrame')}</p>
 
-                <video
-                  ref={videoRef}
-                  src={videoUrl}
-                  onLoadedMetadata={handleLoadedMetadata}
-                  onLoadedData={handleLoadedData}
-                  onSeeked={handleSeeked}
-                  preload="auto"
-                  className="rounded border w-full max-h-80 object-contain bg-black"
-                  muted
-                  crossOrigin="anonymous"
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                onLoadedMetadata={handleLoadedMetadata}
+                onLoadedData={handleLoadedData}
+                onSeeked={handleSeeked}
+                preload="auto"
+                className="rounded border w-full max-h-80 object-contain bg-black"
+                muted
+                crossOrigin="anonymous"
+              />
+              <canvas ref={canvasRef} className="hidden" />
+
+              <div className="space-y-1 pt-2">
+                <Slider
+                  value={[currentVideoTime]}
+                  max={videoDuration}
+                  step={0.1}
+                  onValueChange={handleSliderChange}
+                  className="w-full"
                 />
-                <canvas ref={canvasRef} className="hidden" />
-
-                <div className="space-y-1 pt-2">
-                  <Slider
-                    value={[currentVideoTime]}
-                    max={videoDuration}
-                    step={0.1}
-                    onValueChange={handleSliderChange}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{formatTime(currentVideoTime)}</span>
-                    <span>{formatTime(videoDuration)}</span>
-                  </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(currentVideoTime)}</span>
+                  <span>{formatTime(videoDuration)}</span>
                 </div>
               </div>
 
-              {/* Thumbnail preview section */}
-              <div className="lg:w-72 space-y-2">
-                <Label className="text-sm font-medium">
-                  {t('upload.thumbnail.thumbnailPreview')}
-                </Label>
-                {previewBlob && (
-                  <div className="flex flex-col gap-3">
-                    <div className="relative w-full min-h-20">
-                      {!isPreviewImageLoaded && (
-                        <div className="absolute inset-0 rounded border bg-muted animate-pulse" />
-                      )}
-                      <img
-                        src={URL.createObjectURL(previewBlob)}
-                        alt={t('upload.thumbnail.thumbnailPreview')}
-                        className={`rounded border w-full object-contain transition-opacity duration-200 ${isPreviewImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                        onLoad={() => setIsPreviewImageLoaded(true)}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={handleSetThumbnail}
-                      disabled={!hasUnsavedChanges || thumbnailUploadInfo.uploading}
-                      className="w-full"
-                    >
-                      {thumbnailUploadInfo.uploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {t('upload.thumbnail.uploadingThumbnail')}
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          {t('upload.thumbnail.setAsThumbnail')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
+              <Button
+                type="button"
+                onClick={handleSetThumbnail}
+                disabled={!previewBlob || !hasUnsavedChanges || thumbnailUploadInfo.uploading}
+              >
+                {thumbnailUploadInfo.uploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t('upload.thumbnail.uploadingThumbnail')}
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    {t('upload.thumbnail.setAsThumbnail')}
+                  </>
                 )}
-              </div>
+              </Button>
             </div>
           ) : (
             <div className="text-muted-foreground text-sm py-4 text-center border rounded-md border-dashed">

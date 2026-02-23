@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-02-23
+
+### Fixed
+
+- Even padding on like/dislike buttons in video page (pr-0 → px-2)
+- Upload thumbnail "Generate from video" tab now works when videos are uploaded via blossom (falls back to uploaded variant URL)
+- Removed redundant thumbnail preview section; "Set as thumbnail" button sits below the slider and waits for video frame capture
+
+### Changed
+
+- Added upload button to user dropdown menu on mobile
+- Hidden "Previous", "Next", and "Save Draft" text labels on mobile upload navigation (icon-only)
+- Hidden thumbnail tab labels on mobile (icon-only)
+- Reordered thumbnail tabs: Generate from video (default) → Upload → Enter URL
+
 ## [0.1.5] - 2026-02-23
 
 ### Fixed

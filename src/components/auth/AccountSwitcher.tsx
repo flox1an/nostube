@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserPlus, Settings, User } from 'lucide-react'
+import { ChevronDown, LogOut, Upload, UserPlus, Settings, User } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +110,13 @@ export function AccountSwitcher() {
         >
           <UserPlus className="w-4 h-4" />
           <span>{t('auth.account.playlists')}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate('/upload')}
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md lg:hidden"
+        >
+          <Upload className="w-4 h-4" />
+          <span>{t('header.upload')}</span>
         </DropdownMenuItem>
         <WalletMenuItem />
         <DropdownMenuItem

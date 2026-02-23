@@ -200,6 +200,31 @@ export function useZapNotifications() {
 
         const videoId = eTag[1]
 
+        // Only show notifications for zaps on video events (kinds 21, 22, 34235, 34236)
+        const VIDEO_KINDS = [21, 22, 34235, 34236]
+
+        // Check 'a' tag for addressable events (e.g. "34235:pubkey:identifier")
+        const aTag = zapReceipt.tags.find(t => t[0] === 'a')
+        const aTagKind = aTag?.[1] ? parseInt(aTag[1].split(':')[0], 10) : null
+
+        // Look up event in store to verify kind
+        const videoEvent = eventStoreRef.current.getEvent(videoId)
+
+        if (videoEvent) {
+          // Event is in store — check its kind directly
+          if (!VIDEO_KINDS.includes(videoEvent.kind)) {
+            continue
+          }
+        } else if (aTagKind !== null) {
+          // Event not in store, but we have an 'a' tag — check the kind from it
+          if (!VIDEO_KINDS.includes(aTagKind)) {
+            continue
+          }
+        } else {
+          // No event in store and no 'a' tag — skip, we can't verify it's a video
+          continue
+        }
+
         // Parse zap request to get zapper info
         const zapRequest = parseZapRequest(zapReceipt)
         if (!zapRequest) {
@@ -219,8 +244,6 @@ export function useZapNotifications() {
           continue
         }
 
-        // Fetch video metadata from eventStore
-        const videoEvent = eventStoreRef.current.getEvent(videoId)
         const videoTitle = videoEvent?.tags.find(t => t[0] === 'title')?.[1]
 
         // Extract identifier for addressable events

@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.4] - 2026-02-23
+## [0.1.5] - 2026-02-23
 
 ### Fixed
 
 - Zap notifications incorrectly displayed as comment notifications by adding explicit `notificationType` discriminator to notification type guards
+- Filter zap notifications to only show zaps on video events (kinds 21, 22, 34235, 34236), ignoring zaps on comments or other event types
 - Increased gap between reaction icons and counts in video page (gap-1 → gap-2)

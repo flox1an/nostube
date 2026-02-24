@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-02-24
+
 ### Added
 
 - Generic `useDraftPersistence<T>` hook for localStorage + NIP-78 Nostr sync with debounced saves, milestone detection, and encrypted backup
@@ -14,20 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Refactored `useUploadDrafts` to thin wrapper around `useDraftPersistence<UploadDraft>`
-- Refactored `UploadManagerProvider` draft management to use `useDraftPersistence`, eliminating ~220 lines of duplicated sync logic
+- Refactored `useUploadDrafts` to thin wrapper around `useDraftPersistence<UploadDraft>`, reducing ~460 lines to ~100 lines
+- Migrated `UploadManagerProvider` draft management to `useDraftPersistence`, eliminating ~220 lines of duplicated sync logic
 - Refactored `useVideoUpload` to use `useFileUpload` for video, thumbnail, and subtitle uploads
 - Slimmed `draft-storage.ts` to upload-specific helpers only (`createEmptyDraft`, `isMilestoneUpdate`)
-
-### Changed
-
-- Refactored `useVideoUpload` to use `useFileUpload` for thumbnail, video, and subtitle uploads, eliminating direct `uploadFileToMultipleServersChunked`/`mirrorBlobsToServers` calls
-
-### Changed
-
-- Rewrote `useUploadDrafts` as a thin wrapper around `useDraftPersistence<UploadDraft>`, reducing ~460 lines to ~100 lines while preserving the identical public API
-- Added backward-compatible `drafts` key reading in `getItemsFromStorage` for legacy localStorage data migration
-- Migrated `UploadManagerProvider` draft management to `useDraftPersistence`, removing ~210 lines of duplicate saveToNostr, debounce, NIP-78 subscription, and CRUD logic while DVM transcode code now uses `draftPersistence.getItem`/`updateItem` instead of direct localStorage calls
+- Added backward-compatible `drafts` key reading for legacy localStorage data migration
 
 ## [0.2.3] - 2026-02-24
 

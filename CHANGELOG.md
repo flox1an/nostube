@@ -9,9 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Generic `draft-persistence-storage` utilities for localStorage CRUD and Nostr merge with timestamp-based conflict resolution
-- Generic `useDraftPersistence<T>` hook wrapping storage utilities with NIP-78 Nostr sync, debounced saves, milestone detection, and encrypted backup
-- Generic `useFileUpload` hook wrapping blossom upload/mirror/delete pipeline into a reusable React hook with progress tracking and error handling
+- Generic `useDraftPersistence<T>` hook for localStorage + NIP-78 Nostr sync with debounced saves, milestone detection, and encrypted backup
+- Generic `useFileUpload` hook wrapping blossom upload/mirror/delete pipeline with progress tracking
+
+### Changed
+
+- Refactored `useUploadDrafts` to thin wrapper around `useDraftPersistence<UploadDraft>`
+- Refactored `UploadManagerProvider` draft management to use `useDraftPersistence`, eliminating ~220 lines of duplicated sync logic
+- Refactored `useVideoUpload` to use `useFileUpload` for video, thumbnail, and subtitle uploads
+- Slimmed `draft-storage.ts` to upload-specific helpers only (`createEmptyDraft`, `isMilestoneUpdate`)
 
 ### Changed
 

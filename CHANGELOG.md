@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Rewrote `useUploadDrafts` as a thin wrapper around `useDraftPersistence<UploadDraft>`, reducing ~460 lines to ~100 lines while preserving the identical public API
 - Added backward-compatible `drafts` key reading in `getItemsFromStorage` for legacy localStorage data migration
+- Migrated `UploadManagerProvider` draft management to `useDraftPersistence`, removing ~210 lines of duplicate saveToNostr, debounce, NIP-78 subscription, and CRUD logic while DVM transcode code now uses `draftPersistence.getItem`/`updateItem` instead of direct localStorage calls
 
 ## [0.2.3] - 2026-02-24
 

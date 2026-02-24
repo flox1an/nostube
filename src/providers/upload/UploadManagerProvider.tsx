@@ -23,7 +23,7 @@ import {
 } from 'react'
 import { type NostrEvent, type EventTemplate } from 'nostr-tools'
 import type { UploadTask, TranscodeState, TranscodePhase } from '@/types/upload-manager'
-import type { UploadDraft, UploadDraftsData } from '@/types/upload-draft'
+import type { UploadDraft } from '@/types/upload-draft'
 import {
   getUploadTasks,
   saveUploadTasks,
@@ -33,18 +33,8 @@ import {
   cleanupCompletedTasks,
   getResumableTasks,
 } from '@/lib/upload-manager-storage'
-import {
-  getDraftsFromStorage,
-  saveDraftsToStorage,
-  createEmptyDraft,
-  getDraftFromStorage,
-  updateDraftInStorage,
-  deleteDraftFromStorage,
-  addDraftToStorage,
-  mergeDraftsFromNostr,
-  isMilestoneUpdate,
-  MAX_DRAFTS,
-} from '@/lib/draft-storage'
+import { createEmptyDraft, isMilestoneUpdate, MAX_DRAFTS } from '@/lib/draft-storage'
+import { useDraftPersistence } from '@/hooks/useDraftPersistence'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks/useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
@@ -66,7 +56,6 @@ import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BlobDescriptor } from 'blossom-client-sdk'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
-import { createAddressLoader } from 'applesauce-loaders/loaders'
 
 import type { UploadManagerContextType, TranscodeJob, ResolutionQueueInfo } from './types'
 import {
@@ -75,10 +64,8 @@ import {
   DVM_FEEDBACK_KIND,
   TRANSCODE_JOB_TIMEOUT_MS,
   DVM_EVENT_EXPIRATION_SECS,
-  NOSTR_SYNC_DEBOUNCE_MS,
   ACTIVE_TASK_STATUSES,
 } from './constants'
-import { debounce } from './utils'
 
 const UploadManagerContext = createContext<UploadManagerContextType | undefined>(undefined)
 
@@ -107,7 +94,7 @@ interface UploadManagerProviderProps {
 
 export function UploadManagerProvider({ children }: UploadManagerProviderProps) {
   const { user } = useCurrentUser()
-  const { config, pool, relayOverride } = useAppContext()
+  const { config, relayOverride } = useAppContext()
   const { addNotification } = useUploadNotifications()
 
   // Combined relays for DVM tracking (read + write + override + defaults)
@@ -125,23 +112,19 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     return new Map(storedTasks.map(t => [t.id, t]))
   })
 
-  // Draft state - source of truth
-  const [draftsVersion, setDraftsVersion] = useState(0)
-  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  // Draft state via shared persistence hook
+  const draftPersistence = useDraftPersistence<UploadDraft>({
+    storageKey: 'nostube_upload_drafts',
+    nostrIdentifier: 'nostube-uploads',
+    maxItems: MAX_DRAFTS,
+    isMilestone: isMilestoneUpdate,
+  })
 
-  // Always read from localStorage (source of truth) - re-read when version changes
-  const drafts = useMemo(() => {
-    const freshDrafts = getDraftsFromStorage()
-    if (import.meta.env.DEV) {
-      console.debug(
-        '[UploadManager] Reading drafts, version:',
-        draftsVersion,
-        'count:',
-        freshDrafts.length
-      )
-    }
-    return freshDrafts
-  }, [draftsVersion])
+  const drafts = draftPersistence.items
+  const refreshDrafts = draftPersistence.refreshItems
+  const flushNostrSync = draftPersistence.flushSync
+
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
 
   // Active transcode jobs (subscriptions + abort controllers)
   const jobsRef = useRef<Map<string, TranscodeJob>>(new Map())
@@ -149,19 +132,11 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Track tasks currently being started to prevent auto-resume conflicts
   const startingTasksRef = useRef<Set<string>>(new Set())
 
-  // Track in-flight Nostr saves so we can wait for them
-  const inflightSaveRef = useRef<Promise<void> | null>(null)
-
-  // Track last synced content to avoid redundant Nostr publishes
-  const lastSyncedContentRef = useRef<string | null>(null)
-
   // Refs for stable access in callbacks
   const userRef = useRef(user)
   const configRef = useRef(config)
-  const poolRef = useRef(pool)
   userRef.current = user
   configRef.current = config
-  poolRef.current = pool
 
   // Cleanup old tasks on mount
   useEffect(() => {
@@ -196,214 +171,33 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   // ========== DRAFT MANAGEMENT ==========
 
-  // Save drafts to Nostr (NIP-78 encrypted)
-  const saveToNostr = useCallback(async (draftsToSave: UploadDraft[]) => {
-    const currentUser = userRef.current
-    const currentConfig = configRef.current
-
-    if (!currentUser?.signer?.nip44) {
-      if (import.meta.env.DEV) {
-        console.debug('[UploadManager] saveToNostr - no signer or nip44')
-      }
-      return
-    }
-
-    const saveOperation = async () => {
-      try {
-        // Create content without lastModified for comparison (lastModified always changes)
-        const draftsContent = JSON.stringify(draftsToSave)
-
-        // Skip if content hasn't changed
-        if (draftsContent === lastSyncedContentRef.current) {
-          if (import.meta.env.DEV) {
-            console.debug('[UploadManager] saveToNostr - skipping, content unchanged')
-          }
-          return
-        }
-
-        const plaintext = JSON.stringify({
-          version: '1',
-          lastModified: Date.now(),
-          drafts: draftsToSave,
-        } as UploadDraftsData)
-
-        const content = await currentUser.signer.nip44!.encrypt(currentUser.pubkey, plaintext)
-
-        const event = {
-          kind: 30078,
-          content,
-          created_at: nowInSecs(),
-          tags: [['d', 'nostube-uploads']],
-        }
-
-        const writeRelays = currentConfig.relays
-          .filter(r => r.tags.includes('write'))
-          .map(r => r.url)
-
-        if (import.meta.env.DEV) {
-          console.debug('[UploadManager] saveToNostr - publishing to', writeRelays.length, 'relays')
-        }
-
-        const signedEvent = await currentUser.signer.signEvent(event)
-        await relayPool.publish(writeRelays, signedEvent)
-
-        // Update last synced content after successful publish
-        lastSyncedContentRef.current = draftsContent
-
-        if (import.meta.env.DEV) {
-          console.debug('[UploadManager] saveToNostr - published successfully')
-        }
-      } catch (error) {
-        console.error('[UploadManager] Failed to sync to Nostr:', error)
-      } finally {
-        inflightSaveRef.current = null
-      }
-    }
-
-    const promise = saveOperation()
-    inflightSaveRef.current = promise
-    return promise
-  }, [])
-
-  // Keep a ref to the latest saveToNostr so debounced function doesn't need recreation
-  const saveToNostrRef = useRef(saveToNostr)
-  useEffect(() => {
-    saveToNostrRef.current = saveToNostr
-  }, [saveToNostr])
-
-  // Create debounced function once
-  const debouncedSaveToNostr = useMemo(
-    () =>
-      debounce((draftsToSave: UploadDraft[]) => {
-        saveToNostrRef.current(draftsToSave)
-      }, NOSTR_SYNC_DEBOUNCE_MS),
-    []
-  )
-
-  // Flush pending Nostr sync on unmount
-  useEffect(() => {
-    return () => {
-      debouncedSaveToNostr.flush()
-    }
-  }, [debouncedSaveToNostr])
-
-  // Trigger re-read from localStorage
-  const refreshDrafts = useCallback(() => {
-    if (import.meta.env.DEV) {
-      console.debug('[UploadManager] refreshDrafts - forcing re-fetch')
-    }
-    setDraftsVersion(v => v + 1)
-  }, [])
-
-  // Flush any pending Nostr sync
-  const flushNostrSync = useCallback(async () => {
-    if (import.meta.env.DEV) {
-      console.debug('[UploadManager] flushNostrSync')
-    }
-    debouncedSaveToNostr.flush()
-    if (inflightSaveRef.current) {
-      await inflightSaveRef.current
-    }
-  }, [debouncedSaveToNostr])
-
-  // Create a new draft
+  // Draft CRUD — thin wrappers around draftPersistence
   const createDraftFn = useCallback((): UploadDraft => {
-    const currentDrafts = getDraftsFromStorage()
-    if (currentDrafts.length >= MAX_DRAFTS) {
-      throw new Error(`Maximum ${MAX_DRAFTS} drafts allowed`)
-    }
-
     const newDraft = createEmptyDraft()
-    addDraftToStorage(newDraft)
-    setDraftsVersion(v => v + 1)
-
+    draftPersistence.createItem(newDraft)
     return newDraft
-  }, [])
+  }, [draftPersistence])
 
-  // Update a draft
   const updateDraftFn = useCallback(
     (id: string, updates: Partial<UploadDraft>) => {
-      const updatedDraft = updateDraftInStorage(id, updates)
-      if (!updatedDraft) {
-        console.debug('[UploadManager] updateDraft - draft not found:', id)
-        return
-      }
-
-      setDraftsVersion(v => v + 1)
-
-      // Get fresh drafts for sync
-      const freshDrafts = getDraftsFromStorage()
-
-      // Immediate sync for milestones, debounced for form fields
-      if (isMilestoneUpdate(updates)) {
-        saveDraftsToStorage(freshDrafts) // Already saved, but ensure timestamp
-        saveToNostr(freshDrafts)
-      } else {
-        debouncedSaveToNostr(freshDrafts)
-      }
+      draftPersistence.updateItem(id, updates)
     },
-    [saveToNostr, debouncedSaveToNostr]
+    [draftPersistence]
   )
 
-  // Delete a draft
   const deleteDraftFn = useCallback(
     (id: string) => {
-      deleteDraftFromStorage(id)
-      setDraftsVersion(v => v + 1)
-
-      // Immediate sync for deletions
-      const freshDrafts = getDraftsFromStorage()
-      saveToNostr(freshDrafts)
+      draftPersistence.deleteItem(id)
     },
-    [saveToNostr]
+    [draftPersistence]
   )
 
-  // Get a draft by ID
-  const getDraftFn = useCallback((id: string): UploadDraft | undefined => {
-    return getDraftFromStorage(id)
-  }, [])
-
-  // Subscribe to NIP-78 event changes (Nostr sync)
-  useEffect(() => {
-    if (!user?.pubkey || !user.signer?.nip44) return
-
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-
-    const loader = createAddressLoader(pool)
-    const sub = loader({
-      kind: 30078,
-      pubkey: user.pubkey,
-      identifier: 'nostube-uploads',
-      relays: readRelays,
-    }).subscribe(async event => {
-      if (event) {
-        try {
-          let plaintext = event.content
-          if (user.signer.nip44) {
-            try {
-              plaintext = await user.signer.nip44.decrypt(user.pubkey, event.content)
-            } catch {
-              // Legacy unencrypted draft
-            }
-          }
-
-          const parsed = JSON.parse(plaintext)
-          const nostrDrafts = parsed.drafts || []
-          const merged = mergeDraftsFromNostr(nostrDrafts, event.created_at)
-          saveDraftsToStorage(merged)
-
-          // Update last synced content to prevent re-publishing the same data
-          lastSyncedContentRef.current = JSON.stringify(merged)
-
-          setDraftsVersion(v => v + 1)
-        } catch (error) {
-          console.error('[UploadManager] Failed to parse NIP-78 event:', error)
-        }
-      }
-    })
-
-    return () => sub.unsubscribe()
-  }, [user?.pubkey, user?.signer, pool, config.relays])
+  const getDraftFn = useCallback(
+    (id: string): UploadDraft | undefined => {
+      return draftPersistence.getItem(id)
+    },
+    [draftPersistence]
+  )
 
   // ========== TASK MANAGEMENT ==========
 
@@ -1288,21 +1082,15 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
           // DIRECTLY UPDATE DRAFT - no stale callback issues
           // taskId === draftId, so we can update the draft's uploadInfo.videos
-          const draft = getDraftFromStorage(taskId)
+          const draft = draftPersistence.getItem(taskId)
           if (draft) {
             const existingVideos = draft.uploadInfo?.videos || []
-            // Check for duplicates by URL
             const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
             if (!isDuplicate) {
               const updatedVideos = [...existingVideos, mirroredVideo]
-              updateDraftInStorage(taskId, {
+              draftPersistence.updateItem(taskId, {
                 uploadInfo: { videos: updatedVideos },
               })
-              // Trigger re-render for any listening components
-              setDraftsVersion(v => v + 1)
-              // Immediate Nostr sync for uploads
-              const freshDrafts = getDraftsFromStorage()
-              saveToNostr(freshDrafts)
 
               if (import.meta.env.DEV) {
                 console.debug(
@@ -1335,7 +1123,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         startingTasksRef.current.delete(taskId)
       }
     },
-    [updateTasksState, tasks, processResolution, completeTask, failTask, saveToNostr]
+    [updateTasksState, tasks, processResolution, completeTask, failTask, draftPersistence]
   )
 
   // Resume transcode from persisted state
@@ -1451,16 +1239,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               completedResolutions.push(currentResolution)
 
               // DIRECTLY UPDATE DRAFT
-              const draft = getDraftFromStorage(taskId)
+              const draft = draftPersistence.getItem(taskId)
               if (draft) {
                 const existingVideos = draft.uploadInfo?.videos || []
                 const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
                 if (!isDuplicate) {
                   const updatedVideos = [...existingVideos, mirroredVideo]
-                  updateDraftInStorage(taskId, { uploadInfo: { videos: updatedVideos } })
-                  setDraftsVersion(v => v + 1)
-                  const freshDrafts = getDraftsFromStorage()
-                  saveToNostr(freshDrafts)
+                  draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
                 }
               }
 
@@ -1499,16 +1284,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             completedResolutions.push(currentResolution)
 
             // DIRECTLY UPDATE DRAFT
-            const draft = getDraftFromStorage(taskId)
+            const draft = draftPersistence.getItem(taskId)
             if (draft) {
               const existingVideos = draft.uploadInfo?.videos || []
               const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
               if (!isDuplicate) {
                 const updatedVideos = [...existingVideos, mirroredVideo]
-                updateDraftInStorage(taskId, { uploadInfo: { videos: updatedVideos } })
-                setDraftsVersion(v => v + 1)
-                const freshDrafts = getDraftsFromStorage()
-                saveToNostr(freshDrafts)
+                draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
               }
             }
 
@@ -1550,16 +1332,13 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             completedResolutions.push(resolution)
 
             // DIRECTLY UPDATE DRAFT
-            const draft = getDraftFromStorage(taskId)
+            const draft = draftPersistence.getItem(taskId)
             if (draft) {
               const existingVideos = draft.uploadInfo?.videos || []
               const isDuplicate = existingVideos.some(v => v.url === video.url)
               if (!isDuplicate) {
                 const updatedVideos = [...existingVideos, video]
-                updateDraftInStorage(taskId, { uploadInfo: { videos: updatedVideos } })
-                setDraftsVersion(v => v + 1)
-                const freshDrafts = getDraftsFromStorage()
-                saveToNostr(freshDrafts)
+                draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
               }
             }
 
@@ -1588,7 +1367,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       mirrorTranscodedVideo,
       completeTask,
       failTask,
-      saveToNostr,
+      draftPersistence,
     ]
   )
 

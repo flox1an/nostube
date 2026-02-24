@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
-  uploadFileToMultipleServersChunked,
   deleteBlobsFromServers,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
-import { type BlobDescriptor } from 'blossom-client-sdk'
+import { useFileUpload } from './useFileUpload'
+import { type BlobDescriptor, type Signer } from 'blossom-client-sdk'
 import { nowInSecs } from '@/lib/utils'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
@@ -309,6 +309,22 @@ export function useVideoUpload(
     server.tags.includes('mirror')
   )
 
+  const signer = user
+    ? async (draft: Parameters<typeof user.signer.signEvent>[0]) =>
+        await user.signer.signEvent(draft)
+    : undefined
+
+  const fileUpload = useFileUpload({
+    initialServers: blossomInitalUploadServers?.map(s => s.url) || [],
+    mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
+    signer: signer || ((async d => d) as unknown as Signer),
+  })
+
+  // Sync fileUpload progress to local state for backwards compatibility
+  useEffect(() => {
+    setUploadProgress(fileUpload.progress)
+  }, [fileUpload.progress])
+
   const handleUrlVideoProcessing = async (url: string) => {
     if (!url) return
 
@@ -363,20 +379,12 @@ export function useVideoUpload(
     if (!acceptedFiles[0] || !blossomInitalUploadServers || !user) return
     setThumbnailUploadInfo({ uploadedBlobs: [], mirroredBlobs: [], uploading: true })
     try {
-      const uploadedBlobs = await uploadFileToMultipleServersChunked({
-        file: acceptedFiles[0],
-        servers: blossomInitalUploadServers.map(server => server.url),
-        signer: async draft => await user.signer.signEvent(draft),
+      const result = await fileUpload.upload(acceptedFiles[0])
+      setThumbnailUploadInfo({
+        uploadedBlobs: result.uploadedBlobs,
+        mirroredBlobs: result.mirroredBlobs,
+        uploading: false,
       })
-      let mirroredBlobs: BlobDescriptor[] = []
-      if (blossomMirrorServers && blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
-        mirroredBlobs = await mirrorBlobsToServers({
-          mirrorServers: blossomMirrorServers.map(s => s.url),
-          blob: uploadedBlobs[0],
-          signer: async draft => await user.signer.signEvent(draft),
-        })
-      }
-      setThumbnailUploadInfo({ uploadedBlobs, mirroredBlobs, uploading: false })
       setThumbnail(acceptedFiles[0])
 
       // Generate blurhash for the uploaded thumbnail
@@ -408,9 +416,7 @@ export function useVideoUpload(
       ...(thumbnailUploadInfo.mirroredBlobs || []),
     ]
 
-    if (allBlobs.length > 0) {
-      await deleteBlobsFromServers(allBlobs, async draft => await user.signer.signEvent(draft))
-    }
+    await fileUpload.deleteBlobs(allBlobs)
 
     // Reset thumbnail state
     setThumbnail(null)
@@ -436,45 +442,12 @@ export function useVideoUpload(
       setUploadProgress(null)
 
       try {
-        setUploadProgress({
-          uploadedBytes: 0,
-          totalBytes: acceptedFiles[0].size,
-          percentage: 0,
-          currentChunk: 0,
-          totalChunks: 1,
-        })
-
-        const uploadedBlobs = await uploadFileToMultipleServersChunked({
-          file: acceptedFiles[0],
-          servers: blossomInitalUploadServers.map(server => server.url),
-          signer: async draft => await user.signer.signEvent(draft),
-          options: {
-            chunkSize: 10 * 1024 * 1024,
-            maxConcurrentChunks: 2,
-          },
-          callbacks: {
-            onProgress: progress => {
-              setUploadProgress(progress)
-            },
-          },
-        })
-
-        const videoVariant = await processUploadedVideo(acceptedFiles[0], uploadedBlobs)
+        const result = await fileUpload.upload(acceptedFiles[0])
+        const videoVariant = await processUploadedVideo(acceptedFiles[0], result.uploadedBlobs)
 
         setUploadInfo({
-          videos: [videoVariant],
+          videos: [{ ...videoVariant, mirroredBlobs: result.mirroredBlobs }],
         })
-
-        if (blossomMirrorServers && blossomMirrorServers.length > 0) {
-          const mirroredBlobs = await mirrorBlobsToServers({
-            mirrorServers: blossomMirrorServers.map(s => s.url),
-            blob: uploadedBlobs[0],
-            signer: async draft => await user.signer.signEvent(draft),
-          })
-          setUploadInfo(ui => ({
-            videos: ui.videos.map((v, i) => (i === 0 ? { ...v, mirroredBlobs } : v)),
-          }))
-        }
       } catch (error) {
         console.error('BUD-10 upload failed:', error)
         setUploadState('initial')
@@ -573,47 +546,12 @@ export function useVideoUpload(
     setUploadProgress(null)
 
     try {
-      setUploadProgress({
-        uploadedBytes: 0,
-        totalBytes: acceptedFiles[0].size,
-        percentage: 0,
-        currentChunk: 0,
-        totalChunks: 1,
-      })
-
-      const uploadedBlobs = await uploadFileToMultipleServersChunked({
-        file: acceptedFiles[0],
-        servers: blossomInitalUploadServers.map(server => server.url),
-        signer: async draft => await user.signer.signEvent(draft),
-        options: {
-          chunkSize: 10 * 1024 * 1024,
-          maxConcurrentChunks: 2,
-        },
-        callbacks: {
-          onProgress: progress => {
-            setUploadProgress(progress)
-          },
-        },
-      })
-
-      const videoVariant = await processUploadedVideo(acceptedFiles[0], uploadedBlobs)
+      const result = await fileUpload.upload(acceptedFiles[0])
+      const videoVariant = await processUploadedVideo(acceptedFiles[0], result.uploadedBlobs)
 
       setUploadInfo(ui => ({
-        videos: [...ui.videos, videoVariant],
+        videos: [...ui.videos, { ...videoVariant, mirroredBlobs: result.mirroredBlobs }],
       }))
-
-      if (blossomMirrorServers && blossomMirrorServers.length > 0) {
-        const mirroredBlobs = await mirrorBlobsToServers({
-          mirrorServers: blossomMirrorServers.map(s => s.url),
-          blob: uploadedBlobs[0],
-          signer: async draft => await user.signer.signEvent(draft),
-        })
-        setUploadInfo(ui => ({
-          videos: ui.videos.map((v, i) =>
-            i === ui.videos.length - 1 ? { ...v, mirroredBlobs } : v
-          ),
-        }))
-      }
 
       setUploadState('finished')
     } catch (error) {
@@ -724,25 +662,15 @@ export function useVideoUpload(
         setSubtitles(prev => [...prev, newSubtitle])
 
         try {
-          // Upload to Blossom servers
-          const uploadedBlobs = await uploadFileToMultipleServersChunked({
-            file,
-            servers: blossomInitalUploadServers.map(server => server.url),
-            signer: async draft => await user.signer.signEvent(draft),
-          })
-
-          let mirroredBlobs: BlobDescriptor[] = []
-          if (blossomMirrorServers && blossomMirrorServers.length > 0 && uploadedBlobs[0]) {
-            mirroredBlobs = await mirrorBlobsToServers({
-              mirrorServers: blossomMirrorServers.map(s => s.url),
-              blob: uploadedBlobs[0],
-              signer: async draft => await user.signer.signEvent(draft),
-            })
-          }
+          const result = await fileUpload.upload(file)
 
           // Update subtitle with uploaded blobs
           setSubtitles(prev =>
-            prev.map(s => (s.id === id ? { ...s, uploadedBlobs, mirroredBlobs } : s))
+            prev.map(s =>
+              s.id === id
+                ? { ...s, uploadedBlobs: result.uploadedBlobs, mirroredBlobs: result.mirroredBlobs }
+                : s
+            )
           )
         } catch (error) {
           console.error('Failed to upload subtitle:', error)
@@ -753,7 +681,7 @@ export function useVideoUpload(
 
       setSubtitleUploading(false)
     },
-    [blossomInitalUploadServers, blossomMirrorServers, user]
+    [blossomInitalUploadServers, user, fileUpload]
   )
 
   // Handler to remove a subtitle
@@ -765,15 +693,12 @@ export function useVideoUpload(
         return
       }
 
-      // Delete blobs from servers if they exist
       const allBlobs = [...subtitle.uploadedBlobs, ...subtitle.mirroredBlobs]
-      if (allBlobs.length > 0) {
-        await deleteBlobsFromServers(allBlobs, async draft => await user.signer.signEvent(draft))
-      }
+      await fileUpload.deleteBlobs(allBlobs)
 
       setSubtitles(prev => prev.filter(s => s.id !== id))
     },
-    [subtitles, user]
+    [subtitles, user, fileUpload]
   )
 
   // Handler to change subtitle language
@@ -807,19 +732,9 @@ export function useVideoUpload(
       })
 
       try {
-        thumbnailUploadedBlobs = await uploadFileToMultipleServersChunked({
-          file: thumbnailFile,
-          servers: blossomInitalUploadServers!.map(server => server.url),
-          signer: async draft => await user.signer.signEvent(draft),
-        })
-
-        if (blossomMirrorServers && blossomMirrorServers.length > 0 && thumbnailUploadedBlobs[0]) {
-          thumbnailMirroredBlobs = await mirrorBlobsToServers({
-            mirrorServers: blossomMirrorServers.map(s => s.url),
-            blob: thumbnailUploadedBlobs[0],
-            signer: async draft => await user.signer.signEvent(draft),
-          })
-        }
+        const result = await fileUpload.upload(thumbnailFile)
+        thumbnailUploadedBlobs = result.uploadedBlobs
+        thumbnailMirroredBlobs = result.mirroredBlobs
       } catch (error) {
         console.error('Failed to upload generated thumbnail:', error)
         throw new Error('Failed to upload generated thumbnail')

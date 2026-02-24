@@ -20,8 +20,9 @@ export function getItemsFromStorage<T extends Identifiable>(storageKey: string):
   const stored = localStorage.getItem(storageKey)
   if (stored) {
     try {
-      const parsed: StorageData<T> = JSON.parse(stored)
-      return parsed.items ?? []
+      const parsed = JSON.parse(stored)
+      // Backward compat: accept "items" (new) or "drafts" (legacy)
+      return (parsed as StorageData<T>).items ?? parsed.drafts ?? []
     } catch (error) {
       console.error(`[draft-persistence-storage] Failed to load items from ${storageKey}:`, error)
     }

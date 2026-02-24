@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generic `draft-persistence-storage` utilities for localStorage CRUD and Nostr merge with timestamp-based conflict resolution
 - Generic `useDraftPersistence<T>` hook wrapping storage utilities with NIP-78 Nostr sync, debounced saves, milestone detection, and encrypted backup
 
+### Changed
+
+- Rewrote `useUploadDrafts` as a thin wrapper around `useDraftPersistence<UploadDraft>`, reducing ~460 lines to ~100 lines while preserving the identical public API
+- Added backward-compatible `drafts` key reading in `getItemsFromStorage` for legacy localStorage data migration
+
 ## [0.2.3] - 2026-02-24
 
 ### Added

@@ -50,7 +50,7 @@ describe('useUploadDrafts', () => {
       act(() => {
         result.current.createDraft()
       })
-    }).toThrow('Maximum 10 drafts allowed')
+    }).toThrow('Maximum 10 items allowed')
   })
 
   it('updates draft and modifies updatedAt', async () => {
@@ -104,7 +104,7 @@ describe('useUploadDrafts', () => {
     expect(stored).toBeTruthy()
     const parsed = JSON.parse(stored!)
     expect(parsed.version).toBe('1')
-    expect(parsed.drafts).toHaveLength(1)
+    expect(parsed.items).toHaveLength(1)
   })
 
   it('loads from localStorage on mount', () => {
@@ -159,6 +159,6 @@ describe('useUploadDrafts', () => {
     const stored = localStorage.getItem('nostube_upload_drafts')
     expect(stored).toBeTruthy()
     const parsed = JSON.parse(stored!)
-    expect(parsed.drafts[0].title).toBe('Changed Title')
+    expect(parsed.items[0].title).toBe('Changed Title')
   })
 })

@@ -1,4 +1,5 @@
 import { Header } from '@/components/Header'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { MiniSidebar } from './MiniSidebar'
@@ -20,6 +21,7 @@ export function MainLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      <OfflineBanner />
       <div className={cn('flex flex-1 relative w-full lg:mb-0', !isVideoPage && 'mb-16')}>
         {/* Desktop Sidebar - Inline toggle between Mini and Full (hidden on video pages) */}
         {!isVideoPage && (

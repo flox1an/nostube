@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Generic `draft-persistence-storage` utilities for localStorage CRUD and Nostr merge with timestamp-based conflict resolution
+
 ## [0.2.3] - 2026-02-24
 
 ### Added

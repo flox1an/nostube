@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Home page (`/`) now shows Subscriptions feed when logged in with follows, Global feed otherwise
+- Navigation order adapts: Subscriptions first when user has follows, Home first otherwise
+- Added `/explore` route for Global feed access when Subscriptions is the home view
+- Added `navigation.explore` translations for all 5 locales (en, de, es, fr, ru)
+
 ## [0.2.4] - 2026-02-24
 
 ### Added

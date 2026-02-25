@@ -6,6 +6,9 @@ import { VideoCardSkeleton } from '@/components/VideoCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
+const SmartHomePage = lazy(() =>
+  import('./pages/SmartHomePage').then(m => ({ default: m.SmartHomePage }))
+)
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const ShortsPage = lazy(() => import('./pages/ShortsPage').then(m => ({ default: m.ShortsPage })))
 const ShortsVideoPage = lazy(() =>
@@ -165,6 +168,14 @@ export function AppRouter() {
         <Route path="/" element={<MainLayout />}>
           <Route
             index
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <SmartHomePage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/explore"
             element={
               <Suspense fallback={<PageLoader />}>
                 <HomePage />

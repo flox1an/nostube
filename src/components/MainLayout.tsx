@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Header } from '@/components/Header'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { Outlet, useLocation } from 'react-router-dom'
@@ -17,6 +18,13 @@ export function MainLayout() {
     location.pathname.startsWith('/v/') ||
     location.pathname.startsWith('/video/') ||
     location.pathname.startsWith('/short/')
+
+  // Auto-close sidebar when navigating to a video page
+  useEffect(() => {
+    if (isVideoPage && isSidebarOpen) {
+      toggleSidebar()
+    }
+  }, [isVideoPage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -8,10 +8,11 @@ import {
   Cog,
   FileText,
   MenuIcon,
+  Compass,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
-import { useCurrentUser, useAppContext, useReadRelays, useIsMobile } from '@/hooks'
+import { useCurrentUser, useAppContext, useReadRelays, useIsMobile, useFollowSet } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
@@ -32,6 +33,8 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
   const location = useLocation()
   const isDrawer = mode === 'drawer' || (mode === 'auto' && isMobile)
   const readRelays = useReadRelays()
+  const { followedPubkeys } = useFollowSet()
+  const hasFollows = !!user && followedPubkeys.length > 0
   const pubkey = user?.pubkey
 
   const userProfileUrl = useMemo(() => {
@@ -42,13 +45,21 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
   // Beta feature: only show video-notes for beta users
   const isVideoNotesBetaUser = isBetaUser(pubkey)
 
-  const navigationItems = [
-    { name: t('navigation.home'), icon: Home, href: '/' },
-    { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
-  ]
+  const navigationItems = hasFollows
+    ? [
+        { name: t('navigation.subscriptions'), icon: Users, href: '/' },
+        { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
+        { name: t('navigation.explore'), icon: Compass, href: '/explore' },
+      ]
+    : [
+        { name: t('navigation.home'), icon: Home, href: '/' },
+        { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
+      ]
 
   const libraryItems = [
-    { name: t('navigation.subscriptions'), icon: Users, href: '/subscriptions' },
+    ...(!hasFollows
+      ? [{ name: t('navigation.subscriptions'), icon: Users, href: '/subscriptions' }]
+      : []),
     { name: t('navigation.history'), icon: History, href: '/history', disabled: false },
     { name: t('navigation.playlists'), icon: ListVideo, href: '/playlists' },
     {

@@ -1,41 +1,66 @@
-import { Home, Play, Users, ListVideo } from 'lucide-react'
+import { Home, Play, Users, ListVideo, Compass } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { useCurrentUser } from '@/hooks'
+import { useCurrentUser, useFollowSet } from '@/hooks'
 
 export function MobileBottomNav() {
   const { t } = useTranslation()
   const location = useLocation()
   const { user } = useCurrentUser()
+  const { followedPubkeys } = useFollowSet()
+  const hasFollows = !!user && followedPubkeys.length > 0
 
-  const navItems = [
-    {
-      label: t('navigation.home'),
-      icon: Home,
-      href: '/',
-    },
-    {
-      label: t('navigation.shorts'),
-      icon: Play,
-      href: '/shorts',
-    },
-    // Only show Subscriptions and Playlists when logged in
-    ...(user
-      ? [
-          {
-            label: t('navigation.subscriptions'),
-            icon: Users,
-            href: '/subscriptions',
-          },
-          {
-            label: t('navigation.playlists'),
-            icon: ListVideo,
-            href: '/playlists',
-          },
-        ]
-      : []),
-  ]
+  const navItems = hasFollows
+    ? [
+        {
+          label: t('navigation.subscriptions'),
+          icon: Users,
+          href: '/',
+        },
+        {
+          label: t('navigation.shorts'),
+          icon: Play,
+          href: '/shorts',
+        },
+        {
+          label: t('navigation.explore'),
+          icon: Compass,
+          href: '/explore',
+          noFill: true,
+        },
+        {
+          label: t('navigation.playlists'),
+          icon: ListVideo,
+          href: '/playlists',
+        },
+      ]
+    : [
+        {
+          label: t('navigation.home'),
+          icon: Home,
+          href: '/',
+        },
+        {
+          label: t('navigation.shorts'),
+          icon: Play,
+          href: '/shorts',
+        },
+        ...(user
+          ? [
+              {
+                label: t('navigation.subscriptions'),
+                icon: Users,
+                href: '/subscriptions',
+              },
+              {
+                label: t('navigation.playlists'),
+                icon: ListVideo,
+                href: '/playlists',
+              },
+            ]
+          : []),
+      ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-background/95 backdrop-blur-sm border-t border-border px-2 pb-safe-area-inset-bottom h-16 lg:hidden">
@@ -50,7 +75,7 @@ export function MobileBottomNav() {
               isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <item.icon className={cn('h-5 w-5', isActive && 'fill-current')} />
+            <item.icon className={cn('h-5 w-5', isActive && !item.noFill && 'fill-current')} />
             <span className="text-[10px] font-medium">{item.label}</span>
           </Link>
         )

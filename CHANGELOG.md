@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-02-25
+
 ### Changed
 
 - Home page (`/`) now shows Subscriptions feed when logged in with follows, Global feed otherwise
 - Navigation order adapts: Subscriptions first when user has follows, Home first otherwise
 - Added `/explore` route for Global feed access when Subscriptions is the home view
-- Added `navigation.explore` translations for all 5 locales (en, de, es, fr, ru)
+- Auto-close sidebar when navigating to a video page
+
+### Fixed
+
+- Reply to kind 1 notes now uses kind 1 (NIP-10) instead of kind 1111, so replies are visible in all clients
 
 ## [0.2.4] - 2026-02-24
 

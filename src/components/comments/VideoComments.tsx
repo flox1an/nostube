@@ -299,37 +299,55 @@ export function VideoComments({
     // Get a relay hint (use first parent comment relay or first write relay)
     const relayHint = parentCommentRelays[0] || writeRelays[0] || readRelays[0] || ''
 
-    // NIP-22: Reply to a comment
-    // Root scope uses A tag for addressable events, E tag for regular events
-    // Parent is always the comment being replied to (uses e tag)
-    const tags: string[][] = []
+    // Determine reply kind based on parent:
+    // - Replying to kind 1 → use kind 1 with NIP-10 threading (spec: "Comments MUST NOT reply to kind 1")
+    // - Replying to kind 1111 → use kind 1111 with NIP-22 tags
+    const isReplyToKind1 = replyTo.kind === 1
 
-    if (isAddressable && videoAddress) {
-      // Addressable event: use A tag for root scope
+    const tags: string[][] = []
+    let replyKind: number
+
+    if (isReplyToKind1) {
+      // NIP-10: Reply to a kind 1 note using kind 1 threading
+      // Root tag = the video event, Reply tag = the comment being replied to
+      replyKind = 1
       tags.push(
-        ['A', videoAddress, relayHint],
-        ['K', String(videoKind)],
-        ['P', authorPubkey, relayHint]
+        ['e', videoId, relayHint, 'root'],
+        ['e', replyTo.id, relayHint, 'reply'],
+        ['p', authorPubkey, relayHint],
+        ['p', replyTo.pubkey, relayHint],
+        ['client', 'nostube']
       )
     } else {
-      // Regular event: use E tag for root scope
+      // NIP-22: Reply to a kind 1111 comment
+      // Root scope uses A tag for addressable events, E tag for regular events
+      replyKind = 1111
+
+      if (isAddressable && videoAddress) {
+        tags.push(
+          ['A', videoAddress, relayHint],
+          ['K', String(videoKind)],
+          ['P', authorPubkey, relayHint]
+        )
+      } else {
+        tags.push(
+          ['E', videoId, relayHint, authorPubkey],
+          ['K', String(videoKind || 34235)],
+          ['P', authorPubkey, relayHint]
+        )
+      }
+
+      // Parent: the comment being replied to
       tags.push(
-        ['E', videoId, relayHint, authorPubkey],
-        ['K', String(videoKind || 34235)],
-        ['P', authorPubkey, relayHint]
+        ['e', replyTo.id, relayHint, replyTo.pubkey],
+        ['k', '1111'],
+        ['p', replyTo.pubkey, relayHint],
+        ['client', 'nostube']
       )
     }
 
-    // Parent: the comment being replied to (always uses e tag)
-    tags.push(
-      ['e', replyTo.id, relayHint, replyTo.pubkey],
-      ['k', '1111'],
-      ['p', replyTo.pubkey, relayHint],
-      ['client', 'nostube']
-    )
-
     const draftEvent = {
-      kind: 1111,
+      kind: replyKind,
       content: replyContent,
       created_at: nowInSecs(),
       tags,

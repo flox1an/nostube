@@ -87,6 +87,7 @@ export function mapEventToComment(
     content: event.content,
     pubkey: event.pubkey,
     created_at: event.created_at,
+    kind: event.kind,
     replyToId,
   }
 }

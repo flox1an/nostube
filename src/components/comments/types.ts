@@ -12,6 +12,7 @@ export interface Comment {
   content: string
   pubkey: string
   created_at: number
+  kind: number // The event kind (1 or 1111)
   replyToId?: string // The comment this is replying to
   replies?: Comment[] // Nested replies
 }

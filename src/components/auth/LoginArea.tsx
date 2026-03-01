@@ -29,7 +29,7 @@ export function LoginArea({ className }: LoginAreaProps) {
       {currentUser ? (
         <AccountSwitcher onAddAccount={() => setLoginDialogOpen(true)} />
       ) : (
-        <Button onClick={() => setLoginDialogOpen(true)} variant={'outline'}>
+        <Button onClick={() => setLoginDialogOpen(true)}>
           <User className="w-4 h-4" />
           <span className="truncate">Log in</span>
         </Button>

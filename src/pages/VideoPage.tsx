@@ -44,6 +44,7 @@ import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
 import { TransformVideoDialog } from '@/components/TransformVideoDialog'
 import { getNeededTransformations } from '@/lib/video-transformation-detection'
 import { useTranslation } from 'react-i18next'
+import type { BlossomServerTag } from '@/contexts/AppContext'
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_URLS: string[] = []
@@ -317,11 +318,18 @@ export function VideoPage() {
   const { data: userBlossomServers } = useUserBlossomServers()
 
   // Use video server availability hook
+  const allConfigServers = useMemo(
+    () => [
+      ...(config.blossomServers || []),
+      ...(config.cachingServers || []).map(s => ({ ...s, tags: [] as BlossomServerTag[] })),
+    ],
+    [config.blossomServers, config.cachingServers]
+  )
   const { serverList, serverAvailability, checkAvailability, isChecking } =
     useVideoServerAvailability({
       videoUrls: video?.urls ?? EMPTY_URLS,
       videoHash: video?.x,
-      configServers: config.blossomServers,
+      configServers: allConfigServers,
       userServers: userBlossomServers,
     })
 
@@ -331,6 +339,17 @@ export function VideoPage() {
       checkAvailability()
     }
   }, [video?.id, checkAvailability])
+
+  // Check if video is available on a configured caching/streaming server
+  const isCachedLocally = useMemo(() => {
+    if (!config.cachingServers?.length) return false
+    const cachingUrls = new Set(config.cachingServers.map(s => new URL(s.url).origin))
+    return serverList.some(
+      s =>
+        cachingUrls.has(new URL(s.url).origin) &&
+        serverAvailability.get(s.url)?.status === 'available'
+    )
+  }, [config.cachingServers, serverList, serverAvailability])
 
   // Count servers that currently host the video (from video URLs + verified others)
   const blossomServerCount = useMemo(() => {
@@ -630,6 +649,7 @@ export function VideoPage() {
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
             userServers={userBlossomServers}
+            isCachedLocally={isCachedLocally}
             geohash={videoGeohash}
             currentTime={currentPlayPos}
           />

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Available offline" badge on video page when video is cached on a configured streaming server
+
+### Changed
+
+- Login button is now primary (filled) instead of outline when logged out
+
 ## [0.2.7] - 2026-03-01
 
 ### Added

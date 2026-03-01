@@ -125,6 +125,7 @@
     "languages": "Idiomas",
     "location": "Ubicación",
     "viewLocation": "Ver ubicación en el mapa",
+    "availableOffline": "Disponible sin conexión",
     "expiresIn": "Expira en {{time}}",
     "expired": "Expirado",
     "updatedAgo": "actualizado hace {{time}}",

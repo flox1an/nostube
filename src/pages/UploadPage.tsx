@@ -34,10 +34,13 @@ export function UploadPage() {
   const ephemeralDraftRef = useRef<UploadDraft | null>(null)
 
   // When navigating back to draft picker, force a refresh to get latest data
+  const prevDraftRef = useRef(currentDraft)
   useEffect(() => {
-    if (!currentDraft) {
+    if (prevDraftRef.current && !currentDraft) {
+      // Only refresh when transitioning from editing a draft back to the picker
       refreshDrafts()
     }
+    prevDraftRef.current = currentDraft
   }, [currentDraft, refreshDrafts])
 
   // Auto-select a draft from query param (e.g., /upload?draft=<id>)

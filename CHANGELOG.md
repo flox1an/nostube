@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved settings section spacing: larger headings (`h3`), `divide-y` separators, and more vertical padding between sections in General settings
 
+### Fixed
+
+- Maximum update depth exceeded crash when deleting an upload draft (infinite re-render loop in UploadPage)
+
 ## [0.2.6] - 2026-02-25
 
 ### Changed

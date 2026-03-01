@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Maximum update depth exceeded crash when deleting an upload draft (infinite re-render loop in UploadPage)
+- "Set as thumbnail" button not working at video position 0 in thumbnail generation from video
 
 ## [0.2.6] - 2026-02-25
 

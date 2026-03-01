@@ -44,7 +44,6 @@ export function ThumbnailSection({
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // URL Input State
   const [urlInput, setUrlInput] = useState('')
@@ -90,8 +89,6 @@ export function ThumbnailSection({
               setPreviewBlob(blob)
               if (callback) {
                 callback(blob)
-              } else {
-                setHasUnsavedChanges(true)
               }
             }
           },
@@ -110,7 +107,6 @@ export function ThumbnailSection({
     if (previewBlob) {
       const thumbnailFile = new File([previewBlob], 'thumbnail.webp', { type: 'image/webp' })
       onThumbnailDrop([thumbnailFile])
-      setHasUnsavedChanges(false)
     }
   }, [previewBlob, onThumbnailDrop])
 
@@ -152,13 +148,6 @@ export function ThumbnailSection({
       videoRef.current.load() // Reload video when source changes
     }
   }, [videoUrl])
-
-  // Reset unsaved changes when thumbnail is uploaded
-  useEffect(() => {
-    if (thumbnailBlob || uploadedThumbnailUrl) {
-      setHasUnsavedChanges(false)
-    }
-  }, [thumbnailBlob, uploadedThumbnailUrl])
 
   // Reset image loaded state when thumbnail source changes
   useEffect(() => {
@@ -358,7 +347,7 @@ export function ThumbnailSection({
               <Button
                 type="button"
                 onClick={handleSetThumbnail}
-                disabled={!previewBlob || !hasUnsavedChanges || thumbnailUploadInfo.uploading}
+                disabled={!previewBlob || thumbnailUploadInfo.uploading}
               >
                 {thumbnailUploadInfo.uploading ? (
                   <>

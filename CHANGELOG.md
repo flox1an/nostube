@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Availability indicator (green/red dot) next to each caching server in settings, with HEAD request check and 5s timeout
+
 ## [0.2.6] - 2026-02-25
 
 ### Changed

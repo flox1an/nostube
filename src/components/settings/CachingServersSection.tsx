@@ -1,16 +1,72 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { XIcon } from 'lucide-react'
+import { XIcon, LoaderIcon } from 'lucide-react'
+
+type ServerStatus = 'checking' | 'online' | 'offline'
+
+function useServerStatus(urls: string[]) {
+  const [statuses, setStatuses] = useState<Record<string, ServerStatus>>({})
+  const controllersRef = useRef<Map<string, AbortController>>(new Map())
+
+  const checkServer = useCallback((url: string) => {
+    // Abort any existing request for this URL
+    controllersRef.current.get(url)?.abort()
+
+    const controller = new AbortController()
+    controllersRef.current.set(url, controller)
+    setStatuses(prev => ({ ...prev, [url]: 'checking' }))
+
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
+    fetch(url, { method: 'HEAD', signal: controller.signal, redirect: 'manual' })
+      .then(res => {
+        clearTimeout(timeout)
+        setStatuses(prev => ({
+          ...prev,
+          [url]: res.status < 400 ? 'online' : 'offline',
+        }))
+      })
+      .catch(() => {
+        clearTimeout(timeout)
+        setStatuses(prev => ({ ...prev, [url]: 'offline' }))
+      })
+      .finally(() => {
+        controllersRef.current.delete(url)
+      })
+  }, [])
+
+  useEffect(() => {
+    urls.forEach(checkServer)
+    return () => {
+      controllersRef.current.forEach(c => c.abort())
+      controllersRef.current.clear()
+    }
+  }, [urls.join(','), checkServer])
+
+  return statuses
+}
+
+function StatusDot({ status }: { status: ServerStatus | undefined }) {
+  if (!status || status === 'checking') {
+    return <LoaderIcon className="h-3 w-3 animate-spin text-muted-foreground" />
+  }
+  if (status === 'online') {
+    return <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+  }
+  return <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
+}
 
 export function CachingServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const [newServerUrl, setNewServerUrl] = useState('')
+  const serverUrls = (config.cachingServers || []).map(s => s.url)
+  const serverStatuses = useServerStatus(serverUrls)
 
   const handleAddServer = () => {
     if (newServerUrl.trim()) {
@@ -77,10 +133,9 @@ export function CachingServersSection() {
             <ul className="space-y-2">
               {config.cachingServers?.map(server => (
                 <li key={server.url} className="flex items-center justify-between text-sm">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-2 mt-1">
-                      <span>{server.name || server.url}</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <StatusDot status={serverStatuses[server.url]} />
+                    <span>{server.name || server.url}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

@@ -7,9 +7,11 @@
 
 import React, { useState } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp } from 'lucide-react'
+import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useEventStore } from 'applesauce-react/hooks'
 import { useProfile } from '@/hooks'
+import { isBetaUser } from '@/lib/beta-users'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
@@ -76,6 +78,8 @@ export const CommentItem = React.memo(function CommentItem({
   const isHighlighted = highlightedCommentId === comment.id
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
+  const eventStore = useEventStore()
+  const showDebug = isBetaUser(currentUserPubkey)
 
   // Root comments (depth=0) have big avatars, nested have small avatars
   const isRootComment = depth === 0
@@ -123,6 +127,19 @@ export const CommentItem = React.memo(function CommentItem({
                     <Flag className="w-4 h-4 mr-2" />
                     {t('video.comments.reportComment')}
                   </DropdownMenuItem>
+                  {showDebug && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        const event = eventStore.getEvent(comment.id)
+                        if (event) {
+                          navigator.clipboard.writeText(JSON.stringify(event, null, 2))
+                        }
+                      }}
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy raw event
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

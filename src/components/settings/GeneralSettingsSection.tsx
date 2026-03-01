@@ -49,12 +49,14 @@ export function GeneralSettingsSection() {
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">{t('settings.general.description')}</p>
+    <div className="divide-y divide-border">
+      <div className="pb-6">
+        <p className="text-sm text-muted-foreground">{t('settings.general.description')}</p>
+      </div>
 
       {/* Theme Mode */}
-      <div className="space-y-3">
-        <Label>{t('settings.general.themeMode')}</Label>
+      <div className="space-y-3 py-6">
+        <h3 className="text-base font-semibold">{t('settings.general.themeMode')}</h3>
         <RadioGroup
           value={theme}
           onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}
@@ -84,8 +86,8 @@ export function GeneralSettingsSection() {
       </div>
 
       {/* Color Theme */}
-      <div className="space-y-2">
-        <Label htmlFor="color-theme">{t('settings.general.colorTheme')}</Label>
+      <div className="space-y-2 py-6">
+        <h3 className="text-base font-semibold">{t('settings.general.colorTheme')}</h3>
         <Select value={colorTheme} onValueChange={setColorTheme}>
           <SelectTrigger id="color-theme">
             <SelectValue placeholder={t('settings.general.selectColorTheme')} />
@@ -104,8 +106,8 @@ export function GeneralSettingsSection() {
       </div>
 
       {/* Language */}
-      <div className="space-y-2">
-        <Label htmlFor="language">{t('settings.general.language')}</Label>
+      <div className="space-y-2 py-6">
+        <h3 className="text-base font-semibold">{t('settings.general.language')}</h3>
         <Select value={i18n.language} onValueChange={handleLanguageChange}>
           <SelectTrigger id="language">
             <SelectValue placeholder={t('settings.general.selectLanguage')} />
@@ -122,8 +124,8 @@ export function GeneralSettingsSection() {
       </div>
 
       {/* Thumbnail Resize Server */}
-      <div className="space-y-2">
-        <Label htmlFor="thumb-server">{t('settings.general.thumbnailServer')}</Label>
+      <div className="space-y-2 py-6">
+        <h3 className="text-base font-semibold">{t('settings.general.thumbnailServer')}</h3>
         <Input
           id="thumb-server"
           type="url"
@@ -137,8 +139,8 @@ export function GeneralSettingsSection() {
       </div>
 
       {/* NSFW Filter */}
-      <div className="space-y-3">
-        <Label>{t('settings.general.nsfwFilter')}</Label>
+      <div className="space-y-3 py-6">
+        <h3 className="text-base font-semibold">{t('settings.general.nsfwFilter')}</h3>
         <RadioGroup value={config.nsfwFilter ?? 'hide'} onValueChange={handleNsfwFilterChange}>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="hide" id="nsfw-hide" />
@@ -166,8 +168,8 @@ export function GeneralSettingsSection() {
 
       {/* Import Follows from Nostr Contacts */}
       {user && hasKind3Contacts && (
-        <div className="space-y-3">
-          <Label>{t('settings.general.importFollows')}</Label>
+        <div className="space-y-3 py-6">
+          <h3 className="text-base font-semibold">{t('settings.general.importFollows')}</h3>
           {importDone && importProgress.phase === 'done' ? (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />

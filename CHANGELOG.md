@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Availability indicator (green/red dot) next to each caching server in settings, with HEAD request check and 5s timeout
 
+### Changed
+
+- Improved settings section spacing: larger headings (`h3`), `divide-y` separators, and more vertical padding between sections in General settings
+
 ## [0.2.6] - 2026-02-25
 
 ### Changed

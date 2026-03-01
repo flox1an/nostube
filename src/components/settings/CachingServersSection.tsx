@@ -64,7 +64,7 @@ export function CachingServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
-  const [newServerUrl, setNewServerUrl] = useState('')
+  const [newServerUrl, setNewServerUrl] = useState('http://127.0.0.1:24242')
   const serverUrls = (config.cachingServers || []).map(s => s.url)
   const serverStatuses = useServerStatus(serverUrls)
 

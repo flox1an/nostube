@@ -540,7 +540,9 @@
     },
     "caching": {
       "title": "Streaming Servers",
-      "description": "Servers that deliver videos for playback. Optional - improves streaming speed.",
+      "description": "A streaming server can be used in two ways:",
+      "useCase1": "As a local caching blossom server to store videos for offline usage",
+      "useCase2": "As a CDN edge server that caches videos from other public upstream servers",
       "noServers": "No streaming servers configured. Videos will play directly from hosting servers.",
       "addPlaceholder": "Add streaming server URL",
       "addButton": "Add Server",

@@ -526,7 +526,9 @@
     },
     "caching": {
       "title": "Streaming-Server",
-      "description": "Server für die Videowiedergabe. Optional - verbessert die Streaming-Geschwindigkeit.",
+      "description": "Ein Streaming-Server kann auf zwei Arten genutzt werden:",
+      "useCase1": "Als lokaler Caching-Blossom-Server, um Videos für die Offline-Nutzung zu speichern",
+      "useCase2": "Als CDN-Edge-Server, der Videos von anderen öffentlichen Upstream-Servern zwischenspeichert",
       "noServers": "Keine Streaming-Server konfiguriert. Videos werden direkt von Hosting-Servern abgespielt.",
       "addPlaceholder": "Streaming-Server-URL hinzufügen",
       "addButton": "Server hinzufügen",

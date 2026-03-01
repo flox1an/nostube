@@ -525,7 +525,9 @@
     },
     "caching": {
       "title": "Serveurs de streaming",
-      "description": "Serveurs pour la lecture vidéo. Optionnel - améliore la vitesse de streaming.",
+      "description": "Un serveur de streaming peut être utilisé de deux manières :",
+      "useCase1": "Comme serveur blossom local de cache pour stocker les vidéos hors ligne",
+      "useCase2": "Comme serveur CDN edge qui met en cache les vidéos provenant d'autres serveurs publics",
       "noServers": "Aucun serveur de streaming configuré. Les vidéos seront lues directement depuis les serveurs d'hébergement.",
       "addPlaceholder": "Ajouter l'URL du serveur de streaming",
       "addButton": "Ajouter un serveur",

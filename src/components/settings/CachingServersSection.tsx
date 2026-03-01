@@ -123,7 +123,13 @@ export function CachingServersSection() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{t('settings.caching.description')}</p>
+      <div className="text-sm text-muted-foreground space-y-2">
+        <p>{t('settings.caching.description')}</p>
+        <ul className="list-disc list-inside space-y-1 ml-1">
+          <li>{t('settings.caching.useCase1')}</li>
+          <li>{t('settings.caching.useCase2')}</li>
+        </ul>
+      </div>
 
       <div>
         {(config.cachingServers?.length ?? 0) === 0 ? (

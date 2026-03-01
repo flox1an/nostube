@@ -344,11 +344,14 @@ export function VideoPage() {
   const isCachedLocally = useMemo(() => {
     if (!config.cachingServers?.length) return false
     const cachingUrls = new Set(config.cachingServers.map(s => new URL(s.url).origin))
-    return serverList.some(
-      s =>
+    return serverList.some(s => {
+      const avail = serverAvailability.get(s.url)
+      return (
         cachingUrls.has(new URL(s.url).origin) &&
-        serverAvailability.get(s.url)?.status === 'available'
-    )
+        avail?.status === 'available' &&
+        !avail?.redirected
+      )
+    })
   }, [config.cachingServers, serverList, serverAvailability])
 
   // Count servers that currently host the video (from video URLs + verified others)

@@ -15,6 +15,7 @@ export interface ServerAvailability extends ServerInfo {
   status: ServerStatus
   statusCode?: number // HTTP status from HEAD request
   contentLength?: number // File size from Content-Length header
+  redirected?: boolean // True if the server redirected to another origin
   lastChecked?: number // Timestamp of last check
 }
 
@@ -126,6 +127,7 @@ async function checkBlossomServer(
       status: response.ok ? 'available' : 'unavailable',
       statusCode: response.status,
       contentLength: contentLength ? parseInt(contentLength) : undefined,
+      redirected: response.redirected,
       lastChecked: Date.now(),
     }
   } catch {

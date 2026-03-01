@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-02-25
+
+### Changed
+
+- Reorganized user menu for better usability: Profile & Wallet first, followed by Content (Playlists, Upload), then Settings, and Account Management last
+- Updated "Playlists" icon in user menu to `ListVideo` for better visual indication
+- Added "Add account" button directly to the account switcher menu
+
 ## [0.2.5] - 2026-02-25
 
 ### Changed

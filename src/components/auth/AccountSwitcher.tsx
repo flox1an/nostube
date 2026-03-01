@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, Upload, UserPlus, Settings, User } from 'lucide-react'
+import { ChevronDown, LogOut, Upload, UserPlus, Settings, User, ListVideo } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +51,7 @@ function AccountSwitchItem({
   )
 }
 
-export function AccountSwitcher() {
+export function AccountSwitcher({ onAddAccount }: { onAddAccount?: () => void }) {
   const { t } = useTranslation()
   const activeAccount = useActiveAccount()
   const accountManager = useAccountManager()
@@ -104,11 +104,16 @@ export function AccountSwitcher() {
           <User className="w-4 h-4" />
           <span>{t('auth.account.profile')}</span>
         </DropdownMenuItem>
+
+        <WalletMenuItem />
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuItem
           onClick={() => navigate('/playlists')}
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
         >
-          <UserPlus className="w-4 h-4" />
+          <ListVideo className="w-4 h-4" />
           <span>{t('auth.account.playlists')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -118,7 +123,9 @@ export function AccountSwitcher() {
           <Upload className="w-4 h-4" />
           <span>{t('header.upload')}</span>
         </DropdownMenuItem>
-        <WalletMenuItem />
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuItem
           onClick={() => navigate('/settings')}
           className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
@@ -126,6 +133,7 @@ export function AccountSwitcher() {
           <Settings className="w-4 h-4" />
           <span>{t('settings.title')}</span>
         </DropdownMenuItem>
+
         <DropdownMenuSeparator />
 
         {otherAccounts.length > 0 && (
@@ -141,6 +149,17 @@ export function AccountSwitcher() {
             ))}
           </>
         )}
+
+        {onAddAccount && (
+          <DropdownMenuItem
+            onClick={onAddAccount}
+            className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Add account</span>
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuItem
           onClick={() => {
             handleRemoveAccount(activeAccount)
@@ -152,7 +171,7 @@ export function AccountSwitcher() {
               saveActiveAccount(null)
             }
           }}
-          className="flex items-center gap-2 cursor-pointer p-2 rounded-md"
+          className="flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500 focus:text-red-500"
         >
           <LogOut className="w-4 h-4" />
           <span>{t('auth.account.logout')}</span>

@@ -7,13 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-03-01
+
 ### Added
 
-- "Available offline" badge on video page when video is cached on a configured streaming server
+- "Available offline" badge on video page when video is cached on a configured streaming server (excludes redirected responses)
+- Second-pass comment loading to discover replies from external clients that only tag the parent comment
+- Updated streaming server help text with bullet point use cases across all locales
+- Pre-filled streaming server input with `http://127.0.0.1:24242`
 
 ### Changed
 
 - Login button is now primary (filled) instead of outline when logged out
+- Improved settings section spacing with `divide-y` separators and larger headings
+
+### Fixed
+
+- "Available offline" badge no longer shows when caching server redirects to origin
+- "Set as thumbnail" button not working at video position 0
+- Maximum update depth exceeded crash when deleting an upload draft
 
 ## [0.2.7] - 2026-03-01
 

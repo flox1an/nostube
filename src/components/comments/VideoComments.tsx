@@ -185,15 +185,57 @@ export function VideoComments({
       [eventStore, filters, videoId, videoAddress]
     ) ?? []
 
+  // Second pass: fetch replies to known comments from external clients
+  // External clients may only tag the parent comment (not the video), so we
+  // query for kind:1 events referencing any known comment ID via #e.
+  const commentIds = useMemo(
+    () =>
+      flatComments
+        .map(c => c.id)
+        .sort()
+        .join(','),
+    [flatComments]
+  )
+  useEffect(() => {
+    if (!commentIds) return
+    const ids = commentIds.split(',')
+    const replyFilters: Filter[] = [{ kinds: [1], '#e': ids, limit: 100 }]
+    const loader = createTimelineLoader(pool, readRelays, replyFilters, {
+      limit: 50,
+      eventStore,
+    })
+    const subscription = loader().subscribe(e => eventStore.add(e))
+    return () => subscription.unsubscribe()
+  }, [pool, readRelays, commentIds, eventStore])
+
+  // Combined filters for the EventStore observable (includes reply filters)
+  const allFilters = useMemo(() => {
+    if (!flatComments.length) return filters
+    const ids = flatComments.map(c => c.id)
+    return [...filters, { kinds: [1], '#e': ids, limit: 100 } as Filter]
+  }, [filters, flatComments])
+
+  // Re-derive comments including replies found by the second pass
+  const allComments =
+    use$(
+      () =>
+        eventStore
+          .timeline(allFilters)
+          .pipe(
+            map(events => events.map(e => mapEventToComment(e, videoId, videoAddress ?? undefined)))
+          ),
+      [eventStore, allFilters, videoId, videoAddress]
+    ) ?? flatComments
+
   // Build threaded comment structure
   const threadedComments = useMemo(() => {
-    return buildCommentTree(flatComments)
-  }, [flatComments])
+    return buildCommentTree(allComments)
+  }, [allComments])
 
   // Update comment parent map whenever comments change
   useEffect(() => {
-    setCommentParentMap(flatComments)
-  }, [flatComments, setCommentParentMap])
+    setCommentParentMap(allComments)
+  }, [allComments, setCommentParentMap])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-03-02
+
 ### Fixed
 
 - Relay hints missing from naddr/nevent links in share URLs and video page routing — videos on obscure relays are now shareable
+- Video page now queries the author's NIP-65 outbox relays when loading events, so videos on personal relays are discoverable
 
 ## [0.2.8] - 2026-03-01
 

@@ -71,7 +71,15 @@ export function VideoPage() {
   const { addToHistory } = useVideoHistory()
   const isMobile = useIsMobile()
 
-  // Get initial relays for loading the video event
+  // Extract author pubkey from identifier (naddr always has it, nevent may have it)
+  const identifierAuthorPubkey = useMemo(() => {
+    if (videoIdentifier?.type === 'address') return videoIdentifier.data?.pubkey
+    if (videoIdentifier?.type === 'event')
+      return (videoIdentifier.data as { author?: string })?.author
+    return undefined
+  }, [videoIdentifier])
+
+  // Get initial relays for loading the video event (includes author's NIP-65 outbox relays)
   const initialRelays = useVideoPageRelays({
     neventRelays:
       videoIdentifier?.type === 'event'
@@ -81,7 +89,7 @@ export function VideoPage() {
           : undefined,
     videoEvent: undefined, // Not loaded yet
     playlistEvent: undefined, // Not loaded yet
-    authorPubkey: undefined, // Don't know author yet
+    authorPubkey: identifierAuthorPubkey,
   })
 
   const eventLoader = useMemo(

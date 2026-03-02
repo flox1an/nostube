@@ -247,8 +247,14 @@ export function ShortsVideoPage() {
   // Process the initial video
   const initialVideo = useMemo(() => {
     if (!nevent || !initialVideoEvent) return null
-    return processEvent(initialVideoEvent, [], config.blossomServers, presetContent.nsfwPubkeys)
-  }, [nevent, initialVideoEvent, config.blossomServers, presetContent.nsfwPubkeys])
+    const hintRelays = videoIdentifier?.data?.relays ?? []
+    return processEvent(
+      initialVideoEvent,
+      hintRelays,
+      config.blossomServers,
+      presetContent.nsfwPubkeys
+    )
+  }, [nevent, initialVideoEvent, videoIdentifier, config.blossomServers, presetContent.nsfwPubkeys])
 
   // Track whether we've loaded from store or relays
   const loadSourceRef = useRef<'store' | 'relays' | null>(null)

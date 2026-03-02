@@ -313,12 +313,15 @@ export function processEvent(
   blossomServers?: BlossomServer[],
   nsfwPubkeys?: string[]
 ): VideoEvent | undefined {
-  // Get relays from applesauce's seenRelays tracking
+  // Build relay list for naddr/nevent link encoding:
+  // 1. Relays where the event was actually seen (from applesauce tracking)
+  // 2. Hint relays passed by the caller (e.g., from the naddr/nevent URL)
+  // Cap at 3 relays to keep encoded links short
   const seenRelays = getSeenRelays(event)
-  let eventRelays = seenRelays ? Array.from(seenRelays) : relays
-
-  // Sanitize relay URLs to fix corruption issues (multiple URLs concatenated, etc.)
-  eventRelays = eventRelays.flatMap(url => sanitizeRelayUrl(url))
+  const seenList = seenRelays ? Array.from(seenRelays) : []
+  const combined = [...seenList, ...relays]
+  // Deduplicate and sanitize relay URLs
+  let eventRelays = [...new Set(combined.flatMap(url => sanitizeRelayUrl(url)))].slice(0, 3)
 
   // Find ALL imeta tags
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')

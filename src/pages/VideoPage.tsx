@@ -236,15 +236,20 @@ export function VideoPage() {
   // Full relays with all context (for nprofile encoding and suggestions)
   const relaysToUse = commentRelays
 
+  // Hint relays from the naddr/nevent URL — only these should be encoded in the link
+  const hintRelays = useMemo(() => videoIdentifier?.data?.relays ?? [], [videoIdentifier])
+
   // Process the video event or get from cache
   const video = useMemo(() => {
     if (!nevent) return null
 
     // If we have the event from EventStore, process it
     if (videoEvent) {
+      // Pass only hint relays (from naddr/nevent) as fallback for link encoding.
+      // getSeenRelays inside processEvent adds relays where the event was actually found.
       const processedEvent = processEvent(
         videoEvent,
-        relaysToUse,
+        hintRelays,
         config.blossomServers,
         presetContent.nsfwPubkeys
       )
@@ -252,7 +257,7 @@ export function VideoPage() {
     }
 
     return null
-  }, [nevent, videoEvent, relaysToUse, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [nevent, videoEvent, hintRelays, config.blossomServers, presetContent.nsfwPubkeys])
 
   const isLoading = !video && videoEvent === undefined
 

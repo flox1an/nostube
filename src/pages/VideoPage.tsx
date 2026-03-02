@@ -236,7 +236,7 @@ export function VideoPage() {
     if (videoEvent) {
       const processedEvent = processEvent(
         videoEvent,
-        [],
+        relaysToUse,
         config.blossomServers,
         presetContent.nsfwPubkeys
       )
@@ -244,7 +244,7 @@ export function VideoPage() {
     }
 
     return null
-  }, [nevent, videoEvent, config.blossomServers, presetContent.nsfwPubkeys])
+  }, [nevent, videoEvent, relaysToUse, config.blossomServers, presetContent.nsfwPubkeys])
 
   const isLoading = !video && videoEvent === undefined
 
@@ -468,9 +468,14 @@ export function VideoPage() {
     setTransformDialogOpen(true)
   }, [])
 
-  // Build share URL and links
+  // Build share URL and links — prefer video.link (includes relay hints) over raw URL param
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const shareUrl = buildShareUrl(baseUrl, nevent || '', includeTimestamp, currentPlayPos)
+  const shareUrl = buildShareUrl(
+    baseUrl,
+    video?.link || nevent || '',
+    includeTimestamp,
+    currentPlayPos
+  )
   const fullUrl = shareUrl
   const title = video?.title || t('video.watchThisVideo')
   const thumbnailUrl = video?.images[0] || ''

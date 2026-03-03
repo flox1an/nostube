@@ -12,6 +12,7 @@ import {
   useAdaptiveQuality,
   useValidatedTextTracks,
   useVideoVariantSelector,
+  useMediaSession,
 } from './hooks'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -42,6 +43,10 @@ interface VideoPlayerProps {
   onEnded?: () => void
   onVideoElementReady?: (element: HTMLVideoElement | null) => void
   videoVariants?: VideoVariant[]
+  title?: string
+  authorName?: string
+  onPreviousTrack?: () => void
+  onNextTrack?: () => void
 }
 
 const LOOP_STORAGE_KEY = 'nostube:video-loop'
@@ -67,6 +72,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   onEnded,
   onVideoElementReady,
   videoVariants,
+  title,
+  authorName,
+  onPreviousTrack,
+  onNextTrack,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -765,6 +774,22 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     mediaType: 'image',
     sha256: posterHash,
     enabled: !!poster,
+  })
+
+  // Media Session API - lock screen / Control Center controls + background audio
+  useMediaSession({
+    title,
+    artist: authorName,
+    artwork: posterUrl ?? undefined,
+    isPlaying: playerState.isPlaying,
+    currentTime: playerState.currentTime,
+    duration: playerState.duration,
+    playbackRate: playerState.playbackRate,
+    play: playerState.play,
+    pause: playerState.pause,
+    seek: playerState.seek,
+    onPreviousTrack,
+    onNextTrack,
   })
 
   // Generate blurhash placeholder for poster LQIP (Low Quality Image Placeholder)

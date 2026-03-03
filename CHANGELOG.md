@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-03-03
+
+### Added
+
+- Media Session API integration for background audio playback on iOS and lock screen / Control Center media controls (play, pause, seek, next/previous track in playlists)
+
 ## [0.2.11] - 2026-03-03
 
 ### Removed

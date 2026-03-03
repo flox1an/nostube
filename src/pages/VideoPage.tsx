@@ -585,6 +585,10 @@ export function VideoPage() {
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
         videoVariants={video.allVideoVariants || video.videoVariants} // For quality selector
+        title={video.title}
+        authorName={authorName}
+        onPreviousTrack={prevPlaylistVideo ? navigateToPrevious : undefined}
+        onNextTrack={nextPlaylistVideo ? navigateToNext : undefined}
       />
     )
   }, [
@@ -600,6 +604,11 @@ export function VideoPage() {
     handleVideoDimensionsLoadedStable,
     handlePlaylistVideoEnd,
     handleVideoElementReady,
+    authorName,
+    prevPlaylistVideo,
+    navigateToPrevious,
+    nextPlaylistVideo,
+    navigateToNext,
   ])
 
   // Handle video not found or missing

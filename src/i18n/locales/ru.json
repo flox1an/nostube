@@ -126,7 +126,6 @@
     "languages": "Языки",
     "location": "Местоположение",
     "viewLocation": "Посмотреть на карте",
-    "availableOffline": "Доступно офлайн",
     "expiresIn": "Истекает через {{time}}",
     "expired": "Истекло",
     "updatedAgo": "обновлено {{time}} назад",

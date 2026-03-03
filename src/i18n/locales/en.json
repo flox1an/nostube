@@ -127,7 +127,6 @@
     "languages": "Languages",
     "location": "Location",
     "viewLocation": "View location on map",
-    "availableOffline": "Available offline",
     "expiresIn": "Expires in {{time}}",
     "expired": "Expired",
     "updatedAgo": "updated {{time}} ago",

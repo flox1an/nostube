@@ -206,7 +206,11 @@ function sortVideoVariantsByQuality(variants: VideoVariant[]): VideoVariant[] {
  * Addressable events (kinds 34235, 34236) use naddr
  * Regular events (kinds 21, 22) use nevent
  */
-function generateEventLink(event: Event, identifier: string | undefined, relays: string[]): string {
+export function generateEventLink(
+  event: Event,
+  identifier: string | undefined,
+  relays: string[]
+): string {
   const isAddressable = event.kind === 34235 || event.kind === 34236
 
   if (isAddressable && identifier) {
@@ -226,7 +230,17 @@ function generateEventLink(event: Event, identifier: string | undefined, relays:
   })
 }
 
-// Deprecated functions removed - use generateMediaUrls from @/lib/media-url-generator instead
+/**
+ * Build deduplicated, sanitized relay list from seen relays + hint relays (capped at 3).
+ * Useful for generating fresh naddr/nevent links with up-to-date relay hints.
+ */
+export function buildEventRelays(event: Event, hintRelays: string[]): string[] {
+  const seenRelays = getSeenRelays(event)
+  const seenList = seenRelays ? Array.from(seenRelays) : []
+  const combined = [...seenList, ...hintRelays]
+  return [...new Set(combined.flatMap(url => sanitizeRelayUrl(url)))].slice(0, 3)
+}
+
 /**
  * Check if a video event kind is addressable (NIP-71 addressable events)
  */

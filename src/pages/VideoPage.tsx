@@ -7,7 +7,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import { processEvent } from '@/utils/video-event'
+import { processEvent, generateEventLink, buildEventRelays } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -353,20 +353,6 @@ export function VideoPage() {
     }
   }, [video?.id, checkAvailability])
 
-  // Check if video is available on a configured caching/streaming server
-  const isCachedLocally = useMemo(() => {
-    if (!config.cachingServers?.length) return false
-    const cachingUrls = new Set(config.cachingServers.map(s => new URL(s.url).origin))
-    return serverList.some(s => {
-      const avail = serverAvailability.get(s.url)
-      return (
-        cachingUrls.has(new URL(s.url).origin) &&
-        avail?.status === 'available' &&
-        !avail?.redirected
-      )
-    })
-  }, [config.cachingServers, serverList, serverAvailability])
-
   // Count servers that currently host the video (from video URLs + verified others)
   const blossomServerCount = useMemo(() => {
     const videoUrlCount = serverList.filter(s => s.source === 'video-url').length
@@ -481,14 +467,16 @@ export function VideoPage() {
     setTransformDialogOpen(true)
   }, [])
 
-  // Build share URL and links — prefer video.link (includes relay hints) over raw URL param
+  // Build share URL with fresh relay hints (seen relays grow over time)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const shareUrl = buildShareUrl(
-    baseUrl,
-    video?.link || nevent || '',
-    includeTimestamp,
-    currentPlayPos
-  )
+  // Compute fresh link on each render so it picks up newly discovered seen relays
+  const freshLink = (() => {
+    if (!videoEvent || !video) return video?.link || nevent || ''
+    const identifier = videoEvent.tags.find(t => t[0] === 'd')?.[1]
+    const relays = buildEventRelays(videoEvent, hintRelays)
+    return generateEventLink(videoEvent, identifier, relays)
+  })()
+  const shareUrl = buildShareUrl(baseUrl, freshLink, includeTimestamp, currentPlayPos)
   const fullUrl = shareUrl
   const title = video?.title || t('video.watchThisVideo')
   const thumbnailUrl = video?.images[0] || ''
@@ -670,7 +658,6 @@ export function VideoPage() {
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
             userServers={userBlossomServers}
-            isCachedLocally={isCachedLocally}
             geohash={videoGeohash}
             currentTime={currentPlayPos}
           />

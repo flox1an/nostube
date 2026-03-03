@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-03-03
+
+### Removed
+
+- "Available offline" badge from video page
+
+### Fixed
+
+- Share URL relay hints now include all discovered relays (not just the first relay that responded)
+
 ## [0.2.10] - 2026-03-02
 
 ### Fixed

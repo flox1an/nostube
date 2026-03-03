@@ -37,7 +37,6 @@ import {
   Clock,
   Pencil,
   ExternalLink,
-  HardDriveDownload,
 } from 'lucide-react'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -94,7 +93,6 @@ interface VideoInfoSectionProps {
   onDelete?: () => void
   onMirror?: () => void
   userServers?: string[]
-  isCachedLocally?: boolean
   geohash?: string | null
   currentTime?: number // Current video playback position (for timestamped zaps)
 }
@@ -118,7 +116,6 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   onDelete,
   onMirror,
   userServers,
-  isCachedLocally,
   geohash,
   currentTime,
 }: VideoInfoSectionProps) {
@@ -349,19 +346,8 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           Array.isArray(video.languages) &&
           video.languages.length > 0) ||
         (video && video.origins && video.origins.length > 0) ||
-        isCachedLocally ||
         geohash ? (
           <div className="flex flex-wrap items-center gap-2 pb-1">
-            {/* Available offline badge */}
-            {isCachedLocally && (
-              <Badge
-                variant="outline"
-                className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 text-green-600 border-green-600/30"
-              >
-                <HardDriveDownload className="w-3 h-3" />
-                {t('video.availableOffline')}
-              </Badge>
-            )}
             {/* Language badges with flag + shortcode */}
             {video &&
               'languages' in video &&

@@ -15,7 +15,12 @@ import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
 import { memo, useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { type VideoEvent, getPublishDate } from '@/utils/video-event'
+import {
+  type VideoEvent,
+  getPublishDate,
+  generateEventLink,
+  buildEventRelays,
+} from '@/utils/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import {
@@ -293,7 +298,14 @@ export const ShortVideoItem = memo(
     }, [hasMoreVideoUrls, moveToNextVideo, video.id])
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    const shareUrl = `${baseUrl}${buildVideoPath(video.link, 'shorts')}`
+    // Compute fresh link with up-to-date seen relays (not stale from processEvent)
+    const freshLink = (() => {
+      if (!event) return video.link
+      const identifier = event.tags.find(t => t[0] === 'd')?.[1]
+      const relays = buildEventRelays(event, pointerRelays)
+      return generateEventLink(event, identifier, relays)
+    })()
+    const shareUrl = `${baseUrl}${buildVideoPath(freshLink, 'shorts')}`
 
     // Calculate max-width based on aspect ratio (memoized to avoid recalculation)
     // For vertical videos (9:16), use standard width

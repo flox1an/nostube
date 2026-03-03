@@ -52,10 +52,15 @@ export function useCurrentUser() {
     saveActiveAccount(pubkey)
   }
 
-  const loginWithBunker = async (bunkerUri: string) => {
+  const loginWithBunker = async (
+    bunkerUri: string,
+    options?: { onAuth?: (url: string) => Promise<void> }
+  ) => {
     if (!accountManager) throw new Error('Account manager not available')
 
-    const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri)
+    const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri, {
+      onAuth: options?.onAuth,
+    })
     const pubkey = await signer.getPublicKey()
     const account = new NostrConnectAccount(pubkey, signer)
 

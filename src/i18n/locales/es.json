@@ -72,6 +72,8 @@
       "bunkerUriError": "El URI debe comenzar con bunker://",
       "connecting": "Conectando...",
       "loginWithBunker": "Iniciar sesión con Bunker",
+      "authRequired": "Autorización requerida. Toque abajo para aprobar la conexión:",
+      "openAuth": "Abrir autorización",
       "noAccount": "¿No tiene una cuenta?",
       "signUp": "Registrarse"
     },

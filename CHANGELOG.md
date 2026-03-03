@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Bunker login auth URL popup blocked on iOS Safari and PWA — now shows a tappable "Open Authorization" link instead of using `window.open()`
+
 ## [0.2.12] - 2026-03-03
 
 ### Added

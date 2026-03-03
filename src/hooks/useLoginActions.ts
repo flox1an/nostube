@@ -50,7 +50,10 @@ export function useLoginActions() {
       }
     },
     // Login with a NIP-46 "bunker://" URI
-    async bunker(_uri: string): Promise<void> {
+    async bunker(
+      _uri: string,
+      options?: { onAuth?: (url: string) => Promise<void> }
+    ): Promise<void> {
       try {
         if (!_uri.trim()) {
           throw new Error('Bunker URI cannot be empty')
@@ -60,8 +63,9 @@ export function useLoginActions() {
           throw new Error('Bunker URI must start with bunker://')
         }
 
-        // Use fromBunkerURI if available (from useCurrentUser example)
-        const signer = await NostrConnectSigner.fromBunkerURI(_uri)
+        const signer = await NostrConnectSigner.fromBunkerURI(_uri, {
+          onAuth: options?.onAuth,
+        })
         const pubkey = await signer.getPublicKey()
         const account = new NostrConnectAccount(pubkey, signer)
 

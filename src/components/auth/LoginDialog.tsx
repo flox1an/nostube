@@ -1,8 +1,8 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import React, { useRef, useState } from 'react'
-import { Shield, Upload, AlertCircle, QrCode } from 'lucide-react'
+import React, { useRef, useState, useCallback } from 'react'
+import { Shield, Upload, AlertCircle, QrCode, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import {
@@ -31,8 +31,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
   const [bunkerUri, setBunkerUri] = useState('')
+  const [authUrl, setAuthUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
+
+  const handleBunkerAuth = useCallback(async (url: string) => {
+    setAuthUrl(url)
+  }, [])
 
   const handleExtensionLogin = async () => {
     setIsLoading(true)
@@ -91,10 +96,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
     setIsLoading(true)
     setError(null)
+    setAuthUrl(null)
 
     try {
-      await login.bunker(bunkerUri)
+      await login.bunker(bunkerUri, { onAuth: handleBunkerAuth })
       setBunkerUri('') // Clear bunker URI after successful login
+      setAuthUrl(null)
       onLogin()
       onClose()
     } catch (error) {
@@ -103,6 +110,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           ? error.message
           : 'Bunker login failed. Please check your URI and try again.'
       setError(errorMessage)
+      setAuthUrl(null)
       console.error('Bunker login failed:', error)
     } finally {
       setIsLoading(false)
@@ -249,6 +257,26 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   <p className="text-red-500 text-xs">{t('auth.login.bunkerUriError')}</p>
                 )}
               </div>
+
+              {authUrl && (
+                <Alert>
+                  <ExternalLink className="h-4 w-4" />
+                  <AlertDescription className="space-y-2">
+                    <p>
+                      {t(
+                        'auth.login.authRequired',
+                        'Authorization required. Tap below to approve the connection:'
+                      )}
+                    </p>
+                    <a href={authUrl} target="_blank" rel="noopener noreferrer" className="block">
+                      <Button type="button" variant="secondary" className="w-full">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        {t('auth.login.openAuth', 'Open Authorization')}
+                      </Button>
+                    </a>
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <Button
                 className="w-full rounded-full py-6"

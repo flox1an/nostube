@@ -69,7 +69,7 @@
       "loginWithNsec": "Se connecter avec Nsec",
       "bunkerUri": "URI Bunker",
       "bunkerInputLabel": "URI Bunker ou adresse NIP-05",
-      "bunkerPlaceholder": "bunker:// ou user@domaine",
+      "bunkerPlaceholder": "bunker:// ou bunker.example.com",
       "bunkerUriError": "L'URI doit commencer par bunker://",
       "bunkerInputError": "Entrez une URI bunker:// ou une adresse NIP-05 (user@domaine)",
       "resolvingNip05": "Résolution de l'adresse...",

@@ -23,7 +23,10 @@ interface NostrJsonResponse {
 }
 
 export function isNip05(value: string): boolean {
-  return NIP05_REGEX.test(value) && value.includes('@') && !value.startsWith('bunker://')
+  if (value.startsWith('bunker://')) return false
+  // user@domain or just domain.tld (name defaults to _)
+  if (value.includes('@')) return NIP05_REGEX.test(value)
+  return value.includes('.') && NIP05_REGEX.test(value)
 }
 
 export async function resolveNip05ToBunkerUri(nip05: string): Promise<Nip05BunkerResult> {

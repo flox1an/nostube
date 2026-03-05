@@ -4,6 +4,7 @@ import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce
 import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
+import { isNip05, resolveNip05ToBunkerUri } from '@/lib/nip05-bunker'
 
 // NOTE: This file should not be edited except for adding new login methods.
 
@@ -49,21 +50,29 @@ export function useLoginActions() {
         throw error
       }
     },
-    // Login with a NIP-46 "bunker://" URI
+    // Login with a NIP-46 "bunker://" URI or NIP-05 address (user@domain)
     async bunker(
-      _uri: string,
+      _input: string,
       options?: { onAuth?: (url: string) => Promise<void> }
     ): Promise<void> {
       try {
-        if (!_uri.trim()) {
+        if (!_input.trim()) {
           throw new Error('Bunker URI cannot be empty')
         }
 
-        if (!_uri.startsWith('bunker://')) {
-          throw new Error('Bunker URI must start with bunker://')
+        let bunkerUri: string
+
+        if (isNip05(_input)) {
+          // Resolve NIP-05 address to bunker URI
+          const result = await resolveNip05ToBunkerUri(_input)
+          bunkerUri = result.bunkerUri
+        } else if (_input.startsWith('bunker://')) {
+          bunkerUri = _input
+        } else {
+          throw new Error('Enter a bunker:// URI or NIP-05 address (user@domain)')
         }
 
-        const signer = await NostrConnectSigner.fromBunkerURI(_uri, {
+        const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri, {
           onAuth: options?.onAuth,
         })
         const pubkey = await signer.getPublicKey()
@@ -73,7 +82,7 @@ export function useLoginActions() {
         accountManager.setActive(account)
 
         // Persist account with bunker URI
-        saveAccountToStorage(account, 'bunker', _uri)
+        saveAccountToStorage(account, 'bunker', bunkerUri)
         saveActiveAccount(pubkey)
       } catch (error) {
         console.error('Bunker login failed:', error)

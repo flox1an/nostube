@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- NIP-05 address support in bunker login — enter `user@domain` (e.g. `user@bunker.slidestr.net`) to resolve pubkey and relays via `.well-known/nostr.json` and connect automatically
+
 ### Fixed
 
 - Bunker login auth URL popup blocked on iOS Safari and PWA — now shows a tappable "Open Authorization" link instead of using `window.open()`

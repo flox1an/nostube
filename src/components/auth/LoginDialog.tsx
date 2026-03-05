@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert.tsx'
 import { useLoginActions } from '@/hooks/useLoginActions'
 import { useTranslation } from 'react-i18next'
 import { QRCodeLogin } from './QRCodeLogin'
+import { isNip05 } from '@/lib/nip05-bunker'
 
 interface LoginDialogProps {
   isOpen: boolean
@@ -83,14 +84,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     }
   }
 
+  const isBunkerInputValid = (value: string): boolean => {
+    const trimmed = value.trim()
+    return trimmed.startsWith('bunker://') || isNip05(trimmed)
+  }
+
   const handleBunkerLogin = async () => {
     if (!bunkerUri.trim()) {
-      setError('Please enter a bunker URI')
+      setError('Please enter a bunker URI or NIP-05 address')
       return
     }
 
-    if (!bunkerUri.startsWith('bunker://')) {
-      setError('Bunker URI must start with bunker://')
+    if (!isBunkerInputValid(bunkerUri)) {
+      setError(t('auth.login.bunkerInputError'))
       return
     }
 
@@ -108,7 +114,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Bunker login failed. Please check your URI and try again.'
+          : 'Bunker login failed. Please check your input and try again.'
       setError(errorMessage)
       setAuthUrl(null)
       console.error('Bunker login failed:', error)
@@ -244,7 +250,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   htmlFor="bunkerUri"
                   className="text-sm font-medium text-gray-700 dark:text-gray-400"
                 >
-                  {t('auth.login.bunkerUri')}
+                  {t('auth.login.bunkerInputLabel')}
                 </label>
                 <Input
                   id="bunkerUri"
@@ -253,8 +259,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   className="rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary"
                   placeholder={t('auth.login.bunkerPlaceholder')}
                 />
-                {bunkerUri && !bunkerUri.startsWith('bunker://') && (
-                  <p className="text-red-500 text-xs">{t('auth.login.bunkerUriError')}</p>
+                {bunkerUri && !isBunkerInputValid(bunkerUri) && (
+                  <p className="text-red-500 text-xs">{t('auth.login.bunkerInputError')}</p>
                 )}
               </div>
 
@@ -281,7 +287,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               <Button
                 className="w-full rounded-full py-6"
                 onClick={handleBunkerLogin}
-                disabled={isLoading || !bunkerUri.trim() || !bunkerUri.startsWith('bunker://')}
+                disabled={isLoading || !bunkerUri.trim() || !isBunkerInputValid(bunkerUri)}
               >
                 {isLoading ? t('auth.login.connecting') : t('auth.login.loginWithBunker')}
               </Button>

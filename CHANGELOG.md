@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-03-05
+
 ### Added
 
-- NIP-05 address support in bunker login — enter `user@domain` (e.g. `user@bunker.slidestr.net`) to resolve pubkey and relays via `.well-known/nostr.json` and connect automatically
+- NIP-05 address support in bunker login — enter `user@domain` or just `domain` (e.g. `bunker.slidestr.net`) to resolve pubkey and relays via `.well-known/nostr.json` and connect automatically
 
 ### Fixed
 

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-03-05
+
+### Fixed
+
+- Bunker auth URL popup now opens automatically on non-iOS platforms; manual "Open Authorization" link is only needed on iOS where popups are blocked
+
 ## [0.2.13] - 2026-03-05
 
 ### Added

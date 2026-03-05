@@ -37,6 +37,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const login = useLoginActions()
 
   const handleBunkerAuth = useCallback(async (url: string) => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    if (!isIOS) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
     setAuthUrl(url)
   }, [])
 

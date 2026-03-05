@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-03-05
+
+### Fixed
+
+- `.well-known/nostr.json` not served on Vercel — excluded `.well-known/` from SPA catch-all rewrite and service worker navigate fallback, added CORS headers
+
 ## [0.2.14] - 2026-03-05
 
 ### Fixed

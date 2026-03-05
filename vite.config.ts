@@ -27,7 +27,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         globIgnores: ['embed.html', 'stats.html', 'embed-*.html'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/embed/],
+        navigateFallbackDenylist: [/^\/embed/, /^\/\.well-known\//],
         skipWaiting: true,
         clientsClaim: true,
       },

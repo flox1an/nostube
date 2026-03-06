@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Hide Subscriptions nav entry when user has no follows (Sidebar, MiniSidebar, MobileBottomNav)
+
 ## [0.2.16] - 2026-03-06
 
 ### Added

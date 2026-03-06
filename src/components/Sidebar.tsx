@@ -57,9 +57,6 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
       ]
 
   const libraryItems = [
-    ...(!hasFollows
-      ? [{ name: t('navigation.subscriptions'), icon: Users, href: '/subscriptions' }]
-      : []),
     { name: t('navigation.history'), icon: History, href: '/history', disabled: false },
     { name: t('navigation.playlists'), icon: ListVideo, href: '/playlists' },
     {

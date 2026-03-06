@@ -49,11 +49,6 @@ export function MiniSidebar() {
         ...(user
           ? [
               {
-                label: t('navigation.subscriptions'),
-                icon: Users,
-                href: '/subscriptions',
-              },
-              {
                 label: t('navigation.playlists'),
                 icon: ListVideo,
                 href: '/playlists',

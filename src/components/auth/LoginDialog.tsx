@@ -31,7 +31,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
-  const [bunkerUri, setBunkerUri] = useState('')
+  const [bunkerUri, setBunkerUri] = useState(
+    () => localStorage.getItem('nostube:last-bunker') || ''
+  )
   const [authUrl, setAuthUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
@@ -110,7 +112,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
     try {
       await login.bunker(bunkerUri, { onAuth: handleBunkerAuth })
-      setBunkerUri('') // Clear bunker URI after successful login
+      localStorage.setItem('nostube:last-bunker', bunkerUri.trim())
       setAuthUrl(null)
       onLogin()
       onClose()

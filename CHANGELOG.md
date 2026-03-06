@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Bunker login input now remembers the last used value in localStorage, so returning users can connect with one click
+
 ## [0.2.15] - 2026-03-05
 
 ### Fixed

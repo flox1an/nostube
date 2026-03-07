@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- oEmbed discovery URL in `<link>` tag contained a doubled naddr identifier because Vercel rewrites append matched path params as query parameters — now constructs canonical page URL from known parts instead of using `request.url`
 - Embed URLs in OG/oEmbed meta tags used `#` fragment instead of `?v=` query parameter, so the embed player couldn't read the video ID
 
 ## [0.2.19] - 2026-03-07

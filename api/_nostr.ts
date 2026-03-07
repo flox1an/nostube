@@ -145,7 +145,8 @@ export async function handleVideoPage(
 
     const baseUrl = url.origin
     const meta = extractVideoMeta(event)
-    const pageUrl = request.url
+    const typePath = type === 'short' ? 'short' : type === 'playlist' ? 'playlist' : 'v'
+    const pageUrl = `${baseUrl}/${typePath}/${identifier}`
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 

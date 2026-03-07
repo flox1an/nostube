@@ -7,14 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Vercel serverless function hanging indefinitely on `/v/`, `/short/`, `/playlist/`, and `/oembed` routes — added 8s hard request timeout and 4s relay fetch timeout with structured JSON logging throughout the request lifecycle
-- Vercel function timing out at 300s due to leaked WebSocket connections — replaced `pool.get()` with `subscribeMany` for explicit subscription lifecycle control, added `maxDuration: 10` safety cap, and resolve on first relay EOSE instead of waiting for all relays
+## [0.2.19] - 2026-03-07
 
 ### Changed
 
-- Added `wss://relay.nostu.be` to server-side fallback relay list
+- Disabled Vercel serverless routes (`/v/`, `/short/`, `/playlist/`, `/oembed`) — function kept timing out despite multiple fixes; routes now fall through to SPA
 
 ## [0.2.18] - 2026-03-07
 

@@ -1,10 +1,4 @@
 {
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**",
-      "maxDuration": 10
-    }
-  },
   "headers": [
     {
       "source": "/manifest.webmanifest",

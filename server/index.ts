@@ -2,10 +2,13 @@ import { Hono } from 'hono'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { isBrowser } from './detect.js'
-import { decodeIdentifier, fetchEvent } from './nostr.js'
+import { decodeIdentifier, fetchEvent, log } from './nostr.js'
 import { extractVideoMeta, buildMetaTags } from './meta.js'
 import { buildOEmbed } from './oembed.js'
 import { injectMeta } from './template.js'
+
+/** Hard timeout for the entire request handler (ms) */
+const REQUEST_TIMEOUT_MS = 8000
 
 export interface AppOptions {
   // When true, skip meta injection for browser user agents (Vercel mode)
@@ -41,19 +44,44 @@ export function createApp(options: AppOptions = {}) {
     respondHtml: (html: string) => Response,
     respondRaw: () => Response
   ) {
-    if (options.skipBrowsers && isBrowser(c.req.header('user-agent'))) {
+    const ua = c.req.header('user-agent') ?? '<none>'
+    log('handlePage:start', {
+      url: c.req.url,
+      type,
+      identifier: identifier.slice(0, 30) + '…',
+      ua: ua.slice(0, 80),
+    })
+
+    if (options.skipBrowsers && isBrowser(ua)) {
+      log('handlePage:skip browser')
       return respondRaw()
     }
 
     const decoded = decodeIdentifier(identifier)
     if (!decoded) {
+      log('handlePage:decode failed')
       return respondRaw()
     }
 
-    const event = await fetchEvent(decoded)
+    log('handlePage:decoded', { decodedType: decoded.type, relays: decoded.relays })
+
+    // Wrap fetch in a hard request timeout so the function never hangs
+    const event = await Promise.race([
+      fetchEvent(decoded),
+      new Promise<null>(resolve =>
+        setTimeout(() => {
+          log('handlePage:hard timeout', { ms: REQUEST_TIMEOUT_MS })
+          resolve(null)
+        }, REQUEST_TIMEOUT_MS)
+      ),
+    ])
+
     if (!event) {
+      log('handlePage:no event, serving SPA shell')
       return respondRaw()
     }
+
+    log('handlePage:event found', { eventId: event.id, kind: event.kind })
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
@@ -64,6 +92,7 @@ export function createApp(options: AppOptions = {}) {
     const metaTags = buildMetaTags(meta, pageUrl, embedUrl, oembedUrl, type)
     const html = injectMeta(getIndexHtml(), metaTags, meta.title)
 
+    log('handlePage:injected meta', { title: meta.title })
     return respondHtml(html)
   }
 
@@ -133,7 +162,18 @@ export function createApp(options: AppOptions = {}) {
       return c.json({ error: 'Invalid nostr identifier' }, 400)
     }
 
-    const event = await fetchEvent(decoded)
+    log('oembed:fetch', { type, identifier: identifier.slice(0, 30) })
+
+    const event = await Promise.race([
+      fetchEvent(decoded),
+      new Promise<null>(resolve =>
+        setTimeout(() => {
+          log('oembed:hard timeout', { ms: REQUEST_TIMEOUT_MS })
+          resolve(null)
+        }, REQUEST_TIMEOUT_MS)
+      ),
+    ])
+
     if (!event) {
       return c.json({ error: 'Event not found' }, 404)
     }
@@ -143,6 +183,7 @@ export function createApp(options: AppOptions = {}) {
     const embedUrl = `${baseUrl}/embed.html#${identifier}`
     const oembed = buildOEmbed(meta, embedUrl, url, type)
 
+    log('oembed:success', { title: meta.title })
     return c.json(oembed)
   })
 

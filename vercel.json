@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/index.ts": {
-      "includeFiles": "server/**"
+      "includeFiles": "server/**",
+      "maxDuration": 10
     }
   },
   "headers": [

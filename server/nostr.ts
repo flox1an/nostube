@@ -1,15 +1,22 @@
 import { SimplePool } from 'nostr-tools/pool'
 import { decode } from 'nostr-tools/nip19'
 import type { NostrEvent } from 'nostr-tools/pure'
+import type { Filter } from 'nostr-tools/filter'
 
 const FALLBACK_RELAYS = [
+  'wss://relay.nostu.be',
   'wss://relay.divine.video',
   'wss://relay.damus.io',
   'wss://relay.primal.net',
   'wss://nos.lol',
 ]
 
-const FETCH_TIMEOUT_MS = 3000
+const FETCH_TIMEOUT_MS = 4000
+
+export function log(msg: string, data?: Record<string, unknown>) {
+  const entry = { ts: new Date().toISOString(), msg, ...data }
+  console.log(JSON.stringify(entry))
+}
 
 export interface DecodedIdentifier {
   type: 'nevent' | 'naddr' | 'note'
@@ -58,23 +65,47 @@ export async function fetchEvent(decoded: DecodedIdentifier): Promise<NostrEvent
   const pool = new SimplePool()
   const relays = [...new Set([...decoded.relays, ...FALLBACK_RELAYS])]
 
-  try {
-    const filter =
-      decoded.type === 'naddr'
-        ? {
-            kinds: [decoded.kind!],
-            authors: [decoded.pubkey!],
-            '#d': [decoded.identifier!],
-          }
-        : { ids: [decoded.id!] }
+  const filter: Filter =
+    decoded.type === 'naddr'
+      ? {
+          kinds: [decoded.kind!],
+          authors: [decoded.pubkey!],
+          '#d': [decoded.identifier!],
+        }
+      : { ids: [decoded.id!] }
 
-    const event = await Promise.race([
-      pool.get(relays, filter),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), FETCH_TIMEOUT_MS)),
-    ])
+  log('fetchEvent:start', { type: decoded.type, relays, filter })
 
-    return event
-  } finally {
-    pool.close(relays)
-  }
+  return new Promise<NostrEvent | null>(resolve => {
+    let settled = false
+
+    function done(result: NostrEvent | null, reason: string) {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      sub.close()
+      try {
+        pool.close(relays)
+      } catch {
+        /* ignore */
+      }
+      log('fetchEvent:done', { reason, found: !!result, eventId: result?.id })
+      resolve(result)
+    }
+
+    const sub = pool.subscribeMany(relays, filter, {
+      onevent(event) {
+        done(event, 'event')
+      },
+      oneose() {
+        // First relay EOSE with no event — no need to wait for all
+        done(null, 'eose')
+      },
+    })
+
+    const timer = setTimeout(() => {
+      log('fetchEvent:timeout', { ms: FETCH_TIMEOUT_MS })
+      done(null, 'timeout')
+    }, FETCH_TIMEOUT_MS)
+  })
 }

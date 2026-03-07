@@ -2,6 +2,32 @@ import type { NostrEvent } from 'nostr-tools'
 import { extractBlossomHash } from '@/utils/video-event'
 
 /**
+ * Encode a Nostr auth event as Base64url without padding for BUD-11 Authorization header.
+ * BUD-11 requires Base64 URL-safe encoding without padding (like JWTs).
+ */
+export function encodeAuthToken(event: NostrEvent): string {
+  const json = JSON.stringify(event)
+  const base64 = btoa(json)
+  // Convert standard Base64 to Base64url: + → -, / → _, remove = padding
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/**
+ * Extract the domain name from a server URL for BUD-11 server tags.
+ * Returns lowercase hostname only (e.g., "cdn.example.com"), not a full URL.
+ */
+export function extractServerDomain(serverUrl: string): string {
+  try {
+    return new URL(serverUrl).hostname.toLowerCase()
+  } catch {
+    return serverUrl
+      .replace(/^https?:\/\//, '')
+      .replace(/[:/].*$/, '')
+      .toLowerCase()
+  }
+}
+
+/**
  * Format bytes to human-readable size (MB or GB)
  */
 export function formatFileSize(bytes?: number): string {

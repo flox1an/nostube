@@ -25,10 +25,16 @@ async function ensureCache() {
 }
 ensureCache()
 
+// Only return cached events whose created_at is within this window.
+// Older events are ignored so timeline loaders always fetch fresh data from relays.
+const CACHE_TTL_SECONDS = 4 * 60 * 60 // 4 hours
+
 export async function cacheRequest(filters: Filter[]) {
   try {
     const cache = await ensureCache()
-    return getEventsForFilters(cache, filters)
+    const events = await getEventsForFilters(cache, filters)
+    const cutoff = Math.floor(Date.now() / 1000) - CACHE_TTL_SECONDS
+    return events.filter(e => e.created_at >= cutoff)
   } catch (error) {
     console.warn('Cache unavailable (possibly iOS lockdown mode):', error)
     return [] // Return empty array to continue with relay fetching

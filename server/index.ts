@@ -2,7 +2,14 @@ import { Hono } from 'hono'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { isBrowser } from './detect.js'
-import { decodeIdentifier, fetchEvent, log } from './nostr.js'
+import {
+  decodeIdentifier,
+  fetchEvent,
+  parsePageUrl,
+  buildPageUrl,
+  log,
+  type PageType,
+} from './nostr.js'
 import { extractVideoMeta, buildMetaTags } from './meta.js'
 import { buildOEmbed } from './oembed.js'
 import { injectMeta } from './template.js'
@@ -34,8 +41,6 @@ export function createApp(options: AppOptions = {}) {
     const url = new URL(c.req.url)
     return `${url.protocol}//${url.host}`
   }
-
-  type PageType = 'video' | 'short' | 'playlist'
 
   async function handlePage(
     c: { req: { url: string; header: (name: string) => string | undefined } },
@@ -85,7 +90,7 @@ export function createApp(options: AppOptions = {}) {
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
-    const pageUrl = c.req.url
+    const pageUrl = buildPageUrl(baseUrl, type, identifier)
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 
@@ -136,33 +141,17 @@ export function createApp(options: AppOptions = {}) {
       return c.json({ error: 'Missing url parameter' }, 400)
     }
 
-    // Parse the URL to extract the identifier
-    const parsed = new URL(url)
-    const pathParts = parsed.pathname.split('/')
-    let identifier: string | null = null
-    let type: PageType = 'video'
-
-    if (pathParts[1] === 'v' && pathParts[2]) {
-      identifier = pathParts[2]
-      type = 'video'
-    } else if (pathParts[1] === 'short' && pathParts[2]) {
-      identifier = pathParts[2]
-      type = 'short'
-    } else if (pathParts[1] === 'playlist' && pathParts[2]) {
-      identifier = pathParts[2]
-      type = 'playlist'
-    }
-
-    if (!identifier) {
+    const parsed = parsePageUrl(new URL(url).pathname)
+    if (!parsed) {
       return c.json({ error: 'Could not parse video URL' }, 400)
     }
 
-    const decoded = decodeIdentifier(identifier)
+    const decoded = decodeIdentifier(parsed.identifier)
     if (!decoded) {
       return c.json({ error: 'Invalid nostr identifier' }, 400)
     }
 
-    log('oembed:fetch', { type, identifier: identifier.slice(0, 30) })
+    log('oembed:fetch', { type: parsed.type, identifier: parsed.identifier.slice(0, 30) })
 
     const event = await Promise.race([
       fetchEvent(decoded),
@@ -180,8 +169,8 @@ export function createApp(options: AppOptions = {}) {
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
-    const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
-    const oembed = buildOEmbed(meta, embedUrl, url, type)
+    const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
+    const oembed = buildOEmbed(meta, embedUrl, url, parsed.type)
 
     log('oembed:success', { title: meta.title })
     return c.json(oembed)

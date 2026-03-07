@@ -1,106 +1,14 @@
-import { SimplePool } from 'nostr-tools/pool'
-import { decode } from 'nostr-tools/nip19'
-import type { NostrEvent } from 'nostr-tools/pure'
-import type { Filter } from 'nostr-tools/filter'
+import {
+  decodeIdentifier,
+  fetchEvent,
+  parsePageUrl,
+  buildPageUrl,
+  type PageType,
+} from '../server/nostr.js'
 import { extractVideoMeta, buildMetaTags, type VideoMeta } from '../server/meta.js'
 import { buildOEmbed, type OEmbedResponse } from '../server/oembed.js'
 import { isBrowser } from '../server/detect.js'
 import { injectMeta } from '../server/template.js'
-
-const FALLBACK_RELAYS = [
-  'wss://relay.nostu.be',
-  'wss://relay.divine.video',
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-  'wss://nos.lol',
-]
-
-const FETCH_TIMEOUT_MS = 5000
-
-interface DecodedIdentifier {
-  type: 'nevent' | 'naddr' | 'note'
-  id?: string
-  kind?: number
-  pubkey?: string
-  identifier?: string
-  relays: string[]
-}
-
-export function decodeIdentifier(nip19str: string): DecodedIdentifier | null {
-  try {
-    const decoded = decode(nip19str)
-    switch (decoded.type) {
-      case 'nevent':
-        return {
-          type: 'nevent',
-          id: decoded.data.id,
-          kind: decoded.data.kind,
-          pubkey: decoded.data.author ?? undefined,
-          relays: decoded.data.relays ?? [],
-        }
-      case 'naddr':
-        return {
-          type: 'naddr',
-          kind: decoded.data.kind,
-          pubkey: decoded.data.pubkey,
-          identifier: decoded.data.identifier,
-          relays: decoded.data.relays ?? [],
-        }
-      case 'note':
-        return {
-          type: 'note',
-          id: decoded.data,
-          relays: [],
-        }
-      default:
-        return null
-    }
-  } catch {
-    return null
-  }
-}
-
-export async function fetchEvent(decoded: DecodedIdentifier): Promise<NostrEvent | null> {
-  const relays = [...new Set([...decoded.relays, ...FALLBACK_RELAYS])]
-
-  const filter: Filter =
-    decoded.type === 'naddr'
-      ? { kinds: [decoded.kind!], authors: [decoded.pubkey!], '#d': [decoded.identifier!] }
-      : { ids: [decoded.id!] }
-
-  const pool = new SimplePool()
-
-  const event = await Promise.race([
-    new Promise<NostrEvent | null>(resolve => {
-      let settled = false
-      const sub = pool.subscribeMany(relays, filter, {
-        onevent(ev) {
-          if (!settled) {
-            settled = true
-            sub.close()
-            resolve(ev)
-          }
-        },
-        oneose() {
-          if (!settled) {
-            settled = true
-            sub.close()
-            resolve(null)
-          }
-        },
-      })
-    }),
-    new Promise<null>(resolve => setTimeout(() => resolve(null), FETCH_TIMEOUT_MS)),
-  ])
-
-  try {
-    pool.close(relays)
-  } catch {
-    /* ignore */
-  }
-
-  return event
-}
 
 let cachedHtml: string | null = null
 
@@ -110,8 +18,6 @@ async function getIndexHtml(origin: string): Promise<string> {
   cachedHtml = await res.text()
   return cachedHtml
 }
-
-type PageType = 'video' | 'short' | 'playlist'
 
 async function serveSpa(origin: string): Promise<Response> {
   const html = await getIndexHtml(origin)
@@ -145,8 +51,7 @@ export async function handleVideoPage(
 
     const baseUrl = url.origin
     const meta = extractVideoMeta(event)
-    const typePath = type === 'short' ? 'short' : type === 'playlist' ? 'playlist' : 'v'
-    const pageUrl = `${baseUrl}/${typePath}/${identifier}`
+    const pageUrl = buildPageUrl(baseUrl, type, identifier)
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 
@@ -169,27 +74,12 @@ export async function handleOEmbed(request: Request): Promise<Response> {
     return Response.json({ error: 'Missing url parameter' }, { status: 400 })
   }
 
-  const parsed = new URL(targetUrl)
-  const pathParts = parsed.pathname.split('/')
-  let identifier: string | null = null
-  let type: PageType = 'video'
-
-  if (pathParts[1] === 'v' && pathParts[2]) {
-    identifier = pathParts[2]
-    type = 'video'
-  } else if (pathParts[1] === 'short' && pathParts[2]) {
-    identifier = pathParts[2]
-    type = 'short'
-  } else if (pathParts[1] === 'playlist' && pathParts[2]) {
-    identifier = pathParts[2]
-    type = 'playlist'
-  }
-
-  if (!identifier) {
+  const parsed = parsePageUrl(new URL(targetUrl).pathname)
+  if (!parsed) {
     return Response.json({ error: 'Could not parse video URL' }, { status: 400 })
   }
 
-  const decoded = decodeIdentifier(identifier)
+  const decoded = decodeIdentifier(parsed.identifier)
   if (!decoded) {
     return Response.json({ error: 'Invalid nostr identifier' }, { status: 400 })
   }
@@ -201,8 +91,8 @@ export async function handleOEmbed(request: Request): Promise<Response> {
 
   const baseUrl = reqUrl.origin
   const meta = extractVideoMeta(event)
-  const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
-  const oembed = buildOEmbed(meta, embedUrl, targetUrl, type)
+  const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
+  const oembed = buildOEmbed(meta, embedUrl, targetUrl, parsed.type)
 
   return Response.json(oembed)
 }

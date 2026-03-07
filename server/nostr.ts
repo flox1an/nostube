@@ -3,7 +3,7 @@ import { decode } from 'nostr-tools/nip19'
 import type { NostrEvent } from 'nostr-tools/pure'
 import type { Filter } from 'nostr-tools/filter'
 
-const FALLBACK_RELAYS = [
+export const FALLBACK_RELAYS = [
   'wss://relay.nostu.be',
   'wss://relay.divine.video',
   'wss://relay.damus.io',
@@ -11,7 +11,24 @@ const FALLBACK_RELAYS = [
   'wss://nos.lol',
 ]
 
-const FETCH_TIMEOUT_MS = 4000
+export const FETCH_TIMEOUT_MS = 4000
+
+export type PageType = 'video' | 'short' | 'playlist'
+
+/** Extract page type and nip19 identifier from a nostube URL path */
+export function parsePageUrl(pathname: string): { type: PageType; identifier: string } | null {
+  const parts = pathname.split('/')
+  if (parts[1] === 'v' && parts[2]) return { type: 'video', identifier: parts[2] }
+  if (parts[1] === 'short' && parts[2]) return { type: 'short', identifier: parts[2] }
+  if (parts[1] === 'playlist' && parts[2]) return { type: 'playlist', identifier: parts[2] }
+  return null
+}
+
+/** Build the canonical user-facing page URL (avoids Vercel rewrite query params) */
+export function buildPageUrl(baseUrl: string, type: PageType, identifier: string): string {
+  const typePath = type === 'short' ? 'short' : type === 'playlist' ? 'playlist' : 'v'
+  return `${baseUrl}/${typePath}/${identifier}`
+}
 
 export function log(msg: string, data?: Record<string, unknown>) {
   const entry = { ts: new Date().toISOString(), msg, ...data }

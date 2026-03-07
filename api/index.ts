@@ -32,7 +32,7 @@ export default async function handler() {
     const event = await Promise.race([
       new Promise<NostrEvent | null>((resolve) => {
         let settled = false
-        const sub = pool.subscribeMany(relays, [filter], {
+        const sub = pool.subscribeMany(relays, filter, {
           onevent(ev) {
             if (!settled) {
               settled = true

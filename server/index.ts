@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { isBrowser } from './detect'
-import { decodeIdentifier, fetchEvent } from './nostr'
-import { extractVideoMeta, buildMetaTags } from './meta'
-import { buildOEmbed } from './oembed'
-import { injectMeta } from './template'
+import { isBrowser } from './detect.js'
+import { decodeIdentifier, fetchEvent } from './nostr.js'
+import { extractVideoMeta, buildMetaTags } from './meta.js'
+import { buildOEmbed } from './oembed.js'
+import { injectMeta } from './template.js'
 
 export interface AppOptions {
   // When true, skip meta injection for browser user agents (Vercel mode)

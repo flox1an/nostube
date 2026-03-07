@@ -33,6 +33,10 @@
     }
   ],
   "rewrites": [
+    { "source": "/v/:path*", "destination": "/api" },
+    { "source": "/short/:path*", "destination": "/api" },
+    { "source": "/playlist/:path*", "destination": "/api" },
+    { "source": "/oembed", "destination": "/api" },
     { "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }
   ]
 }

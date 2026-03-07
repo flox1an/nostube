@@ -1,4 +1,4 @@
-import type { VideoMeta } from './meta'
+import type { VideoMeta } from './meta.js'
 
 export interface OEmbedResponse {
   version: '1.0'

@@ -86,7 +86,7 @@ export function createApp(options: AppOptions = {}) {
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
     const pageUrl = c.req.url
-    const embedUrl = `${baseUrl}/embed.html#${identifier}`
+    const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 
     const metaTags = buildMetaTags(meta, pageUrl, embedUrl, oembedUrl, type)
@@ -180,7 +180,7 @@ export function createApp(options: AppOptions = {}) {
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
-    const embedUrl = `${baseUrl}/embed.html#${identifier}`
+    const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembed = buildOEmbed(meta, embedUrl, url, type)
 
     log('oembed:success', { title: meta.title })

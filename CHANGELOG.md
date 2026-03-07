@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Re-enabled OG meta tags, Twitter Player Cards, and oEmbed for video pages using Vercel Edge Runtime — bots get injected meta, browsers get the unmodified SPA
 - Edge-compatible nostr relay fetching (`api/_nostr.ts`) with 5s timeout and graceful fallback to SPA on any failure
 
+### Fixed
+
+- Embed URLs in OG/oEmbed meta tags used `#` fragment instead of `?v=` query parameter, so the embed player couldn't read the video ID
+
 ## [0.2.19] - 2026-03-07
 
 ### Changed

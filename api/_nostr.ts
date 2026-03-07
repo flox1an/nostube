@@ -146,7 +146,7 @@ export async function handleVideoPage(
     const baseUrl = url.origin
     const meta = extractVideoMeta(event)
     const pageUrl = request.url
-    const embedUrl = `${baseUrl}/embed.html#${identifier}`
+    const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 
     const metaTags = buildMetaTags(meta, pageUrl, embedUrl, oembedUrl, type)
@@ -200,7 +200,7 @@ export async function handleOEmbed(request: Request): Promise<Response> {
 
   const baseUrl = reqUrl.origin
   const meta = extractVideoMeta(event)
-  const embedUrl = `${baseUrl}/embed.html#${identifier}`
+  const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
   const oembed = buildOEmbed(meta, embedUrl, targetUrl, type)
 
   return Response.json(oembed)

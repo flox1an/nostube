@@ -6,13 +6,13 @@ import { extractVideoMeta } from '../server/meta.js'
 const app = new Hono()
 
 // Health check
-app.get('/api', c => {
+app.get('/', c => {
   log('health:ok')
   return c.json({ ok: true, ts: Date.now() })
 })
 
 // Test route — resolves a hardcoded naddr to verify relay fetch works
-app.get('/api/test', async c => {
+app.get('/test', async c => {
   const naddr =
     'naddr1qvzqqqy9hvpzpd7x76g4e756vtlldg0syczdazxz83kxcmgm3a3v0nqswj0nql5pqyt8wumn8ghj7un9d3shjtnswf5k6ctv9ehx2aqpz3mhxue69uhhyetvv9ujuerpd46hxtnfduq32amnwvaz7tmjv4kxz7fj9eskuem0wghxjmcqysurzepj89sngvedx43nqcedx33k2cedvfnr2ded8yukgef3v33ngcmxvccsa86rkw'
 

@@ -34,7 +34,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }
+    { "source": "/((?!api(?:/|$)|\\.well-known/).*)", "destination": "/index.html" }
   ]
 }

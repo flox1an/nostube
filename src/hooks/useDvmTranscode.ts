@@ -161,93 +161,6 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
   }, [])
 
   /**
-   * Discover available DVM handlers for video transform
-   */
-  const discoverDvm = useCallback(async (): Promise<DvmHandlerInfo | null> => {
-    if (dvmRelays.length === 0) {
-      throw new Error('No relays configured')
-    }
-
-    // Use a custom promise to handle collecting multiple DVM events and then selecting the newest
-    return new Promise((resolve, reject) => {
-      let dvmHandlers: (DvmHandlerInfo & { createdAt: number })[] = []
-      let timer: number | undefined
-      let sub: any // Subscription object
-
-      // Timeout to resolve after a certain period if no DVMs are found or all relays have sent EOSE
-      timer = window.setTimeout(() => {
-        sub?.unsubscribe() // Ensure the subscription is cleaned up
-        if (dvmHandlers.length > 0) {
-          // Sort by createdAt descending and pick the newest
-          const newestDvm = dvmHandlers.sort((a, b) => b.createdAt - a.createdAt)[0]
-          resolve(newestDvm)
-        } else {
-          resolve(null) // No DVMs found
-        }
-      }, 5000) // 5 second timeout for DVM discovery
-
-      sub = relayPool
-        .request(dvmRelays, [
-          {
-            kinds: [31990],
-            '#k': ['5207'],
-            '#d': ['video-transform-hls'],
-            // No limit here, we want to collect all
-          },
-        ])
-        .subscribe({
-          next: event => {
-            if (typeof event === 'string') return // EOSE
-            const nostrEvent = event as NostrEvent
-
-            let name: string | undefined
-            let about: string | undefined
-
-            try {
-              const content = JSON.parse(nostrEvent.content || '{}')
-              name = content.name
-              about = content.about
-            } catch {
-              // Content is not JSON, check tags
-            }
-
-            const nameTag = nostrEvent.tags.find(t => t[0] === 'name')
-            const aboutTag = nostrEvent.tags.find(t => t[0] === 'about')
-            if (nameTag?.[1]) name = nameTag[1]
-            if (aboutTag?.[1]) about = aboutTag[1]
-
-            dvmHandlers.push({
-              pubkey: nostrEvent.pubkey,
-              name,
-              about,
-              createdAt: nostrEvent.created_at, // Capture created_at for sorting
-            })
-
-            console.log('[DVM] Discovered DVM handler:', {
-              pubkey: nostrEvent.pubkey,
-              name,
-              about,
-            })
-          },
-          error: err => {
-            clearTimeout(timer)
-            reject(err)
-          },
-          complete: () => {
-            clearTimeout(timer)
-            if (dvmHandlers.length > 0) {
-              // Sort by createdAt descending and pick the newest
-              const newestDvm = dvmHandlers.sort((a, b) => b.createdAt - a.createdAt)[0]
-              resolve(newestDvm)
-            } else {
-              resolve(null) // No DVMs found
-            }
-          },
-        })
-    })
-  }, [dvmRelays])
-
-  /**
    * Collect bids for a job request
    */
   const collectBids = useCallback(
@@ -1254,7 +1167,6 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       buildVideoVariantFromResult,
       subscribeToDvmResponses,
       mirrorTranscodedVideo,
-      discoverDvm,
       processResolution,
     ]
   )

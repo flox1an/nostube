@@ -10,7 +10,7 @@ interface PlayProgressBarProps {
 export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
   const { user } = useCurrentUser()
   // Force re-render when cache is invalidated
-  const [version, setVersion] = useState(getCacheVersion())
+  const [_version, setVersion] = useState(getCacheVersion())
 
   useEffect(() => {
     // Check for cache invalidation periodically
@@ -39,7 +39,7 @@ export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
     getPlayPosCache().set(key, data)
     return data
     // Note: cacheVersion triggers re-reads from localStorage via setVersion
-  }, [user?.pubkey, videoId, version])
+  }, [user?.pubkey, videoId])
 
   // Use stored duration if available, fall back to prop
   const effectiveDuration = posData?.duration || duration

@@ -350,7 +350,6 @@ export function ShortsVideoPage() {
       subscription.unsubscribe()
       shortsSub.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialVideo, authorParam, allVideos.length])
 
   // Track if we've done the initial scroll

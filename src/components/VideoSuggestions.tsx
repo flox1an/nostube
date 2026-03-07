@@ -229,32 +229,32 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   }, [authorPubkey, currentVideoType, relaysToUse, pool, eventStore])
 
   // Use EventStore timeline for author-specific suggestions
-  const authorSuggestions =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: getKindsForType('all'),
-            authors: authorPubkey ? [authorPubkey] : [],
-            limit: 30,
-          },
-        ]),
-      [eventStore, authorPubkey]
-    ) ?? []
+  const rawAuthorSuggestions = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: getKindsForType('all'),
+          authors: authorPubkey ? [authorPubkey] : [],
+          limit: 30,
+        },
+      ]),
+    [eventStore, authorPubkey]
+  )
+  const authorSuggestions = useMemo(() => rawAuthorSuggestions ?? [], [rawAuthorSuggestions])
   const authorIsLoading = authorPubkey && authorSuggestions.length === 0
 
   // Use EventStore timeline for global suggestions
-  const globalSuggestions =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
-            limit: 30,
-          },
-        ]),
-      [eventStore, currentVideoType]
-    ) ?? []
+  const rawGlobalSuggestions = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: currentVideoType ? getKindsForType(currentVideoType) : getKindsForType('all'),
+          limit: 30,
+        },
+      ]),
+    [eventStore, currentVideoType]
+  )
+  const globalSuggestions = useMemo(() => rawGlobalSuggestions ?? [], [rawGlobalSuggestions])
   const globalIsLoading = globalSuggestions.length === 0
 
   const suggestions = useMemo(() => {

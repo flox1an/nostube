@@ -21,18 +21,18 @@ export function useUserRelays(pubkey: string | undefined) {
   const { pool, config } = useAppContext()
 
   // Use EventStore to get user's relay list (kind 10002)
-  const relayListEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [10002],
-            authors: pubkey ? [pubkey] : [],
-            limit: 1,
-          },
-        ]),
-      [eventStore, pubkey]
-    ) ?? []
+  const rawRelayListEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [10002],
+          authors: pubkey ? [pubkey] : [],
+          limit: 1,
+        },
+      ]),
+    [eventStore, pubkey]
+  )
+  const relayListEvents = useMemo(() => rawRelayListEvents ?? [], [rawRelayListEvents])
 
   const discoveryRelays = useMemo(() => {
     const urls = new Set<string>()

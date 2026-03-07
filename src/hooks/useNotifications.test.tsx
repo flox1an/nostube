@@ -3,9 +3,10 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { useNotifications } from './useNotifications'
 import { TestApp } from '../test/TestApp'
 import type { NostrEvent } from 'nostr-tools'
+import type * as NostrCore from '@/nostr/core'
 
 // Mock the relayPool from @/nostr/core
-type NostrCoreModule = typeof import('@/nostr/core')
+type NostrCoreModule = typeof NostrCore
 
 vi.mock('@/nostr/core', async () => {
   const actual = await vi.importActual('@/nostr/core')

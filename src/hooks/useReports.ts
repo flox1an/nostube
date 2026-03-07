@@ -41,7 +41,8 @@ export const useReports = ({ p, e, x }: UseReportsParams = {}) => {
   }, [p, e, x])
 
   // Use EventStore timeline to get reports
-  const reportEvents = use$(() => eventStore.timeline([filter]), [eventStore, filter]) ?? []
+  const rawReportEvents = use$(() => eventStore.timeline([filter]), [eventStore, filter])
+  const reportEvents = useMemo(() => rawReportEvents ?? [], [rawReportEvents])
 
   const processedReports = useMemo(() => {
     return reportEvents.map(event => {

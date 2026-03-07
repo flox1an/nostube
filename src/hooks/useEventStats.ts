@@ -200,7 +200,6 @@ export function useEventStats({
     if (!eventId) return
 
     // Build filters for both event ID and address (for addressable events)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filters: any[] = [{ kinds: [9735], '#e': allEventIds }]
 
     // For addressable events, also query by address
@@ -289,7 +288,8 @@ export function useEventStats({
   // ============ REACTION LOADING ============
 
   // Get reactions from EventStore via ReactionsModel
-  const reactions = useEventModel(ReactionsModel, [targetEvent]) || []
+  const rawReactions = useEventModel(ReactionsModel, [targetEvent])
+  const reactions = useMemo(() => rawReactions || [], [rawReactions])
 
   // Load reactions from relays
   useEffect(() => {

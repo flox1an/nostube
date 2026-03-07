@@ -335,7 +335,7 @@ export function processEvent(
   const seenList = seenRelays ? Array.from(seenRelays) : []
   const combined = [...seenList, ...relays]
   // Deduplicate and sanitize relay URLs
-  let eventRelays = [...new Set(combined.flatMap(url => sanitizeRelayUrl(url)))].slice(0, 3)
+  const eventRelays = [...new Set(combined.flatMap(url => sanitizeRelayUrl(url)))].slice(0, 3)
 
   // Find ALL imeta tags
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')

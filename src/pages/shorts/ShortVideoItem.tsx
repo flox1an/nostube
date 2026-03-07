@@ -101,8 +101,11 @@ export const ShortVideoItem = memo(
     }, [video.id])
 
     // Get video owner's Blossom servers
-    const rawOwnerServers =
-      useEventModel(UserBlossomServersModel, video.pubkey ? [video.pubkey] : null) || []
+    const rawOwnerServersResult = useEventModel(
+      UserBlossomServersModel,
+      video.pubkey ? [video.pubkey] : null
+    )
+    const rawOwnerServers = useMemo(() => rawOwnerServersResult || [], [rawOwnerServersResult])
 
     // Combine config Blossom servers with video owner's servers
     const allBlossomServers = useMemo(() => {

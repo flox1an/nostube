@@ -218,7 +218,6 @@ export function EditVideoDialog({
   // Compute preview event reactively for the diff view
   const previewEvent = useMemo(
     () => buildUpdatedEvent(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       imetaTags,
       title,

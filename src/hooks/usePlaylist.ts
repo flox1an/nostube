@@ -7,6 +7,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import type { Event } from 'nostr-tools'
 
 export interface Video {
   id: string
@@ -33,7 +34,7 @@ const PLAYLIST_KIND = 30005
 function parseVideoTags(
   tags: string[][],
   created_at: number,
-  eventStore: { getEvent: (id: string) => import('nostr-tools').Event | undefined }
+  eventStore: { getEvent: (id: string) => Event | undefined }
 ): Video[] {
   const videos: Video[] = []
 
@@ -101,7 +102,8 @@ export function usePlaylists() {
   )
 
   // Use EventStore timeline to get playlists for current user
-  const allPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters]) ?? []
+  const rawAllPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters])
+  const allPlaylistEvents = useMemo(() => rawAllPlaylistEvents ?? [], [rawAllPlaylistEvents])
 
   // Filter out deleted playlists
   const playlistEvents = useMemo(
@@ -449,7 +451,8 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   // Also load deletion events (kind 5) for filtering
   const deletionFilters = useMemo(() => [{ kinds: [5], authors: pubkey ? [pubkey] : [] }], [pubkey])
 
-  const allPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters]) ?? []
+  const rawAllPlaylistEvents = use$(() => eventStore.timeline(filters), [eventStore, filters])
+  const allPlaylistEvents = useMemo(() => rawAllPlaylistEvents ?? [], [rawAllPlaylistEvents])
 
   // Filter out deleted playlists
   const playlistEvents = useMemo(

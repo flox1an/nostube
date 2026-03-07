@@ -16,17 +16,17 @@ export function useLikedEvents() {
   }, [config.relays])
 
   // Use EventStore timeline to get user's reactions (kind 7)
-  const reactionEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [7],
-            authors: user?.pubkey ? [user.pubkey] : [],
-          },
-        ]),
-      [eventStore, user?.pubkey]
-    ) ?? []
+  const rawReactionEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [7],
+          authors: user?.pubkey ? [user.pubkey] : [],
+        },
+      ]),
+    [eventStore, user?.pubkey]
+  )
+  const reactionEvents = useMemo(() => rawReactionEvents ?? [], [rawReactionEvents])
 
   // Load reactions from relays if not in EventStore
   useEffect(() => {

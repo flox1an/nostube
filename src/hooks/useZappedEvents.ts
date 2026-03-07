@@ -19,17 +19,17 @@ export function useZappedEvents() {
   }, [config.relays])
 
   // Use EventStore timeline to get user's zap requests (kind 9734)
-  const zapRequestEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [9734],
-            authors: user?.pubkey ? [user.pubkey] : [],
-          },
-        ]),
-      [eventStore, user?.pubkey]
-    ) ?? []
+  const rawZapRequestEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [9734],
+          authors: user?.pubkey ? [user.pubkey] : [],
+        },
+      ]),
+    [eventStore, user?.pubkey]
+  )
+  const zapRequestEvents = useMemo(() => rawZapRequestEvents ?? [], [rawZapRequestEvents])
 
   // Load zap requests from relays if not in EventStore
   useEffect(() => {

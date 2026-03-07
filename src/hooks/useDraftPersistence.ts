@@ -89,7 +89,6 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
       console.log(`[useDraftPersistence:${storageKey}] items recomputed, version=${version}`, fresh)
     }
     return fresh
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey, version])
 
   const { user } = useCurrentUser()
@@ -162,7 +161,6 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
       inflightSaveRef.current = promise
       return promise
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user, config.relays, pool, storageKey, nostrIdentifier]
   )
 

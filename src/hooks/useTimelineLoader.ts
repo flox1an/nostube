@@ -63,13 +63,13 @@ export function useTimelineLoader({
 
   // Subscribe to events from EventStore for reactive updates
   // Only recreate observable when filters change, not when processing dependencies change
-  const events =
-    use$(() => {
-      if (!filters) {
-        return of([]) // Return observable that emits empty array
-      }
-      return eventStore.timeline(filters)
-    }, [eventStore, filters]) ?? []
+  const rawEvents = use$(() => {
+    if (!filters) {
+      return of([]) // Return observable that emits empty array
+    }
+    return eventStore.timeline(filters)
+  }, [eventStore, filters])
+  const events = useMemo(() => rawEvents ?? [], [rawEvents])
 
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
   // Sort by publish date descending (newest first), fallback to created_at

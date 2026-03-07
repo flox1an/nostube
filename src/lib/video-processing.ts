@@ -81,9 +81,6 @@ export async function processUploadedVideo(
     const sizeMB = file.size / 1024 / 1024
     const qualityLabel = generateQualityLabel(dimension)
 
-    let videoCodec: string | undefined
-    let audioCodec: string | undefined
-    let bitrate: number | undefined
     let extractedMetadata: VideoMetadata | undefined
 
     // Extract codecs and metadata in parallel
@@ -98,9 +95,9 @@ export async function processUploadedVideo(
       }),
     ])
 
-    videoCodec = codecs.videoCodec
-    audioCodec = codecs.audioCodec
-    bitrate = codecs.bitrate
+    const videoCodec = codecs.videoCodec
+    const audioCodec = codecs.audioCodec
+    const bitrate = codecs.bitrate
 
     // Only include metadata if we found something
     if (Object.keys(metadata).length > 0) {
@@ -167,9 +164,6 @@ export async function processVideoUrl(
   const qualityLabel = generateQualityLabel(dimension)
   const sizeMB = fileSize ? Number((fileSize / 1024 / 1024).toFixed(2)) : undefined
 
-  let videoCodec: string | undefined
-  let audioCodec: string | undefined
-  let bitrate: number | undefined
   let extractedMetadata: VideoMetadata | undefined
 
   // Extract codecs and metadata in parallel
@@ -184,9 +178,9 @@ export async function processVideoUrl(
     }),
   ])
 
-  videoCodec = codecs.videoCodec
-  audioCodec = codecs.audioCodec
-  bitrate = codecs.bitrate
+  const videoCodec = codecs.videoCodec
+  const audioCodec = codecs.audioCodec
+  const bitrate = codecs.bitrate
 
   // Only include metadata if we found something
   if (Object.keys(metadata).length > 0) {

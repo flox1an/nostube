@@ -54,17 +54,17 @@ export function usePresets() {
   const [isLoading, setIsLoading] = useState(true)
 
   // Query event store for all preset events
-  const presetEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [PRESET_EVENT_KIND],
-            '#d': [PRESET_D_TAG],
-          },
-        ]),
-      [eventStore]
-    ) ?? []
+  const rawPresetEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [PRESET_EVENT_KIND],
+          '#d': [PRESET_D_TAG],
+        },
+      ]),
+    [eventStore]
+  )
+  const presetEvents = useMemo(() => rawPresetEvents ?? [], [rawPresetEvents])
 
   // Build list of relays to query
   const discoveryRelays = useMemo(() => {

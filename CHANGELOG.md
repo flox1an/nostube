@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BUD-11 compliance: authorization tokens now use Base64url encoding without padding (instead of standard Base64) as required by the spec
 - BUD-11 compliance: all upload, mirror, and delete auth tokens now include `server` tags scoped to the target domain, preventing token replay on other servers
 - Mirror operations now create per-server auth tokens instead of reusing one unscoped token across all servers
+- Reduced ESLint warnings from 131 to 86: wrapped `use$() ?? []` fallbacks in `useMemo` to stabilize deps (12+ hooks/components), fixed `prefer-const`, removed dead `eslint-disable` comments and unused `discoverDvm` callback, fixed `consistent-type-imports`, wrapped `signer` conditional and `getEffectiveMode` in memoized hooks
 
 ### Fixed
 

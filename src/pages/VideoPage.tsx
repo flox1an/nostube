@@ -1,6 +1,6 @@
 import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
-import { of, Subscription } from 'rxjs'
+import { of, type Subscription } from 'rxjs'
 import { switchMap, catchError, take } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import type { NostrEvent } from 'nostr-tools'

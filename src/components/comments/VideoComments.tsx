@@ -174,16 +174,16 @@ export function VideoComments({
   }, [pool, readRelays, filters, eventStore])
 
   // Use EventStore timeline to get comments for this video
-  const flatComments =
-    use$(
-      () =>
-        eventStore
-          .timeline(filters)
-          .pipe(
-            map(events => events.map(e => mapEventToComment(e, videoId, videoAddress ?? undefined)))
-          ),
-      [eventStore, filters, videoId, videoAddress]
-    ) ?? []
+  const rawFlatComments = use$(
+    () =>
+      eventStore
+        .timeline(filters)
+        .pipe(
+          map(events => events.map(e => mapEventToComment(e, videoId, videoAddress ?? undefined)))
+        ),
+    [eventStore, filters, videoId, videoAddress]
+  )
+  const flatComments = useMemo(() => rawFlatComments ?? [], [rawFlatComments])
 
   // Second pass: fetch replies to known comments from external clients
   // External clients may only tag the parent comment (not the video), so we

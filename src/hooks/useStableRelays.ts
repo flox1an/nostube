@@ -11,6 +11,5 @@ import { useReadRelays } from './useReadRelays'
 export function useStableRelays(): string[] {
   const relaysFromHook = useReadRelays()
   const relaysKey = relaysFromHook.join(',')
-  // relaysKey is a stable serialization - when it changes, we want to return a new array
-  return useMemo(() => relaysFromHook, [relaysKey, relaysFromHook])
+  return useMemo(() => (relaysKey ? relaysKey.split(',') : []), [relaysKey])
 }

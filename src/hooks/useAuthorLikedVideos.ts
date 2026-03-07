@@ -21,29 +21,29 @@ export function useAuthorLikedVideos(pubkey: string | undefined) {
   const [loadedPubkey, setLoadedPubkey] = useState<string | null>(null)
 
   // Use EventStore timeline to get author's reactions (kind 7) and zap requests (kind 9734)
-  const reactionEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [7],
-            authors: pubkey ? [pubkey] : [],
-          },
-        ]),
-      [eventStore, pubkey]
-    ) ?? []
+  const rawReactionEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [7],
+          authors: pubkey ? [pubkey] : [],
+        },
+      ]),
+    [eventStore, pubkey]
+  )
+  const reactionEvents = useMemo(() => rawReactionEvents ?? [], [rawReactionEvents])
 
-  const zapRequestEvents =
-    use$(
-      () =>
-        eventStore.timeline([
-          {
-            kinds: [9734],
-            authors: pubkey ? [pubkey] : [],
-          },
-        ]),
-      [eventStore, pubkey]
-    ) ?? []
+  const rawZapRequestEvents = use$(
+    () =>
+      eventStore.timeline([
+        {
+          kinds: [9734],
+          authors: pubkey ? [pubkey] : [],
+        },
+      ]),
+    [eventStore, pubkey]
+  )
+  const zapRequestEvents = useMemo(() => rawZapRequestEvents ?? [], [rawZapRequestEvents])
 
   // Load reactions and zaps from relays if not in EventStore
   useEffect(() => {

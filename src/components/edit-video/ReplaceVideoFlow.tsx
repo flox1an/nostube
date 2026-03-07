@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -61,10 +61,14 @@ export function ReplaceVideoFlow({
     config.blossomServers?.filter(server => server.tags.includes('mirror')) || []
   ).map(s => s.url)
 
-  const signer = user
-    ? async (draft: Parameters<typeof user.signer.signEvent>[0]) =>
-        await user.signer.signEvent(draft)
-    : undefined
+  const signer = useMemo(
+    () =>
+      user
+        ? async (draft: Parameters<typeof user.signer.signEvent>[0]) =>
+            await user.signer.signEvent(draft)
+        : undefined,
+    [user]
+  )
 
   const upload = useVideoFileUpload({
     initialUploadServers: blossomInitialUploadServers,

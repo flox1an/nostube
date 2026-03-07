@@ -78,7 +78,6 @@ export async function discoverUrls(options: DiscoveryOptions): Promise<Discovere
   return new Promise(resolve => {
     const discovered: DiscoveredUrl[] = []
     const seenUrls = new Set<string>()
-    let timeoutId: number | undefined
 
     // Create subscription to search for kind 1063 events
     const subscription = relayPool
@@ -137,7 +136,7 @@ export async function discoverUrls(options: DiscoveryOptions): Promise<Discovere
       })
 
     // Set timeout to stop searching after specified time
-    timeoutId = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       subscription.unsubscribe()
       resolve(sortByTimestamp(discovered))
     }, timeout)

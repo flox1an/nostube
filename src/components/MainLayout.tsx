@@ -24,7 +24,7 @@ export function MainLayout() {
     if (isVideoPage && isSidebarOpen) {
       toggleSidebar()
     }
-  }, [isVideoPage]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isVideoPage])
 
   return (
     <div className="min-h-screen flex flex-col">

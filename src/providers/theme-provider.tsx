@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { applyTheme, getThemeById } from '@/lib/themes'
 
 type Theme = 'dark' | 'light' | 'system'
@@ -42,12 +42,12 @@ export function ThemeProvider({
   )
 
   // Determine the effective theme mode (light/dark)
-  const getEffectiveMode = (): 'light' | 'dark' => {
+  const getEffectiveMode = useCallback((): 'light' | 'dark' => {
     if (theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
     return theme as 'light' | 'dark'
-  }
+  }, [theme])
 
   // Apply theme colors when theme or colorTheme changes
   useEffect(() => {
@@ -60,7 +60,7 @@ export function ThemeProvider({
     // Apply color theme
     const selectedTheme = getThemeById(colorTheme)
     applyTheme(selectedTheme, mode)
-  }, [theme, colorTheme])
+  }, [theme, colorTheme, getEffectiveMode])
 
   // Listen for system theme changes
   useEffect(() => {

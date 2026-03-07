@@ -169,7 +169,6 @@ export function LikedVideosPage() {
       loadingRef.current = false
     }
     // Only depend on the stable string, but use combinedEventIds inside the effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [combinedIdsString, eventStore, pool])
 
   const isLoading = isLoadingReactions || isLoadingZaps || loadingVideos

@@ -1,3 +1,7 @@
-export default function handler(_req: any, res: any) {
-  res.status(200).json({ hello: 'world', ts: Date.now() })
+export const config = { runtime: 'edge' }
+
+export default function handler() {
+  return new Response(JSON.stringify({ hello: 'world', ts: Date.now() }), {
+    headers: { 'content-type': 'application/json' },
+  })
 }

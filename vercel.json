@@ -27,5 +27,8 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api", "destination": "/api" },
+    { "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }
+  ]
 }

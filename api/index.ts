@@ -1,7 +1,12 @@
+import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
-import { createApp } from '../server/index.js'
 
-// On Vercel, skip meta injection for browsers to avoid serverless latency
-const app = createApp({ skipBrowsers: true })
+const app = new Hono()
+
+// Health check — hit /api to verify the function boots
+app.get('/api', c => {
+  console.log(JSON.stringify({ ts: new Date().toISOString(), msg: 'health:ok' }))
+  return c.json({ ok: true, ts: Date.now() })
+})
 
 export default handle(app)

@@ -38,7 +38,7 @@ export default tseslint.config(
       ],
       'custom/no-placeholder-comments': 'error',
       'no-warning-comments': ['error', { terms: ['fixme'] }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': 'off',
       'prefer-const': 'warn',
       'no-var': 'error',
       '@typescript-eslint/consistent-type-imports': [

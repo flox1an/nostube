@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-03-07
+
+### Added
+
+- Social media embed support: Open Graph meta tags, Twitter Player Cards, and oEmbed endpoint for rich video link previews on Twitter/X, Discord, Slack, WhatsApp, Telegram, etc.
+- Hono server layer (`server/`) that injects meta tags for crawler bots while serving the unmodified SPA to regular users
+- `/oembed?url=...` JSON endpoint for oEmbed-compatible consumers (WordPress, Medium, etc.)
+- Standalone server mode (`npm run server:dev`) for self-hosted deployments with embed support
+- Vercel serverless function (`api/index.ts`) routes `/v/`, `/short/`, `/playlist/` through bot detection
+
+### Changed
+
+- Hide "Transformation Needed" alert for small H.264 files (< 50 MB) since the codec is already widely compatible
+
 ## [0.2.17] - 2026-03-06
 
 ### Changed

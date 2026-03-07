@@ -7,6 +7,7 @@ import { type VideoVariant } from '@/utils/video-event'
 import {
   needsLowerResolutionVariants,
   needsIOSCompatibleVariants,
+  extractCodecFromMimeType,
 } from '@/lib/video-transformation-detection'
 import { dismissAlert, isAlertDismissed } from '@/lib/dismissed-alerts'
 import { useState, useEffect } from 'react'
@@ -53,6 +54,15 @@ export function VideoTransformAlert({
 
   // Don't show if no transformation needed or dismissed
   if (!needsLowerRes && !needsIOSCompatible) return null
+
+  // Skip alert for small H.264 files — widely compatible, low bandwidth anyway
+  const MAX_SMALL_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
+  const isSmallFile = videoVariants.every(v => v.size !== undefined && v.size < MAX_SMALL_FILE_SIZE)
+  const isAllH264 = videoVariants.every(v => {
+    const codec = extractCodecFromMimeType(v.mimeType)
+    return !codec || codec === 'avc1' || codec === 'avc'
+  })
+  if (isSmallFile && isAllH264) return null
   if (isDismissed) return null
 
   // Determine which message to show based on needs

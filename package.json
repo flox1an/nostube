@@ -1,7 +1,7 @@
 {
   "name": "nostube",
   "private": false,
-  "version": "0.2.17",
+  "version": "0.2.18",
   "type": "module",
   "scripts": {
     "dev": "npm i && vite",
@@ -12,12 +12,14 @@
     "deploy": "npm run build && npx -y surge@latest dist",
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
-    "format:staged": "npx prettier --write --ignore-unknown"
+    "format:staged": "npx prettier --write --ignore-unknown",
+    "server:dev": "npx tsx --watch server/standalone.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@hono/node-server": "^1.19.11",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -68,6 +70,7 @@
     "embla-carousel-react": "^8.6.0",
     "hash-wasm": "^4.12.0",
     "hls.js": "^1.6.13",
+    "hono": "^4.12.5",
     "i18next": "^25.6.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "immer": "^11.1.0",

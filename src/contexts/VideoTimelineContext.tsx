@@ -160,6 +160,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useVideoTimelineContext() {
   const context = useContext(VideoTimelineContext)
   if (context === undefined) {

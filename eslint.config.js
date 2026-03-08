@@ -17,7 +17,6 @@ export default tseslint.config(
       globals: globals.browser,
     },
     linterOptions: {
-      noInlineConfig: true, // Prevents all eslint-disable comments
       reportUnusedDisableDirectives: 'error', // Reports unused disable directives as errors
     },
     plugins: {

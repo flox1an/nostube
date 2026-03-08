@@ -5,6 +5,7 @@
  * This file exists for backward compatibility with existing imports.
  */
 
+/* eslint-disable react-refresh/only-export-components */
 export {
   UploadManagerProvider,
   useUploadManager,

@@ -204,6 +204,7 @@ export function PresetProvider({ children }: PresetProviderProps) {
   return <PresetContext.Provider value={contextValue}>{children}</PresetContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePresetContext(): PresetContextValue {
   const context = useContext(PresetContext)
   if (!context) {

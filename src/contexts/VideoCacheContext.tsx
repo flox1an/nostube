@@ -97,6 +97,7 @@ export function VideoCacheProvider({ children }: { children: React.ReactNode }) 
   return <VideoCacheContext.Provider value={value}>{children}</VideoCacheContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useVideoCache() {
   const context = useContext(VideoCacheContext)
   if (context === undefined) {

@@ -45,6 +45,7 @@ export function UserRelaysProvider({ children }: UserRelaysProviderProps) {
   return <UserRelaysContext.Provider value={value}>{children}</UserRelaysContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useUserRelaysContext(): UserRelaysContextValue {
   return useContext(UserRelaysContext)
 }

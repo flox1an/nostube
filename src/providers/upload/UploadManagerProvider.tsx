@@ -154,18 +154,19 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     if (import.meta.env.DEV) {
       console.debug('[UploadManager] Provider mounted')
     }
+    const jobs = jobsRef.current
     return () => {
       if (import.meta.env.DEV) {
         console.debug(
           '[UploadManager] Provider unmounting! Clearing jobs:',
-          Array.from(jobsRef.current.keys())
+          Array.from(jobs.keys())
         )
       }
-      jobsRef.current.forEach(job => {
+      jobs.forEach(job => {
         job.subscription?.unsubscribe()
         job.abortController.abort()
       })
-      jobsRef.current.clear()
+      jobs.clear()
     }
   }, [])
 
@@ -1126,6 +1127,56 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [updateTasksState, tasks, processResolution, completeTask, failTask, draftPersistence]
   )
 
+  // Query for existing DVM result
+  const queryForExistingResult = useCallback(
+    async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
+      return new Promise(resolve => {
+        let found = false
+        const timeout = setTimeout(() => {
+          if (!found) {
+            sub.unsubscribe()
+            resolve(null)
+          }
+        }, 5000)
+
+        const sub = relayPool
+          .request(dvmRelays, [
+            {
+              kinds: [DVM_RESULT_KIND],
+              authors: [dvmPubkey],
+              '#e': [requestEventId],
+              limit: 1,
+            },
+          ])
+          .subscribe({
+            next: event => {
+              if (typeof event === 'string') return
+              found = true
+              clearTimeout(timeout)
+              sub.unsubscribe()
+
+              const nostrEvent = event as NostrEvent
+              console.log('[UploadManager] Found existing result event:', {
+                id: nostrEvent.id,
+                pubkey: nostrEvent.pubkey,
+                content: nostrEvent.content,
+                tags: nostrEvent.tags,
+              })
+
+              resolve(nostrEvent)
+            },
+            complete: () => {
+              if (!found) {
+                clearTimeout(timeout)
+                resolve(null)
+              }
+            },
+          })
+      })
+    },
+    [dvmRelays]
+  )
+
   // Resume transcode from persisted state
   const resumeTranscode = useCallback(
     async (
@@ -1368,57 +1419,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       completeTask,
       failTask,
       draftPersistence,
+      queryForExistingResult,
     ]
-  )
-
-  // Query for existing DVM result
-  const queryForExistingResult = useCallback(
-    async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
-      return new Promise(resolve => {
-        let found = false
-        const timeout = setTimeout(() => {
-          if (!found) {
-            sub.unsubscribe()
-            resolve(null)
-          }
-        }, 5000)
-
-        const sub = relayPool
-          .request(dvmRelays, [
-            {
-              kinds: [DVM_RESULT_KIND],
-              authors: [dvmPubkey],
-              '#e': [requestEventId],
-              limit: 1,
-            },
-          ])
-          .subscribe({
-            next: event => {
-              if (typeof event === 'string') return
-              found = true
-              clearTimeout(timeout)
-              sub.unsubscribe()
-
-              const nostrEvent = event as NostrEvent
-              console.log('[UploadManager] Found existing result event:', {
-                id: nostrEvent.id,
-                pubkey: nostrEvent.pubkey,
-                content: nostrEvent.content,
-                tags: nostrEvent.tags,
-              })
-
-              resolve(nostrEvent)
-            },
-            complete: () => {
-              if (!found) {
-                clearTimeout(timeout)
-                resolve(null)
-              }
-            },
-          })
-      })
-    },
-    [dvmRelays]
   )
 
   // Cancel transcode
@@ -1587,6 +1589,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useUploadManager(): UploadManagerContextType {
   const context = useContext(UploadManagerContext)
   if (!context) {

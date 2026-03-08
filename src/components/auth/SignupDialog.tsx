@@ -76,6 +76,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true)
     try {
       await login.nsec(nsec)
+      setNsec('') // Clear nsec from memory after successful login
       setStep('done')
       onClose()
 

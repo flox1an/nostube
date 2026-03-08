@@ -13,13 +13,12 @@ import { useTranslation } from 'react-i18next'
 // Relays used for nostrconnect communication
 const NOSTRCONNECT_RELAYS = presetRelays.map(r => r.url)
 
-// Build a bunker:// URI from signer properties for persistence
-function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string): string {
+// Build a bunker:// URI from signer properties for persistence.
+// The secret is intentionally omitted — it is only needed for the initial
+// NIP-46 handshake and should never be persisted to storage.
+function buildBunkerUri(remotePubkey: string, relays: string[]): string {
   const params = new URLSearchParams()
   relays.forEach(relay => params.append('relay', relay))
-  if (secret) {
-    params.append('secret', secret)
-  }
   return `bunker://${remotePubkey}?${params.toString()}`
 }
 
@@ -86,7 +85,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
       if (!remotePubkey) {
         throw new Error('Failed to get remote signer pubkey')
       }
-      const bunkerUri = buildBunkerUri(remotePubkey, NOSTRCONNECT_RELAYS, signer.secret)
+      const bunkerUri = buildBunkerUri(remotePubkey, NOSTRCONNECT_RELAYS)
 
       // Persist account
       saveAccountToStorage(account, 'bunker', bunkerUri)

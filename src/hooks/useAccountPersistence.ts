@@ -9,6 +9,22 @@ const STORAGE_KEY_ACTIVE = 'nostr:active-account'
 
 export type AccountMethod = 'extension' | 'nsec' | 'bunker'
 
+/**
+ * Strip the `secret` query parameter from a bunker:// URI before persisting.
+ * The secret is only needed during the initial NIP-46 handshake and should not
+ * be stored long-term — the clientKey alone is sufficient to restore a session.
+ */
+function stripBunkerSecret(bunkerUri: string): string {
+  try {
+    const url = new URL(bunkerUri)
+    url.searchParams.delete('secret')
+    return url.toString()
+  } catch {
+    // If parsing fails, return the original (will be validated elsewhere)
+    return bunkerUri
+  }
+}
+
 export interface PersistedAccount {
   pubkey: string
   method: AccountMethod
@@ -35,7 +51,13 @@ export function saveAccountToStorage(
     const accountData: PersistedAccount = {
       pubkey: account.pubkey,
       method,
-      data: method === 'nsec' ? undefined : data, // Don't store nsec for security
+      // Don't store nsec for security; strip secret from bunker URIs (only needed for initial handshake)
+      data:
+        method === 'nsec'
+          ? undefined
+          : method === 'bunker' && data
+            ? stripBunkerSecret(data)
+            : data,
       createdAt: existingIndex >= 0 ? accounts[existingIndex].createdAt : Date.now(),
     }
 

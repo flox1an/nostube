@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Bunker URIs no longer persist the `secret` query parameter to localStorage — the secret is only needed during the initial NIP-46 handshake; the client key alone restores sessions
+- Stripped `secret` from `nostube:last-bunker` localStorage entry and from QR-code login persistence
+- Auth token fragment logging in `blossom-upload.ts` now gated behind `import.meta.env.DEV` — previously leaked first 50 chars of Nostr auth tokens to the console in production
+- nsec input field now uses `type="password"` to prevent shoulder surfing
+- Added `autocomplete="off"` to nsec and bunker URI inputs to prevent browser credential caching
+- nsec is now cleared from React state in SignupDialog after successful login (was already done in LoginDialog)
+
 ### Fixed
 
 - Follow import dialog flashing briefly on page load — now waits for the kind 10020 follow set query to complete (EOSE) before deciding whether to show the import prompt

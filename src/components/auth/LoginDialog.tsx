@@ -112,7 +112,15 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
     try {
       await login.bunker(bunkerUri, { onAuth: handleBunkerAuth })
-      localStorage.setItem('nostube:last-bunker', bunkerUri.trim())
+      // Store bunker URI without secret param (secret is only for initial handshake)
+      try {
+        const uri = new URL(bunkerUri.trim())
+        uri.searchParams.delete('secret')
+        localStorage.setItem('nostube:last-bunker', uri.toString())
+      } catch {
+        // If not a valid URL (e.g. NIP-05 input), store as-is
+        localStorage.setItem('nostube:last-bunker', bunkerUri.trim())
+      }
       setAuthUrl(null)
       onLogin()
       onClose()
@@ -214,6 +222,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   </label>
                   <Input
                     id="nsec"
+                    type="password"
+                    autoComplete="off"
                     value={nsec}
                     onChange={e => setNsec(e.target.value)}
                     className="rounded-lg focus-visible:ring-primary"
@@ -260,6 +270,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 </label>
                 <Input
                   id="bunkerUri"
+                  autoComplete="off"
                   value={bunkerUri}
                   onChange={e => setBunkerUri(e.target.value)}
                   className="rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary"

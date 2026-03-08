@@ -20,15 +20,15 @@ async function customMirrorBlob(
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
-  console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
-  console.log(
-    `[MIRROR] Auth token received:`,
-    authToken ? 'YES' : 'NO',
-    'Length:',
-    authToken?.length || 0,
-    'First 50:',
-    authToken?.substring(0, 50) || 'EMPTY'
-  )
+  if (import.meta.env.DEV) {
+    console.log(`[MIRROR] Mirroring blob to ${normalizedServer}`)
+    console.log(
+      `[MIRROR] Auth token received:`,
+      authToken ? 'YES' : 'NO',
+      'Length:',
+      authToken?.length || 0
+    )
+  }
 
   const response = await fetch(`${normalizedServer}/mirror`, {
     method: 'PUT',
@@ -62,11 +62,13 @@ export async function mirrorBlobsToServers({
   if (import.meta.env.DEV) console.log('Mirroring blobs to servers', mirrorServers, blob)
 
   // Create per-server auth tokens with server tags for BUD-11 scoping
-  console.log(`[MIRROR] Creating auth tokens for ${mirrorServers.length} servers`)
+  if (import.meta.env.DEV)
+    console.log(`[MIRROR] Creating auth tokens for ${mirrorServers.length} servers`)
 
   const results = await Promise.allSettled(
     mirrorServers.map(async (server, index) => {
-      console.log(`[MIRROR ${index + 1}/${mirrorServers.length}] Processing server: ${server}`)
+      if (import.meta.env.DEV)
+        console.log(`[MIRROR ${index + 1}/${mirrorServers.length}] Processing server: ${server}`)
 
       // Check if file already exists on this server
       const fileExists = await checkFileExists(server, blob.sha256)

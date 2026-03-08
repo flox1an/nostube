@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.22] - 2026-03-08
+
+### Changed
+
+- Server-side OG meta tag injection now applies to all requests (browsers and bots alike), removed browser-exclusion logic from both Vercel edge and standalone Hono server
+
 ## [0.2.21] - 2026-03-08
 
 ### Added

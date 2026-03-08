@@ -7,7 +7,6 @@ import {
 } from '../server/nostr.js'
 import { extractVideoMeta, buildMetaTags, type VideoMeta } from '../server/meta.js'
 import { buildOEmbed, type OEmbedResponse } from '../server/oembed.js'
-import { isBrowser } from '../server/detect.js'
 import { injectMeta } from '../server/template.js'
 
 let cachedHtml: string | null = null
@@ -32,13 +31,6 @@ export async function handleVideoPage(
   const url = new URL(request.url)
 
   try {
-    const ua = request.headers.get('user-agent') ?? ''
-
-    // Browsers get the normal SPA — only bots get injected meta
-    if (isBrowser(ua)) {
-      return serveSpa(url.origin)
-    }
-
     const decoded = decodeIdentifier(identifier)
     if (!decoded) {
       return serveSpa(url.origin)

@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { isBrowser } from './detect.js'
 import {
   decodeIdentifier,
   fetchEvent,
@@ -17,12 +16,7 @@ import { injectMeta } from './template.js'
 /** Hard timeout for the entire request handler (ms) */
 const REQUEST_TIMEOUT_MS = 8000
 
-export interface AppOptions {
-  // When true, skip meta injection for browser user agents (Vercel mode)
-  skipBrowsers?: boolean
-}
-
-export function createApp(options: AppOptions = {}) {
+export function createApp() {
   const app = new Hono()
 
   // Cache the index.html template
@@ -56,11 +50,6 @@ export function createApp(options: AppOptions = {}) {
       identifier: identifier.slice(0, 30) + '…',
       ua: ua.slice(0, 80),
     })
-
-    if (options.skipBrowsers && isBrowser(ua)) {
-      log('handlePage:skip browser')
-      return respondRaw()
-    }
 
     const decoded = decodeIdentifier(identifier)
     if (!decoded) {

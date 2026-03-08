@@ -1,7 +1,7 @@
 {
   "name": "nostube",
   "private": false,
-  "version": "0.2.21",
+  "version": "0.2.22",
   "type": "module",
   "scripts": {
     "dev": "npm i && vite",

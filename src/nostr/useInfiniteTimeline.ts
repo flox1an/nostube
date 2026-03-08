@@ -89,6 +89,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     subscriptionRef.current = loader()().subscribe({
       next: event => {
         receivedAnyEvents = true
+        if (import.meta.env.DEV) {
+          console.log('[useInfiniteTimeline] event received:', event.kind, event.id.slice(0, 8))
+        }
         setEvents(prev => {
           const newList = Array.from(insertEventIntoDescendingList(prev, event))
           return newList
@@ -133,6 +136,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
 
   // Process events to VideoEvent format and sort by publish date
   const videos = useMemo(() => {
+    if (import.meta.env.DEV) {
+      console.log('[useInfiniteTimeline] processing', events.length, 'events')
+    }
     const processed = processEvents(
       events,
       readRelays,
@@ -142,6 +148,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       presetContent.nsfwPubkeys,
       config.reportedEventIds
     )
+    if (import.meta.env.DEV) {
+      console.log('[useInfiniteTimeline] processed to', processed.length, 'videos')
+    }
     // Sort by publish date descending (newest first), fallback to created_at
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -216,19 +216,18 @@ export function EditVideoDialog({
   }
 
   // Compute preview event reactively for the diff view
-  const previewEvent = useMemo(
-    () => buildUpdatedEvent(),
-    [
-      imetaTags,
-      title,
-      description,
-      tags,
-      language,
-      contentWarningEnabled,
-      contentWarningReason,
-      videoEvent,
-    ]
-  )
+  const buildUpdatedEventCb = useCallback(buildUpdatedEvent, [
+    imetaTags,
+    title,
+    description,
+    tags,
+    language,
+    contentWarningEnabled,
+    contentWarningReason,
+    videoEvent,
+  ])
+
+  const previewEvent = useMemo(() => buildUpdatedEventCb(), [buildUpdatedEventCb])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

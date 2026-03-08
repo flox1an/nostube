@@ -192,6 +192,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     }
   }, [
     originalUrlsKey,
+    originalUrls,
     mediaType,
     sha256,
     kind,
@@ -199,7 +200,9 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     authorPubkey,
     enabled,
     blossomServersKey,
+    blossomServers,
     cachingServersKey,
+    cachingServers,
   ])
 
   // Serialize discovery relays for stable comparison
@@ -276,7 +279,15 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     return () => {
       cancelled = true
     }
-  }, [enabled, finalDiscoveryEnabled, sha256, discoveryRelaysKey, finalDiscoveryTimeout, mediaType])
+  }, [
+    enabled,
+    finalDiscoveryEnabled,
+    sha256,
+    discoveryRelaysKey,
+    finalDiscoveryRelays,
+    finalDiscoveryTimeout,
+    mediaType,
+  ])
 
   // Serialize generated URLs for stable comparison
   const generatedUrlsKey = useMemo(() => generatedUrls.urls.join('|'), [generatedUrls.urls])
@@ -333,7 +344,14 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     return () => {
       cancelled = true
     }
-  }, [enabled, finalPreValidate, generatedUrlsKey, mediaType, finalValidationOptions])
+  }, [
+    enabled,
+    finalPreValidate,
+    generatedUrlsKey,
+    generatedUrls.urls,
+    mediaType,
+    finalValidationOptions,
+  ])
 
   // Move to next URL
   const moveToNext = useCallback(() => {

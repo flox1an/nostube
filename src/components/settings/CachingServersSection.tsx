@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Button } from '@/components/ui/button'
@@ -39,13 +39,16 @@ function useServerStatus(urls: string[]) {
       })
   }, [])
 
+  const urlsKey = useMemo(() => urls.join(','), [urls])
+
   useEffect(() => {
     urls.forEach(checkServer)
+    const controllers = controllersRef.current
     return () => {
-      controllersRef.current.forEach(c => c.abort())
-      controllersRef.current.clear()
+      controllers.forEach(c => c.abort())
+      controllers.clear()
     }
-  }, [urls.join(','), checkServer])
+  }, [urlsKey, urls, checkServer])
 
   return statuses
 }

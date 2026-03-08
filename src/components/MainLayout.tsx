@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Header } from '@/components/Header'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { Outlet, useLocation } from 'react-router-dom'
@@ -20,11 +20,15 @@ export function MainLayout() {
     location.pathname.startsWith('/short/')
 
   // Auto-close sidebar when navigating to a video page
+  const isSidebarOpenRef = useRef(isSidebarOpen)
   useEffect(() => {
-    if (isVideoPage && isSidebarOpen) {
+    isSidebarOpenRef.current = isSidebarOpen
+  }, [isSidebarOpen])
+  useEffect(() => {
+    if (isVideoPage && isSidebarOpenRef.current) {
       toggleSidebar()
     }
-  }, [isVideoPage])
+  }, [isVideoPage, toggleSidebar])
 
   return (
     <div className="min-h-screen flex flex-col">

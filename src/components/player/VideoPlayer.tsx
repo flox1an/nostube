@@ -121,8 +121,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   // Cleanup: pause video and clear source on unmount to stop downloads
   useEffect(() => {
+    const el = videoRef.current
     return () => {
-      const el = videoRef.current
       if (el) {
         el.pause()
         // Clear the source to abort any ongoing downloads
@@ -737,7 +737,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [playerState, addSeek, showControls, toggleFullscreen, toggleCaptions, onToggleCinemaMode])
+  }, [
+    playerState,
+    addSeek,
+    showControls,
+    toggleFullscreen,
+    togglePip,
+    toggleCaptions,
+    onToggleCinemaMode,
+  ])
 
   const handleTogglePlay = useCallback(() => {
     userInitiatedRef.current = true

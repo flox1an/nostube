@@ -130,11 +130,11 @@ export function parseDescriptorSize(headerValue?: string | null): number | undef
       if (parsedJson && typeof parsedJson === 'object') {
         const possibleSizes = [
           (parsedJson as Record<string, unknown>).size,
-          (parsedJson as Record<string, any>).blob?.size,
-          (parsedJson as Record<string, any>).meta?.size,
+          (parsedJson as Record<string, unknown> & { blob?: Record<string, unknown> }).blob?.size,
+          (parsedJson as Record<string, unknown> & { meta?: Record<string, unknown> }).meta?.size,
         ]
         for (const maybeSize of possibleSizes) {
-          const normalized = parseNumericSize(maybeSize)
+          const normalized = parseNumericSize(maybeSize as string | number | null | undefined)
           if (normalized) return normalized
         }
       }

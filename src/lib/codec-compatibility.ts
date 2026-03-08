@@ -12,7 +12,11 @@ const loggedMessages = new Set<string>()
 export function isIOSDevice(): boolean {
   if (typeof navigator === 'undefined') return false
 
-  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || ''
+  const userAgent =
+    navigator.userAgent ||
+    navigator.vendor ||
+    (window as unknown as Record<string, string>).opera ||
+    ''
 
   // Check for iOS devices
   return (

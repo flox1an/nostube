@@ -209,7 +209,7 @@ export async function restoreAccount(
           return null
         }
         try {
-          const options: any = {}
+          const options: { signer?: PrivateKeySigner } = {}
           if (accountData.clientKey) {
             options.signer = PrivateKeySigner.fromKey(accountData.clientKey)
           }

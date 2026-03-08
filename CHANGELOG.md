@@ -14,9 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Fixed 10 `react-hooks/exhaustive-deps` ESLint warnings across 5 files: wrapped `buildUpdatedEvent` in `useCallback` (EditVideoDialog), used ref+effect pattern for sidebar auto-close (MainLayout), copied `videoRef.current` to variable for cleanup (VideoPlayer), added `togglePip` to keydown effect deps (VideoPlayer), extracted `urls.join()` to `useMemo` variable (CachingServersSection), added memoized array deps alongside serialized keys (useMediaUrls)
-- Suppressed all 9 `react-refresh/only-export-components` ESLint warnings across context/provider files by adding targeted `eslint-disable` comments; removed `noInlineConfig: true` from ESLint config to allow inline directives (unused directive detection still enforced via `reportUnusedDisableDirectives: 'error'`)
 - Subscription/home page auto layout now shows 2 rows of long-form videos per 1 row of vertical/short videos (was 1:1 interleaving)
+- Reduced ESLint warnings from 86 to 35 (remaining are `no-explicit-any` in mp4box-atoms.ts/Mp4DebugPage.tsx): replaced `any` with proper types across 14 files, fixed 20 `react-hooks/exhaustive-deps` warnings, suppressed 9 `react-refresh/only-export-components` in context/provider files; removed `noInlineConfig: true` from ESLint config to allow inline directives
 - Refactored embed server code: `api/_nostr.ts` now imports shared `decodeIdentifier`, `fetchEvent`, `parsePageUrl`, `buildPageUrl` from `server/nostr.ts` instead of duplicating them; oembed URL parsing extracted into reusable `parsePageUrl` helper
 - BUD-11 compliance: authorization tokens now use Base64url encoding without padding (instead of standard Base64) as required by the spec
 - BUD-11 compliance: all upload, mirror, and delete auth tokens now include `server` tags scoped to the target domain, preventing token replay on other servers

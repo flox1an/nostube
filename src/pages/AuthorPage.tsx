@@ -28,6 +28,8 @@ import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
+import type { VideoEvent } from '@/utils/video-event'
+import type { NostrEvent } from 'nostr-tools'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
@@ -202,7 +204,7 @@ export function AuthorPage() {
   const nprofileRelays = profileData?.relays || []
 
   // State for selected playlist videos
-  const [playlistVideos, setPlaylistVideos] = useState<Record<string, any[]>>({})
+  const [playlistVideos, setPlaylistVideos] = useState<Record<string, VideoEvent[]>>({})
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null)
   const loadedPlaylistsRef = useRef<Set<string>>(new Set())
 
@@ -222,7 +224,9 @@ export function AuthorPage() {
   // Only update if the relay URLs actually changed (deep comparison)
   // Note: NIP-65 relay discovery is handled by useUserRelays inside useAuthorPageRelays
   // with indexer relays included for better discovery in incognito mode
-  const relays = useMemo(() => relaysFromHook, [relaysFromHook.join(',')])
+  const relaysKey = relaysFromHook.join(',')
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-compare relay URLs to prevent unnecessary loader recreations
+  const relays = useMemo(() => relaysFromHook, [relaysKey])
 
   // Fetch playlists and videos for this author using the reactive relay set
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useUserPlaylists(pubkey, relays)
@@ -233,7 +237,7 @@ export function AuthorPage() {
     isLoading: isLoadingLiked,
     count: likedCount,
   } = useAuthorLikedVideos(pubkey)
-  const [likedVideos, setLikedVideos] = useState<any[]>([])
+  const [likedVideos, setLikedVideos] = useState<VideoEvent[]>([])
   const [loadingLikedVideos, setLoadingLikedVideos] = useState(false)
   const likedVideosLoadedRef = useRef(false)
   const blockedPubkeys = useReportedPubkeys()
@@ -299,7 +303,9 @@ export function AuthorPage() {
         }
 
         // Get all events from store (both existing and newly fetched)
-        const events = ids.map(id => eventStoreInstance.getEvent(id)).filter(Boolean) as any[]
+        const events = ids
+          .map(id => eventStoreInstance.getEvent(id))
+          .filter((e): e is NostrEvent => !!e)
 
         // Process events to VideoEvent format
         const { processEvents } = await import('@/utils/video-event')
@@ -364,7 +370,7 @@ export function AuthorPage() {
       // Get all events from store
       const events = likedEventIds
         .map(id => eventStoreInstance.getEvent(id))
-        .filter(Boolean) as any[]
+        .filter((e): e is NostrEvent => !!e)
 
       const processedVideos = processEvents(
         events,
@@ -391,6 +397,7 @@ export function AuthorPage() {
     blockedPubkeys,
     config.blossomServers,
     presetContent.nsfwPubkeys,
+    config.reportedEventIds,
   ])
 
   // Auto-fetch video events for all playlists when playlists are loaded
@@ -410,7 +417,12 @@ export function AuthorPage() {
   }, [playlists, isLoadingPlaylists, fetchPlaylistVideos]) // Include fetchPlaylistVideos dependency
 
   // Memoize the loader to prevent recreation on every render
-  const loader = useMemo(() => authorVideoLoader(pubkey, relays), [pubkey, relays])
+  const loader = useMemo(() => {
+    if (import.meta.env.DEV) {
+      console.log('[AuthorPage] creating loader for', pubkey.slice(0, 8), 'with relays:', relays)
+    }
+    return authorVideoLoader(pubkey, relays)
+  }, [pubkey, relays])
 
   const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 

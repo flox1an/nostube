@@ -1001,6 +1001,7 @@ export function useVideoUpload(
     contentWarningReason,
     expiration,
     thumbnailSource,
+    thumbnail,
     thumbnailUploadInfo,
     thumbnailBlob,
     thumbnailBlurhash,

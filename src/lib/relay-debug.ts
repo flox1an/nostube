@@ -4,10 +4,13 @@
  */
 
 // Track active subscriptions
-const activeSubscriptions = new Map<string, { timestamp: number; filters: any; relays: string[] }>()
+const activeSubscriptions = new Map<
+  string,
+  { timestamp: number; filters: unknown; relays: string[] }
+>()
 let subscriptionCounter = 0
 
-export function logSubscriptionCreated(name: string, relays: string[], filters: any): string {
+export function logSubscriptionCreated(name: string, relays: string[], filters: unknown): string {
   subscriptionCounter++
   const id = `${name}-${subscriptionCounter}-${Date.now()}`
 

@@ -3,6 +3,8 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { getProfileContent } from 'applesauce-core/helpers'
 import { kinds } from 'nostr-tools'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import type { EventStore } from 'applesauce-core'
+import type { RelayPool } from 'applesauce-relay'
 import { useAppContext } from './useAppContext'
 import type { TaggedPerson } from '@/types/upload-draft'
 import { DEFAULT_RELAYS } from '@/nostr/core'
@@ -116,8 +118,8 @@ export function useLoadTaggedPerson(
  */
 export async function loadTaggedPeople(
   pubkeys: string[],
-  eventStore: any,
-  pool: any,
+  eventStore: EventStore,
+  pool: RelayPool,
   relays?: string[]
 ): Promise<TaggedPerson[]> {
   const people: TaggedPerson[] = []

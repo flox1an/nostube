@@ -89,6 +89,7 @@ function parseDate(dateStr: string): number | undefined {
 /**
  * Map raw iTunes metadata to VideoMetadata interface
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapItunesMetadata(rawMetadata: Record<string, any>): VideoMetadata {
   const metadata: VideoMetadata = {}
 

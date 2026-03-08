@@ -118,7 +118,9 @@ export function useEventZaps({
     if (!eventId) return
 
     // Build filters for both event ID and address (for addressable events)
-    const filters: any[] = [{ kinds: [9735], '#e': allEventIds }]
+    const filters: { kinds: number[]; '#e'?: string[]; '#a'?: string[] }[] = [
+      { kinds: [9735], '#e': allEventIds },
+    ]
 
     // For addressable events, also query by address
     if (videoAddress) {

@@ -84,14 +84,16 @@ export function LikedVideosPage() {
       seenIds.add(video.id)
       return true
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- forceUpdate is an intentional trigger dep incremented after relay loads
   }, [
-    combinedIdsString,
+    combinedEventIds,
     forceUpdate,
     eventStore,
     readRelays,
     blockedPubkeys,
     config.blossomServers,
     presetContent.nsfwPubkeys,
+    config.reportedEventIds,
   ])
 
   // Load missing video events from relays
@@ -168,8 +170,8 @@ export function LikedVideosPage() {
       subscriptions.forEach(sub => sub.unsubscribe())
       loadingRef.current = false
     }
-    // Only depend on the stable string, but use combinedEventIds inside the effect
-  }, [combinedIdsString, eventStore, pool])
+    // combinedIdsString is derived from combinedEventIds — both included for ESLint and stability
+  }, [combinedEventIds, combinedIdsString, eventStore, pool])
 
   const isLoading = isLoadingReactions || isLoadingZaps || loadingVideos
 

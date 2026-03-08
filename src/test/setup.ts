@@ -130,7 +130,7 @@ Object.defineProperty(window, 'localStorage', {
         if (typeof prop === 'string' && prop in store) {
           return store[prop]
         }
-        return (target as any)[prop]
+        return (target as unknown as Record<string | symbol, unknown>)[prop]
       },
       getOwnPropertyDescriptor: (_target, prop) => {
         if (typeof prop === 'string' && prop in store) {

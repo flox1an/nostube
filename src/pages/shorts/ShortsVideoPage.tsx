@@ -350,6 +350,7 @@ export function ShortsVideoPage() {
       subscription.unsubscribe()
       shortsSub.unsubscribe()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally limited deps: adding relay/filter/processing deps would cause unwanted resubscriptions on every render
   }, [initialVideo, authorParam, allVideos.length])
 
   // Track if we've done the initial scroll
@@ -381,7 +382,7 @@ export function ShortsVideoPage() {
         hasScrolledRef.current = true
       }
     }
-  }, [allVideos.length, currentVideoIndex, initialVideo])
+  }, [allVideos, currentVideoIndex, initialVideo])
 
   // Reset flags when the component unmounts
   useEffect(() => {

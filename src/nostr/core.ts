@@ -3,7 +3,7 @@ import { RelayPool } from 'applesauce-relay'
 import { createTimelineLoader, createEventLoaderForStore } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
-import type { IDBPDatabase } from 'idb'
+import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
@@ -15,7 +15,7 @@ export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
 
 // Setup a local event
 
-let cache: IDBPDatabase<any> | undefined
+let cache: NostrIDBDatabase | undefined
 
 async function ensureCache() {
   if (!cache) {

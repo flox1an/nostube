@@ -1,3 +1,4 @@
+import type { NostrEvent } from 'nostr-tools'
 import type { VideoVariant } from './video-processing'
 
 /**
@@ -148,7 +149,7 @@ export interface DvmBid {
 /**
  * Parse a bid from a kind:7000 status event
  */
-export function parseDvmBid(event: any): DvmBid | null {
+export function parseDvmBid(event: NostrEvent): DvmBid | null {
   const statusTag = event.tags.find((t: string[]) => t[0] === 'status')
   if (statusTag?.[1] !== 'payment-required') return null
 

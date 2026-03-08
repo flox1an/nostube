@@ -31,7 +31,7 @@ const mockCanPlayType = (supportMap: Record<string, string>) => {
   const createElement = vi.spyOn(document, 'createElement')
   createElement.mockReturnValue({
     canPlayType: (mimeType: string) => supportMap[mimeType] || '',
-  } as any)
+  } as unknown as HTMLVideoElement)
   return createElement
 }
 

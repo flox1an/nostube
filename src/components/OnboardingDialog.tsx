@@ -32,17 +32,20 @@ function OnboardingDialogContent({ onComplete }: { onComplete: () => void }) {
 
 export function OnboardingDialog() {
   const { user } = useCurrentUser()
-  const { hasFollowSet, hasKind3Contacts } = useFollowSet()
+  const { hasFollowSet, followSetLoaded, hasKind3Contacts } = useFollowSet()
   const [isCompleted, setIsCompleted] = useState(false)
 
   const shouldShow = useMemo(() => {
     if (!user?.pubkey || isCompleted) return false
 
+    // Wait until the follow set query has completed before deciding
+    if (!followSetLoaded) return false
+
     const followImportCompleted = localStorage.getItem(FOLLOW_IMPORT_STORAGE_KEY)
 
     // Only show if user has kind 3 contacts but no follow set and hasn't completed import
     return !followImportCompleted && !hasFollowSet && hasKind3Contacts
-  }, [user?.pubkey, hasFollowSet, hasKind3Contacts, isCompleted])
+  }, [user?.pubkey, hasFollowSet, followSetLoaded, hasKind3Contacts, isCompleted])
 
   const handleComplete = () => {
     setIsCompleted(true)

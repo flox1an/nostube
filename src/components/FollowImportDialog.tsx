@@ -21,6 +21,7 @@ export function FollowImportDialog() {
   const { user } = useCurrentUser()
   const {
     hasFollowSet,
+    followSetLoaded,
     hasKind3Contacts,
     importFromKind3,
     kind3PubkeyCount,
@@ -39,13 +40,14 @@ export function FollowImportDialog() {
     const completed = localStorage.getItem(STORAGE_KEY)
     if (completed) return
 
+    // Wait until the follow set query has completed before deciding
+    if (!followSetLoaded) return
+
     // Show dialog if user has kind 3 but no kind 10020 media follows
     if (!hasFollowSet && hasKind3Contacts) {
       setIsOpen(true)
     }
-    // Note: We don't auto-skip for users without kind 3 contacts to avoid race condition
-    // where localStorage gets set before kind 3 data loads from relays
-  }, [user?.pubkey, hasFollowSet, hasKind3Contacts])
+  }, [user?.pubkey, hasFollowSet, followSetLoaded, hasKind3Contacts])
 
   const handleImport = async () => {
     setIsImporting(true)

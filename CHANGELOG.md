@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Follow import dialog flashing briefly on page load — now waits for the kind 10020 follow set query to complete (EOSE) before deciding whether to show the import prompt
+
 ## [0.2.20] - 2026-03-08
 
 ### Added

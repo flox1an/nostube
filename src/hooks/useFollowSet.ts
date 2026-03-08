@@ -27,6 +27,8 @@ interface UseFollowSetReturn {
   removeFollow: (pubkey: string) => Promise<void>
   importFromKind3: () => Promise<boolean>
   hasFollowSet: boolean
+  /** Whether the initial follow set query has completed (EOSE received) */
+  followSetLoaded: boolean
   hasKind3Contacts: boolean
   kind3PubkeyCount: number
   importProgress: ImportProgress
@@ -39,6 +41,7 @@ export function useFollowSet(): UseFollowSetReturn {
   const eventStore = useEventStore()
   const { publish } = useNostrPublish()
   const [isLoading, setIsLoading] = useState(false)
+  const [followSetLoaded, setFollowSetLoaded] = useState(false)
   const [importProgress, setImportProgress] = useState<ImportProgress>({
     phase: 'idle',
     checked: 0,
@@ -62,12 +65,16 @@ export function useFollowSet(): UseFollowSetReturn {
   // Load kind 10020 media follows list (NIP-51)
   useEffect(() => {
     if (user?.pubkey) {
+      setFollowSetLoaded(false)
       const loader = createAddressLoader(pool)
       const subscription = loader({
         kind: MEDIA_FOLLOWS_KIND,
         pubkey: user.pubkey,
         relays: relaysWithMetadata,
-      }).subscribe(e => eventStore.add(e))
+      }).subscribe({
+        next: e => eventStore.add(e),
+        complete: () => setFollowSetLoaded(true),
+      })
 
       return () => subscription.unsubscribe()
     }
@@ -395,6 +402,7 @@ export function useFollowSet(): UseFollowSetReturn {
     removeFollow,
     importFromKind3,
     hasFollowSet,
+    followSetLoaded,
     hasKind3Contacts,
     kind3PubkeyCount,
     importProgress,

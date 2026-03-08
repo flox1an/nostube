@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Search, X, User, Loader2 } from 'lucide-react'
 import { useSearchVideoAuthors } from '@/hooks/useSearchVideoAuthors'
 import { UserAvatar } from '@/components/UserAvatar'
-import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
+import { buildProfileUrlFromPubkey, buildProfilePath } from '@/lib/nprofile'
+import { decodeProfilePointer } from '@/lib/nip19'
 import { cn } from '@/lib/utils'
 
 interface GlobalSearchBarProps {
@@ -72,11 +73,33 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
-      setIsOpen(false)
-      onSearch?.()
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    const query = searchQuery.trim()
+    if (!query) return
+
+    setIsOpen(false)
+    onSearch?.()
+
+    // Check for npub/nprofile — navigate to profile page
+    if (query.startsWith('npub1') || query.startsWith('nprofile1')) {
+      const profile = decodeProfilePointer(query)
+      if (profile) {
+        setSearchQuery('')
+        navigate(buildProfilePath(query))
+        return
+      }
     }
+
+    // Check for hashtag — navigate to tag page
+    if (query.startsWith('#') && query.length > 1) {
+      const tag = query.slice(1).trim()
+      if (tag) {
+        setSearchQuery('')
+        navigate(`/tag/${encodeURIComponent(tag)}`)
+        return
+      }
+    }
+
+    navigate(`/search?q=${encodeURIComponent(query)}`)
   }
 
   const handleProfileClick = (pubkey: string) => {

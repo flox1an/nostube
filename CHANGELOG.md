@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Missing thumbnail in social media link previews — `og:image` and `twitter:image` now always present, falling back to the NosTube logo (`og-image.png`) when the video event has no thumbnail
+- `og:image` and `twitter:image` not using video thumbnail — server-side meta extraction now reads `image` fields from imeta tags (where thumbnails are stored), not just standalone `thumb`/`image` tags
 
 ## [0.2.22] - 2026-03-08
 

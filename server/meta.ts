@@ -32,10 +32,16 @@ export function extractVideoMeta(event: NostrEvent): VideoMeta {
   const imetaTags = tags.filter(t => t[0] === 'imeta')
   for (const imeta of imetaTags) {
     const values = new Map<string, string>()
+    const imageUrls: string[] = []
     for (let i = 1; i < imeta.length; i++) {
       const firstSpace = imeta[i].indexOf(' ')
       if (firstSpace !== -1) {
-        values.set(imeta[i].slice(0, firstSpace), imeta[i].slice(firstSpace + 1).trim())
+        const key = imeta[i].slice(0, firstSpace)
+        const value = imeta[i].slice(firstSpace + 1).trim()
+        values.set(key, value)
+        if (key === 'image' && value) {
+          imageUrls.push(value)
+        }
       }
     }
 
@@ -43,9 +49,9 @@ export function extractVideoMeta(event: NostrEvent): VideoMeta {
     const m = values.get('m')
     const dim = values.get('dim')
 
-    // Use image from imeta as fallback thumbnail
-    if (!thumbnail && m?.startsWith('image/') && url) {
-      thumbnail = url
+    // Use image field from imeta as fallback thumbnail
+    if (!thumbnail && imageUrls.length > 0) {
+      thumbnail = imageUrls[0]
     }
 
     // Get video URL

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Subscription/home page auto layout now shows 2 rows of long-form videos per 1 row of vertical/short videos (was 1:1 interleaving)
 - Refactored embed server code: `api/_nostr.ts` now imports shared `decodeIdentifier`, `fetchEvent`, `parsePageUrl`, `buildPageUrl` from `server/nostr.ts` instead of duplicating them; oembed URL parsing extracted into reusable `parsePageUrl` helper
 - BUD-11 compliance: authorization tokens now use Base64url encoding without padding (instead of standard Base64) as required by the spec
 - BUD-11 compliance: all upload, mirror, and delete auth tokens now include `server` tags scoped to the target domain, preventing token replay on other servers

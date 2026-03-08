@@ -171,16 +171,18 @@ export function VideoGrid({
       })
     }
 
-    // Interleave rows: wide, portrait, wide, portrait, ...
+    // Interleave rows: 2 wide rows per 1 portrait row
     const wideRows = chunk(wideVideos, getCols('horizontal'))
     const portraitRows = chunk(portraitVideos, getCols('vertical'))
-    const maxRows = Math.max(wideRows.length, portraitRows.length)
     const rows: React.ReactNode[] = []
-    for (let i = 0; i < maxRows; i++) {
-      if (wideRows[i]) {
+    let wideIdx = 0
+    let portraitIdx = 0
+    while (wideIdx < wideRows.length || portraitIdx < portraitRows.length) {
+      // Emit up to 2 wide rows
+      for (let r = 0; r < 2 && wideIdx < wideRows.length; r++, wideIdx++) {
         rows.push(
-          <div key={'wide-' + i} className={`grid ${gridColsClass(getCols('horizontal'))}`}>
-            {wideRows[i].map(video => (
+          <div key={'wide-' + wideIdx} className={`grid ${gridColsClass(getCols('horizontal'))}`}>
+            {wideRows[wideIdx].map(video => (
               <VideoCard
                 key={video.id}
                 video={video}
@@ -191,10 +193,14 @@ export function VideoGrid({
           </div>
         )
       }
-      if (portraitRows[i]) {
+      // Emit 1 portrait row
+      if (portraitIdx < portraitRows.length) {
         rows.push(
-          <div key={'portrait-' + i} className={`grid ${gridColsClass(getCols('vertical'))}`}>
-            {portraitRows[i].map(video => (
+          <div
+            key={'portrait-' + portraitIdx}
+            className={`grid ${gridColsClass(getCols('vertical'))}`}
+          >
+            {portraitRows[portraitIdx].map(video => (
               <VideoCard
                 key={video.id}
                 video={video}
@@ -206,6 +212,7 @@ export function VideoGrid({
             ))}
           </div>
         )
+        portraitIdx++
       }
     }
 

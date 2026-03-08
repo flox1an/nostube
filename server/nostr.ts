@@ -78,6 +78,61 @@ export function decodeIdentifier(nip19str: string): DecodedIdentifier | null {
   }
 }
 
+/** Fetch a user's blossom server list (kind 10063) and return server URLs */
+export async function fetchBlossomServers(pubkey: string): Promise<string[]> {
+  const pool = new SimplePool()
+  const relays = [...FALLBACK_RELAYS]
+
+  log('fetchBlossomServers:start', { pubkey: pubkey.slice(0, 16) })
+
+  return new Promise<string[]>(resolve => {
+    let settled = false
+
+    function done(servers: string[], reason: string) {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      sub.close()
+      try {
+        pool.close(relays)
+      } catch {
+        /* ignore */
+      }
+      log('fetchBlossomServers:done', { reason, count: servers.length })
+      resolve(servers)
+    }
+
+    let event: NostrEvent | null = null
+
+    const filter: Filter = { kinds: [10063], authors: [pubkey] }
+    const sub = pool.subscribeMany(relays, filter, {
+      onevent(e) {
+        // Keep the newest replaceable event
+        if (!event || e.created_at > event.created_at) {
+          event = e
+        }
+      },
+      oneose() {
+        if (event) {
+          const servers = event.tags.filter(t => t[0] === 'server' && t[1]).map(t => t[1])
+          done(servers, 'eose')
+        } else {
+          done([], 'eose-empty')
+        }
+      },
+    })
+
+    const timer = setTimeout(() => {
+      if (event) {
+        const servers = event.tags.filter(t => t[0] === 'server' && t[1]).map(t => t[1])
+        done(servers, 'timeout-with-event')
+      } else {
+        done([], 'timeout')
+      }
+    }, FETCH_TIMEOUT_MS)
+  })
+}
+
 export async function fetchEvent(decoded: DecodedIdentifier): Promise<NostrEvent | null> {
   const pool = new SimplePool()
   const relays = [...new Set([...decoded.relays, ...FALLBACK_RELAYS])]

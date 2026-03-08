@@ -9,7 +9,7 @@ import {
   log,
   type PageType,
 } from './nostr.js'
-import { extractVideoMeta, buildMetaTags } from './meta.js'
+import { extractVideoMeta, buildMetaTags, findValidThumbnail } from './meta.js'
 import { buildOEmbed } from './oembed.js'
 import { injectMeta } from './template.js'
 
@@ -79,6 +79,13 @@ export function createApp() {
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
+
+    // Validate thumbnail URLs with HEAD requests, try blossom fallbacks
+    if (meta.candidateThumbnails.length > 0) {
+      const validThumb = await findValidThumbnail(meta.candidateThumbnails, event.pubkey)
+      meta.thumbnail = validThumb
+    }
+
     const pageUrl = buildPageUrl(baseUrl, type, identifier)
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
@@ -158,6 +165,12 @@ export function createApp() {
 
     const baseUrl = getBaseUrl(c)
     const meta = extractVideoMeta(event)
+
+    // Validate thumbnail URLs
+    if (meta.candidateThumbnails.length > 0) {
+      meta.thumbnail = await findValidThumbnail(meta.candidateThumbnails, event.pubkey)
+    }
+
     const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
     const oembed = buildOEmbed(meta, embedUrl, url, parsed.type)
 

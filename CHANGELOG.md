@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Embed thumbnail resolution now validates each candidate URL with HEAD requests, tries all `thumb`, `image`, and imeta `image` entries, and falls back to the author's blossom server list (kind 10063) if none are reachable
+
 ### Fixed
 
 - Missing thumbnail in social media link previews — `og:image` and `twitter:image` now always present, falling back to the NosTube logo (`og-image.png`) when the video event has no thumbnail

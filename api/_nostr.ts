@@ -5,7 +5,12 @@ import {
   buildPageUrl,
   type PageType,
 } from '../server/nostr.js'
-import { extractVideoMeta, buildMetaTags, type VideoMeta } from '../server/meta.js'
+import {
+  extractVideoMeta,
+  buildMetaTags,
+  findValidThumbnail,
+  type VideoMeta,
+} from '../server/meta.js'
 import { buildOEmbed, type OEmbedResponse } from '../server/oembed.js'
 import { injectMeta } from '../server/template.js'
 
@@ -43,6 +48,12 @@ export async function handleVideoPage(
 
     const baseUrl = url.origin
     const meta = extractVideoMeta(event)
+
+    // Validate thumbnail URLs with HEAD requests, try blossom fallbacks
+    if (meta.candidateThumbnails.length > 0) {
+      meta.thumbnail = await findValidThumbnail(meta.candidateThumbnails, event.pubkey)
+    }
+
     const pageUrl = buildPageUrl(baseUrl, type, identifier)
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
@@ -83,10 +94,23 @@ export async function handleOEmbed(request: Request): Promise<Response> {
 
   const baseUrl = reqUrl.origin
   const meta = extractVideoMeta(event)
+
+  // Validate thumbnail URLs
+  if (meta.candidateThumbnails.length > 0) {
+    meta.thumbnail = await findValidThumbnail(meta.candidateThumbnails, event.pubkey)
+  }
+
   const embedUrl = `${baseUrl}/embed.html?v=${parsed.identifier}`
   const oembed = buildOEmbed(meta, embedUrl, targetUrl, parsed.type)
 
   return Response.json(oembed)
 }
 
-export { extractVideoMeta, buildMetaTags, buildOEmbed, type VideoMeta, type OEmbedResponse }
+export {
+  extractVideoMeta,
+  buildMetaTags,
+  buildOEmbed,
+  findValidThumbnail,
+  type VideoMeta,
+  type OEmbedResponse,
+}

@@ -47,7 +47,7 @@ export async function handleVideoPage(
     const embedUrl = `${baseUrl}/embed.html?v=${identifier}`
     const oembedUrl = `${baseUrl}/oembed?url=${encodeURIComponent(pageUrl)}&format=json`
 
-    const metaTags = buildMetaTags(meta, pageUrl, embedUrl, oembedUrl, type)
+    const metaTags = buildMetaTags(meta, pageUrl, embedUrl, oembedUrl, type, baseUrl)
     const rawHtml = await getIndexHtml(url.origin)
     const html = injectMeta(rawHtml, metaTags, meta.title)
 

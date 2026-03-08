@@ -75,10 +75,12 @@ export function buildMetaTags(
   pageUrl: string,
   embedUrl: string,
   oembedUrl: string,
-  type: 'video' | 'short' | 'playlist'
+  type: 'video' | 'short' | 'playlist',
+  siteOrigin: string = 'https://nostu.be'
 ): string {
   const lines: string[] = []
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+  const imageUrl = meta.thumbnail || `${siteOrigin}/og-image.png`
 
   // Open Graph
   lines.push(
@@ -89,9 +91,7 @@ export function buildMetaTags(
   lines.push(`<meta property="og:url" content="${esc(pageUrl)}" />`)
   lines.push(`<meta property="og:site_name" content="NosTube" />`)
 
-  if (meta.thumbnail) {
-    lines.push(`<meta property="og:image" content="${esc(meta.thumbnail)}" />`)
-  }
+  lines.push(`<meta property="og:image" content="${esc(imageUrl)}" />`)
 
   if (meta.videoUrl && type !== 'playlist') {
     lines.push(`<meta property="og:video" content="${esc(meta.videoUrl)}" />`)
@@ -114,9 +114,7 @@ export function buildMetaTags(
 
   lines.push(`<meta name="twitter:title" content="${esc(meta.title)}" />`)
   lines.push(`<meta name="twitter:description" content="${esc(meta.description.slice(0, 200))}" />`)
-  if (meta.thumbnail) {
-    lines.push(`<meta name="twitter:image" content="${esc(meta.thumbnail)}" />`)
-  }
+  lines.push(`<meta name="twitter:image" content="${esc(imageUrl)}" />`)
 
   // oEmbed discovery
   lines.push(`<link rel="alternate" type="application/json+oembed" href="${esc(oembedUrl)}" />`)

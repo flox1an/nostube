@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Relatr integration analysis for gamification — detailed plan for using Relatr's NIP-85 trust scores (kind 30382) as the WoT multiplier backend, replacing custom graph analysis with trust-gated levels (`docs/plans/2025-03-09-relatr-gamification-integration.md`)
+
 ### Changed
 
 - Embed thumbnail resolution now validates each candidate URL with HEAD requests, tries all `thumb`, `image`, and imeta `image` entries, and falls back to the author's blossom server list (kind 10063) if none are reachable

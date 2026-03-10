@@ -5,7 +5,7 @@ import { type NostrEvent } from 'nostr-tools'
 import type { TrackedDvm } from '@/lib/dvm-utils'
 
 /** How far back to look for DVM announcements (seconds) */
-const DVM_ACTIVITY_WINDOW_SECS = 10 * 60 // 10 minutes
+const DVM_ACTIVITY_WINDOW_SECS = 30 * 60 // 30 minutes
 
 /** How often to prune stale entries (ms) */
 const PRUNE_INTERVAL_MS = 60_000 // 1 minute

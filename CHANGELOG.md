@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.25] - 2026-03-10
+
+### Changed
+
+- DVM activity window increased from 10 to 30 minutes so announcements are detected more reliably
+
 ## [0.2.24] - 2026-03-10
 
 ### Changed

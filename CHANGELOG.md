@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.29] - 2026-03-10
+
+### Added
+
+- Broadcast button in the video debug dialog — re-publishes the event to all user relays, default relays, and seen relays
+
 ## [0.2.28] - 2026-03-10
 
 ### Added

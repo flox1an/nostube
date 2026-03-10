@@ -10,11 +10,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { Check, Circle, Loader2, X, Video, Image, Captions, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Check,
+  Circle,
+  Loader2,
+  X,
+  Video,
+  Image,
+  Captions,
+  ChevronRight,
+  Radio,
+} from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
+import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
 import { deduplicateVariants } from '@/lib/blossom-blob-extractor'
@@ -88,6 +101,50 @@ export function VideoDebugInfo({
   blossomServers,
   userServers,
 }: VideoDebugInfoProps) {
+  const { config } = useAppContext()
+
+  // Broadcast state
+  const [broadcastStatus, setBroadcastStatus] = useState<
+    'idle' | 'broadcasting' | 'done' | 'error'
+  >('idle')
+  const [broadcastResult, setBroadcastResult] = useState<{
+    success: number
+    failed: number
+    total: number
+  } | null>(null)
+
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (!newOpen) {
+        setBroadcastStatus('idle')
+        setBroadcastResult(null)
+      }
+      onOpenChange(newOpen)
+    },
+    [onOpenChange]
+  )
+
+  const handleBroadcast = useCallback(async () => {
+    if (!videoEvent) return
+
+    setBroadcastStatus('broadcasting')
+    setBroadcastResult(null)
+
+    // Combine all known relays: user's read + write relays, default relays, seen relays
+    const userRelays = config.relays.map(r => r.url)
+    const seenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
+    const allRelays = Array.from(new Set([...userRelays, ...DEFAULT_RELAYS, ...seenRelays]))
+
+    try {
+      const results = await relayPool.publish(allRelays, videoEvent)
+      const success = results.filter(r => r).length
+      setBroadcastResult({ success, failed: allRelays.length - success, total: allRelays.length })
+      setBroadcastStatus('done')
+    } catch {
+      setBroadcastStatus('error')
+    }
+  }, [videoEvent, config.relays])
+
   // Deduplicate thumbnails with same URL or hash
   const deduplicatedThumbnails = useMemo(
     () => deduplicateVariants(video?.thumbnailVariants || []),
@@ -243,7 +300,7 @@ export function VideoDebugInfo({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Debug Info</DialogTitle>
@@ -286,6 +343,44 @@ export function VideoDebugInfo({
                 )}
               </div>
             </div>
+
+            {/* Broadcast */}
+            {videoEvent && (
+              <div>
+                <h3 className="font-semibold mb-2">Broadcast</h3>
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Re-publish this event to all your relays and default relays.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleBroadcast}
+                      disabled={broadcastStatus === 'broadcasting'}
+                      className="cursor-pointer"
+                    >
+                      {broadcastStatus === 'broadcasting' ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Radio className="h-4 w-4 mr-2" />
+                      )}
+                      {broadcastStatus === 'broadcasting'
+                        ? 'Broadcasting...'
+                        : 'Broadcast to All Relays'}
+                    </Button>
+                    {broadcastStatus === 'done' && broadcastResult && (
+                      <span className="text-sm text-green-600">
+                        Sent to {broadcastResult.success}/{broadcastResult.total} relays
+                      </span>
+                    )}
+                    {broadcastStatus === 'error' && (
+                      <span className="text-sm text-red-500">Broadcast failed</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Blossom Servers - Responsive layout: stacked on mobile, side-by-side on desktop */}
             {allVariants.length > 0 && (

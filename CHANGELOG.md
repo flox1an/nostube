@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.23] - 2026-03-10
+
 ### Changed
 
 - Embed thumbnail resolution now validates each candidate URL with HEAD requests, tries all `thumb`, `image`, and imeta `image` entries, and falls back to the author's blossom server list (kind 10063) if none are reachable

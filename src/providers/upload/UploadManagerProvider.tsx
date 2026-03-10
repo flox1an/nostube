@@ -965,7 +965,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       resolutions: string[],
       originalDuration?: number,
       onComplete?: (video: VideoVariant) => void,
-      onAllComplete?: () => void
+      onAllComplete?: () => void,
+      codecMap?: Record<string, TranscodeCodec>
     ) => {
       if (!userRef.current) {
         failTask(taskId, 'User not logged in')
@@ -1033,7 +1034,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             resolution,
             selectedDvm,
             originalDuration,
-            queueInfo
+            queueInfo,
+            codecMap?.[resolution] || 'h264'
           )
 
           // Remember the DVM for subsequent resolutions

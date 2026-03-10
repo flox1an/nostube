@@ -8,6 +8,7 @@ import type { Subscription } from 'rxjs'
 import type { UploadTask, TranscodeState } from '@/types/upload-manager'
 import type { UploadDraft } from '@/types/upload-draft'
 import type { VideoVariant } from '@/lib/video-processing'
+import type { TranscodeCodec } from '@/lib/dvm-utils'
 
 /**
  * Active transcode job state
@@ -55,7 +56,8 @@ export interface UploadManagerContextType {
     resolutions: string[],
     originalDuration?: number,
     onComplete?: (video: VideoVariant) => void,
-    onAllComplete?: () => void
+    onAllComplete?: () => void,
+    codecMap?: Record<string, TranscodeCodec>
   ): Promise<void>
   resumeTranscode(
     taskId: string,

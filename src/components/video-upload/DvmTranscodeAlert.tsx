@@ -10,7 +10,7 @@ import {
 import { useDvmTracker } from '@/hooks/useDvmTracker'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
-import { AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
+import { AVAILABLE_RESOLUTIONS, type TranscodeCodec } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle, Bot } from 'lucide-react'
 import type { TrackedDvm } from '@/lib/dvm-utils'
 import { useTranslation } from 'react-i18next'
@@ -42,10 +42,20 @@ export function DvmTranscodeAlert({
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(false)
-  // Default to 720p only if it doesn't already exist
-  const [selectedResolutions, setSelectedResolutions] = useState<string[]>(() =>
-    existingResolutions.includes('720p') ? [] : ['720p']
-  )
+
+  // Each variant is a resolution + codec pair
+  interface VariantSelection {
+    resolution: string
+    codec: TranscodeCodec
+  }
+
+  // Default: 720p/h265 + 360p/h264, excluding already-existing resolutions
+  const [selectedVariants, setSelectedVariants] = useState<VariantSelection[]>(() => {
+    const defaults: VariantSelection[] = []
+    if (!existingResolutions.includes('720p')) defaults.push({ resolution: '720p', codec: 'h265' })
+    if (!existingResolutions.includes('360p')) defaults.push({ resolution: '360p', codec: 'h264' })
+    return defaults
+  })
   const hasResumedRef = useRef(false)
 
   // Check if a DVM is available (only check if not resuming)
@@ -117,20 +127,41 @@ export function DvmTranscodeAlert({
 
   const handleStartTranscode = () => {
     const inputUrl = getInputVideoUrl()
-    if (inputUrl && effectiveSelectedResolutions.length > 0) {
+    if (inputUrl && effectiveVariants.length > 0) {
       // Sort resolutions high to low using AVAILABLE_RESOLUTIONS order
-      const sortedResolutions = [...effectiveSelectedResolutions].sort((a, b) => {
-        const aIndex = AVAILABLE_RESOLUTIONS.indexOf(a as (typeof AVAILABLE_RESOLUTIONS)[number])
-        const bIndex = AVAILABLE_RESOLUTIONS.indexOf(b as (typeof AVAILABLE_RESOLUTIONS)[number])
+      const sortedVariants = [...effectiveVariants].sort((a, b) => {
+        const aIndex = AVAILABLE_RESOLUTIONS.indexOf(
+          a.resolution as (typeof AVAILABLE_RESOLUTIONS)[number]
+        )
+        const bIndex = AVAILABLE_RESOLUTIONS.indexOf(
+          b.resolution as (typeof AVAILABLE_RESOLUTIONS)[number]
+        )
         return aIndex - bIndex
       })
-      startTranscode(inputUrl, video.duration, sortedResolutions)
+      const resolutions = sortedVariants.map(v => v.resolution)
+      const codecMap: Record<string, TranscodeCodec> = {}
+      for (const v of sortedVariants) {
+        codecMap[v.resolution] = v.codec
+      }
+      startTranscode(inputUrl, video.duration, resolutions, codecMap)
     }
   }
 
   const toggleResolution = (resolution: string) => {
-    setSelectedResolutions(prev =>
-      prev.includes(resolution) ? prev.filter(r => r !== resolution) : [...prev, resolution]
+    setSelectedVariants(prev => {
+      const exists = prev.find(v => v.resolution === resolution)
+      if (exists) return prev.filter(v => v.resolution !== resolution)
+      // Default codec for newly toggled resolutions
+      const defaultCodec: TranscodeCodec = resolution === '360p' ? 'h264' : 'h265'
+      return [...prev, { resolution, codec: defaultCodec }]
+    })
+  }
+
+  const toggleCodec = (resolution: string) => {
+    setSelectedVariants(prev =>
+      prev.map(v =>
+        v.resolution === resolution ? { ...v, codec: v.codec === 'h264' ? 'h265' : 'h264' } : v
+      )
     )
   }
 
@@ -139,8 +170,8 @@ export function DvmTranscodeAlert({
   }
 
   // Derive effective selections: exclude any resolutions that now exist
-  const effectiveSelectedResolutions = selectedResolutions.filter(
-    r => !existingResolutions.includes(r)
+  const effectiveVariants = selectedVariants.filter(
+    v => !existingResolutions.includes(v.resolution)
   )
 
   const hasSelectableResolutions = AVAILABLE_RESOLUTIONS.some(r => !isResolutionDisabled(r))
@@ -165,34 +196,40 @@ export function DvmTranscodeAlert({
               <div className="flex flex-wrap gap-4 mb-4">
                 {AVAILABLE_RESOLUTIONS.map(resolution => {
                   const disabled = isResolutionDisabled(resolution)
-                  const checked = effectiveSelectedResolutions.includes(resolution)
+                  const variant = effectiveVariants.find(v => v.resolution === resolution)
+                  const checked = !!variant
                   return (
-                    <label
-                      key={resolution}
-                      className={`flex items-center gap-2 ${
-                        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        disabled={disabled}
-                        onCheckedChange={() => !disabled && toggleResolution(resolution)}
-                        className="cursor-pointer"
-                      />
-                      <span className={disabled ? 'line-through' : ''}>
-                        {resolution}
-                        {disabled && (
-                          <span className="text-xs ml-1 text-blue-500 dark:text-blue-400">
-                            (exists)
-                          </span>
-                        )}
-                        {resolution === '720p' && !disabled && (
-                          <span className="text-xs ml-1 text-blue-500 dark:text-blue-400">
-                            (default)
-                          </span>
-                        )}
-                      </span>
-                    </label>
+                    <div key={resolution} className="flex items-center gap-2">
+                      <label
+                        className={`flex items-center gap-2 ${
+                          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={() => !disabled && toggleResolution(resolution)}
+                          className="cursor-pointer"
+                        />
+                        <span className={disabled ? 'line-through' : ''}>
+                          {resolution}
+                          {disabled && (
+                            <span className="text-xs ml-1 text-blue-500 dark:text-blue-400">
+                              (exists)
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      {checked && !disabled && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCodec(resolution)}
+                          className="text-xs px-1.5 py-0.5 rounded border border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 cursor-pointer"
+                        >
+                          {variant.codec === 'h265' ? 'H.265' : 'H.264'}
+                        </button>
+                      )}
+                    </div>
                   )
                 })}
               </div>
@@ -200,13 +237,13 @@ export function DvmTranscodeAlert({
                 <Button
                   size="sm"
                   onClick={handleStartTranscode}
-                  disabled={effectiveSelectedResolutions.length === 0}
+                  disabled={effectiveVariants.length === 0}
                   className="cursor-pointer"
                 >
                   <Wand2 className="h-4 w-4 mr-2" />
                   {t('upload.transcode.createSelected', {
                     defaultValue: 'Create Selected',
-                    count: effectiveSelectedResolutions.length,
+                    count: effectiveVariants.length,
                   })}
                 </Button>
                 <Button
@@ -304,11 +341,11 @@ export function DvmTranscodeAlert({
                   phase={isCurrent ? progress.phase : undefined}
                   percentage={isCurrent ? progress.percentage : undefined}
                   eta={isCurrent ? progress.eta : undefined}
+                  statusMessages={isCurrent ? progress.statusMessages : undefined}
                 />
               )
             })}
           </div>
-          <StatusLog messages={progress.statusMessages} />
           <div className="mt-3">
             <Button size="sm" variant="outline" onClick={cancel} className="cursor-pointer">
               <X className="h-4 w-4 mr-2" />
@@ -447,6 +484,7 @@ interface VariantProgressProps {
   phase?: PhaseStep
   percentage?: number
   eta?: number
+  statusMessages?: StatusMessage[]
 }
 
 function TranscodeVariantProgress({
@@ -457,6 +495,7 @@ function TranscodeVariantProgress({
   phase,
   percentage,
   eta,
+  statusMessages,
 }: VariantProgressProps) {
   const { t } = useTranslation()
 
@@ -517,12 +556,17 @@ function TranscodeVariantProgress({
       {/* Progress bar for active variant */}
       {isActive && percentage !== undefined && (
         <div className="space-y-0.5">
-          <Progress value={percentage} className="h-1.5" />
+          <Progress value={percentage} className="h-1.5 [&>div]:bg-blue-500" />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{percentage}%</span>
             {eta !== undefined && <span>{formatEta(eta)}</span>}
           </div>
         </div>
+      )}
+
+      {/* Status log for active variant */}
+      {isActive && statusMessages && statusMessages.length > 0 && (
+        <StatusLog messages={statusMessages} />
       )}
 
       {/* Waiting label */}

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useUploadManager } from '@/providers/UploadManagerProvider'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { UploadTask } from '@/types/upload-manager'
+import type { TranscodeCodec } from '@/lib/dvm-utils'
 
 export type TranscodeStatus =
   | 'idle'
@@ -69,7 +70,8 @@ export interface UseDvmTranscodeManagerResult {
   startTranscode: (
     inputVideoUrl: string,
     originalDuration?: number,
-    resolutions?: string[]
+    resolutions?: string[],
+    codecMap?: Record<string, TranscodeCodec>
   ) => Promise<void>
   resumeTranscode: () => Promise<void>
   cancel: () => void
@@ -224,7 +226,12 @@ export function useDvmTranscodeManager({
   }, [task?.transcodeState?.completedVideos, status, taskId, onComplete, onAllComplete])
 
   const startTranscode = useCallback(
-    async (inputVideoUrl: string, originalDuration?: number, resolutions: string[] = ['720p']) => {
+    async (
+      inputVideoUrl: string,
+      originalDuration?: number,
+      resolutions: string[] = ['720p'],
+      codecMap?: Record<string, TranscodeCodec>
+    ) => {
       // Clear delivered videos when starting a new transcode
       deliveredVideosRef.current.clear()
 
@@ -239,7 +246,8 @@ export function useDvmTranscodeManager({
         resolutions,
         originalDuration,
         onComplete,
-        onAllComplete
+        onAllComplete,
+        codecMap
       )
     },
     [taskId, manager, onComplete, onAllComplete]

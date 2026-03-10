@@ -135,8 +135,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
   // Refs for stable access in callbacks
   const userRef = useRef(user)
   const configRef = useRef(config)
+  const tasksRef = useRef(tasks)
   userRef.current = user
   configRef.current = config
+  tasksRef.current = tasks
 
   // Cleanup old tasks on mount
   useEffect(() => {
@@ -621,8 +623,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
                   if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
                     const phase = detectPhaseFromMessage(message)
-                    // Update task state
-                    const currentTask = tasks.get(taskId)
+                    // Update task state (use ref to avoid stale closure)
+                    const currentTask = tasksRef.current.get(taskId)
                     const prevMessages = currentTask?.transcodeState?.statusMessages || []
                     const lastMsg = prevMessages[prevMessages.length - 1]
 
@@ -737,7 +739,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         job.subscription = subscription
       })
     },
-    [dvmRelays, updateTasksState, tasks]
+    [dvmRelays, updateTasksState]
   )
 
   /**
@@ -849,10 +851,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       const signedRequest = await currentUser.signer.signEvent(jobRequest)
       await relayPool.publish(writeRelays, signedRequest)
 
-      // Update task state with request ID
+      // Update task state with request ID (use ref to avoid stale closure)
       updateTasksState(taskId, {
         transcodeState: {
-          ...tasks.get(taskId)?.transcodeState,
+          ...tasksRef.current.get(taskId)?.transcodeState,
           requestEventId: signedRequest.id,
         } as TranscodeState,
       })
@@ -862,7 +864,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       // Step 2: If broadcast, collect bids and approve one
       if (!selectedDvmPubkey) {
         const biddingMsg = 'Waiting for DVM bids...'
-        const currentTask = tasks.get(taskId)
+        const currentTask = tasksRef.current.get(taskId)
         updateTasksState(taskId, {
           transcodeState: {
             ...currentTask?.transcodeState,
@@ -893,7 +895,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         await approveBid(signedRequest.id, selectedDvmPubkey)
 
         const selectedMsg = `Selected DVM ${selectedDvmPubkey.substring(0, 8)}...`
-        const afterBidTask = tasks.get(taskId)
+        const afterBidTask = tasksRef.current.get(taskId)
         updateTasksState(taskId, {
           transcodeState: {
             ...afterBidTask?.transcodeState,
@@ -931,7 +933,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       // Mirror to user's servers
       const mirroringMsg = `Copying ${resolution} to your servers...`
-      const beforeMirrorTask = tasks.get(taskId)
+      const beforeMirrorTask = tasksRef.current.get(taskId)
       updateTasksState(taskId, {
         status: 'mirroring',
         transcodeState: {
@@ -952,14 +954,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
       return { ...mirroredVideo, dvmPubkey: selectedDvmPubkey }
     },
-    [
-      updateTasksState,
-      tasks,
-      collectBids,
-      approveBid,
-      subscribeToDvmResponses,
-      mirrorTranscodedVideo,
-    ]
+    [updateTasksState, collectBids, approveBid, subscribeToDvmResponses, mirrorTranscodedVideo]
   )
 
   // Start transcode - the main entry point
@@ -1054,7 +1049,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           completedResolutions.push(resolution)
 
           // Store completed video in state for persistence (in case callbacks are stale)
-          const currentState = tasks.get(taskId)?.transcodeState
+          const currentState = tasksRef.current.get(taskId)?.transcodeState
           const completedVideos = [...(currentState?.completedVideos || [])]
           completedVideos.push({
             url: mirroredVideo.url!,
@@ -1124,7 +1119,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         startingTasksRef.current.delete(taskId)
       }
     },
-    [updateTasksState, tasks, processResolution, completeTask, failTask, draftPersistence]
+    [updateTasksState, processResolution, completeTask, failTask, draftPersistence]
   )
 
   // Query for existing DVM result
@@ -1192,7 +1187,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         return
       }
 
-      const task = tasks.get(taskId)
+      const task = tasksRef.current.get(taskId)
       if (!task || !task.transcodeState) {
         console.debug('[UploadManager] Cannot resume - no transcode state')
         return
@@ -1272,7 +1267,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
               // Mirror it
               const mirrorMsg = `Copying ${currentResolution} to your servers...`
-              const currentTask = tasks.get(taskId)
+              const currentTask = tasksRef.current.get(taskId)
               updateTasksState(taskId, {
                 status: 'mirroring',
                 transcodeState: {
@@ -1314,7 +1309,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
             // Mirror
             const mirrorMsg = `Copying ${currentResolution} to your servers...`
-            const currentTask = tasks.get(taskId)
+            const currentTask = tasksRef.current.get(taskId)
             updateTasksState(taskId, {
               status: 'mirroring',
               transcodeState: {
@@ -1411,7 +1406,6 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       }
     },
     [
-      tasks,
       updateTasksState,
       processResolution,
       subscribeToDvmResponses,

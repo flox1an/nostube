@@ -6,6 +6,7 @@ export type VideoType = 'all' | 'shorts' | 'videos'
 export type BlossomServerTag = 'mirror' | 'initial upload'
 export type RelayTag = 'read' | 'write'
 export type NsfwFilter = 'hide' | 'warning' | 'show'
+export type PreferredQuality = 'highest' | '720p'
 
 export interface Relay {
   url: string
@@ -66,6 +67,8 @@ export interface AppConfig {
   selectedPresetPubkey?: string | null
   /** Enable hover previews for videos */
   hoverPreview?: boolean
+  /** Preferred default video quality: 'highest' selects best available, '720p' selects mid quality */
+  preferredQuality?: PreferredQuality
   /** Event IDs the user has reported (hidden from feeds) */
   reportedEventIds?: string[]
 }

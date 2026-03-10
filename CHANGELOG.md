@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.28] - 2026-03-10
+
+### Added
+
+- Default video quality setting in General settings — choose between "Mid quality (720p)" (default) or "Highest available"; player remembers your preference across sessions
+
 ## [0.2.27] - 2026-03-10
 
 ### Fixed

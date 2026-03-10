@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, type RefObject } from 'react'
 import type { VideoVariant } from '@/utils/video-event'
+import { useAppContext } from '@/hooks/useAppContext'
 
 interface UseVideoVariantSelectorOptions {
   videoRef: RefObject<HTMLVideoElement | null>
@@ -32,15 +33,21 @@ export function useVideoVariantSelector({
   urls,
   sha256,
 }: UseVideoVariantSelectorOptions): UseVideoVariantSelectorResult {
-  // Compute default quality index: prefer 1080p, then 720p, else first
+  const { config } = useAppContext()
+  const preferredQuality = config.preferredQuality ?? '720p'
+
+  // Compute default quality index based on user preference
   const defaultQualityIndex = useMemo(() => {
     if (!videoVariants || videoVariants.length === 0) return 0
-    const idx1080 = videoVariants.findIndex(v => v.quality === '1080p')
-    if (idx1080 !== -1) return idx1080
+    if (preferredQuality === 'highest') {
+      // Pick the highest resolution available (first variant is typically highest)
+      return 0
+    }
+    // Default: prefer 720p, then first available
     const idx720 = videoVariants.findIndex(v => v.quality === '720p')
     if (idx720 !== -1) return idx720
     return 0
-  }, [videoVariants])
+  }, [videoVariants, preferredQuality])
 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(defaultQualityIndex)
 

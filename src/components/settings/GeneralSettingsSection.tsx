@@ -3,7 +3,7 @@ import { useAppContext, useSelectedPreset, useFollowSet, useCurrentUser } from '
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { type NsfwFilter } from '@/contexts/AppContext'
+import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
 import { defaultResizeServer } from '@/constants/servers'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
@@ -41,6 +41,13 @@ export function GeneralSettingsSection() {
     updateConfig(currentConfig => ({
       ...currentConfig,
       nsfwFilter: value,
+    }))
+  }
+
+  const handlePreferredQualityChange = (value: PreferredQuality) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      preferredQuality: value,
     }))
   }
 
@@ -163,6 +170,36 @@ export function GeneralSettingsSection() {
         </RadioGroup>
         <p className="text-xs text-muted-foreground">
           {t('settings.general.nsfwFilterDescription')}
+        </p>
+      </div>
+
+      {/* Default Video Quality */}
+      <div className="space-y-3 py-6">
+        <h3 className="text-base font-semibold">
+          {t('settings.general.preferredQuality', { defaultValue: 'Default Video Quality' })}
+        </h3>
+        <RadioGroup
+          value={config.preferredQuality ?? '720p'}
+          onValueChange={handlePreferredQualityChange}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="720p" id="quality-720p" />
+            <Label htmlFor="quality-720p" className="font-normal cursor-pointer">
+              {t('settings.general.quality720p', { defaultValue: 'Mid quality (720p)' })}
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="highest" id="quality-highest" />
+            <Label htmlFor="quality-highest" className="font-normal cursor-pointer">
+              {t('settings.general.qualityHighest', { defaultValue: 'Highest available' })}
+            </Label>
+          </div>
+        </RadioGroup>
+        <p className="text-xs text-muted-foreground">
+          {t('settings.general.preferredQualityDescription', {
+            defaultValue:
+              'Choose which video quality is selected by default. You can always switch in the player.',
+          })}
         </p>
       </div>
 

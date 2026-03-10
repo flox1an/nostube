@@ -10,7 +10,7 @@ import {
 import { useDvmTracker } from '@/hooks/useDvmTracker'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
-import { shouldOfferTranscode, AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
+import { AVAILABLE_RESOLUTIONS } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle, Bot } from 'lucide-react'
 import type { TrackedDvm } from '@/lib/dvm-utils'
 import { useTranslation } from 'react-i18next'
@@ -72,14 +72,11 @@ export function DvmTranscodeAlert({
     onStatusChange?.(status)
   }, [status, onStatusChange])
 
-  // Check if transcode should be offered (skip check if resuming)
-  const transcodeCheck = shouldOfferTranscode(video)
   const isResuming = !!initialTranscodeState
 
   // Debug logging
   if (import.meta.env.DEV) {
     console.debug('[DvmTranscodeAlert] State:', {
-      transcodeCheck,
       isResuming,
       isDvmAvailable,
       isDvmLoading,
@@ -88,8 +85,8 @@ export function DvmTranscodeAlert({
     })
   }
 
-  // Don't show if not needed or dismissed (unless we're resuming)
-  if ((!transcodeCheck.needed && !isResuming) || dismissed) {
+  // Don't show if dismissed
+  if (dismissed) {
     return null
   }
 

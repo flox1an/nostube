@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.24] - 2026-03-10
+
+### Changed
+
+- DVM transcode card now always shows when a DVM is available, regardless of video resolution or codec — allows creating additional resolution variants for any video
+
 ## [0.2.23] - 2026-03-10
 
 ### Changed

@@ -554,7 +554,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                       deletingIndex={deletingIndex}
                     />
 
-                    {/* DVM Transcode Alert - shown for high-res or incompatible videos */}
+                    {/* DVM Transcode Alert - always shown when a DVM is available */}
                     {(uploadState === 'finished' && uploadInfo.videos[0]) ||
                     draft.dvmTranscodeState ? (
                       <DvmTranscodeAlert

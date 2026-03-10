@@ -323,36 +323,30 @@ export function VideoDebugInfo({
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Relays */}
+            {/* Relays & Broadcast */}
             <div>
               <h3 className="font-semibold mb-2">
                 Relays ({videoEvent ? Array.from(getSeenRelays(videoEvent) || []).length : 0})
               </h3>
-              <div className="bg-muted p-4 rounded-lg">
-                {videoEvent && getSeenRelays(videoEvent) && getSeenRelays(videoEvent)!.size > 0 ? (
-                  <ul className="space-y-1 text-sm">
-                    {Array.from(getSeenRelays(videoEvent)!).map((relay, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-500" />
-                        <code className="text-xs">{relay}</code>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No relay information available</p>
-                )}
-              </div>
-            </div>
-
-            {/* Broadcast */}
-            {videoEvent && (
-              <div>
-                <h3 className="font-semibold mb-2">Broadcast</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Re-publish this event to all your relays and default relays.
-                  </p>
-                  <div className="flex items-center gap-3">
+              <div className="bg-muted p-4 rounded-lg flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  {videoEvent &&
+                  getSeenRelays(videoEvent) &&
+                  getSeenRelays(videoEvent)!.size > 0 ? (
+                    <ul className="space-y-1 text-sm">
+                      {Array.from(getSeenRelays(videoEvent)!).map((relay, idx) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-green-500" />
+                          <code className="text-xs">{relay}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No relay information available</p>
+                  )}
+                </div>
+                {videoEvent && (
+                  <div className="shrink-0 flex flex-col items-end gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -365,22 +359,20 @@ export function VideoDebugInfo({
                       ) : (
                         <Radio className="h-4 w-4 mr-2" />
                       )}
-                      {broadcastStatus === 'broadcasting'
-                        ? 'Broadcasting...'
-                        : 'Broadcast to All Relays'}
+                      {broadcastStatus === 'broadcasting' ? 'Broadcasting...' : 'Broadcast'}
                     </Button>
                     {broadcastStatus === 'done' && broadcastResult && (
                       <span className="text-sm text-green-600">
-                        Sent to {broadcastResult.success}/{broadcastResult.total} relays
+                        {broadcastResult.success}/{broadcastResult.total} relays
                       </span>
                     )}
                     {broadcastStatus === 'error' && (
-                      <span className="text-sm text-red-500">Broadcast failed</span>
+                      <span className="text-sm text-red-500">Failed</span>
                     )}
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Blossom Servers - Responsive layout: stacked on mobile, side-by-side on desktop */}
             {allVariants.length > 0 && (

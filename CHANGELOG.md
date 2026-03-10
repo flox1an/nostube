@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
+
 ## [0.2.29] - 2026-03-10
 
 ### Added

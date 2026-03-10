@@ -28,6 +28,7 @@ export default defineConfig({
         globIgnores: ['embed.html', 'stats.html', 'embed-*.html'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/embed/, /^\/\.well-known\//],
+        navigateFallbackAllowlist: [/^\/(?!assets\/)/],
         skipWaiting: true,
         clientsClaim: true,
       },

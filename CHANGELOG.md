@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.27] - 2026-03-10
+
+### Fixed
+
+- Blank pages after deployment caused by stale cached chunks — service worker no longer serves `index.html` for missing `/assets/` files, and a global error handler auto-reloads once on chunk load failures
+
 ## [0.2.26] - 2026-03-10
 
 ### Added

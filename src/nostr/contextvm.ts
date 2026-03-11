@@ -1,0 +1,176 @@
+/**
+ * ContextVM MCP client singleton for trust score queries.
+ *
+ * Uses Nostr-based transport to communicate with a ContextVM server
+ * via the Model Context Protocol (MCP).
+ */
+import { Client } from '@modelcontextprotocol/sdk/client'
+import { NostrClientTransport, PrivateKeySigner, ApplesauceRelayPool } from '@contextvm/sdk'
+import { nip19 } from 'nostr-tools'
+
+// ContextVM server identity
+const SERVER_NPUB = 'npub16w48u4xvtlp7ywgfsjlud74tlgdfx9s33scdlafmgl3a40n9tthsu6ty8g'
+const CONTEXTVM_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol']
+
+// Decode server npub to hex
+const decoded = nip19.decode(SERVER_NPUB)
+const SERVER_PUBKEY_HEX = decoded.data as string
+
+/** Trust score result from ContextVM */
+export interface TrustScoreResult {
+  sourcePubkey: string
+  targetPubkey: string
+  score: number
+  components: {
+    distanceWeight: number
+    socialDistance: number
+    normalizedDistance: number
+    validators: string[]
+  }
+  computedAt: string
+}
+
+// Singleton state
+let activeClient: Client | null = null
+let activeTransport: NostrClientTransport | null = null
+let activeRelayPool: ApplesauceRelayPool | null = null
+
+/**
+ * Connect to the ContextVM server using a private key for signing.
+ * Returns the MCP Client instance ready for tool calls.
+ */
+export async function connectContextVM(privateKeyHex: string): Promise<Client> {
+  // Reuse existing connection
+  if (activeClient) return activeClient
+
+  const signer = new PrivateKeySigner(privateKeyHex)
+  const relayPool = new ApplesauceRelayPool(CONTEXTVM_RELAYS)
+
+  const transport = new NostrClientTransport({
+    serverPubkey: SERVER_PUBKEY_HEX,
+    signer,
+    relayHandler: relayPool,
+    isStateless: true,
+  })
+
+  const client = new Client({
+    name: 'nostube',
+    version: '1.0.0',
+  })
+
+  await client.connect(transport)
+
+  activeClient = client
+  activeTransport = transport
+  activeRelayPool = relayPool
+
+  return client
+}
+
+/**
+ * Disconnect from the ContextVM server and clean up resources.
+ */
+export async function disconnectContextVM(): Promise<void> {
+  if (activeClient) {
+    try {
+      await activeClient.close()
+    } catch {
+      // Ignore close errors
+    }
+    activeClient = null
+  }
+
+  if (activeTransport) {
+    try {
+      await activeTransport.close()
+    } catch {
+      // Ignore close errors
+    }
+    activeTransport = null
+  }
+
+  if (activeRelayPool) {
+    try {
+      await activeRelayPool.disconnect()
+    } catch {
+      // Ignore disconnect errors
+    }
+    activeRelayPool = null
+  }
+}
+
+/**
+ * Calculate trust score for a single target pubkey.
+ */
+export async function calculateTrustScore(
+  client: Client,
+  targetPubkey: string
+): Promise<TrustScoreResult | null> {
+  try {
+    const result = await client.callTool({
+      name: 'calculate_trust_score',
+      arguments: { targetPubkey },
+    })
+
+    return parseMcpToolResult(result)
+  } catch (error) {
+    console.error('[ContextVM] Error calculating trust score:', error)
+    return null
+  }
+}
+
+/**
+ * Calculate trust scores for multiple target pubkeys in a single batch call.
+ */
+export async function calculateTrustScores(
+  client: Client,
+  targetPubkeys: string[]
+): Promise<TrustScoreResult[]> {
+  if (targetPubkeys.length === 0) return []
+
+  try {
+    const result = await client.callTool({
+      name: 'calculate_trust_scores',
+      arguments: { targetPubkeys: JSON.stringify(targetPubkeys) },
+    })
+
+    return parseMcpToolResults(result)
+  } catch (error) {
+    console.error('[ContextVM] Error calculating trust scores:', error)
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MCP result parsing helpers
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractTextContent(result: any): string | null {
+  if (!result || !('content' in result) || !Array.isArray(result.content)) return null
+  const textBlock = result.content.find((c: { type: string; text?: string }) => c.type === 'text')
+  return textBlock?.text ?? null
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseMcpToolResult(result: any): TrustScoreResult | null {
+  try {
+    const text = extractTextContent(result)
+    if (!text) return null
+    return JSON.parse(text) as TrustScoreResult
+  } catch {
+    return null
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseMcpToolResults(result: any): TrustScoreResult[] {
+  try {
+    const text = extractTextContent(result)
+    if (!text) return []
+    const parsed = JSON.parse(text)
+    return Array.isArray(parsed) ? (parsed as TrustScoreResult[]) : [parsed as TrustScoreResult]
+  } catch {
+    return []
+  }
+}

@@ -34,6 +34,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { useTranslation } from 'react-i18next'
+import { TrustBadge } from '@/components/TrustBadge'
 
 type Tabs = 'videos' | 'shorts' | string
 
@@ -131,7 +132,10 @@ function AuthorProfile({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-foreground">{displayName}</h1>
+            <TrustBadge pubkey={pubkey} />
+          </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 pr-4">
             {canFollow && (
               <Button

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
+- Trust badge displayed next to comment author names in comment threads
+- Trust badge displayed next to author display name on profile pages
+
 ### Changed
 
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section

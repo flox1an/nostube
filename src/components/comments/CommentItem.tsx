@@ -18,6 +18,7 @@ import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
 import { CommentReactions } from '@/components/CommentReactions'
 import { ReportDialog } from '@/components/ReportDialog'
+import { TrustBadge } from '@/components/TrustBadge'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -104,6 +105,7 @@ export const CommentItem = React.memo(function CommentItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <div className="font-semibold text-sm">{name}</div>
+            <TrustBadge pubkey={comment.pubkey} />
             <div className="text-xs text-muted-foreground">
               {formatDistance(new Date(comment.created_at * 1000), new Date(), {
                 addSuffix: true,

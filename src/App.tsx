@@ -18,6 +18,7 @@ import 'applesauce-common'
 import { eventStore } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
+import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
@@ -100,6 +101,11 @@ function BatchedProfileLoaderInit() {
   return null
 }
 
+function TrustScoreProviderInit() {
+  useTrustScoreProvider()
+  return null
+}
+
 function LoginTimeTrackingInit() {
   useLoginTimeTracking()
   return null
@@ -141,6 +147,7 @@ export function App() {
                         <UserRelaySync />
                         <RelayPoolSync />
                         <BatchedProfileLoaderInit />
+                        <TrustScoreProviderInit />
                         <LoginTimeTrackingInit />
                         <BlossomServerSync />
                         <OnboardingDialog />

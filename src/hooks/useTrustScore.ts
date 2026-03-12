@@ -1,12 +1,19 @@
 /**
- * Trust score hooks with batching and caching.
+ * Trust score hooks with batching and IndexedDB caching.
  *
- * - useTrustScoreProvider() — mount once near app root to wire the signer into the batch system
- * - useTrustScore(pubkey) — returns { score, isLoading } for a single pubkey
- * - useTrustScores(pubkeys) — returns Map<string, number | null> for multiple pubkeys
+ * Flow:
+ * 1. Components call useTrustScore(pubkey) or useTrustScores(pubkeys[])
+ * 2. Pubkeys are checked against in-memory cache (instant) then IndexedDB (async)
+ * 3. Uncached pubkeys are collected into a batch over BATCH_DELAY ms
+ * 4. Batch is sent to ContextVM relatr service (groups of MAX_BATCH_SIZE)
+ * 5. Results are stored in IndexedDB (24h TTL) and in-memory cache
+ * 6. Listeners are notified to re-render components
  *
- * Follows the caching pattern from useEventStats (in-memory Map + localStorage)
- * and the batching pattern from useBatchedProfiles (collect over a delay, batch request).
+ * Hooks:
+ * - useTrustScoreProvider() — mount once near app root
+ * - useTrustScore(pubkey) — returns { score, isLoading }
+ * - useTrustScoreDetail(pubkey) — returns { result, isLoading } (full breakdown)
+ * - useTrustScores(pubkeys) — returns Map<string, number | null>
  */
 import { useEffect, useMemo, useState } from 'react'
 import { bytesToHex } from 'nostr-tools/utils'
@@ -19,67 +26,28 @@ import {
   calculateTrustScores,
   type TrustScoreResult,
 } from '@/nostr/contextvm'
+import {
+  getCachedResult,
+  getCachedResults,
+  setCachedResults,
+  pruneExpired,
+} from '@/lib/trust-score-db'
 
 // ---------------------------------------------------------------------------
-// Cache layer (in-memory Map backed by localStorage)
+// In-memory cache (fast synchronous reads, backed by IndexedDB)
 // ---------------------------------------------------------------------------
 
-const CACHE_KEY = 'trust-scores-cache'
-const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
+const memCache = new Map<string, TrustScoreResult>()
 
-interface CacheEntry {
-  score: number
-  timestamp: number
+function getMemCached(pubkey: string): TrustScoreResult | null {
+  return memCache.get(pubkey) ?? null
 }
 
-const scoreCache = new Map<string, CacheEntry>()
-// Full results cache (in-memory only, for debug panel)
-const fullResultCache = new Map<string, TrustScoreResult>()
-
-function loadCache() {
-  try {
-    const stored = localStorage.getItem(CACHE_KEY)
-    if (stored) {
-      const data = JSON.parse(stored) as Record<string, CacheEntry>
-      const now = Date.now()
-      for (const [key, entry] of Object.entries(data)) {
-        if (now - entry.timestamp < CACHE_TTL) {
-          scoreCache.set(key, entry)
-        }
-      }
-    }
-  } catch {
-    // Ignore cache errors
+function setMemCached(results: TrustScoreResult[]) {
+  for (const r of results) {
+    memCache.set(r.targetPubkey, r)
   }
 }
-
-function saveCache() {
-  try {
-    const data: Record<string, CacheEntry> = {}
-    scoreCache.forEach((entry, key) => {
-      data[key] = entry
-    })
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data))
-  } catch {
-    // Ignore cache errors
-  }
-}
-
-function getCached(pubkey: string): number | null {
-  const entry = scoreCache.get(pubkey)
-  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
-    return entry.score
-  }
-  return null
-}
-
-function setCached(pubkey: string, score: number) {
-  scoreCache.set(pubkey, { score, timestamp: Date.now() })
-  saveCache()
-}
-
-// Load cache on module init
-loadCache()
 
 // ---------------------------------------------------------------------------
 // Listener / subscribe pattern for reactive updates
@@ -101,15 +69,25 @@ function notifyListeners() {
 // Batching system
 // ---------------------------------------------------------------------------
 
-const BATCH_DELAY = 200 // ms
+const BATCH_DELAY = 300 // ms — collect pubkeys over this window
+const MAX_BATCH_SIZE = 50 // max pubkeys per relatr request
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
+// Pubkeys that have been checked against IDB and confirmed missing/stale
+const confirmedMissing = new Set<string>()
 let currentPrivateKeyHex: string | null = null
 
-function requestTrustScore(pubkey: string, forceRefresh = false) {
+/**
+ * Request trust score for a pubkey.
+ * Checks mem cache → schedules IDB check → batches for network request.
+ */
+function requestTrustScore(pubkey: string) {
   if (!pubkey || pubkey.trim() === '') return
-  // Skip if already cached and fresh (unless forcing refresh for full result)
-  if (!forceRefresh && getCached(pubkey) !== null) return
+  // Already in memory? Skip
+  if (getMemCached(pubkey)) return
+  // Already pending? Skip
+  if (pendingPubkeys.has(pubkey)) return
+
   pendingPubkeys.add(pubkey)
   scheduleBatch()
 }
@@ -117,47 +95,109 @@ function requestTrustScore(pubkey: string, forceRefresh = false) {
 function scheduleBatch() {
   if (batchTimeout) clearTimeout(batchTimeout)
   batchTimeout = setTimeout(() => {
-    processBatch()
     batchTimeout = null
+    void checkCacheAndFetch()
   }, BATCH_DELAY)
 }
 
-async function processBatch() {
-  if (pendingPubkeys.size === 0) {
-    if (import.meta.env.DEV) console.log('[TrustScore] No pending pubkeys, skipping batch')
-    return
-  }
-  if (!currentPrivateKeyHex) {
-    if (import.meta.env.DEV)
-      console.warn('[TrustScore] No private key available — user not logged in?')
-    return
-  }
+/**
+ * Step 1: Check IndexedDB for cached results.
+ * Step 2: Fetch uncached pubkeys from relatr.
+ */
+async function checkCacheAndFetch() {
+  if (pendingPubkeys.size === 0) return
 
   const pubkeys = Array.from(pendingPubkeys)
   pendingPubkeys.clear()
 
+  // Check IndexedDB for cached results
+  try {
+    const cached = await getCachedResults(pubkeys)
+    const uncached: string[] = []
+
+    for (const [pk, result] of cached) {
+      if (result) {
+        memCache.set(pk, result)
+      } else {
+        uncached.push(pk)
+        confirmedMissing.add(pk)
+      }
+    }
+
+    // Notify immediately for any IDB cache hits
+    if (cached.size > uncached.length) {
+      notifyListeners()
+    }
+
+    // Queue uncached for network fetch
+    if (uncached.length > 0) {
+      for (const pk of uncached) pendingPubkeys.add(pk)
+      void processBatches()
+    }
+  } catch {
+    // IDB failed — treat all as uncached
+    for (const pk of pubkeys) {
+      pendingPubkeys.add(pk)
+      confirmedMissing.add(pk)
+    }
+    void processBatches()
+  }
+}
+
+/**
+ * Fetch uncached pubkeys from relatr in groups of MAX_BATCH_SIZE.
+ */
+async function processBatches() {
+  if (pendingPubkeys.size === 0 || !currentPrivateKeyHex) {
+    if (import.meta.env.DEV && !currentPrivateKeyHex && pendingPubkeys.size > 0) {
+      console.warn('[TrustScore] No private key available — user not logged in?')
+    }
+    return
+  }
+
+  const allPubkeys = Array.from(pendingPubkeys)
+  pendingPubkeys.clear()
+
   if (import.meta.env.DEV) {
-    console.log('[TrustScore] Processing batch of', pubkeys.length, 'pubkeys')
+    console.log('[TrustScore] Fetching', allPubkeys.length, 'pubkeys from relatr')
+  }
+
+  // Split into chunks of MAX_BATCH_SIZE
+  const chunks: string[][] = []
+  for (let i = 0; i < allPubkeys.length; i += MAX_BATCH_SIZE) {
+    chunks.push(allPubkeys.slice(i, i + MAX_BATCH_SIZE))
   }
 
   try {
     const client = await connectContextVM(currentPrivateKeyHex)
-    const results: TrustScoreResult[] = await calculateTrustScores(client, pubkeys)
 
-    if (import.meta.env.DEV) {
-      console.log('[TrustScore] Got', results.length, 'results for', pubkeys.length, 'requested')
-    }
+    for (const chunk of chunks) {
+      try {
+        const results: TrustScoreResult[] = await calculateTrustScores(client, chunk)
 
-    for (const result of results) {
-      if (result && typeof result.score === 'number') {
-        setCached(result.targetPubkey, result.score)
-        fullResultCache.set(result.targetPubkey, result)
+        if (import.meta.env.DEV) {
+          console.log('[TrustScore] Got', results.length, 'results for', chunk.length, 'requested')
+        }
+
+        const validResults = results.filter(r => r && typeof r.score === 'number')
+
+        // Update in-memory cache
+        setMemCached(validResults)
+
+        // Remove from confirmedMissing
+        for (const r of validResults) confirmedMissing.delete(r.targetPubkey)
+
+        // Persist to IndexedDB
+        await setCachedResults(validResults)
+
+        // Notify after each chunk so UI updates progressively
+        notifyListeners()
+      } catch (error) {
+        console.error('[TrustScore] Chunk fetch error:', error)
       }
     }
-
-    notifyListeners()
   } catch (error) {
-    console.error('[TrustScore] Batch processing error:', error)
+    console.error('[TrustScore] Connection error:', error)
   }
 }
 
@@ -195,12 +235,10 @@ export function useTrustScoreProvider() {
       return
     }
 
-    // If user has an applesauce PrivateKeySigner (nsec login), extract the raw key
     if (user.signer instanceof ApplesaucePrivateKeySigner) {
       currentPrivateKeyHex = bytesToHex(user.signer.key)
       if (import.meta.env.DEV) console.log('[TrustScore] Using user private key for ContextVM')
     } else {
-      // NIP-07 / bunker: use an ephemeral key for ContextVM communication
       currentPrivateKeyHex = getOrCreateEphemeralKey()
       if (import.meta.env.DEV) {
         console.log(
@@ -220,8 +258,11 @@ export function useTrustScoreProvider() {
           'pending pubkeys after key became available'
         )
       }
-      scheduleBatch()
+      void processBatches()
     }
+
+    // Prune expired entries on login
+    void pruneExpired()
 
     return () => {
       currentPrivateKeyHex = null
@@ -240,25 +281,25 @@ export function useTrustScore(pubkey: string | undefined): {
 } {
   const [, forceUpdate] = useState(0)
 
-  // Subscribe to score updates
   useEffect(() => {
     return subscribe(() => forceUpdate(n => n + 1))
   }, [])
 
-  // Request score when pubkey changes
   useEffect(() => {
     if (pubkey) requestTrustScore(pubkey)
   }, [pubkey])
 
-  const cached = pubkey ? getCached(pubkey) : null
-  const isLoading = pubkey ? cached === null && pendingPubkeys.has(pubkey) : false
+  const cached = pubkey ? getMemCached(pubkey) : null
+  const isLoading = pubkey
+    ? !cached && (pendingPubkeys.has(pubkey) || confirmedMissing.has(pubkey))
+    : false
 
-  return { score: cached, isLoading }
+  return { score: cached?.score ?? null, isLoading }
 }
 
 /**
  * Get the full trust score result for a pubkey (includes component breakdown).
- * Only available after the score has been fetched in the current session.
+ * Loads from IndexedDB if not in memory, fetches from relatr if not cached.
  */
 export function useTrustScoreDetail(pubkey: string | undefined): {
   result: TrustScoreResult | null
@@ -272,13 +313,23 @@ export function useTrustScoreDetail(pubkey: string | undefined): {
 
   useEffect(() => {
     if (!pubkey) return
-    // If we have the score cached but not the full result, force a refresh
-    const needsFullResult = !fullResultCache.has(pubkey)
-    requestTrustScore(pubkey, needsFullResult)
+
+    // If in memory, done
+    if (getMemCached(pubkey)) return
+
+    // Try loading from IDB, then fetch if needed
+    void getCachedResult(pubkey).then(result => {
+      if (result) {
+        memCache.set(pubkey, result)
+        notifyListeners()
+      } else {
+        requestTrustScore(pubkey)
+      }
+    })
   }, [pubkey])
 
-  const result = pubkey ? (fullResultCache.get(pubkey) ?? null) : null
-  const isLoading = pubkey ? result === null && !!currentPrivateKeyHex : false
+  const result = pubkey ? getMemCached(pubkey) : null
+  const isLoading = pubkey ? !result && !!currentPrivateKeyHex : false
 
   return { result, isLoading }
 }
@@ -290,12 +341,10 @@ export function useTrustScoreDetail(pubkey: string | undefined): {
 export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
   const [, forceUpdate] = useState(0)
 
-  // Subscribe to score updates
   useEffect(() => {
     return subscribe(() => forceUpdate(n => n + 1))
   }, [])
 
-  // Request scores when pubkeys change
   const pubkeyKey = pubkeys.join(',')
   useEffect(() => {
     for (const pk of pubkeys) {
@@ -307,7 +356,8 @@ export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
   return useMemo(() => {
     const map = new Map<string, number | null>()
     for (const pk of pubkeys) {
-      map.set(pk, getCached(pk))
+      const cached = getMemCached(pk)
+      map.set(pk, cached?.score ?? null)
     }
     return map
     // eslint-disable-next-line react-hooks/exhaustive-deps

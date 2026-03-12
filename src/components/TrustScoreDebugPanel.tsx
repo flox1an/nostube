@@ -73,6 +73,7 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
   const { components } = result
   const validators = components.validators
   const globalScore = getGlobalScore(result)
+  const reportPenalty = Object.entries(validators).find(([k]) => k.endsWith(':report_penalty'))?.[1]
 
   return (
     <div className="space-y-3">
@@ -116,6 +117,12 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Platform score based on video activity, engagement, and community participation
+            {reportPenalty && reportPenalty.score < 1 && (
+              <span className="text-red-500">
+                {' '}
+                (report penalty: ×{reportPenalty.score.toFixed(2)})
+              </span>
+            )}
           </p>
         </div>
       )}

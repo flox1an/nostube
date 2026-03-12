@@ -43,23 +43,33 @@ export interface TrustScoreResult {
 const VIDEO_VALIDATOR_PUBKEY = 'd3aa7e54cc5fc3e2390984bfc6faabfa1a9316118c30dff53b47e3dabe655aef'
 
 /**
- * Calculate a global (non-personalized) score from the 4 video validators.
- * Returns the average of activity_videos, video_community, video_engagement,
- * and video_viewer — ignoring social distance weighting.
+ * Calculate a global (non-personalized) score from the 4 video validators,
+ * multiplied by the report_penalty (kind 1984 reports).
+ *
+ * globalScore = avg(activity_videos, video_community, video_engagement, video_viewer)
+ *             × report_penalty
+ *
+ * report_penalty is 1.0 for clean pubkeys, approaches 0 for reported ones,
+ * and is 0 for illegal-content reports.
  */
 export function getGlobalScore(result: TrustScoreResult): number | null {
   const validators = result.components?.validators
   if (!validators || typeof validators !== 'object') return null
 
   const videoScores: number[] = []
+  let reportPenalty = 1.0 // default: no penalty
   for (const [key, val] of Object.entries(validators)) {
     if (key.startsWith(VIDEO_VALIDATOR_PUBKEY + ':')) {
       videoScores.push(val.score)
     }
+    if (key.endsWith(':report_penalty')) {
+      reportPenalty = val.score
+    }
   }
 
   if (videoScores.length === 0) return null
-  return videoScores.reduce((sum, s) => sum + s, 0) / videoScores.length
+  const avg = videoScores.reduce((sum, s) => sum + s, 0) / videoScores.length
+  return avg * reportPenalty
 }
 
 // Singleton state

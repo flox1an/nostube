@@ -1,7 +1,11 @@
 /**
  * IndexedDB storage for trust score results.
  *
- * Stores full TrustScoreResult objects with a 24-hour TTL.
+ * Stores full TrustScoreResult objects with stale-while-revalidate semantics:
+ * - Fresh entries (< CACHE_TTL): served from cache, no refetch
+ * - Stale entries (>= CACHE_TTL): served from cache AND refetched in background
+ * - Missing entries: fetched from network
+ *
  * Uses a single object store keyed by target pubkey.
  */
 import type { TrustScoreResult } from '@/nostr/contextvm'
@@ -15,6 +19,12 @@ interface StoredEntry {
   pubkey: string
   result: TrustScoreResult
   timestamp: number
+}
+
+/** Result of a cache lookup: the result (if any) and whether it's stale. */
+export interface CacheEntry {
+  result: TrustScoreResult | null
+  stale: boolean
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -42,7 +52,7 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise
 }
 
-/** Get a single cached trust score result. Returns null if missing or expired. */
+/** Get a single cached trust score result. Returns the result and whether it's stale. */
 export async function getCachedResult(pubkey: string): Promise<TrustScoreResult | null> {
   try {
     const db = await openDB()
@@ -52,7 +62,7 @@ export async function getCachedResult(pubkey: string): Promise<TrustScoreResult 
       const request = store.get(pubkey)
       request.onsuccess = () => {
         const entry = request.result as StoredEntry | undefined
-        if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+        if (entry) {
           resolve(entry.result)
         } else {
           resolve(null)
@@ -65,12 +75,17 @@ export async function getCachedResult(pubkey: string): Promise<TrustScoreResult 
   }
 }
 
-/** Get multiple cached trust score results. Returns a Map of pubkey → result (null if missing/expired). */
+/**
+ * Get multiple cached trust score results (stale-while-revalidate).
+ * Always returns a cached result if one exists, even if expired.
+ * The `stale` set contains pubkeys that need background revalidation.
+ */
 export async function getCachedResults(
   pubkeys: string[]
-): Promise<Map<string, TrustScoreResult | null>> {
+): Promise<{ results: Map<string, TrustScoreResult | null>; stale: Set<string> }> {
   const results = new Map<string, TrustScoreResult | null>()
-  if (pubkeys.length === 0) return results
+  const stale = new Set<string>()
+  if (pubkeys.length === 0) return { results, stale }
 
   try {
     const db = await openDB()
@@ -85,13 +100,18 @@ export async function getCachedResults(
         const request = store.get(pubkey)
         request.onsuccess = () => {
           const entry = request.result as StoredEntry | undefined
-          if (entry && now - entry.timestamp < CACHE_TTL) {
+          if (entry) {
+            // Always return the cached result
             results.set(pubkey, entry.result)
+            // Mark as stale if past TTL
+            if (now - entry.timestamp >= CACHE_TTL) {
+              stale.add(pubkey)
+            }
           } else {
             results.set(pubkey, null)
           }
           completed++
-          if (completed === pubkeys.length) resolve(results)
+          if (completed === pubkeys.length) resolve({ results, stale })
         }
         request.onerror = () => reject(request.error)
       }
@@ -99,7 +119,7 @@ export async function getCachedResults(
   } catch {
     // On error, return all as null
     for (const pk of pubkeys) results.set(pk, null)
-    return results
+    return { results, stale }
   }
 }
 
@@ -132,8 +152,9 @@ export async function setCachedResults(results: TrustScoreResult[]): Promise<voi
   }
 }
 
-/** Remove expired entries from the store. Call periodically or on app start. */
+/** Remove very old entries (> 7 days) from the store. */
 export async function pruneExpired(): Promise<void> {
+  const MAX_AGE = CACHE_TTL * 7 // keep stale entries up to 7 days
   try {
     const db = await openDB()
     const now = Date.now()
@@ -147,7 +168,7 @@ export async function pruneExpired(): Promise<void> {
         const cursor = request.result
         if (cursor) {
           const entry = cursor.value as StoredEntry
-          if (now - entry.timestamp >= CACHE_TTL) {
+          if (now - entry.timestamp >= MAX_AGE) {
             cursor.delete()
           }
           cursor.continue()

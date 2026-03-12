@@ -102,8 +102,9 @@ function scheduleBatch() {
 }
 
 /**
- * Step 1: Check IndexedDB for cached results.
- * Step 2: Fetch uncached pubkeys from relatr.
+ * Step 1: Check IndexedDB for cached results (stale-while-revalidate).
+ * Step 2: Serve stale results immediately, refetch expired ones in background.
+ * Step 3: Fetch missing pubkeys from relatr.
  */
 async function checkCacheAndFetch() {
   if (pendingPubkeys.size === 0) return
@@ -113,26 +114,27 @@ async function checkCacheAndFetch() {
 
   // Check IndexedDB for cached results
   try {
-    const cached = await getCachedResults(pubkeys)
-    const uncached: string[] = []
+    const { results: cached, stale } = await getCachedResults(pubkeys)
+    const missing: string[] = []
 
     for (const [pk, result] of cached) {
       if (result) {
         memCache.set(pk, result)
       } else {
-        uncached.push(pk)
+        missing.push(pk)
         confirmedMissing.add(pk)
       }
     }
 
-    // Notify immediately for any IDB cache hits
-    if (cached.size > uncached.length) {
+    // Notify immediately for any cache hits (fresh or stale)
+    if (cached.size > missing.length) {
       notifyListeners()
     }
 
-    // Queue uncached for network fetch
-    if (uncached.length > 0) {
-      for (const pk of uncached) pendingPubkeys.add(pk)
+    // Queue missing + stale pubkeys for network fetch
+    const toFetch = [...missing, ...stale]
+    if (toFetch.length > 0) {
+      for (const pk of toFetch) pendingPubkeys.add(pk)
       void processBatches()
     }
   } catch {

@@ -38,7 +38,7 @@ export interface TrustScoreResult {
 
 /**
  * Pubkey of the NosTube video validator set in relatr.
- * Validators: activity_videos, video_community, video_engagement, video_viewer
+ * Validators: video_activity, video_community, video_engagement, video_viewer
  */
 const VIDEO_VALIDATOR_PUBKEY = 'd3aa7e54cc5fc3e2390984bfc6faabfa1a9316118c30dff53b47e3dabe655aef'
 
@@ -46,7 +46,7 @@ const VIDEO_VALIDATOR_PUBKEY = 'd3aa7e54cc5fc3e2390984bfc6faabfa1a9316118c30dff5
  * Calculate a global (non-personalized) score from the 4 video validators,
  * multiplied by the report_penalty (kind 1984 reports).
  *
- * globalScore = avg(activity_videos, video_community, video_engagement, video_viewer)
+ * globalScore = avg(video_activity, video_community, video_engagement, video_viewer)
  *             × report_penalty
  *
  * report_penalty is 1.0 for clean pubkeys, approaches 0 for reported ones,

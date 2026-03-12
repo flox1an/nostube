@@ -10,7 +10,7 @@ import { nip19 } from 'nostr-tools'
 
 // ContextVM server identity
 const SERVER_NPUB = 'npub16w48u4xvtlp7ywgfsjlud74tlgdfx9s33scdlafmgl3a40n9tthsu6ty8g'
-const CONTEXTVM_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol']
+const CONTEXTVM_RELAYS = ['wss://relay.contextvm.org']
 
 // Decode server npub to hex
 const decoded = nip19.decode(SERVER_NPUB)
@@ -41,7 +41,15 @@ let activeRelayPool: ApplesauceRelayPool | null = null
  */
 export async function connectContextVM(privateKeyHex: string): Promise<Client> {
   // Reuse existing connection
-  if (activeClient) return activeClient
+  if (activeClient) {
+    if (import.meta.env.DEV) console.log('[ContextVM] Reusing existing connection')
+    return activeClient
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[ContextVM] Connecting to server:', SERVER_NPUB)
+    console.log('[ContextVM] Using relays:', CONTEXTVM_RELAYS)
+  }
 
   const signer = new PrivateKeySigner(privateKeyHex)
   const relayPool = new ApplesauceRelayPool(CONTEXTVM_RELAYS)
@@ -58,7 +66,13 @@ export async function connectContextVM(privateKeyHex: string): Promise<Client> {
     version: '1.0.0',
   })
 
-  await client.connect(transport)
+  try {
+    await client.connect(transport)
+    if (import.meta.env.DEV) console.log('[ContextVM] Connected successfully')
+  } catch (error) {
+    console.error('[ContextVM] Connection failed:', error)
+    throw error
+  }
 
   activeClient = client
   activeTransport = transport
@@ -129,12 +143,19 @@ export async function calculateTrustScores(
   if (targetPubkeys.length === 0) return []
 
   try {
+    if (import.meta.env.DEV) {
+      console.log('[ContextVM] Batch requesting trust scores for', targetPubkeys.length, 'pubkeys')
+    }
     const result = await client.callTool({
       name: 'calculate_trust_scores',
-      arguments: { targetPubkeys: JSON.stringify(targetPubkeys) },
+      arguments: { targetPubkeys },
     })
 
-    return parseMcpToolResults(result)
+    const scores = parseMcpToolResults(result)
+    if (import.meta.env.DEV) {
+      console.log('[ContextVM] Got', scores.length, 'scores for', targetPubkeys.length, 'requested')
+    }
+    return scores
   } catch (error) {
     console.error('[ContextVM] Error calculating trust scores:', error)
     return []
@@ -147,24 +168,33 @@ export async function calculateTrustScores(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractTextContent(result: any): string | null {
-  if (!result || !('content' in result) || !Array.isArray(result.content)) return null
-  const textBlock = result.content.find((c: { type: string; text?: string }) => c.type === 'text')
-  return textBlock?.text ?? null
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseMcpToolResult(result: any): TrustScoreResult | null {
-  try {
-    const text = extractTextContent(result)
-    if (!text) return null
-    return JSON.parse(text) as TrustScoreResult
-  } catch {
-    return null
+  if (!result) return null
+  // Check content array for text blocks
+  if ('content' in result && Array.isArray(result.content)) {
+    const textBlock = result.content.find((c: { type: string; text?: string }) => c.type === 'text')
+    if (textBlock?.text) return textBlock.text
   }
+  return null
 }
 
+/**
+ * Extract trust scores from MCP result, supporting both:
+ * - content[].text (text-based response)
+ * - structuredContent.trustScores (structured response)
+ * - structuredContent.trustScore (single structured response)
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseMcpToolResults(result: any): TrustScoreResult[] {
+function extractTrustScores(result: any): TrustScoreResult[] {
+  if (!result) return []
+
+  // Try structuredContent first (preferred by relatr server)
+  if (result.structuredContent) {
+    const sc = result.structuredContent
+    if (Array.isArray(sc.trustScores)) return sc.trustScores as TrustScoreResult[]
+    if (sc.trustScore) return [sc.trustScore as TrustScoreResult]
+  }
+
+  // Fall back to text content
   try {
     const text = extractTextContent(result)
     if (!text) return []
@@ -173,4 +203,15 @@ function parseMcpToolResults(result: any): TrustScoreResult[] {
   } catch {
     return []
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseMcpToolResult(result: any): TrustScoreResult | null {
+  const scores = extractTrustScores(result)
+  return scores[0] ?? null
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseMcpToolResults(result: any): TrustScoreResult[] {
+  return extractTrustScores(result)
 }

@@ -33,6 +33,8 @@ interface CacheEntry {
 }
 
 const scoreCache = new Map<string, CacheEntry>()
+// Full results cache (in-memory only, for debug panel)
+const fullResultCache = new Map<string, TrustScoreResult>()
 
 function loadCache() {
   try {
@@ -104,10 +106,10 @@ let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
 let currentPrivateKeyHex: string | null = null
 
-function requestTrustScore(pubkey: string) {
+function requestTrustScore(pubkey: string, forceRefresh = false) {
   if (!pubkey || pubkey.trim() === '') return
-  // Skip if already cached and fresh
-  if (getCached(pubkey) !== null) return
+  // Skip if already cached and fresh (unless forcing refresh for full result)
+  if (!forceRefresh && getCached(pubkey) !== null) return
   pendingPubkeys.add(pubkey)
   scheduleBatch()
 }
@@ -121,18 +123,35 @@ function scheduleBatch() {
 }
 
 async function processBatch() {
-  if (pendingPubkeys.size === 0 || !currentPrivateKeyHex) return
+  if (pendingPubkeys.size === 0) {
+    if (import.meta.env.DEV) console.log('[TrustScore] No pending pubkeys, skipping batch')
+    return
+  }
+  if (!currentPrivateKeyHex) {
+    if (import.meta.env.DEV)
+      console.warn('[TrustScore] No private key available — user not logged in?')
+    return
+  }
 
   const pubkeys = Array.from(pendingPubkeys)
   pendingPubkeys.clear()
+
+  if (import.meta.env.DEV) {
+    console.log('[TrustScore] Processing batch of', pubkeys.length, 'pubkeys')
+  }
 
   try {
     const client = await connectContextVM(currentPrivateKeyHex)
     const results: TrustScoreResult[] = await calculateTrustScores(client, pubkeys)
 
+    if (import.meta.env.DEV) {
+      console.log('[TrustScore] Got', results.length, 'results for', pubkeys.length, 'requested')
+    }
+
     for (const result of results) {
       if (result && typeof result.score === 'number') {
         setCached(result.targetPubkey, result.score)
+        fullResultCache.set(result.targetPubkey, result)
       }
     }
 
@@ -171,6 +190,7 @@ export function useTrustScoreProvider() {
 
   useEffect(() => {
     if (!user) {
+      if (import.meta.env.DEV) console.log('[TrustScore] No user, clearing private key')
       currentPrivateKeyHex = null
       return
     }
@@ -178,9 +198,29 @@ export function useTrustScoreProvider() {
     // If user has an applesauce PrivateKeySigner (nsec login), extract the raw key
     if (user.signer instanceof ApplesaucePrivateKeySigner) {
       currentPrivateKeyHex = bytesToHex(user.signer.key)
+      if (import.meta.env.DEV) console.log('[TrustScore] Using user private key for ContextVM')
     } else {
       // NIP-07 / bunker: use an ephemeral key for ContextVM communication
       currentPrivateKeyHex = getOrCreateEphemeralKey()
+      if (import.meta.env.DEV) {
+        console.log(
+          '[TrustScore] Using ephemeral key for ContextVM (signer type:',
+          user.signer?.constructor?.name,
+          ')'
+        )
+      }
+    }
+
+    // Flush any pubkeys that were requested before the key was available
+    if (pendingPubkeys.size > 0) {
+      if (import.meta.env.DEV) {
+        console.log(
+          '[TrustScore] Flushing',
+          pendingPubkeys.size,
+          'pending pubkeys after key became available'
+        )
+      }
+      scheduleBatch()
     }
 
     return () => {
@@ -214,6 +254,33 @@ export function useTrustScore(pubkey: string | undefined): {
   const isLoading = pubkey ? cached === null && pendingPubkeys.has(pubkey) : false
 
   return { score: cached, isLoading }
+}
+
+/**
+ * Get the full trust score result for a pubkey (includes component breakdown).
+ * Only available after the score has been fetched in the current session.
+ */
+export function useTrustScoreDetail(pubkey: string | undefined): {
+  result: TrustScoreResult | null
+  isLoading: boolean
+} {
+  const [, forceUpdate] = useState(0)
+
+  useEffect(() => {
+    return subscribe(() => forceUpdate(n => n + 1))
+  }, [])
+
+  useEffect(() => {
+    if (!pubkey) return
+    // If we have the score cached but not the full result, force a refresh
+    const needsFullResult = !fullResultCache.has(pubkey)
+    requestTrustScore(pubkey, needsFullResult)
+  }, [pubkey])
+
+  const result = pubkey ? (fullResultCache.get(pubkey) ?? null) : null
+  const isLoading = pubkey ? result === null && !!currentPrivateKeyHex : false
+
+  return { result, isLoading }
 }
 
 /**

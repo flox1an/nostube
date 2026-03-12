@@ -2,6 +2,8 @@ import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTrustScore } from '@/hooks/useTrustScore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { TrustScoreDialog } from '@/components/TrustScoreDebugPanel'
+import { useState } from 'react'
 
 interface TrustBadgeProps {
   pubkey: string
@@ -19,6 +21,7 @@ function getTrustLevel(score: number): {
 
 export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
   const { score, isLoading } = useTrustScore(pubkey)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   if (isLoading || score === null) return null
 
@@ -26,18 +29,32 @@ export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
   const { label, colorClass } = getTrustLevel(score)
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={cn('inline-flex items-center gap-0.5 text-xs', colorClass, className)}>
-            <Shield className="h-3 w-3" />
-            {percentage}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          {label} trust ({percentage}%)
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                setDialogOpen(true)
+              }}
+              className={cn(
+                'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity',
+                colorClass,
+                className
+              )}
+            >
+              <Shield className="h-3 w-3" />
+              {percentage}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {label} trust ({percentage}%) — click for details
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <TrustScoreDialog pubkey={pubkey} open={dialogOpen} onOpenChange={setDialogOpen} />
+    </>
   )
 }

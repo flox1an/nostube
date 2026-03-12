@@ -12,10 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
 - Trust badge displayed next to comment author names in comment threads
 - Trust badge displayed next to author display name on profile pages
+- Clickable trust badges — clicking any trust score badge opens a dialog with full score breakdown including social distance, distance weight, and individual validator scores with descriptions
 
 ### Changed
 
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
+
+### Fixed
+
+- Trust scores not loading — ContextVM relay changed to `wss://relay.contextvm.org` (was using wrong relays that couldn't reach the server)
+- Trust score response parsing — server returns data in `structuredContent.trustScores` but parser only checked `content[].text`; now supports both formats
+- Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
 
 ## [0.2.29] - 2026-03-10
 

@@ -152,6 +152,21 @@ export async function setCachedResults(results: TrustScoreResult[]): Promise<voi
   }
 }
 
+/** Clear all cached trust scores (e.g. on logout or account switch). */
+export async function clearAllCached(): Promise<void> {
+  try {
+    const db = await openDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      tx.objectStore(STORE_NAME).clear()
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } catch {
+    // Silently fail
+  }
+}
+
 /** Remove very old entries (> 7 days) from the store. */
 export async function pruneExpired(): Promise<void> {
   const MAX_AGE = CACHE_TTL * 7 // keep stale entries up to 7 days

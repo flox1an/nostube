@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust scores not loading — ContextVM relay changed to `wss://relay.contextvm.org` (was using wrong relays that couldn't reach the server)
 - Trust score response parsing — server returns data in `structuredContent.trustScores` but parser only checked `content[].text`; now supports both formats
 - Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
+- Trust scores not resetting on logout or account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared when the user changes, since scores are personalized per source pubkey
 
 ## [0.2.29] - 2026-03-10
 

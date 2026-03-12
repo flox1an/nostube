@@ -31,6 +31,7 @@ import {
   getCachedResult,
   getCachedResults,
   setCachedResults,
+  clearAllCached,
   pruneExpired,
 } from '@/lib/trust-score-db'
 
@@ -232,11 +233,21 @@ export function useTrustScoreProvider() {
   const { user } = useCurrentUser()
 
   useEffect(() => {
+    // Clear all caches on user change (scores are personalized per sourcePubkey)
+    memCache.clear()
+    pendingPubkeys.clear()
+    confirmedMissing.clear()
+    void clearAllCached()
+    notifyListeners()
+
     if (!user) {
       if (import.meta.env.DEV) console.log('[TrustScore] No user, clearing private key')
       currentPrivateKeyHex = null
+      disconnectContextVM()
       return
     }
+
+    if (import.meta.env.DEV) console.log('[TrustScore] User changed, resetting trust score caches')
 
     if (user.signer instanceof ApplesaucePrivateKeySigner) {
       currentPrivateKeyHex = bytesToHex(user.signer.key)
@@ -252,6 +263,9 @@ export function useTrustScoreProvider() {
       }
     }
 
+    // Reconnect with new identity
+    disconnectContextVM()
+
     // Flush any pubkeys that were requested before the key was available
     if (pendingPubkeys.size > 0) {
       if (import.meta.env.DEV) {
@@ -264,13 +278,8 @@ export function useTrustScoreProvider() {
       void processBatches()
     }
 
-    // Prune expired entries on login
+    // Prune very old entries
     void pruneExpired()
-
-    return () => {
-      currentPrivateKeyHex = null
-      disconnectContextVM()
-    }
   }, [user])
 }
 

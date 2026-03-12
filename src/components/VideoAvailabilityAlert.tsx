@@ -47,7 +47,7 @@ export function VideoAvailabilityAlert({
   // and author has sufficient global score
   if (!currentUser.user || blossomServerCount === 0 || blossomServerCount > 1 || isDismissed)
     return null
-  if (globalScore !== null && globalScore < MIN_GLOBAL_SCORE) return null
+  if (globalScore === null || globalScore < MIN_GLOBAL_SCORE) return null
 
   return (
     <Alert className="border-primary relative">

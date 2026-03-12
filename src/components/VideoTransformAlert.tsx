@@ -51,7 +51,7 @@ export function VideoTransformAlert({
 
   // Only show if logged in and author has sufficient global score
   if (!currentUser.user) return null
-  if (globalScore !== null && globalScore < MIN_GLOBAL_SCORE) return null
+  if (globalScore === null || globalScore < MIN_GLOBAL_SCORE) return null
 
   // Check if video variants exist
   if (!videoVariants || videoVariants.length === 0) return null

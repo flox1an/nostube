@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Trust score cache uses stale-while-revalidate — always returns cached values instantly, refetches expired entries in the background; stale entries kept up to 7 days
-
+- Contribute transformation alert requires author global NosTube score ≥ 20%; mirror to blossom alert requires ≥ 10%
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
 
 ### Fixed

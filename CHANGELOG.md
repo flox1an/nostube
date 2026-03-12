@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IndexedDB caching for trust scores with 24-hour TTL — scores persist across page reloads and sessions
 - Batched trust score requests — collects pubkeys over a 300ms window and fetches in groups of 50, so rendering 100 comments triggers 2 network requests instead of 100
 - Two-tier trust score cache — in-memory Map for instant synchronous reads backed by IndexedDB for persistence
+- Global NosTube score in trust score detail dialog — average of the 4 video validators (activity_videos, video_community, video_engagement, video_viewer), shown as a non-personalized platform score
 
 ### Changed
 

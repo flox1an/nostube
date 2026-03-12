@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useState } from 'react'
-import type { TrustScoreResult } from '@/nostr/contextvm'
+import { type TrustScoreResult, getGlobalScore } from '@/nostr/contextvm'
 
 function ScoreBar({
   score,
@@ -71,10 +71,8 @@ function ValidatorRow({
 function TrustScoreContent({ result }: { result: TrustScoreResult }) {
   const percentage = Math.round(result.score * 100)
   const { components } = result
-  const validators = components.validators as unknown as Record<
-    string,
-    { score: number; description?: string }
-  >
+  const validators = components.validators
+  const globalScore = getGlobalScore(result)
 
   return (
     <div className="space-y-3">
@@ -97,6 +95,30 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
           </span>
         </div>
       </div>
+
+      {/* Global NosTube score */}
+      {globalScore !== null && (
+        <div className="bg-muted/50 rounded-md p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Global NosTube Score</span>
+            <span
+              className={cn(
+                'text-lg font-bold',
+                globalScore >= 0.7
+                  ? 'text-green-500'
+                  : globalScore >= 0.4
+                    ? 'text-yellow-500'
+                    : 'text-red-500'
+              )}
+            >
+              {Math.round(globalScore * 100)}%
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Platform score based on video activity, engagement, and community participation
+          </p>
+        </div>
+      )}
 
       {/* Social distance */}
       <div className="grid grid-cols-2 gap-2 text-xs">

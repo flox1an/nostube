@@ -24,6 +24,7 @@ import {
   connectContextVM,
   disconnectContextVM,
   calculateTrustScores,
+  getGlobalScore,
   type TrustScoreResult,
 } from '@/nostr/contextvm'
 import {
@@ -277,6 +278,7 @@ export function useTrustScoreProvider() {
  */
 export function useTrustScore(pubkey: string | undefined): {
   score: number | null
+  globalScore: number | null
   isLoading: boolean
 } {
   const [, forceUpdate] = useState(0)
@@ -294,7 +296,11 @@ export function useTrustScore(pubkey: string | undefined): {
     ? !cached && (pendingPubkeys.has(pubkey) || confirmedMissing.has(pubkey))
     : false
 
-  return { score: cached?.score ?? null, isLoading }
+  return {
+    score: cached?.score ?? null,
+    globalScore: cached ? getGlobalScore(cached) : null,
+    isLoading,
+  }
 }
 
 /**
@@ -363,3 +369,36 @@ export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pubkeyKey, forceUpdate])
 }
+
+/**
+ * Get the global NosTube score for a pubkey.
+ * This is the average of the 4 video validators (activity, community,
+ * engagement, viewer) — a non-personalized platform score for feature gating.
+ */
+export function useGlobalScore(pubkey: string | undefined): {
+  globalScore: number | null
+  isLoading: boolean
+} {
+  const [, forceUpdate] = useState(0)
+
+  useEffect(() => {
+    return subscribe(() => forceUpdate(n => n + 1))
+  }, [])
+
+  useEffect(() => {
+    if (pubkey) requestTrustScore(pubkey)
+  }, [pubkey])
+
+  const cached = pubkey ? getMemCached(pubkey) : null
+  const isLoading = pubkey
+    ? !cached && (pendingPubkeys.has(pubkey) || confirmedMissing.has(pubkey))
+    : false
+
+  return {
+    globalScore: cached ? getGlobalScore(cached) : null,
+    isLoading,
+  }
+}
+
+// Re-export for direct use
+export { getGlobalScore } from '@/nostr/contextvm'

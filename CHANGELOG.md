@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Trust score cache uses stale-while-revalidate — always returns cached values instantly, refetches expired entries in the background; stale entries kept up to 7 days
 - Contribute transformation alert requires author global NosTube score ≥ 20%; mirror to blossom alert requires ≥ 10%
+- NSFW content filter in settings is locked to "Hide" when user's global NosTube trust score is below 20% or unavailable — shows info banner explaining the restriction
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
 
 ### Fixed
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust score response parsing — server returns data in `structuredContent.trustScores` but parser only checked `content[].text`; now supports both formats
 - Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
 - Trust scores not resetting on logout or account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared when the user changes, since scores are personalized per source pubkey
+- Trust score batch size reduced from 50 to 20 pubkeys per request — NIP-44 encrypted responses with 50 scores exceeded the 65535-byte plaintext limit, causing server-side encryption failures
 
 ## [0.2.29] - 2026-03-10
 

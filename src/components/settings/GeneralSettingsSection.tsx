@@ -17,7 +17,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useTranslation } from 'react-i18next'
-import { Download, CheckCircle2, X } from 'lucide-react'
+import { Download, CheckCircle2, X, Info } from 'lucide-react'
+import { useGlobalScore } from '@/hooks/useTrustScore'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
@@ -29,6 +30,8 @@ export function GeneralSettingsSection() {
     useFollowSet()
   const [isImporting, setIsImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
+  const { globalScore } = useGlobalScore(user?.pubkey)
+  const nsfwLocked = globalScore === null || globalScore < 0.2
 
   const handleThumbServerChange = (value: string) => {
     updateConfig(currentConfig => ({
@@ -38,6 +41,7 @@ export function GeneralSettingsSection() {
   }
 
   const handleNsfwFilterChange = (value: NsfwFilter) => {
+    if (nsfwLocked) return
     updateConfig(currentConfig => ({
       ...currentConfig,
       nsfwFilter: value,
@@ -148,22 +152,47 @@ export function GeneralSettingsSection() {
       {/* NSFW Filter */}
       <div className="space-y-3 py-6">
         <h3 className="text-base font-semibold">{t('settings.general.nsfwFilter')}</h3>
-        <RadioGroup value={config.nsfwFilter ?? 'hide'} onValueChange={handleNsfwFilterChange}>
+        {nsfwLocked && (
+          <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              {t('settings.general.nsfwLockedInfo', {
+                defaultValue:
+                  'NSFW content is hidden because your NosTube trust score is below 20% or not yet available. Build your score by engaging with the platform.',
+              })}
+            </p>
+          </div>
+        )}
+        <RadioGroup
+          value={nsfwLocked ? 'hide' : (config.nsfwFilter ?? 'hide')}
+          onValueChange={handleNsfwFilterChange}
+          disabled={nsfwLocked}
+          className={nsfwLocked ? 'opacity-50' : ''}
+        >
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="hide" id="nsfw-hide" />
-            <Label htmlFor="nsfw-hide" className="font-normal cursor-pointer">
+            <RadioGroupItem value="hide" id="nsfw-hide" disabled={nsfwLocked} />
+            <Label
+              htmlFor="nsfw-hide"
+              className={`font-normal ${nsfwLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
               {t('settings.general.nsfwHide')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="warning" id="nsfw-warning" />
-            <Label htmlFor="nsfw-warning" className="font-normal cursor-pointer">
+            <RadioGroupItem value="warning" id="nsfw-warning" disabled={nsfwLocked} />
+            <Label
+              htmlFor="nsfw-warning"
+              className={`font-normal ${nsfwLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
               {t('settings.general.nsfwWarning')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="show" id="nsfw-show" />
-            <Label htmlFor="nsfw-show" className="font-normal cursor-pointer">
+            <RadioGroupItem value="show" id="nsfw-show" disabled={nsfwLocked} />
+            <Label
+              htmlFor="nsfw-show"
+              className={`font-normal ${nsfwLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
               {t('settings.general.nsfwShow')}
             </Label>
           </div>

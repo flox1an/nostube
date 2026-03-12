@@ -511,6 +511,7 @@
       "nsfwWarning": "Warning - Show blurred with warning",
       "nsfwShow": "Show - Always show NSFW content",
       "nsfwFilterDescription": "Control how NSFW (Not Safe For Work) content is displayed in the app.",
+      "nsfwLockedInfo": "NSFW content is hidden because your NosTube trust score is below 20% or not yet available. Build your score by engaging with the platform.",
       "language": "Language",
       "selectLanguage": "Select language",
       "languageDescription": "Choose the language for the user interface.",

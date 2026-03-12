@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
 - Trust badge displayed next to comment author names in comment threads
 - Trust badge displayed next to author display name on profile pages
+- Trust badge displayed next to each user in the profile Following tab
 - Clickable trust badges — clicking any trust score badge opens a dialog with full score breakdown including social distance, distance weight, and individual validator scores with descriptions
 - IndexedDB caching for trust scores with 24-hour TTL — scores persist across page reloads and sessions
 - Batched trust score requests — collects pubkeys over a 300ms window and fetches in groups of 50, so rendering 100 comments triggers 2 network requests instead of 100

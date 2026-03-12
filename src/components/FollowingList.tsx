@@ -4,6 +4,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
+import { TrustBadge } from '@/components/TrustBadge'
 
 interface FollowingItemProps {
   pubkey: string
@@ -27,7 +28,10 @@ const FollowingItem = React.memo(function FollowingItem({ pubkey, relays }: Foll
         className="h-12 w-12"
       />
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{displayName}</p>
+        <p className="font-medium truncate flex items-center gap-1">
+          {displayName}
+          <TrustBadge pubkey={pubkey} />
+        </p>
         {metadata?.nip05 && (
           <p className="text-sm text-muted-foreground truncate">{metadata.nip05}</p>
         )}

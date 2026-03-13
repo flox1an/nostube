@@ -243,15 +243,11 @@ export function useTrustScoreProvider() {
     notifyListeners()
 
     if (!user) {
-      if (import.meta.env.DEV) console.log('[TrustScore] No user, clearing private key')
-      currentPrivateKeyHex = null
-      disconnectContextVM()
-      return
-    }
-
-    if (import.meta.env.DEV) console.log('[TrustScore] User changed, resetting trust score caches')
-
-    if (user.signer instanceof ApplesaucePrivateKeySigner) {
+      // Use ephemeral key for non-personalized trust scores when logged out
+      currentPrivateKeyHex = getOrCreateEphemeralKey()
+      if (import.meta.env.DEV)
+        console.log('[TrustScore] No user, using ephemeral key for ContextVM')
+    } else if (user.signer instanceof ApplesaucePrivateKeySigner) {
       currentPrivateKeyHex = bytesToHex(user.signer.key)
       if (import.meta.env.DEV) console.log('[TrustScore] Using user private key for ContextVM')
     } else {

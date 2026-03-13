@@ -1,4 +1,4 @@
-import { Shield, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { Shield, ChevronDown, ChevronRight, Loader2, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTrustScoreDetail } from '@/hooks/useTrustScore'
 import {
@@ -68,6 +68,30 @@ function ValidatorRow({
   )
 }
 
+interface UserLevel {
+  name: string
+  colorClass: string
+  bgClass: string
+  minScore: number
+}
+
+const USER_LEVELS: UserLevel[] = [
+  { name: 'Grandmaster', colorClass: 'text-purple-500', bgClass: 'bg-purple-500', minScore: 0.9 },
+  { name: 'Master', colorClass: 'text-amber-500', bgClass: 'bg-amber-500', minScore: 0.75 },
+  { name: 'Adept', colorClass: 'text-blue-500', bgClass: 'bg-blue-500', minScore: 0.5 },
+  { name: 'Apprentice', colorClass: 'text-green-500', bgClass: 'bg-green-500', minScore: 0.2 },
+  {
+    name: 'Novice',
+    colorClass: 'text-muted-foreground',
+    bgClass: 'bg-muted-foreground',
+    minScore: 0,
+  },
+]
+
+export function getUserLevel(score: number): UserLevel {
+  return USER_LEVELS.find(l => score >= l.minScore) ?? USER_LEVELS[USER_LEVELS.length - 1]
+}
+
 function TrustScoreContent({ result }: { result: TrustScoreResult }) {
   const percentage = Math.round(result.score * 100)
   const { components } = result
@@ -97,35 +121,42 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
         </div>
       </div>
 
-      {/* Global NosTube score */}
-      {globalScore !== null && (
-        <div className="bg-muted/50 rounded-md p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Global NosTube Score</span>
-            <span
-              className={cn(
-                'text-lg font-bold',
-                globalScore >= 0.7
-                  ? 'text-green-500'
-                  : globalScore >= 0.4
-                    ? 'text-yellow-500'
-                    : 'text-red-500'
+      {/* NosTube User Level */}
+      {globalScore !== null &&
+        (() => {
+          const level = getUserLevel(globalScore)
+          const globalPct = Math.round(globalScore * 100)
+          return (
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Swords className={cn('h-5 w-5', level.colorClass)} />
+                  <span className={cn('text-base font-bold', level.colorClass)}>{level.name}</span>
+                </div>
+                <span className="text-sm font-mono text-muted-foreground">{globalPct}%</span>
+              </div>
+              {/* Level progress bar with tier markers */}
+              <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full transition-all', level.bgClass)}
+                  style={{ width: `${globalPct}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Novice</span>
+                <span>Apprentice</span>
+                <span>Adept</span>
+                <span>Master</span>
+                <span>GM</span>
+              </div>
+              {reportPenalty && reportPenalty.score < 1 && (
+                <p className="text-xs text-red-500">
+                  Report penalty active: ×{reportPenalty.score.toFixed(2)}
+                </p>
               )}
-            >
-              {Math.round(globalScore * 100)}%
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Platform score based on video activity, engagement, and community participation
-            {reportPenalty && reportPenalty.score < 1 && (
-              <span className="text-red-500">
-                {' '}
-                (report penalty: ×{reportPenalty.score.toFixed(2)})
-              </span>
-            )}
-          </p>
-        </div>
-      )}
+            </div>
+          )
+        })()}
 
       {/* Social distance */}
       <div className="grid grid-cols-2 gap-2 text-xs">

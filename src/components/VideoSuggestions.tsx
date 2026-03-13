@@ -326,6 +326,24 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const personalScores = useTrustScores(suggestionPubkeys)
   const globalScores = useGlobalScores(suggestionPubkeys)
 
+  // Track if scores arrived after initial render (deferred filtering)
+  const [scoresReady, setScoresReady] = useState(false)
+  const hadScoresOnMount = useMemo(() => {
+    if (!user || suggestionPubkeys.length === 0) return true
+    // If any score is already available on first check, scores were cached
+    return suggestionPubkeys.some(pk => personalScores.get(pk) !== null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!scoresReady && suggestionPubkeys.some(pk => personalScores.get(pk) !== null)) {
+      setScoresReady(true)
+    }
+  }, [personalScores, suggestionPubkeys, scoresReady])
+
+  // Fade in only when scores arrived after a delay (not cached from the start)
+  const shouldFadeIn = !hadScoresOnMount && scoresReady
+
   const filteredSuggestions = useMemo(() => {
     if (!user) return suggestions
     return suggestions.filter(v => {
@@ -340,7 +358,9 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
-    <div className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'}`}>
+    <div
+      className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'} ${shouldFadeIn ? 'animate-in fade-in duration-200' : ''}`}
+    >
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
         : filteredSuggestions.map(video => (

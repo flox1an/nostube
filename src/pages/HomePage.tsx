@@ -6,7 +6,7 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTrustScores } from '@/hooks/useTrustScore'
+import { useGlobalScores } from '@/hooks/useTrustScore'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -47,20 +47,20 @@ export function HomePage() {
     () => (videos ? [...new Set(videos.map(v => v.pubkey))] : []),
     [videos]
   )
-  const trustScores = useTrustScores(authorPubkeys)
+  const globalScores = useGlobalScores(authorPubkeys)
 
-  // Filter videos by trust score when enabled
+  // Filter videos by global trust score when enabled
   const filteredVideos = useMemo(() => {
     if (!videos) return null
     if (!trustFilterEnabled) return videos
 
     return videos.filter(v => {
-      const score = trustScores.get(v.pubkey)
+      const score = globalScores.get(v.pubkey)
       // Show videos from authors whose score hasn't loaded yet (don't hide while loading)
       if (score === null || score === undefined) return true
       return score >= MIN_TRUST_SCORE
     })
-  }, [videos, trustFilterEnabled, trustScores])
+  }, [videos, trustFilterEnabled, globalScores])
 
   if (!filteredVideos) return null
 
@@ -71,11 +71,11 @@ export function HomePage() {
           <Button
             variant="secondary"
             size="sm"
-            className="shrink-0 rounded-full px-2.5"
+            className={`shrink-0 rounded-full px-2.5 ${trustFilterEnabled ? 'border border-green-500' : ''}`}
             onClick={() => setTrustFilterEnabled(prev => !prev)}
           >
             <Shield
-              className={`h-3.5 w-3.5 ${trustFilterEnabled ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`}
+              className={`h-3.5 w-3.5 ${trustFilterEnabled ? 'text-green-500' : 'text-muted-foreground'}`}
             />
           </Button>
         </TooltipTrigger>

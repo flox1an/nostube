@@ -72,7 +72,7 @@ function notifyListeners() {
 // ---------------------------------------------------------------------------
 
 const BATCH_DELAY = 300 // ms — collect pubkeys over this window
-const MAX_BATCH_SIZE = 50 // max pubkeys per relatr request
+const MAX_BATCH_SIZE = 20 // max pubkeys per relatr request (NIP-44 plaintext limit is 65535 bytes)
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
 // Pubkeys that have been checked against IDB and confirmed missing/stale
@@ -356,7 +356,7 @@ export function useTrustScoreDetail(pubkey: string | undefined): {
  * Returns a Map of pubkey -> score (null if not yet loaded).
  */
 export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
-  const [, forceUpdate] = useState(0)
+  const [version, forceUpdate] = useState(0)
 
   useEffect(() => {
     return subscribe(() => forceUpdate(n => n + 1))
@@ -378,7 +378,37 @@ export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
     }
     return map
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeyKey, forceUpdate])
+  }, [pubkeyKey, version])
+}
+
+/**
+ * Get global NosTube scores for multiple pubkeys.
+ * Like useTrustScores but returns the global (non-personalized) score.
+ */
+export function useGlobalScores(pubkeys: string[]): Map<string, number | null> {
+  const [version, forceUpdate] = useState(0)
+
+  useEffect(() => {
+    return subscribe(() => forceUpdate(n => n + 1))
+  }, [])
+
+  const pubkeyKey = pubkeys.join(',')
+  useEffect(() => {
+    for (const pk of pubkeys) {
+      requestTrustScore(pk)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkeyKey])
+
+  return useMemo(() => {
+    const map = new Map<string, number | null>()
+    for (const pk of pubkeys) {
+      const cached = getMemCached(pk)
+      map.set(pk, cached ? getGlobalScore(cached) : null)
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkeyKey, version])
 }
 
 /**

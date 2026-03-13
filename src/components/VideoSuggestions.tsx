@@ -12,7 +12,6 @@ import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
@@ -317,8 +316,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     presetContent.nsfwPubkeys,
   ])
 
-  // Trust score filtering — always on for logged-in users
-  const { user } = useCurrentUser()
+  // Trust score filtering — always on (ephemeral key used when logged out)
   const suggestionPubkeys = useMemo(
     () => [...new Set(suggestions.map(v => v.pubkey))],
     [suggestions]
@@ -329,7 +327,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   // Track if scores arrived after initial render (deferred filtering)
   const [scoresReady, setScoresReady] = useState(false)
   const hadScoresOnMount = useMemo(() => {
-    if (!user || suggestionPubkeys.length === 0) return true
+    if (suggestionPubkeys.length === 0) return true
     // If any score is already available on first check, scores were cached
     return suggestionPubkeys.some(pk => personalScores.get(pk) !== null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -345,7 +343,6 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const shouldFadeIn = !hadScoresOnMount && scoresReady
 
   const filteredSuggestions = useMemo(() => {
-    if (!user) return suggestions
     return suggestions.filter(v => {
       const personal = personalScores.get(v.pubkey)
       const global = globalScores.get(v.pubkey)
@@ -354,7 +351,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       if (global === null || global === undefined) return true
       return personal >= 0.4 && global >= 0.2
     })
-  }, [suggestions, user, personalScores, globalScores])
+  }, [suggestions, personalScores, globalScores])
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */

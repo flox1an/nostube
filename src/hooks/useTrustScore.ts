@@ -153,9 +153,6 @@ async function checkCacheAndFetch() {
  */
 async function processBatches() {
   if (pendingPubkeys.size === 0 || !currentPrivateKeyHex) {
-    if (import.meta.env.DEV && !currentPrivateKeyHex && pendingPubkeys.size > 0) {
-      console.warn('[TrustScore] No private key available — user not logged in?')
-    }
     return
   }
 

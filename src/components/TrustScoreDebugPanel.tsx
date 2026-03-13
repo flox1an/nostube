@@ -247,7 +247,7 @@ export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialo
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            No trust score available. Log in to see trust scores.
+            No trust score available for this user.
           </p>
         )}
       </DialogContent>

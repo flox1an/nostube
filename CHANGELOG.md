@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two-tier trust score cache — in-memory Map for instant synchronous reads backed by IndexedDB for persistence
 - NosTube user level system in trust score dialog — RPG-style ranks (Novice >0%, Apprentice >20%, Adept >50%, Master >75%, Grandmaster >90%) with colored progress bar and tier markers, replacing the plain global score percentage
 - Trust badge tooltips now show RPG level name instead of High/Medium/Low
-- Trust score filter on explore/home page — small shield toggle button (green outline when active) hides videos from authors with global NosTube score below 5%; enabled by default, click to toggle off and see all videos
+- Trust score filter on explore/home page — small shield toggle button (green outline when active) hides videos from authors with personalized trust score below 40% or global NosTube score below 20%; enabled by default, click to toggle off and see all videos
 
 ### Changed
 

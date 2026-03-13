@@ -6,13 +6,15 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTrustScores } from '@/hooks/useTrustScore'
+import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-/** Minimum global score (0–1) for an author's videos to appear when filter is on */
-const MIN_TRUST_SCORE = 0.5
+/** Minimum personalized trust score (0–1) to pass the filter */
+const MIN_PERSONAL_SCORE = 0.4
+/** Minimum global NosTube score (0–1) to pass the filter */
+const MIN_GLOBAL_SCORE = 0.2
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -48,19 +50,22 @@ export function HomePage() {
     [videos]
   )
   const trustScores = useTrustScores(authorPubkeys)
+  const globalScores = useGlobalScores(authorPubkeys)
 
-  // Filter videos by personalized trust score when enabled
+  // Filter videos by both personalized and global trust scores when enabled
   const filteredVideos = useMemo(() => {
     if (!videos) return null
     if (!trustFilterEnabled) return videos
 
     return videos.filter(v => {
-      const score = trustScores.get(v.pubkey)
-      // Show videos from authors whose score hasn't loaded yet (don't hide while loading)
-      if (score === null || score === undefined) return true
-      return score >= MIN_TRUST_SCORE
+      const personal = trustScores.get(v.pubkey)
+      const global = globalScores.get(v.pubkey)
+      // Show videos from authors whose scores haven't loaded yet (don't hide while loading)
+      if (personal === null || personal === undefined) return true
+      if (global === null || global === undefined) return true
+      return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
     })
-  }, [videos, trustFilterEnabled, trustScores])
+  }, [videos, trustFilterEnabled, trustScores, globalScores])
 
   if (!filteredVideos) return null
 

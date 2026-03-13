@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust score cache uses stale-while-revalidate — always returns cached values instantly, refetches expired entries in the background; stale entries kept up to 7 days
 - Contribute transformation alert requires author global NosTube score ≥ 20%; mirror to blossom alert requires ≥ 10%
 - NSFW content filter in settings is locked to "Hide" when user's global NosTube trust score is below 20% or unavailable — shows info banner explaining the restriction
+- NsfwTrustGate — automatically resets `nsfwFilter` config to "hide" on login or account switch when global trust score is below 20% or unavailable, so the filter is enforced even if a previous session stored a different value
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
 
 ### Fixed

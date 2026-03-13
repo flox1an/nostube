@@ -231,6 +231,8 @@ function getOrCreateEphemeralKey(): string {
  */
 export function useTrustScoreProvider() {
   const { user } = useCurrentUser()
+  // Depend on pubkey string (stable) instead of user object (new ref every render)
+  const userPubkey = user?.pubkey
 
   useEffect(() => {
     // Clear all caches on user change (scores are personalized per sourcePubkey)
@@ -280,7 +282,8 @@ export function useTrustScoreProvider() {
 
     // Prune very old entries
     void pruneExpired()
-  }, [user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPubkey])
 }
 
 /**

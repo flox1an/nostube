@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
 - Trust scores not resetting on logout or account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared when the user changes, since scores are personalized per source pubkey
 - Trust score batch size reduced from 50 to 20 pubkeys per request — NIP-44 encrypted responses with 50 scores exceeded the 65535-byte plaintext limit, causing server-side encryption failures
+- Trust scores resetting on every re-render — `useTrustScoreProvider` depended on the `user` object reference (new every render) instead of `user.pubkey` (stable string), causing all caches to clear on any config change
 
 ## [0.2.29] - 2026-03-10
 

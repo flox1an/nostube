@@ -6,13 +6,13 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGlobalScores } from '@/hooks/useTrustScore'
+import { useTrustScores } from '@/hooks/useTrustScore'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 /** Minimum global score (0–1) for an author's videos to appear when filter is on */
-const MIN_TRUST_SCORE = 0.05
+const MIN_TRUST_SCORE = 0.5
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -47,20 +47,20 @@ export function HomePage() {
     () => (videos ? [...new Set(videos.map(v => v.pubkey))] : []),
     [videos]
   )
-  const globalScores = useGlobalScores(authorPubkeys)
+  const trustScores = useTrustScores(authorPubkeys)
 
-  // Filter videos by global trust score when enabled
+  // Filter videos by personalized trust score when enabled
   const filteredVideos = useMemo(() => {
     if (!videos) return null
     if (!trustFilterEnabled) return videos
 
     return videos.filter(v => {
-      const score = globalScores.get(v.pubkey)
+      const score = trustScores.get(v.pubkey)
       // Show videos from authors whose score hasn't loaded yet (don't hide while loading)
       if (score === null || score === undefined) return true
       return score >= MIN_TRUST_SCORE
     })
-  }, [videos, trustFilterEnabled, globalScores])
+  }, [videos, trustFilterEnabled, trustScores])
 
   if (!filteredVideos) return null
 

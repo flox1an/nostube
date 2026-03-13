@@ -665,7 +665,9 @@
   "pages": {
     "home": {
       "noVideos": "No videos found.",
-      "noMore": "No more videos to load."
+      "noMore": "No more videos to load.",
+      "trustFilterOn": "Trust filter on — hiding low-score authors",
+      "trustFilterOff": "Trust filter off — showing all videos"
     },
     "shorts": {
       "noShorts": "No shorts found.",

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batched trust score requests — collects pubkeys over a 300ms window and fetches in groups of 50, so rendering 100 comments triggers 2 network requests instead of 100
 - Two-tier trust score cache — in-memory Map for instant synchronous reads backed by IndexedDB for persistence
 - Global NosTube score in trust score detail dialog — average of the 4 video validators (video_activity, video_community, video_engagement, video_viewer) multiplied by report_penalty (kind 1984 reports); shown as a non-personalized platform score with penalty indicator when active
+- Trust score filter on explore/home page — small shield toggle button hides videos from authors with trust score below 5%; enabled by default, click to toggle off and see all videos
 
 ### Changed
 

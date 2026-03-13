@@ -4,22 +4,13 @@ import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
-import { Shield } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-
-/** Minimum personalized trust score (0–1) to pass the filter */
-const MIN_PERSONAL_SCORE = 0.4
-/** Minimum global NosTube score (0–1) to pass the filter */
-const MIN_GLOBAL_SCORE = 0.2
+import { useTrustFilter } from '@/hooks/useTrustFilter'
 
 export function HomePage() {
   const { t } = useTranslation()
   const { relayOverride, setRelayOverride } = useAppContext()
-  const [trustFilterEnabled, setTrustFilterEnabled] = useState(true)
 
   useEffect(() => {
     document.title = `${t('navigation.home')} - nostube`
@@ -34,8 +25,6 @@ export function HomePage() {
     [relayOverride, relays]
   )
 
-  // Memoize the loader to prevent recreation on every render
-  // When relay override is active, skip EventStore cache to show only that relay's events
   const loader = useMemo(
     () =>
       videoTypeLoader('videos', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
@@ -43,59 +32,9 @@ export function HomePage() {
   )
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
-
-  // Collect unique author pubkeys for trust score lookup
-  const authorPubkeys = useMemo(
-    () => (videos ? [...new Set(videos.map(v => v.pubkey))] : []),
-    [videos]
-  )
-  const trustScores = useTrustScores(authorPubkeys)
-  const globalScores = useGlobalScores(authorPubkeys)
-
-  // Filter videos by both personalized and global trust scores when enabled
-  const filteredVideos = useMemo(() => {
-    if (!videos) return null
-    if (!trustFilterEnabled) return videos
-
-    return videos.filter(v => {
-      const personal = trustScores.get(v.pubkey)
-      const global = globalScores.get(v.pubkey)
-      // Show videos from authors whose scores haven't loaded yet (don't hide while loading)
-      if (personal === null || personal === undefined) return true
-      if (global === null || global === undefined) return true
-      return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
-    })
-  }, [videos, trustFilterEnabled, trustScores, globalScores])
+  const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   if (!filteredVideos) return null
-
-  const trustFilterButton = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="secondary"
-            size="sm"
-            className={`shrink-0 rounded-full px-2.5 ${trustFilterEnabled ? 'border border-green-500' : ''}`}
-            onClick={() => setTrustFilterEnabled(prev => !prev)}
-          >
-            <Shield
-              className={`h-3.5 w-3.5 ${trustFilterEnabled ? 'text-green-500' : 'text-muted-foreground'}`}
-            />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {trustFilterEnabled
-            ? t('pages.home.trustFilterOn', {
-                defaultValue: 'Trust filter on — hiding low-score authors',
-              })
-            : t('pages.home.trustFilterOff', {
-                defaultValue: 'Trust filter off — showing all videos',
-              })}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
 
   return (
     <div className="max-w-560 mx-auto">
@@ -103,7 +42,7 @@ export function HomePage() {
         <CategoryButtonBar
           selectedRelay={relayOverride}
           onRelayChange={setRelayOverride}
-          afterRelay={trustFilterButton}
+          afterRelay={filterButton}
         />
       </div>
       <VideoTimelinePage

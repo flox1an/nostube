@@ -20,12 +20,15 @@ interface CategoryButtonBarProps {
   activeSlug?: string
   selectedRelay: string | null
   onRelayChange: (relay: string | null) => void
+  /** Optional element rendered right after the relay dropdown */
+  afterRelay?: React.ReactNode
 }
 
 export function CategoryButtonBar({
   activeSlug,
   selectedRelay,
   onRelayChange,
+  afterRelay,
 }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -193,6 +196,8 @@ export function CategoryButtonBar({
             </Command>
           </PopoverContent>
         </Popover>
+
+        {afterRelay}
 
         <Button
           variant={!activeSlug ? 'default' : 'outline'}

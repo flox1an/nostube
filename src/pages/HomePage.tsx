@@ -64,35 +64,42 @@ export function HomePage() {
 
   if (!filteredVideos) return null
 
+  const trustFilterButton = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shrink-0 rounded-full px-2.5"
+            onClick={() => setTrustFilterEnabled(prev => !prev)}
+          >
+            <Shield
+              className={`h-3.5 w-3.5 ${trustFilterEnabled ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`}
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {trustFilterEnabled
+            ? t('pages.home.trustFilterOn', {
+                defaultValue: 'Trust filter on — hiding low-score authors',
+              })
+            : t('pages.home.trustFilterOff', {
+                defaultValue: 'Trust filter off — showing all videos',
+              })}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+
   return (
     <div className="max-w-560 mx-auto">
-      <div className="sm:px-2 flex items-center gap-1">
-        <div className="flex-1 min-w-0">
-          <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
-        </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={trustFilterEnabled ? 'default' : 'ghost'}
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => setTrustFilterEnabled(prev => !prev)}
-              >
-                <Shield className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {trustFilterEnabled
-                ? t('pages.home.trustFilterOn', {
-                    defaultValue: 'Trust filter on — hiding low-score authors',
-                  })
-                : t('pages.home.trustFilterOff', {
-                    defaultValue: 'Trust filter off — showing all videos',
-                  })}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className="sm:px-2">
+        <CategoryButtonBar
+          selectedRelay={relayOverride}
+          onRelayChange={setRelayOverride}
+          afterRelay={trustFilterButton}
+        />
       </div>
       <VideoTimelinePage
         videos={filteredVideos}

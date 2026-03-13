@@ -93,6 +93,7 @@ export function getUserLevel(score: number): UserLevel {
 }
 
 function TrustScoreContent({ result }: { result: TrustScoreResult }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const percentage = Math.round(result.score * 100)
   const { components } = result
   const validators = components.validators
@@ -158,41 +159,56 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
           )
         })()}
 
-      {/* Social distance */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-muted/50 rounded p-2">
-          <span className="text-muted-foreground">Social Distance</span>
-          <div className="font-mono font-medium">{components.socialDistance}</div>
-        </div>
-        <div className="bg-muted/50 rounded p-2">
-          <span className="text-muted-foreground">Distance Weight</span>
-          <div className="font-mono font-medium">{components.distanceWeight}</div>
-        </div>
-        <div className="bg-muted/50 rounded p-2">
-          <span className="text-muted-foreground">Normalized Distance</span>
-          <div className="font-mono font-medium">{components.normalizedDistance}</div>
-        </div>
-        <div className="bg-muted/50 rounded p-2">
-          <span className="text-muted-foreground">Computed At</span>
-          <div className="font-mono font-medium">
-            {new Date(
-              typeof result.computedAt === 'number' ? result.computedAt * 1000 : result.computedAt
-            ).toLocaleTimeString()}
+      {/* Expandable details */}
+      <button
+        onClick={() => setDetailsOpen(prev => !prev)}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {detailsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        Details…
+      </button>
+
+      {detailsOpen && (
+        <div className="space-y-3">
+          {/* Social distance */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-muted/50 rounded p-2">
+              <span className="text-muted-foreground">Social Distance</span>
+              <div className="font-mono font-medium">{components.socialDistance}</div>
+            </div>
+            <div className="bg-muted/50 rounded p-2">
+              <span className="text-muted-foreground">Distance Weight</span>
+              <div className="font-mono font-medium">{components.distanceWeight}</div>
+            </div>
+            <div className="bg-muted/50 rounded p-2">
+              <span className="text-muted-foreground">Normalized Distance</span>
+              <div className="font-mono font-medium">{components.normalizedDistance}</div>
+            </div>
+            <div className="bg-muted/50 rounded p-2">
+              <span className="text-muted-foreground">Computed At</span>
+              <div className="font-mono font-medium">
+                {new Date(
+                  typeof result.computedAt === 'number'
+                    ? result.computedAt * 1000
+                    : result.computedAt
+                ).toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Validators */}
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1">Validators</h4>
+            <div className="border rounded-md">
+              {Object.entries(validators)
+                .sort(([, a], [, b]) => b.score - a.score)
+                .map(([name, validator]) => (
+                  <ValidatorRow key={name} name={name} validator={validator} />
+                ))}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Validators */}
-      <div>
-        <h4 className="text-xs font-medium text-muted-foreground mb-1">Validators</h4>
-        <div className="border rounded-md">
-          {Object.entries(validators)
-            .sort(([, a], [, b]) => b.score - a.score)
-            .map(([name, validator]) => (
-              <ValidatorRow key={name} name={name} validator={validator} />
-            ))}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -208,7 +224,7 @@ export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />

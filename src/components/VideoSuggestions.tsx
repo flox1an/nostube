@@ -12,6 +12,8 @@ import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -315,12 +317,33 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     presetContent.nsfwPubkeys,
   ])
 
+  // Trust score filtering — always on for logged-in users
+  const { user } = useCurrentUser()
+  const suggestionPubkeys = useMemo(
+    () => [...new Set(suggestions.map(v => v.pubkey))],
+    [suggestions]
+  )
+  const personalScores = useTrustScores(suggestionPubkeys)
+  const globalScores = useGlobalScores(suggestionPubkeys)
+
+  const filteredSuggestions = useMemo(() => {
+    if (!user) return suggestions
+    return suggestions.filter(v => {
+      const personal = personalScores.get(v.pubkey)
+      const global = globalScores.get(v.pubkey)
+      // Don't hide while scores are still loading
+      if (personal === null || personal === undefined) return true
+      if (global === null || global === undefined) return true
+      return personal >= 0.4 && global >= 0.2
+    })
+  }, [suggestions, user, personalScores, globalScores])
+
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'}`}>
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
-        : suggestions.map(video => (
+        : filteredSuggestions.map(video => (
             <VideoSuggestionItem
               key={video.id}
               video={video}

@@ -2,7 +2,7 @@ import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTrustScore } from '@/hooks/useTrustScore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { TrustScoreDialog, getUserLevel } from '@/components/TrustScoreDebugPanel'
+import { TrustScoreDialog, getTrustColor } from '@/components/TrustScoreDebugPanel'
 import { useState } from 'react'
 
 interface TrustBadgeProps {
@@ -17,7 +17,7 @@ export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
   if (isLoading || score === null) return null
 
   const percentage = Math.round(score * 100)
-  const level = getUserLevel(score)
+  const trust = getTrustColor(score)
 
   return (
     <>
@@ -32,7 +32,7 @@ export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
               }}
               className={cn(
                 'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity',
-                level.colorClass,
+                trust.colorClass,
                 className
               )}
             >
@@ -41,7 +41,7 @@ export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            {level.name} ({percentage}%) — click for details
+            {trust.label} trust ({percentage}%) — click for details
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

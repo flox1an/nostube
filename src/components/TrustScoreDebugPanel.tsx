@@ -26,10 +26,7 @@ function ScoreBar({
       <span className="text-xs text-muted-foreground w-8 text-right shrink-0">{percentage}%</span>
       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className={cn(
-            'h-full rounded-full transition-all',
-            score >= 0.7 ? 'bg-green-500' : score >= 0.4 ? 'bg-yellow-500' : 'bg-red-500'
-          )}
+          className={cn('h-full rounded-full transition-all', getTrustColor(score).bgClass)}
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -88,6 +85,21 @@ const USER_LEVELS: UserLevel[] = [
   },
 ]
 
+/**
+ * Color mapping for personalized trust scores (badge + dialog header).
+ * Separate from getUserLevel which is for the global NosTube user level only.
+ */
+export function getTrustColor(score: number): {
+  label: string
+  colorClass: string
+  bgClass: string
+} {
+  if (score >= 0.7) return { label: 'High', colorClass: 'text-green-500', bgClass: 'bg-green-500' }
+  if (score >= 0.4)
+    return { label: 'Medium', colorClass: 'text-yellow-500', bgClass: 'bg-yellow-500' }
+  return { label: 'Low', colorClass: 'text-red-500', bgClass: 'bg-red-500' }
+}
+
 export function getUserLevel(score: number): UserLevel {
   return USER_LEVELS.find(l => score >= l.minScore) ?? USER_LEVELS[USER_LEVELS.length - 1]
 }
@@ -102,25 +114,19 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
 
   return (
     <div className="space-y-3">
-      {/* Overall score */}
-      <div className="flex items-center gap-3">
-        <Shield
-          className={cn(
-            'h-6 w-6',
-            result.score >= 0.7
-              ? 'text-green-500'
-              : result.score >= 0.4
-                ? 'text-yellow-500'
-                : 'text-red-500'
-          )}
-        />
-        <div>
-          <span className="text-2xl font-bold">{percentage}%</span>
-          <span className="text-sm text-muted-foreground ml-2">
-            {result.score >= 0.7 ? 'High' : result.score >= 0.4 ? 'Medium' : 'Low'} Trust
-          </span>
-        </div>
-      </div>
+      {/* Overall personalized score */}
+      {(() => {
+        const trust = getTrustColor(result.score)
+        return (
+          <div className="flex items-center gap-3">
+            <Shield className={cn('h-6 w-6', trust.colorClass)} />
+            <div>
+              <span className="text-2xl font-bold">{percentage}%</span>
+              <span className={cn('text-sm ml-2', trust.colorClass)}>{trust.label} Trust</span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* NosTube User Level */}
       {globalScore !== null &&

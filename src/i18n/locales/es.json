@@ -679,7 +679,8 @@
     },
     "subscriptions": {
       "emptyState": "Siga algunos autores para ver sus videos aquí.",
-      "noVideos": "No se encontraron videos de sus suscripciones."
+      "noVideos": "No se encontraron videos de sus suscripciones.",
+      "noMore": "Has visto todos los videos de tus suscripciones."
     },
     "videoNotes": {
       "title": "Notas de video",

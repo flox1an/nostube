@@ -716,7 +716,8 @@
     },
     "subscriptions": {
       "emptyState": "Follow some authors to see their videos here.",
-      "noVideos": "No videos found from your subscriptions."
+      "noVideos": "No videos found from your subscriptions.",
+      "noMore": "You've seen all videos from your subscriptions."
     },
     "videoNotes": {
       "title": "Video Notes",

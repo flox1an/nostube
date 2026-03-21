@@ -499,6 +499,7 @@
       "nsfwWarning": "Warnung - Unscharf mit Warnung anzeigen",
       "nsfwShow": "Anzeigen - NSFW-Inhalte immer anzeigen",
       "nsfwFilterDescription": "Steuere, wie NSFW (Not Safe For Work) Inhalte in der App angezeigt werden.",
+      "nsfwLockedInfo": "NSFW-Inhalte werden ausgeblendet, da dein NosTube-Vertrauensscore unter 20% liegt oder noch nicht verfügbar ist. Erhöhe deinen Score durch Interaktion mit der Plattform.",
       "language": "Sprache",
       "selectLanguage": "Sprache auswählen",
       "languageDescription": "Wähle die Sprache für die Benutzeroberfläche.",
@@ -627,7 +628,9 @@
   "pages": {
     "home": {
       "noVideos": "Keine Videos gefunden.",
-      "noMore": "Keine weiteren Videos zum Laden."
+      "noMore": "Keine weiteren Videos zum Laden.",
+      "trustFilterOn": "Vertrauensfilter an — Autoren mit niedrigem Score ausgeblendet",
+      "trustFilterOff": "Vertrauensfilter aus — alle Videos angezeigt"
     },
     "shorts": {
       "noShorts": "Keine Shorts gefunden.",
@@ -890,6 +893,40 @@
     "it": "Italienisch",
     "tr": "Türkisch",
     "nl": "Niederländisch"
+  },
+  "trust": {
+    "badge": {
+      "tooltip": "{{label}}-Vertrauen ({{percentage}}%) — klicken für Details"
+    },
+    "dialog": {
+      "title": "Vertrauensscore Details",
+      "description": "Personalisierter Vertrauensscore von relatr via ContextVM",
+      "loading": "Vertrauensscore wird geladen...",
+      "noScore": "Kein Vertrauensscore für diesen Benutzer verfügbar."
+    },
+    "labels": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "levels": {
+      "novice": "Anfänger",
+      "apprentice": "Lehrling",
+      "adept": "Fortgeschritten",
+      "master": "Meister",
+      "grandmaster": "Großmeister",
+      "gm": "GM"
+    },
+    "details": {
+      "toggle": "Details…",
+      "socialDistance": "Soziale Distanz",
+      "distanceWeight": "Distanzgewichtung",
+      "normalizedDistance": "Normalisierte Distanz",
+      "computedAt": "Berechnet um",
+      "validators": "Validatoren",
+      "reportPenalty": "Meldestrafe aktiv: ×{{score}}",
+      "trustLabel": "{{label}} Vertrauen"
+    }
   },
   "relaySource": {
     "global": "Global",

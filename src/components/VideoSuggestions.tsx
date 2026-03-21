@@ -13,6 +13,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
+import { useFollowSet } from '@/hooks/useFollowSet'
+import { MIN_PERSONAL_SCORE, MIN_GLOBAL_SCORE } from '@/hooks/useTrustFilter'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -317,6 +319,9 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   ])
 
   // Trust score filtering — always on (ephemeral key used when logged out)
+  const { followedPubkeys } = useFollowSet()
+  const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])
+
   const suggestionPubkeys = useMemo(
     () => [...new Set(suggestions.map(v => v.pubkey))],
     [suggestions]
@@ -344,14 +349,16 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   const filteredSuggestions = useMemo(() => {
     return suggestions.filter(v => {
+      // Always show videos from followed authors
+      if (followedSet.has(v.pubkey)) return true
       const personal = personalScores.get(v.pubkey)
       const global = globalScores.get(v.pubkey)
       // Don't hide while scores are still loading
       if (personal === null || personal === undefined) return true
       if (global === null || global === undefined) return true
-      return personal >= 0.4 && global >= 0.2
+      return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
     })
-  }, [suggestions, personalScores, globalScores])
+  }, [suggestions, personalScores, globalScores, followedSet])
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */

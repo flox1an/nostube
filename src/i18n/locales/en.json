@@ -957,6 +957,40 @@
     "loginRequired": "Please log in to zap",
     "failed": "Zap failed"
   },
+  "trust": {
+    "badge": {
+      "tooltip": "{{label}} trust ({{percentage}}%) — click for details"
+    },
+    "dialog": {
+      "title": "Trust Score Details",
+      "description": "Personalized trust score from relatr via ContextVM",
+      "loading": "Loading trust score...",
+      "noScore": "No trust score available for this user."
+    },
+    "labels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "levels": {
+      "novice": "Novice",
+      "apprentice": "Apprentice",
+      "adept": "Adept",
+      "master": "Master",
+      "grandmaster": "Grandmaster",
+      "gm": "GM"
+    },
+    "details": {
+      "toggle": "Details…",
+      "socialDistance": "Social Distance",
+      "distanceWeight": "Distance Weight",
+      "normalizedDistance": "Normalized Distance",
+      "computedAt": "Computed At",
+      "validators": "Validators",
+      "reportPenalty": "Report penalty active: ×{{score}}",
+      "trustLabel": "{{label}} Trust"
+    }
+  },
   "relaySource": {
     "global": "Global",
     "globalDescription": "All configured relays ({{count}})",

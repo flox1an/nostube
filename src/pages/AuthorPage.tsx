@@ -123,7 +123,7 @@ function AuthorProfile({
         <img
           src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}
-          className="w-24 h-24 rounded-full ring-2 ring-background"
+          className="w-24 h-24 rounded-full ring-2 ring-background object-cover"
           onError={e => {
             const target = e.target as HTMLImageElement
             target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`

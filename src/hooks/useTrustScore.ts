@@ -15,7 +15,7 @@
  * - useTrustScoreDetail(pubkey) — returns { result, isLoading } (full breakdown)
  * - useTrustScores(pubkeys) — returns Map<string, number | null>
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { bytesToHex } from 'nostr-tools/utils'
 import { generateSecretKey } from 'nostr-tools'
 import { PrivateKeySigner as ApplesaucePrivateKeySigner } from 'applesauce-signers'
@@ -230,14 +230,23 @@ export function useTrustScoreProvider() {
   const { user } = useCurrentUser()
   // Depend on pubkey string (stable) instead of user object (new ref every render)
   const userPubkey = user?.pubkey
+  const prevPubkeyRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
-    // Clear all caches on user change (scores are personalized per sourcePubkey)
-    memCache.clear()
-    pendingPubkeys.clear()
-    confirmedMissing.clear()
-    void clearAllCached()
-    notifyListeners()
+    const prevPubkey = prevPubkeyRef.current
+    prevPubkeyRef.current = userPubkey
+
+    // Only clear caches when switching between different logged-in accounts.
+    // Logout (userPubkey becomes undefined) keeps cached scores so the
+    // ephemeral key can continue serving requests.
+    if (prevPubkey && userPubkey && prevPubkey !== userPubkey) {
+      memCache.clear()
+      pendingPubkeys.clear()
+      confirmedMissing.clear()
+      void clearAllCached()
+      notifyListeners()
+      if (import.meta.env.DEV) console.log('[TrustScore] Account switch, cleared caches')
+    }
 
     if (!user) {
       // Use ephemeral key for non-personalized trust scores when logged out
@@ -299,9 +308,8 @@ export function useTrustScore(pubkey: string | undefined): {
   }, [pubkey])
 
   const cached = pubkey ? getMemCached(pubkey) : null
-  const isLoading = pubkey
-    ? !cached && (pendingPubkeys.has(pubkey) || confirmedMissing.has(pubkey))
-    : false
+  // Loading if we have a pubkey but no cached result and it hasn't been confirmed missing
+  const isLoading = pubkey ? !cached && !confirmedMissing.has(pubkey) : false
 
   return {
     score: cached?.score ?? null,
@@ -427,9 +435,8 @@ export function useGlobalScore(pubkey: string | undefined): {
   }, [pubkey])
 
   const cached = pubkey ? getMemCached(pubkey) : null
-  const isLoading = pubkey
-    ? !cached && (pendingPubkeys.has(pubkey) || confirmedMissing.has(pubkey))
-    : false
+  // Loading if we have a pubkey but no cached result and it hasn't been confirmed missing
+  const isLoading = pubkey ? !cached && !confirmedMissing.has(pubkey) : false
 
   return {
     globalScore: cached ? getGlobalScore(cached) : null,

@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type TrustScoreResult, getGlobalScore } from '@/nostr/contextvm'
 
 function ScoreBar({
@@ -91,13 +92,30 @@ const USER_LEVELS: UserLevel[] = [
  */
 export function getTrustColor(score: number): {
   label: string
+  labelKey: string
   colorClass: string
   bgClass: string
 } {
-  if (score >= 0.7) return { label: 'High', colorClass: 'text-green-500', bgClass: 'bg-green-500' }
+  if (score >= 0.7)
+    return {
+      label: 'High',
+      labelKey: 'trust.labels.high',
+      colorClass: 'text-green-500',
+      bgClass: 'bg-green-500',
+    }
   if (score >= 0.4)
-    return { label: 'Medium', colorClass: 'text-yellow-500', bgClass: 'bg-yellow-500' }
-  return { label: 'Low', colorClass: 'text-red-500', bgClass: 'bg-red-500' }
+    return {
+      label: 'Medium',
+      labelKey: 'trust.labels.medium',
+      colorClass: 'text-yellow-500',
+      bgClass: 'bg-yellow-500',
+    }
+  return {
+    label: 'Low',
+    labelKey: 'trust.labels.low',
+    colorClass: 'text-red-500',
+    bgClass: 'bg-red-500',
+  }
 }
 
 export function getUserLevel(score: number): UserLevel {
@@ -105,6 +123,7 @@ export function getUserLevel(score: number): UserLevel {
 }
 
 function TrustScoreContent({ result }: { result: TrustScoreResult }) {
+  const { t } = useTranslation()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const percentage = Math.round(result.score * 100)
   const { components } = result
@@ -122,7 +141,12 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
             <Shield className={cn('h-6 w-6', trust.colorClass)} />
             <div>
               <span className="text-2xl font-bold">{percentage}%</span>
-              <span className={cn('text-sm ml-2', trust.colorClass)}>{trust.label} Trust</span>
+              <span className={cn('text-sm ml-2', trust.colorClass)}>
+                {t('trust.details.trustLabel', {
+                  label: t(trust.labelKey),
+                  defaultValue: '{{label}} Trust',
+                })}
+              </span>
             </div>
           </div>
         )
@@ -138,7 +162,9 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Swords className={cn('h-5 w-5', level.colorClass)} />
-                  <span className={cn('text-base font-bold', level.colorClass)}>{level.name}</span>
+                  <span className={cn('text-base font-bold', level.colorClass)}>
+                    {t(`trust.levels.${level.name.toLowerCase()}`)}
+                  </span>
                 </div>
                 <span className="text-sm font-mono text-muted-foreground">{globalPct}%</span>
               </div>
@@ -150,15 +176,18 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
                 />
               </div>
               <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>Novice</span>
-                <span>Apprentice</span>
-                <span>Adept</span>
-                <span>Master</span>
-                <span>GM</span>
+                <span>{t('trust.levels.novice')}</span>
+                <span>{t('trust.levels.apprentice')}</span>
+                <span>{t('trust.levels.adept')}</span>
+                <span>{t('trust.levels.master')}</span>
+                <span>{t('trust.levels.gm')}</span>
               </div>
               {reportPenalty && reportPenalty.score < 1 && (
                 <p className="text-xs text-red-500">
-                  Report penalty active: ×{reportPenalty.score.toFixed(2)}
+                  {t('trust.details.reportPenalty', {
+                    score: reportPenalty.score.toFixed(2),
+                    defaultValue: 'Report penalty active: ×{{score}}',
+                  })}
                 </p>
               )}
             </div>
@@ -171,7 +200,7 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         {detailsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Details…
+        {t('trust.details.toggle', { defaultValue: 'Details…' })}
       </button>
 
       {detailsOpen && (
@@ -179,19 +208,27 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
           {/* Social distance */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-muted/50 rounded p-2">
-              <span className="text-muted-foreground">Social Distance</span>
+              <span className="text-muted-foreground">
+                {t('trust.details.socialDistance', { defaultValue: 'Social Distance' })}
+              </span>
               <div className="font-mono font-medium">{components.socialDistance}</div>
             </div>
             <div className="bg-muted/50 rounded p-2">
-              <span className="text-muted-foreground">Distance Weight</span>
+              <span className="text-muted-foreground">
+                {t('trust.details.distanceWeight', { defaultValue: 'Distance Weight' })}
+              </span>
               <div className="font-mono font-medium">{components.distanceWeight}</div>
             </div>
             <div className="bg-muted/50 rounded p-2">
-              <span className="text-muted-foreground">Normalized Distance</span>
+              <span className="text-muted-foreground">
+                {t('trust.details.normalizedDistance', { defaultValue: 'Normalized Distance' })}
+              </span>
               <div className="font-mono font-medium">{components.normalizedDistance}</div>
             </div>
             <div className="bg-muted/50 rounded p-2">
-              <span className="text-muted-foreground">Computed At</span>
+              <span className="text-muted-foreground">
+                {t('trust.details.computedAt', { defaultValue: 'Computed At' })}
+              </span>
               <div className="font-mono font-medium">
                 {new Date(
                   typeof result.computedAt === 'number'
@@ -204,7 +241,9 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
 
           {/* Validators */}
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1">Validators</h4>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1">
+              {t('trust.details.validators', { defaultValue: 'Validators' })}
+            </h4>
             <div className="border rounded-md">
               {Object.entries(validators)
                 .sort(([, a], [, b]) => b.score - a.score)
@@ -226,6 +265,7 @@ interface TrustScoreDialogProps {
 }
 
 export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialogProps) {
+  const { t } = useTranslation()
   const { result, isLoading } = useTrustScoreDetail(pubkey)
 
   return (
@@ -234,20 +274,26 @@ export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Trust Score Details
+            {t('trust.dialog.title', { defaultValue: 'Trust Score Details' })}
           </DialogTitle>
-          <DialogDescription>Personalized trust score from relatr via ContextVM</DialogDescription>
+          <DialogDescription>
+            {t('trust.dialog.description', {
+              defaultValue: 'Personalized trust score from relatr via ContextVM',
+            })}
+          </DialogDescription>
         </DialogHeader>
         {result ? (
           <TrustScoreContent result={result} />
         ) : isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading trust score...</span>
+            <span>{t('trust.dialog.loading', { defaultValue: 'Loading trust score...' })}</span>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            No trust score available for this user.
+            {t('trust.dialog.noScore', {
+              defaultValue: 'No trust score available for this user.',
+            })}
           </p>
         )}
       </DialogContent>

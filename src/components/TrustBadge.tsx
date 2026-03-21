@@ -1,9 +1,10 @@
 import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTrustScore } from '@/hooks/useTrustScore'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TrustScoreDialog, getTrustColor } from '@/components/TrustScoreDebugPanel'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface TrustBadgeProps {
   pubkey: string
@@ -11,6 +12,7 @@ interface TrustBadgeProps {
 }
 
 export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
+  const { t } = useTranslation()
   const { score, isLoading } = useTrustScore(pubkey)
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -21,30 +23,32 @@ export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
 
   return (
     <>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={e => {
-                e.preventDefault()
-                e.stopPropagation()
-                setDialogOpen(true)
-              }}
-              className={cn(
-                'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity',
-                trust.colorClass,
-                className
-              )}
-            >
-              <Shield className="h-3 w-3" />
-              {percentage}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {trust.label} trust ({percentage}%) — click for details
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDialogOpen(true)
+            }}
+            className={cn(
+              'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity',
+              trust.colorClass,
+              className
+            )}
+          >
+            <Shield className="h-3 w-3" />
+            {percentage}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {t('trust.badge.tooltip', {
+            label: t(trust.labelKey),
+            percentage,
+            defaultValue: '{{label}} trust ({{percentage}}%) — click for details',
+          })}
+        </TooltipContent>
+      </Tooltip>
       <TrustScoreDialog pubkey={pubkey} open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   )

@@ -70,14 +70,23 @@ export function useHashtagVideos({
   // Store subscription ref to keep it alive during loadMore
   const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
 
+  // Build tag variants: lowercase, Capitalized, UPPERCASE
+  const tagVariants = useMemo(() => {
+    if (!tag) return []
+    const lower = tag.toLowerCase()
+    const capitalized = lower.charAt(0).toUpperCase() + lower.slice(1)
+    const upper = tag.toUpperCase()
+    return [...new Set([lower, capitalized, upper])]
+  }, [tag])
+
   // Build filter for Phase 1 EventStore subscription
   const nativeFilter = useMemo((): Filter | null => {
-    if (!tag) return null
+    if (!tag || tagVariants.length === 0) return null
     return {
       kinds: videoKinds,
-      '#t': [tag.toLowerCase()],
+      '#t': tagVariants,
     }
-  }, [tag, videoKinds])
+  }, [tag, videoKinds, tagVariants])
 
   // Subscribe to EventStore for reactive updates (Phase 1)
   const nativeEvents = use$(() => {
@@ -184,7 +193,7 @@ export function useHashtagVideos({
       const filter: Filter = {
         kinds: [1985], // NIP-32 label events
         '#L': ['#t'], // Namespace for hashtags
-        '#l': [tag.toLowerCase()], // The actual label value
+        '#l': tagVariants, // The actual label value (lowercase, Capitalized, UPPERCASE)
         limit: 100,
       }
 

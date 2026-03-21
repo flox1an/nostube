@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
 - Trust badge displayed next to comment author names in comment threads
 - Trust badge displayed next to author display name on profile pages
+- Trust badge displayed next to video author name on video page
 - Trust badge displayed next to each user in the profile Following tab
 - Clickable trust badges — clicking any trust score badge opens a dialog with full score breakdown including social distance, distance weight, and individual validator scores with descriptions
 - IndexedDB caching for trust scores with 24-hour TTL — scores persist across page reloads and sessions
@@ -26,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Trust score filter now whitelists authors in the user's media follow set (kind 10020) — followed creators always pass the filter on explore, category, hashtag, and recommendation pages
+- Hashtag page queries now search lowercase, Capitalized, and UPPERCASE variants of the tag — catches videos tagged with any casing convention
 - Trust score cache uses stale-while-revalidate — always returns cached values instantly, refetches expired entries in the background; stale entries kept up to 7 days
 - Contribute transformation alert requires author global NosTube score ≥ 20%; mirror to blossom alert requires ≥ 10%
 - NSFW content filter in settings is locked to "Hide" when user's global NosTube trust score is below 20% or unavailable — shows info banner explaining the restriction
@@ -37,9 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trust scores not loading — ContextVM relay changed to `wss://relay.contextvm.org` (was using wrong relays that couldn't reach the server)
 - Trust score response parsing — server returns data in `structuredContent.trustScores` but parser only checked `content[].text`; now supports both formats
 - Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
-- Trust scores not resetting on logout or account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared when the user changes, since scores are personalized per source pubkey
+- Trust scores not resetting on account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared only when switching between logged-in accounts; logout preserves cached scores so the ephemeral key can continue serving requests
 - Trust score batch size reduced from 50 to 20 pubkeys per request — NIP-44 encrypted responses with 50 scores exceeded the 65535-byte plaintext limit, causing server-side encryption failures
 - Trust scores resetting on every re-render — `useTrustScoreProvider` depended on the `user` object reference (new every render) instead of `user.pubkey` (stable string), causing all caches to clear on any config change
+- NSFW filter locking to "hide" for high-score users — `isLoading` was false before the first fetch fired, so `globalScore === null` was treated as "unavailable" instead of "loading"; NsfwTrustGate and settings now wait for scores to finish loading before deciding whether to lock
 
 ## [0.2.29] - 2026-03-10
 

@@ -114,12 +114,13 @@ function NsfwTrustGate() {
   const { config, updateConfig } = useAppContext()
 
   useEffect(() => {
-    // Wait until score has loaded (or user is not logged in)
+    // Wait until score has actually loaded
     if (isLoading) return
-    // If score is null (unavailable) or below 20%, enforce 'hide'
-    const shouldLock = globalScore === null || globalScore < 0.2
-    if (shouldLock && config.nsfwFilter !== 'hide') {
-      updateConfig(c => ({ ...c, nsfwFilter: 'hide' }))
+    // Only enforce 'hide' when score is definitively null (unavailable) or below 20%
+    if (globalScore === null || globalScore < 0.2) {
+      if (config.nsfwFilter !== 'hide') {
+        updateConfig(c => ({ ...c, nsfwFilter: 'hide' }))
+      }
     }
   }, [globalScore, isLoading, config.nsfwFilter, updateConfig])
 

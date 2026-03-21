@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { TrustBadge } from '@/components/TrustBadge'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
 import { type NostrEvent } from 'nostr-tools'
@@ -226,7 +227,10 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           >
             <UserAvatar picture={metadata?.picture} pubkey={video?.pubkey} name={authorName} />
             <div>
-              <div className="font-semibold">{authorName}</div>
+              <div className="flex items-center gap-1.5 font-semibold">
+                {authorName}
+                {video?.pubkey && <TrustBadge pubkey={video.pubkey} />}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {video &&
                   formatDistance(new Date(getPublishDate(video) * 1000), new Date(), {

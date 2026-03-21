@@ -30,8 +30,8 @@ export function GeneralSettingsSection() {
     useFollowSet()
   const [isImporting, setIsImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
-  const { globalScore } = useGlobalScore(user?.pubkey)
-  const nsfwLocked = globalScore === null || globalScore < 0.2
+  const { globalScore, isLoading: scoreLoading } = useGlobalScore(user?.pubkey)
+  const nsfwLocked = !scoreLoading && (globalScore === null || globalScore < 0.2)
 
   const handleThumbServerChange = (value: string) => {
     updateConfig(currentConfig => ({

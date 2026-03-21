@@ -498,6 +498,7 @@
       "nsfwWarning": "Avertissement - Afficher flouté avec avertissement",
       "nsfwShow": "Afficher - Toujours afficher le contenu NSFW",
       "nsfwFilterDescription": "Contrôlez comment le contenu NSFW (Not Safe For Work) est affiché dans l'application.",
+      "nsfwLockedInfo": "Le contenu NSFW est masqué car votre score de confiance NosTube est inférieur à 20% ou pas encore disponible. Augmentez votre score en interagissant avec la plateforme.",
       "language": "Langue",
       "selectLanguage": "Sélectionner la langue",
       "languageDescription": "Choisissez la langue de l'interface utilisateur.",
@@ -626,7 +627,9 @@
   "pages": {
     "home": {
       "noVideos": "Aucune vidéo trouvée.",
-      "noMore": "Plus de vidéos à charger."
+      "noMore": "Plus de vidéos à charger.",
+      "trustFilterOn": "Filtre de confiance activé — auteurs à faible score masqués",
+      "trustFilterOff": "Filtre de confiance désactivé — toutes les vidéos affichées"
     },
     "shorts": {
       "noShorts": "Aucun short trouvé.",
@@ -889,6 +892,40 @@
     "it": "Italien",
     "tr": "Turc",
     "nl": "Néerlandais"
+  },
+  "trust": {
+    "badge": {
+      "tooltip": "Confiance {{label}} ({{percentage}}%) — cliquez pour les détails"
+    },
+    "dialog": {
+      "title": "Détails du score de confiance",
+      "description": "Score de confiance personnalisé de relatr via ContextVM",
+      "loading": "Chargement du score de confiance...",
+      "noScore": "Aucun score de confiance disponible pour cet utilisateur."
+    },
+    "labels": {
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "levels": {
+      "novice": "Novice",
+      "apprentice": "Apprenti",
+      "adept": "Adepte",
+      "master": "Maître",
+      "grandmaster": "Grand Maître",
+      "gm": "GM"
+    },
+    "details": {
+      "toggle": "Détails…",
+      "socialDistance": "Distance sociale",
+      "distanceWeight": "Poids de distance",
+      "normalizedDistance": "Distance normalisée",
+      "computedAt": "Calculé à",
+      "validators": "Validateurs",
+      "reportPenalty": "Pénalité de signalement active : ×{{score}}",
+      "trustLabel": "Confiance {{label}}"
+    }
   },
   "relaySource": {
     "global": "Global",

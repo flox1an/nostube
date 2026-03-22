@@ -5,6 +5,8 @@ import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { getTimelineLoader } from '@/nostr/core'
+import { getPublishDate } from '@/utils/video-event'
+import type { VideoEvent } from '@/utils/video-event'
 
 export function SubscriptionsPage() {
   const { t } = useTranslation()
@@ -41,10 +43,32 @@ export function SubscriptionsPage() {
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
 
+  // Show at most one long-form and one short per pubkey (videos are already sorted newest-first)
+  const dedupedVideos = useMemo(() => {
+    const seenLongform = new Set<string>()
+    const seenShorts = new Set<string>()
+    const result: VideoEvent[] = []
+    for (const video of videos) {
+      if (video.type === 'videos') {
+        if (!seenLongform.has(video.pubkey)) {
+          seenLongform.add(video.pubkey)
+          result.push(video)
+        }
+      } else if (video.type === 'shorts') {
+        if (!seenShorts.has(video.pubkey)) {
+          seenShorts.add(video.pubkey)
+          result.push(video)
+        }
+      }
+    }
+    // Re-sort by publish date since we interleaved two sets
+    return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+  }, [videos])
+
   return (
     <div className="max-w-560 mx-auto">
       <VideoTimelinePage
-        videos={videos}
+        videos={dedupedVideos}
         loading={loading}
         exhausted={exhausted}
         onLoadMore={loadMore}

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Subscriptions page now shows at most one long-form video and one short per followed pubkey (always the latest), preventing the feed from being dominated by a single creator
+- Subscriptions page now shows at most one long-form video and one short per followed pubkey per day (always the latest), preventing the feed from being dominated by a single creator
 - Subscriptions page now uses infinite scroll — loads more videos as you scroll down, same behavior as Explore and Shorts pages
 - Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
 

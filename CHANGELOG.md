@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Notification polling loop — `useNotifications` and `useZapNotifications` were depending on the `user` object in their polling `useEffect`, but `useCurrentUser` creates a new object reference on every render; switching to `user?.pubkey` (a stable string) stops the effect from re-triggering after each fetch completes
+
 ## [0.2.30] - 2026-03-30
 
 ### Fixed

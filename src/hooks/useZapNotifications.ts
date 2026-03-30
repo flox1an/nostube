@@ -317,8 +317,10 @@ export function useZapNotifications() {
   }, [])
 
   // Start polling when user is logged in
+  // Use pubkey (stable string) not the user object (new reference every render)
+  const userPubkey = user?.pubkey
   useEffect(() => {
-    if (!user) return
+    if (!userPubkey) return
 
     // Initial fetch
     fetchNotificationsRef.current?.()
@@ -331,7 +333,7 @@ export function useZapNotifications() {
     return () => {
       clearInterval(intervalId)
     }
-  }, [user])
+  }, [userPubkey])
 
   return {
     notifications,

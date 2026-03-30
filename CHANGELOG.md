@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Timeline pagination now uses per-relay cursors instead of a single shared cursor — previously, a relay with many recent events could exhaust its page budget in the recent window, and subsequent pages would skip its older events entirely (the gap between its page-1 cursor and the global minimum was never fetched). Affects Home, Subscriptions, Author, and Shorts feeds.
+
 ### Changed
 
 - Explore/Discovery page now shows at most one long-form video and one short per pubkey per day (always the latest), consistent with the Subscriptions feed

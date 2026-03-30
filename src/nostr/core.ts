@@ -1,13 +1,30 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
-import { createTimelineLoader, createEventLoaderForStore } from 'applesauce-loaders/loaders'
+import {
+  createEventLoaderForStore,
+  loadBlocksFromFilterMap,
+  loadBlocksFromCache,
+  type TimelineLoader,
+} from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
 import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
-import { filter, mergeMap, race, throwError, timer } from 'rxjs'
+import {
+  BehaviorSubject,
+  Observable,
+  merge,
+  share,
+  EMPTY,
+  filter,
+  mergeMap,
+  race,
+  throwError,
+  timer,
+} from 'rxjs'
+import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
 
 // Default relays for video content - these will be overridden by user config
@@ -108,11 +125,39 @@ export function getTimelineLoader(
   baseFilters: Filter,
   relays: string[] = DEFAULT_RELAYS,
   options?: { skipCache?: boolean }
-) {
-  const loader = createTimelineLoader(relayPool, relays, baseFilters, {
-    eventStore,
-    ...(options?.skipCache ? {} : { cache: cacheRequest }),
-    limit: 50,
-  })
-  return loader
+): TimelineLoader {
+  // Build a relay map so each relay gets its own independent backward cursor.
+  // With createTimelineLoader all relays share one cursor: the global minimum
+  // across all relays. This causes a gap when Relay A returns dense recent
+  // events (shallow cursor) while Relay B has older events (deep cursor) —
+  // Relay A's middle window gets permanently skipped on subsequent pages.
+  const relayMap: Record<string, Filter> = Object.fromEntries(
+    relays.map(relay => [relay, baseFilters])
+  )
+
+  const limit = 50
+  const window$ = new BehaviorSubject<{ since?: number; until?: number }>({})
+
+  // Per-relay loading: each relay advances its own cursor independently
+  const relays$ = window$.pipe(loadBlocksFromFilterMap(relayPool, relayMap, { limit }))
+
+  // Cache loading: shared, timestamp-based (unchanged behaviour)
+  const cache$ = options?.skipCache
+    ? EMPTY
+    : window$.pipe(loadBlocksFromCache(cacheRequest, baseFilters, { limit }))
+
+  // Deduplicate via EventStore and share the subscription across all callers.
+  // This mirrors the internals of the (unexported) wrapTimelineLoader helper.
+  const singleton$ = merge(cache$, relays$).pipe(filterDuplicateEvents(eventStore), share())
+
+  return (since?: number | { since?: number; until?: number }) =>
+    new Observable(observer => {
+      const sub = singleton$.subscribe(observer)
+      if (typeof since === 'object' && since !== undefined) {
+        window$.next(since)
+      } else {
+        window$.next({ since: since ?? -Infinity })
+      }
+      return () => sub.unsubscribe()
+    })
 }

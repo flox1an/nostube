@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.30] - 2026-03-30
+
 ### Fixed
 
 - Timeline pagination now uses per-relay cursors instead of a single shared cursor — previously, a relay with many recent events could exhaust its page budget in the recent window, and subsequent pages would skip its older events entirely (the gap between its page-1 cursor and the global minimum was never fetched). Affects Home, Subscriptions, Author, and Shorts feeds.

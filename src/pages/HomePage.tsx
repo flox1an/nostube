@@ -6,6 +6,8 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getPublishDate } from '@/utils/video-event'
+import type { VideoEvent } from '@/utils/video-event'
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -34,6 +36,29 @@ export function HomePage() {
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
 
+  // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
+  const dedupedVideos = useMemo(() => {
+    const seenLongform = new Set<string>()
+    const seenShorts = new Set<string>()
+    const result: VideoEvent[] = []
+    for (const video of videos) {
+      const day = new Date(getPublishDate(video) * 1000).toISOString().slice(0, 10)
+      const key = `${video.pubkey}:${day}`
+      if (video.type === 'videos') {
+        if (!seenLongform.has(key)) {
+          seenLongform.add(key)
+          result.push(video)
+        }
+      } else if (video.type === 'shorts') {
+        if (!seenShorts.has(key)) {
+          seenShorts.add(key)
+          result.push(video)
+        }
+      }
+    }
+    return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+  }, [videos])
+
   if (!videos) return null
 
   return (
@@ -42,7 +67,7 @@ export function HomePage() {
         <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
       </div>
       <VideoTimelinePage
-        videos={videos}
+        videos={dedupedVideos}
         loading={loading}
         exhausted={exhausted}
         onLoadMore={loadMore}

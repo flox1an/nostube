@@ -141,7 +141,7 @@ export function DraggableSubtitle({
         left: `${position.x}%`,
         top: `${position.y}%`,
         transform: 'translate(-50%, -50%)',
-        zIndex: 20,
+        zIndex: 30,
       }}
     >
       <div

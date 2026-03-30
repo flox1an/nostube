@@ -63,6 +63,8 @@ export function useCategoryVideos({
   const prevVideoCountRef = useRef(0)
   // Store subscription ref to keep it alive during loadMore
   const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
+  // Persist the loader across loadMore calls so per-relay cursors advance correctly
+  const loaderRef = useRef<ReturnType<typeof getTimelineLoader> | null>(null)
 
   // Normalize tags to lowercase
   const normalizedTags = useMemo(() => tags.map(tag => tag.toLowerCase()), [tags])
@@ -136,6 +138,8 @@ export function useCategoryVideos({
       relays,
       directMode ? { skipCache: true } : undefined
     )
+    // Store so loadMore can reuse the same loader — preserving per-relay cursor state
+    loaderRef.current = loader
 
     let eventCount = 0
     const subscription = loader().subscribe({
@@ -176,7 +180,7 @@ export function useCategoryVideos({
 
   // Load more videos (pagination)
   const loadMore = useCallback(() => {
-    if (!filters || loading || exhausted || videos.length === 0) return
+    if (!loaderRef.current || loading || exhausted || videos.length === 0) return
 
     // Clean up any previous loadMore subscription
     loadMoreSubscriptionRef.current?.unsubscribe()
@@ -184,22 +188,10 @@ export function useCategoryVideos({
     setLoading(true)
     prevVideoCountRef.current = videos.length
 
-    // Get the oldest event timestamp for pagination
-    const oldestVideo = videos[videos.length - 1]
-    const until = oldestVideo.created_at
-
-    const paginatedFilter = { ...filters, until }
-    // Create unique cache key for paginated request
-    const cacheKey = `category:${normalizedTags.sort().join(',')}:r:${relays.sort().join(',')}:until:${until}`
-    const loader = getTimelineLoader(
-      cacheKey,
-      paginatedFilter,
-      relays,
-      directMode ? { skipCache: true } : undefined
-    )
-
+    // Reuse the same loader instance — its per-relay cursors have already advanced
+    // to the oldest event seen per relay, so this call fetches the next block backward
     let eventCount = 0
-    loadMoreSubscriptionRef.current = loader().subscribe({
+    loadMoreSubscriptionRef.current = loaderRef.current().subscribe({
       next: (event: NostrEvent) => {
         if (directMode) {
           setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
@@ -210,8 +202,7 @@ export function useCategoryVideos({
       },
       complete: () => {
         setLoading(false)
-        // If we got fewer events than the limit, we're exhausted
-        if (eventCount < limit) {
+        if (eventCount === 0) {
           setExhausted(true)
         }
       },
@@ -220,7 +211,7 @@ export function useCategoryVideos({
         setLoading(false)
       },
     })
-  }, [filters, relays, eventStore, loading, exhausted, videos, limit, normalizedTags, directMode])
+  }, [loading, exhausted, videos.length, directMode, eventStore])
 
   return {
     videos,

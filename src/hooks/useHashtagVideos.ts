@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { getTimelineLoader } from '@/nostr/core'
 import {
   processEvent,
   processEvents,
@@ -69,6 +70,8 @@ export function useHashtagVideos({
   const phase1Relays = useRef<string[]>([])
   // Store subscription ref to keep it alive during loadMore
   const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
+  // Persist the loader across loadMore calls so per-relay cursors advance correctly
+  const loaderRef = useRef<ReturnType<typeof getTimelineLoader> | null>(null)
 
   // Build filter for Phase 1 EventStore subscription
   const nativeFilter = useMemo((): Filter | null => {
@@ -119,6 +122,7 @@ export function useHashtagVideos({
     labelQueriesStarted.current = false
     phase1CompletedOnce.current = false
     phase1Relays.current = []
+    loaderRef.current = null
   }, [tag])
 
   // Phase 1: Load native videos from relays into EventStore
@@ -130,7 +134,9 @@ export function useHashtagVideos({
 
     queueMicrotask(() => setLoading(true))
 
-    const loader = createTimelineLoader(pool, relays, nativeFilter, { eventStore, limit })
+    const loader = getTimelineLoader(`hashtag:${tag}`, nativeFilter, relays)
+    // Store so loadMore can reuse the same loader — preserving per-relay cursor state
+    loaderRef.current = loader
 
     let eventCount = 0
     const subscription = loader().subscribe({
@@ -319,31 +325,24 @@ export function useHashtagVideos({
 
   // Load more videos (pagination for native videos)
   const loadMore = useCallback(() => {
-    if (!nativeFilter || !pool || loading || exhausted || mergedVideos.length === 0) return
+    if (!loaderRef.current || loading || exhausted || mergedVideos.length === 0) return
 
     // Clean up any previous loadMore subscription
     loadMoreSubscriptionRef.current?.unsubscribe()
 
     setLoading(true)
 
-    // Get the oldest native video timestamp for pagination
-    // We use merged videos since that's what's displayed, but filter for native ones
-    const oldestVideo = mergedVideos[mergedVideos.length - 1]
-    const until = oldestVideo.created_at
-
-    const paginatedFilter = { ...nativeFilter, until }
-    const loader = createTimelineLoader(pool, relays, paginatedFilter, { eventStore, limit })
-
+    // Reuse the same loader instance — its per-relay cursors have already advanced
+    // to the oldest event seen per relay, so this call fetches the next block backward
     let eventCount = 0
-    loadMoreSubscriptionRef.current = loader().subscribe({
+    loadMoreSubscriptionRef.current = loaderRef.current().subscribe({
       next: (event: NostrEvent) => {
         eventStore.add(event)
         eventCount++
       },
       complete: () => {
         setLoading(false)
-        // If we got fewer events than the limit, we're exhausted
-        if (eventCount < limit) {
+        if (eventCount === 0) {
           setExhausted(true)
         }
       },
@@ -352,7 +351,7 @@ export function useHashtagVideos({
         setLoading(false)
       },
     })
-  }, [nativeFilter, pool, relays, eventStore, loading, exhausted, mergedVideos, limit])
+  }, [loading, exhausted, mergedVideos.length, eventStore])
 
   return {
     videos: mergedVideos,

@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Draggable subtitle overlay — click and drag subtitles to any position on the video; position persists across sessions; double-click to reset to default
-
 ## [0.2.30] - 2026-03-30
 
 ### Fixed

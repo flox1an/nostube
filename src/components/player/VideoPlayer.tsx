@@ -15,6 +15,7 @@ import {
   useMediaSession,
 } from './hooks'
 import { ControlBar } from './ControlBar'
+import { DraggableSubtitle } from './DraggableSubtitle'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
@@ -613,8 +614,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     const tracks = el.textTracks
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i]
-      // Show only the track matching the selected language
-      track.mode = lang && track.language === lang ? 'showing' : 'hidden'
+      // Load cues for the selected track but suppress native rendering (DraggableSubtitle handles display)
+      track.mode = lang && track.language === lang ? 'hidden' : 'disabled'
     }
   }, [])
 
@@ -897,6 +898,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         isVisible={isAccumulating}
         direction={direction}
       />
+
+      {/* Draggable subtitle overlay */}
+      {hasCaptions && (
+        <DraggableSubtitle
+          videoRef={videoRef}
+          containerRef={containerRef}
+          captionsEnabled={captionsEnabled}
+          selectedSubtitleLang={selectedSubtitleLang}
+        />
+      )}
 
       {/* Touch overlay for mobile */}
       {isMobile && (

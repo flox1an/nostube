@@ -66,6 +66,50 @@ const REQUEST_TIMEOUT_MS = 5000
 const originalRequest = relayPool.request.bind(relayPool)
 
 relayPool.request = ((relays, filters, opts) => {
+  if (import.meta.env.DEV) {
+    const start = Date.now()
+    const relayList = Array.isArray(relays) ? relays : [relays]
+    console.log(`[relay] request to ${relayList.length} relay(s): ${JSON.stringify(relayList)}`)
+    const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
+      mergeMap(() => {
+        console.warn(
+          `[relay] ⏱ TIMEOUT after ${REQUEST_TIMEOUT_MS}ms for relays: ${JSON.stringify(relayList)}`
+        )
+        return throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`))
+      })
+    )
+    let eventCount = 0
+    return race(
+      new Observable(observer => {
+        const sub = originalRequest(relays, filters, opts).subscribe({
+          next: (event: unknown) => {
+            eventCount++
+            if (eventCount === 1) {
+              console.log(
+                `[relay] ⚡ first event from relay in ${Date.now() - start}ms: ${JSON.stringify(relayList)}`
+              )
+            }
+            observer.next(event)
+          },
+          error: (err: unknown) => {
+            console.warn(
+              `[relay] ❌ error after ${Date.now() - start}ms from: ${JSON.stringify(relayList)}`,
+              err
+            )
+            observer.error(err)
+          },
+          complete: () => {
+            console.log(
+              `[relay] ✅ complete after ${Date.now() - start}ms, ${eventCount} events from: ${JSON.stringify(relayList)}`
+            )
+            observer.complete()
+          },
+        })
+        return () => sub.unsubscribe()
+      }),
+      timeout$
+    )
+  }
   const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
     mergeMap(() =>
       throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`))

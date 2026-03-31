@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Notification polling loop — `useNotifications` and `useZapNotifications` were depending on the `user` object in their polling `useEffect`, but `useCurrentUser` creates a new object reference on every render; switching to `user?.pubkey` (a stable string) stops the effect from re-triggering after each fetch completes
+- Removed `ditto.pub/relay` from the default preset relay list — it was consistently taking 5+ seconds to send EOSE, blocking the Subscriptions and Explore page load for all users; all other preset relays complete in under 600ms
+
+### Added
+
+- Per-relay timing logs in dev mode (`[relay] ⚡`, `✅`, `⏱ TIMEOUT`) on `relayPool.request` to diagnose slow relay response times
 
 ## [0.2.30] - 2026-03-30
 

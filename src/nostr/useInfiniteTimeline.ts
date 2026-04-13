@@ -25,12 +25,19 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   // Track safety timeout to clear it properly
   const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Early-complete timer: fires 500ms after the first event arrives so fast-relay
+  // results are shown immediately without waiting for slow relays to finish.
+  const earlyCompleteTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   // Cleanup subscription and timeout on unmount
   useEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current)
+      }
+      if (earlyCompleteTimerRef.current) {
+        clearTimeout(earlyCompleteTimerRef.current)
       }
     }
   }, [])
@@ -50,10 +57,14 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     }
     isFirstLoadRef.current = false
 
-    // Cleanup previous subscription and timeout before creating a new one
+    // Cleanup previous subscription and timeouts before creating a new one
     subscriptionRef.current?.unsubscribe()
     if (safetyTimeoutRef.current) {
       clearTimeout(safetyTimeoutRef.current)
+    }
+    if (earlyCompleteTimerRef.current) {
+      clearTimeout(earlyCompleteTimerRef.current)
+      earlyCompleteTimerRef.current = null
     }
 
     setLoading(true)
@@ -96,11 +107,30 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
           const newList = Array.from(insertEventIntoDescendingList(prev, event))
           return newList
         })
+        // After the first event arrives, start a 500ms timer to release the loading
+        // state early. This lets fast-relay results show up without waiting for slow
+        // relays. Slow relays keep streaming in the background; the next loadMore call
+        // will safely re-query them from their current cursor.
+        if (!earlyCompleteTimerRef.current) {
+          earlyCompleteTimerRef.current = setTimeout(() => {
+            earlyCompleteTimerRef.current = null
+            setEvents(currentEvents => {
+              if (currentEvents.length > eventCountBeforeLoadRef.current) {
+                setLoading(false)
+              }
+              return currentEvents
+            })
+          }, 500)
+        }
       },
       complete: () => {
         if (safetyTimeoutRef.current) {
           clearTimeout(safetyTimeoutRef.current)
           safetyTimeoutRef.current = null
+        }
+        if (earlyCompleteTimerRef.current) {
+          clearTimeout(earlyCompleteTimerRef.current)
+          earlyCompleteTimerRef.current = null
         }
 
         // Check immediately if we received any events from the loader
@@ -126,6 +156,10 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         if (safetyTimeoutRef.current) {
           clearTimeout(safetyTimeoutRef.current)
           safetyTimeoutRef.current = null
+        }
+        if (earlyCompleteTimerRef.current) {
+          clearTimeout(earlyCompleteTimerRef.current)
+          earlyCompleteTimerRef.current = null
         }
         console.error('[useInfiniteTimeline] Load error:', err)
         setLoading(false)
@@ -229,6 +263,10 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     if (safetyTimeoutRef.current) {
       clearTimeout(safetyTimeoutRef.current)
       safetyTimeoutRef.current = null
+    }
+    if (earlyCompleteTimerRef.current) {
+      clearTimeout(earlyCompleteTimerRef.current)
+      earlyCompleteTimerRef.current = null
     }
     setEvents([])
     setExhausted(false)

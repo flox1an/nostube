@@ -9,12 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Infinite scroll pagination no longer waits for all relays to finish before showing new results — `useInfiniteTimeline` now sets `loading=false` 500ms after the first event arrives, so results from fast relays appear immediately; slow relays continue streaming in the background and are re-queried correctly on the next page load
 - Notification polling loop — `useNotifications` and `useZapNotifications` were depending on the `user` object in their polling `useEffect`, but `useCurrentUser` creates a new object reference on every render; switching to `user?.pubkey` (a stable string) stops the effect from re-triggering after each fetch completes
 - Removed `ditto.pub/relay` from the default preset relay list — it was consistently taking 5+ seconds to send EOSE, blocking the Subscriptions and Explore page load for all users; all other preset relays complete in under 600ms
 
 ### Added
 
 - Per-relay timing logs in dev mode (`[relay] ⚡`, `✅`, `⏱ TIMEOUT`) on `relayPool.request` to diagnose slow relay response times
+- Brand SVG icon components (`YoutubeIcon`, `InstagramIcon`, `TwitterIcon`, `FacebookIcon`) in `src/components/icons/brands.tsx` to replace removed lucide-react brand icons
+
+### Changed
+
+- Upgraded all dependencies to latest compatible versions; major upgrades include lucide-react 1.x, nostr-idb 5.x, react-dropzone 15.x, i18next 26.x, react-i18next 17.x
 
 ## [0.2.30] - 2026-03-30
 

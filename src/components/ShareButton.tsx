@@ -11,17 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Clock,
-  Mail,
-  Send,
-  Twitter,
-  Globe,
-  Facebook,
-  Share2,
-  Link as LinkIcon,
-  Code,
-} from 'lucide-react'
+import { Clock, Mail, Send, Globe, Share2, Link as LinkIcon, Code } from 'lucide-react'
+import { TwitterIcon, FacebookIcon } from '@/components/icons/brands'
 import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -172,7 +163,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
                 rel="noopener noreferrer"
                 title={t('video.share.onX')}
               >
-                <Twitter className="w-7 h-7" />
+                <TwitterIcon className="w-7 h-7" />
               </a>
               <a
                 href={shareLinks.reddit}
@@ -188,7 +179,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
                 rel="noopener noreferrer"
                 title={t('video.share.onFacebook')}
               >
-                <Facebook className="w-7 h-7" />
+                <FacebookIcon className="w-7 h-7" />
               </a>
               <a
                 href={shareLinks.pinterest}

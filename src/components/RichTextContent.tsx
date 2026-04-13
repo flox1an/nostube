@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Youtube, Instagram, Twitter, Facebook } from 'lucide-react'
+import { YoutubeIcon, InstagramIcon, TwitterIcon, FacebookIcon } from '@/components/icons/brands'
 import { Badge } from '@/components/ui/badge'
 import { nip19 } from 'nostr-tools'
 import { useProfile } from '@/hooks/useProfile'
@@ -21,7 +21,7 @@ interface SocialMediaPlatform {
 const socialMediaPlatforms: SocialMediaPlatform[] = [
   {
     name: 'YouTube',
-    icon: Youtube,
+    icon: YoutubeIcon,
     patterns: [/youtube\.com/, /youtu\.be/],
     extractTitle: (url: string) => {
       // Handle channel links like youtube.com/@username
@@ -35,7 +35,7 @@ const socialMediaPlatforms: SocialMediaPlatform[] = [
   },
   {
     name: 'Instagram',
-    icon: Instagram,
+    icon: InstagramIcon,
     patterns: [/instagram\.com/, /instagr\.am/],
     extractTitle: (url: string) => {
       // Handle both profile links and post/reel links
@@ -49,7 +49,7 @@ const socialMediaPlatforms: SocialMediaPlatform[] = [
   },
   {
     name: 'X',
-    icon: Twitter,
+    icon: TwitterIcon,
     patterns: [/twitter\.com/, /x\.com/],
     extractTitle: (url: string) => {
       const match = url.match(/(?:twitter|x)\.com\/([^/]+)\/status\/([^/?]+)/)
@@ -60,7 +60,7 @@ const socialMediaPlatforms: SocialMediaPlatform[] = [
   },
   {
     name: 'Facebook',
-    icon: Facebook,
+    icon: FacebookIcon,
     patterns: [/facebook\.com/, /fb\.com/],
     extractTitle: (url: string) => {
       const match = url.match(/facebook\.com\/([^/?]+)\/?/)

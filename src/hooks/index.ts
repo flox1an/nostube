@@ -44,6 +44,7 @@ export { useReportedPubkeys } from './useReportedPubkeys'
 export type { ReportedPubkeys } from './useReportedPubkeys'
 export { useReports } from './useReports'
 export type { ProcessedReportEvent } from './useReports'
+export { useTrustScore, useTrustScores, useTrustScoreProvider } from './useTrustScore'
 
 // ============================================================================
 // VIDEO PLAYBACK & PLAYER

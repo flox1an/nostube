@@ -8,6 +8,7 @@ import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
+import { useTrustFilter } from '@/hooks/useTrustFilter'
 
 export function CategoryPage() {
   const { t } = useTranslation()
@@ -37,6 +38,8 @@ export function CategoryPage() {
     videoKinds,
     directMode: !!relayOverride,
   })
+
+  const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   // Update document title
   useEffect(() => {
@@ -79,10 +82,11 @@ export function CategoryPage() {
         activeSlug={categorySlug}
         selectedRelay={relayOverride}
         onRelayChange={setRelayOverride}
+        afterRelay={filterButton}
       />
 
       <VideoTimelinePage
-        videos={videos}
+        videos={filteredVideos ?? []}
         loading={loading}
         exhausted={exhausted}
         onLoadMore={loadMore}

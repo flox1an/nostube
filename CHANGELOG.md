@@ -7,34 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Infinite scroll pagination no longer waits for all relays to finish before showing new results — `useInfiniteTimeline` now sets `loading=false` 500ms after the first event arrives, so results from fast relays appear immediately; slow relays continue streaming in the background and are re-queried correctly on the next page load
-- Notification polling loop — `useNotifications` and `useZapNotifications` were depending on the `user` object in their polling `useEffect`, but `useCurrentUser` creates a new object reference on every render; switching to `user?.pubkey` (a stable string) stops the effect from re-triggering after each fetch completes
-- Removed `ditto.pub/relay` from the default preset relay list — it was consistently taking 5+ seconds to send EOSE, blocking the Subscriptions and Explore page load for all users; all other preset relays complete in under 600ms
-
 ### Added
 
+- Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
+- Trust badge displayed next to comment author names in comment threads
+- Trust badge displayed next to author display name on profile pages
+- Trust badge displayed next to video author name on video page
+- Trust badge displayed next to each user in the profile Following tab
+- Clickable trust badges — clicking any trust score badge opens a dialog with full score breakdown including social distance, distance weight, and individual validator scores with descriptions
+- IndexedDB caching for trust scores with 24-hour TTL — scores persist across page reloads and sessions
+- Batched trust score requests — collects pubkeys over a 300ms window and fetches in groups of 50, so rendering 100 comments triggers 2 network requests instead of 100
+- Two-tier trust score cache — in-memory Map for instant synchronous reads backed by IndexedDB for persistence
+- NosTube user level system in trust score dialog — RPG-style ranks (Novice >0%, Apprentice >20%, Adept >50%, Master >75%, Grandmaster >90%) with colored progress bar and tier markers, replacing the plain global score percentage
+- Trust badge tooltips now show RPG level name instead of High/Medium/Low
+- Trust score filter on explore, category, and hashtag pages — small shield toggle button (green outline when active) hides videos from authors with personalized trust score below 40% or global NosTube score below 20%; enabled by default, click to toggle off and see all videos
+- Reusable `useTrustFilter` hook and filter button — extracted from HomePage for consistent trust filtering across all feed pages
+- Trust score filter on video recommendations sidebar — always on for logged-in users, same thresholds as explore (personal >= 40%, global >= 20%)
+- Trust scores available when logged out — uses an ephemeral key so explore page filtering and recommendations work for anonymous visitors
 - Per-relay timing logs in dev mode (`[relay] ⚡`, `✅`, `⏱ TIMEOUT`) on `relayPool.request` to diagnose slow relay response times
 - Brand SVG icon components (`YoutubeIcon`, `InstagramIcon`, `TwitterIcon`, `FacebookIcon`) in `src/components/icons/brands.tsx` to replace removed lucide-react brand icons
 
 ### Changed
 
+- Trust score filter now whitelists authors in the user's media follow set (kind 10020) — followed creators always pass the filter on explore, category, hashtag, and recommendation pages
+- Hashtag page queries now search lowercase, Capitalized, and UPPERCASE variants of the tag — catches videos tagged with any casing convention
+- Trust score cache uses stale-while-revalidate — always returns cached values instantly, refetches expired entries in the background; stale entries kept up to 7 days
+- Contribute transformation alert requires author global NosTube score ≥ 20%; mirror to blossom alert requires ≥ 10%
+- NSFW content filter in settings is locked to "Hide" when user's global NosTube trust score is below 20% or unavailable — shows info banner explaining the restriction
+- NsfwTrustGate — automatically resets `nsfwFilter` config to "hide" on login or account switch when global trust score is below 20% or unavailable, so the filter is enforced even if a previous session stored a different value
+- Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
 - Upgraded all dependencies to latest compatible versions; major upgrades include lucide-react 1.x, nostr-idb 5.x, react-dropzone 15.x, i18next 26.x, react-i18next 17.x
-
-## [0.2.30] - 2026-03-30
 
 ### Fixed
 
-- Timeline pagination now uses per-relay cursors instead of a single shared cursor — previously, a relay with many recent events could exhaust its page budget in the recent window, and subsequent pages would skip its older events entirely (the gap between its page-1 cursor and the global minimum was never fetched). Affects Home, Subscriptions, Author, and Shorts feeds.
-- Hashtag and Category pages now reuse the same loader instance across `loadMore` calls instead of creating a new loader anchored at a global `until` timestamp — each relay now advances its own cursor independently when paginating.
-
-### Changed
-
-- Explore/Discovery page now shows at most one long-form video and one short per pubkey per day (always the latest), consistent with the Subscriptions feed
-- Subscriptions page now shows at most one long-form video and one short per followed pubkey per day (always the latest), preventing the feed from being dominated by a single creator
-- Subscriptions page now uses infinite scroll — loads more videos as you scroll down, same behavior as Explore and Shorts pages
-- Moved broadcast button inline with the relay list in the debug dialog instead of a separate section
+- Infinite scroll pagination no longer waits for all relays to finish before showing new results — `useInfiniteTimeline` now sets `loading=false` 500ms after the first event arrives, so results from fast relays appear immediately; slow relays continue streaming in the background and are re-queried correctly on the next page load
+- Notification polling loop — `useNotifications` and `useZapNotifications` were depending on the `user` object in their polling `useEffect`, but `useCurrentUser` creates a new object reference on every render; switching to `user?.pubkey` (a stable string) stops the effect from re-triggering after each fetch completes
+- Removed `ditto.pub/relay` from the default preset relay list — it was consistently taking 5+ seconds to send EOSE, blocking the Subscriptions and Explore page load for all users; all other preset relays complete in under 600ms
+- Trust scores not loading — ContextVM relay changed to `wss://relay.contextvm.org` (was using wrong relays that couldn't reach the server)
+- Trust score response parsing — server returns data in `structuredContent.trustScores` but parser only checked `content[].text`; now supports both formats
+- Trust scores not appearing after login — pubkeys requested before login were silently dropped; now flushes pending batch when private key becomes available
+- Trust scores not resetting on account switch — in-memory cache, IndexedDB, and ContextVM connection are now cleared only when switching between logged-in accounts; logout preserves cached scores so the ephemeral key can continue serving requests
+- Trust score batch size reduced from 50 to 20 pubkeys per request — NIP-44 encrypted responses with 50 scores exceeded the 65535-byte plaintext limit, causing server-side encryption failures
+- Trust scores resetting on every re-render — `useTrustScoreProvider` depended on the `user` object reference (new every render) instead of `user.pubkey` (stable string), causing all caches to clear on any config change
+- NSFW filter locking to "hide" for high-score users — `isLoading` was false before the first fetch fired, so `globalScore === null` was treated as "unavailable" instead of "loading"; NsfwTrustGate and settings now wait for scores to finish loading before deciding whether to lock
 
 ## [0.2.29] - 2026-03-10
 

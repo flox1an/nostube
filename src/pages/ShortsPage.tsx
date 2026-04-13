@@ -6,6 +6,7 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useTrustFilter } from '@/hooks/useTrustFilter'
 
 export function ShortsPage() {
   const { t } = useTranslation()
@@ -33,14 +34,19 @@ export function ShortsPage() {
   )
 
   const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
+  const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   return (
     <div className="max-w-560 mx-auto">
       <div className="sm:px-2">
-        <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
+        <CategoryButtonBar
+          selectedRelay={relayOverride}
+          onRelayChange={setRelayOverride}
+          afterRelay={filterButton}
+        />
       </div>
       <VideoTimelinePage
-        videos={videos}
+        videos={filteredVideos ?? []}
         loading={loading}
         exhausted={exhausted}
         onLoadMore={loadMore}

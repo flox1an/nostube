@@ -511,6 +511,7 @@
       "nsfwWarning": "Warning - Show blurred with warning",
       "nsfwShow": "Show - Always show NSFW content",
       "nsfwFilterDescription": "Control how NSFW (Not Safe For Work) content is displayed in the app.",
+      "nsfwLockedInfo": "NSFW content is hidden because your NosTube trust score is below 20% or not yet available. Build your score by engaging with the platform.",
       "language": "Language",
       "selectLanguage": "Select language",
       "languageDescription": "Choose the language for the user interface.",
@@ -664,7 +665,9 @@
   "pages": {
     "home": {
       "noVideos": "No videos found.",
-      "noMore": "No more videos to load."
+      "noMore": "No more videos to load.",
+      "trustFilterOn": "Trust filter on — hiding low-score authors",
+      "trustFilterOff": "Trust filter off — showing all videos"
     },
     "shorts": {
       "noShorts": "No shorts found.",
@@ -954,6 +957,40 @@
     "noLightningAddress": "Author cannot receive zaps",
     "loginRequired": "Please log in to zap",
     "failed": "Zap failed"
+  },
+  "trust": {
+    "badge": {
+      "tooltip": "{{label}} trust ({{percentage}}%) — click for details"
+    },
+    "dialog": {
+      "title": "Trust Score Details",
+      "description": "Personalized trust score from relatr via ContextVM",
+      "loading": "Loading trust score...",
+      "noScore": "No trust score available for this user."
+    },
+    "labels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "levels": {
+      "novice": "Novice",
+      "apprentice": "Apprentice",
+      "adept": "Adept",
+      "master": "Master",
+      "grandmaster": "Grandmaster",
+      "gm": "GM"
+    },
+    "details": {
+      "toggle": "Details…",
+      "socialDistance": "Social Distance",
+      "distanceWeight": "Distance Weight",
+      "normalizedDistance": "Normalized Distance",
+      "computedAt": "Computed At",
+      "validators": "Validators",
+      "reportPenalty": "Report penalty active: ×{{score}}",
+      "trustLabel": "{{label}} Trust"
+    }
   },
   "relaySource": {
     "global": "Global",

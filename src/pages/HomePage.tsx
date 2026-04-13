@@ -8,6 +8,7 @@ import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getPublishDate } from '@/utils/video-event'
 import type { VideoEvent } from '@/utils/video-event'
+import { useTrustFilter } from '@/hooks/useTrustFilter'
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -26,8 +27,6 @@ export function HomePage() {
     [relayOverride, relays]
   )
 
-  // Memoize the loader to prevent recreation on every render
-  // When relay override is active, skip EventStore cache to show only that relay's events
   const loader = useMemo(
     () =>
       videoTypeLoader('videos', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
@@ -59,15 +58,21 @@ export function HomePage() {
     return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [videos])
 
-  if (!videos) return null
+  const { filteredVideos, filterButton } = useTrustFilter(dedupedVideos)
+
+  if (!filteredVideos) return null
 
   return (
     <div className="max-w-560 mx-auto">
       <div className="sm:px-2">
-        <CategoryButtonBar selectedRelay={relayOverride} onRelayChange={setRelayOverride} />
+        <CategoryButtonBar
+          selectedRelay={relayOverride}
+          onRelayChange={setRelayOverride}
+          afterRelay={filterButton}
+        />
       </div>
       <VideoTimelinePage
-        videos={dedupedVideos}
+        videos={filteredVideos}
         loading={loading}
         exhausted={exhausted}
         onLoadMore={loadMore}

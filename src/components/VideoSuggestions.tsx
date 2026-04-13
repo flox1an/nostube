@@ -12,6 +12,9 @@ import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
+import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
+import { useFollowSet } from '@/hooks/useFollowSet'
+import { MIN_PERSONAL_SCORE, MIN_GLOBAL_SCORE } from '@/hooks/useTrustFilter'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -315,12 +318,56 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     presetContent.nsfwPubkeys,
   ])
 
+  // Trust score filtering — always on (ephemeral key used when logged out)
+  const { followedPubkeys } = useFollowSet()
+  const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])
+
+  const suggestionPubkeys = useMemo(
+    () => [...new Set(suggestions.map(v => v.pubkey))],
+    [suggestions]
+  )
+  const personalScores = useTrustScores(suggestionPubkeys)
+  const globalScores = useGlobalScores(suggestionPubkeys)
+
+  // Track if scores arrived after initial render (deferred filtering)
+  const [scoresReady, setScoresReady] = useState(false)
+  const hadScoresOnMount = useMemo(() => {
+    if (suggestionPubkeys.length === 0) return true
+    // If any score is already available on first check, scores were cached
+    return suggestionPubkeys.some(pk => personalScores.get(pk) !== null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!scoresReady && suggestionPubkeys.some(pk => personalScores.get(pk) !== null)) {
+      setScoresReady(true)
+    }
+  }, [personalScores, suggestionPubkeys, scoresReady])
+
+  // Fade in only when scores arrived after a delay (not cached from the start)
+  const shouldFadeIn = !hadScoresOnMount && scoresReady
+
+  const filteredSuggestions = useMemo(() => {
+    return suggestions.filter(v => {
+      // Always show videos from followed authors
+      if (followedSet.has(v.pubkey)) return true
+      const personal = personalScores.get(v.pubkey)
+      const global = globalScores.get(v.pubkey)
+      // Don't hide while scores are still loading
+      if (personal === null || personal === undefined) return true
+      if (global === null || global === undefined) return true
+      return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
+    })
+  }, [suggestions, personalScores, globalScores, followedSet])
+
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
-    <div className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'}`}>
+    <div
+      className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'} ${shouldFadeIn ? 'animate-in fade-in duration-200' : ''}`}
+    >
       {authorIsLoading || globalIsLoading
         ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
-        : suggestions.map(video => (
+        : filteredSuggestions.map(video => (
             <VideoSuggestionItem
               key={video.id}
               video={video}

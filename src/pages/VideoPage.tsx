@@ -676,6 +676,7 @@ export function VideoPage() {
             {video?.id && !isChecking && (
               <VideoAvailabilityAlert
                 videoId={video.id}
+                authorPubkey={video.pubkey}
                 blossomServerCount={blossomServerCount}
                 onMirror={handleMirror}
               />
@@ -683,6 +684,7 @@ export function VideoPage() {
             {video?.id && video?.allVideoVariants && blossomServerCount !== 1 && (
               <VideoTransformAlert
                 videoId={video.id}
+                authorPubkey={video.pubkey}
                 videoVariants={video.allVideoVariants}
                 onTransform={handleTransform}
               />

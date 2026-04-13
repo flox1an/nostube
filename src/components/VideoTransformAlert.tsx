@@ -10,10 +10,15 @@ import {
   extractCodecFromMimeType,
 } from '@/lib/video-transformation-detection'
 import { dismissAlert, isAlertDismissed } from '@/lib/dismissed-alerts'
+import { useTrustScore } from '@/hooks/useTrustScore'
 import { useState, useEffect } from 'react'
+
+/** Minimum global NosTube score (0–1) for the author to show the transform alert */
+const MIN_GLOBAL_SCORE = 0.2
 
 interface VideoTransformAlertProps {
   videoId: string
+  authorPubkey?: string
   videoVariants: VideoVariant[]
   onTransform: () => void
 }
@@ -25,11 +30,13 @@ interface VideoTransformAlertProps {
  */
 export function VideoTransformAlert({
   videoId,
+  authorPubkey,
   videoVariants,
   onTransform,
 }: VideoTransformAlertProps) {
   const { t } = useTranslation()
   const currentUser = useCurrentUser()
+  const { globalScore } = useTrustScore(authorPubkey)
   const [isDismissed, setIsDismissed] = useState(false)
 
   // Check dismissed state on mount and when videoId changes
@@ -42,8 +49,9 @@ export function VideoTransformAlert({
     setIsDismissed(true)
   }
 
-  // Only show if logged in
+  // Only show if logged in and author has sufficient global score
   if (!currentUser.user) return null
+  if (globalScore === null || globalScore < MIN_GLOBAL_SCORE) return null
 
   // Check if video variants exist
   if (!videoVariants || videoVariants.length === 0) return null

@@ -3,11 +3,16 @@ import { AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { dismissAlert, isAlertDismissed } from '@/lib/dismissed-alerts'
+import { useTrustScore } from '@/hooks/useTrustScore'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
+/** Minimum global NosTube score (0–1) for the author to show the mirror alert */
+const MIN_GLOBAL_SCORE = 0.1
+
 interface VideoAvailabilityAlertProps {
   videoId: string
+  authorPubkey?: string
   blossomServerCount: number
   onMirror: () => void
 }
@@ -19,11 +24,13 @@ interface VideoAvailabilityAlertProps {
  */
 export function VideoAvailabilityAlert({
   videoId,
+  authorPubkey,
   blossomServerCount,
   onMirror,
 }: VideoAvailabilityAlertProps) {
   const { t } = useTranslation()
   const currentUser = useCurrentUser()
+  const { globalScore } = useTrustScore(authorPubkey)
   const [isDismissed, setIsDismissed] = useState(false)
 
   // Check dismissed state on mount and when videoId changes
@@ -36,9 +43,11 @@ export function VideoAvailabilityAlert({
     setIsDismissed(true)
   }
 
-  // Only show if logged in, has at least one Blossom URL, fewer than 2 servers, and not dismissed
+  // Only show if logged in, has at least one Blossom URL, fewer than 2 servers, not dismissed,
+  // and author has sufficient global score
   if (!currentUser.user || blossomServerCount === 0 || blossomServerCount > 1 || isDismissed)
     return null
+  if (globalScore === null || globalScore < MIN_GLOBAL_SCORE) return null
 
   return (
     <Alert className="border-primary relative">

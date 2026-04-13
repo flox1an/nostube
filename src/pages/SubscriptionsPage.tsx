@@ -41,7 +41,10 @@ export function SubscriptionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pubkeysKey, relays])
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
+  const { videos, loading, exhausted, subscriptionActive, loadMore } = useInfiniteTimeline(
+    loader,
+    relays
+  )
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {
@@ -73,6 +76,7 @@ export function SubscriptionsPage() {
         videos={dedupedVideos}
         loading={loading}
         exhausted={exhausted}
+        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
         layoutMode="auto"
         emptyMessage={

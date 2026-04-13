@@ -5,6 +5,9 @@ interface UseInfiniteScrollOptions {
   onLoadMore: () => void
   loading: boolean
   exhausted: boolean
+  /** When true, a relay subscription is still open even if loading=false (early-complete).
+   *  Prevents re-triggering loadMore during that window. */
+  subscriptionActive?: boolean
   threshold?: number
   rootMargin?: string
 }
@@ -21,6 +24,7 @@ export function useInfiniteScroll({
   onLoadMore,
   loading,
   exhausted,
+  subscriptionActive = false,
   threshold = 0,
   rootMargin = '0px 0px 400px 0px',
 }: UseInfiniteScrollOptions) {
@@ -31,10 +35,10 @@ export function useInfiniteScroll({
   })
 
   useEffect(() => {
-    if (inView && !exhausted && !loading) {
+    if (inView && !exhausted && !loading && !subscriptionActive) {
       onLoadMore()
     }
-  }, [inView, exhausted, loading, onLoadMore])
+  }, [inView, exhausted, loading, subscriptionActive, onLoadMore])
 
   return { ref, inView }
 }

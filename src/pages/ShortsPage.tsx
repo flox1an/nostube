@@ -33,7 +33,10 @@ export function ShortsPage() {
     [effectiveRelays, relayOverride]
   )
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
+  const { videos, loading, exhausted, subscriptionActive, loadMore } = useInfiniteTimeline(
+    loader,
+    effectiveRelays
+  )
   const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   return (
@@ -49,6 +52,7 @@ export function ShortsPage() {
         videos={filteredVideos ?? []}
         loading={loading}
         exhausted={exhausted}
+        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
         layoutMode="vertical"
         emptyMessage={t('pages.shorts.noShorts')}

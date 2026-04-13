@@ -428,12 +428,19 @@ export function AuthorPage() {
     return authorVideoLoader(pubkey, relays)
   }, [pubkey, relays])
 
-  const { videos: allVideos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays)
+  const {
+    videos: allVideos,
+    loading,
+    exhausted,
+    subscriptionActive,
+    loadMore,
+  } = useInfiniteTimeline(loader, relays)
 
   const { ref } = useInfiniteScroll({
     onLoadMore: loadMore,
     loading,
     exhausted,
+    subscriptionActive,
   })
 
   const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos])

@@ -8,6 +8,7 @@ interface VideoTimelinePageProps {
   videos: VideoEvent[]
   loading: boolean
   exhausted: boolean
+  subscriptionActive?: boolean
   onLoadMore: () => void
   layoutMode?: 'horizontal' | 'vertical' | 'auto'
   emptyMessage?: string
@@ -27,6 +28,7 @@ export function VideoTimelinePage({
   videos,
   loading,
   exhausted,
+  subscriptionActive,
   onLoadMore,
   layoutMode = 'horizontal',
   emptyMessage,
@@ -40,6 +42,7 @@ export function VideoTimelinePage({
     onLoadMore,
     loading,
     exhausted,
+    subscriptionActive,
   })
 
   // Use translations for default messages if not provided

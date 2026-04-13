@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Page crash (OOM / "Aw, Snap") when scrolling through 700+ videos on a profile page — the early-complete timer (500 ms) was setting `loading=false` while the relay subscription was still open; `useInfiniteScroll` immediately re-triggered `loadMore`, canceling and restarting the subscription in a tight loop, opening hundreds of WebSocket connections and exhausting browser memory; fixed by tracking `subscriptionActive` separately from `loading` and blocking re-triggers while the subscription is still running
+
 ### Added
 
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)

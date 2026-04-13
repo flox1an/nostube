@@ -33,7 +33,10 @@ export function HomePage() {
     [effectiveRelays, relayOverride]
   )
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays)
+  const { videos, loading, exhausted, subscriptionActive, loadMore } = useInfiniteTimeline(
+    loader,
+    effectiveRelays
+  )
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {
@@ -75,6 +78,7 @@ export function HomePage() {
         videos={filteredVideos}
         loading={loading}
         exhausted={exhausted}
+        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
         layoutMode="horizontal"
         emptyMessage={t('pages.home.noVideos')}

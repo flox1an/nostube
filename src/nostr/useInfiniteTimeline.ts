@@ -15,6 +15,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   const [events, setEvents] = useState<NostrEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [exhausted, setExhausted] = useState(false)
+  // True while a relay subscription is actively open (even after early-complete sets loading=false).
+  // Prevents useInfiniteScroll from firing loadMore again during that window.
+  const [subscriptionActive, setSubscriptionActive] = useState(false)
 
   // Store subscription reference for cleanup
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
@@ -68,6 +71,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     }
 
     setLoading(true)
+    setSubscriptionActive(true)
 
     // Store the current event count before loading
     setEvents(prev => {
@@ -95,6 +99,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       })
 
       setLoading(false)
+      setSubscriptionActive(false)
     }, 5000)
 
     subscriptionRef.current = loader()().subscribe({
@@ -137,6 +142,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         if (!receivedAnyEvents) {
           setExhausted(true)
           setLoading(false)
+          setSubscriptionActive(false)
           return
         }
 
@@ -151,6 +157,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
           setLoading(false)
           return currentEvents
         })
+        setSubscriptionActive(false)
       },
       error: err => {
         if (safetyTimeoutRef.current) {
@@ -163,6 +170,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         }
         console.error('[useInfiniteTimeline] Load error:', err)
         setLoading(false)
+        setSubscriptionActive(false)
         // Don't mark as exhausted on error, allow retry
       },
     })
@@ -322,6 +330,7 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     videos,
     loading,
     exhausted,
+    subscriptionActive,
     loadMore: next,
     reset,
   }

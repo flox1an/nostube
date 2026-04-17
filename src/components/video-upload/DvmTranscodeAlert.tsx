@@ -10,7 +10,11 @@ import {
 import { useDvmTracker } from '@/hooks/useDvmTracker'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
-import { AVAILABLE_RESOLUTIONS, type TranscodeCodec } from '@/lib/dvm-utils'
+import {
+  AVAILABLE_RESOLUTIONS,
+  type TranscodeCodec,
+  getTranscodeRecommendation,
+} from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle, Bot } from 'lucide-react'
 import type { TrackedDvm } from '@/lib/dvm-utils'
 import { DvmSelector } from './DvmSelector'
@@ -225,12 +229,7 @@ export function DvmTranscodeAlert({
             </>
           ) : (
             <>
-              <p className="mb-3">
-                {t('upload.transcode.suggestion', {
-                  defaultValue:
-                    'Creating smaller versions improves playback compatibility across all devices.',
-                })}
-              </p>
+              <p className="mb-3">{getTranscodeRecommendation(video).message}</p>
               {hasSelectableResolutions ? (
                 <>
                   <div className="flex flex-wrap gap-4 mb-4">

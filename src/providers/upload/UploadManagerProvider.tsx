@@ -530,10 +530,33 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         const timeout = setTimeout(
           () => {
             job.subscription?.unsubscribe()
+            clearInterval(heartbeat)
             reject(new Error('DVM job timed out after 10 minutes'))
           },
           10 * 60 * 1000
         )
+
+        // Heartbeat: warn at 90s silence, error at 3min silence
+        const heartbeat = setInterval(() => {
+          const currentTask = tasksRef.current.get(taskId)
+          const lastFeedback = currentTask?.transcodeState?.lastFeedbackAt
+          if (!lastFeedback) return
+          const silentSecs = (Date.now() - lastFeedback) / 1000
+          if (silentSecs >= 180) {
+            clearInterval(heartbeat)
+            clearTimeout(timeout)
+            job.subscription?.unsubscribe()
+            reject(new Error('DVM stopped responding. You can retry with a different service.'))
+          } else if (silentSecs >= 90) {
+            const currentTask2 = tasksRef.current.get(taskId)
+            updateTasksState(taskId, {
+              transcodeState: {
+                ...currentTask2?.transcodeState,
+                message: 'DVM seems unresponsive...',
+              } as TranscodeState,
+            })
+          }
+        }, 30_000)
 
         const subscription = relayPool
           .subscription(dvmRelays, [
@@ -666,12 +689,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                     })
                   } else if (feedbackStatus === 'error') {
                     clearTimeout(timeout)
+                    clearInterval(heartbeat)
                     subscription.unsubscribe()
                     reject(new Error(message || 'DVM processing error'))
                   }
                 }
               } else if (nostrEvent.kind === DVM_RESULT_KIND) {
                 clearTimeout(timeout)
+                clearInterval(heartbeat)
                 subscription.unsubscribe()
 
                 let resultContent = nostrEvent.content
@@ -744,6 +769,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             },
             error: err => {
               clearTimeout(timeout)
+              clearInterval(heartbeat)
               reject(err)
             },
           })

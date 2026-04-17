@@ -31,6 +31,47 @@ export interface TranscodeCheckResult {
   reason: string
 }
 
+export interface TranscodeRecommendation {
+  message: string
+}
+
+/**
+ * Context-aware recommendation message explaining why transcoding is useful for this video.
+ */
+export function getTranscodeRecommendation(video: VideoVariant): TranscodeRecommendation {
+  const codec = video.videoCodec?.toLowerCase() || ''
+  const [width, height] = video.dimension.split('x').map(Number)
+  const maxDim = Math.max(width || 0, height || 0)
+
+  const problematicCodecs: Record<string, string> = {
+    hev1: 'HEVC (hev1)',
+    av01: 'AV1',
+    vp09: 'VP9',
+    vp9: 'VP9',
+  }
+  const matchedCodec = Object.entries(problematicCodecs).find(([prefix]) =>
+    codec.startsWith(prefix)
+  )
+
+  if (matchedCodec) {
+    return {
+      message: `Your video uses ${matchedCodec[1]}, which isn't supported on all devices. Adding an H.264 version ensures everyone can watch it.`,
+    }
+  }
+
+  if (maxDim > 1080) {
+    const label = maxDim >= 2160 ? '4K' : '2K'
+    return {
+      message: `Your video is ${label} (${video.dimension}). Most viewers watch at 720p or lower — creating smaller versions saves bandwidth and loads faster.`,
+    }
+  }
+
+  return {
+    message:
+      'Creating additional versions improves compatibility across devices and network conditions.',
+  }
+}
+
 /**
  * Check if a video should be offered for transcoding
  *

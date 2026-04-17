@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structured progress parsing in `UploadManagerProvider` — reads `phase`, `speed`, `queue_position` tags from kind 7000 DVM feedback events (with fallback to string-detection for older DVMs); `speed` and `queuePosition` now exposed in `TranscodeProgress`
 - DVM capability parsing in `useDvmTracker` — kind 31990 announcements now populate `hardware`, `speeds`, `maxConcurrent`, `queueLength`, `codecs`, and `rate` on `TrackedDvm`; auto-selection picks the DVM with lowest queue length
 - `preferredDvmPubkey` parameter on `startTranscode` in `UploadManagerProvider` and `useDvmTranscodeManager` — pass a DVM pubkey to skip auto-selection and send a directed NIP-90 request to that specific service
+- Context-aware transcode recommendation message — idle state of the transcode alert now shows a specific reason based on the video's codec (e.g. "Your video uses AV1, which isn't supported on all devices") or resolution (e.g. "Your video is 4K — most viewers watch at 720p or lower")
+- DVM heartbeat monitor — during active transcoding, checks every 30s for DVM silence; warns after 90s and rejects the job with a user-friendly error after 3 minutes of no response
 
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
 - Trust badge displayed next to comment author names in comment threads

@@ -35,6 +35,10 @@ export interface TranscodeProgress {
   phase?: 'transcoding' | 'uploading' | 'mirroring'
   statusMessages: StatusMessage[]
   dvmPubkey?: string
+  /** Realtime speed multiplier (transcoding) or MB/s (uploading) */
+  speed?: number
+  /** Position in DVM queue (1-based, only while queued) */
+  queuePosition?: number
   queue?: {
     resolutions: string[]
     currentIndex: number
@@ -71,7 +75,8 @@ export interface UseDvmTranscodeManagerResult {
     inputVideoUrl: string,
     originalDuration?: number,
     resolutions?: string[],
-    codecMap?: Record<string, TranscodeCodec>
+    codecMap?: Record<string, TranscodeCodec>,
+    dvmPubkey?: string
   ) => Promise<void>
   resumeTranscode: () => Promise<void>
   cancel: () => void
@@ -124,6 +129,8 @@ function mapTaskToProgress(task: UploadTask | undefined): TranscodeProgress {
     phase: state.phase,
     statusMessages: state.statusMessages || [],
     dvmPubkey: state.dvmPubkey,
+    speed: state.speed,
+    queuePosition: state.queuePosition,
     queue: {
       resolutions: state.resolutionQueue || [],
       currentIndex: currentIndex >= 0 ? currentIndex : 0,
@@ -230,7 +237,8 @@ export function useDvmTranscodeManager({
       inputVideoUrl: string,
       originalDuration?: number,
       resolutions: string[] = ['720p'],
-      codecMap?: Record<string, TranscodeCodec>
+      codecMap?: Record<string, TranscodeCodec>,
+      dvmPubkey?: string
     ) => {
       // Clear delivered videos when starting a new transcode
       deliveredVideosRef.current.clear()
@@ -247,7 +255,8 @@ export function useDvmTranscodeManager({
         originalDuration,
         onComplete,
         onAllComplete,
-        codecMap
+        codecMap,
+        dvmPubkey
       )
     },
     [taskId, manager, onComplete, onAllComplete]

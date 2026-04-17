@@ -72,11 +72,43 @@ function parseDvmEvent(event: NostrEvent): TrackedDvm {
   if (nameTag?.[1]) name = nameTag[1]
   if (aboutTag?.[1]) about = aboutTag[1]
 
+  let hardware: string | undefined
+  const speeds: Record<string, number> = {}
+  let maxConcurrent: number | undefined
+  let queueLength: number | undefined
+  let codecs: string[] | undefined
+  let rate: number | undefined
+
+  for (const tag of event.tags) {
+    if (tag[0] === 'capability' && tag[1] && tag[2] !== undefined) {
+      const key = tag[1]
+      const val = tag[2]
+      if (key === 'hardware') hardware = val
+      else if (key === 'max_concurrent') maxConcurrent = parseInt(val, 10)
+      else if (key === 'queue_length') queueLength = parseInt(val, 10)
+      else if (key === 'codecs') codecs = val.split(',').map(c => c.trim())
+      else if (key.startsWith('speed_')) {
+        const res = key.replace('speed_', '')
+        const v = parseFloat(val)
+        if (!isNaN(v)) speeds[res] = v
+      }
+    }
+    if (tag[0] === 'rate' && tag[1] !== undefined) {
+      rate = parseInt(tag[1], 10)
+    }
+  }
+
   return {
     pubkey: event.pubkey,
     name,
     about,
     lastSeenAt: event.created_at,
+    hardware,
+    speeds: Object.keys(speeds).length > 0 ? speeds : undefined,
+    maxConcurrent,
+    queueLength,
+    codecs,
+    rate,
   }
 }
 

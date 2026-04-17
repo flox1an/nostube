@@ -46,6 +46,12 @@ export interface TranscodeState {
   eta?: number
   message?: string
   statusMessages: StatusMessage[]
+  /** Realtime speed multiplier during transcoding (e.g. 3.5 = 3.5x realtime) or MB/s during upload */
+  speed?: number
+  /** Position in DVM job queue (1-based, shown when job is queued) */
+  queuePosition?: number
+  /** Last known heartbeat from DVM (timestamp ms) — used to detect unresponsive DVMs */
+  lastFeedbackAt?: number
   // Completed video variants (persisted for delivery on remount)
   completedVideos?: Array<{
     url: string

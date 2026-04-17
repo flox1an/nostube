@@ -57,7 +57,8 @@ export interface UploadManagerContextType {
     originalDuration?: number,
     onComplete?: (video: VideoVariant) => void,
     onAllComplete?: () => void,
-    codecMap?: Record<string, TranscodeCodec>
+    codecMap?: Record<string, TranscodeCodec>,
+    preferredDvmPubkey?: string
   ): Promise<void>
   resumeTranscode(
     taskId: string,

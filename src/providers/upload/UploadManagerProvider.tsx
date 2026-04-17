@@ -612,17 +612,27 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                 }
 
                 if (feedbackStatus) {
-                  // Extract percentage from progress tag first, then fallback to message regex
+                  // Extract percentage — prefer structured tag, fallback to regex
                   const progressTag = nostrEvent.tags.find(t => t[0] === 'progress')
                   let percentage = progressTag?.[1] ? parseInt(progressTag[1], 10) : undefined
-
                   if (percentage === undefined) {
                     const percentMatch = message?.match(/(\d+)%/)
                     percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
                   }
 
+                  // Extract structured phase — prefer tag over string detection
+                  const phaseTag = nostrEvent.tags.find(t => t[0] === 'phase')
+                  const phase: TranscodePhase =
+                    (phaseTag?.[1] as TranscodePhase | undefined) ?? detectPhaseFromMessage(message)
+
+                  // Extract speed and queue position from structured tags
+                  const speedTag = nostrEvent.tags.find(t => t[0] === 'speed')
+                  const speed = speedTag?.[1] ? parseFloat(speedTag[1]) : undefined
+
+                  const queueTag = nostrEvent.tags.find(t => t[0] === 'queue_position')
+                  const queuePosition = queueTag?.[1] ? parseInt(queueTag[1], 10) : undefined
+
                   if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
-                    const phase = detectPhaseFromMessage(message)
                     // Update task state (use ref to avoid stale closure)
                     const currentTask = tasksRef.current.get(taskId)
                     const prevMessages = currentTask?.transcodeState?.statusMessages || []
@@ -648,6 +658,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
                         message: message || 'Processing...',
                         percentage,
                         eta,
+                        speed,
+                        queuePosition,
+                        lastFeedbackAt: Date.now(),
                         statusMessages: newMessages,
                       } as TranscodeState,
                     })
@@ -966,7 +979,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       originalDuration?: number,
       onComplete?: (video: VideoVariant) => void,
       onAllComplete?: () => void,
-      codecMap?: Record<string, TranscodeCodec>
+      codecMap?: Record<string, TranscodeCodec>,
+      /** If provided, skip tracker auto-selection and use this DVM directly */
+      preferredDvmPubkey?: string
     ) => {
       if (!userRef.current) {
         failTask(taskId, 'User not logged in')
@@ -992,15 +1007,44 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       const completedResolutions: string[] = []
 
       try {
-        // Pre-select a DVM from the background tracker if available (skips bidding phase)
+        // Pre-select a DVM — use explicit choice if provided, otherwise pick best from tracker
         let selectedDvm: DvmHandlerInfo | undefined = undefined
         const trackedDvms = getTrackedDvms()
-        if (trackedDvms.size > 0) {
+
+        if (preferredDvmPubkey) {
+          // User explicitly selected a DVM from the selection UI
+          const preferred = trackedDvms.get(preferredDvmPubkey)
+          selectedDvm = {
+            pubkey: preferredDvmPubkey,
+            name: preferred?.name,
+            about: preferred?.about,
+            createdAt: preferred?.lastSeenAt ?? 0,
+          }
+          if (import.meta.env.DEV) {
+            console.log('[UploadManager] Using user-selected DVM:', preferredDvmPubkey)
+          }
+        } else if (trackedDvms.size > 0) {
+          // Auto-pick the DVM with lowest queue length, falling back to most recently seen
           let best:
-            | { pubkey: string; name?: string; about?: string; lastSeenAt: number }
+            | {
+                pubkey: string
+                name?: string
+                about?: string
+                lastSeenAt: number
+                queueLength?: number
+              }
             | undefined
           for (const dvm of trackedDvms.values()) {
-            if (!best || dvm.lastSeenAt > best.lastSeenAt) {
+            if (!best) {
+              best = dvm
+              continue
+            }
+            const bestQueue = best.queueLength ?? Infinity
+            const dvmQueue = dvm.queueLength ?? Infinity
+            if (
+              dvmQueue < bestQueue ||
+              (dvmQueue === bestQueue && dvm.lastSeenAt > best.lastSeenAt)
+            ) {
               best = dvm
             }
           }
@@ -1012,9 +1056,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               createdAt: best.lastSeenAt,
             }
             if (import.meta.env.DEV) {
-              console.log('[UploadManager] Using pre-tracked DVM:', {
+              console.log('[UploadManager] Auto-selected DVM:', {
                 pubkey: best.pubkey,
                 name: best.name,
+                queueLength: best.queueLength,
               })
             }
           }

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- DVM selector UI — when multiple transcoding DVMs are available, clicking "Create Selected" now shows a card list of available services with hardware type, estimated time per resolution, queue depth, and price; user can pick one before starting, or let the auto-selector choose the lowest-queue DVM when only one is present
+- Structured progress parsing in `UploadManagerProvider` — reads `phase`, `speed`, `queue_position` tags from kind 7000 DVM feedback events (with fallback to string-detection for older DVMs); `speed` and `queuePosition` now exposed in `TranscodeProgress`
+- DVM capability parsing in `useDvmTracker` — kind 31990 announcements now populate `hardware`, `speeds`, `maxConcurrent`, `queueLength`, `codecs`, and `rate` on `TrackedDvm`; auto-selection picks the DVM with lowest queue length
+- `preferredDvmPubkey` parameter on `startTranscode` in `UploadManagerProvider` and `useDvmTranscodeManager` — pass a DVM pubkey to skip auto-selection and send a directed NIP-90 request to that specific service
+
 - Trust score badge (TrustBadge component) — shows a colored shield icon with score percentage next to usernames, with tooltip showing trust level (High/Medium/Low)
 - Trust badge displayed next to comment author names in comment threads
 - Trust badge displayed next to author display name on profile pages

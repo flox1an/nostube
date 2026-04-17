@@ -133,6 +133,18 @@ export interface TrackedDvm {
   name?: string
   about?: string
   lastSeenAt: number // unix timestamp of most recent event from this DVM
+  /** Hardware acceleration type from capability tags (e.g. "nvidia_nvenc", "apple_videotoolbox") */
+  hardware?: string
+  /** Average transcode speed per resolution in realtime multiplier (e.g. { "720p": 3.5 }) */
+  speeds?: Record<string, number>
+  /** Maximum concurrent jobs */
+  maxConcurrent?: number
+  /** Current number of active jobs (live queue depth) */
+  queueLength?: number
+  /** Supported codecs (e.g. ["h264", "h265", "av1"]) */
+  codecs?: string[]
+  /** Base rate in sats per minute (0 = free) */
+  rate?: number
 }
 
 /**

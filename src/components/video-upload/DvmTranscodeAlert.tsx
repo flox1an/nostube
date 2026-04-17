@@ -8,6 +8,7 @@ import {
   type StatusMessage,
 } from '@/hooks/useDvmTranscodeManager'
 import { useDvmTracker } from '@/hooks/useDvmTracker'
+import { useUploadManager } from '@/providers/upload'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { DvmTranscodeState } from '@/types/upload-draft'
 import {
@@ -16,10 +17,13 @@ import {
   getTranscodeRecommendation,
 } from '@/lib/dvm-utils'
 import { Loader2, Wand2, X, AlertCircle, RefreshCw, CheckCircle2, Circle, Bot } from 'lucide-react'
-import type { TrackedDvm } from '@/lib/dvm-utils'
+import type { TrackedDvm, DvmBid } from '@/lib/dvm-utils'
 import { DvmSelector } from './DvmSelector'
+import { DvmPayment } from './DvmPayment'
+import { useAppContext } from '@/hooks/useAppContext'
+import { DEFAULT_RELAYS } from '@/nostr/core'
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 interface DvmTranscodeAlertProps {
   draftId: string
@@ -46,9 +50,20 @@ export function DvmTranscodeAlert({
   initialTranscodeState,
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
+  const { config } = useAppContext()
   const [dismissed, setDismissed] = useState(false)
   // When multiple DVMs are available, show the selector before starting
   const [selectingDvm, setSelectingDvm] = useState(false)
+  // Pending payment: set when DVM requires payment, cleared after payment or cancel
+  const [pendingPayment, setPendingPayment] = useState<{
+    bid: DvmBid
+    requestEventId: string
+    resolve: () => void
+    reject: (err: Error) => void
+  } | null>(null)
+
+  const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+  const effectiveWriteRelays = writeRelays.length > 0 ? writeRelays : DEFAULT_RELAYS
 
   // Each variant is a resolution + codec pair
   interface VariantSelection {
@@ -67,6 +82,7 @@ export function DvmTranscodeAlert({
 
   // Check if a DVM is available (only check if not resuming)
   const { isDvmAvailable, isLoading: isDvmLoading, dvmHandlers } = useDvmTracker()
+  const uploadManager = useUploadManager()
 
   // Use the manager-backed hook for background transcoding
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
@@ -90,6 +106,18 @@ export function DvmTranscodeAlert({
   }, [status, onStatusChange])
 
   const isResuming = !!initialTranscodeState
+
+  // Called by UploadManagerProvider when the DVM requires payment before processing.
+  // Returns a promise that resolves when the user completes payment, rejects if cancelled.
+  const onPaymentRequired = useCallback(
+    (bid: DvmBid): Promise<void> => {
+      return new Promise<void>((resolve, reject) => {
+        const requestEventId = uploadManager.getTask(draftId)?.transcodeState?.requestEventId ?? ''
+        setPendingPayment({ bid, requestEventId, resolve, reject })
+      })
+    },
+    [uploadManager, draftId]
+  )
 
   // Debug logging
   if (import.meta.env.DEV) {
@@ -125,6 +153,27 @@ export function DvmTranscodeAlert({
     return null
   }
 
+  // Payment pending — show payment UI (interrupts all other states)
+  if (pendingPayment) {
+    return (
+      <DvmPayment
+        bid={pendingPayment.bid}
+        requestEventId={pendingPayment.requestEventId}
+        writeRelays={effectiveWriteRelays}
+        onPaid={() => {
+          const p = pendingPayment
+          setPendingPayment(null)
+          p.resolve()
+        }}
+        onCancel={() => {
+          const p = pendingPayment
+          setPendingPayment(null)
+          p.reject(new Error('Payment cancelled'))
+        }}
+      />
+    )
+  }
+
   const getInputVideoUrl = (): string => {
     if (video.inputMethod === 'url' && video.url) {
       return video.url
@@ -153,7 +202,7 @@ export function DvmTranscodeAlert({
       for (const v of sortedVariants) {
         codecMap[v.resolution] = v.codec
       }
-      startTranscode(inputUrl, video.duration, resolutions, codecMap, dvmPubkey)
+      startTranscode(inputUrl, video.duration, resolutions, codecMap, dvmPubkey, onPaymentRequired)
     }
   }
 

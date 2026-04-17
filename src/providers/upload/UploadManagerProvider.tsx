@@ -793,7 +793,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       dvm?: DvmHandlerInfo,
       originalDuration?: number,
       queueInfo?: ResolutionQueueInfo,
-      codec: TranscodeCodec = 'h264'
+      codec: TranscodeCodec = 'h264',
+      onPaymentRequired?: (bid: DvmBid) => Promise<void>
     ): Promise<VideoVariant & { dvmPubkey: string }> => {
       const currentUser = userRef.current
       const currentConfig = configRef.current
@@ -921,17 +922,31 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
           throw new Error('No DVMs responded to the request')
         }
 
-        // Pick the best bid (for now, first one with amount 0)
-        // In the future, we can add a selection UI or more complex logic
-        const freeBid = bids.find(b => b.amount === '0') || bids[0]
-        selectedDvmPubkey = freeBid.pubkey
+        // Prefer free bids; if only paid bids available and handler provided, use it
+        const freeBid = bids.find(b => b.amount === '0' || parseInt(b.amount) === 0)
+        const paidBid = freeBid ? undefined : bids[0]
+
+        if (paidBid) {
+          if (!onPaymentRequired) {
+            throw new Error(
+              `DVM requires payment of ${Math.ceil(parseInt(paidBid.amount) / 1000)} sats but no payment handler is configured`
+            )
+          }
+          // Delegate payment to the UI layer; throws if user cancels or wallet insufficient
+          await onPaymentRequired(paidBid)
+          selectedDvmPubkey = paidBid.pubkey
+        } else {
+          selectedDvmPubkey = freeBid!.pubkey
+        }
 
         if (import.meta.env.DEV) {
           console.log('[UploadManager] Selected DVM from bids:', selectedDvmPubkey)
         }
 
-        // Approve the bid
-        await approveBid(signedRequest.id, selectedDvmPubkey)
+        // Approve the bid (free bids only — paid bids were approved via payment event)
+        if (!paidBid) {
+          await approveBid(signedRequest.id, selectedDvmPubkey)
+        }
 
         const selectedMsg = `Selected DVM ${selectedDvmPubkey.substring(0, 8)}...`
         const afterBidTask = tasksRef.current.get(taskId)
@@ -1007,7 +1022,9 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       onAllComplete?: () => void,
       codecMap?: Record<string, TranscodeCodec>,
       /** If provided, skip tracker auto-selection and use this DVM directly */
-      preferredDvmPubkey?: string
+      preferredDvmPubkey?: string,
+      /** Called when DVM requires payment before processing; must resolve when payment is sent */
+      onPaymentRequired?: (bid: DvmBid) => Promise<void>
     ) => {
       if (!userRef.current) {
         failTask(taskId, 'User not logged in')
@@ -1106,7 +1123,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             selectedDvm,
             originalDuration,
             queueInfo,
-            codecMap?.[resolution] || 'h264'
+            codecMap?.[resolution] || 'h264',
+            onPaymentRequired
           )
 
           // Remember the DVM for subsequent resolutions

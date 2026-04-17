@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useUploadManager } from '@/providers/UploadManagerProvider'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { UploadTask } from '@/types/upload-manager'
-import type { TranscodeCodec } from '@/lib/dvm-utils'
+import type { TranscodeCodec, DvmBid } from '@/lib/dvm-utils'
 
 export type TranscodeStatus =
   | 'idle'
@@ -76,7 +76,8 @@ export interface UseDvmTranscodeManagerResult {
     originalDuration?: number,
     resolutions?: string[],
     codecMap?: Record<string, TranscodeCodec>,
-    dvmPubkey?: string
+    dvmPubkey?: string,
+    onPaymentRequired?: (bid: DvmBid) => Promise<void>
   ) => Promise<void>
   resumeTranscode: () => Promise<void>
   cancel: () => void
@@ -238,7 +239,8 @@ export function useDvmTranscodeManager({
       originalDuration?: number,
       resolutions: string[] = ['720p'],
       codecMap?: Record<string, TranscodeCodec>,
-      dvmPubkey?: string
+      dvmPubkey?: string,
+      onPaymentRequired?: (bid: DvmBid) => Promise<void>
     ) => {
       // Clear delivered videos when starting a new transcode
       deliveredVideosRef.current.clear()
@@ -256,7 +258,8 @@ export function useDvmTranscodeManager({
         onComplete,
         onAllComplete,
         codecMap,
-        dvmPubkey
+        dvmPubkey,
+        onPaymentRequired
       )
     },
     [taskId, manager, onComplete, onAllComplete]

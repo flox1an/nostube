@@ -7,6 +7,7 @@ export const FALLBACK_TARGET_HEIGHT = 480
 export const TARGET_1080P_BITRATE = 8_000_000
 export const TARGET_1080P_WIDTH = 1920
 export const TARGET_FPS = 30
+export const HLS_TARGET_DURATION = 4
 export const BPP_MEDIUM =
   TARGET_1080P_BITRATE / (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
 
@@ -25,7 +26,7 @@ export type TranscodeRecommendation = 'none' | 'bitrate' | 'full'
 export interface BrowserTranscodeVariant {
   codec: 'hevc' | 'avc'
   targetHeight: number
-  format: 'mp4'
+  format: 'mp4' | 'hls'
   label: string
 }
 
@@ -258,4 +259,120 @@ export async function transcodeFile(
     type: 'video/mp4',
     lastModified: Date.now(),
   })
+}
+
+export async function transcodeToHls(
+  file: File,
+  variants: BrowserTranscodeVariant[],
+  sourceMeta: TranscodeSourceMeta,
+  onProgress: (variantIndex: number, progress: number) => void,
+  signal: AbortSignal
+): Promise<Map<string, File>> {
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+
+  const {
+    Input,
+    Output,
+    Conversion,
+    ALL_FORMATS,
+    BlobSource,
+    HlsOutputFormat,
+    CmafOutputFormat,
+    BufferTarget,
+    PathedTarget,
+    QUALITY_MEDIUM,
+  } = await import('mediabunny')
+
+  const outputFiles = new Map<string, File>()
+
+  const output = new Output({
+    format: new HlsOutputFormat({
+      segmentFormat: new CmafOutputFormat(),
+      targetDuration: HLS_TARGET_DURATION,
+      getPlaylistPath: info => `variant-${info.n - 1}.m3u8`,
+      getSegmentPath: info => `variant-${info.playlist.n - 1}/segment-${info.n - 1}.m4s`,
+      getInitPath: info => `variant-${info.n - 1}/init.mp4`,
+    }),
+    target: new PathedTarget('master.m3u8', ({ path, mimeType }) =>
+      new BufferTarget({
+        onFinalize: buffer => {
+          outputFiles.set(path, new File([buffer], path, { type: mimeType }))
+        },
+      })
+    ),
+  })
+
+  const conversion = await Conversion.init({
+    input: new Input({ formats: ALL_FORMATS, source: new BlobSource(file) }),
+    output,
+    tracks: 'primary',
+    video: variants.map(v => {
+      const { width, height } = computeTargetDimensions(sourceMeta.width, sourceMeta.height, v.targetHeight)
+      const bitrate = Math.round(width * height * 30 * BPP_MEDIUM)
+      return {
+        width,
+        height,
+        bitrate,
+        codec: v.codec as VideoCodec,
+        keyFrameInterval: HLS_TARGET_DURATION,
+        forceTranscode: true,
+      }
+    }),
+    audio: { bitrate: QUALITY_MEDIUM },
+  })
+
+  if (!conversion.isValid) throw new Error('HLS conversion not valid')
+
+  const abortConversion = () => {
+    void conversion.cancel()
+  }
+  signal.addEventListener('abort', abortConversion, { once: true })
+
+  try {
+    conversion.onProgress = progress => {
+      if (!signal.aborted) onProgress(0, progress)
+    }
+
+    await conversion.execute()
+  } finally {
+    signal.removeEventListener('abort', abortConversion)
+  }
+
+  return outputFiles
+}
+
+/**
+ * Rewrites HLS playlists to use absolute Blossom URLs instead of relative paths.
+ *
+ * @param outputFiles The map of generated HLS files (path -> File)
+ * @param uploadedUrls A map of original paths to their uploaded Blossom URLs
+ */
+export async function rewriteHlsPlaylists(
+  outputFiles: Map<string, File>,
+  uploadedUrls: Map<string, string>
+): Promise<Map<string, File>> {
+  const rewrittenFiles = new Map<string, File>()
+
+  for (const [path, file] of outputFiles.entries()) {
+    if (path.endsWith('.m3u8')) {
+      let content = await file.text()
+
+      // Sort keys by length descending to avoid partial replacements
+      // e.g. "variant-0/segment-1.m4s" before "variant-0"
+      const sortedPaths = Array.from(uploadedUrls.keys()).sort((a, b) => b.length - a.length)
+
+      for (const originalPath of sortedPaths) {
+        const absoluteUrl = uploadedUrls.get(originalPath)!
+        // We use a simple global replace. For HLS manifests, this is generally safe
+        // because paths are usually unique and specifically formatted.
+        content = content.split(originalPath).join(absoluteUrl)
+      }
+
+      rewrittenFiles.set(path, new File([content], path, { type: file.type }))
+    } else {
+      rewrittenFiles.set(path, file)
+    }
+  }
+
+  return rewrittenFiles
 }

@@ -9,6 +9,7 @@ import type { OriginalVideoInfo } from '@/types/upload-draft'
  */
 export interface VideoVariant {
   url?: string // The video URL (from upload or URL input)
+  mimeType?: string // The video MIME type (e.g., "video/mp4", "application/vnd.apple.mpegurl")
   dimension: string // e.g., "1920x1080"
   sizeMB?: number // File size in MB (only for uploaded files)
   duration: number // Duration in seconds

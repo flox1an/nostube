@@ -4,7 +4,6 @@ import type {
   BrowserTranscodeVariantState,
   UploadDraft,
 } from '@/types/upload-draft'
-import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
@@ -13,6 +12,12 @@ import {
 import { processUploadedVideo, type VideoVariant } from '@/lib/video-processing'
 import { getItemsFromStorage, updateItemInStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
+import {
+  rewriteHlsPlaylists,
+  transcodeToHls,
+  type BrowserTranscodeVariant,
+  type TranscodeSourceMeta,
+} from '@/lib/video-transcode'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024
@@ -97,6 +102,24 @@ async function uploadAndProcessFile(
   return { ...video, mirroredBlobs }
 }
 
+async function uploadAndGetUrl(
+  file: File,
+  initialServers: string[],
+  signer: Signer,
+  onProgress?: (progress: ChunkedUploadProgress) => void
+): Promise<string> {
+  const uploadedBlobs = await uploadFileToMultipleServersChunked({
+    file,
+    servers: initialServers,
+    signer,
+    options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
+    callbacks: { onProgress },
+  })
+
+  if (uploadedBlobs.length === 0) throw new Error(`Failed to upload ${file.name}`)
+  return uploadedBlobs[0].url
+}
+
 export function subscribeToBrowserTranscodeUploads(listener: BrowserTranscodeUploadListener) {
   listeners.add(listener)
   return () => {
@@ -161,36 +184,57 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       message: 'Transcoding video in background...',
     }))
 
+    const isHls = variants.some(v => v.format === 'hls')
+
     const transcodedFiles =
       variants.length > 0
-        ? await runBrowserTranscodeJob(
-            file,
-            variants,
-            sourceMeta,
-            ({ variantIndex, progress }) => {
-              updateBrowserState(draftId, state => ({
-                ...state,
-                status: 'transcoding',
-                updatedAt: Date.now(),
-                variants: state.variants.map((variant, index) => {
-                  if (index < variantIndex) return { ...variant, progress: 1, status: 'done' }
-                  if (index === variantIndex) return { ...variant, progress, status: 'active' }
-                  return variant
-                }),
-              }))
-            },
-            (variantIndex, message) => {
-              updateBrowserState(draftId, state => ({
-                ...state,
-                updatedAt: Date.now(),
-                variants: state.variants.map((variant, index) =>
-                  index === variantIndex ? { ...variant, status: 'error' } : variant
-                ),
-                message,
-              }))
-            },
-            controller.signal
-          )
+        ? isHls
+          ? await transcodeToHls(
+              file,
+              variants,
+              sourceMeta,
+              (_, progress) => {
+                updateBrowserState(draftId, state => ({
+                  ...state,
+                  status: 'transcoding',
+                  updatedAt: Date.now(),
+                  variants: state.variants.map(v => ({
+                    ...v,
+                    progress,
+                    status: 'active',
+                  })),
+                }))
+              },
+              controller.signal
+            )
+          : await runBrowserTranscodeJob(
+              file,
+              variants,
+              sourceMeta,
+              ({ variantIndex, progress }) => {
+                updateBrowserState(draftId, state => ({
+                  ...state,
+                  status: 'transcoding',
+                  updatedAt: Date.now(),
+                  variants: state.variants.map((variant, index) => {
+                    if (index < variantIndex) return { ...variant, progress: 1, status: 'done' }
+                    if (index === variantIndex) return { ...variant, progress, status: 'active' }
+                    return variant
+                  }),
+                }))
+              },
+              (variantIndex, message) => {
+                updateBrowserState(draftId, state => ({
+                  ...state,
+                  updatedAt: Date.now(),
+                  variants: state.variants.map((variant, index) =>
+                    index === variantIndex ? { ...variant, status: 'error' } : variant
+                  ),
+                  message,
+                }))
+              },
+              controller.signal
+            )
         : []
 
     updateBrowserState(draftId, state => ({
@@ -205,24 +249,87 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       message: 'Uploading transcoded videos...',
     }))
 
-    const filesToUpload = keepOriginal ? [...transcodedFiles, file] : transcodedFiles
     const uploadedVideos: VideoVariant[] = []
-    for (const fileToUpload of filesToUpload) {
-      const video = await uploadAndProcessFile(
-        fileToUpload,
-        initialServers,
-        mirrorServers,
-        signer,
-        progress => {
-          updateBrowserState(draftId, state => ({
-            ...state,
-            status: 'uploading',
-            updatedAt: Date.now(),
-            uploadProgress: progress,
-          }))
-        }
+
+    if (isHls && transcodedFiles instanceof Map) {
+      // HLS Stage 1: Upload segments and init files
+      const uploadedUrls = new Map<string, string>()
+      const segmentPaths = Array.from(transcodedFiles.keys()).filter(p => !p.endsWith('.m3u8'))
+
+      for (let i = 0; i < segmentPaths.length; i++) {
+        const path = segmentPaths[i]
+        const hlsFile = transcodedFiles.get(path)!
+        const url = await uploadAndGetUrl(hlsFile, initialServers, signer)
+        uploadedUrls.set(path, url)
+
+        updateBrowserState(draftId, state => ({
+          ...state,
+          updatedAt: Date.now(),
+          message: `Uploading HLS segments (${i + 1}/${segmentPaths.length})...`,
+          uploadProgress: {
+            uploadedBytes: i + 1,
+            totalBytes: segmentPaths.length,
+            percentage: (i + 1) / segmentPaths.length,
+            currentChunk: i + 1,
+            totalChunks: segmentPaths.length,
+          },
+        }))
+      }
+
+      // HLS Stage 2: Rewrite playlists and upload them
+      const rewrittenFiles = await rewriteHlsPlaylists(transcodedFiles, uploadedUrls)
+      const playlistPaths = Array.from(rewrittenFiles.keys()).filter(
+        p => p.endsWith('.m3u8') && p !== 'master.m3u8'
       )
-      uploadedVideos.push(video)
+
+      for (const path of playlistPaths) {
+        const playlistFile = rewrittenFiles.get(path)!
+        const url = await uploadAndGetUrl(playlistFile, initialServers, signer)
+        uploadedUrls.set(path, url)
+      }
+
+      // HLS Stage 3: Rewrite and upload master playlist
+      const masterFile = rewrittenFiles.get('master.m3u8')!
+      const finalRewritten = await rewriteHlsPlaylists(
+        new Map([['master.m3u8', masterFile]]),
+        uploadedUrls
+      )
+      const masterUrl = await uploadAndGetUrl(
+        finalRewritten.get('master.m3u8')!,
+        initialServers,
+        signer
+      )
+
+      // Add HLS variant
+      uploadedVideos.push({
+        url: masterUrl,
+        mimeType: 'application/vnd.apple.mpegurl',
+        dimension: `${sourceMeta.width}x${sourceMeta.height}`,
+        qualityLabel: variants[0].targetHeight + 'p',
+        duration: sourceMeta.duration,
+        uploadedBlobs: [], // Master playlist is uploaded once, but we don't have its descriptor easily here
+        mirroredBlobs: [],
+        inputMethod: 'file',
+      })
+    } else if (transcodedFiles instanceof Array) {
+      const filesToUpload = keepOriginal ? [...transcodedFiles, file] : transcodedFiles
+      for (const fileToUpload of filesToUpload) {
+        const video = await uploadAndProcessFile(
+          fileToUpload,
+          initialServers,
+          mirrorServers,
+          signer,
+          progress => {
+            updateBrowserState(draftId, state => ({
+              ...state,
+              status: 'uploading',
+              updatedAt: Date.now(),
+              uploadProgress: progress,
+            }))
+          }
+        )
+        uploadedVideos.push(video)
+      }
     }
 
     const draft = getDraft(draftId)

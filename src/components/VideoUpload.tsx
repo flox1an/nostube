@@ -18,6 +18,7 @@ import {
   SubtitleSection,
   PeoplePickerSection,
   OriginManager,
+  BrowserTranscodeStep,
 } from './video-upload'
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
@@ -39,7 +40,7 @@ import type { BlossomServerTag } from '@/contexts/AppContext'
 import type { UploadDraft } from '@/types/upload-draft'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { isBetaUser } from '@/lib/beta-users'
-import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Save, Trash2 } from 'lucide-react'
 
 interface UploadFormProps {
   draft: UploadDraft
@@ -117,6 +118,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     handleThumbnailSourceChange,
     handleDeleteThumbnail,
     onDrop,
+    handleBrowserTranscodeComplete,
+    handleBrowserTranscodeSkip,
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
@@ -525,16 +528,33 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 )}
 
                 {/* File upload */}
-                {uploadInfo.videos.length === 0 && inputMethod === 'file' && (
-                  <FileDropzone
-                    onDrop={wrappedOnDrop}
-                    accept={{ 'video/*': [] }}
-                    selectedFile={file}
-                    className="mb-4"
+                {uploadInfo.videos.length === 0 &&
+                  inputMethod === 'file' &&
+                  uploadState !== 'transcoding' && (
+                    <FileDropzone
+                      onDrop={wrappedOnDrop}
+                      accept={{ 'video/*': [] }}
+                      selectedFile={file}
+                      className="mb-4"
+                    />
+                  )}
+
+                {/* Browser transcode step - shown after drop, before upload */}
+                {uploadState === 'transcoding' && file && inputMethod === 'file' && (
+                  <BrowserTranscodeStep
+                    file={file}
+                    onComplete={handleBrowserTranscodeComplete}
+                    onSkip={handleBrowserTranscodeSkip}
                   />
                 )}
 
                 {/* Upload progress */}
+                {uploadState === 'uploading' && !uploadProgress && (
+                  <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>{t('upload.uploading')}</span>
+                  </div>
+                )}
                 {uploadProgress && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm text-muted-foreground">

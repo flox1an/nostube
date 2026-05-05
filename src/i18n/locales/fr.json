@@ -412,6 +412,18 @@
       "phaseCopying": "Copie",
       "waiting": "En attente"
     },
+    "browserTranscode": {
+      "analyzing": "Analysing video...",
+      "title": "Optimise for Nostr",
+      "recommendFull": "Your video needs conversion for Nostr compatibility (wrong container or codec).",
+      "recommendBitrate": "Your video is well-encoded but at {{bitrate}} Mbps - a re-encode will reduce file size significantly.",
+      "recommendNone": "Your video is already optimised - only creating the 480p fallback.",
+      "optimiseUpload": "Optimise & Upload",
+      "uploadOriginal": "Upload original",
+      "transcoding": "Optimising video...",
+      "cancel": "Cancel - upload original",
+      "errorTitle": "Transcode failed"
+    },
     "origins": {
       "label": "Références externes",
       "description": "Lien vers YouTube, TikTok ou d'autres événements Nostr.",

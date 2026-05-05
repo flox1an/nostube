@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- No loading indicator during Blossom upload when server does not support chunked uploads (BUD-10) — fallback regular upload never called `onProgress`, leaving the UI showing nothing between dropping the file and the upload completing; now shows a spinner with "Uploading…" text whenever `uploadState === 'uploading'` and no chunk progress is available yet
+
 - Page crash (OOM / "Aw, Snap") when scrolling through 700+ videos on a profile page — the early-complete timer (500 ms) was setting `loading=false` while the relay subscription was still open; `useInfiniteScroll` immediately re-triggered `loadMore`, canceling and restarting the subscription in a tight loop, opening hundreds of WebSocket connections and exhausting browser memory; fixed by tracking `subscriptionActive` separately from `loading` and blocking re-triggers while the subscription is still running
 
 ### Added
 
+- In-browser video transcoding before upload - when a file is dropped, NosTube probes the source codec, resolution, and bitrate, then offers to optimise it in-browser via WebCodecs/mediabunny before uploading to Blossom; produces an HEVC 1080p primary and H.264 480p fallback by default, remains skippable, uses a 15 Mbps re-encode threshold for compatible codecs, and falls back to direct upload when WebCodecs is unavailable
 - DVM selector UI — when multiple transcoding DVMs are available, clicking "Create Selected" now shows a card list of available services with hardware type, estimated time per resolution, queue depth, and price; user can pick one before starting, or let the auto-selector choose the lowest-queue DVM when only one is present
 - Structured progress parsing in `UploadManagerProvider` — reads `phase`, `speed`, `queue_position` tags from kind 7000 DVM feedback events (with fallback to string-detection for older DVMs); `speed` and `queuePosition` now exposed in `TranscodeProgress`
 - DVM capability parsing in `useDvmTracker` — kind 31990 announcements now populate `hardware`, `speeds`, `maxConcurrent`, `queueLength`, `codecs`, and `rate` on `TrackedDvm`; auto-selection picks the DVM with lowest queue length

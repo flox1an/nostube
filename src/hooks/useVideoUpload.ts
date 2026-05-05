@@ -198,9 +198,10 @@ export function useVideoUpload(
   const [uploadInfo, setUploadInfo] = useState<UploadInfo>(
     initialDraft?.uploadInfo || { videos: [] }
   )
-  const [uploadState, setUploadState] = useState<'initial' | 'uploading' | 'finished'>(
-    initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial'
-  )
+  const [uploadState, setUploadState] = useState<
+    'initial' | 'transcoding' | 'uploading' | 'finished'
+  >(initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial')
+  const [browserTranscodeMode, setBrowserTranscodeMode] = useState<'replace' | 'append'>('replace')
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
   const [thumbnailBlurhash, setThumbnailBlurhash] = useState<string | undefined>(undefined)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(
@@ -426,75 +427,120 @@ export function useVideoUpload(
     setThumbnailSource('upload')
   }
 
+  const showVideoUploadError = (error: unknown) => {
+    if (error instanceof Error) {
+      if (error.name === 'NotReadableError' || error.message.includes('NotReadableError')) {
+        alert(
+          `Upload failed: File cannot be read by browser.\n\n` +
+            `This usually happens with very large files (>2GB) or corrupted files.\n\n` +
+            `Solutions:\n` +
+            `- Try reducing file size\n` +
+            `- Use Chrome browser (better large file support)\n` +
+            `- Check if file is corrupted\n` +
+            `- Close other browser tabs to free memory\n\n` +
+            `Error: ${error.message}`
+        )
+      } else if (error.message.includes('File too large for browser')) {
+        alert(
+          `Upload failed: File too large for browser to process.\n\n` +
+            `Try:\n` +
+            `- Reducing file size\n` +
+            `- Using Chrome browser\n` +
+            `- Closing other browser tabs\n\n` +
+            `Error: ${error.message}`
+        )
+      } else if (error.message.includes('does not support PATCH chunked uploads')) {
+        alert(
+          `Upload failed: Server does not support BUD-10 PATCH chunked uploads.\n\n${error.message}\n\nTry using a different server that supports BUD-10 specification.`
+        )
+      } else if (error.message.includes('BUD-10 PATCH chunked upload failed')) {
+        alert(
+          `Upload failed: BUD-10 PATCH upload failed.\n\n${error.message}\n\nThis server may not be BUD-10 compliant. Try a different server.`
+        )
+      } else if (error.message.includes('OPTIONS /upload failed')) {
+        alert(
+          `Upload failed: Server capabilities negotiation failed.\n\n${error.message}\n\nThis server may not support BUD-10. Try a different server.`
+        )
+      } else {
+        alert(`Upload failed: ${error.message}`)
+      }
+    } else {
+      alert('Upload failed due to an unknown error. Please try again.')
+    }
+  }
+
   const onDrop = async (acceptedFiles: File[]) => {
     if (
-      acceptedFiles &&
-      acceptedFiles[0] &&
-      blossomInitalUploadServers &&
-      blossomInitalUploadServers.length > 0 &&
-      user
+      !acceptedFiles[0] ||
+      !blossomInitalUploadServers ||
+      blossomInitalUploadServers.length === 0 ||
+      !user
     ) {
-      const file = acceptedFiles[0] ?? null
-
-      setFile(file)
-      setUploadInfo({ videos: [] })
-      setUploadState('uploading')
-      setUploadProgress(null)
-
-      try {
-        const result = await fileUpload.upload(acceptedFiles[0])
-        const videoVariant = await processUploadedVideo(acceptedFiles[0], result.uploadedBlobs)
-
-        setUploadInfo({
-          videos: [{ ...videoVariant, mirroredBlobs: result.mirroredBlobs }],
-        })
-      } catch (error) {
-        console.error('BUD-10 upload failed:', error)
-        setUploadState('initial')
-        setUploadInfo({ videos: [] })
-        setUploadProgress(null)
-
-        if (error instanceof Error) {
-          if (error.name === 'NotReadableError' || error.message.includes('NotReadableError')) {
-            alert(
-              `Upload failed: File cannot be read by browser.\n\n` +
-                `This usually happens with very large files (>2GB) or corrupted files.\n\n` +
-                `Solutions:\n` +
-                `• Try reducing file size\n` +
-                `• Use Chrome browser (better large file support)\n` +
-                `• Check if file is corrupted\n` +
-                `• Close other browser tabs to free memory\n\n` +
-                `Error: ${error.message}`
-            )
-          } else if (error.message.includes('File too large for browser')) {
-            alert(
-              `Upload failed: File too large for browser to process.\n\n` +
-                `Try:\n` +
-                `• Reducing file size\n` +
-                `• Using Chrome browser\n` +
-                `• Closing other browser tabs\n\n` +
-                `Error: ${error.message}`
-            )
-          } else if (error.message.includes('does not support PATCH chunked uploads')) {
-            alert(
-              `Upload failed: Server does not support BUD-10 PATCH chunked uploads.\n\n${error.message}\n\nTry using a different server that supports BUD-10 specification.`
-            )
-          } else if (error.message.includes('BUD-10 PATCH chunked upload failed')) {
-            alert(
-              `Upload failed: BUD-10 PATCH upload failed.\n\n${error.message}\n\nThis server may not be BUD-10 compliant. Try a different server.`
-            )
-          } else if (error.message.includes('OPTIONS /upload failed')) {
-            alert(
-              `Upload failed: Server capabilities negotiation failed.\n\n${error.message}\n\nThis server may not support BUD-10. Try a different server.`
-            )
-          } else {
-            alert(`Upload failed: ${error.message}`)
-          }
-        } else {
-          alert('Upload failed due to an unknown error. Please try again.')
-        }
-      }
+      return
     }
+
+    const droppedFile = acceptedFiles[0]
+    setBrowserTranscodeMode('replace')
+    setFile(droppedFile)
+    setUploadInfo({ videos: [] })
+    setUploadProgress(null)
+    setUploadState('transcoding')
+  }
+
+  const uploadFileAndProcess = async (fileToUpload: File): Promise<VideoVariant> => {
+    const result = await fileUpload.upload(fileToUpload)
+    const videoVariant = await processUploadedVideo(fileToUpload, result.uploadedBlobs)
+    return { ...videoVariant, mirroredBlobs: result.mirroredBlobs }
+  }
+
+  const handleBrowserTranscodeComplete = async (transcodedFiles: File[]) => {
+    setUploadState('uploading')
+    setUploadProgress(null)
+
+    try {
+      const variants: VideoVariant[] = []
+      for (const transcodedFile of transcodedFiles) {
+        variants.push(await uploadFileAndProcess(transcodedFile))
+      }
+      setUploadInfo(ui => ({
+        videos: browserTranscodeMode === 'append' ? [...ui.videos, ...variants] : variants,
+      }))
+    } catch (error) {
+      console.error('Upload after browser transcode failed:', error)
+      setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
+      if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
+      setUploadProgress(null)
+      showVideoUploadError(error)
+      return
+    }
+
+    setUploadState('finished')
+    setUploadProgress(null)
+  }
+
+  const handleBrowserTranscodeSkip = async () => {
+    if (!file || !blossomInitalUploadServers || blossomInitalUploadServers.length === 0 || !user) {
+      setUploadState('initial')
+      return
+    }
+
+    setUploadState('uploading')
+    setUploadProgress(null)
+
+    try {
+      const variant = await uploadFileAndProcess(file)
+      setUploadInfo(ui => ({
+        videos: browserTranscodeMode === 'append' ? [...ui.videos, variant] : [variant],
+      }))
+    } catch (error) {
+      console.error('BUD-10 upload failed:', error)
+      setUploadState(browserTranscodeMode === 'append' ? 'finished' : 'initial')
+      if (browserTranscodeMode === 'replace') setUploadInfo({ videos: [] })
+      setUploadProgress(null)
+      showVideoUploadError(error)
+      return
+    }
+
     setUploadState('finished')
     setUploadProgress(null)
   }
@@ -523,6 +569,7 @@ export function useVideoUpload(
     setThumbnail(null)
     setUploadInfo({ videos: [] })
     setUploadState('initial')
+    setBrowserTranscodeMode('replace')
     setThumbnailBlob(null)
     setThumbnailBlurhash(undefined)
     setThumbnailSource('generated')
@@ -542,25 +589,10 @@ export function useVideoUpload(
       return
     }
 
-    setUploadState('uploading')
+    setBrowserTranscodeMode('append')
+    setFile(acceptedFiles[0])
     setUploadProgress(null)
-
-    try {
-      const result = await fileUpload.upload(acceptedFiles[0])
-      const videoVariant = await processUploadedVideo(acceptedFiles[0], result.uploadedBlobs)
-
-      setUploadInfo(ui => ({
-        videos: [...ui.videos, { ...videoVariant, mirroredBlobs: result.mirroredBlobs }],
-      }))
-
-      setUploadState('finished')
-    } catch (error) {
-      console.error('Failed to add video:', error)
-      setUploadState('finished')
-      alert(`Failed to upload video: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setUploadProgress(null)
-    }
+    setUploadState('transcoding')
   }
 
   // Handler to initiate video variant removal (opens dialog)
@@ -1065,6 +1097,8 @@ export function useVideoUpload(
     handleThumbnailSourceChange,
     handleDeleteThumbnail,
     onDrop,
+    handleBrowserTranscodeComplete,
+    handleBrowserTranscodeSkip,
     handleReset,
     handleSubmit,
     handleAddVideo,

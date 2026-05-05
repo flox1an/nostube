@@ -154,6 +154,14 @@ export function defaultVariants(
       format: 'mp4',
       label: `${primaryHeight}p ${primaryCodec === 'hevc' ? 'HEVC' : 'H.264'}`,
     })
+
+    // Add HLS variant as an option for testing
+    variants.push({
+      codec: 'avc',
+      targetHeight: primaryHeight,
+      format: 'hls',
+      label: `${primaryHeight}p HLS Adaptive (AVC)`,
+    })
   }
 
   if (shortSide > FALLBACK_TARGET_HEIGHT) {

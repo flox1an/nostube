@@ -320,6 +320,7 @@ export async function transcodeToHls(
       return {
         width,
         height,
+        fit: 'contain',
         bitrate,
         codec: v.codec as VideoCodec,
         keyFrameInterval: HLS_TARGET_DURATION,

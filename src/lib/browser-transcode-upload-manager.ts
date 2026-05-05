@@ -185,28 +185,35 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     }))
 
     const isHls = variants.some(v => v.format === 'hls')
+    console.log('[BrowserTranscodeUploadManager] Starting job:', { isHls, variants, keepOriginal })
 
     const transcodedFiles =
       variants.length > 0
         ? isHls
-          ? await transcodeToHls(
-              file,
-              variants,
-              sourceMeta,
-              (_, progress) => {
-                updateBrowserState(draftId, state => ({
-                  ...state,
-                  status: 'transcoding',
-                  updatedAt: Date.now(),
-                  variants: state.variants.map(v => ({
-                    ...v,
-                    progress,
-                    status: 'active',
-                  })),
-                }))
-              },
-              controller.signal
-            )
+          ? await (async () => {
+              console.log('[BrowserTranscodeUploadManager] Calling transcodeToHls')
+              const result = await transcodeToHls(
+                file,
+                variants,
+                sourceMeta,
+                (_, progress) => {
+                  console.log(`[BrowserTranscodeUploadManager] HLS Progress: ${Math.round(progress * 100)}%`)
+                  updateBrowserState(draftId, state => ({
+                    ...state,
+                    status: 'transcoding',
+                    updatedAt: Date.now(),
+                    variants: state.variants.map(v => ({
+                      ...v,
+                      progress,
+                      status: 'active',
+                    })),
+                  }))
+                },
+                controller.signal
+              )
+              console.log(`[BrowserTranscodeUploadManager] HLS Transcode complete, produced ${result.size} files`)
+              return result
+            })()
           : await runBrowserTranscodeJob(
               file,
               variants,
@@ -236,6 +243,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               controller.signal
             )
         : []
+
+    console.log('[BrowserTranscodeUploadManager] Transcode result type:', transcodedFiles instanceof Map ? 'Map' : 'Array')
 
     updateBrowserState(draftId, state => ({
       ...state,
@@ -356,6 +365,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       },
     })
   } catch (error) {
+    console.error('[BrowserTranscodeUploadManager] Job failed:', error)
     if (controller.signal.aborted) {
       updateBrowserState(draftId, state => ({
         ...state,

@@ -330,6 +330,7 @@ export async function transcodeToHls(
   })
 
   if (!conversion.isValid) throw new Error('HLS conversion not valid')
+  console.log('[transcodeToHls] Starting conversion...')
 
   const abortConversion = () => {
     void conversion.cancel()
@@ -342,6 +343,7 @@ export async function transcodeToHls(
     }
 
     await conversion.execute()
+    console.log('[transcodeToHls] Conversion finished')
   } finally {
     signal.removeEventListener('abort', abortConversion)
   }

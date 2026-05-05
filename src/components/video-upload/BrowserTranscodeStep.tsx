@@ -17,7 +17,7 @@ interface BrowserTranscodeStepProps {
     sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>,
     keepOriginal: boolean
   ) => Promise<void>
-  onComplete: (files: File[]) => void
+  onComplete: (files: File[] | Map<string, File>) => void
   onSkip: () => void
 }
 
@@ -72,8 +72,14 @@ export function BrowserTranscodeStep({
         return
       }
 
-      const files = await startTranscode(file)
-      onComplete(keepOriginal ? [...files, file] : files)
+      const results = await startTranscode(file)
+      if (results instanceof Array) {
+        onComplete(keepOriginal ? [...results, file] : results)
+      } else {
+        // HLS (Map) doesn't support 'keepOriginal' in the same way here,
+        // but it's handled in the background path anyway.
+        onComplete(results)
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
     }

@@ -1,7 +1,7 @@
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 
 export interface BrowserTranscodeJobProgress {
-  variant: BrowserTranscodeVariant
+  variant?: BrowserTranscodeVariant
   variantIndex: number
   progress: number
 }
@@ -10,7 +10,7 @@ type WorkerResponse =
   | {
       type: 'progress'
       jobId: string
-      variant: BrowserTranscodeVariant
+      variant?: BrowserTranscodeVariant
       variantIndex: number
       progress: number
     }
@@ -31,7 +31,7 @@ type WorkerResponse =
   | {
       type: 'complete'
       jobId: string
-      files: File[]
+      files: File[] | Map<string, File>
     }
   | {
       type: 'error'
@@ -50,7 +50,7 @@ interface PendingJob {
   sourceMeta: TranscodeSourceMeta
   onProgress: (progress: BrowserTranscodeJobProgress) => void
   onVariantError: (variantIndex: number, message: string) => void
-  resolve: (files: File[]) => void
+  resolve: (files: File[] | Map<string, File>) => void
   reject: (error: Error) => void
   signal: AbortSignal
 }
@@ -68,7 +68,7 @@ class BrowserTranscodeWorkerQueue {
     onProgress: (progress: BrowserTranscodeJobProgress) => void,
     onVariantError: (variantIndex: number, message: string) => void,
     signal: AbortSignal
-  ): Promise<File[]> {
+  ): Promise<File[] | Map<string, File>> {
     const jobId = crypto.randomUUID()
 
     return new Promise((resolve, reject) => {
@@ -94,7 +94,7 @@ class BrowserTranscodeWorkerQueue {
       }
 
       signal.addEventListener('abort', abort, { once: true })
-      const cleanupResolve = (files: File[]) => {
+      const cleanupResolve = (files: File[] | Map<string, File>) => {
         signal.removeEventListener('abort', abort)
         resolve(files)
       }

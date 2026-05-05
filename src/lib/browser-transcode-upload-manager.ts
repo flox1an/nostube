@@ -14,7 +14,6 @@ import { getItemsFromStorage, updateItemInStorage } from '@/lib/draft-persistenc
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
   rewriteHlsPlaylists,
-  transcodeToHls,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
@@ -239,61 +238,35 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
 
     const transcodedFiles =
       variants.length > 0
-        ? isHls
-          ? await (async () => {
-              console.log('[BrowserTranscodeUploadManager] Calling transcodeToHls')
-              const result = await transcodeToHls(
-                file,
-                variants,
-                sourceMeta,
-                (_, progress) => {
-                  console.log(
-                    `[BrowserTranscodeUploadManager] HLS Progress: ${Math.round(progress * 100)}%`
-                  )
-                  throttledUpdateProgress(progress)
-                },
-                controller.signal
-              )
-              console.log(
-                `[BrowserTranscodeUploadManager] HLS Transcode complete, produced ${result.size} files`
-              )
-              return result
-            })()
-          : await runBrowserTranscodeJob(
-              file,
-              variants,
-              sourceMeta,
-              ({ variantIndex, progress }) => {
-                const now = Date.now()
-                if (now - lastProgressTime > 500 || progress === 1) {
-                  lastProgressTime = now
-                  updateBrowserState(draftId, state => ({
-                    ...state,
-                    status: 'transcoding',
-                    updatedAt: Date.now(),
-                    variants: state.variants.map((variant, index) => {
-                      if (index < variantIndex) return { ...variant, progress: 1, status: 'done' }
-                      if (index === variantIndex) return { ...variant, progress, status: 'active' }
-                      return variant
-                    }),
-                  }))
-                }
-              },
-              (variantIndex, message) => {
-                updateBrowserState(draftId, state => ({
-                  ...state,
-                  updatedAt: Date.now(),
-                  variants: state.variants.map((variant, index) =>
-                    index === variantIndex ? { ...variant, status: 'error' } : variant
-                  ),
-                  message,
-                }))
-              },
-              controller.signal
-            )
+        ? await runBrowserTranscodeJob(
+            file,
+            variants,
+            sourceMeta,
+            ({ progress }) => {
+              const now = Date.now()
+              if (now - lastProgressTime > 500 || progress === 1) {
+                lastProgressTime = now
+                throttledUpdateProgress(progress)
+              }
+            },
+            (variantIndex, message) => {
+              updateBrowserState(draftId, state => ({
+                ...state,
+                updatedAt: Date.now(),
+                variants: state.variants.map((variant, index) =>
+                  index === variantIndex ? { ...variant, status: 'error' } : variant
+                ),
+                message,
+              }))
+            },
+            controller.signal
+          )
         : []
 
-    console.log('[BrowserTranscodeUploadManager] Transcode result type:', transcodedFiles instanceof Map ? 'Map' : 'Array')
+    console.log(
+      '[BrowserTranscodeUploadManager] Transcode result type:',
+      transcodedFiles instanceof Map ? 'Map' : 'Array'
+    )
 
     updateBrowserState(draftId, state => ({
       ...state,

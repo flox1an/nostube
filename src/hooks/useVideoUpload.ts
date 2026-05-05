@@ -616,11 +616,15 @@ export function useVideoUpload(
     return { ...videoVariant, mirroredBlobs: result.mirroredBlobs }
   }
 
-  const handleBrowserTranscodeComplete = async (transcodedFiles: File[]) => {
+  const handleBrowserTranscodeComplete = async (transcodedFiles: File[] | Map<string, File>) => {
     setUploadState('uploading')
     setUploadProgress(null)
 
     try {
+      if (!(transcodedFiles instanceof Array)) {
+        throw new Error('HLS upload is currently only supported in background mode.')
+      }
+
       const variants: VideoVariant[] = []
       for (const transcodedFile of transcodedFiles) {
         variants.push(await uploadFileAndProcess(transcodedFile))

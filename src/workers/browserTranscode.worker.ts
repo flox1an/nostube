@@ -1,5 +1,6 @@
 import {
   transcodeFile,
+  transcodeToHls,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
@@ -21,7 +22,7 @@ type WorkerResponse =
   | {
       type: 'progress'
       jobId: string
-      variant: BrowserTranscodeVariant
+      variant?: BrowserTranscodeVariant
       variantIndex: number
       progress: number
     }
@@ -42,7 +43,7 @@ type WorkerResponse =
   | {
       type: 'complete'
       jobId: string
-      files: File[]
+      files: File[] | Map<string, File>
     }
   | {
       type: 'error'
@@ -71,9 +72,25 @@ async function runTranscodeJob(
   activeJobId = jobId
   activeAbortController = new AbortController()
   const signal = activeAbortController.signal
-  const files: File[] = []
 
   try {
+    const isHls = variants.some(v => v.format === 'hls')
+
+    if (isHls) {
+      const hlsFiles = await transcodeToHls(
+        file,
+        variants,
+        sourceMeta,
+        (variantIndex, progress) => {
+          post({ type: 'progress', jobId, variant: variants[variantIndex], variantIndex, progress })
+        },
+        signal
+      )
+      post({ type: 'complete', jobId, files: hlsFiles })
+      return
+    }
+
+    const files: File[] = []
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]
 

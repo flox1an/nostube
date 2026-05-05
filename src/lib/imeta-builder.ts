@@ -119,8 +119,8 @@ export function buildImetaTag(params: BuildImetaTagParams): string[] {
   }
 
   // Add MIME type with codecs
-  const fileType = variant.file?.type
-  tag.push(`m ${buildAdvancedMimeType(fileType, variant.videoCodec, variant.audioCodec)}`)
+  const baseMime = variant.mimeType || variant.file?.type
+  tag.push(`m ${buildAdvancedMimeType(baseMime, variant.videoCodec, variant.audioCodec)}`)
 
   // Add bitrate
   if (variant.bitrate) {

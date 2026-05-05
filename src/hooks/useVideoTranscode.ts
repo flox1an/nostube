@@ -36,7 +36,7 @@ export interface UseVideoTranscodeReturn {
   supported: boolean
   setVariants: Dispatch<SetStateAction<BrowserTranscodeVariant[]>>
   analyze: (file: File) => Promise<void>
-  startTranscode: (file: File) => Promise<File[]>
+  startTranscode: (file: File) => Promise<File[] | Map<string, File>>
   cancel: () => void
   reset: () => void
 }
@@ -115,7 +115,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
   )
 
   const startTranscode = useCallback(
-    async (file: File): Promise<File[]> => {
+    async (file: File): Promise<File[] | Map<string, File>> => {
       if (!sourceMeta || variants.length === 0) return []
 
       const controller = new AbortController()
@@ -153,7 +153,9 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
 
       abortRef.current = null
 
-      if (results.length === 0) {
+      const hasResults = results instanceof Array ? results.length > 0 : results.size > 0
+
+      if (!hasResults) {
         const message = 'All transcode variants failed. Try uploading the original.'
         setError(message)
         setStatus('error')

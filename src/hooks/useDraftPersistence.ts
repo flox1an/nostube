@@ -132,6 +132,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
 
           const event = {
             kind: 30078,
+            pubkey: user.pubkey,
             content,
             created_at: nowInSecs(),
             tags: [['d', nostrIdentifier]],

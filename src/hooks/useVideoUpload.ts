@@ -270,6 +270,9 @@ export function useVideoUpload(
   // Index of the video variant currently being deleted from servers
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
 
+  // Track if an update came from the browser transcode listener to avoid sync loops
+  const isInternalUpdateRef = useRef(false)
+
   // Use ref to store callback to prevent infinite loop
   const onDraftChangeRef = useRef(onDraftChange)
 
@@ -282,6 +285,7 @@ export function useVideoUpload(
     const unsubscribe = subscribeToBrowserTranscodeUploads(updatedDraft => {
       if (updatedDraft.id !== draftId) return
 
+      isInternalUpdateRef.current = true
       setBrowserTranscodeState(updatedDraft.browserTranscodeState)
       setUploadInfo(updatedDraft.uploadInfo)
 
@@ -1094,6 +1098,11 @@ export function useVideoUpload(
 
   // Sync upload milestone changes separately (immediate in useUploadDrafts)
   useEffect(() => {
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false
+      return
+    }
+
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
         uploadInfo,

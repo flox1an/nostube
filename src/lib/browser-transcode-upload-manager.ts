@@ -75,6 +75,42 @@ function updateBrowserState(
   })
 }
 
+/**
+ * Creates a throttled function that only invokes func at most once per every wait milliseconds.
+ * Ensures the last call always goes through.
+ */
+function throttle<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let lastTime = 0
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  let lastArgs: any[] | null = null
+
+  return ((...args: any[]) => {
+    const now = Date.now()
+    const remaining = wait - (now - lastTime)
+
+    if (remaining <= 0) {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      lastTime = now
+      func(...args)
+    } else {
+      lastArgs = args
+      if (!timeout) {
+        timeout = setTimeout(() => {
+          lastTime = Date.now()
+          timeout = null
+          if (lastArgs) {
+            func(...lastArgs)
+            lastArgs = null
+          }
+        }, remaining)
+      }
+    }
+  }) as T
+}
+
 async function uploadAndProcessFile(
   file: File,
   initialServers: string[],
@@ -187,6 +223,20 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     const isHls = variants.some(v => v.format === 'hls')
     console.log('[BrowserTranscodeUploadManager] Starting job:', { isHls, variants, keepOriginal })
 
+    let lastProgressTime = 0
+    const throttledUpdateProgress = throttle((progress: number) => {
+      updateBrowserState(draftId, state => ({
+        ...state,
+        status: 'transcoding',
+        updatedAt: Date.now(),
+        variants: state.variants.map(v => ({
+          ...v,
+          progress,
+          status: 'active',
+        })),
+      }))
+    }, 500)
+
     const transcodedFiles =
       variants.length > 0
         ? isHls
@@ -197,21 +247,16 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
                 variants,
                 sourceMeta,
                 (_, progress) => {
-                  console.log(`[BrowserTranscodeUploadManager] HLS Progress: ${Math.round(progress * 100)}%`)
-                  updateBrowserState(draftId, state => ({
-                    ...state,
-                    status: 'transcoding',
-                    updatedAt: Date.now(),
-                    variants: state.variants.map(v => ({
-                      ...v,
-                      progress,
-                      status: 'active',
-                    })),
-                  }))
+                  console.log(
+                    `[BrowserTranscodeUploadManager] HLS Progress: ${Math.round(progress * 100)}%`
+                  )
+                  throttledUpdateProgress(progress)
                 },
                 controller.signal
               )
-              console.log(`[BrowserTranscodeUploadManager] HLS Transcode complete, produced ${result.size} files`)
+              console.log(
+                `[BrowserTranscodeUploadManager] HLS Transcode complete, produced ${result.size} files`
+              )
               return result
             })()
           : await runBrowserTranscodeJob(
@@ -219,16 +264,20 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               variants,
               sourceMeta,
               ({ variantIndex, progress }) => {
-                updateBrowserState(draftId, state => ({
-                  ...state,
-                  status: 'transcoding',
-                  updatedAt: Date.now(),
-                  variants: state.variants.map((variant, index) => {
-                    if (index < variantIndex) return { ...variant, progress: 1, status: 'done' }
-                    if (index === variantIndex) return { ...variant, progress, status: 'active' }
-                    return variant
-                  }),
-                }))
+                const now = Date.now()
+                if (now - lastProgressTime > 500 || progress === 1) {
+                  lastProgressTime = now
+                  updateBrowserState(draftId, state => ({
+                    ...state,
+                    status: 'transcoding',
+                    updatedAt: Date.now(),
+                    variants: state.variants.map((variant, index) => {
+                      if (index < variantIndex) return { ...variant, progress: 1, status: 'done' }
+                      if (index === variantIndex) return { ...variant, progress, status: 'active' }
+                      return variant
+                    }),
+                  }))
+                }
               },
               (variantIndex, message) => {
                 updateBrowserState(draftId, state => ({

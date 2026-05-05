@@ -580,6 +580,12 @@ export function useVideoUpload(
       !user ||
       !signer
     ) {
+      console.warn('[useVideoUpload] Cannot start transcode upload. Missing requirements:', {
+        hasFile: !!file,
+        serverCount: blossomInitalUploadServers?.length ?? 0,
+        hasUser: !!user,
+        hasSigner: !!signer,
+      })
       setUploadState('initial')
       return
     }

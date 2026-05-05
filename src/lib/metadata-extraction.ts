@@ -266,6 +266,17 @@ export const extractMetadataFromFile = (file: File): Promise<VideoMetadata> => {
       if (!resolved) {
         try {
           const arrayBuffer = fileReader.result as ArrayBuffer
+
+          // Check for MP4 signature (ftyp box)
+          // Offset 4: 0x66 0x74 0x79 0x70 ("ftyp")
+          const uint8 = new Uint8Array(arrayBuffer)
+          if (uint8.length >= 8) {
+            const signature = String.fromCharCode(uint8[4], uint8[5], uint8[6], uint8[7])
+            if (signature !== 'ftyp') {
+              throw new Error('Not a valid MP4 file (missing ftyp box)')
+            }
+          }
+
           const mp4boxBuffer = Object.assign(arrayBuffer, { fileStart: 0 })
           mp4boxfile.appendBuffer(mp4boxBuffer)
           mp4boxfile.flush()

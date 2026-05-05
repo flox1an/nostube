@@ -2,6 +2,7 @@ import { type BlobDescriptor } from 'blossom-client-sdk'
 import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from './codec-detection'
 import { extractMetadataFromFile, extractMetadataFromUrl } from './metadata-extraction'
 import type { VideoMetadata } from './metadata-extraction'
+import type { OriginalVideoInfo } from '@/types/upload-draft'
 
 /**
  * Interface representing a single video variant (e.g., different quality levels)
@@ -118,6 +119,51 @@ export async function processUploadedVideo(
       file,
       qualityLabel,
       extractedMetadata,
+    }
+  } finally {
+    URL.revokeObjectURL(video.src)
+  }
+}
+
+/**
+ * Extract serializable metadata from the original local video before it is discarded
+ * by the browser transcode workflow.
+ */
+export async function processOriginalVideoInfo(file: File): Promise<OriginalVideoInfo> {
+  const video = document.createElement('video')
+  video.src = URL.createObjectURL(file)
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'metadata'
+
+  try {
+    const { dimension, duration } = await extractVideoMetadata(video)
+    const sizeMB = file.size / 1024 / 1024
+    const qualityLabel = generateQualityLabel(dimension)
+
+    const [codecs, metadata] = await Promise.all([
+      getCodecsFromFile(file).catch(err => {
+        console.warn('Failed to extract codecs from original file:', err)
+        return {} as CodecInfo
+      }),
+      extractMetadataFromFile(file).catch(err => {
+        console.warn('Failed to extract metadata from original file:', err)
+        return {} as VideoMetadata
+      }),
+    ])
+
+    return {
+      name: file.name,
+      mimeType: file.type,
+      size: file.size,
+      sizeMB: Number(sizeMB.toFixed(2)),
+      dimension,
+      duration,
+      videoCodec: codecs.videoCodec,
+      audioCodec: codecs.audioCodec,
+      bitrate: codecs.bitrate ? Math.floor(codecs.bitrate) : undefined,
+      qualityLabel,
+      extractedMetadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     }
   } finally {
     URL.revokeObjectURL(video.src)

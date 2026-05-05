@@ -8,9 +8,25 @@ import {
 import { useFileUpload } from './useFileUpload'
 import { type BlobDescriptor, type Signer } from 'blossom-client-sdk'
 import { nowInSecs } from '@/lib/utils'
-import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
+import {
+  type VideoVariant,
+  processOriginalVideoInfo,
+  processUploadedVideo,
+  processVideoUrl,
+} from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
-import type { UploadDraft, SubtitleVariant, TaggedPerson } from '@/types/upload-draft'
+import type {
+  BrowserTranscodeState,
+  OriginalVideoInfo,
+  SubtitleVariant,
+  TaggedPerson,
+  UploadDraft,
+} from '@/types/upload-draft'
+import {
+  startBrowserTranscodeUploadJob,
+  subscribeToBrowserTranscodeUploads,
+} from '@/lib/browser-transcode-upload-manager'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
@@ -200,8 +216,21 @@ export function useVideoUpload(
   )
   const [uploadState, setUploadState] = useState<
     'initial' | 'transcoding' | 'uploading' | 'finished'
-  >(initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial')
+  >(
+    initialDraft?.browserTranscodeState &&
+      ['queued', 'transcoding', 'uploading'].includes(initialDraft.browserTranscodeState.status)
+      ? 'transcoding'
+      : initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0
+        ? 'finished'
+        : 'initial'
+  )
   const [browserTranscodeMode, setBrowserTranscodeMode] = useState<'replace' | 'append'>('replace')
+  const [browserTranscodeState, setBrowserTranscodeState] = useState<
+    BrowserTranscodeState | undefined
+  >(initialDraft?.browserTranscodeState)
+  const [originalVideoInfo, setOriginalVideoInfo] = useState<OriginalVideoInfo | undefined>(
+    initialDraft?.originalVideoInfo
+  )
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null)
   const [thumbnailBlurhash, setThumbnailBlurhash] = useState<string | undefined>(undefined)
   const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>(
@@ -249,19 +278,45 @@ export function useVideoUpload(
     onDraftChangeRef.current = onDraftChange
   }, [onDraftChange])
 
+  useEffect(() => {
+    const unsubscribe = subscribeToBrowserTranscodeUploads(updatedDraft => {
+      if (updatedDraft.id !== draftId) return
+
+      setBrowserTranscodeState(updatedDraft.browserTranscodeState)
+      setUploadInfo(updatedDraft.uploadInfo)
+
+      const backgroundStatus = updatedDraft.browserTranscodeState?.status
+      if (backgroundStatus === 'complete') {
+        setUploadState('finished')
+        setUploadProgress(null)
+      } else if (
+        backgroundStatus === 'queued' ||
+        backgroundStatus === 'transcoding' ||
+        backgroundStatus === 'uploading'
+      ) {
+        setUploadState('transcoding')
+      } else if (backgroundStatus === 'error' || backgroundStatus === 'cancelled') {
+        setUploadState(updatedDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial')
+      }
+    })
+
+    return unsubscribe
+  }, [draftId])
+
   // Auto-populate form fields from extracted metadata
   const metadataAppliedRef = useRef(false)
   const [metadataDetected, setMetadataDetected] = useState(false)
 
   useEffect(() => {
     const firstVideo = uploadInfo.videos[0]
+    const extractedMetadata = originalVideoInfo?.extractedMetadata ?? firstVideo?.extractedMetadata
 
     // Only apply metadata once, when video is first uploaded
-    if (!firstVideo?.extractedMetadata || metadataAppliedRef.current) {
+    if (!extractedMetadata || metadataAppliedRef.current) {
       return
     }
 
-    const meta = firstVideo.extractedMetadata
+    const meta = extractedMetadata
     let applied = false
 
     if (import.meta.env.DEV) {
@@ -297,7 +352,7 @@ export function useVideoUpload(
         console.log('[useVideoUpload] Metadata auto-populated successfully')
       }
     }
-  }, [uploadInfo.videos, title, description, tags.length, publishAt])
+  }, [originalVideoInfo, uploadInfo.videos, title, description, tags.length, publishAt])
 
   const { user } = useCurrentUser()
   const { config } = useAppContext()
@@ -481,10 +536,68 @@ export function useVideoUpload(
 
     const droppedFile = acceptedFiles[0]
     setBrowserTranscodeMode('replace')
+    setBrowserTranscodeState(undefined)
+    setOriginalVideoInfo(undefined)
     setFile(droppedFile)
     setUploadInfo({ videos: [] })
     setUploadProgress(null)
     setUploadState('transcoding')
+
+    try {
+      const info = await processOriginalVideoInfo(droppedFile)
+      setOriginalVideoInfo(info)
+      onDraftChangeRef.current?.({
+        originalVideoInfo: info,
+        updatedAt: Date.now(),
+      })
+    } catch (error) {
+      console.warn('[useVideoUpload] Failed to extract original video info:', error)
+      const fallbackInfo: OriginalVideoInfo = {
+        name: droppedFile.name,
+        mimeType: droppedFile.type,
+        size: droppedFile.size,
+        sizeMB: Number((droppedFile.size / 1024 / 1024).toFixed(2)),
+        dimension: '0x0',
+        duration: 0,
+      }
+      setOriginalVideoInfo(fallbackInfo)
+      onDraftChangeRef.current?.({
+        originalVideoInfo: fallbackInfo,
+        updatedAt: Date.now(),
+      })
+    }
+  }
+
+  const handleStartBrowserTranscodeUpload = async (
+    variants: BrowserTranscodeVariant[],
+    sourceMeta: TranscodeSourceMeta,
+    keepOriginal = false
+  ) => {
+    if (
+      !file ||
+      !blossomInitalUploadServers ||
+      blossomInitalUploadServers.length === 0 ||
+      !user ||
+      !signer
+    ) {
+      setUploadState('initial')
+      return
+    }
+
+    setUploadState('transcoding')
+    setUploadProgress(null)
+
+    void startBrowserTranscodeUploadJob({
+      draftId,
+      file,
+      variants,
+      sourceMeta,
+      mode: browserTranscodeMode,
+      keepOriginal,
+      initialServers: blossomInitalUploadServers.map(s => s.url),
+      mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
+      signer,
+    })
   }
 
   const uploadFileAndProcess = async (fileToUpload: File): Promise<VideoVariant> => {
@@ -978,6 +1091,8 @@ export function useVideoUpload(
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
         uploadInfo,
+        originalVideoInfo,
+        browserTranscodeState,
         thumbnailUploadInfo: {
           uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
           mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
@@ -986,7 +1101,7 @@ export function useVideoUpload(
         updatedAt: Date.now(),
       })
     }
-  }, [uploadInfo, thumbnailUploadInfo, subtitles])
+  }, [browserTranscodeState, originalVideoInfo, uploadInfo, thumbnailUploadInfo, subtitles])
 
   // Build preview event from current form state (reuses buildVideoEvent logic)
   const previewEvent = useMemo(() => {
@@ -1065,6 +1180,7 @@ export function useVideoUpload(
     thumbnail,
     setThumbnail,
     uploadInfo,
+    originalVideoInfo,
     uploadState,
     thumbnailBlob,
     thumbnailSource,
@@ -1078,6 +1194,7 @@ export function useVideoUpload(
     publishAt,
     setPublishAt,
     uploadProgress,
+    browserTranscodeState,
     publishSummary,
     blossomInitalUploadServers,
     blossomMirrorServers,
@@ -1099,6 +1216,7 @@ export function useVideoUpload(
     onDrop,
     handleBrowserTranscodeComplete,
     handleBrowserTranscodeSkip,
+    handleStartBrowserTranscodeUpload,
     handleReset,
     handleSubmit,
     handleAddVideo,

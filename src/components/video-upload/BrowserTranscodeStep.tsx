@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -6,16 +6,30 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
+import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { Loader2, Upload, X, Zap } from 'lucide-react'
 
 interface BrowserTranscodeStepProps {
-  file: File
+  file: File | null
+  backgroundState?: BrowserTranscodeState
+  onStartBackground?: (
+    variants: BrowserTranscodeVariant[],
+    sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>,
+    keepOriginal: boolean
+  ) => Promise<void>
   onComplete: (files: File[]) => void
   onSkip: () => void
 }
 
-export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTranscodeStepProps) {
+export function BrowserTranscodeStep({
+  file,
+  backgroundState,
+  onStartBackground,
+  onComplete,
+  onSkip,
+}: BrowserTranscodeStepProps) {
   const { t } = useTranslation()
+  const [keepOriginal, setKeepOriginal] = useState(false)
   const {
     status,
     sourceMeta,
@@ -32,22 +46,47 @@ export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTransc
   } = useVideoTranscode()
 
   useEffect(() => {
-    if (!supported) return
-    analyze(file)
-  }, [analyze, file, supported])
+    if (status === 'waiting') {
+      if (recommendation === 'none' || availableVariants.length === 0) {
+        setKeepOriginal(true)
+      }
+    }
+  }, [status, recommendation, availableVariants.length])
 
   useEffect(() => {
-    if (!supported) onSkip()
-  }, [supported, onSkip])
+    if (!file || !supported || backgroundState?.status) return
+    analyze(file)
+  }, [analyze, backgroundState?.status, file, supported])
 
   const handleStart = useCallback(async () => {
+    if (!file) return
+
     try {
+      if (!sourceMeta && keepOriginal) {
+        onSkip()
+        return
+      }
+
+      if (onStartBackground && sourceMeta) {
+        await onStartBackground(variants, sourceMeta, keepOriginal)
+        return
+      }
+
       const files = await startTranscode(file)
-      onComplete(files)
+      onComplete(keepOriginal ? [...files, file] : files)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
     }
-  }, [file, onComplete, startTranscode])
+  }, [
+    file,
+    keepOriginal,
+    onComplete,
+    onSkip,
+    onStartBackground,
+    sourceMeta,
+    startTranscode,
+    variants,
+  ])
 
   const toggleVariant = useCallback(
     (variant: BrowserTranscodeVariant) => {
@@ -59,6 +98,87 @@ export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTransc
     },
     [setVariants]
   )
+
+  if (backgroundState && backgroundState.status !== 'complete') {
+    return (
+      <Alert variant={backgroundState.status === 'error' ? 'destructive' : 'default'}>
+        {backgroundState.status === 'error' ? (
+          <X className="h-4 w-4" />
+        ) : (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        )}
+        <AlertTitle>
+          {backgroundState.status === 'uploading'
+            ? t('upload.browserTranscode.backgroundUploading', {
+                defaultValue: 'Uploading optimised video...',
+              })
+            : backgroundState.status === 'error'
+              ? t('upload.browserTranscode.errorTitle', { defaultValue: 'Transcode failed' })
+              : t('upload.browserTranscode.backgroundTranscoding', {
+                  defaultValue: 'Optimising video in background...',
+                })}
+        </AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p className="text-sm text-muted-foreground">{backgroundState.message}</p>
+          {backgroundState.variants.map(variant => (
+            <div key={variant.label} className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>{variant.label}</span>
+                <span>
+                  {variant.status === 'done'
+                    ? 'Done'
+                    : variant.status === 'active'
+                      ? `${Math.round(variant.progress * 100)}%`
+                      : variant.status === 'error'
+                        ? 'Error'
+                        : 'Waiting'}
+                </span>
+              </div>
+              {variant.status === 'active' && (
+                <Progress value={variant.progress * 100} className="h-1.5" />
+              )}
+            </div>
+          ))}
+          {backgroundState.uploadProgress && (
+            <Progress value={backgroundState.uploadProgress.percentage} className="h-1.5" />
+          )}
+          {backgroundState.error && <p className="text-sm">{backgroundState.error}</p>}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (!file) return null
+
+  if (!supported) {
+    return (
+      <Alert>
+        <Upload className="h-4 w-4" />
+        <AlertTitle>
+          {t('upload.browserTranscode.notSupported', {
+            defaultValue: 'Browser optimisation is not available',
+          })}
+        </AlertTitle>
+        <AlertDescription className="space-y-3">
+          <label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              checked={keepOriginal}
+              onCheckedChange={checked => setKeepOriginal(checked === true)}
+            />
+            <span className="text-sm">
+              {t('upload.browserTranscode.keepOriginal', {
+                defaultValue: 'Keep original',
+              })}
+            </span>
+          </label>
+          <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t('upload.upload', { defaultValue: 'Upload' })}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
 
   if (status === 'analyzing' || status === 'idle') {
     return (
@@ -80,10 +200,6 @@ export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTransc
         </AlertTitle>
         <AlertDescription>
           <p className="mb-3">{error}</p>
-          <Button type="button" size="sm" variant="outline" onClick={onSkip}>
-            <Upload className="mr-2 h-4 w-4" />
-            {t('upload.browserTranscode.uploadOriginal', { defaultValue: 'Upload original' })}
-          </Button>
         </AlertDescription>
       </Alert>
     )
@@ -134,32 +250,50 @@ export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTransc
                     <span className="text-sm">{variant.label}</span>
                   </label>
                 ))}
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={keepOriginal}
+                    onCheckedChange={checked => setKeepOriginal(checked === true)}
+                  />
+                  <span className="text-sm">
+                    {t('upload.browserTranscode.keepOriginal', {
+                      defaultValue: 'Keep original',
+                    })}
+                  </span>
+                </label>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
                   size="sm"
                   onClick={handleStart}
-                  disabled={variants.length === 0}
+                  disabled={variants.length === 0 && !keepOriginal}
                 >
                   <Zap className="mr-2 h-4 w-4" />
                   {t('upload.browserTranscode.optimiseUpload', {
                     defaultValue: 'Optimise & Upload',
                   })}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={onSkip}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  {t('upload.browserTranscode.uploadOriginal', {
-                    defaultValue: 'Upload original',
-                  })}
-                </Button>
               </div>
             </>
           ) : (
-            <Button type="button" size="sm" onClick={onSkip}>
-              <Upload className="mr-2 h-4 w-4" />
-              {t('upload.browserTranscode.uploadOriginal', { defaultValue: 'Upload original' })}
-            </Button>
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={keepOriginal}
+                  onCheckedChange={checked => setKeepOriginal(checked === true)}
+                />
+                <span className="text-sm">
+                  {t('upload.browserTranscode.keepOriginal', {
+                    defaultValue: 'Keep original',
+                  })}
+                </span>
+              </label>
+              <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
+                <Upload className="mr-2 h-4 w-4" />
+                {t('upload.upload', { defaultValue: 'Upload' })}
+              </Button>
+            </div>
           )}
         </AlertDescription>
       </Alert>
@@ -197,12 +331,11 @@ export function BrowserTranscodeStep({ file, onComplete, onSkip }: BrowserTransc
             variant="outline"
             onClick={() => {
               cancel()
-              onSkip()
             }}
           >
             <X className="mr-2 h-4 w-4" />
             {t('upload.browserTranscode.cancel', {
-              defaultValue: 'Cancel - upload original',
+              defaultValue: 'Cancel',
             })}
           </Button>
         </AlertDescription>

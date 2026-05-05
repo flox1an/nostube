@@ -1,10 +1,14 @@
 import { getCodecsFromFile } from './codec-detection'
 import type { VideoCodec } from 'mediabunny'
 
-export const BITRATE_CUTOFF_MBPS = 15
+export const BITRATE_CUTOFF_MBPS = 8
 export const PRIMARY_TARGET_HEIGHT = 1080
 export const FALLBACK_TARGET_HEIGHT = 480
-export const BPP_MEDIUM = 0.22
+export const TARGET_1080P_BITRATE = 8_000_000
+export const TARGET_1080P_WIDTH = 1920
+export const TARGET_FPS = 30
+export const BPP_MEDIUM =
+  TARGET_1080P_BITRATE / (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
 
 export interface TranscodeSourceMeta {
   width: number

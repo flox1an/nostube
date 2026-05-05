@@ -5,11 +5,11 @@ import {
   defaultVariants,
   isWebCodecsSupported,
   probeTranscodeSource,
-  transcodeFile,
   type BrowserTranscodeVariant,
   type TranscodeRecommendation,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
+import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 
 export type VideoTranscodeStatus =
   | 'idle'
@@ -126,42 +126,30 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
       setVariantProgress(variants.map(v => ({ variant: v, progress: 0, status: 'pending' })))
       setError(null)
 
-      const results: File[] = []
-
-      for (let i = 0; i < variants.length; i++) {
-        const variant = variants[i]
-
-        setVariantProgress(prev =>
-          prev.map((vp, idx) => (idx === i ? { ...vp, status: 'active', progress: 0 } : vp))
-        )
-
-        try {
-          const outFile = await transcodeFile(
-            file,
-            variant,
-            sourceMeta,
-            progress => {
-              setVariantProgress(prev =>
-                prev.map((vp, idx) => (idx === i ? { ...vp, progress } : vp))
-              )
-            },
-            signal
-          )
-
-          results.push(outFile)
-
+      const results = await runBrowserTranscodeJob(
+        file,
+        variants,
+        sourceMeta,
+        ({ variantIndex, progress }) => {
           setVariantProgress(prev =>
-            prev.map((vp, idx) => (idx === i ? { ...vp, status: 'done', progress: 1 } : vp))
+            prev.map((vp, idx) => {
+              if (idx < variantIndex) return { ...vp, status: 'done', progress: 1 }
+              if (idx === variantIndex) return { ...vp, status: 'active', progress }
+              return vp
+            })
           )
-        } catch (err) {
-          if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
-
+        },
+        (variantIndex, message) => {
           setVariantProgress(prev =>
-            prev.map((vp, idx) => (idx === i ? { ...vp, status: 'error' } : vp))
+            prev.map((vp, idx) => (idx === variantIndex ? { ...vp, status: 'error' } : vp))
           )
-          console.warn(`[useVideoTranscode] Variant ${variant.label} failed:`, err)
-        }
-      }
+          console.warn(
+            `[useVideoTranscode] Variant ${variants[variantIndex]?.label} failed:`,
+            message
+          )
+        },
+        signal
+      )
 
       abortRef.current = null
 
@@ -172,6 +160,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
         throw new Error(message)
       }
 
+      setVariantProgress(prev => prev.map(vp => ({ ...vp, status: 'done', progress: 1 })))
       setStatus('done')
       return results
     },

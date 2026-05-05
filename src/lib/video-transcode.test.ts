@@ -29,11 +29,11 @@ describe('assessTranscodeNeed', () => {
     expect(assessTranscodeNeed({ ...baseMeta, height: 2160, bitrateMbps: 5 })).toBe('full')
   })
 
-  it('returns bitrate when codec/container/res fine but bitrate > 15', () => {
+  it('returns bitrate when codec/container/res fine but bitrate > 8', () => {
     expect(
       assessTranscodeNeed({
         ...baseMeta,
-        bitrateMbps: 20,
+        bitrateMbps: 10,
         mimeType: 'video/mp4',
         videoCodec: 'hvc1.1',
       })
@@ -44,7 +44,7 @@ describe('assessTranscodeNeed', () => {
     expect(
       assessTranscodeNeed({
         ...baseMeta,
-        bitrateMbps: 10,
+        bitrateMbps: 8,
         videoCodec: 'hvc1.1',
         mimeType: 'video/mp4',
       })

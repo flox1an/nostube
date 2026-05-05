@@ -31,3 +31,7 @@ dist-ssr
 # Tauri build artifacts
 src-tauri/target/
 src-tauri/gen/
+
+# Integration test stack local files
+infra/test-stack/.env
+infra/test-stack/data/

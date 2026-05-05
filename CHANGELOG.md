@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Browser transcoding UI now automatically selects "Keep original" when the source video is already optimised or no high-resolution transcode variants are produced; ensures the original video is always preserved as the primary source when no conversion is needed
 - No loading indicator during Blossom upload when server does not support chunked uploads (BUD-10) — fallback regular upload never called `onProgress`, leaving the UI showing nothing between dropping the file and the upload completing; now shows a spinner with "Uploading…" text whenever `uploadState === 'uploading'` and no chunk progress is available yet
 
 - Page crash (OOM / "Aw, Snap") when scrolling through 700+ videos on a profile page — the early-complete timer (500 ms) was setting `loading=false` while the relay subscription was still open; `useInfiniteScroll` immediately re-triggered `loadMore`, canceling and restarting the subscription in a tight loop, opening hundreds of WebSocket connections and exhausting browser memory; fixed by tracking `subscriptionActive` separately from `loading` and blocking re-triggers while the subscription is still running

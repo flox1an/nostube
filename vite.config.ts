@@ -52,6 +52,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
   },
+  worker: {
+    format: 'es',
+  },
   build: {
     sourcemap: false, // Disable sourcemaps in production for smaller bundle
     minify: 'terser',

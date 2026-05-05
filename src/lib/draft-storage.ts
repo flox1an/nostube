@@ -40,8 +40,10 @@ export function createEmptyDraft(): UploadDraft {
 export function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
   return !!(
     updates.uploadInfo?.videos ||
+    updates.originalVideoInfo ||
     updates.thumbnailUploadInfo?.uploadedBlobs ||
     updates.thumbnailUploadInfo?.mirroredBlobs ||
+    'browserTranscodeState' in updates ||
     'dvmTranscodeState' in updates
   )
 }

@@ -1,0 +1,114 @@
+services:
+  relay:
+    image: scsibug/nostr-rs-relay:latest
+    restart: unless-stopped
+    ports:
+      - '${RELAY_PORT:-18081}:8080'
+
+  almond:
+    build:
+      context: ../../../almond
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      BIND_ADDR: 0.0.0.0:3000
+      PUBLIC_URL: http://localhost:${ALMOND_PORT:-13000}
+      STORAGE_PATH: /app/files
+      RUST_LOG: ${ALMOND_RUST_LOG:-info}
+    ports:
+      - '${ALMOND_PORT:-13000}:3000'
+    volumes:
+      - ./data/almond:/app/files
+    depends_on:
+      - relay
+
+  image-resizer:
+    image: darthsim/imgproxy:v3.26.1
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: ':8080'
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_ENABLE_WEBP_DETECTION: 'true'
+      IMGPROXY_USE_ETAG: 'true'
+      IMGPROXY_ENABLE_SIGNATURE: 'false'
+    ports:
+      - '${IMGPROXY_PORT:-18082}:8080'
+
+  divico-dvm:
+    build:
+      context: ../../../divico-dvm
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      OPERATOR_NPUB: ${OPERATOR_NPUB}
+      HTTP_PORT: 5207
+      DATA_DIR: /app/data
+      TEMP_DIR: /app/temp
+      BOOTSTRAP_RELAYS: ${DVM_BOOTSTRAP_RELAYS:-ws://relay:8080}
+      RUST_LOG: ${DVM_RUST_LOG:-info}
+    ports:
+      - '${DVM_PORT:-15207}:5207'
+    volumes:
+      - ./data/divico:/app/data
+      - ./data/divico-temp:/app/temp
+    depends_on:
+      - relay
+      - almond
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:5207/']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  nostube:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      RUNTIME_RELAYS: ${RUNTIME_RELAYS:-ws://localhost:18081}
+      RUNTIME_BLOSSOM_SERVERS: ${RUNTIME_BLOSSOM_SERVERS:-http://localhost:13000}
+      RUNTIME_APP_TITLE: ${RUNTIME_APP_TITLE:-nostube (test-stack)}
+      RUNTIME_DEBUG: ${RUNTIME_DEBUG:-true}
+    ports:
+      - '${NOSTUBE_PORT:-18080}:80'
+    depends_on:
+      - relay
+      - almond
+      - image-resizer
+      - divico-dvm
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost/health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  test-runner:
+    image: curlimages/curl:8.8.0
+    profiles:
+      - smoke
+    depends_on:
+      nostube:
+        condition: service_healthy
+      divico-dvm:
+        condition: service_healthy
+      almond:
+        condition: service_started
+      relay:
+        condition: service_started
+      image-resizer:
+        condition: service_started
+    environment:
+      NOSTUBE_URL: http://nostube
+      ALMOND_URL: http://almond:3000
+      DIVICO_URL: http://divico-dvm:5207
+      RELAY_URL: http://relay:8080
+      IMAGE_RESIZER_URL: http://image-resizer:8080
+      EXPECTED_RUNTIME_RELAYS: ${RUNTIME_RELAYS:-ws://localhost:18081}
+      EXPECTED_RUNTIME_BLOSSOM_SERVERS: ${RUNTIME_BLOSSOM_SERVERS:-http://localhost:13000}
+      WAIT_TIMEOUT_SECONDS: ${SMOKE_WAIT_TIMEOUT_SECONDS:-180}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ['/bin/sh', '/scripts/smoke.sh']

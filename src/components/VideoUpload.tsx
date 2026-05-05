@@ -101,6 +101,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     publishAt,
     setPublishAt,
     uploadProgress,
+    browserTranscodeState,
     blossomInitalUploadServers,
     blossomMirrorServers,
     isPublishing,
@@ -120,6 +121,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     onDrop,
     handleBrowserTranscodeComplete,
     handleBrowserTranscodeSkip,
+    handleStartBrowserTranscodeUpload,
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
@@ -540,9 +542,11 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                   )}
 
                 {/* Browser transcode step - shown after drop, before upload */}
-                {uploadState === 'transcoding' && file && inputMethod === 'file' && (
+                {uploadState === 'transcoding' && inputMethod === 'file' && (
                   <BrowserTranscodeStep
                     file={file}
+                    backgroundState={browserTranscodeState}
+                    onStartBackground={handleStartBrowserTranscodeUpload}
                     onComplete={handleBrowserTranscodeComplete}
                     onSkip={handleBrowserTranscodeSkip}
                   />

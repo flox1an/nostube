@@ -94,8 +94,8 @@ export function BrowserTranscodeStep({
     const selected = availableResolutionOptions.filter(r =>
       effectiveSelectedHeights.includes(r.height)
     )
-    const selectedWithCodecs =
-      outputFormat === 'mp4' ? assignMp4ResolutionCodecs(selected, supportsHevc) : selected
+    // Apply codec policy for both MP4 and HLS: HEVC for higher resolutions, H.264 for lowest
+    const selectedWithCodecs = assignMp4ResolutionCodecs(selected, supportsHevc)
 
     // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
     selectedWithCodecs.sort((a, b) => b.height - a.height)
@@ -104,21 +104,19 @@ export function BrowserTranscodeStep({
 
   const getDisplayCodecForHeight = useCallback(
     (height: number): ResolutionOption['suggestedCodec'] => {
-      if (outputFormat === 'hls') return 'avc'
-
       const selectedForPreview = effectiveSelectedHeights.includes(height)
         ? effectiveSelectedHeights
         : [...effectiveSelectedHeights, height]
       const codecOptions = assignMp4ResolutionCodecs(
         selectedForPreview.map(selectedHeight => ({
           height: selectedHeight,
-          suggestedCodec: 'avc',
+          suggestedCodec: 'avc' as const,
         })),
         supportsHevc
       )
       return codecOptions.find(option => option.height === height)?.suggestedCodec ?? 'avc'
     },
-    [effectiveSelectedHeights, outputFormat, supportsHevc]
+    [effectiveSelectedHeights, supportsHevc]
   )
 
   const handleStart = useCallback(async () => {
@@ -358,8 +356,9 @@ export function BrowserTranscodeStep({
                 {outputFormat === 'hls' && (
                   <p className="text-xs text-muted-foreground">
                     {t('upload.browserTranscode.hlsHint', {
-                      defaultValue:
-                        'All selected resolutions will be encoded as a single adaptive stream (H.264).',
+                      defaultValue: supportsHevc
+                        ? 'Higher resolutions use HEVC; the lowest uses H.264 for broad compatibility.'
+                        : 'All selected resolutions will be encoded as a single adaptive stream (H.264).',
                     })}
                   </p>
                 )}
@@ -376,7 +375,6 @@ export function BrowserTranscodeStep({
                       key={opt.height}
                       option={opt}
                       codec={getDisplayCodecForHeight(opt.height)}
-                      outputFormat={outputFormat}
                       checked={effectiveSelectedHeights.includes(opt.height)}
                       onToggle={checked => setHeightSelection(opt.height, checked)}
                     />
@@ -493,13 +491,12 @@ export function BrowserTranscodeStep({
 interface ResolutionRowProps {
   option: ResolutionOption
   codec: ResolutionOption['suggestedCodec']
-  outputFormat: 'mp4' | 'hls'
   checked: boolean
   onToggle: (checked: boolean) => void
 }
 
-function ResolutionRow({ option, codec, outputFormat, checked, onToggle }: ResolutionRowProps) {
-  const codecLabel = outputFormat === 'hls' ? 'H.264' : codec === 'hevc' ? 'HEVC' : 'H.264'
+function ResolutionRow({ option, codec, checked, onToggle }: ResolutionRowProps) {
+  const codecLabel = codec === 'hevc' ? 'HEVC' : 'H.264'
 
   return (
     <label className="flex cursor-pointer items-center gap-2">

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- HLS browser transcode now uses HEVC for higher-resolution streams and H.264 only for the lowest stream — previously all HLS streams were encoded as H.264; the resolution picker now shows the correct codec label per stream, and the hint text reflects mixed-codec output when HEVC is supported
+
 ### Added
 
 - Browser transcode UI now has a format toggle (MP4 / HLS Adaptive) and per-resolution checkboxes; selecting HLS encodes all checked resolutions into one adaptive multi-bitrate stream (H.264); selecting MP4 produces one file per resolution; default pre-selects the highest available resolution plus 480p fallback

@@ -212,7 +212,7 @@ export function buildVariants(
 ): BrowserTranscodeVariant[] {
   if (format === 'hls') {
     return resolutions.map(r => ({
-      codec: 'avc' as const,
+      codec: r.suggestedCodec,
       targetHeight: r.height,
       format: 'hls' as const,
       label: `${r.height}p`,

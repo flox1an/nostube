@@ -277,7 +277,24 @@ export function VideoVariantsTable({
               return [
                 <TableRow key={`hls-header-${masterIndex}`}>
                   <TableCell colSpan={7} className="bg-muted/30 font-semibold">
-                    HLS Streams
+                    <div className="flex items-center justify-between">
+                      <span>HLS Streams</span>
+                      {asset.master.url && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setHlsPreviewUrl(asset.master.url!)
+                            setIsHlsPreviewDialogOpen(true)
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="Preview master playlist"
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>,
                 ...asset.streams.map((stream, streamIndex) => (

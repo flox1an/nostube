@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import {
   assessTranscodeNeed,
-  defaultVariants,
+  availableResolutions,
+  defaultResolutions,
   isWebCodecsSupported,
   probeTranscodeSource,
   type BrowserTranscodeVariant,
+  type ResolutionOption,
   type TranscodeRecommendation,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
@@ -29,6 +31,8 @@ export interface UseVideoTranscodeReturn {
   status: VideoTranscodeStatus
   sourceMeta: TranscodeSourceMeta | null
   recommendation: TranscodeRecommendation | null
+  /** All standard resolutions ≤ source resolution. */
+  availableResolutionOptions: ResolutionOption[]
   availableVariants: BrowserTranscodeVariant[]
   variants: BrowserTranscodeVariant[]
   variantProgress: VariantProgress[]
@@ -45,6 +49,9 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
   const [status, setStatus] = useState<VideoTranscodeStatus>('idle')
   const [sourceMeta, setSourceMeta] = useState<TranscodeSourceMeta | null>(null)
   const [recommendation, setRecommendation] = useState<TranscodeRecommendation | null>(null)
+  const [availableResolutionOptions, setAvailableResolutionOptions] = useState<ResolutionOption[]>(
+    []
+  )
   const [availableVariants, setAvailableVariants] = useState<BrowserTranscodeVariant[]>([])
   const [variants, setVariants] = useState<BrowserTranscodeVariant[]>([])
   const [variantProgress, setVariantProgress] = useState<VariantProgress[]>([])
@@ -74,6 +81,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
     setStatus('idle')
     setSourceMeta(null)
     setRecommendation(null)
+    setAvailableResolutionOptions([])
     setAvailableVariants([])
     setVariants([])
     setVariantProgress([])
@@ -99,10 +107,18 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
         const meta = await probeTranscodeSource(file)
         const rec = assessTranscodeNeed(meta)
         const supportedCodecs = await getSupportedCodecs()
-        const vars = defaultVariants(meta, supportedCodecs)
+        const resOptions = availableResolutions(meta, supportedCodecs)
+        const defaultRes = defaultResolutions(meta, supportedCodecs)
+        const vars = defaultRes.map(r => ({
+          codec: r.suggestedCodec,
+          targetHeight: r.height,
+          format: 'mp4' as const,
+          label: `${r.height}p ${r.suggestedCodec === 'hevc' ? 'HEVC' : 'H.264'}`,
+        }))
 
         setSourceMeta(meta)
         setRecommendation(rec)
+        setAvailableResolutionOptions(resOptions)
         setAvailableVariants(vars)
         setVariants(vars)
         setStatus('waiting')
@@ -173,6 +189,7 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
     status,
     sourceMeta,
     recommendation,
+    availableResolutionOptions,
     availableVariants,
     variants,
     variantProgress,

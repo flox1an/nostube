@@ -4,16 +4,18 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
+import { buildVariants, type ResolutionOption } from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
-import { CheckCircle2, Loader2, Play, Upload, X, Zap } from 'lucide-react'
+import { CheckCircle2, Layers, Loader2, Play, Upload, X, Zap } from 'lucide-react'
 import { HlsPreviewDialog } from './HlsPreviewDialog'
 
 interface BrowserTranscodeStepProps {
   file: File | null
   backgroundState?: BrowserTranscodeState
-  /** Master playlist URL – shown as a Preview button when upload is complete. */
+  /** Master playlist URL – shown as a Preview button when HLS upload is complete. */
   previewUrl?: string
   onStartBackground?: (
     variants: BrowserTranscodeVariant[],
@@ -33,35 +35,70 @@ export function BrowserTranscodeStep({
   onSkip,
 }: BrowserTranscodeStepProps) {
   const { t } = useTranslation()
+
+  // Format + resolution state — local to this component
+  const [outputFormat, setOutputFormat] = useState<'mp4' | 'hls'>('mp4')
+  const [selectedHeights, setSelectedHeights] = useState<number[]>([])
   const [keepOriginal, setKeepOriginal] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+
   const {
     status,
     sourceMeta,
     recommendation,
-    availableVariants,
-    variants,
+    availableResolutionOptions,
     variantProgress,
     error,
     supported,
-    setVariants,
     analyze,
     startTranscode,
     cancel,
   } = useVideoTranscode()
 
+  // Auto-select default resolutions once analysis finishes
   useEffect(() => {
-    if (status === 'waiting') {
-      if (recommendation === 'none' || availableVariants.length === 0) {
-        setKeepOriginal(true)
-      }
+    if (
+      status === 'waiting' &&
+      availableResolutionOptions.length > 0 &&
+      selectedHeights.length === 0
+    ) {
+      // Default: top resolution + 480p fallback (mirrors previous behaviour)
+      const heights = availableResolutionOptions.map(r => r.height)
+      const top = heights[heights.length - 1]
+      const fallback = 480
+      const defaults = [top, ...(heights.includes(fallback) && fallback !== top ? [fallback] : [])]
+      setSelectedHeights(defaults)
     }
-  }, [status, recommendation, availableVariants.length])
+  }, [status, availableResolutionOptions, selectedHeights.length])
+
+  // Auto-set keepOriginal when nothing can be transcoded
+  useEffect(() => {
+    if (
+      status === 'waiting' &&
+      (recommendation === 'none' || availableResolutionOptions.length === 0)
+    ) {
+      setKeepOriginal(true)
+    }
+  }, [status, recommendation, availableResolutionOptions.length])
 
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
     analyze(file)
   }, [analyze, backgroundState?.status, file, supported])
+
+  const toggleHeight = useCallback((height: number) => {
+    setSelectedHeights(prev =>
+      prev.includes(height) ? prev.filter(h => h !== height) : [...prev, height]
+    )
+  }, [])
+
+  /** Compute the variant array from current UI selections. */
+  const computeVariants = useCallback((): BrowserTranscodeVariant[] => {
+    const selected = availableResolutionOptions.filter(r => selectedHeights.includes(r.height))
+    // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
+    selected.sort((a, b) => b.height - a.height)
+    return buildVariants(selected, outputFormat)
+  }, [availableResolutionOptions, selectedHeights, outputFormat])
 
   const handleStart = useCallback(async () => {
     if (!file) return
@@ -72,17 +109,18 @@ export function BrowserTranscodeStep({
         return
       }
 
+      const variants = computeVariants()
+      const effectiveKeepOriginal = outputFormat === 'mp4' ? keepOriginal : false
+
       if (onStartBackground && sourceMeta) {
-        await onStartBackground(variants, sourceMeta, keepOriginal)
+        await onStartBackground(variants, sourceMeta, effectiveKeepOriginal)
         return
       }
 
       const results = await startTranscode(file)
       if (results instanceof Array) {
-        onComplete(keepOriginal ? [...results, file] : results)
+        onComplete(effectiveKeepOriginal ? [...results, file] : results)
       } else {
-        // HLS (Map) doesn't support 'keepOriginal' in the same way here,
-        // but it's handled in the background path anyway.
         onComplete(results)
       }
     } catch (err) {
@@ -96,19 +134,11 @@ export function BrowserTranscodeStep({
     onStartBackground,
     sourceMeta,
     startTranscode,
-    variants,
+    computeVariants,
+    outputFormat,
   ])
 
-  const toggleVariant = useCallback(
-    (variant: BrowserTranscodeVariant) => {
-      setVariants(prev => {
-        const exists = prev.some(v => v.label === variant.label)
-        if (exists) return prev.filter(v => v.label !== variant.label)
-        return [...prev, variant]
-      })
-    },
-    [setVariants]
-  )
+  // ── Background state rendering ──────────────────────────────────────────────
 
   if (backgroundState) {
     if (backgroundState.status === 'complete') {
@@ -193,6 +223,8 @@ export function BrowserTranscodeStep({
     )
   }
 
+  // ── Normal flow ─────────────────────────────────────────────────────────────
+
   if (!file) return null
 
   if (!supported) {
@@ -211,9 +243,7 @@ export function BrowserTranscodeStep({
               onCheckedChange={checked => setKeepOriginal(checked === true)}
             />
             <span className="text-sm">
-              {t('upload.browserTranscode.keepOriginal', {
-                defaultValue: 'Keep original',
-              })}
+              {t('upload.browserTranscode.keepOriginal', { defaultValue: 'Keep original' })}
             </span>
           </label>
           <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
@@ -254,21 +284,9 @@ export function BrowserTranscodeStep({
     const durationMin = Math.floor(sourceMeta.duration / 60)
     const durationSec = Math.round(sourceMeta.duration % 60)
     const durationStr = `${durationMin}:${durationSec.toString().padStart(2, '0')}`
-    const recommendationMessage =
-      recommendation === 'full'
-        ? t('upload.browserTranscode.recommendFull', {
-            defaultValue:
-              'Your video needs conversion for Nostr compatibility (wrong container or codec).',
-          })
-        : recommendation === 'bitrate'
-          ? t('upload.browserTranscode.recommendBitrate', {
-              bitrate: sourceMeta.bitrateMbps.toFixed(0),
-              defaultValue:
-                'Your video is well-encoded but at {{bitrate}} Mbps - a re-encode will reduce file size significantly.',
-            })
-          : t('upload.browserTranscode.recommendNone', {
-              defaultValue: 'Your video is already optimised - only creating the 480p fallback.',
-            })
+
+    const canTranscode = availableResolutionOptions.length > 0
+    const hasSelection = selectedHeights.length > 0
 
     return (
       <Alert>
@@ -276,52 +294,97 @@ export function BrowserTranscodeStep({
         <AlertTitle>
           {t('upload.browserTranscode.title', { defaultValue: 'Optimise for Nostr' })}
         </AlertTitle>
-        <AlertDescription className="space-y-3">
+        <AlertDescription className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {sourceMeta.width}x{sourceMeta.height} - {durationStr} - {sourceMeta.sizeMB.toFixed(0)}{' '}
-            MB - {sourceMeta.bitrateMbps.toFixed(0)} Mbps
+            {sourceMeta.width}×{sourceMeta.height} · {durationStr} · {sourceMeta.sizeMB.toFixed(0)}{' '}
+            MB · {sourceMeta.bitrateMbps.toFixed(0)} Mbps
           </p>
-          <p>{recommendationMessage}</p>
 
-          {availableVariants.length > 0 ? (
+          {canTranscode ? (
             <>
-              <div className="flex flex-col gap-2">
-                {availableVariants.map(variant => (
-                  <label key={variant.label} className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={variants.some(v => v.label === variant.label)}
-                      onCheckedChange={() => toggleVariant(variant)}
+              {/* Format toggle */}
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {t('upload.browserTranscode.format', { defaultValue: 'Output format' })}
+                </p>
+                <ToggleGroup
+                  type="single"
+                  value={outputFormat}
+                  onValueChange={v => {
+                    if (v) setOutputFormat(v as 'mp4' | 'hls')
+                  }}
+                  className="justify-start gap-1"
+                >
+                  <ToggleGroupItem value="mp4" size="sm" className="gap-1.5 px-3">
+                    <Upload className="h-3.5 w-3.5" />
+                    MP4
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="hls" size="sm" className="gap-1.5 px-3">
+                    <Layers className="h-3.5 w-3.5" />
+                    HLS Adaptive
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                {outputFormat === 'hls' && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('upload.browserTranscode.hlsHint', {
+                      defaultValue:
+                        'All selected resolutions will be encoded as a single adaptive stream (H.264).',
+                    })}
+                  </p>
+                )}
+              </div>
+
+              {/* Resolution checkboxes */}
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {t('upload.browserTranscode.resolutions', { defaultValue: 'Resolutions' })}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {[...availableResolutionOptions].reverse().map(opt => (
+                    <ResolutionRow
+                      key={opt.height}
+                      option={opt}
+                      outputFormat={outputFormat}
+                      checked={selectedHeights.includes(opt.height)}
+                      onToggle={() => toggleHeight(opt.height)}
                     />
-                    <span className="text-sm">{variant.label}</span>
-                  </label>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* Keep original — MP4 only */}
+              {outputFormat === 'mp4' && (
                 <label className="flex cursor-pointer items-center gap-2">
                   <Checkbox
                     checked={keepOriginal}
                     onCheckedChange={checked => setKeepOriginal(checked === true)}
                   />
                   <span className="text-sm">
-                    {t('upload.browserTranscode.keepOriginal', {
-                      defaultValue: 'Keep original',
-                    })}
+                    {t('upload.browserTranscode.keepOriginal', { defaultValue: 'Keep original' })}
                   </span>
                 </label>
-              </div>
+              )}
+
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
                   size="sm"
                   onClick={handleStart}
-                  disabled={variants.length === 0 && !keepOriginal}
+                  disabled={!hasSelection && !(outputFormat === 'mp4' && keepOriginal)}
                 >
                   <Zap className="mr-2 h-4 w-4" />
-                  {t('upload.browserTranscode.optimiseUpload', {
-                    defaultValue: 'Optimise & Upload',
-                  })}
+                  {outputFormat === 'hls'
+                    ? t('upload.browserTranscode.generateHls', {
+                        defaultValue: 'Generate HLS & Upload',
+                      })
+                    : t('upload.browserTranscode.optimiseUpload', {
+                        defaultValue: 'Optimise & Upload',
+                      })}
                 </Button>
               </div>
             </>
           ) : (
+            /* No resolutions available — source is too small or not transcodeable */
             <div className="space-y-3">
               <label className="flex cursor-pointer items-center gap-2">
                 <Checkbox
@@ -329,9 +392,7 @@ export function BrowserTranscodeStep({
                   onCheckedChange={checked => setKeepOriginal(checked === true)}
                 />
                 <span className="text-sm">
-                  {t('upload.browserTranscode.keepOriginal', {
-                    defaultValue: 'Keep original',
-                  })}
+                  {t('upload.browserTranscode.keepOriginal', { defaultValue: 'Keep original' })}
                 </span>
               </label>
               <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
@@ -379,9 +440,7 @@ export function BrowserTranscodeStep({
             }}
           >
             <X className="mr-2 h-4 w-4" />
-            {t('upload.browserTranscode.cancel', {
-              defaultValue: 'Cancel',
-            })}
+            {t('upload.browserTranscode.cancel', { defaultValue: 'Cancel' })}
           </Button>
         </AlertDescription>
       </Alert>
@@ -389,4 +448,27 @@ export function BrowserTranscodeStep({
   }
 
   return null
+}
+
+// ── Sub-component ────────────────────────────────────────────────────────────
+
+interface ResolutionRowProps {
+  option: ResolutionOption
+  outputFormat: 'mp4' | 'hls'
+  checked: boolean
+  onToggle: () => void
+}
+
+function ResolutionRow({ option, outputFormat, checked, onToggle }: ResolutionRowProps) {
+  const codecLabel =
+    outputFormat === 'hls' ? 'H.264' : option.suggestedCodec === 'hevc' ? 'HEVC' : 'H.264'
+
+  return (
+    <label className="flex cursor-pointer items-center gap-2">
+      <Checkbox checked={checked} onCheckedChange={onToggle} />
+      <span className="text-sm">
+        {option.height}p<span className="ml-1.5 text-xs text-muted-foreground">{codecLabel}</span>
+      </span>
+    </label>
+  )
 }

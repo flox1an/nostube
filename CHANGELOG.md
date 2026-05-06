@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Browser transcode UI now has a format toggle (MP4 / HLS Adaptive) and per-resolution checkboxes; selecting HLS encodes all checked resolutions into one adaptive multi-bitrate stream (H.264); selecting MP4 produces one file per resolution; default pre-selects the highest available resolution plus 480p fallback
 - HLS preview button in the upload flow — after a browser HLS transcode and Blossom upload complete, a "Preview HLS" button appears that opens a player dialog (hls.js on Chrome/Firefox, native on Safari) showing the uploaded master playlist; makes it easy to verify the stream before publishing
 
 ### Fixed

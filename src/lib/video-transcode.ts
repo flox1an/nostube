@@ -135,45 +135,82 @@ export function computeTargetDimensions(
     : { width: finalLong, height: finalShort }
 }
 
+/** A resolution option the user can select in the transcode UI. */
+export interface ResolutionOption {
+  height: number
+  /** Suggested codec for MP4 output — HEVC on capable browsers for high resolutions, AVC otherwise. */
+  suggestedCodec: 'hevc' | 'avc'
+}
+
+const RESOLUTION_STEPS = [240, 360, 480, 720, 1080, 1440, 2160]
+
+/** All standard resolutions that are ≤ the source short-side. */
+export function availableResolutions(
+  meta: TranscodeSourceMeta,
+  supportedCodecs: string[]
+): ResolutionOption[] {
+  const supportsHevc = supportedCodecs.includes('hevc')
+  const shortSide = Math.min(meta.width, meta.height)
+  return RESOLUTION_STEPS.filter(h => h <= shortSide).map(h => ({
+    height: h,
+    suggestedCodec: (supportsHevc && h >= PRIMARY_TARGET_HEIGHT ? 'hevc' : 'avc') as 'hevc' | 'avc',
+  }))
+}
+
+/** Default-selected resolutions (primary + 480p fallback). */
+export function defaultResolutions(
+  meta: TranscodeSourceMeta,
+  supportedCodecs: string[]
+): ResolutionOption[] {
+  const all = availableResolutions(meta, supportedCodecs)
+  if (all.length === 0) return []
+  const shortSide = Math.min(meta.width, meta.height)
+  const primaryHeight = Math.min(PRIMARY_TARGET_HEIGHT, shortSide)
+  const primary = all.find(r => r.height === primaryHeight) ?? all[all.length - 1]
+  const selected = [primary]
+  if (shortSide > FALLBACK_TARGET_HEIGHT) {
+    const fallback = all.find(r => r.height === FALLBACK_TARGET_HEIGHT)
+    if (fallback && fallback.height !== primary.height) selected.push(fallback)
+  }
+  return selected
+}
+
+/**
+ * Build the `BrowserTranscodeVariant[]` array from user selections.
+ *
+ * - HLS: all selected resolutions become adaptive variants in one stream (AVC only).
+ * - MP4: each resolution becomes a separate file using the given codec.
+ */
+export function buildVariants(
+  resolutions: ResolutionOption[],
+  format: 'mp4' | 'hls',
+  mp4Codec?: 'hevc' | 'avc'
+): BrowserTranscodeVariant[] {
+  if (format === 'hls') {
+    return resolutions.map(r => ({
+      codec: 'avc' as const,
+      targetHeight: r.height,
+      format: 'hls' as const,
+      label: `${r.height}p`,
+    }))
+  }
+  return resolutions.map(r => {
+    const codec = mp4Codec ?? r.suggestedCodec
+    return {
+      codec,
+      targetHeight: r.height,
+      format: 'mp4' as const,
+      label: `${r.height}p ${codec === 'hevc' ? 'HEVC' : 'H.264'}`,
+    }
+  })
+}
+
+/** @deprecated Use availableResolutions + buildVariants instead. */
 export function defaultVariants(
   meta: TranscodeSourceMeta,
   supportedCodecs: string[]
 ): BrowserTranscodeVariant[] {
-  const recommendation = assessTranscodeNeed(meta)
-  const supportsHevc = supportedCodecs.includes('hevc')
-  const variants: BrowserTranscodeVariant[] = []
-  const shortSide = Math.min(meta.width, meta.height)
-
-  if (recommendation !== 'none') {
-    const primaryHeight = Math.min(PRIMARY_TARGET_HEIGHT, shortSide)
-    const primaryCodec: 'hevc' | 'avc' = supportsHevc ? 'hevc' : 'avc'
-
-    variants.push({
-      codec: primaryCodec,
-      targetHeight: primaryHeight,
-      format: 'mp4',
-      label: `${primaryHeight}p ${primaryCodec === 'hevc' ? 'HEVC' : 'H.264'}`,
-    })
-
-    // Add HLS variant as an option for testing
-    variants.push({
-      codec: 'avc',
-      targetHeight: primaryHeight,
-      format: 'hls',
-      label: `${primaryHeight}p HLS Adaptive (AVC)`,
-    })
-  }
-
-  if (shortSide > FALLBACK_TARGET_HEIGHT) {
-    variants.push({
-      codec: 'avc',
-      targetHeight: FALLBACK_TARGET_HEIGHT,
-      format: 'mp4',
-      label: `${FALLBACK_TARGET_HEIGHT}p H.264`,
-    })
-  }
-
-  return variants
+  return buildVariants(defaultResolutions(meta, supportedCodecs), 'mp4')
 }
 
 export function isWebCodecsSupported(): boolean {

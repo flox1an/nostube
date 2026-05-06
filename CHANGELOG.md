@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Deleting a draft with HLS media now removes all uploaded files (segments, init fragments, variant playlists, and master playlist) from Blossom servers — previously only MP4 uploads were deleted because HLS blobs were not stored in the draft; all HLS blobs are now saved to `uploadedBlobs` during upload
+
 - HLS browser transcode now uses HEVC for higher-resolution streams and H.264 only for the lowest stream — previously all HLS streams were encoded as H.264; the resolution picker now shows the correct codec label per stream, and the hint text reflects mixed-codec output when HEVC is supported
 
 ### Added

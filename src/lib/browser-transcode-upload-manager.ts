@@ -230,9 +230,9 @@ async function uploadAndGetUrl(
   initialServers: string[],
   signer: Signer,
   onProgress?: (progress: ChunkedUploadProgress) => void
-): Promise<string> {
+): Promise<{ url: string; blobs: BlobDescriptor[] }> {
   const uploadFile = normaliseHlsFile(file)
-  const uploadedBlobs = await uploadFileToMultipleServersChunked({
+  const blobs = await uploadFileToMultipleServersChunked({
     file: uploadFile,
     servers: initialServers,
     signer,
@@ -243,8 +243,8 @@ async function uploadAndGetUrl(
 
   // uploadFileToMultipleServersChunked now throws when all servers fail,
   // so an empty array here means servers is an empty list.
-  if (uploadedBlobs.length === 0) throw new Error(`No upload servers configured`)
-  return uploadedBlobs[0].url
+  if (blobs.length === 0) throw new Error(`No upload servers configured`)
+  return { url: blobs[0].url, blobs }
 }
 
 export function subscribeToBrowserTranscodeUploads(listener: BrowserTranscodeUploadListener) {
@@ -435,12 +435,16 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         },
       }))
 
+      // Collect all blobs for later deletion support
+      const allHlsBlobs: BlobDescriptor[] = []
+
       // Stage 1: Upload segments and init files
       for (let i = 0; i < segmentPaths.length; i++) {
         const path = segmentPaths[i]
         const hlsFile = transcodedFiles.get(path)!
-        const url = await uploadAndGetUrl(hlsFile, initialServers, signer)
+        const { url, blobs } = await uploadAndGetUrl(hlsFile, initialServers, signer)
         uploadedUrls.set(path, url)
+        allHlsBlobs.push(...blobs)
         uploadedBytes += hlsFile.size
         reportProgress(i + 1, `Uploading HLS segments (${i + 1}/${totalFiles})…`)
       }
@@ -467,8 +471,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       for (let i = 0; i < playlistPaths.length; i++) {
         const path = playlistPaths[i]
         const playlistFile = rewrittenFiles.get(path)!
-        const url = await uploadAndGetUrl(playlistFile, initialServers, signer)
+        const { url, blobs } = await uploadAndGetUrl(playlistFile, initialServers, signer)
         uploadedUrls.set(path, url)
+        allHlsBlobs.push(...blobs)
 
         const parsedDims = streamMap.get(path)
         if (parsedDims) {
@@ -505,7 +510,12 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         uploadedUrls
       )
       const finalMaster = finalRewritten.get('master.m3u8')!
-      const masterUrl = await uploadAndGetUrl(finalMaster, initialServers, signer)
+      const { url: masterUrl, blobs: masterBlobs } = await uploadAndGetUrl(
+        finalMaster,
+        initialServers,
+        signer
+      )
+      allHlsBlobs.push(...masterBlobs)
       uploadedBytes += finalMaster.size
       reportProgress(totalFiles, `Uploading master playlist (${totalFiles}/${totalFiles})…`)
 
@@ -518,8 +528,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       })
       const highestHlsStream = sortedHlsVariantStreams[0]
 
-      // Add HLS variant — use inputMethod:'url' so buildImetaTag uses variant.url directly
-      // (we only have the URL, not a BlobDescriptor with hash/size for the master playlist)
+      // Add HLS variant — use inputMethod:'url' so buildImetaTag uses variant.url directly.
+      // Store all uploaded blobs (segments, playlists, master) so they can be deleted later.
       uploadedVideos.push({
         url: masterUrl,
         mimeType: 'application/vnd.apple.mpegurl',
@@ -527,7 +537,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         qualityLabel: highestHlsStream?.qualityLabel,
         hlsVariants: sortedHlsVariantStreams,
         duration: sourceMeta.duration,
-        uploadedBlobs: [],
+        uploadedBlobs: allHlsBlobs,
         mirroredBlobs: [],
         inputMethod: 'url',
       })

@@ -240,6 +240,14 @@ export function BrowserTranscodeStep({
                   {backgroundState.uploadProgress.currentChunk}/
                   {backgroundState.uploadProgress.totalChunks}{' '}
                   {t('upload.browserTranscode.files', { defaultValue: 'files' })}
+                  {backgroundState.uploadProgress.totalBytes > 0 && (
+                    <>
+                      {' · '}
+                      {(backgroundState.uploadProgress.uploadedBytes / 1024 / 1024).toFixed(1)}
+                      {' / '}
+                      {(backgroundState.uploadProgress.totalBytes / 1024 / 1024).toFixed(1)} MB
+                    </>
+                  )}
                 </span>
                 <span>{backgroundState.uploadProgress.percentage}%</span>
               </div>

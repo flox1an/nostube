@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- HLS segment and variant playlist uploads now run 2 at a time instead of sequentially — reduces total upload time roughly in half for typical streams
+
 ### Fixed
+
+- HLS upload progress now shows uploaded / total MB alongside the file count ("3/42 files · 12.4 / 148.2 MB") — `uploadedBytes` and `totalBytes` were already tracked but not displayed
 
 - Deleting a draft with HLS media now removes all uploaded files (segments, init fragments, variant playlists, and master playlist) from Blossom servers — previously only MP4 uploads were deleted because HLS blobs were not stored in the draft; all HLS blobs are now saved to `uploadedBlobs` during upload
 

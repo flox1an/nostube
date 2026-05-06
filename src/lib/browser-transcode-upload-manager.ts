@@ -225,6 +225,23 @@ function normaliseHlsFile(file: File): File {
   return file
 }
 
+/** Run tasks with at most `concurrency` running at once. Results are in input order. */
+async function runWithConcurrency<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length)
+  let next = 0
+  async function worker() {
+    while (next < tasks.length) {
+      const i = next++
+      results[i] = await tasks[i]()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, worker))
+  return results
+}
+
 async function uploadAndGetUrl(
   file: File,
   initialServers: string[],
@@ -438,16 +455,23 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       // Collect all blobs for later deletion support
       const allHlsBlobs: BlobDescriptor[] = []
 
-      // Stage 1: Upload segments and init files
-      for (let i = 0; i < segmentPaths.length; i++) {
-        const path = segmentPaths[i]
-        const hlsFile = transcodedFiles.get(path)!
-        const { url, blobs } = await uploadAndGetUrl(hlsFile, initialServers, signer)
-        uploadedUrls.set(path, url)
-        allHlsBlobs.push(...blobs)
-        uploadedBytes += hlsFile.size
-        reportProgress(i + 1, `Uploading HLS segments (${i + 1}/${totalFiles})…`)
-      }
+      // Stage 1: Upload segments and init files — 2 concurrent uploads
+      let segmentsUploaded = 0
+      await runWithConcurrency(
+        segmentPaths.map(path => async () => {
+          const hlsFile = transcodedFiles.get(path)!
+          const { url, blobs } = await uploadAndGetUrl(hlsFile, initialServers, signer)
+          uploadedUrls.set(path, url)
+          allHlsBlobs.push(...blobs)
+          uploadedBytes += hlsFile.size
+          segmentsUploaded++
+          reportProgress(
+            segmentsUploaded,
+            `Uploading HLS segments (${segmentsUploaded}/${totalFiles})…`
+          )
+        }),
+        2
+      )
 
       // Stage 2: Rewrite and upload variant playlists
       const rewrittenFiles = await rewriteHlsPlaylists(transcodedFiles, uploadedUrls)
@@ -468,40 +492,45 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         p => p.endsWith('.m3u8') && p !== 'master.m3u8'
       )
 
-      for (let i = 0; i < playlistPaths.length; i++) {
-        const path = playlistPaths[i]
-        const playlistFile = rewrittenFiles.get(path)!
-        const { url, blobs } = await uploadAndGetUrl(playlistFile, initialServers, signer)
-        uploadedUrls.set(path, url)
-        allHlsBlobs.push(...blobs)
+      // Stage 2: Rewrite and upload variant playlists — 2 concurrent
+      let playlistsUploaded = 0
+      await runWithConcurrency(
+        playlistPaths.map(path => async () => {
+          const playlistFile = rewrittenFiles.get(path)!
+          const { url, blobs } = await uploadAndGetUrl(playlistFile, initialServers, signer)
+          uploadedUrls.set(path, url)
+          allHlsBlobs.push(...blobs)
 
-        const parsedDims = streamMap.get(path)
-        if (parsedDims) {
-          const originalPlaylist = transcodedFiles.get(path)
-          const streamBytes = computeVariantStreamBytes(
-            path,
-            originalPlaylist ? await originalPlaylist.text() : await playlistFile.text(),
-            transcodedFiles
+          const parsedDims = streamMap.get(path)
+          if (parsedDims) {
+            const originalPlaylist = transcodedFiles.get(path)
+            const streamBytes = computeVariantStreamBytes(
+              path,
+              originalPlaylist ? await originalPlaylist.text() : await playlistFile.text(),
+              transcodedFiles
+            )
+            const totalVariantBytes = streamBytes + playlistFile.size
+
+            hlsVariantStreams.push({
+              url,
+              dimension: `${parsedDims.width}x${parsedDims.height}`,
+              qualityLabel: `${Math.min(parsedDims.width, parsedDims.height)}p`,
+              sizeMB: totalVariantBytes > 0 ? totalVariantBytes / (1024 * 1024) : undefined,
+              mimeType: parsedDims.mimeType,
+              videoCodec: parsedDims.videoCodec,
+              audioCodec: parsedDims.audioCodec,
+            })
+          }
+
+          uploadedBytes += playlistFile.size
+          playlistsUploaded++
+          reportProgress(
+            segmentsUploaded + playlistsUploaded,
+            `Uploading HLS playlists (${segmentsUploaded + playlistsUploaded}/${totalFiles})…`
           )
-          const totalVariantBytes = streamBytes + playlistFile.size
-
-          hlsVariantStreams.push({
-            url,
-            dimension: `${parsedDims.width}x${parsedDims.height}`,
-            qualityLabel: `${Math.min(parsedDims.width, parsedDims.height)}p`,
-            sizeMB: totalVariantBytes > 0 ? totalVariantBytes / (1024 * 1024) : undefined,
-            mimeType: parsedDims.mimeType,
-            videoCodec: parsedDims.videoCodec,
-            audioCodec: parsedDims.audioCodec,
-          })
-        }
-
-        uploadedBytes += playlistFile.size
-        reportProgress(
-          segmentPaths.length + i + 1,
-          `Uploading HLS playlists (${segmentPaths.length + i + 1}/${totalFiles})…`
-        )
-      }
+        }),
+        2
+      )
 
       // Stage 3: Rewrite and upload master playlist
       const masterFile = rewrittenFiles.get('master.m3u8')!

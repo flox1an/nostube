@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assessTranscodeNeed,
+  assignMp4ResolutionCodecs,
   computeTargetDimensions,
   defaultVariants,
   type TranscodeSourceMeta,
@@ -104,6 +105,40 @@ describe('computeTargetDimensions', () => {
     const { width, height } = computeTargetDimensions(1080, 1920, 1080)
     expect(width).toBe(1080)
     expect(height).toBe(1920)
+  })
+})
+
+describe('assignMp4ResolutionCodecs', () => {
+  it('uses H.264 only for the lowest selected resolution when HEVC is supported', () => {
+    const variants = assignMp4ResolutionCodecs(
+      [
+        { height: 1080, suggestedCodec: 'hevc' },
+        { height: 720, suggestedCodec: 'hevc' },
+        { height: 480, suggestedCodec: 'hevc' },
+      ],
+      true
+    )
+
+    expect(variants).toEqual([
+      { height: 1080, suggestedCodec: 'hevc' },
+      { height: 720, suggestedCodec: 'hevc' },
+      { height: 480, suggestedCodec: 'avc' },
+    ])
+  })
+
+  it('keeps every selected resolution on H.264 when HEVC is unavailable', () => {
+    const variants = assignMp4ResolutionCodecs(
+      [
+        { height: 1080, suggestedCodec: 'hevc' },
+        { height: 480, suggestedCodec: 'hevc' },
+      ],
+      false
+    )
+
+    expect(variants).toEqual([
+      { height: 1080, suggestedCodec: 'avc' },
+      { height: 480, suggestedCodec: 'avc' },
+    ])
   })
 })
 

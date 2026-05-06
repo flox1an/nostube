@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import {
   assessTranscodeNeed,
+  assignMp4ResolutionCodecs,
   availableResolutions,
   defaultResolutions,
   isWebCodecsSupported,
@@ -108,7 +109,11 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
         const rec = assessTranscodeNeed(meta)
         const supportedCodecs = await getSupportedCodecs()
         const resOptions = availableResolutions(meta, supportedCodecs)
-        const defaultRes = defaultResolutions(meta, supportedCodecs)
+        const supportsHevc = supportedCodecs.includes('hevc')
+        const defaultRes = assignMp4ResolutionCodecs(
+          defaultResolutions(meta, supportedCodecs),
+          supportsHevc
+        )
         const vars = defaultRes.map(r => ({
           codec: r.suggestedCodec,
           targetHeight: r.height,

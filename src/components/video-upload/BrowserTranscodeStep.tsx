@@ -6,7 +6,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
-import { buildVariants, type ResolutionOption } from '@/lib/video-transcode'
+import {
+  assignMp4ResolutionCodecs,
+  buildVariants,
+  type ResolutionOption,
+} from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { CheckCircle2, Layers, Loader2, Play, Upload, X, Zap } from 'lucide-react'
@@ -65,31 +69,57 @@ export function BrowserTranscodeStep({
   }, [availableResolutionOptions, status])
 
   const effectiveSelectedHeights = selectedHeights ?? defaultSelectedHeights
+  const supportsHevc = availableResolutionOptions.some(option => option.suggestedCodec === 'hevc')
 
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
     analyze(file)
   }, [analyze, backgroundState?.status, file, supported])
 
-  const setHeightSelection = useCallback((height: number, checked: boolean) => {
-    setSelectedHeights(prev => {
-      const current = prev ?? defaultSelectedHeights
-      if (checked) {
-        return current.includes(height) ? current : [...current, height]
-      }
-      return current.filter(h => h !== height)
-    })
-  }, [defaultSelectedHeights])
+  const setHeightSelection = useCallback(
+    (height: number, checked: boolean) => {
+      setSelectedHeights(prev => {
+        const current = prev ?? defaultSelectedHeights
+        if (checked) {
+          return current.includes(height) ? current : [...current, height]
+        }
+        return current.filter(h => h !== height)
+      })
+    },
+    [defaultSelectedHeights]
+  )
 
   /** Compute the variant array from current UI selections. */
   const computeVariants = useCallback((): BrowserTranscodeVariant[] => {
     const selected = availableResolutionOptions.filter(r =>
       effectiveSelectedHeights.includes(r.height)
     )
+    const selectedWithCodecs =
+      outputFormat === 'mp4' ? assignMp4ResolutionCodecs(selected, supportsHevc) : selected
+
     // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
-    selected.sort((a, b) => b.height - a.height)
-    return buildVariants(selected, outputFormat)
-  }, [availableResolutionOptions, effectiveSelectedHeights, outputFormat])
+    selectedWithCodecs.sort((a, b) => b.height - a.height)
+    return buildVariants(selectedWithCodecs, outputFormat)
+  }, [availableResolutionOptions, effectiveSelectedHeights, outputFormat, supportsHevc])
+
+  const getDisplayCodecForHeight = useCallback(
+    (height: number): ResolutionOption['suggestedCodec'] => {
+      if (outputFormat === 'hls') return 'avc'
+
+      const selectedForPreview = effectiveSelectedHeights.includes(height)
+        ? effectiveSelectedHeights
+        : [...effectiveSelectedHeights, height]
+      const codecOptions = assignMp4ResolutionCodecs(
+        selectedForPreview.map(selectedHeight => ({
+          height: selectedHeight,
+          suggestedCodec: 'avc',
+        })),
+        supportsHevc
+      )
+      return codecOptions.find(option => option.height === height)?.suggestedCodec ?? 'avc'
+    },
+    [effectiveSelectedHeights, outputFormat, supportsHevc]
+  )
 
   const handleStart = useCallback(async () => {
     if (!file) return
@@ -345,6 +375,7 @@ export function BrowserTranscodeStep({
                     <ResolutionRow
                       key={opt.height}
                       option={opt}
+                      codec={getDisplayCodecForHeight(opt.height)}
                       outputFormat={outputFormat}
                       checked={effectiveSelectedHeights.includes(opt.height)}
                       onToggle={checked => setHeightSelection(opt.height, checked)}
@@ -402,12 +433,7 @@ export function BrowserTranscodeStep({
                   {t('upload.browserTranscode.keepOriginal', { defaultValue: 'Keep original' })}
                 </span>
               </label>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleStart}
-                disabled={!keepOriginal}
-              >
+              <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
                 <Upload className="mr-2 h-4 w-4" />
                 {t('upload.upload', { defaultValue: 'Upload' })}
               </Button>
@@ -466,14 +492,14 @@ export function BrowserTranscodeStep({
 
 interface ResolutionRowProps {
   option: ResolutionOption
+  codec: ResolutionOption['suggestedCodec']
   outputFormat: 'mp4' | 'hls'
   checked: boolean
   onToggle: (checked: boolean) => void
 }
 
-function ResolutionRow({ option, outputFormat, checked, onToggle }: ResolutionRowProps) {
-  const codecLabel =
-    outputFormat === 'hls' ? 'H.264' : option.suggestedCodec === 'hevc' ? 'HEVC' : 'H.264'
+function ResolutionRow({ option, codec, outputFormat, checked, onToggle }: ResolutionRowProps) {
+  const codecLabel = outputFormat === 'hls' ? 'H.264' : codec === 'hevc' ? 'HEVC' : 'H.264'
 
   return (
     <label className="flex cursor-pointer items-center gap-2">

@@ -138,7 +138,7 @@ export function computeTargetDimensions(
 /** A resolution option the user can select in the transcode UI. */
 export interface ResolutionOption {
   height: number
-  /** Suggested codec for MP4 output — HEVC on capable browsers for high resolutions, AVC otherwise. */
+  /** Suggested codec for MP4 output. */
   suggestedCodec: 'hevc' | 'avc'
 }
 
@@ -153,7 +153,23 @@ export function availableResolutions(
   const shortSide = Math.min(meta.width, meta.height)
   return RESOLUTION_STEPS.filter(h => h <= shortSide).map(h => ({
     height: h,
-    suggestedCodec: (supportsHevc && h >= PRIMARY_TARGET_HEIGHT ? 'hevc' : 'avc') as 'hevc' | 'avc',
+    suggestedCodec: supportsHevc ? 'hevc' : 'avc',
+  }))
+}
+
+/** Apply MP4 codec policy: use HEVC when available, except for the lowest selected resolution. */
+export function assignMp4ResolutionCodecs(
+  resolutions: ResolutionOption[],
+  supportsHevc: boolean
+): ResolutionOption[] {
+  if (!supportsHevc || resolutions.length === 0) {
+    return resolutions.map(r => ({ ...r, suggestedCodec: 'avc' }))
+  }
+
+  const lowestHeight = Math.min(...resolutions.map(r => r.height))
+  return resolutions.map(r => ({
+    ...r,
+    suggestedCodec: r.height === lowestHeight ? 'avc' : 'hevc',
   }))
 }
 
@@ -218,7 +234,11 @@ export function defaultVariants(
   meta: TranscodeSourceMeta,
   supportedCodecs: string[]
 ): BrowserTranscodeVariant[] {
-  return buildVariants(defaultResolutions(meta, supportedCodecs), 'mp4')
+  const supportsHevc = supportedCodecs.includes('hevc')
+  return buildVariants(
+    assignMp4ResolutionCodecs(defaultResolutions(meta, supportedCodecs), supportsHevc),
+    'mp4'
+  )
 }
 
 export function isWebCodecsSupported(): boolean {

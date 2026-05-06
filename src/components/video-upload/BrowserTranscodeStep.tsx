@@ -45,7 +45,6 @@ export function BrowserTranscodeStep({
   const {
     status,
     sourceMeta,
-    recommendation,
     availableResolutionOptions,
     variantProgress,
     error,
@@ -66,10 +65,6 @@ export function BrowserTranscodeStep({
   }, [availableResolutionOptions, status])
 
   const effectiveSelectedHeights = selectedHeights ?? defaultSelectedHeights
-  const effectiveKeepOriginal =
-    keepOriginal ||
-    (status === 'waiting' &&
-      (recommendation === 'none' || availableResolutionOptions.length === 0))
 
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
@@ -100,13 +95,13 @@ export function BrowserTranscodeStep({
     if (!file) return
 
     try {
-      if (!sourceMeta && effectiveKeepOriginal) {
+      if (!sourceMeta && keepOriginal) {
         onSkip()
         return
       }
 
       const variants = computeVariants()
-      const shouldKeepOriginal = outputFormat === 'mp4' ? effectiveKeepOriginal : false
+      const shouldKeepOriginal = outputFormat === 'mp4' ? keepOriginal : false
 
       if (onStartBackground && sourceMeta) {
         await onStartBackground(variants, sourceMeta, shouldKeepOriginal)
@@ -124,7 +119,7 @@ export function BrowserTranscodeStep({
     }
   }, [
     file,
-    effectiveKeepOriginal,
+    keepOriginal,
     onComplete,
     onSkip,
     onStartBackground,
@@ -376,7 +371,7 @@ export function BrowserTranscodeStep({
                   type="button"
                   size="sm"
                   onClick={handleStart}
-                  disabled={!hasSelection && !(outputFormat === 'mp4' && effectiveKeepOriginal)}
+                  disabled={!hasSelection && !(outputFormat === 'mp4' && keepOriginal)}
                 >
                   <Zap className="mr-2 h-4 w-4" />
                   {outputFormat === 'hls'
@@ -390,11 +385,17 @@ export function BrowserTranscodeStep({
               </div>
             </>
           ) : (
-            /* No resolutions available — source is too small or not transcodeable */
+            /* No resolutions available — keep original is an explicit fallback only. */
             <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t('upload.browserTranscode.noVariants', {
+                  defaultValue:
+                    'No lower local transcode variants are available for this file. You can still upload the original explicitly.',
+                })}
+              </p>
               <label className="flex cursor-pointer items-center gap-2">
                 <Checkbox
-                  checked={effectiveKeepOriginal}
+                  checked={keepOriginal}
                   onCheckedChange={checked => setKeepOriginal(checked === true)}
                 />
                 <span className="text-sm">
@@ -405,7 +406,7 @@ export function BrowserTranscodeStep({
                 type="button"
                 size="sm"
                 onClick={handleStart}
-                disabled={!effectiveKeepOriginal}
+                disabled={!keepOriginal}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 {t('upload.upload', { defaultValue: 'Upload' })}

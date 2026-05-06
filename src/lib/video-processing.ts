@@ -30,6 +30,9 @@ export interface HlsVariantStream {
   dimension: string // e.g., "1280x720"
   qualityLabel: string // e.g., "720p"
   sizeMB?: number // Total generated stream size in MB
+  mimeType?: string // e.g., application/vnd.apple.mpegurl; codecs="avc1.64001f,mp4a.40.2"
+  videoCodec?: string // e.g., "avc1.64001F" or "hvc1.1.6.L123.B0"
+  audioCodec?: string // e.g., "mp4a.40.2"
 }
 
 /**

@@ -10,7 +10,6 @@ import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
   rewriteHlsPlaylists,
-  computeTargetDimensions,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
@@ -58,21 +57,61 @@ function updateBrowserState(
   }))
 }
 
-function parseMasterPlaylistStreams(
-  masterContent: string
-): Map<string, { width: number; height: number }> {
+function parseCodecList(codecs: string | undefined): { videoCodec?: string; audioCodec?: string } {
+  const codecList =
+    codecs
+      ?.split(',')
+      .map(codec => codec.trim())
+      .filter(Boolean) ?? []
+
+  return {
+    videoCodec: codecList.find(codec => /^(avc1|avc3|hvc1|hev1)/i.test(codec)),
+    audioCodec: codecList.find(codec => /^(mp4a|ac-3|ec-3|opus)/i.test(codec)),
+  }
+}
+
+function buildHlsMimeType(codecs: string | undefined): string {
+  return codecs
+    ? `application/vnd.apple.mpegurl; codecs="${codecs}"`
+    : 'application/vnd.apple.mpegurl'
+}
+
+function parseMasterPlaylistStreams(masterContent: string): Map<
+  string,
+  {
+    width: number
+    height: number
+    mimeType: string
+    videoCodec?: string
+    audioCodec?: string
+  }
+> {
   const lines = masterContent.split('\n').map(line => line.trim())
-  const map = new Map<string, { width: number; height: number }>()
+  const map = new Map<
+    string,
+    {
+      width: number
+      height: number
+      mimeType: string
+      videoCodec?: string
+      audioCodec?: string
+    }
+  >()
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i]
     if (!line.startsWith('#EXT-X-STREAM-INF:')) continue
     const resolutionMatch = line.match(/RESOLUTION=(\d+)x(\d+)/i)
+    const codecs = line.match(/CODECS="([^"]+)"/i)?.[1]
     const playlistPath = lines[i + 1]
     if (!resolutionMatch || !playlistPath || playlistPath.startsWith('#')) continue
+    const { videoCodec, audioCodec } = parseCodecList(codecs)
     map.set(playlistPath, {
       width: parseInt(resolutionMatch[1], 10),
       height: parseInt(resolutionMatch[2], 10),
+      mimeType: buildHlsMimeType(codecs),
+      videoCodec,
+      audioCodec,
     })
   }
 
@@ -212,9 +251,7 @@ export function subscribeToBrowserTranscodeUploads(listener: BrowserTranscodeUpl
   return subscribeToBrowserTranscodeJobs(listener)
 }
 
-export type BrowserTranscodeUploadListener = Parameters<
-  typeof subscribeToBrowserTranscodeJobs
->[0]
+export type BrowserTranscodeUploadListener = Parameters<typeof subscribeToBrowserTranscodeJobs>[0]
 
 export function getBrowserTranscodeUploadDraft(draftId: string) {
   return getBrowserTranscodeJob(draftId)
@@ -261,9 +298,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     status: 'queued',
     mode,
     keepOriginal,
-      sourceName: file.name,
-      sourceSize: file.size,
-      startedAt: Date.now(),
+    sourceName: file.name,
+    sourceSize: file.size,
+    startedAt: Date.now(),
     updatedAt: Date.now(),
     variants: getVariantStates(variants),
     message: 'Browser transcode queued.',
@@ -347,6 +384,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         dimension: string
         qualityLabel: string
         sizeMB?: number
+        mimeType?: string
+        videoCodec?: string
+        audioCodec?: string
       }> = []
 
       // Pre-compute total bytes across all files for accurate progress
@@ -410,7 +450,16 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       const masterPlaylistForMetadata = rewrittenFiles.get('master.m3u8')
       const streamMap = masterPlaylistForMetadata
         ? parseMasterPlaylistStreams(await masterPlaylistForMetadata.text())
-        : new Map<string, { width: number; height: number }>()
+        : new Map<
+            string,
+            {
+              width: number
+              height: number
+              mimeType: string
+              videoCodec?: string
+              audioCodec?: string
+            }
+          >()
       const playlistPaths = Array.from(rewrittenFiles.keys()).filter(
         p => p.endsWith('.m3u8') && p !== 'master.m3u8'
       )
@@ -422,17 +471,25 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         uploadedUrls.set(path, url)
 
         const parsedDims = streamMap.get(path)
-        const fallbackDims = computeTargetDimensions(sourceMeta.width, sourceMeta.height, sourceMeta.height)
-        const dims = parsedDims ?? fallbackDims
-        const streamBytes = computeVariantStreamBytes(path, await playlistFile.text(), transcodedFiles)
-        const totalVariantBytes = streamBytes + playlistFile.size
+        if (parsedDims) {
+          const originalPlaylist = transcodedFiles.get(path)
+          const streamBytes = computeVariantStreamBytes(
+            path,
+            originalPlaylist ? await originalPlaylist.text() : await playlistFile.text(),
+            transcodedFiles
+          )
+          const totalVariantBytes = streamBytes + playlistFile.size
 
-        hlsVariantStreams.push({
-          url,
-          dimension: `${dims.width}x${dims.height}`,
-          qualityLabel: `${Math.min(dims.width, dims.height)}p`,
-          sizeMB: totalVariantBytes > 0 ? totalVariantBytes / (1024 * 1024) : undefined,
-        })
+          hlsVariantStreams.push({
+            url,
+            dimension: `${parsedDims.width}x${parsedDims.height}`,
+            qualityLabel: `${Math.min(parsedDims.width, parsedDims.height)}p`,
+            sizeMB: totalVariantBytes > 0 ? totalVariantBytes / (1024 * 1024) : undefined,
+            mimeType: parsedDims.mimeType,
+            videoCodec: parsedDims.videoCodec,
+            audioCodec: parsedDims.audioCodec,
+          })
+        }
 
         uploadedBytes += playlistFile.size
         reportProgress(
@@ -454,18 +511,21 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
 
       console.log('[BrowserTranscodeUploadManager] HLS master playlist URL:', masterUrl)
 
+      const sortedHlsVariantStreams = hlsVariantStreams.sort((a, b) => {
+        const qa = parseInt(a.qualityLabel, 10) || 0
+        const qb = parseInt(b.qualityLabel, 10) || 0
+        return qb - qa
+      })
+      const highestHlsStream = sortedHlsVariantStreams[0]
+
       // Add HLS variant — use inputMethod:'url' so buildImetaTag uses variant.url directly
       // (we only have the URL, not a BlobDescriptor with hash/size for the master playlist)
       uploadedVideos.push({
         url: masterUrl,
         mimeType: 'application/vnd.apple.mpegurl',
-        dimension: `${sourceMeta.width}x${sourceMeta.height}`,
-        qualityLabel: variants[0] ? `${variants[0].targetHeight}p` : undefined,
-        hlsVariants: hlsVariantStreams.sort((a, b) => {
-          const qa = parseInt(a.qualityLabel, 10) || 0
-          const qb = parseInt(b.qualityLabel, 10) || 0
-          return qb - qa
-        }),
+        dimension: highestHlsStream?.dimension || `${sourceMeta.width}x${sourceMeta.height}`,
+        qualityLabel: highestHlsStream?.qualityLabel,
+        hlsVariants: sortedHlsVariantStreams,
         duration: sourceMeta.duration,
         uploadedBlobs: [],
         mirroredBlobs: [],

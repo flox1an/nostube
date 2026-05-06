@@ -68,6 +68,15 @@ function getCodecWarning(
   return null
 }
 
+function getVideoCodecLabel(videoCodec?: string): string {
+  if (!videoCodec) return '-'
+
+  const codecLower = videoCodec.toLowerCase()
+  if (codecLower.startsWith('avc1') || codecLower.startsWith('avc3')) return 'H.264'
+  if (codecLower.startsWith('hvc1') || codecLower.startsWith('hev1')) return 'HEVC'
+  return videoCodec
+}
+
 export function VideoVariantsTable({
   videos,
   onRemove,
@@ -177,7 +186,9 @@ export function VideoVariantsTable({
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-1 cursor-help">
                                 <LucideBookUp className="h-4 w-4 text-green-500" />
-                                <span className="text-xs font-medium">{video.uploadedBlobs.length}</span>
+                                <span className="text-xs font-medium">
+                                  {video.uploadedBlobs.length}
+                                </span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -202,7 +213,9 @@ export function VideoVariantsTable({
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-1 cursor-help">
                                 <Copy className="h-4 w-4 text-blue-500" />
-                                <span className="text-xs font-medium">{video.mirroredBlobs.length}</span>
+                                <span className="text-xs font-medium">
+                                  {video.mirroredBlobs.length}
+                                </span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -279,7 +292,28 @@ export function VideoVariantsTable({
                     <TableCell className="font-mono text-sm">
                       {stream.sizeMB ? `${stream.sizeMB.toFixed(2)} MB` : '-'}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">HLS (.m3u8)</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">V:</span>
+                          <span className="truncate max-w-[100px]" title={stream.videoCodec}>
+                            {getVideoCodecLabel(stream.videoCodec)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">A:</span>
+                          <span className="truncate max-w-[100px]" title={stream.audioCodec}>
+                            {stream.audioCodec || '-'}
+                          </span>
+                        </div>
+                        <div
+                          className="max-w-[180px] truncate text-muted-foreground"
+                          title={stream.mimeType}
+                        >
+                          {stream.mimeType || 'application/vnd.apple.mpegurl'}
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <span className="text-xs text-muted-foreground">Variant Playlist</span>
                     </TableCell>
@@ -321,7 +355,9 @@ export function VideoVariantsTable({
                         {codecWarning.type === 'warning' && (
                           <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
                         )}
-                        <AlertDescription className="text-sm">{t(codecWarning.key)}</AlertDescription>
+                        <AlertDescription className="text-sm">
+                          {t(codecWarning.key)}
+                        </AlertDescription>
                       </div>
                     </Alert>
                   </TableCell>

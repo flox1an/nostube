@@ -199,7 +199,9 @@ export function useVideoUpload(
   initialDraft?: UploadDraft,
   onDraftChange?: (updates: Partial<UploadDraft>) => void
 ) {
-  const legacyDraft = initialDraft as (UploadDraft & { browserTranscodeState?: BrowserTranscodeState }) | undefined
+  const legacyDraft = initialDraft as
+    | (UploadDraft & { browserTranscodeState?: BrowserTranscodeState })
+    | undefined
   const initialBrowserTranscodeJob = initialDraft?.id
     ? getBrowserTranscodeUploadDraft(initialDraft.id)
     : undefined
@@ -264,6 +266,7 @@ export function useVideoUpload(
   const [publishAt, setPublishAt] = useState<number | undefined>(initialDraft?.publishAt)
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
+  const [publishRelays, setPublishRelays] = useState<string[] | null>(null) // null = use all write relays
 
   // Subtitles state
   const [subtitles, setSubtitles] = useState<SubtitleVariant[]>(initialDraft?.subtitles || [])
@@ -928,10 +931,11 @@ export function useVideoUpload(
       })
 
       const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+      const relaysToPublishTo = publishRelays ?? writeRelays
 
       const publishedEvent = await publish({
         event: event as { kind: number; content: string; created_at: number; tags: string[][] },
-        relays: writeRelays,
+        relays: relaysToPublishTo,
       })
 
       // Publish kind 1063 events for mirrored blobs (non-blocking)
@@ -1210,6 +1214,9 @@ export function useVideoUpload(
     uploadProgress,
     browserTranscodeState,
     publishSummary,
+    publishRelays,
+    setPublishRelays,
+    writeRelays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
     blossomInitalUploadServers,
     blossomMirrorServers,
     isPublishing,

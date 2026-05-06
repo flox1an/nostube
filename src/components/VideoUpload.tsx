@@ -19,6 +19,7 @@ import {
   PeoplePickerSection,
   OriginManager,
   BrowserTranscodeStep,
+  PublishButton,
 } from './video-upload'
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
@@ -105,6 +106,9 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     blossomInitalUploadServers,
     blossomMirrorServers,
     isPublishing,
+    publishRelays,
+    setPublishRelays,
+    writeRelays,
     previewEvent,
     videoToDelete,
     setVideoToDelete,
@@ -760,12 +764,13 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     <ChevronRight className="h-4 w-4 md:ml-2" />
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={isPublishing || !canPublish || justArrivedAtStep5}
-                  >
-                    {isPublishing ? t('upload.publishing') : t('upload.publishVideo')}
-                  </Button>
+                  <PublishButton
+                    isPublishing={isPublishing}
+                    disabled={!canPublish || justArrivedAtStep5}
+                    writeRelays={writeRelays}
+                    selectedRelays={publishRelays}
+                    onSelectedRelaysChange={setPublishRelays}
+                  />
                 )}
               </div>
             </div>

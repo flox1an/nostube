@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Split publish button on the upload review step — the left side publishes as before; the right chevron opens a dropdown with a checkbox per configured write relay so users can target specific relays; button label updates to "Publish to N relays" when a subset is selected; falls back to a plain button when only one relay is configured
+
 ### Changed
 
 - HLS segment and variant playlist uploads now run 2 at a time instead of sequentially — reduces total upload time roughly in half for typical streams

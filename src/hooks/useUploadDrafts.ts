@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { UploadDraft } from '@/types/upload-draft'
-import { removeOldDrafts } from '@/lib/upload-draft-utils'
+import { removeOldDrafts, stripRuntimeStateFromDrafts } from '@/lib/upload-draft-utils'
 import { useDraftPersistence } from './useDraftPersistence'
-import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
+import { getItemsFromStorage, saveItemsToStorage } from '@/lib/draft-persistence-storage'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
@@ -28,8 +28,16 @@ export function useUploadDrafts() {
 
   // Apply age-based cleanup on read
   const drafts = useMemo(() => {
-    return removeOldDrafts(persistence.items, 30)
+    return removeOldDrafts(stripRuntimeStateFromDrafts(persistence.items), 30)
   }, [persistence.items])
+
+  useEffect(() => {
+    const sanitized = stripRuntimeStateFromDrafts(persistence.items)
+    if (JSON.stringify(sanitized) === JSON.stringify(persistence.items)) return
+
+    saveItemsToStorage(STORAGE_KEY, sanitized)
+    persistence.refreshItems()
+  }, [persistence])
 
   const createDraftInMemory = useCallback((): UploadDraft => {
     return {
@@ -57,7 +65,7 @@ export function useUploadDrafts() {
       const existing = getItemsFromStorage<UploadDraft>(STORAGE_KEY)
       if (existing.some(d => d.id === draft.id)) return
 
-      persistence.createItem({ ...draft, updatedAt: Date.now() })
+      persistence.createItem({ ...stripRuntimeStateFromDrafts([draft])[0], updatedAt: Date.now() })
     },
     [persistence]
   )

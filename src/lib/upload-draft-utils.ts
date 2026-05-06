@@ -48,3 +48,19 @@ export function removeOldDrafts(drafts: UploadDraft[], maxAgeDays = 30): UploadD
   const cutoffTime = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
   return drafts.filter(d => d.createdAt > cutoffTime)
 }
+
+type LegacyRuntimeFields = {
+  browserTranscodeState?: unknown
+  dvmTranscodeState?: unknown
+}
+
+export function stripRuntimeStateFromDraft(draft: UploadDraft & LegacyRuntimeFields): UploadDraft {
+  const sanitized = { ...draft }
+  delete sanitized.browserTranscodeState
+  delete sanitized.dvmTranscodeState
+  return sanitized
+}
+
+export function stripRuntimeStateFromDrafts(drafts: UploadDraft[]): UploadDraft[] {
+  return drafts.map(draft => stripRuntimeStateFromDraft(draft))
+}

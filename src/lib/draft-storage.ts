@@ -35,14 +35,13 @@ export function createEmptyDraft(): UploadDraft {
 
 /**
  * Determine if an update is a "milestone" that needs immediate Nostr sync.
- * Upload-specific: checks for publishable video/thumbnail/DVM state changes.
+ * Upload-specific: checks for publishable video/thumbnail state changes.
  */
 export function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
   return !!(
     updates.uploadInfo?.videos ||
     updates.originalVideoInfo ||
     updates.thumbnailUploadInfo?.uploadedBlobs ||
-    updates.thumbnailUploadInfo?.mirroredBlobs ||
-    'dvmTranscodeState' in updates
+    updates.thumbnailUploadInfo?.mirroredBlobs
   )
 }

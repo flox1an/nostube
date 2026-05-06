@@ -10,7 +10,6 @@ import {
 import { useDvmTracker } from '@/hooks/useDvmTracker'
 import { useUploadManager } from '@/providers/upload'
 import type { VideoVariant } from '@/lib/video-processing'
-import type { DvmTranscodeState } from '@/types/upload-draft'
 import {
   AVAILABLE_RESOLUTIONS,
   type TranscodeCodec,
@@ -32,8 +31,6 @@ interface DvmTranscodeAlertProps {
   onComplete: (transcodedVideo: VideoVariant) => void
   onAllComplete?: () => void
   onStatusChange?: (status: TranscodeStatus) => void
-  initialTranscodeState?: DvmTranscodeState
-  onTranscodeStateChange?: (state: DvmTranscodeState | null) => void
 }
 
 /**
@@ -47,7 +44,6 @@ export function DvmTranscodeAlert({
   onComplete,
   onAllComplete,
   onStatusChange,
-  initialTranscodeState,
 }: DvmTranscodeAlertProps) {
   const { t } = useTranslation()
   const { config } = useAppContext()
@@ -83,6 +79,8 @@ export function DvmTranscodeAlert({
   // Check if a DVM is available (only check if not resuming)
   const { isDvmAvailable, isLoading: isDvmLoading, dvmHandlers } = useDvmTracker()
   const uploadManager = useUploadManager()
+  const activeTask = uploadManager.getTask(draftId)
+  const isResuming = !!activeTask?.transcodeState
 
   // Use the manager-backed hook for background transcoding
   const { status, progress, error, startTranscode, resumeTranscode, cancel, transcodedVideo } =
@@ -92,20 +90,18 @@ export function DvmTranscodeAlert({
       onAllComplete,
     })
 
-  // Auto-resume if we have initial state (or if there's an active task in the manager)
+  // Auto-resume if there's an active task in the manager.
   useEffect(() => {
-    if (initialTranscodeState && !hasResumedRef.current && status === 'idle') {
+    if (isResuming && !hasResumedRef.current && status === 'idle') {
       hasResumedRef.current = true
       resumeTranscode()
     }
-  }, [initialTranscodeState, status, resumeTranscode])
+  }, [isResuming, status, resumeTranscode])
 
   // Notify parent of status changes
   useEffect(() => {
     onStatusChange?.(status)
   }, [status, onStatusChange])
-
-  const isResuming = !!initialTranscodeState
 
   // Called by UploadManagerProvider when the DVM requires payment before processing.
   // Returns a promise that resolves when the user completes payment, rejects if cancelled.

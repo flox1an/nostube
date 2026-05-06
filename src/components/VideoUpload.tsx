@@ -583,8 +583,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     />
 
                     {/* DVM Transcode Alert - always shown when a DVM is available */}
-                    {(uploadState === 'finished' && uploadInfo.videos[0]) ||
-                    draft.dvmTranscodeState ? (
+                    {uploadState === 'finished' && uploadInfo.videos[0] ? (
                       <DvmTranscodeAlert
                         draftId={draft.id}
                         video={uploadInfo.videos[0]}
@@ -593,7 +592,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                           .filter((label): label is string => !!label)}
                         onComplete={videoUploadState.handleAddTranscodedVideo}
                         onStatusChange={setTranscodeStatus}
-                        initialTranscodeState={draft.dvmTranscodeState}
                       />
                     ) : null}
 

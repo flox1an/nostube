@@ -749,12 +749,7 @@ export function useVideoUpload(
   // Handler to remove video from form only (without deleting blobs)
   const handleRemoveVideoFromFormOnly = () => {
     if (videoToDelete === null) return
-    const { video, index } = videoToDelete
-
-    // If removing a 720p video, clear the DVM transcode state
-    if (video.qualityLabel === '720p' && onDraftChangeRef.current) {
-      onDraftChangeRef.current({ dvmTranscodeState: undefined })
-    }
+    const { index } = videoToDelete
 
     setUploadInfo(ui => ({
       videos: ui.videos.filter((_, i) => i !== index),
@@ -773,11 +768,6 @@ export function useVideoUpload(
     setDeletingIndex(index)
 
     try {
-      // If removing a 720p video, clear the DVM transcode state
-      if (video.qualityLabel === '720p' && onDraftChangeRef.current) {
-        onDraftChangeRef.current({ dvmTranscodeState: undefined })
-      }
-
       // Delete all blobs from their servers
       const allBlobs = [...video.uploadedBlobs, ...video.mirroredBlobs]
       const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(

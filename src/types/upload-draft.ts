@@ -25,25 +25,6 @@ export interface SubtitleVariant {
   mirroredBlobs: BlobDescriptor[]
 }
 
-/**
- * State for persisting DVM transcode jobs across navigation.
- * Allows users to leave the upload dialog and resume when they return.
- */
-export interface DvmTranscodeState {
-  requestEventId: string // kind:5207 event id we published
-  dvmPubkey: string // DVM handler pubkey
-  inputVideoUrl: string // URL sent to DVM
-  originalDuration?: number // For result parsing
-  startedAt: number // For timeout detection (12h limit)
-  status: 'transcoding' | 'mirroring' // Active states only
-  lastStatusMessage?: string
-  lastPercentage?: number
-  // Multi-resolution support
-  resolutionQueue: string[] // All resolutions to process (e.g., ['1080p', '720p', '480p'])
-  completedResolutions: string[] // Already finished resolutions
-  currentResolution: string // Currently processing resolution
-}
-
 export interface BrowserTranscodeVariantState {
   label: string
   progress: number
@@ -136,8 +117,6 @@ export interface UploadDraft {
   // Metadata
   thumbnailSource: 'generated' | 'upload'
 
-  // DVM Transcode state (only present during active transcode)
-  dvmTranscodeState?: DvmTranscodeState
 }
 
 export interface UploadDraftsData {

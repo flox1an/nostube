@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- HLS stream tree in the video debug dialog — for events with an HLS master playlist, a new section shows a two-column layout: left side is a tree of master → variant streams (lazy-fetched on expand) → init fragment + collapsible segment list; right side shows a direct HEAD check + per-configured-Blossom-server availability for the selected node; HLS variants in the existing tab list now use a layers icon
+
 ### Fixed
 
 - Video page blank (left side dark / not rendered) for events whose only video source is an HLS master playlist — `application/vnd.apple.mpegurl` was excluded by a `startsWith('video/')` filter in `processEvent`, so `video.urls` came out empty and the player returned `null`; HLS MIME types and `.m3u8` URLs are now accepted as valid video variants

@@ -704,32 +704,18 @@ export async function uploadFileToMultipleServersChunked({
         return createMockBlobDescriptor(server, fileHash, file.size, file.type)
       }
 
-      // Try chunked upload first
+      // Try chunked upload first, fall back to regular PUT on any failure.
+      // Chunked upload can fail for many reasons (server doesn't support PATCH,
+      // CORS, 401 on PATCH but not PUT, etc.). A regular PUT is always worth trying.
       try {
         console.debug(`File does not exist on ${server}, attempting chunked upload`)
         return await uploadFileChunked(file, server, signer, options, callbacks, fileHash)
       } catch (chunkedError) {
-        // If chunked upload fails, check if it's because chunked upload is not supported
-        const errorMessage =
-          chunkedError instanceof Error ? chunkedError.message : String(chunkedError)
-
-        if (
-          errorMessage.includes('does not support PATCH chunked uploads') ||
-          errorMessage.includes('CORS error')
-        ) {
-          console.debug(`Chunked upload not supported on ${server}, falling back to regular upload`)
-
-          // Fall back to regular upload
-          try {
-            return await uploadFileToSingleServer(file, server, signer, fileHash)
-          } catch (regularError) {
-            console.error(`Both chunked and regular upload failed for ${server}:`, regularError)
-            throw regularError
-          }
-        }
-
-        // If it's another error, rethrow it
-        throw chunkedError
+        console.debug(
+          `Chunked upload failed for ${server}, falling back to regular upload:`,
+          chunkedError
+        )
+        return await uploadFileToSingleServer(file, server, signer, fileHash)
       }
     })
   )

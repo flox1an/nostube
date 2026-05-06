@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added dev-mode logging of raw and rewritten m3u8 content to aid debugging of HLS output
 - HLS segment and init-file uploads now use `video/mp4` MIME type — mediabunny may emit `video/iso.segment` for CMAF segments which some Blossom servers reject; normalised to `video/mp4` in the upload pipeline
 - `uploadFileToMultipleServersChunked` now throws the first server error when all uploads fail instead of silently returning an empty array; surfaces the real failure reason (e.g. auth error, CORS, server rejection) rather than a generic "Failed to upload" message
+- Chunked upload fallback now triggers for **any** chunked-upload failure (previously only "does not support PATCH" and CORS errors); a `401` on PATCH now retries with a regular PUT, fixing HLS segment uploads to servers like `almond.slidestr.net` that accept PUT but return 401 for PATCH
 
 - Browser transcoding UI now automatically selects "Keep original" when the source video is already optimised or no high-resolution transcode variants are produced; ensures the original video is always preserved as the primary source when no conversion is needed
 - No loading indicator during Blossom upload when server does not support chunked uploads (BUD-10) — fallback regular upload never called `onProgress`, leaving the UI showing nothing between dropping the file and the upload completing; now shows a spinner with "Uploading…" text whenever `uploadState === 'uploading'` and no chunk progress is available yet

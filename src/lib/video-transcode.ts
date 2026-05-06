@@ -429,16 +429,21 @@ export async function rewriteHlsPlaylists(
 
       for (const originalPath of sortedPaths) {
         const absoluteUrl = uploadedUrls.get(originalPath)!
+        // Use only the SHA256 hash (last URL path segment) as a relative filename.
+        // Blossom URLs are https://server/<sha256>, so the hash is the last segment.
+        // HLS players resolve relative references against the playlist's base URL,
+        // so "abc123..." in a playlist at https://server/<hash> → https://server/abc123...
+        const relativeRef = absoluteUrl.split('/').pop()!
 
         if (content.includes(originalPath)) {
           // Full path found in content — replace directly.
-          content = content.split(originalPath).join(absoluteUrl)
+          content = content.split(originalPath).join(relativeRef)
         } else if (companionDir && originalPath.startsWith(companionDir)) {
           // Relative path: strip the companion directory prefix and try again.
           // e.g. "variant-0/segment-0.m4s" → "segment-0.m4s" inside "variant-0.m3u8"
           const relativePart = originalPath.slice(companionDir.length)
           if (relativePart && content.includes(relativePart)) {
-            content = content.split(relativePart).join(absoluteUrl)
+            content = content.split(relativePart).join(relativeRef)
           }
         }
       }

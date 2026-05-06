@@ -21,7 +21,15 @@ export interface VideoVariant {
   inputMethod: 'file' | 'url' // How this video was added
   file?: File // Original file (only for uploaded files)
   qualityLabel?: string // e.g., "1080p", "720p", "480p"
+  hlsVariants?: HlsVariantStream[] // Per-stream info for HLS master playlists
   extractedMetadata?: VideoMetadata // iTunes metadata from moov/udta/meta/ilst
+}
+
+export interface HlsVariantStream {
+  url: string // Variant playlist URL (.m3u8)
+  dimension: string // e.g., "1280x720"
+  qualityLabel: string // e.g., "720p"
+  sizeMB?: number // Total generated stream size in MB
 }
 
 /**

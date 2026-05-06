@@ -86,10 +86,13 @@ export function BrowserTranscodeStep({
     analyze(file)
   }, [analyze, backgroundState?.status, file, supported])
 
-  const toggleHeight = useCallback((height: number) => {
-    setSelectedHeights(prev =>
-      prev.includes(height) ? prev.filter(h => h !== height) : [...prev, height]
-    )
+  const setHeightSelection = useCallback((height: number, checked: boolean) => {
+    setSelectedHeights(prev => {
+      if (checked) {
+        return prev.includes(height) ? prev : [...prev, height]
+      }
+      return prev.filter(h => h !== height)
+    })
   }, [])
 
   /** Compute the variant array from current UI selections. */
@@ -214,8 +217,18 @@ export function BrowserTranscodeStep({
               )}
             </div>
           ))}
-          {backgroundState.uploadProgress && (
-            <Progress value={backgroundState.uploadProgress.percentage} className="h-1.5" />
+          {backgroundState.uploadProgress !== undefined && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>
+                  {backgroundState.uploadProgress.currentChunk}/
+                  {backgroundState.uploadProgress.totalChunks}{' '}
+                  {t('upload.browserTranscode.files', { defaultValue: 'files' })}
+                </span>
+                <span>{backgroundState.uploadProgress.percentage}%</span>
+              </div>
+              <Progress value={backgroundState.uploadProgress.percentage} className="h-1.5" />
+            </div>
           )}
           {backgroundState.error && <p className="text-sm">{backgroundState.error}</p>}
         </AlertDescription>
@@ -346,7 +359,7 @@ export function BrowserTranscodeStep({
                       option={opt}
                       outputFormat={outputFormat}
                       checked={selectedHeights.includes(opt.height)}
-                      onToggle={() => toggleHeight(opt.height)}
+                      onToggle={checked => setHeightSelection(opt.height, checked)}
                     />
                   ))}
                 </div>
@@ -456,7 +469,7 @@ interface ResolutionRowProps {
   option: ResolutionOption
   outputFormat: 'mp4' | 'hls'
   checked: boolean
-  onToggle: () => void
+  onToggle: (checked: boolean) => void
 }
 
 function ResolutionRow({ option, outputFormat, checked, onToggle }: ResolutionRowProps) {
@@ -465,7 +478,7 @@ function ResolutionRow({ option, outputFormat, checked, onToggle }: ResolutionRo
 
   return (
     <label className="flex cursor-pointer items-center gap-2">
-      <Checkbox checked={checked} onCheckedChange={onToggle} />
+      <Checkbox checked={checked} onCheckedChange={value => onToggle(value === true)} />
       <span className="text-sm">
         {option.height}p<span className="ml-1.5 text-xs text-muted-foreground">{codecLabel}</span>
       </span>

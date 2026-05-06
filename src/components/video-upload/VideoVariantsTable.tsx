@@ -23,6 +23,7 @@ import { useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { HlsPreviewDialog } from './HlsPreviewDialog'
 
 interface VideoVariantsTableProps {
   videos: VideoVariant[]
@@ -75,6 +76,8 @@ export function VideoVariantsTable({
   const { t } = useTranslation()
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const [hlsPreviewUrl, setHlsPreviewUrl] = useState<string | null>(null)
+  const [isHlsPreviewDialogOpen, setIsHlsPreviewDialogOpen] = useState(false)
 
   if (videos.length === 0) {
     return null
@@ -87,6 +90,19 @@ export function VideoVariantsTable({
       onPreview(videos[index])
     }
   }
+
+  const hlsMasterVariants = videos
+    .map((video, originalIndex) => ({ video, originalIndex }))
+    .filter(
+      ({ video }) =>
+        video.mimeType === 'application/vnd.apple.mpegurl' && (video.hlsVariants?.length ?? 0) > 0
+    )
+  const regularVariants = videos
+    .map((video, originalIndex) => ({ video, originalIndex }))
+    .filter(
+      ({ video }) =>
+        !(video.mimeType === 'application/vnd.apple.mpegurl' && (video.hlsVariants?.length ?? 0) > 0)
+    )
 
   // Collect codec warnings - show error/warning per row, info/success once at end
   const codecWarnings = videos.map(v => getCodecWarning(v.videoCodec))
@@ -113,171 +129,210 @@ export function VideoVariantsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {videos.map((video, index) => {
+            {regularVariants.map(({ video, originalIndex }, index) => {
               const codecWarning = getCodecWarning(video.videoCodec)
-              // Only show error/warning inline, info/success shown once at end
-              const showInlineWarning =
-                codecWarning && (codecWarning.type === 'error' || codecWarning.type === 'warning')
 
               return (
-                <>
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell>
-                      <span className="inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
-                        {video.qualityLabel}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{video.dimension}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {video.sizeMB ? `${video.sizeMB.toFixed(2)} MB` : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">V:</span>
-                          <span className="truncate max-w-[100px]" title={video.videoCodec}>
-                            {video.videoCodec || '-'}
-                          </span>
-                          {codecWarning && (
-                            <>
-                              {codecWarning.type === 'error' && (
-                                <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
-                              )}
-                              {codecWarning.type === 'warning' && (
-                                <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
-                              )}
-                              {codecWarning.type === 'info' && (
-                                <Info className="h-3 w-3 text-blue-500 shrink-0" />
-                              )}
-                              {codecWarning.type === 'success' && (
-                                <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
-                              )}
-                            </>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">A:</span>
-                          <span className="truncate max-w-[100px]" title={video.audioCodec}>
-                            {video.audioCodec || '-'}
-                          </span>
-                        </div>
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{index + 1}</TableCell>
+                  <TableCell>
+                    <span className="inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
+                      {video.qualityLabel}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">{video.dimension}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {video.sizeMB ? `${video.sizeMB.toFixed(2)} MB` : '-'}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">V:</span>
+                        <span className="truncate max-w-[100px]" title={video.videoCodec}>
+                          {video.videoCodec || '-'}
+                        </span>
+                        {codecWarning && (
+                          <>
+                            {codecWarning.type === 'error' && (
+                              <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
+                            )}
+                            {codecWarning.type === 'warning' && (
+                              <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0" />
+                            )}
+                            {codecWarning.type === 'info' && (
+                              <Info className="h-3 w-3 text-blue-500 shrink-0" />
+                            )}
+                            {codecWarning.type === 'success' && (
+                              <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                            )}
+                          </>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <TooltipProvider>
-                        <div className="flex items-center gap-2">
-                          {(video.uploadedBlobs?.length ?? 0) > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 cursor-help">
-                                  <LucideBookUp className="h-4 w-4 text-green-500" />
-                                  <span className="text-xs font-medium">
-                                    {video.uploadedBlobs.length}
-                                  </span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="space-y-1">
-                                  <p className="font-semibold text-xs">
-                                    {t('upload.videoTable.uploadedTo')}:
-                                  </p>
-                                  {video.uploadedBlobs.map((blob, idx) => {
-                                    const url = new URL(blob.url)
-                                    return (
-                                      <p key={idx} className="text-xs">
-                                        ✓ {url.hostname}
-                                      </p>
-                                    )
-                                  })}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {(video.mirroredBlobs?.length ?? 0) > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 cursor-help">
-                                  <Copy className="h-4 w-4 text-blue-500" />
-                                  <span className="text-xs font-medium">
-                                    {video.mirroredBlobs.length}
-                                  </span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="space-y-1">
-                                  <p className="font-semibold text-xs">
-                                    {t('upload.videoTable.mirroredTo')}:
-                                  </p>
-                                  {video.mirroredBlobs.map((blob, idx) => {
-                                    const url = new URL(blob.url)
-                                    return (
-                                      <p key={idx} className="text-xs">
-                                        ✓ {url.hostname}
-                                      </p>
-                                    )
-                                  })}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">A:</span>
+                        <span className="truncate max-w-[100px]" title={video.audioCodec}>
+                          {video.audioCodec || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <div className="flex items-center gap-2">
+                        {(video.uploadedBlobs?.length ?? 0) > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 cursor-help">
+                                <LucideBookUp className="h-4 w-4 text-green-500" />
+                                <span className="text-xs font-medium">{video.uploadedBlobs.length}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1">
+                                <p className="font-semibold text-xs">
+                                  {t('upload.videoTable.uploadedTo')}:
+                                </p>
+                                {video.uploadedBlobs.map((blob, idx) => {
+                                  const url = new URL(blob.url)
+                                  return (
+                                    <p key={idx} className="text-xs">
+                                      ✓ {url.hostname}
+                                    </p>
+                                  )
+                                })}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {(video.mirroredBlobs?.length ?? 0) > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 cursor-help">
+                                <Copy className="h-4 w-4 text-blue-500" />
+                                <span className="text-xs font-medium">{video.mirroredBlobs.length}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1">
+                                <p className="font-semibold text-xs">
+                                  {t('upload.videoTable.mirroredTo')}:
+                                </p>
+                                {video.mirroredBlobs.map((blob, idx) => {
+                                  const url = new URL(blob.url)
+                                  return (
+                                    <p key={idx} className="text-xs">
+                                      ✓ {url.hostname}
+                                    </p>
+                                  )
+                                })}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreviewClick(originalIndex)}
+                        className="h-8 w-8 p-0"
+                        title={t('upload.videoTable.preview')}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      {onRemove && videos.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handlePreviewClick(index)}
-                          className="h-8 w-8 p-0"
-                          title={t('upload.videoTable.preview')}
+                          onClick={() => onRemove(originalIndex)}
+                          disabled={deletingIndex != null}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title={t('upload.videoTable.remove')}
                         >
-                          <Play className="h-4 w-4" />
+                          {deletingIndex === index ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
-                        {onRemove && videos.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRemove(index)}
-                            disabled={deletingIndex != null}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            title={t('upload.videoTable.remove')}
-                          >
-                            {deletingIndex === index ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+            {hlsMasterVariants.flatMap(({ video: masterVideo }, masterIndex) => {
+              const streams = masterVideo.hlsVariants ?? []
+              if (streams.length === 0) return []
+              return [
+                <TableRow key={`hls-header-${masterIndex}`}>
+                  <TableCell colSpan={7} className="bg-muted/30 font-semibold">
+                    HLS Streams
+                  </TableCell>
+                </TableRow>,
+                ...streams.map((stream, streamIndex) => (
+                  <TableRow key={`hls-${masterIndex}-${streamIndex}`}>
+                    <TableCell className="font-medium">{streamIndex + 1}</TableCell>
+                    <TableCell>
+                      <span className="inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
+                        {stream.qualityLabel}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{stream.dimension}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {stream.sizeMB ? `${stream.sizeMB.toFixed(2)} MB` : '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">HLS (.m3u8)</TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">Variant Playlist</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setHlsPreviewUrl(stream.url)
+                          setIsHlsPreviewDialogOpen(true)
+                        }}
+                        className="h-8 w-8 p-0"
+                        title={t('upload.videoTable.preview')}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                  {/* Codec Warning Row - only for error/warning types */}
-                  {showInlineWarning && (
-                    <TableRow key={`${index}-warning`}>
-                      <TableCell className="p-0"></TableCell>
-                      <TableCell colSpan={6} className="p-0">
-                        <Alert variant="destructive" className="rounded-none border-0">
-                          <div className="flex items-start gap-2">
-                            {codecWarning.type === 'error' && (
-                              <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
-                            )}
-                            {codecWarning.type === 'warning' && (
-                              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                            )}
-                            <AlertDescription className="text-sm">
-                              {t(codecWarning.key)}
-                            </AlertDescription>
-                          </div>
-                        </Alert>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+                )),
+              ]
+            })}
+            {regularVariants.map(({ video, originalIndex }) => {
+              const codecWarning = getCodecWarning(video.videoCodec)
+              const showInlineWarning =
+                codecWarning && (codecWarning.type === 'error' || codecWarning.type === 'warning')
+
+              if (!showInlineWarning) return null
+              return (
+                <TableRow key={`${originalIndex}-warning`}>
+                  <TableCell className="p-0"></TableCell>
+                  <TableCell colSpan={6} className="p-0">
+                    <Alert variant="destructive" className="rounded-none border-0">
+                      <div className="flex items-start gap-2">
+                        {codecWarning.type === 'error' && (
+                          <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                        )}
+                        {codecWarning.type === 'warning' && (
+                          <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                        )}
+                        <AlertDescription className="text-sm">{t(codecWarning.key)}</AlertDescription>
+                      </div>
+                    </Alert>
+                  </TableCell>
+                </TableRow>
               )
             })}
             {/* Info/Success messages shown once at end */}
@@ -343,6 +398,11 @@ export function VideoVariantsTable({
           )}
         </DialogContent>
       </Dialog>
+      <HlsPreviewDialog
+        url={hlsPreviewUrl}
+        open={isHlsPreviewDialogOpen}
+        onOpenChange={setIsHlsPreviewDialogOpen}
+      />
     </div>
   )
 }

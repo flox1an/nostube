@@ -14,6 +14,7 @@ import { getItemsFromStorage, updateItemInStorage } from '@/lib/draft-persistenc
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
   rewriteHlsPlaylists,
+  computeTargetDimensions,
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
@@ -72,6 +73,53 @@ function updateBrowserState(
   updateDraft(draftId, {
     browserTranscodeState: updater(state),
   })
+}
+
+function parseMasterPlaylistStreams(masterContent: string): Map<string, { width: number; height: number }> {
+  const lines = masterContent.split('\n').map(line => line.trim())
+  const map = new Map<string, { width: number; height: number }>()
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i]
+    if (!line.startsWith('#EXT-X-STREAM-INF:')) continue
+    const resolutionMatch = line.match(/RESOLUTION=(\d+)x(\d+)/i)
+    const playlistPath = lines[i + 1]
+    if (!resolutionMatch || !playlistPath || playlistPath.startsWith('#')) continue
+    map.set(playlistPath, {
+      width: parseInt(resolutionMatch[1], 10),
+      height: parseInt(resolutionMatch[2], 10),
+    })
+  }
+
+  return map
+}
+
+function computeVariantStreamBytes(
+  variantPlaylistPath: string,
+  variantPlaylistContent: string,
+  files: Map<string, File>
+): number {
+  const companionDir = variantPlaylistPath.replace(/\.m3u8$/, '/')
+  const lines = variantPlaylistContent
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('#'))
+
+  const referencedPaths = new Set<string>()
+  for (const line of lines) {
+    if (line.startsWith('http://') || line.startsWith('https://')) continue
+    if (line.includes('/')) {
+      referencedPaths.add(line)
+    } else {
+      referencedPaths.add(`${companionDir}${line}`)
+    }
+  }
+
+  let total = 0
+  referencedPaths.forEach(path => {
+    total += files.get(path)?.size ?? 0
+  })
+  return total
 }
 
 /**
@@ -303,64 +351,135 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     const uploadedVideos: VideoVariant[] = []
 
     if (isHls && transcodedFiles instanceof Map) {
-      // HLS Stage 1: Upload segments and init files
       const uploadedUrls = new Map<string, string>()
-      const segmentPaths = Array.from(transcodedFiles.keys()).filter(p => !p.endsWith('.m3u8'))
+      const hlsVariantStreams: Array<{
+        url: string
+        dimension: string
+        qualityLabel: string
+        sizeMB?: number
+      }> = []
 
+      // Pre-compute total bytes across all files for accurate progress
+      const allPaths = Array.from(transcodedFiles.keys())
+      const segmentPaths = allPaths.filter(p => !p.endsWith('.m3u8'))
+      const playlistPathsRaw = allPaths.filter(p => p.endsWith('.m3u8'))
+      // +1 for master (rewritten copy uploaded separately)
+      const totalFiles = segmentPaths.length + playlistPathsRaw.length + 1
+      const totalBytes = allPaths.reduce((sum, p) => sum + (transcodedFiles.get(p)?.size ?? 0), 0)
+      let uploadedBytes = 0
+
+      const reportProgress = (filesUploaded: number, label: string) => {
+        const pct =
+          totalBytes > 0
+            ? Math.round((uploadedBytes / totalBytes) * 100)
+            : Math.round((filesUploaded / totalFiles) * 100)
+        if (import.meta.env.DEV) {
+          console.log(
+            `[BrowserTranscodeUploadManager] reportProgress: ${filesUploaded}/${totalFiles} files, ${uploadedBytes}/${totalBytes} bytes, ${pct}%`
+          )
+        }
+        updateBrowserState(draftId, state => ({
+          ...state,
+          updatedAt: Date.now(),
+          message: label,
+          uploadProgress: {
+            uploadedBytes,
+            totalBytes,
+            percentage: pct,
+            currentChunk: filesUploaded,
+            totalChunks: totalFiles,
+          },
+        }))
+      }
+
+      // Show the progress bar immediately at 0%
+      updateBrowserState(draftId, state => ({
+        ...state,
+        updatedAt: Date.now(),
+        uploadProgress: {
+          uploadedBytes: 0,
+          totalBytes,
+          percentage: 0,
+          currentChunk: 0,
+          totalChunks: totalFiles,
+        },
+      }))
+
+      // Stage 1: Upload segments and init files
       for (let i = 0; i < segmentPaths.length; i++) {
         const path = segmentPaths[i]
         const hlsFile = transcodedFiles.get(path)!
         const url = await uploadAndGetUrl(hlsFile, initialServers, signer)
         uploadedUrls.set(path, url)
-
-        updateBrowserState(draftId, state => ({
-          ...state,
-          updatedAt: Date.now(),
-          message: `Uploading HLS segments (${i + 1}/${segmentPaths.length})...`,
-          uploadProgress: {
-            uploadedBytes: i + 1,
-            totalBytes: segmentPaths.length,
-            percentage: (i + 1) / segmentPaths.length,
-            currentChunk: i + 1,
-            totalChunks: segmentPaths.length,
-          },
-        }))
+        uploadedBytes += hlsFile.size
+        reportProgress(i + 1, `Uploading HLS segments (${i + 1}/${totalFiles})…`)
       }
 
-      // HLS Stage 2: Rewrite playlists and upload them
+      // Stage 2: Rewrite and upload variant playlists
       const rewrittenFiles = await rewriteHlsPlaylists(transcodedFiles, uploadedUrls)
+      const masterPlaylistForMetadata = rewrittenFiles.get('master.m3u8')
+      const streamMap = masterPlaylistForMetadata
+        ? parseMasterPlaylistStreams(await masterPlaylistForMetadata.text())
+        : new Map<string, { width: number; height: number }>()
       const playlistPaths = Array.from(rewrittenFiles.keys()).filter(
         p => p.endsWith('.m3u8') && p !== 'master.m3u8'
       )
 
-      for (const path of playlistPaths) {
+      for (let i = 0; i < playlistPaths.length; i++) {
+        const path = playlistPaths[i]
         const playlistFile = rewrittenFiles.get(path)!
         const url = await uploadAndGetUrl(playlistFile, initialServers, signer)
         uploadedUrls.set(path, url)
+
+        const parsedDims = streamMap.get(path)
+        const fallbackDims = computeTargetDimensions(sourceMeta.width, sourceMeta.height, sourceMeta.height)
+        const dims = parsedDims ?? fallbackDims
+        const streamBytes = computeVariantStreamBytes(path, await playlistFile.text(), transcodedFiles)
+        const totalVariantBytes = streamBytes + playlistFile.size
+
+        hlsVariantStreams.push({
+          url,
+          dimension: `${dims.width}x${dims.height}`,
+          qualityLabel: `${Math.min(dims.width, dims.height)}p`,
+          sizeMB: totalVariantBytes > 0 ? totalVariantBytes / (1024 * 1024) : undefined,
+        })
+
+        uploadedBytes += playlistFile.size
+        reportProgress(
+          segmentPaths.length + i + 1,
+          `Uploading HLS playlists (${segmentPaths.length + i + 1}/${totalFiles})…`
+        )
       }
 
-      // HLS Stage 3: Rewrite and upload master playlist
+      // Stage 3: Rewrite and upload master playlist
       const masterFile = rewrittenFiles.get('master.m3u8')!
       const finalRewritten = await rewriteHlsPlaylists(
         new Map([['master.m3u8', masterFile]]),
         uploadedUrls
       )
-      const masterUrl = await uploadAndGetUrl(
-        finalRewritten.get('master.m3u8')!,
-        initialServers,
-        signer
-      )
+      const finalMaster = finalRewritten.get('master.m3u8')!
+      const masterUrl = await uploadAndGetUrl(finalMaster, initialServers, signer)
+      uploadedBytes += finalMaster.size
+      reportProgress(totalFiles, `Uploading master playlist (${totalFiles}/${totalFiles})…`)
 
-      // Add HLS variant
+      console.log('[BrowserTranscodeUploadManager] HLS master playlist URL:', masterUrl)
+
+      // Add HLS variant — use inputMethod:'url' so buildImetaTag uses variant.url directly
+      // (we only have the URL, not a BlobDescriptor with hash/size for the master playlist)
       uploadedVideos.push({
         url: masterUrl,
         mimeType: 'application/vnd.apple.mpegurl',
         dimension: `${sourceMeta.width}x${sourceMeta.height}`,
-        qualityLabel: variants[0].targetHeight + 'p',
+        qualityLabel: variants[0] ? `${variants[0].targetHeight}p` : undefined,
+        hlsVariants: hlsVariantStreams.sort((a, b) => {
+          const qa = parseInt(a.qualityLabel, 10) || 0
+          const qb = parseInt(b.qualityLabel, 10) || 0
+          return qb - qa
+        }),
         duration: sourceMeta.duration,
-        uploadedBlobs: [], // Master playlist is uploaded once, but we don't have its descriptor easily here
+        uploadedBlobs: [],
         mirroredBlobs: [],
-        inputMethod: 'file',
+        inputMethod: 'url',
       })
     } else if (transcodedFiles instanceof Array) {
       const filesToUpload = keepOriginal ? [...transcodedFiles, file] : transcodedFiles

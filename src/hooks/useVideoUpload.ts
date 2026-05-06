@@ -15,6 +15,7 @@ import {
   processVideoUrl,
 } from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
+import { getPublishableDimension } from '@/lib/upload-media'
 import type {
   BrowserTranscodeState,
   OriginalVideoInfo,
@@ -96,16 +97,7 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
   } = params
 
   const firstVideo = videos[0]
-  const highestHlsVariant =
-    firstVideo?.mimeType === 'application/vnd.apple.mpegurl' && firstVideo.hlsVariants?.length
-      ? [...firstVideo.hlsVariants].sort((a, b) => {
-          const qa = parseInt(a.qualityLabel, 10) || 0
-          const qb = parseInt(b.qualityLabel, 10) || 0
-          return qb - qa
-        })[0]
-      : undefined
-
-  const effectiveDimension = highestHlsVariant?.dimension || firstVideo.dimension
+  const effectiveDimension = getPublishableDimension(firstVideo)
   const [width, height] = effectiveDimension.split('x').map(Number)
   // Use addressable event kinds (NIP-71): 34235 for normal videos, 34236 for shorts
   const kind = height > width ? 34236 : 34235

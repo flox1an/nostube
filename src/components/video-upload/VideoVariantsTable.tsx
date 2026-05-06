@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HlsPreviewDialog } from './HlsPreviewDialog'
+import { normalizeUploadMedia } from '@/lib/upload-media'
 
 interface VideoVariantsTableProps {
   videos: VideoVariant[]
@@ -91,18 +92,9 @@ export function VideoVariantsTable({
     }
   }
 
-  const hlsMasterVariants = videos
-    .map((video, originalIndex) => ({ video, originalIndex }))
-    .filter(
-      ({ video }) =>
-        video.mimeType === 'application/vnd.apple.mpegurl' && (video.hlsVariants?.length ?? 0) > 0
-    )
-  const regularVariants = videos
-    .map((video, originalIndex) => ({ video, originalIndex }))
-    .filter(
-      ({ video }) =>
-        !(video.mimeType === 'application/vnd.apple.mpegurl' && (video.hlsVariants?.length ?? 0) > 0)
-    )
+  const mediaAssets = normalizeUploadMedia(videos)
+  const hlsAssets = mediaAssets.filter(asset => asset.kind === 'hls')
+  const regularAssets = mediaAssets.filter(asset => asset.kind === 'video')
 
   // Collect codec warnings - show error/warning per row, info/success once at end
   const codecWarnings = videos.map(v => getCodecWarning(v.videoCodec))
@@ -129,7 +121,8 @@ export function VideoVariantsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {regularVariants.map(({ video, originalIndex }, index) => {
+            {regularAssets.map((asset, index) => {
+              const { video, originalIndex } = asset
               const codecWarning = getCodecWarning(video.videoCodec)
 
               return (
@@ -266,16 +259,15 @@ export function VideoVariantsTable({
                 </TableRow>
               )
             })}
-            {hlsMasterVariants.flatMap(({ video: masterVideo }, masterIndex) => {
-              const streams = masterVideo.hlsVariants ?? []
-              if (streams.length === 0) return []
+            {hlsAssets.flatMap((asset, masterIndex) => {
+              if (asset.streams.length === 0) return []
               return [
                 <TableRow key={`hls-header-${masterIndex}`}>
                   <TableCell colSpan={7} className="bg-muted/30 font-semibold">
                     HLS Streams
                   </TableCell>
                 </TableRow>,
-                ...streams.map((stream, streamIndex) => (
+                ...asset.streams.map((stream, streamIndex) => (
                   <TableRow key={`hls-${masterIndex}-${streamIndex}`}>
                     <TableCell className="font-medium">{streamIndex + 1}</TableCell>
                     <TableCell>
@@ -310,7 +302,8 @@ export function VideoVariantsTable({
                 )),
               ]
             })}
-            {regularVariants.map(({ video, originalIndex }) => {
+            {regularAssets.map(asset => {
+              const { video, originalIndex } = asset
               const codecWarning = getCodecWarning(video.videoCodec)
               const showInlineWarning =
                 codecWarning && (codecWarning.type === 'error' || codecWarning.type === 'warning')

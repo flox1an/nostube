@@ -24,6 +24,7 @@ import type {
   UploadDraft,
 } from '@/types/upload-draft'
 import {
+  clearBrowserTranscodeUpload,
   getBrowserTranscodeUploadDraft,
   startBrowserTranscodeUploadJob,
   subscribeToBrowserTranscodeUploads,
@@ -547,6 +548,7 @@ export function useVideoUpload(
     }
 
     const droppedFile = acceptedFiles[0]
+    clearBrowserTranscodeUpload(draftId)
     setBrowserTranscodeMode('replace')
     setBrowserTranscodeState(undefined)
     setOriginalVideoInfo(undefined)
@@ -724,6 +726,7 @@ export function useVideoUpload(
       return
     }
 
+    clearBrowserTranscodeUpload(draftId)
     setBrowserTranscodeMode('append')
     setFile(acceptedFiles[0])
     setUploadProgress(null)

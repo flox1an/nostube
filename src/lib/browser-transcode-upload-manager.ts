@@ -16,6 +16,7 @@ import {
 } from '@/lib/video-transcode'
 import {
   getBrowserTranscodeJob,
+  removeBrowserTranscodeJob,
   subscribeToBrowserTranscodeJobs,
   updateBrowserTranscodeJob,
   upsertBrowserTranscodeJob,
@@ -217,6 +218,12 @@ export type BrowserTranscodeUploadListener = Parameters<
 
 export function getBrowserTranscodeUploadDraft(draftId: string) {
   return getBrowserTranscodeJob(draftId)
+}
+
+export function clearBrowserTranscodeUpload(draftId: string) {
+  activeJobs.get(draftId)?.abort()
+  activeJobs.delete(draftId)
+  removeBrowserTranscodeJob(draftId)
 }
 
 export function cancelBrowserTranscodeUpload(draftId: string) {

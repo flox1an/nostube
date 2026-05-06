@@ -315,19 +315,21 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   // Wrap file drop to persist ephemeral draft before processing
   const wrappedOnDrop = useCallback(
     (files: File[]) => {
+      setInputMethod('file')
       onPersist?.()
       onDrop(files)
     },
-    [onPersist, onDrop]
+    [onPersist, onDrop, setInputMethod]
   )
 
   // Dropzone for adding additional videos
   const onDropAdditional = useCallback(
     (acceptedFiles: File[]) => {
+      setInputMethod('file')
       onPersist?.()
       handleAddVideo(acceptedFiles)
     },
-    [onPersist, handleAddVideo]
+    [onPersist, handleAddVideo, setInputMethod]
   )
 
   const { getRootProps: getRootPropsAdditional, getInputProps: getInputPropsAdditional } =
@@ -421,13 +423,23 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
       !autoProcessed.current &&
       inputMethod === 'url' &&
       videoUrl &&
-      uploadInfo.videos.length === 0
+      uploadInfo.videos.length === 0 &&
+      uploadState === 'initial' &&
+      !file
     ) {
       autoProcessed.current = true
       onPersist?.()
       handleUrlVideoProcessing(videoUrl)
     }
-  }, [inputMethod, videoUrl, uploadInfo.videos.length, handleUrlVideoProcessing, onPersist])
+  }, [
+    inputMethod,
+    videoUrl,
+    uploadInfo.videos.length,
+    uploadState,
+    file,
+    handleUrlVideoProcessing,
+    onPersist,
+  ])
 
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>

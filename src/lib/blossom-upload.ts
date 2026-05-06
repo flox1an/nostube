@@ -704,19 +704,26 @@ export async function uploadFileToMultipleServersChunked({
         return createMockBlobDescriptor(server, fileHash, file.size, file.type)
       }
 
-      // Try chunked upload first, fall back to regular PUT on any failure.
-      // Chunked upload can fail for many reasons (server doesn't support PATCH,
-      // CORS, 401 on PATCH but not PUT, etc.). A regular PUT is always worth trying.
-      try {
-        console.debug(`File does not exist on ${server}, attempting chunked upload`)
-        return await uploadFileChunked(file, server, signer, options, callbacks, fileHash)
-      } catch (chunkedError) {
-        console.debug(
-          `Chunked upload failed for ${server}, falling back to regular upload:`,
-          chunkedError
-        )
-        return await uploadFileToSingleServer(file, server, signer, fileHash)
+      // Use regular PUT (core Blossom BUD-01/02) by default.
+      // BUD-10 PATCH chunked upload is only attempted for very large files where
+      // resumability is actually useful. Most servers only reliably support PUT.
+      const CHUNKED_THRESHOLD = 100 * 1024 * 1024 // 100 MB
+      const useChunked = file.size > CHUNKED_THRESHOLD
+
+      if (useChunked) {
+        try {
+          console.debug(`File does not exist on ${server}, attempting chunked upload (large file)`)
+          return await uploadFileChunked(file, server, signer, options, callbacks, fileHash)
+        } catch (chunkedError) {
+          console.debug(
+            `Chunked upload failed for ${server}, falling back to regular upload:`,
+            chunkedError
+          )
+        }
       }
+
+      console.debug(`File does not exist on ${server}, uploading via regular PUT`)
+      return await uploadFileToSingleServer(file, server, signer, fileHash)
     })
   )
 

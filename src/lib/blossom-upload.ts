@@ -734,9 +734,25 @@ export async function uploadFileToMultipleServersChunked({
     })
   )
 
-  return results
+  const successful = results
     .filter((r): r is PromiseFulfilledResult<BlobDescriptor> => r.status === 'fulfilled')
     .map(r => r.value)
+
+  // Surface the first real error when all servers fail so callers see why instead of
+  // receiving a silent empty array.
+  if (successful.length === 0 && results.length > 0) {
+    const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+    const reason = firstFailure?.reason
+    throw reason instanceof Error
+      ? reason
+      : new Error(
+          reason != null
+            ? String(reason)
+            : `Upload failed: all ${results.length} server(s) rejected`
+        )
+  }
+
+  return successful
 }
 
 /**

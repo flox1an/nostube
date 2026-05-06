@@ -137,21 +137,40 @@ async function uploadAndProcessFile(
   return { ...video, mirroredBlobs }
 }
 
+/**
+ * Normalises the MIME type of HLS binary files for Blossom server compatibility.
+ *
+ * mediabunny may emit types like "video/iso.segment" for .m4s CMAF segments,
+ * which some Blossom servers refuse. We remap those to "video/mp4" so the upload
+ * goes through while keeping the content identical.
+ */
+function normaliseHlsFile(file: File): File {
+  const name = file.name.toLowerCase()
+  const knownBinaryExts = ['.mp4', '.m4s', '.m4v', '.m4a']
+  if (knownBinaryExts.some(ext => name.endsWith(ext)) && file.type !== 'video/mp4') {
+    return new File([file], file.name, { type: 'video/mp4', lastModified: file.lastModified })
+  }
+  return file
+}
+
 async function uploadAndGetUrl(
   file: File,
   initialServers: string[],
   signer: Signer,
   onProgress?: (progress: ChunkedUploadProgress) => void
 ): Promise<string> {
+  const uploadFile = normaliseHlsFile(file)
   const uploadedBlobs = await uploadFileToMultipleServersChunked({
-    file,
+    file: uploadFile,
     servers: initialServers,
     signer,
     options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
     callbacks: { onProgress },
   })
 
-  if (uploadedBlobs.length === 0) throw new Error(`Failed to upload ${file.name}`)
+  // uploadFileToMultipleServersChunked now throws when all servers fail,
+  // so an empty array here means servers is an empty list.
+  if (uploadedBlobs.length === 0) throw new Error(`No upload servers configured`)
   return uploadedBlobs[0].url
 }
 

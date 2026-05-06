@@ -166,6 +166,7 @@ async function uploadAndGetUrl(
     signer,
     options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
     callbacks: { onProgress },
+    skipExistenceCheck: true, // HLS files are freshly generated — skip the HEAD round-trip
   })
 
   // uploadFileToMultipleServersChunked now throws when all servers fail,

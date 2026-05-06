@@ -685,23 +685,27 @@ export async function uploadFileToMultipleServersChunked({
   signer,
   options = {},
   callbacks = {},
+  skipExistenceCheck = false,
 }: {
   file: File
   servers: string[]
   signer: Signer
   options?: ChunkedUploadOptions
   callbacks?: ChunkedUploadCallbacks
+  /** Skip the HEAD existence check — use when the file is known to be new (e.g. freshly generated HLS segments). */
+  skipExistenceCheck?: boolean
 }): Promise<BlobDescriptor[]> {
   // Calculate file hash once for all servers
   const fileHash = await calculateSHA256(file)
 
   const results = await Promise.allSettled(
     servers.map(async server => {
-      // Check if file already exists on this server
-      const fileExists = await checkFileExists(server, fileHash)
-      if (fileExists) {
-        console.debug(`File already exists on ${server}, skipping upload`)
-        return createMockBlobDescriptor(server, fileHash, file.size, file.type)
+      if (!skipExistenceCheck) {
+        const fileExists = await checkFileExists(server, fileHash)
+        if (fileExists) {
+          console.debug(`File already exists on ${server}, skipping upload`)
+          return createMockBlobDescriptor(server, fileHash, file.size, file.type)
+        }
       }
 
       // Use regular PUT (core Blossom BUD-01/02) by default.

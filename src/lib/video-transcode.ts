@@ -165,6 +165,14 @@ export function defaultResolutions(
   const all = availableResolutions(meta, supportedCodecs)
   if (all.length === 0) return []
   const shortSide = Math.min(meta.width, meta.height)
+  const recommendation = assessTranscodeNeed(meta)
+
+  if (recommendation === 'none') {
+    if (shortSide <= FALLBACK_TARGET_HEIGHT) return []
+    const fallback = all.find(r => r.height === FALLBACK_TARGET_HEIGHT)
+    return fallback ? [fallback] : []
+  }
+
   const primaryHeight = Math.min(PRIMARY_TARGET_HEIGHT, shortSide)
   const primary = all.find(r => r.height === primaryHeight) ?? all[all.length - 1]
   const selected = [primary]

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -38,7 +38,7 @@ export function BrowserTranscodeStep({
 
   // Format + resolution state — local to this component
   const [outputFormat, setOutputFormat] = useState<'mp4' | 'hls'>('mp4')
-  const [selectedHeights, setSelectedHeights] = useState<number[]>([])
+  const [selectedHeights, setSelectedHeights] = useState<number[] | null>(null)
   const [keepOriginal, setKeepOriginal] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
 
@@ -55,31 +55,21 @@ export function BrowserTranscodeStep({
     cancel,
   } = useVideoTranscode()
 
-  // Auto-select default resolutions once analysis finishes
-  useEffect(() => {
-    if (
-      status === 'waiting' &&
-      availableResolutionOptions.length > 0 &&
-      selectedHeights.length === 0
-    ) {
-      // Default: top resolution + 480p fallback (mirrors previous behaviour)
-      const heights = availableResolutionOptions.map(r => r.height)
-      const top = heights[heights.length - 1]
-      const fallback = 480
-      const defaults = [top, ...(heights.includes(fallback) && fallback !== top ? [fallback] : [])]
-      setSelectedHeights(defaults)
-    }
-  }, [status, availableResolutionOptions, selectedHeights.length])
+  const defaultSelectedHeights = useMemo(() => {
+    if (status !== 'waiting' || availableResolutionOptions.length === 0) return []
 
-  // Auto-set keepOriginal when nothing can be transcoded
-  useEffect(() => {
-    if (
-      status === 'waiting' &&
-      (recommendation === 'none' || availableResolutionOptions.length === 0)
-    ) {
-      setKeepOriginal(true)
-    }
-  }, [status, recommendation, availableResolutionOptions.length])
+    // Default: top resolution + 480p fallback (mirrors previous behaviour)
+    const heights = availableResolutionOptions.map(r => r.height)
+    const top = heights[heights.length - 1]
+    const fallback = 480
+    return [top, ...(heights.includes(fallback) && fallback !== top ? [fallback] : [])]
+  }, [availableResolutionOptions, status])
+
+  const effectiveSelectedHeights = selectedHeights ?? defaultSelectedHeights
+  const effectiveKeepOriginal =
+    keepOriginal ||
+    (status === 'waiting' &&
+      (recommendation === 'none' || availableResolutionOptions.length === 0))
 
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
@@ -88,41 +78,44 @@ export function BrowserTranscodeStep({
 
   const setHeightSelection = useCallback((height: number, checked: boolean) => {
     setSelectedHeights(prev => {
+      const current = prev ?? defaultSelectedHeights
       if (checked) {
-        return prev.includes(height) ? prev : [...prev, height]
+        return current.includes(height) ? current : [...current, height]
       }
-      return prev.filter(h => h !== height)
+      return current.filter(h => h !== height)
     })
-  }, [])
+  }, [defaultSelectedHeights])
 
   /** Compute the variant array from current UI selections. */
   const computeVariants = useCallback((): BrowserTranscodeVariant[] => {
-    const selected = availableResolutionOptions.filter(r => selectedHeights.includes(r.height))
+    const selected = availableResolutionOptions.filter(r =>
+      effectiveSelectedHeights.includes(r.height)
+    )
     // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
     selected.sort((a, b) => b.height - a.height)
     return buildVariants(selected, outputFormat)
-  }, [availableResolutionOptions, selectedHeights, outputFormat])
+  }, [availableResolutionOptions, effectiveSelectedHeights, outputFormat])
 
   const handleStart = useCallback(async () => {
     if (!file) return
 
     try {
-      if (!sourceMeta && keepOriginal) {
+      if (!sourceMeta && effectiveKeepOriginal) {
         onSkip()
         return
       }
 
       const variants = computeVariants()
-      const effectiveKeepOriginal = outputFormat === 'mp4' ? keepOriginal : false
+      const shouldKeepOriginal = outputFormat === 'mp4' ? effectiveKeepOriginal : false
 
       if (onStartBackground && sourceMeta) {
-        await onStartBackground(variants, sourceMeta, effectiveKeepOriginal)
+        await onStartBackground(variants, sourceMeta, shouldKeepOriginal)
         return
       }
 
       const results = await startTranscode(file)
       if (results instanceof Array) {
-        onComplete(effectiveKeepOriginal ? [...results, file] : results)
+        onComplete(shouldKeepOriginal ? [...results, file] : results)
       } else {
         onComplete(results)
       }
@@ -131,7 +124,7 @@ export function BrowserTranscodeStep({
     }
   }, [
     file,
-    keepOriginal,
+    effectiveKeepOriginal,
     onComplete,
     onSkip,
     onStartBackground,
@@ -299,7 +292,7 @@ export function BrowserTranscodeStep({
     const durationStr = `${durationMin}:${durationSec.toString().padStart(2, '0')}`
 
     const canTranscode = availableResolutionOptions.length > 0
-    const hasSelection = selectedHeights.length > 0
+    const hasSelection = effectiveSelectedHeights.length > 0
 
     return (
       <Alert>
@@ -358,7 +351,7 @@ export function BrowserTranscodeStep({
                       key={opt.height}
                       option={opt}
                       outputFormat={outputFormat}
-                      checked={selectedHeights.includes(opt.height)}
+                      checked={effectiveSelectedHeights.includes(opt.height)}
                       onToggle={checked => setHeightSelection(opt.height, checked)}
                     />
                   ))}
@@ -383,7 +376,7 @@ export function BrowserTranscodeStep({
                   type="button"
                   size="sm"
                   onClick={handleStart}
-                  disabled={!hasSelection && !(outputFormat === 'mp4' && keepOriginal)}
+                  disabled={!hasSelection && !(outputFormat === 'mp4' && effectiveKeepOriginal)}
                 >
                   <Zap className="mr-2 h-4 w-4" />
                   {outputFormat === 'hls'
@@ -401,14 +394,19 @@ export function BrowserTranscodeStep({
             <div className="space-y-3">
               <label className="flex cursor-pointer items-center gap-2">
                 <Checkbox
-                  checked={keepOriginal}
+                  checked={effectiveKeepOriginal}
                   onCheckedChange={checked => setKeepOriginal(checked === true)}
                 />
                 <span className="text-sm">
                   {t('upload.browserTranscode.keepOriginal', { defaultValue: 'Keep original' })}
                 </span>
               </label>
-              <Button type="button" size="sm" onClick={handleStart} disabled={!keepOriginal}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleStart}
+                disabled={!effectiveKeepOriginal}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 {t('upload.upload', { defaultValue: 'Upload' })}
               </Button>

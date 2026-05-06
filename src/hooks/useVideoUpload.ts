@@ -206,11 +206,12 @@ export function useVideoUpload(
   initialDraft?: UploadDraft,
   onDraftChange?: (updates: Partial<UploadDraft>) => void
 ) {
+  const legacyDraft = initialDraft as (UploadDraft & { browserTranscodeState?: BrowserTranscodeState }) | undefined
   const initialBrowserTranscodeJob = initialDraft?.id
     ? getBrowserTranscodeUploadDraft(initialDraft.id)
     : undefined
   const initialBrowserTranscodeState =
-    initialBrowserTranscodeJob?.state ?? initialDraft?.browserTranscodeState
+    initialBrowserTranscodeJob?.state ?? legacyDraft?.browserTranscodeState
 
   const [title, setTitle] = useState(initialDraft?.title || '')
   const [description, setDescription] = useState(initialDraft?.description || '')

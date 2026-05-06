@@ -138,9 +138,6 @@ export interface UploadDraft {
 
   // DVM Transcode state (only present during active transcode)
   dvmTranscodeState?: DvmTranscodeState
-
-  // Browser transcode/upload state (kept while active or for the last completed job)
-  browserTranscodeState?: BrowserTranscodeState
 }
 
 export interface UploadDraftsData {

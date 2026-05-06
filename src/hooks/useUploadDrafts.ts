@@ -8,17 +8,11 @@ const STORAGE_KEY = 'nostube_upload_drafts'
 const MAX_DRAFTS = 10
 
 function isMilestoneUpdate(updates: Partial<UploadDraft>): boolean {
-  // Only status changes are milestones for transcode state
-  const isTranscodeMilestone =
-    updates.browserTranscodeState &&
-    ['complete', 'error', 'cancelled'].includes(updates.browserTranscodeState.status)
-
   return !!(
     updates.uploadInfo?.videos ||
     updates.originalVideoInfo ||
     updates.thumbnailUploadInfo?.uploadedBlobs ||
     updates.thumbnailUploadInfo?.mirroredBlobs ||
-    isTranscodeMilestone ||
     'dvmTranscodeState' in updates // DVM state changes need immediate persistence (including clearing)
   )
 }

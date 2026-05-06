@@ -23,6 +23,7 @@ import type {
   UploadDraft,
 } from '@/types/upload-draft'
 import {
+  getBrowserTranscodeUploadDraft,
   startBrowserTranscodeUploadJob,
   subscribeToBrowserTranscodeUploads,
 } from '@/lib/browser-transcode-upload-manager'
@@ -205,6 +206,12 @@ export function useVideoUpload(
   initialDraft?: UploadDraft,
   onDraftChange?: (updates: Partial<UploadDraft>) => void
 ) {
+  const initialBrowserTranscodeJob = initialDraft?.id
+    ? getBrowserTranscodeUploadDraft(initialDraft.id)
+    : undefined
+  const initialBrowserTranscodeState =
+    initialBrowserTranscodeJob?.state ?? initialDraft?.browserTranscodeState
+
   const [title, setTitle] = useState(initialDraft?.title || '')
   const [description, setDescription] = useState(initialDraft?.description || '')
   const [tags, setTags] = useState<string[]>(() => {
@@ -227,8 +234,8 @@ export function useVideoUpload(
   const [uploadState, setUploadState] = useState<
     'initial' | 'transcoding' | 'uploading' | 'finished'
   >(
-    initialDraft?.browserTranscodeState &&
-      ['queued', 'transcoding', 'uploading'].includes(initialDraft.browserTranscodeState.status)
+    initialBrowserTranscodeState &&
+      ['queued', 'transcoding', 'uploading'].includes(initialBrowserTranscodeState.status)
       ? 'transcoding'
       : initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0
         ? 'finished'
@@ -237,7 +244,7 @@ export function useVideoUpload(
   const [browserTranscodeMode, setBrowserTranscodeMode] = useState<'replace' | 'append'>('replace')
   const [browserTranscodeState, setBrowserTranscodeState] = useState<
     BrowserTranscodeState | undefined
-  >(initialDraft?.browserTranscodeState)
+  >(initialBrowserTranscodeState)
   const [originalVideoInfo, setOriginalVideoInfo] = useState<OriginalVideoInfo | undefined>(
     initialDraft?.originalVideoInfo
   )
@@ -280,9 +287,6 @@ export function useVideoUpload(
   // Index of the video variant currently being deleted from servers
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
 
-  // Track if an update came from the browser transcode listener to avoid sync loops
-  const isInternalUpdateRef = useRef(false)
-
   // Use ref to store callback to prevent infinite loop
   const onDraftChangeRef = useRef(onDraftChange)
 
@@ -292,15 +296,16 @@ export function useVideoUpload(
   }, [onDraftChange])
 
   useEffect(() => {
-    const unsubscribe = subscribeToBrowserTranscodeUploads(updatedDraft => {
-      if (updatedDraft.id !== draftId) return
+    const unsubscribe = subscribeToBrowserTranscodeUploads(job => {
+      if (job.draftId !== draftId) return
 
-      isInternalUpdateRef.current = true
-      setBrowserTranscodeState(updatedDraft.browserTranscodeState)
-      setUploadInfo(updatedDraft.uploadInfo)
+      setBrowserTranscodeState(job.state)
 
-      const backgroundStatus = updatedDraft.browserTranscodeState?.status
+      const backgroundStatus = job.state.status
       if (backgroundStatus === 'complete') {
+        if (job.resultVideos) {
+          setUploadInfo({ videos: job.resultVideos })
+        }
         setUploadState('finished')
         setUploadProgress(null)
       } else if (
@@ -310,12 +315,12 @@ export function useVideoUpload(
       ) {
         setUploadState('transcoding')
       } else if (backgroundStatus === 'error' || backgroundStatus === 'cancelled') {
-        setUploadState(updatedDraft.uploadInfo.videos.length > 0 ? 'finished' : 'initial')
+        setUploadState(uploadInfo.videos.length > 0 ? 'finished' : 'initial')
       }
     })
 
     return unsubscribe
-  }, [draftId])
+  }, [draftId, uploadInfo.videos.length])
 
   // Auto-populate form fields from extracted metadata
   const metadataAppliedRef = useRef(false)
@@ -1112,16 +1117,10 @@ export function useVideoUpload(
 
   // Sync upload milestone changes separately (immediate in useUploadDrafts)
   useEffect(() => {
-    if (isInternalUpdateRef.current) {
-      isInternalUpdateRef.current = false
-      return
-    }
-
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
         uploadInfo,
         originalVideoInfo,
-        browserTranscodeState,
         thumbnailUploadInfo: {
           uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
           mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
@@ -1130,7 +1129,7 @@ export function useVideoUpload(
         updatedAt: Date.now(),
       })
     }
-  }, [browserTranscodeState, originalVideoInfo, uploadInfo, thumbnailUploadInfo, subtitles])
+  }, [originalVideoInfo, uploadInfo, thumbnailUploadInfo, subtitles])
 
   // Build preview event from current form state (reuses buildVideoEvent logic)
   const previewEvent = useMemo(() => {

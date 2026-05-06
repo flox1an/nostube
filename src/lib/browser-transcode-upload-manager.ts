@@ -1,16 +1,12 @@
 import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
-import type {
-  BrowserTranscodeState,
-  BrowserTranscodeVariantState,
-  UploadDraft,
-} from '@/types/upload-draft'
+import type { BrowserTranscodeState, BrowserTranscodeVariantState } from '@/types/upload-draft'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { processUploadedVideo, type VideoVariant } from '@/lib/video-processing'
-import { getItemsFromStorage, updateItemInStorage } from '@/lib/draft-persistence-storage'
+import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
   rewriteHlsPlaylists,
@@ -18,12 +14,16 @@ import {
   type BrowserTranscodeVariant,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
+import {
+  getBrowserTranscodeJob,
+  subscribeToBrowserTranscodeJobs,
+  updateBrowserTranscodeJob,
+  upsertBrowserTranscodeJob,
+} from '@/lib/browser-transcode-job-storage'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
 const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024
 const DEFAULT_MAX_CONCURRENT_CHUNKS = 2
-
-type BrowserTranscodeUploadListener = (draft: UploadDraft) => void
 
 export interface BrowserTranscodeUploadJobOptions {
   draftId: string
@@ -37,22 +37,7 @@ export interface BrowserTranscodeUploadJobOptions {
   signer: Signer
 }
 
-const listeners = new Set<BrowserTranscodeUploadListener>()
 const activeJobs = new Map<string, AbortController>()
-
-function getDraft(draftId: string): UploadDraft | undefined {
-  return getItemsFromStorage<UploadDraft>(STORAGE_KEY).find(draft => draft.id === draftId)
-}
-
-function notify(draft: UploadDraft) {
-  listeners.forEach(listener => listener(draft))
-}
-
-function updateDraft(draftId: string, updates: Partial<UploadDraft>): UploadDraft | undefined {
-  const draft = updateItemInStorage<UploadDraft>(STORAGE_KEY, draftId, updates)
-  if (draft) notify(draft)
-  return draft
-}
 
 function getVariantStates(variants: BrowserTranscodeVariant[]): BrowserTranscodeVariantState[] {
   return variants.map(variant => ({
@@ -66,16 +51,15 @@ function updateBrowserState(
   draftId: string,
   updater: (state: BrowserTranscodeState) => BrowserTranscodeState
 ) {
-  const draft = getDraft(draftId)
-  const state = draft?.browserTranscodeState
-  if (!draft || !state) return
-
-  updateDraft(draftId, {
-    browserTranscodeState: updater(state),
-  })
+  updateBrowserTranscodeJob(draftId, job => ({
+    ...job,
+    state: updater(job.state),
+  }))
 }
 
-function parseMasterPlaylistStreams(masterContent: string): Map<string, { width: number; height: number }> {
+function parseMasterPlaylistStreams(
+  masterContent: string
+): Map<string, { width: number; height: number }> {
   const lines = masterContent.split('\n').map(line => line.trim())
   const map = new Map<string, { width: number; height: number }>()
 
@@ -224,14 +208,15 @@ async function uploadAndGetUrl(
 }
 
 export function subscribeToBrowserTranscodeUploads(listener: BrowserTranscodeUploadListener) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
+  return subscribeToBrowserTranscodeJobs(listener)
 }
 
-export function getBrowserTranscodeUploadDraft(draftId: string): UploadDraft | undefined {
-  return getDraft(draftId)
+export type BrowserTranscodeUploadListener = Parameters<
+  typeof subscribeToBrowserTranscodeJobs
+>[0]
+
+export function getBrowserTranscodeUploadDraft(draftId: string) {
+  return getBrowserTranscodeJob(draftId)
 }
 
 export function cancelBrowserTranscodeUpload(draftId: string) {
@@ -265,18 +250,16 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
   const controller = new AbortController()
   activeJobs.set(draftId, controller)
 
-  updateDraft(draftId, {
-    browserTranscodeState: {
-      status: 'queued',
-      mode,
-      keepOriginal,
+  upsertBrowserTranscodeJob(draftId, {
+    status: 'queued',
+    mode,
+    keepOriginal,
       sourceName: file.name,
       sourceSize: file.size,
       startedAt: Date.now(),
-      updatedAt: Date.now(),
-      variants: getVariantStates(variants),
-      message: 'Browser transcode queued.',
-    },
+    updatedAt: Date.now(),
+    variants: getVariantStates(variants),
+    message: 'Browser transcode queued.',
   })
 
   try {
@@ -502,19 +485,23 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       }
     }
 
-    const draft = getDraft(draftId)
+    const draft = getItemsFromStorage<{
+      id: string
+      updatedAt: number
+      uploadInfo: { videos: VideoVariant[] }
+    }>(STORAGE_KEY).find(item => item.id === draftId)
     const currentVideos = draft?.uploadInfo.videos ?? []
     const videos = mode === 'append' ? [...currentVideos, ...uploadedVideos] : uploadedVideos
 
-    updateDraft(draftId, {
-      uploadInfo: { videos },
-      browserTranscodeState: {
+    upsertBrowserTranscodeJob(
+      draftId,
+      {
         status: 'complete',
         mode,
         keepOriginal,
         sourceName: file.name,
         sourceSize: file.size,
-        startedAt: draft?.browserTranscodeState?.startedAt ?? Date.now(),
+        startedAt: getBrowserTranscodeJob(draftId)?.state.startedAt ?? Date.now(),
         updatedAt: Date.now(),
         completedAt: Date.now(),
         variants: getVariantStates(variants).map(variant => ({
@@ -524,7 +511,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         })),
         message: 'Browser transcode and upload complete.',
       },
-    })
+      videos
+    )
   } catch (error) {
     console.error('[BrowserTranscodeUploadManager] Job failed:', error)
     if (controller.signal.aborted) {

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Video page blank (left side dark / not rendered) for events whose only video source is an HLS master playlist — `application/vnd.apple.mpegurl` was excluded by a `startsWith('video/')` filter in `processEvent`, so `video.urls` came out empty and the player returned `null`; HLS MIME types and `.m3u8` URLs are now accepted as valid video variants
+- HLS variants no longer filtered out by the codec-compatibility layer on Chrome/Firefox — `canPlayType('application/vnd.apple.mpegurl')` returns empty string on non-Safari browsers (hls.js handles them), so the check now short-circuits to `true` for both `application/vnd.apple.mpegurl` and `application/x-mpegurl`
+
 ### Added
 
 - Split publish button on the upload review step — the left side publishes as before; the right chevron opens a dropdown with a checkbox per configured write relay so users can target specific relays; button label updates to "Publish to N relays" when a subset is selected; falls back to a plain button when only one relay is configured

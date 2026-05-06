@@ -380,7 +380,13 @@ export function processEvent(
     }
 
     // Separate video variants from thumbnail variants
-    const parsedVideoVariants = allVariants.filter(v => v.mimeType?.startsWith('video/'))
+    // Also accept HLS master playlists (application/vnd.apple.mpegurl) and .m3u8 URLs
+    const parsedVideoVariants = allVariants.filter(
+      v =>
+        v.mimeType?.startsWith('video/') ||
+        v.mimeType === 'application/vnd.apple.mpegurl' ||
+        v.url?.endsWith('.m3u8')
+    )
     // Sort all variants by quality (highest first) - keep unfiltered for debugging
     const allVideoVariants = sortVideoVariantsByQuality(parsedVideoVariants)
     // Filter out incompatible codecs for current platform (e.g., HEVC on iOS)

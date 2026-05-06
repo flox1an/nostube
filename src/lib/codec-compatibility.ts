@@ -70,6 +70,14 @@ export function isCodecSupported(mimeType?: string): boolean {
 
   const normalizedMime = mimeType.toLowerCase()
 
+  // HLS playlists are handled by hls.js on all browsers — never filter them out
+  if (
+    normalizedMime === 'application/vnd.apple.mpegurl' ||
+    normalizedMime === 'application/x-mpegurl'
+  ) {
+    return true
+  }
+
   // On iOS, filter out known unsupported codecs
   if (isIOSDevice()) {
     // Check if any unsupported codec is mentioned in the MIME type

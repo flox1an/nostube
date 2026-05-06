@@ -546,6 +546,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                   <BrowserTranscodeStep
                     file={file}
                     backgroundState={browserTranscodeState}
+                    previewUrl={
+                      uploadInfo.videos.find(v => v.mimeType === 'application/vnd.apple.mpegurl')
+                        ?.url
+                    }
                     onStartBackground={handleStartBrowserTranscodeUpload}
                     onComplete={handleBrowserTranscodeComplete}
                     onSkip={handleBrowserTranscodeSkip}

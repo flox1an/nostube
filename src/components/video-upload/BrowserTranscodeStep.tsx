@@ -7,11 +7,14 @@ import { Progress } from '@/components/ui/progress'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
-import { Loader2, Upload, X, Zap } from 'lucide-react'
+import { CheckCircle2, Loader2, Play, Upload, X, Zap } from 'lucide-react'
+import { HlsPreviewDialog } from './HlsPreviewDialog'
 
 interface BrowserTranscodeStepProps {
   file: File | null
   backgroundState?: BrowserTranscodeState
+  /** Master playlist URL – shown as a Preview button when upload is complete. */
+  previewUrl?: string
   onStartBackground?: (
     variants: BrowserTranscodeVariant[],
     sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>,
@@ -24,12 +27,14 @@ interface BrowserTranscodeStepProps {
 export function BrowserTranscodeStep({
   file,
   backgroundState,
+  previewUrl,
   onStartBackground,
   onComplete,
   onSkip,
 }: BrowserTranscodeStepProps) {
   const { t } = useTranslation()
   const [keepOriginal, setKeepOriginal] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const {
     status,
     sourceMeta,
@@ -105,7 +110,41 @@ export function BrowserTranscodeStep({
     [setVariants]
   )
 
-  if (backgroundState && backgroundState.status !== 'complete') {
+  if (backgroundState) {
+    if (backgroundState.status === 'complete') {
+      return (
+        <>
+          {previewUrl && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>
+                {t('upload.browserTranscode.complete', {
+                  defaultValue: 'Transcode & upload complete',
+                })}
+              </AlertTitle>
+              <AlertDescription>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  {t('upload.browserTranscode.previewHls', { defaultValue: 'Preview HLS' })}
+                </Button>
+                <HlsPreviewDialog
+                  url={previewUrl}
+                  open={previewOpen}
+                  onOpenChange={setPreviewOpen}
+                />
+              </AlertDescription>
+            </Alert>
+          )}
+        </>
+      )
+    }
+
     return (
       <Alert variant={backgroundState.status === 'error' ? 'destructive' : 'default'}>
         {backgroundState.status === 'error' ? (

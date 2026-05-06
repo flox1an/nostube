@@ -301,12 +301,14 @@ export async function transcodeToHls(
       getSegmentPath: info => `variant-${info.playlist.n - 1}/segment-${info.n - 1}.m4s`,
       getInitPath: info => `variant-${info.n - 1}/init.mp4`,
     }),
-    target: new PathedTarget('master.m3u8', ({ path, mimeType }) =>
-      new BufferTarget({
-        onFinalize: buffer => {
-          outputFiles.set(path, new File([buffer], path, { type: mimeType }))
-        },
-      })
+    target: new PathedTarget(
+      'master.m3u8',
+      ({ path, mimeType }) =>
+        new BufferTarget({
+          onFinalize: buffer => {
+            outputFiles.set(path, new File([buffer], path, { type: mimeType }))
+          },
+        })
     ),
   })
 
@@ -315,7 +317,11 @@ export async function transcodeToHls(
     output,
     tracks: 'primary',
     video: variants.map(v => {
-      const { width, height } = computeTargetDimensions(sourceMeta.width, sourceMeta.height, v.targetHeight)
+      const { width, height } = computeTargetDimensions(
+        sourceMeta.width,
+        sourceMeta.height,
+        v.targetHeight
+      )
       const bitrate = Math.round(width * height * 30 * BPP_MEDIUM)
       return {
         width,
@@ -355,6 +361,10 @@ export async function transcodeToHls(
 /**
  * Rewrites HLS playlists to use absolute Blossom URLs instead of relative paths.
  *
+ * Handles both full paths (e.g. "variant-0/segment-0.m4s") and relative paths
+ * (e.g. "segment-0.m4s" inside "variant-0.m3u8"), since mediabunny may emit
+ * either depending on the output configuration.
+ *
  * @param outputFiles The map of generated HLS files (path -> File)
  * @param uploadedUrls A map of original paths to their uploaded Blossom URLs
  */
@@ -368,15 +378,36 @@ export async function rewriteHlsPlaylists(
     if (path.endsWith('.m3u8')) {
       let content = await file.text()
 
+      if (import.meta.env.DEV) {
+        console.log(`[rewriteHlsPlaylists] ${path} original content:\n${content}`)
+      }
+
+      // "Companion directory" for a playlist like "variant-0.m3u8" is "variant-0/".
+      // mediabunny may write segment references as relative paths (e.g. "segment-0.m4s")
+      // inside the variant playlist instead of the full "variant-0/segment-0.m4s".
+      const companionDir = path.replace(/\.m3u8$/, '/')
+
       // Sort keys by length descending to avoid partial replacements
-      // e.g. "variant-0/segment-1.m4s" before "variant-0"
       const sortedPaths = Array.from(uploadedUrls.keys()).sort((a, b) => b.length - a.length)
 
       for (const originalPath of sortedPaths) {
         const absoluteUrl = uploadedUrls.get(originalPath)!
-        // We use a simple global replace. For HLS manifests, this is generally safe
-        // because paths are usually unique and specifically formatted.
-        content = content.split(originalPath).join(absoluteUrl)
+
+        if (content.includes(originalPath)) {
+          // Full path found in content — replace directly.
+          content = content.split(originalPath).join(absoluteUrl)
+        } else if (companionDir && originalPath.startsWith(companionDir)) {
+          // Relative path: strip the companion directory prefix and try again.
+          // e.g. "variant-0/segment-0.m4s" → "segment-0.m4s" inside "variant-0.m3u8"
+          const relativePart = originalPath.slice(companionDir.length)
+          if (relativePart && content.includes(relativePart)) {
+            content = content.split(relativePart).join(absoluteUrl)
+          }
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        console.log(`[rewriteHlsPlaylists] ${path} rewritten content:\n${content}`)
       }
 
       rewrittenFiles.set(path, new File([content], path, { type: file.type }))

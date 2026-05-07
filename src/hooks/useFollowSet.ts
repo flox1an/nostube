@@ -3,6 +3,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { kinds, type NostrEvent } from 'nostr-tools'
+import type { RelayReqEventMessage } from 'applesauce-relay'
 import { useAppContext } from './useAppContext'
 import { METADATA_RELAY } from '@/constants/relays'
 import { useNostrPublish } from './useNostrPublish'
@@ -274,16 +275,18 @@ export function useFollowSet(): UseFollowSetReturn {
               limit: batch.length, // We only need 1 per author
             })
             .subscribe({
-              next: (response: NostrEvent | 'EOSE') => {
-                if (response === 'EOSE') {
+              next: response => {
+                if (response.type === 'EOSE') {
                   subscription.unsubscribe()
                   resolve(results)
                   return
                 }
+                if (response.type !== 'EVENT') return
+                const event = (response as RelayReqEventMessage).event
                 // Only keep first video per author
-                if (!seenAuthors.has(response.pubkey)) {
-                  seenAuthors.add(response.pubkey)
-                  results.push(response)
+                if (!seenAuthors.has(event.pubkey)) {
+                  seenAuthors.add(event.pubkey)
+                  results.push(event)
                 }
               },
               error: () => {

@@ -163,7 +163,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const hasHlsSource = useMemo(
-    () => mime === 'application/vnd.apple.mpegurl' || effectiveUrls.some(url => url.endsWith('.m3u8')),
+    () =>
+      mime === 'application/vnd.apple.mpegurl' || effectiveUrls.some(url => url.endsWith('.m3u8')),
     [effectiveUrls, mime]
   )
 

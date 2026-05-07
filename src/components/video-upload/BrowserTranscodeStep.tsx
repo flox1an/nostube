@@ -165,7 +165,11 @@ export function BrowserTranscodeStep({
     }, 0)
     const avgProgress = totalProgress / backgroundState.variants.length
 
-    return estimateRemainingSeconds(avgProgress, backgroundState.startedAt, backgroundState.updatedAt)
+    return estimateRemainingSeconds(
+      avgProgress,
+      backgroundState.startedAt,
+      backgroundState.updatedAt
+    )
   }, [backgroundState])
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
@@ -253,7 +257,14 @@ export function BrowserTranscodeStep({
       )
       return codecOptions.find(option => option.height === height)?.suggestedCodec ?? 'avc'
     },
-    [effectiveSelectedHeights, hasOriginalHlsVariant, outputFormat, sourceMeta, sourceShortSide, supportsHevc]
+    [
+      effectiveSelectedHeights,
+      hasOriginalHlsVariant,
+      outputFormat,
+      sourceMeta,
+      sourceShortSide,
+      supportsHevc,
+    ]
   )
 
   const handleStart = useCallback(async () => {

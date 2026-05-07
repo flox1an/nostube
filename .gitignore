@@ -35,3 +35,7 @@ src-tauri/gen/
 # Integration test stack local files
 infra/test-stack/.env
 infra/test-stack/data/
+
+# Nostr event dumps and trace files
+*.jsonl
+*.json.gz

@@ -7,15 +7,15 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import {
   AccountsProvider,
   EventStoreProvider,
-  FactoryProvider,
+  ActionsProvider,
   AccountsContext,
 } from 'applesauce-react/providers'
 import { AccountManager } from 'applesauce-accounts'
-import { EventFactory } from 'applesauce-core'
+import { ActionRunner } from 'applesauce-actions'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 // Import applesauce-common to register EventFactory extensions (note, reaction, etc.)
 import 'applesauce-common'
-import { eventStore } from '@/nostr/core'
+import { eventStore, publishMethod } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { useTrustScoreProvider, useGlobalScore } from '@/hooks/useTrustScore'
@@ -71,9 +71,8 @@ const accountManager = new AccountManager()
 
 registerCommonAccountTypes(accountManager)
 
-const factory = new EventFactory({
-  // use the active signer from the account manager
-  signer: accountManager.signer,
+const actionRunner = new ActionRunner(eventStore, accountManager.signer, (event, relays) => {
+  publishMethod(relays ?? [], event)
 })
 
 /**
@@ -158,7 +157,7 @@ export function App() {
       >
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
-            <FactoryProvider factory={factory}>
+            <ActionsProvider runner={actionRunner}>
               <PresetProvider>
                 <UserRelaysProvider>
                   <UploadManagerProvider>
@@ -181,7 +180,7 @@ export function App() {
                   </UploadManagerProvider>
                 </UserRelaysProvider>
               </PresetProvider>
-            </FactoryProvider>
+            </ActionsProvider>
           </EventStoreProvider>
         </AccountsProvider>
       </AppProvider>

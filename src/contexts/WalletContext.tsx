@@ -1,20 +1,12 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  type ReactNode,
-} from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { WalletConnect } from 'applesauce-wallet-connect'
-import { ActionRunner } from 'applesauce-actions'
+import type { ActionRunner } from 'applesauce-actions'
 import { CashuMint, CashuWallet, type MeltQuoteResponse } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'
 import * as WalletModels from 'applesauce-wallet/models'
 import * as WalletActions from 'applesauce-wallet/actions'
 import { use$ } from 'applesauce-react/hooks'
-import { FactoryContext } from 'applesauce-react/providers'
+import { ActionsContext } from 'applesauce-react/providers'
 import { map } from 'rxjs'
 import {
   relayPool,
@@ -88,7 +80,7 @@ interface WalletContextValue {
 const WalletContext = createContext<WalletContextValue | null>(null)
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const factory = useContext(FactoryContext)
+  const actionRunner = useContext(ActionsContext) as ActionRunner | undefined
   const currentUser = useCurrentUser()
   const userPubkey = currentUser.user?.pubkey
 
@@ -108,14 +100,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(DEFAULT_ZAP_AMOUNT_KEY)
     return stored ? parseInt(stored, 10) : 21
   })
-
-  // Action runner for Cashu wallet operations
-  const actionRunner = useMemo(() => {
-    if (!factory) return null
-    return new ActionRunner(eventStore, factory, (event, relays) =>
-      relayPool.publish(relays ?? DEFAULT_RELAYS, event)
-    )
-  }, [factory])
 
   // Subscribe to Cashu wallet event (kind 17375)
   const cashuWalletEvent = use$(

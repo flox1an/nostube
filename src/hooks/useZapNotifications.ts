@@ -138,7 +138,7 @@ export function useZapNotifications() {
       const seenEventIds = new Set<string>()
 
       await new Promise<void>(resolve => {
-        let timeoutId: NodeJS.Timeout | undefined
+        let timeoutId: ReturnType<typeof setTimeout> | undefined
 
         const subscription = relayPool.subscription(relays, [filter]).subscribe({
           next: msg => {

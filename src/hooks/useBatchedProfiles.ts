@@ -12,7 +12,7 @@ import { METADATA_RELAY } from '@/constants/relays'
  */
 
 const BATCH_DELAY = 100 // milliseconds to wait before sending batch request
-let batchTimeout: NodeJS.Timeout | null = null
+let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
 
 export function useBatchedProfileLoader() {

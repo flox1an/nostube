@@ -14,6 +14,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
+import type { RelayReqEventMessage } from 'applesauce-relay'
 import { of, type Subscription } from 'rxjs'
 
 interface UseHashtagVideosOptions {
@@ -205,10 +206,11 @@ export function useHashtagVideos({
 
       const queryRelays = phase1Relays.current
       const subscription = pool.req(queryRelays, filter).subscribe({
-        next: (response: NostrEvent | 'EOSE') => {
-          if (response === 'EOSE') return
-          eventStore.add(response)
-          labelEvents.push(response)
+        next: response => {
+          if (response.type !== 'EVENT') return
+          const event = (response as RelayReqEventMessage).event
+          eventStore.add(event)
+          labelEvents.push(event)
         },
         error: err => {
           console.error('Error loading label events:', err)

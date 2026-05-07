@@ -26,11 +26,11 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   const eventCountBeforeLoadRef = useRef(0)
 
   // Track safety timeout to clear it properly
-  const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Early-complete timer: fires 500ms after the first event arrives so fast-relay
   // results are shown immediately without waiting for slow relays to finish.
-  const earlyCompleteTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const earlyCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Cleanup subscription and timeout on unmount
   useEffect(() => {

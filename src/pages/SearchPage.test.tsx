@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -24,6 +25,7 @@ beforeAll(() => {
     disconnect() {}
     readonly root = null
     readonly rootMargin = ''
+    readonly scrollMargin = ''
     readonly thresholds = []
     takeRecords(): IntersectionObserverEntry[] {
       return []

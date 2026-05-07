@@ -25,7 +25,7 @@ export function useCommentHighlight() {
     if (!commentId) return
 
     // Track all timeouts for cleanup
-    const timeouts: NodeJS.Timeout[] = []
+    const timeouts: ReturnType<typeof setTimeout>[] = []
     let cancelled = false
 
     // Retry mechanism to wait for comment to be rendered

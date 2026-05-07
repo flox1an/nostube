@@ -124,7 +124,7 @@ export function useNotifications() {
       const seenEventIds = new Set<string>() // Track seen event IDs for deduplication
 
       await new Promise<void>(resolve => {
-        let timeoutId: NodeJS.Timeout | undefined
+        let timeoutId: ReturnType<typeof setTimeout> | undefined
         let _eoseCount = 0
 
         // Create subscription using RxJS observable pattern

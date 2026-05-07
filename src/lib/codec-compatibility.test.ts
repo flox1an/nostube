@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   isIOSDevice,

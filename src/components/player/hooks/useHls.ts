@@ -229,7 +229,10 @@ export function useHls(
 
       const initialAutoLevel = getHighestLevelIndex(qualityLevels)
       if (initialAutoLevel !== undefined) {
-        const initialBandwidthEstimate = getInitialBandwidthEstimate(qualityLevels, initialAutoLevel)
+        const initialBandwidthEstimate = getInitialBandwidthEstimate(
+          qualityLevels,
+          initialAutoLevel
+        )
         if (initialBandwidthEstimate !== undefined) {
           hls.bandwidthEstimate = initialBandwidthEstimate
         }
@@ -382,52 +385,59 @@ export function useHls(
   ])
 
   // Set quality level
-  const setLevel = useCallback((level: number) => {
-    if (hlsRef.current) {
-      const hls = hlsRef.current
-      const previousLevel = hls.currentLevel
-      hls.currentLevel = level
-      if (level === -1) {
-        const levels = hls.levels?.map((hlsLevel, index) => ({
-          index,
-          height: hlsLevel.height,
-          width: hlsLevel.width,
-          bitrate: hlsLevel.bitrate,
-          label: hlsLevel.height ? `${hlsLevel.height}p` : `${Math.round(hlsLevel.bitrate / 1000)}kbps`,
-        }))
-        const highestLevel = levels ? getHighestLevelIndex(levels) : undefined
-        if (highestLevel !== undefined) {
-          const initialBandwidthEstimate = getInitialBandwidthEstimate(levels, highestLevel)
-          if (initialBandwidthEstimate !== undefined) {
-            hls.bandwidthEstimate = initialBandwidthEstimate
+  const setLevel = useCallback(
+    (level: number) => {
+      if (hlsRef.current) {
+        const hls = hlsRef.current
+        const previousLevel = hls.currentLevel
+        hls.currentLevel = level
+        if (level === -1) {
+          const levels = hls.levels?.map((hlsLevel, index) => ({
+            index,
+            height: hlsLevel.height,
+            width: hlsLevel.width,
+            bitrate: hlsLevel.bitrate,
+            label: hlsLevel.height
+              ? `${hlsLevel.height}p`
+              : `${Math.round(hlsLevel.bitrate / 1000)}kbps`,
+          }))
+          const highestLevel = levels ? getHighestLevelIndex(levels) : undefined
+          if (highestLevel !== undefined) {
+            const initialBandwidthEstimate = getInitialBandwidthEstimate(levels, highestLevel)
+            if (initialBandwidthEstimate !== undefined) {
+              hls.bandwidthEstimate = initialBandwidthEstimate
+            }
+            hls.nextAutoLevel = highestLevel
           }
-          hls.nextAutoLevel = highestLevel
         }
+        if (isHlsDebugEnabled()) {
+          console.info('[HLS]', 'quality selection changed', {
+            previousLevel,
+            selectedLevel: level,
+            activeLevel: hlsActiveLevel,
+            autoLevelEnabled: hls.autoLevelEnabled,
+            currentLevel: hls.currentLevel,
+            nextAutoLevel: hls.nextAutoLevel,
+            bandwidthEstimate: formatBitrate(hls.bandwidthEstimate),
+          })
+          logHlsJson('quality selection changed', {
+            previousLevel,
+            selectedLevel: level,
+            activeLevel: hlsActiveLevel,
+            autoLevelEnabled: hls.autoLevelEnabled,
+            currentLevel: hls.currentLevel,
+            nextAutoLevel: hls.nextAutoLevel,
+            bandwidthEstimate: formatBitrate(hls.bandwidthEstimate),
+            bandwidthEstimateBps: Number.isNaN(hls.bandwidthEstimate)
+              ? null
+              : hls.bandwidthEstimate,
+          })
+        }
+        setHlsCurrentLevel(level)
       }
-      if (isHlsDebugEnabled()) {
-        console.info('[HLS]', 'quality selection changed', {
-          previousLevel,
-          selectedLevel: level,
-          activeLevel: hlsActiveLevel,
-          autoLevelEnabled: hls.autoLevelEnabled,
-          currentLevel: hls.currentLevel,
-          nextAutoLevel: hls.nextAutoLevel,
-          bandwidthEstimate: formatBitrate(hls.bandwidthEstimate),
-        })
-        logHlsJson('quality selection changed', {
-          previousLevel,
-          selectedLevel: level,
-          activeLevel: hlsActiveLevel,
-          autoLevelEnabled: hls.autoLevelEnabled,
-          currentLevel: hls.currentLevel,
-          nextAutoLevel: hls.nextAutoLevel,
-          bandwidthEstimate: formatBitrate(hls.bandwidthEstimate),
-          bandwidthEstimateBps: Number.isNaN(hls.bandwidthEstimate) ? null : hls.bandwidthEstimate,
-        })
-      }
-      setHlsCurrentLevel(level)
-    }
-  }, [hlsActiveLevel])
+    },
+    [hlsActiveLevel]
+  )
 
   return {
     levels,

@@ -23,7 +23,7 @@ function debounce<T extends (...args: unknown[]) => unknown>(
   (...args: Parameters<T>): void
   flush: () => void
 } {
-  let timeout: NodeJS.Timeout | null = null
+  let timeout: ReturnType<typeof setTimeout> | null = null
   let lastArgs: Parameters<T> | null = null
 
   const debounced = (...args: Parameters<T>) => {

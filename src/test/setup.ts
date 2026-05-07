@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import i18n from 'i18next'

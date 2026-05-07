@@ -116,7 +116,6 @@ export interface UploadDraft {
 
   // Metadata
   thumbnailSource: 'generated' | 'upload'
-
 }
 
 export interface UploadDraftsData {

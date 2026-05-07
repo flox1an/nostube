@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -215,18 +214,18 @@ function useNodeCheck(url: string | null, configServers: BlossomServer[]) {
 
 // ── HLS tree component ────────────────────────────────────────────────────────
 
+// Renders only the tree (left panel). selectedUrl and onSelectUrl are controlled externally.
 function HlsStreamTree({
   masterUrl,
-  configServers,
+  selectedUrl,
+  onSelectUrl,
 }: {
   masterUrl: string
-  configServers: BlossomServer[]
+  selectedUrl: string
+  onSelectUrl: (url: string) => void
 }) {
   const [master, setMaster] = useState<HlsMaster>({ streams: [], loadState: 'idle' })
-  const [selectedUrl, setSelectedUrl] = useState<string>(masterUrl)
-  const { check, serverChecks } = useNodeCheck(selectedUrl, configServers)
 
-  // Fetch master on mount
   useEffect(() => {
     setMaster({ streams: [], loadState: 'loading' })
     fetch(masterUrl)
@@ -278,194 +277,194 @@ function HlsStreamTree({
     `flex items-center gap-1.5 px-2 py-0.5 rounded cursor-pointer text-xs hover:bg-accent transition-colors ${selectedUrl === url ? 'bg-accent font-medium' : ''}`
 
   return (
-    <div className="flex gap-4 min-h-0">
-      {/* Tree */}
-      <div className="w-64 shrink-0 text-xs space-y-0.5">
-        {/* Master playlist row */}
-        <div className={nodeClass(masterUrl)} onClick={() => setSelectedUrl(masterUrl)}>
-          <Layers className="w-3.5 h-3.5 shrink-0 text-blue-500" />
-          <span className="truncate font-mono">master.m3u8</span>
-          {masterHash && (
-            <span className="text-muted-foreground ml-auto shrink-0">{masterHash.slice(0, 6)}</span>
-          )}
+    <div className="text-xs space-y-0.5">
+      {/* Master playlist row */}
+      <div className={nodeClass(masterUrl)} onClick={() => onSelectUrl(masterUrl)}>
+        <Layers className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+        <span className="truncate font-mono">master.m3u8</span>
+        {masterHash && (
+          <span className="text-muted-foreground ml-auto shrink-0">{masterHash.slice(0, 6)}</span>
+        )}
+      </div>
+
+      {master.loadState === 'loading' && (
+        <div className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" /> Fetching…
         </div>
+      )}
+      {master.loadState === 'error' && (
+        <div className="px-2 py-1 text-xs text-red-500">Failed to fetch master playlist</div>
+      )}
 
-        {master.loadState === 'loading' && (
-          <div className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground">
-            <Loader2 className="w-3 h-3 animate-spin" /> Fetching…
-          </div>
-        )}
-        {master.loadState === 'error' && (
-          <div className="px-2 py-1 text-xs text-red-500">Failed to fetch master playlist</div>
-        )}
-
-        {master.streams.map((stream, si) => (
-          <div key={si} className="ml-3">
-            {/* Variant row */}
-            <Collapsible
-              onOpenChange={open => {
-                if (open) expandVariant(si)
-              }}
-            >
-              <div className="flex items-center gap-0.5">
-                <CollapsibleTrigger asChild>
-                  <button className="p-0.5 hover:bg-accent rounded">
-                    <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90" />
-                  </button>
-                </CollapsibleTrigger>
-                <div
-                  className={nodeClass(stream.url)}
-                  onClick={() => setSelectedUrl(stream.url)}
-                  style={{ flex: 1 }}
-                >
-                  <Film className="w-3.5 h-3.5 shrink-0 text-purple-500" />
-                  <span className="truncate font-mono">
-                    {stream.resolution ||
-                      (stream.bandwidth
-                        ? `${Math.round(stream.bandwidth / 1000)}kbps`
-                        : `variant-${si}`)}
-                  </span>
-                  {stream.loadState === 'loading' && (
-                    <Loader2 className="w-3 h-3 animate-spin ml-auto shrink-0" />
-                  )}
-                </div>
+      {master.streams.map((stream, si) => (
+        <div key={si} className="ml-3">
+          <Collapsible
+            onOpenChange={open => {
+              if (open) expandVariant(si)
+            }}
+          >
+            <div className="flex items-center gap-0.5">
+              <CollapsibleTrigger asChild>
+                <button className="p-0.5 hover:bg-accent rounded">
+                  <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90" />
+                </button>
+              </CollapsibleTrigger>
+              <div
+                className={nodeClass(stream.url)}
+                onClick={() => onSelectUrl(stream.url)}
+                style={{ flex: 1 }}
+              >
+                <Film className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+                <span className="truncate font-mono">
+                  {stream.resolution ||
+                    (stream.bandwidth
+                      ? `${Math.round(stream.bandwidth / 1000)}kbps`
+                      : `variant-${si}`)}
+                </span>
+                {stream.loadState === 'loading' && (
+                  <Loader2 className="w-3 h-3 animate-spin ml-auto shrink-0" />
+                )}
               </div>
-
-              <CollapsibleContent>
-                <div className="ml-5 space-y-0.5 mt-0.5">
-                  {/* Init segment */}
-                  {stream.segments
-                    .filter(s => s.isInit)
-                    .map((seg, i) => (
-                      <div
-                        key={i}
-                        className={nodeClass(seg.url)}
-                        onClick={() => setSelectedUrl(seg.url)}
-                      >
-                        <Package className="w-3 h-3 shrink-0 text-orange-400" />
-                        <span className="truncate font-mono">init · {shortUrl(seg.url)}</span>
-                      </div>
-                    ))}
-                  {/* Media segments */}
-                  {stream.segments.filter(s => !s.isInit).length > 0 && (
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <button className={`${nodeClass('')} w-full text-left`}>
-                          <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90 shrink-0" />
-                          <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
-                          <span>{stream.segments.filter(s => !s.isInit).length} segments</span>
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="ml-4 space-y-0.5 max-h-48 overflow-y-auto">
-                          {stream.segments
-                            .filter(s => !s.isInit)
-                            .map((seg, i) => (
-                              <div
-                                key={i}
-                                className={nodeClass(seg.url)}
-                                onClick={() => setSelectedUrl(seg.url)}
-                              >
-                                <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
-                                <span className="truncate font-mono">{shortUrl(seg.url)}</span>
-                                {seg.duration && (
-                                  <span className="ml-auto shrink-0 text-muted-foreground">
-                                    {seg.duration.toFixed(1)}s
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                  {stream.loadState === 'error' && (
-                    <div className="px-2 text-red-500">Failed to fetch</div>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        ))}
-      </div>
-
-      {/* Right: node info + server checks */}
-      <div className="flex-1 min-w-0 space-y-3">
-        <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
-          <div>
-            <span className="font-medium">URL: </span>
-            <code className="text-xs break-all">{selectedUrl}</code>
-          </div>
-          {extractBlossomHash(selectedUrl).sha256 && (
-            <div>
-              <span className="font-medium">SHA256: </span>
-              <code className="text-xs">{extractBlossomHash(selectedUrl).sha256}</code>
             </div>
-          )}
-          {check.contentType && (
-            <div>
-              <span className="font-medium">Content-Type: </span>
-              <span className="text-xs font-mono">{check.contentType}</span>
-            </div>
-          )}
-          {check.contentLength !== undefined && (
-            <div>
-              <span className="font-medium">Size: </span>
-              <span className="text-xs">{(check.contentLength / 1024).toFixed(1)} KB</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <span className="font-medium">Direct: </span>
-            {check.status === 'checking' && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
-            )}
-            {check.status === 'ok' && <Check className="w-3.5 h-3.5 text-green-500" />}
-            {check.status === 'error' && <X className="w-3.5 h-3.5 text-red-500" />}
-            <span
-              className={`text-xs ${check.status === 'ok' ? 'text-green-600' : check.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}
-            >
-              {check.status === 'checking'
-                ? 'Checking…'
-                : check.status === 'ok'
-                  ? `${check.statusCode}`
-                  : check.status === 'error'
-                    ? (check.error ?? `${check.statusCode}`)
-                    : '—'}
-            </span>
-          </div>
-        </div>
 
-        {serverChecks.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium mb-2">Blossom Servers ({serverChecks.length})</h4>
-            <ul className="space-y-2">
-              {serverChecks.map((sc, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  {sc.status === 'checking' ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0 mt-0.5" />
-                  ) : sc.status === 'ok' ? (
-                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                  ) : (
-                    <X className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <code className="text-xs block">{sc.server}</code>
-                    <span
-                      className={`text-xs ${sc.status === 'ok' ? 'text-green-600' : sc.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}
+            <CollapsibleContent>
+              <div className="ml-5 space-y-0.5 mt-0.5">
+                {stream.segments
+                  .filter(s => s.isInit)
+                  .map((seg, i) => (
+                    <div
+                      key={i}
+                      className={nodeClass(seg.url)}
+                      onClick={() => onSelectUrl(seg.url)}
                     >
-                      {sc.status === 'checking'
-                        ? 'Checking…'
-                        : sc.status === 'ok'
-                          ? `${sc.code}${sc.size ? ` · ${(sc.size / 1024).toFixed(1)} KB` : ''}`
-                          : `${sc.code ?? 'Error'}`}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                      <Package className="w-3 h-3 shrink-0 text-orange-400" />
+                      <span className="truncate font-mono">init · {shortUrl(seg.url)}</span>
+                    </div>
+                  ))}
+                {stream.segments.filter(s => !s.isInit).length > 0 && (
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <button className={`${nodeClass('')} w-full text-left`}>
+                        <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90 shrink-0" />
+                        <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
+                        <span>{stream.segments.filter(s => !s.isInit).length} segments</span>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-4 space-y-0.5 max-h-48 overflow-y-auto">
+                        {stream.segments
+                          .filter(s => !s.isInit)
+                          .map((seg, i) => (
+                            <div
+                              key={i}
+                              className={nodeClass(seg.url)}
+                              onClick={() => onSelectUrl(seg.url)}
+                            >
+                              <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
+                              <span className="truncate font-mono">{shortUrl(seg.url)}</span>
+                              {seg.duration && (
+                                <span className="ml-auto shrink-0 text-muted-foreground">
+                                  {seg.duration.toFixed(1)}s
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+                {stream.loadState === 'error' && (
+                  <div className="px-2 text-red-500">Failed to fetch</div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Renders the right-panel details for a selected HLS node URL.
+function HlsNodeDetails({ url, configServers }: { url: string; configServers: BlossomServer[] }) {
+  const { check, serverChecks } = useNodeCheck(url, configServers)
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-sm">
+        <div>
+          <span className="font-medium">URL: </span>
+          <code className="text-xs break-all">{url}</code>
+        </div>
+        {extractBlossomHash(url).sha256 && (
+          <div>
+            <span className="font-medium">SHA256: </span>
+            <code className="text-xs">{extractBlossomHash(url).sha256}</code>
           </div>
         )}
+        {check.contentType && (
+          <div>
+            <span className="font-medium">Content-Type: </span>
+            <span className="text-xs font-mono">{check.contentType}</span>
+          </div>
+        )}
+        {check.contentLength !== undefined && (
+          <div>
+            <span className="font-medium">Size: </span>
+            <span className="text-xs">{(check.contentLength / 1024).toFixed(1)} KB</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium">Direct: </span>
+          {check.status === 'checking' && (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+          )}
+          {check.status === 'ok' && <Check className="w-3.5 h-3.5 text-green-500" />}
+          {check.status === 'error' && <X className="w-3.5 h-3.5 text-red-500" />}
+          <span
+            className={`text-xs ${check.status === 'ok' ? 'text-green-600' : check.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}
+          >
+            {check.status === 'checking'
+              ? 'Checking…'
+              : check.status === 'ok'
+                ? `${check.statusCode}`
+                : check.status === 'error'
+                  ? (check.error ?? `${check.statusCode}`)
+                  : '—'}
+          </span>
+        </div>
       </div>
+
+      {serverChecks.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-2">Blossom Servers ({serverChecks.length})</h4>
+          <ul className="space-y-2">
+            {serverChecks.map((sc, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                {sc.status === 'checking' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0 mt-0.5" />
+                ) : sc.status === 'ok' ? (
+                  <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                ) : (
+                  <X className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <code className="text-xs block">{sc.server}</code>
+                  <span
+                    className={`text-xs ${sc.status === 'ok' ? 'text-green-600' : sc.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}
+                  >
+                    {sc.status === 'checking'
+                      ? 'Checking…'
+                      : sc.status === 'ok'
+                        ? `${sc.code}${sc.size ? ` · ${(sc.size / 1024).toFixed(1)} KB` : ''}`
+                        : `${sc.code ?? 'Error'}`}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
@@ -632,6 +631,33 @@ export function VideoDebugInfo({
       .map(v => v.url)
       .filter(Boolean) as string[]
   }, [video?.allVideoVariants])
+
+  // Selection state for the unified left/right panel
+  type PanelSelection =
+    | { kind: 'variant'; idx: number }
+    | { kind: 'hls'; masterUrl: string; nodeUrl: string }
+
+  const nonHlsVariants = useMemo(
+    () =>
+      allVariants.filter(
+        v =>
+          v.variant.mimeType !== 'application/vnd.apple.mpegurl' &&
+          v.variant.mimeType !== 'application/x-mpegurl'
+      ),
+    [allVariants]
+  )
+
+  const [selection, setSelection] = useState<PanelSelection | null>(null)
+
+  // Default selection when data arrives
+  useEffect(() => {
+    if (selection !== null) return
+    if (nonHlsVariants.length > 0) {
+      setSelection({ kind: 'variant', idx: 0 })
+    } else if (hlsMasterUrls.length > 0) {
+      setSelection({ kind: 'hls', masterUrl: hlsMasterUrls[0], nodeUrl: hlsMasterUrls[0] })
+    }
+  }, [nonHlsVariants.length, hlsMasterUrls, selection])
 
   // Store checkAllAvailability in ref to avoid triggering effect on every state update
   const checkAllAvailabilityRef = useRef(checkAllAvailability)
@@ -826,61 +852,78 @@ export function VideoDebugInfo({
               </div>
             </div>
 
-            {/* Blossom Servers - Responsive layout: stacked on mobile, side-by-side on desktop */}
-            {allVariants.length > 0 && (
+            {/* Unified variant + HLS panel */}
+            {(nonHlsVariants.length > 0 || hlsMasterUrls.length > 0) && (
               <div>
                 <h3 className="font-semibold mb-2">Blossom Server Availability by Variant</h3>
-                <Tabs defaultValue="0" className="w-full" orientation="vertical">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Variant list: horizontal scroll on mobile, vertical list on desktop */}
-                    <TabsList className="flex md:flex-col h-auto md:w-48 shrink-0 justify-start items-stretch overflow-x-auto md:overflow-x-visible">
-                      {allVariants.map((variantData, idx) => {
-                        const mimeType = variantData.variant.mimeType || ''
-                        let Icon = Image
-                        if (
-                          mimeType === 'application/vnd.apple.mpegurl' ||
-                          mimeType === 'application/x-mpegurl'
-                        ) {
-                          Icon = Layers
-                        } else if (mimeType.startsWith('video/')) {
-                          Icon = Video
-                        } else if (mimeType.startsWith('text/')) {
-                          Icon = Captions
-                        }
+                <div className="flex gap-4">
+                  {/* Left panel: variant buttons + HLS tree(s) */}
+                  <div className="w-52 shrink-0 space-y-0.5">
+                    {/* Non-HLS variant buttons */}
+                    {nonHlsVariants.map((variantData, idx) => {
+                      const mimeType = variantData.variant.mimeType || ''
+                      let Icon = Image
+                      if (mimeType.startsWith('video/')) Icon = Video
+                      else if (mimeType.startsWith('text/')) Icon = Captions
+                      const isSelected = selection?.kind === 'variant' && selection.idx === idx
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelection({ kind: 'variant', idx })}
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-sm text-left hover:bg-accent transition-colors ${isSelected ? 'bg-accent font-medium' : ''}`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{variantData.label}</span>
+                        </button>
+                      )
+                    })}
 
-                        return (
-                          <TabsTrigger
-                            key={idx}
-                            value={idx.toString()}
-                            className="justify-start gap-2 whitespace-nowrap md:whitespace-normal"
-                          >
-                            <Icon className="w-4 h-4 shrink-0" />
-                            <span className="truncate">{variantData.label}</span>
-                          </TabsTrigger>
-                        )
-                      })}
-                    </TabsList>
-
-                    {/* Variant details */}
-                    <div className="flex-1 min-w-0">
-                      {allVariants.map((variantData, idx) => (
-                        <TabsContent key={idx} value={idx.toString()} className="mt-0">
-                          <div className="bg-muted p-4 rounded-lg">
-                            {renderVariantServers(
-                              variantData.variant,
-                              variantData.serverAvailability
-                            )}
+                    {/* HLS trees */}
+                    {hlsMasterUrls.map((masterUrl, idx) => (
+                      <div key={masterUrl} className="mt-1">
+                        {hlsMasterUrls.length > 1 && (
+                          <div className="px-2 py-0.5 text-xs text-muted-foreground font-medium">
+                            HLS Stream {idx + 1}
                           </div>
-                        </TabsContent>
-                      ))}
-                    </div>
+                        )}
+                        <HlsStreamTree
+                          masterUrl={masterUrl}
+                          selectedUrl={
+                            selection?.kind === 'hls' && selection.masterUrl === masterUrl
+                              ? selection.nodeUrl
+                              : ''
+                          }
+                          onSelectUrl={url =>
+                            setSelection({ kind: 'hls', masterUrl, nodeUrl: url })
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
-                </Tabs>
+
+                  {/* Right panel */}
+                  <div className="flex-1 min-w-0">
+                    {selection?.kind === 'variant' && nonHlsVariants[selection.idx] && (
+                      <div className="bg-muted p-4 rounded-lg">
+                        {renderVariantServers(
+                          nonHlsVariants[selection.idx].variant,
+                          nonHlsVariants[selection.idx].serverAvailability
+                        )}
+                      </div>
+                    )}
+                    {selection?.kind === 'hls' && (
+                      <HlsNodeDetails
+                        url={selection.nodeUrl}
+                        configServers={blossomServers ?? []}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Show message if no variants */}
-            {allVariants.length === 0 && (
+            {/* Show message if no variants and no HLS */}
+            {nonHlsVariants.length === 0 && hlsMasterUrls.length === 0 && (
               <div>
                 <h3 className="font-semibold mb-2">Blossom Servers</h3>
                 <div className="bg-muted p-4 rounded-lg">
@@ -890,19 +933,6 @@ export function VideoDebugInfo({
                 </div>
               </div>
             )}
-
-            {/* HLS Stream Tree — one section per master playlist */}
-            {hlsMasterUrls.map(masterUrl => (
-              <div key={masterUrl}>
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-blue-500" />
-                  HLS Stream
-                </h3>
-                <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                  <HlsStreamTree masterUrl={masterUrl} configServers={blossomServers ?? []} />
-                </div>
-              </div>
-            ))}
           </div>
         </ScrollArea>
       </DialogContent>

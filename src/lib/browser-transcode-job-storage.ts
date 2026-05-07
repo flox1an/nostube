@@ -116,9 +116,7 @@ export function removeBrowserTranscodeJob(draftId: string): void {
   saveStorage(storage)
 }
 
-export function subscribeToBrowserTranscodeJobs(
-  listener: BrowserTranscodeJobListener
-): () => void {
+export function subscribeToBrowserTranscodeJobs(listener: BrowserTranscodeJobListener): () => void {
   listeners.add(listener)
   return () => {
     listeners.delete(listener)

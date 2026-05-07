@@ -40,6 +40,7 @@ interface ControlBarProps {
   isHls: boolean
   hlsLevels?: HlsQualityLevel[]
   hlsCurrentLevel?: number
+  hlsActiveLevel?: number | null
   onHlsLevelChange?: (level: number) => void
 
   // Quality - Native
@@ -101,6 +102,7 @@ export const ControlBar = memo(function ControlBar({
   isHls,
   hlsLevels,
   hlsCurrentLevel,
+  hlsActiveLevel,
   onHlsLevelChange,
   videoVariants,
   selectedVariantIndex,
@@ -197,6 +199,7 @@ export const ControlBar = memo(function ControlBar({
             isHls={isHls}
             hlsLevels={hlsLevels}
             hlsCurrentLevel={hlsCurrentLevel}
+            hlsActiveLevel={hlsActiveLevel}
             onHlsLevelChange={onHlsLevelChange}
             videoVariants={videoVariants}
             selectedVariantIndex={selectedVariantIndex}

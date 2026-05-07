@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assessTranscodeNeed,
   assignMp4ResolutionCodecs,
+  canUseOriginalHlsVariant,
   computeTargetDimensions,
   defaultVariants,
   type TranscodeSourceMeta,
@@ -79,6 +80,18 @@ describe('assessTranscodeNeed', () => {
         mimeType: 'video/mp4',
       })
     ).toBe('none')
+  })
+})
+
+describe('canUseOriginalHlsVariant', () => {
+  it('allows MP4 sources with AVC or HEVC video', () => {
+    expect(canUseOriginalHlsVariant({ ...baseMeta, videoCodec: 'avc1.64001F' })).toBe(true)
+    expect(canUseOriginalHlsVariant({ ...baseMeta, videoCodec: 'hvc1.1.6.L123.B0' })).toBe(true)
+  })
+
+  it('rejects unsupported containers and codecs', () => {
+    expect(canUseOriginalHlsVariant({ ...baseMeta, mimeType: 'video/webm' })).toBe(false)
+    expect(canUseOriginalHlsVariant({ ...baseMeta, videoCodec: 'av01.0.04M.08' })).toBe(false)
   })
 })
 

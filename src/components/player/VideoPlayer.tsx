@@ -162,8 +162,14 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     console.error('Video URL failover error:', error)
   }, [])
 
-  // Memoize proxyConfig to prevent infinite loops
-  const proxyConfig = useMemo(() => ({ enabled: true }), [])
+  const hasHlsSource = useMemo(
+    () => mime === 'application/vnd.apple.mpegurl' || effectiveUrls.some(url => url.endsWith('.m3u8')),
+    [effectiveUrls, mime]
+  )
+
+  // HLS manifests contain their own variants and segment URLs. Feeding the master
+  // through video proxy candidates can add failed requests before ABR has any useful data.
+  const proxyConfig = useMemo(() => ({ enabled: !hasHlsSource }), [hasHlsSource])
 
   const {
     currentUrl: videoUrl,
@@ -180,6 +186,35 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     onError: handleVideoUrlError,
   })
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const hlsByInput = hasHlsSource
+    if (!hlsByInput && !(videoUrl?.endsWith('.m3u8') ?? false)) return
+
+    console.info('[HLS:VideoPlayer]', 'source selection', {
+      mime,
+      eventId,
+      authorPubkey,
+      effectiveUrls,
+      effectiveSha256,
+      selectedVideoUrl: videoUrl,
+      hasMoreVideoUrls,
+      isLoadingVideoUrls,
+      proxyConfig,
+    })
+  }, [
+    authorPubkey,
+    effectiveSha256,
+    effectiveUrls,
+    eventId,
+    hasMoreVideoUrls,
+    hasHlsSource,
+    isLoadingVideoUrls,
+    mime,
+    proxyConfig,
+    videoUrl,
+  ])
+
   // Notify parent when all sources fail
   useEffect(() => {
     if (!hasMoreVideoUrls && !isLoadingVideoUrls && videoUrl === null) {
@@ -189,16 +224,28 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   // Determine if HLS
   const isHls = useMemo(
-    () => mime === 'application/vnd.apple.mpegurl' || (videoUrl?.endsWith('.m3u8') ?? false),
-    [mime, videoUrl]
+    () => hasHlsSource || (videoUrl?.endsWith('.m3u8') ?? false),
+    [hasHlsSource, videoUrl]
   )
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !isHls) return
+    console.info('[HLS:VideoPlayer]', 'hls mode resolved', {
+      isHls,
+      mime,
+      videoUrl,
+      byMime: mime === 'application/vnd.apple.mpegurl',
+      byUrl: videoUrl?.endsWith('.m3u8') ?? false,
+    })
+  }, [isHls, mime, videoUrl])
 
   // Initialize HLS
   const {
     levels: hlsLevels,
     currentLevel: hlsCurrentLevel,
+    activeLevel: hlsActiveLevel,
     setLevel: setHlsLevel,
-  } = useHls(videoRef, videoUrl, isHls)
+  } = useHls(videoRef, videoUrl, isHls, authorPubkey, eventId, 'never')
 
   // Validate text tracks (check availability, use blossom fallback)
   const { validatedTracks } = useValidatedTextTracks(textTracks)
@@ -928,6 +975,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         isHls={isHls}
         hlsLevels={hlsLevels}
         hlsCurrentLevel={hlsCurrentLevel}
+        hlsActiveLevel={hlsActiveLevel}
         onHlsLevelChange={setHlsLevel}
         videoVariants={videoVariants}
         selectedVariantIndex={selectedVariantIndex}

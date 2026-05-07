@@ -38,19 +38,26 @@ export interface TrustScoreResult {
 
 /**
  * Pubkey of the NosTube video validator set in relatr.
- * Validators: video_activity, video_community, video_engagement, video_viewer
+ * Currently available indicators:
+ * - video_creator_activity
+ * - video_viewer_engagement
+ * - video_creator_comments
  */
 const VIDEO_VALIDATOR_PUBKEY = 'd3aa7e54cc5fc3e2390984bfc6faabfa1a9316118c30dff53b47e3dabe655aef'
+const VIDEO_INDICATORS = new Set([
+  'video_creator_activity',
+  'video_viewer_engagement',
+  'video_creator_comments',
+])
 
 /**
- * Calculate a global (non-personalized) score from the 4 video validators,
- * multiplied by the report_penalty (kind 1984 reports).
+ * Calculate a global (non-personalized) score from the available video indicators,
+ * multiplied by the report_penalty if relatr returns one.
  *
- * globalScore = avg(video_activity, video_community, video_engagement, video_viewer)
- *             × report_penalty
+ * globalScore = avg(video_creator_activity, video_viewer_engagement, video_creator_comments)
+ *             × report_penalty?
  *
- * report_penalty is 1.0 for clean pubkeys, approaches 0 for reported ones,
- * and is 0 for illegal-content reports.
+ * report_penalty defaults to 1.0 when it is not present.
  */
 export function getGlobalScore(result: TrustScoreResult): number | null {
   const validators = result.components?.validators
@@ -59,7 +66,10 @@ export function getGlobalScore(result: TrustScoreResult): number | null {
   const videoScores: number[] = []
   let reportPenalty = 1.0 // default: no penalty
   for (const [key, val] of Object.entries(validators)) {
-    if (key.startsWith(VIDEO_VALIDATOR_PUBKEY + ':')) {
+    const indicator = key.startsWith(VIDEO_VALIDATOR_PUBKEY + ':')
+      ? key.slice(VIDEO_VALIDATOR_PUBKEY.length + 1)
+      : null
+    if (indicator && VIDEO_INDICATORS.has(indicator)) {
       videoScores.push(val.score)
     }
     if (key.endsWith(':report_penalty')) {

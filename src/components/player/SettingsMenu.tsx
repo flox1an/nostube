@@ -18,12 +18,14 @@ type MenuView = 'main' | 'quality' | 'speed' | 'subtitles'
 interface QualityOption {
   label: string
   value: number // -1 for auto (HLS), or variant index
+  description?: string
 }
 
 interface SettingsMenuProps {
   // HLS quality (for HLS streams)
   hlsLevels?: HlsQualityLevel[]
   hlsCurrentLevel?: number
+  hlsActiveLevel?: number | null
   onHlsLevelChange?: (level: number) => void
 
   // Native video quality (for non-HLS)
@@ -65,6 +67,7 @@ const PLAYBACK_SPEEDS = [
 export const SettingsMenu = memo(function SettingsMenu({
   hlsLevels = [],
   hlsCurrentLevel = -1,
+  hlsActiveLevel = null,
   onHlsLevelChange,
   videoVariants = [],
   selectedVariantIndex = 0,
@@ -82,11 +85,17 @@ export const SettingsMenu = memo(function SettingsMenu({
   const [currentView, setCurrentView] = useState<MenuView>('main')
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const activeHlsLevelLabel =
+    hlsActiveLevel === null ? null : hlsLevels.find(level => level.index === hlsActiveLevel)?.label
 
   // Build quality options based on mode
   const qualityOptions: QualityOption[] = isHls
     ? [
-        { label: 'Auto', value: -1 },
+        {
+          label: 'Auto',
+          value: -1,
+          description: activeHlsLevelLabel ? `Currently ${activeHlsLevelLabel}` : undefined,
+        },
         ...hlsLevels.map(level => ({ label: level.label, value: level.index })),
       ]
     : videoVariants.map((variant, index) => ({
@@ -97,7 +106,9 @@ export const SettingsMenu = memo(function SettingsMenu({
   const currentQuality = isHls ? hlsCurrentLevel : selectedVariantIndex
   const currentQualityLabel =
     currentQuality === -1
-      ? 'Auto'
+      ? activeHlsLevelLabel
+        ? `Auto (${activeHlsLevelLabel})`
+        : 'Auto'
       : qualityOptions.find(q => q.value === currentQuality)?.label || 'Unknown'
 
   const currentSpeedLabel =
@@ -333,6 +344,7 @@ const QualitySubmenu = memo(function QualitySubmenu({
         <SelectableItem
           key={option.value}
           label={option.label}
+          description={option.description}
           isSelected={option.value === currentValue}
           onClick={() => onSelect(option.value)}
         />
@@ -452,12 +464,14 @@ const SubmenuHeader = memo(function SubmenuHeader({ title, onBack }: SubmenuHead
 
 interface SelectableItemProps {
   label: string
+  description?: string
   isSelected: boolean
   onClick: () => void
 }
 
 const SelectableItem = memo(function SelectableItem({
   label,
+  description,
   isSelected,
   onClick,
 }: SelectableItemProps) {
@@ -474,7 +488,10 @@ const SelectableItem = memo(function SelectableItem({
       <span className="w-5 h-5 flex items-center justify-center">
         {isSelected && <Check className="w-5 h-5 text-primary" />}
       </span>
-      <span>{label}</span>
+      <span className="min-w-0">
+        <span className="block truncate">{label}</span>
+        {description && <span className="block truncate text-xs text-white/60">{description}</span>}
+      </span>
     </button>
   )
 })

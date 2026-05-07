@@ -28,6 +28,7 @@ export interface BrowserTranscodeVariant {
   targetHeight: number
   format: 'mp4' | 'hls'
   label: string
+  passthrough?: boolean
 }
 
 export async function probeTranscodeSource(file: File): Promise<TranscodeSourceMeta> {
@@ -102,6 +103,11 @@ function isCompatibleCodec(codec: string | undefined): boolean {
 
 function isMp4Container(mimeType: string): boolean {
   return mimeType === 'video/mp4' || mimeType === 'video/x-m4v'
+}
+
+export function canUseOriginalHlsVariant(meta: TranscodeSourceMeta): boolean {
+  if (!isMp4Container(meta.mimeType)) return false
+  return isCompatibleCodec(meta.videoCodec)
 }
 
 export function assessTranscodeNeed(meta: TranscodeSourceMeta): TranscodeRecommendation {
@@ -382,6 +388,8 @@ export async function transcodeToHls(
     output,
     tracks: 'primary',
     video: variants.map(v => {
+      if (v.passthrough) return {}
+
       const { width, height } = computeTargetDimensions(
         sourceMeta.width,
         sourceMeta.height,

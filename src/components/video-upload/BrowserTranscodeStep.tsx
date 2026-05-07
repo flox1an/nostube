@@ -6,9 +6,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
+import { formatDuration } from '@/lib/formatDuration'
 import {
+  BPP_MEDIUM,
+  TARGET_FPS,
   assignMp4ResolutionCodecs,
   buildVariants,
+  canUseOriginalHlsVariant,
+  computeTargetDimensions,
   type ResolutionOption,
 } from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
@@ -30,6 +35,54 @@ interface BrowserTranscodeStepProps {
   onSkip: () => void
 }
 
+function estimateRemainingSeconds(
+  progress: number | undefined,
+  startedAt: number,
+  updatedAt?: number
+): number | undefined {
+  if (!progress || progress <= 0.01 || progress >= 0.99) return undefined
+  const now = updatedAt ?? Date.now()
+  const elapsedSeconds = Math.max(0, (now - startedAt) / 1000)
+  if (elapsedSeconds < 1) return undefined
+  const totalSeconds = elapsedSeconds / progress
+  const remaining = Math.round(totalSeconds - elapsedSeconds)
+  if (!Number.isFinite(remaining) || remaining <= 0) return undefined
+  return remaining
+}
+
+function estimateVariantSizeMB(
+  variant: BrowserTranscodeVariant,
+  sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>
+): number {
+  if (variant.passthrough) return sourceMeta.sizeMB
+
+  const { width, height } = computeTargetDimensions(
+    sourceMeta.width,
+    sourceMeta.height,
+    variant.targetHeight
+  )
+  const videoBitrateBps = Math.round(width * height * TARGET_FPS * BPP_MEDIUM)
+  const audioBitrateBps = 128_000
+  const bytes = ((videoBitrateBps + audioBitrateBps) * sourceMeta.duration) / 8
+  return bytes / (1024 * 1024)
+}
+
+function formatEstimatedSize(sizeMB: number): string {
+  if (sizeMB < 1024) return `${sizeMB.toFixed(1)} MB`
+  return `${(sizeMB / 1024).toFixed(2)} GB`
+}
+
+function getCodecLabel(codec: ResolutionOption['suggestedCodec']): string {
+  return codec === 'hevc' ? 'HEVC' : 'H.264'
+}
+
+function getSourceVariantCodec(
+  sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>
+): ResolutionOption['suggestedCodec'] {
+  const codec = sourceMeta.videoCodec?.toLowerCase()
+  return codec?.startsWith('hvc1') || codec?.startsWith('hev1') ? 'hevc' : 'avc'
+}
+
 export function BrowserTranscodeStep({
   file,
   backgroundState,
@@ -38,6 +91,7 @@ export function BrowserTranscodeStep({
   onComplete,
   onSkip,
 }: BrowserTranscodeStepProps) {
+  const SINGLE_MP4_MAX_SIZE_MB = 50
   const { t } = useTranslation()
 
   // Format + resolution state — local to this component
@@ -61,20 +115,67 @@ export function BrowserTranscodeStep({
   const defaultSelectedHeights = useMemo(() => {
     if (status !== 'waiting' || availableResolutionOptions.length === 0) return []
 
-    // Default: top resolution + 480p fallback (mirrors previous behaviour)
     const heights = availableResolutionOptions.map(r => r.height)
+    const sourceSizeMB = sourceMeta?.sizeMB ?? 0
+    const useSingleMp4Default = sourceSizeMB > 0 && sourceSizeMB < SINGLE_MP4_MAX_SIZE_MB
+
+    if (useSingleMp4Default) {
+      const top = heights[heights.length - 1]
+      return top ? [top] : []
+    }
+
+    const hlsDefaults = [720, 360].filter(height => heights.includes(height))
+    if (hlsDefaults.length > 0) return hlsDefaults
+
     const top = heights[heights.length - 1]
-    const fallback = 480
-    return [top, ...(heights.includes(fallback) && fallback !== top ? [fallback] : [])]
-  }, [availableResolutionOptions, status])
+    return top ? [top] : []
+  }, [availableResolutionOptions, sourceMeta?.sizeMB, status])
 
   const effectiveSelectedHeights = selectedHeights ?? defaultSelectedHeights
   const supportsHevc = availableResolutionOptions.some(option => option.suggestedCodec === 'hevc')
+  const sourceShortSide = sourceMeta ? Math.min(sourceMeta.width, sourceMeta.height) : undefined
+  const hasOriginalHlsVariant =
+    outputFormat === 'hls' && sourceMeta ? canUseOriginalHlsVariant(sourceMeta) : false
+  const shouldShowBackgroundMessage = useMemo(() => {
+    if (!backgroundState?.message) return false
+    if (backgroundState.status !== 'transcoding') return true
 
+    const normalized = backgroundState.message.trim().toLowerCase()
+    return normalized !== 'transcoding video in background...'
+  }, [backgroundState])
+
+  const backgroundEtaSeconds = useMemo(() => {
+    if (!backgroundState) return undefined
+
+    if (backgroundState.status === 'uploading' && backgroundState.uploadProgress) {
+      return estimateRemainingSeconds(
+        backgroundState.uploadProgress.percentage / 100,
+        backgroundState.startedAt,
+        backgroundState.updatedAt
+      )
+    }
+
+    if (backgroundState.status !== 'transcoding') return undefined
+    if (backgroundState.variants.length === 0) return undefined
+
+    const totalProgress = backgroundState.variants.reduce((sum, variant) => {
+      if (variant.status === 'done') return sum + 1
+      if (variant.status === 'active') return sum + variant.progress
+      return sum
+    }, 0)
+    const avgProgress = totalProgress / backgroundState.variants.length
+
+    return estimateRemainingSeconds(avgProgress, backgroundState.startedAt, backgroundState.updatedAt)
+  }, [backgroundState])
   useEffect(() => {
     if (!file || !supported || backgroundState?.status) return
     analyze(file)
   }, [analyze, backgroundState?.status, file, supported])
+
+  useEffect(() => {
+    if (status !== 'waiting' || !sourceMeta) return
+    setOutputFormat(sourceMeta.sizeMB < SINGLE_MP4_MAX_SIZE_MB ? 'mp4' : 'hls')
+  }, [sourceMeta, status])
 
   const setHeightSelection = useCallback(
     (height: number, checked: boolean) => {
@@ -99,11 +200,47 @@ export function BrowserTranscodeStep({
 
     // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
     selectedWithCodecs.sort((a, b) => b.height - a.height)
-    return buildVariants(selectedWithCodecs, outputFormat)
-  }, [availableResolutionOptions, effectiveSelectedHeights, outputFormat, supportsHevc])
+    const variants = buildVariants(selectedWithCodecs, outputFormat)
+    if (!sourceMeta || outputFormat !== 'hls' || !canUseOriginalHlsVariant(sourceMeta)) {
+      return variants
+    }
+
+    const originalHeight = Math.min(sourceMeta.width, sourceMeta.height)
+    const originalCodec = getSourceVariantCodec(sourceMeta)
+    return variants.map(variant =>
+      variant.targetHeight === originalHeight
+        ? {
+            ...variant,
+            codec: originalCodec,
+            label: `${originalHeight}p (original)`,
+            passthrough: true,
+          }
+        : variant
+    )
+  }, [availableResolutionOptions, effectiveSelectedHeights, outputFormat, sourceMeta, supportsHevc])
+  const estimatedOutputSizeMB = useMemo(() => {
+    if (status !== 'waiting' || !sourceMeta) return undefined
+
+    const variants = computeVariants()
+    const transcodedEstimate = variants.reduce(
+      (sum, variant) => sum + estimateVariantSizeMB(variant, sourceMeta),
+      0
+    )
+    const includeOriginal = outputFormat === 'mp4' && keepOriginal
+    return transcodedEstimate + (includeOriginal ? sourceMeta.sizeMB : 0)
+  }, [computeVariants, keepOriginal, outputFormat, sourceMeta, status])
 
   const getDisplayCodecForHeight = useCallback(
     (height: number): ResolutionOption['suggestedCodec'] => {
+      if (
+        outputFormat === 'hls' &&
+        hasOriginalHlsVariant &&
+        sourceMeta &&
+        height === sourceShortSide
+      ) {
+        return getSourceVariantCodec(sourceMeta)
+      }
+
       const selectedForPreview = effectiveSelectedHeights.includes(height)
         ? effectiveSelectedHeights
         : [...effectiveSelectedHeights, height]
@@ -116,7 +253,7 @@ export function BrowserTranscodeStep({
       )
       return codecOptions.find(option => option.height === height)?.suggestedCodec ?? 'avc'
     },
-    [effectiveSelectedHeights, supportsHevc]
+    [effectiveSelectedHeights, hasOriginalHlsVariant, outputFormat, sourceMeta, sourceShortSide, supportsHevc]
   )
 
   const handleStart = useCallback(async () => {
@@ -213,7 +350,9 @@ export function BrowserTranscodeStep({
                 })}
         </AlertTitle>
         <AlertDescription className="space-y-3">
-          <p className="text-sm text-muted-foreground">{backgroundState.message}</p>
+          {shouldShowBackgroundMessage && (
+            <p className="text-sm text-muted-foreground">{backgroundState.message}</p>
+          )}
           {backgroundState.variants.map(variant => (
             <div key={variant.label} className="space-y-1">
               <div className="flex justify-between text-sm">
@@ -253,6 +392,14 @@ export function BrowserTranscodeStep({
               </div>
               <Progress value={backgroundState.uploadProgress.percentage} className="h-1.5" />
             </div>
+          )}
+          {backgroundEtaSeconds !== undefined && (
+            <p className="text-xs text-muted-foreground">
+              {t('upload.transcode.eta', {
+                time: formatDuration(backgroundEtaSeconds),
+                defaultValue: 'Estimated time remaining: {{time}}',
+              })}
+            </p>
           )}
           {backgroundState.error && <p className="text-sm">{backgroundState.error}</p>}
         </AlertDescription>
@@ -336,6 +483,14 @@ export function BrowserTranscodeStep({
             {sourceMeta.width}×{sourceMeta.height} · {durationStr} · {sourceMeta.sizeMB.toFixed(0)}{' '}
             MB · {sourceMeta.bitrateMbps.toFixed(0)} Mbps
           </p>
+          {estimatedOutputSizeMB !== undefined && (
+            <p className="text-sm text-muted-foreground">
+              {t('upload.browserTranscode.estimatedSize', {
+                defaultValue: 'Estimated output size: {{size}}',
+                size: formatEstimatedSize(estimatedOutputSizeMB),
+              })}
+            </p>
+          )}
 
           {canTranscode ? (
             <>
@@ -361,15 +516,6 @@ export function BrowserTranscodeStep({
                     HLS Adaptive
                   </ToggleGroupItem>
                 </ToggleGroup>
-                {outputFormat === 'hls' && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('upload.browserTranscode.hlsHint', {
-                      defaultValue: supportsHevc
-                        ? 'Higher resolutions use HEVC; the lowest uses H.264 for broad compatibility.'
-                        : 'All selected resolutions will be encoded as a single adaptive stream (H.264).',
-                    })}
-                  </p>
-                )}
               </div>
 
               {/* Resolution checkboxes */}
@@ -383,6 +529,7 @@ export function BrowserTranscodeStep({
                       key={opt.height}
                       option={opt}
                       codec={getDisplayCodecForHeight(opt.height)}
+                      original={hasOriginalHlsVariant && opt.height === sourceShortSide}
                       checked={effectiveSelectedHeights.includes(opt.height)}
                       onToggle={checked => setHeightSelection(opt.height, checked)}
                     />
@@ -499,18 +646,23 @@ export function BrowserTranscodeStep({
 interface ResolutionRowProps {
   option: ResolutionOption
   codec: ResolutionOption['suggestedCodec']
+  original?: boolean
   checked: boolean
   onToggle: (checked: boolean) => void
 }
 
-function ResolutionRow({ option, codec, checked, onToggle }: ResolutionRowProps) {
-  const codecLabel = codec === 'hevc' ? 'HEVC' : 'H.264'
-
+function ResolutionRow({ option, codec, original = false, checked, onToggle }: ResolutionRowProps) {
   return (
     <label className="flex cursor-pointer items-center gap-2">
       <Checkbox checked={checked} onCheckedChange={value => onToggle(value === true)} />
       <span className="text-sm">
-        {option.height}p<span className="ml-1.5 text-xs text-muted-foreground">{codecLabel}</span>
+        {option.height}p
+        {option.height === 360 && (
+          <span className="ml-1 text-xs text-muted-foreground">(standard fallback resolution)</span>
+        )}
+        <span className="ml-1.5 text-xs text-muted-foreground">
+          {original ? '(original)' : getCodecLabel(codec)}
+        </span>
       </span>
     </label>
   )

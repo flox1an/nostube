@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Video debug dialog merges "Blossom Server Availability by Variant" and "HLS Stream" into a single tab view — HLS m3u8 variants are removed from the server-availability tab list; each HLS master playlist gets its own "HLS Stream" tab showing the full stream tree with per-node server checks
+
 ### Added
 
-- HLS stream tree in the video debug dialog — for events with an HLS master playlist, a new section shows a two-column layout: left side is a tree of master → variant streams (lazy-fetched on expand) → init fragment + collapsible segment list; right side shows a direct HEAD check + per-configured-Blossom-server availability for the selected node; HLS variants in the existing tab list now use a layers icon
+- HLS stream tree in the video debug dialog — for events with an HLS master playlist, a new section shows a two-column layout: left side is a tree of master → variant streams (lazy-fetched on expand) → init fragment + collapsible segment list; right side shows a direct HEAD check + per-configured-Blossom-server availability for the selected node
 
 ### Fixed
 

@@ -6,6 +6,7 @@ import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug
 import type { NostrEvent } from 'nostr-tools'
 import { VideoPlayer } from '@/components/VideoPlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
+import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { processEvent, generateEventLink, buildEventRelays } from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
@@ -534,13 +535,16 @@ export function VideoPage() {
     }
 
     return (
-      <VideoSuggestions
-        currentVideoId={video?.id}
-        authorPubkey={video?.pubkey}
-        currentVideoType={video?.type}
-        relays={relaysToUse}
-        cinemaMode={cinemaMode}
-      />
+      <>
+        <HlsFailoverDebugPanel videoId={video?.id} />
+        <VideoSuggestions
+          currentVideoId={video?.id}
+          authorPubkey={video?.pubkey}
+          currentVideoType={video?.type}
+          relays={relaysToUse}
+          cinemaMode={cinemaMode}
+        />
+      </>
     )
   }
 

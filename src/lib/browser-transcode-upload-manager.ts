@@ -76,6 +76,23 @@ function buildHlsMimeType(codecs: string | undefined): string {
     : 'application/vnd.apple.mpegurl'
 }
 
+function parseAudioRenditions(
+  masterContent: string
+): Map<string, { language?: string; name?: string }> {
+  const lines = masterContent.split('\n').map(line => line.trim())
+  const map = new Map<string, { language?: string; name?: string }>()
+  for (const line of lines) {
+    if (!line.startsWith('#EXT-X-MEDIA:') || !line.includes('TYPE=AUDIO')) continue
+    const uri = line.match(/URI="([^"]+)"/)?.[1]
+    if (!uri) continue
+    map.set(uri, {
+      language: line.match(/LANGUAGE="([^"]+)"/)?.[1],
+      name: line.match(/NAME="([^"]+)"/)?.[1],
+    })
+  }
+  return map
+}
+
 function parseMasterPlaylistStreams(masterContent: string): Map<
   string,
   {
@@ -405,6 +422,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
     if (isHls && transcodedFiles instanceof Map) {
       const uploadedUrls = new Map<string, string>()
       const hlsVariantStreams: Array<{
+        type?: 'video' | 'audio'
+        language?: string
         url: string
         dimension: string
         qualityLabel: string
@@ -463,11 +482,156 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       // Collect all blobs for later deletion support
       const allHlsBlobs: BlobDescriptor[] = []
 
+      // ── Pre-parse variant playlists to build segment→(stream,server) mapping ──
+      // One state row per (stream × server) so the UI can show per-server progress.
+      type SegLoc = { stateIdx: number; segIdx: number }
+      // Key: `${segmentPath}::${serverHostname}`
+      const segmentLocations = new Map<string, SegLoc>()
+      // Key: uploaded blob URL → location (for mirror tracking)
+      const uploadedUrlToLoc = new Map<string, SegLoc>()
+
+      const serverHostnames = initialServers.map(s => {
+        try {
+          return new URL(s).hostname
+        } catch {
+          return s
+        }
+      })
+      const multiServer = serverHostnames.length > 1
+
+      const initSegmentStates: Array<{
+        streamLabel: string
+        serverLabel?: string
+        statuses: Array<'pending' | 'uploading' | 'done' | 'error'>
+      }> = []
+
+      // Collect segment paths per stream label (for building state entries below)
+      const streamSegPaths: Array<{ label: string; segPaths: string[] }> = []
+
+      const masterRaw = transcodedFiles.get('master.m3u8')
+      if (masterRaw) {
+        const masterText = await masterRaw.text()
+        const masterLines = masterText.split('\n').map(l => l.trim())
+        for (let i = 0; i < masterLines.length - 1; i++) {
+          const line = masterLines[i]
+          if (!line.startsWith('#EXT-X-STREAM-INF:')) continue
+          const resMatch = line.match(/RESOLUTION=(\d+)x(\d+)/i)
+          const variantPath = masterLines[i + 1]
+          if (!variantPath || variantPath.startsWith('#')) continue
+          const label = resMatch
+            ? `${Math.min(parseInt(resMatch[1]), parseInt(resMatch[2]))}p`
+            : `stream-${streamSegPaths.length}`
+          i++
+
+          const variantFile = transcodedFiles.get(variantPath)
+          if (!variantFile) continue
+          const variantText = await variantFile.text()
+          const companionDir = variantPath.replace(/\.m3u8$/, '/')
+
+          const segPaths: string[] = []
+          for (const vLine of variantText.split('\n').map(l => l.trim())) {
+            if (!vLine || vLine.startsWith('#')) {
+              if (vLine.startsWith('#EXT-X-MAP:')) {
+                const uriMatch = vLine.match(/URI="([^"]+)"/)
+                if (uriMatch) {
+                  const p = uriMatch[1].includes('/')
+                    ? uriMatch[1]
+                    : `${companionDir}${uriMatch[1]}`
+                  if (transcodedFiles.has(p)) segPaths.push(p)
+                }
+              }
+              continue
+            }
+            if (vLine.startsWith('http://') || vLine.startsWith('https://')) continue
+            const p = vLine.includes('/') ? vLine : `${companionDir}${vLine}`
+            if (transcodedFiles.has(p)) segPaths.push(p)
+          }
+          streamSegPaths.push({ label, segPaths })
+        }
+
+        // Parse audio renditions from master playlist
+        for (const line of masterLines) {
+          if (!line.startsWith('#EXT-X-MEDIA:') || !line.includes('TYPE=AUDIO')) continue
+          const uriMatch = line.match(/URI="([^"]+)"/)
+          if (!uriMatch) continue
+          const audioPath = uriMatch[1]
+          const language = line.match(/LANGUAGE="([^"]+)"/)?.[1]
+          const name = line.match(/NAME="([^"]+)"/)?.[1]
+          const label = name ? `audio (${name})` : language ? `audio (${language})` : 'audio'
+
+          const audioFile = transcodedFiles.get(audioPath)
+          if (!audioFile) continue
+          const audioText = await audioFile.text()
+          const companionDir = audioPath.replace(/\.m3u8$/, '/')
+
+          const segPaths: string[] = []
+          for (const aLine of audioText.split('\n').map(l => l.trim())) {
+            if (!aLine || aLine.startsWith('#')) {
+              if (aLine.startsWith('#EXT-X-MAP:')) {
+                const uriM = aLine.match(/URI="([^"]+)"/)
+                if (uriM) {
+                  const p = uriM[1].includes('/') ? uriM[1] : `${companionDir}${uriM[1]}`
+                  if (transcodedFiles.has(p)) segPaths.push(p)
+                }
+              }
+              continue
+            }
+            if (aLine.startsWith('http://') || aLine.startsWith('https://')) continue
+            const p = aLine.includes('/') ? aLine : `${companionDir}${aLine}`
+            if (transcodedFiles.has(p)) segPaths.push(p)
+          }
+          streamSegPaths.push({ label, segPaths })
+        }
+      }
+
+      // Build one state entry per (stream × server)
+      for (const { label, segPaths } of streamSegPaths) {
+        for (const hostname of serverHostnames) {
+          const stateIdx = initSegmentStates.length
+          initSegmentStates.push({
+            streamLabel: label,
+            serverLabel: multiServer ? hostname : undefined,
+            statuses: segPaths.map(() => 'pending' as const),
+          })
+          segPaths.forEach((p, segIdx) =>
+            segmentLocations.set(`${p}::${hostname}`, { stateIdx, segIdx })
+          )
+        }
+      }
+
+      // Mutable copy for in-place updates; flushed to state at most every 150ms
+      const liveStatuses: Array<Array<'pending' | 'uploading' | 'done' | 'error'>> =
+        initSegmentStates.map(s => [...s.statuses])
+
+      const flushSegmentStates = throttle(() => {
+        updateBrowserState(draftId, state => ({
+          ...state,
+          segmentStates: initSegmentStates.map((s, si) => ({
+            streamLabel: s.streamLabel,
+            serverLabel: s.serverLabel,
+            statuses: [...liveStatuses[si]],
+          })),
+        }))
+      }, 150)
+
+      if (initSegmentStates.length > 0) {
+        updateBrowserState(draftId, state => ({ ...state, segmentStates: initSegmentStates }))
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
       // Stage 1: Upload segments and init files — 2 concurrent uploads
       let segmentsUploaded = 0
       await runWithConcurrency(
         segmentPaths.map(path => async () => {
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+
+          // Mark all server rows for this segment as 'uploading'
+          for (const hostname of serverHostnames) {
+            const loc = segmentLocations.get(`${path}::${hostname}`)
+            if (loc) liveStatuses[loc.stateIdx][loc.segIdx] = 'uploading'
+          }
+          flushSegmentStates()
+
           const hlsFile = transcodedFiles.get(path)!
           const { url, blobs } = await uploadAndGetUrl(
             hlsFile,
@@ -480,6 +644,37 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
           allHlsBlobs.push(...blobs)
           uploadedBytes += hlsFile.size
           segmentsUploaded++
+
+          // Mark per-server: done if blob returned from that server, error otherwise
+          const succeededHostnames = new Set(
+            blobs.map(b => {
+              try {
+                return new URL(b.url).hostname
+              } catch {
+                return ''
+              }
+            })
+          )
+          for (const hostname of serverHostnames) {
+            const loc = segmentLocations.get(`${path}::${hostname}`)
+            if (loc) {
+              liveStatuses[loc.stateIdx][loc.segIdx] = succeededHostnames.has(hostname)
+                ? 'done'
+                : 'error'
+            }
+          }
+          // Track uploaded URLs for mirror phase
+          for (const blob of blobs) {
+            try {
+              const hostname = new URL(blob.url).hostname
+              const loc = segmentLocations.get(`${path}::${hostname}`)
+              if (loc) uploadedUrlToLoc.set(blob.url, loc)
+            } catch {
+              /* ignore */
+            }
+          }
+          flushSegmentStates()
+
           reportProgress(
             segmentsUploaded,
             `Uploading HLS segments (${segmentsUploaded}/${totalFiles})…`
@@ -492,8 +687,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       const rewrittenFiles = await rewriteHlsPlaylists(transcodedFiles, uploadedUrls)
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       const masterPlaylistForMetadata = rewrittenFiles.get('master.m3u8')
-      const streamMap = masterPlaylistForMetadata
-        ? parseMasterPlaylistStreams(await masterPlaylistForMetadata.text())
+      const masterPlaylistContent = masterPlaylistForMetadata
+        ? await masterPlaylistForMetadata.text()
+        : null
+      const streamMap = masterPlaylistContent
+        ? parseMasterPlaylistStreams(masterPlaylistContent)
         : new Map<
             string,
             {
@@ -504,6 +702,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               audioCodec?: string
             }
           >()
+      const audioMap = masterPlaylistContent
+        ? parseAudioRenditions(masterPlaylistContent)
+        : new Map<string, { language?: string; name?: string }>()
       const playlistPaths = Array.from(rewrittenFiles.keys()).filter(
         p => p.endsWith('.m3u8') && p !== 'master.m3u8'
       )
@@ -545,6 +746,26 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
             })
           }
 
+          const audioInfo = audioMap.get(path)
+          if (audioInfo) {
+            const originalAudio = transcodedFiles.get(path)
+            const audioBytes = computeVariantStreamBytes(
+              path,
+              originalAudio ? await originalAudio.text() : await playlistFile.text(),
+              transcodedFiles
+            )
+            const totalAudioBytes = audioBytes + playlistFile.size
+            const label = audioInfo.name ?? audioInfo.language ?? 'audio'
+            hlsVariantStreams.push({
+              type: 'audio',
+              language: audioInfo.language,
+              url,
+              dimension: '-',
+              qualityLabel: label,
+              sizeMB: totalAudioBytes > 0 ? totalAudioBytes / (1024 * 1024) : undefined,
+            })
+          }
+
           uploadedBytes += playlistFile.size
           playlistsUploaded++
           reportProgress(
@@ -576,6 +797,76 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
 
       console.log('[BrowserTranscodeUploadManager] HLS master playlist URL:', masterUrl)
 
+      // Stage 4: Mirror all HLS blobs to mirror servers
+      let hlsMirroredBlobs: BlobDescriptor[] = []
+      if (mirrorServers.length > 0 && allHlsBlobs.length > 0) {
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+        let mirrored = 0
+        const total = allHlsBlobs.length
+
+        // Initialize mirror segment states from the same stream structure
+        const liveMirrorStatuses: Array<Array<'pending' | 'mirroring' | 'done' | 'error'>> =
+          initSegmentStates.map(s => s.statuses.map(() => 'pending' as const))
+
+        const flushMirrorStates = throttle(() => {
+          updateBrowserState(draftId, state => ({
+            ...state,
+            mirrorSegmentStates: initSegmentStates.map((s, si) => ({
+              streamLabel: s.streamLabel,
+              statuses: [...liveMirrorStatuses[si]],
+            })),
+          }))
+        }, 150)
+
+        if (initSegmentStates.length > 0) {
+          updateBrowserState(draftId, state => ({
+            ...state,
+            mirrorProgress: { mirrored: 0, total, percentage: 0 },
+            mirrorSegmentStates: initSegmentStates.map(s => ({
+              streamLabel: s.streamLabel,
+              statuses: s.statuses.map(() => 'pending' as const),
+            })),
+          }))
+        } else {
+          updateBrowserState(draftId, state => ({
+            ...state,
+            mirrorProgress: { mirrored: 0, total, percentage: 0 },
+          }))
+        }
+
+        const mirrorResults = await runWithConcurrency(
+          allHlsBlobs.map(blob => async () => {
+            if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+            const loc = uploadedUrlToLoc.get(blob.url)
+            if (loc) {
+              liveMirrorStatuses[loc.stateIdx][loc.segIdx] = 'mirroring'
+              flushMirrorStates()
+            }
+            const result = await mirrorBlobsToServers({ mirrorServers, blob, signer })
+            mirrored++
+            if (loc) {
+              liveMirrorStatuses[loc.stateIdx][loc.segIdx] = 'done'
+              flushMirrorStates()
+            }
+            updateBrowserState(draftId, state => ({
+              ...state,
+              mirrorProgress: {
+                mirrored,
+                total,
+                percentage: Math.round((mirrored / total) * 100),
+              },
+            }))
+            return result
+          }),
+          4
+        )
+        hlsMirroredBlobs = mirrorResults.flat()
+        updateBrowserState(draftId, state => ({
+          ...state,
+          mirrorProgress: { mirrored: total, total, percentage: 100 },
+        }))
+      }
+
       const sortedHlsVariantStreams = hlsVariantStreams.sort((a, b) => {
         const qa = parseInt(a.qualityLabel, 10) || 0
         const qb = parseInt(b.qualityLabel, 10) || 0
@@ -593,7 +884,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         hlsVariants: sortedHlsVariantStreams,
         duration: sourceMeta.duration,
         uploadedBlobs: allHlsBlobs,
-        mirroredBlobs: [],
+        mirroredBlobs: hlsMirroredBlobs,
         inputMethod: 'url',
       })
     } else if (transcodedFiles instanceof Array) {

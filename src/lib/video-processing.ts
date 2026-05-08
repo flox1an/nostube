@@ -26,9 +26,11 @@ export interface VideoVariant {
 }
 
 export interface HlsVariantStream {
-  url: string // Variant playlist URL (.m3u8)
-  dimension: string // e.g., "1280x720"
-  qualityLabel: string // e.g., "720p"
+  type?: 'video' | 'audio' // defaults to 'video' when absent
+  language?: string // ISO 639-1 language code, set for audio renditions
+  url: string // Variant/rendition playlist URL (.m3u8)
+  dimension: string // e.g., "1280x720"; '-' for audio-only renditions
+  qualityLabel: string // e.g., "720p"; language name for audio renditions
   sizeMB?: number // Total generated stream size in MB
   mimeType?: string // e.g., application/vnd.apple.mpegurl; codecs="avc1.64001f,mp4a.40.2"
   videoCodec?: string // e.g., "avc1.64001F" or "hvc1.1.6.L123.B0"

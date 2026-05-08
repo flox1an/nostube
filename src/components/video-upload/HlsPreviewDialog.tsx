@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Copy, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
+import { useAppContextSafe } from '@/hooks/useAppContext'
+import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
 
 interface HlsPreviewDialogProps {
   url: string | null
@@ -12,54 +14,106 @@ interface HlsPreviewDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+const LOG = '[HlsPreviewDialog]'
+
 export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+  const appContext = useAppContextSafe()
+  const blossomServers = appContext?.config.blossomServers ?? []
+  const cachingServers = appContext?.config.cachingServers ?? []
 
   useEffect(() => {
-    const video = videoRef.current
-    if (!video || !url || !open) return
+    console.log(LOG, 'effect triggered', {
+      url,
+      open,
+      hasVideoElement: !!videoElement,
+      blossomServers: blossomServers.map(s => s.url),
+      cachingServers: cachingServers.map(s => s.url),
+    })
+
+    const video = videoElement
+    if (!video || !url || !open) {
+      console.log(LOG, 'early return — guard failed', {
+        hasVideo: !!video,
+        hasUrl: !!url,
+        open,
+      })
+      return
+    }
 
     hlsRef.current?.destroy()
     hlsRef.current = null
     video.removeAttribute('src')
+    video.muted = true
     video.load()
     setTimeout(() => {
       setIsLoading(true)
       setError(null)
     }, 0)
 
-    if (Hls.isSupported()) {
+    const hlsSupported = Hls.isSupported()
+    const nativeHls = video.canPlayType('application/vnd.apple.mpegurl')
+    console.log(LOG, 'playback path check', { hlsSupported, nativeHls, url })
+
+    if (hlsSupported) {
+      console.log(LOG, 'using hls.js', { url })
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
         backBufferLength: 90,
+        loader: createBlossomHlsLoader({
+          blossomServers,
+          cachingServers,
+          masterUrl: url,
+        }),
       })
       hlsRef.current = hls
 
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        console.log(LOG, 'MEDIA_ATTACHED → loadSource', { url })
         hls.loadSource(url)
       })
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+        console.log(LOG, 'MANIFEST_PARSED → play()', {
+          levels: data.levels.length,
+          firstLevel: data.firstLevel,
+        })
         setIsLoading(false)
-        video.play().catch(() => {
+        video.play().catch(err => {
+          console.warn(LOG, 'play() rejected (autoplay policy?)', err)
           // Autoplay may be blocked; controls are visible for manual playback.
         })
       })
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error(LOG, 'HLS error', {
+          fatal: data.fatal,
+          type: data.type,
+          details: data.details,
+          url: data.url,
+          response: data.response,
+        })
+
         if (!data.fatal) return
 
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad()
+          setIsLoading(false)
+          const statusCode =
+            typeof data.response?.code === 'number' ? ` (HTTP ${data.response.code})` : ''
+          setError(`HLS playlist or segment could not be loaded: ${data.details}${statusCode}`)
+          hls.destroy()
+          hlsRef.current = null
           return
         }
 
         if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          console.log(LOG, 'attempting recoverMediaError()')
           hls.recoverMediaError()
           return
         }
@@ -70,29 +124,42 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
         hlsRef.current = null
       })
 
+      console.log(LOG, 'attachMedia()')
       hls.attachMedia(video)
       return () => {
+        console.log(LOG, 'cleanup: destroy hls')
         hls.destroy()
         hlsRef.current = null
         video.removeAttribute('src')
         video.load()
       }
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    } else if (nativeHls) {
       // Native HLS (Safari)
+      console.log(LOG, 'using native HLS (Safari)', { url })
       video.src = url
       video.load()
-      setTimeout(() => setIsLoading(false), 0)
+      const playNative = () => {
+        console.log(LOG, 'loadedmetadata → play() (native)')
+        setIsLoading(false)
+        video.play().catch(err => {
+          console.warn(LOG, 'native play() rejected', err)
+          // Autoplay may be blocked; controls are visible for manual playback.
+        })
+      }
+      video.addEventListener('loadedmetadata', playNative, { once: true })
       return () => {
+        video.removeEventListener('loadedmetadata', playNative)
         video.removeAttribute('src')
         video.load()
       }
     }
 
+    console.warn(LOG, 'HLS not supported in this browser')
     setTimeout(() => {
       setIsLoading(false)
       setError('HLS playback is not supported in this browser.')
     }, 0)
-  }, [url, open])
+  }, [url, open, blossomServers, cachingServers, videoElement])
 
   useEffect(() => {
     if (!open) {
@@ -119,8 +186,15 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
         </DialogHeader>
         <div className="space-y-3">
           <video
-            ref={videoRef}
+            key={url ?? 'empty'}
+            ref={node => {
+              videoRef.current = node
+              setVideoElement(node)
+            }}
             controls
+            autoPlay
+            muted
+            playsInline
             crossOrigin="anonymous"
             className="w-full rounded-md bg-black"
             style={{ aspectRatio: '16/9' }}

@@ -1,3 +1,4 @@
+import type { BlobDescriptor } from 'blossom-client-sdk'
 import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import {
   Copy,
   LucideBookUp,
   Loader2,
+  Music,
 } from 'lucide-react'
 import {
   Table,
@@ -75,6 +77,53 @@ function getVideoCodecLabel(videoCodec?: string): string {
   if (codecLower.startsWith('avc1') || codecLower.startsWith('avc3')) return 'H.264'
   if (codecLower.startsWith('hvc1') || codecLower.startsWith('hev1')) return 'HEVC'
   return videoCodec
+}
+
+function groupBlobsByServer(blobs: BlobDescriptor[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const blob of blobs) {
+    try {
+      const host = new URL(blob.url).hostname
+      counts.set(host, (counts.get(host) ?? 0) + 1)
+    } catch {
+      // ignore malformed URLs
+    }
+  }
+  return counts
+}
+
+function BlobServerBadge({
+  blobs,
+  icon,
+  label,
+}: {
+  blobs: BlobDescriptor[]
+  icon: React.ReactNode
+  label: string
+}) {
+  if (blobs.length === 0) return null
+  const byServer = groupBlobsByServer(blobs)
+  const serverCount = byServer.size
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1 cursor-help">
+          {icon}
+          <span className="text-xs font-medium">{serverCount}</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="space-y-1">
+          <p className="font-semibold text-xs">{label}</p>
+          {Array.from(byServer.entries()).map(([host, count]) => (
+            <p key={host} className="text-xs">
+              ✓ {host} ({count} blob{count !== 1 ? 's' : ''})
+            </p>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 export function VideoVariantsTable({
@@ -274,31 +323,47 @@ export function VideoVariantsTable({
             })}
             {hlsAssets.flatMap((asset, masterIndex) => {
               if (asset.streams.length === 0) return []
+              const videoStreams = asset.streams.filter(s => s.type !== 'audio')
+              const audioStreams = asset.streams.filter(s => s.type === 'audio')
               return [
                 <TableRow key={`hls-header-${masterIndex}`}>
                   <TableCell colSpan={7} className="bg-muted/30 font-semibold">
                     <div className="flex items-center justify-between">
                       <span>HLS Streams</span>
-                      {asset.master.url && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setHlsPreviewUrl(asset.master.url!)
-                            setIsHlsPreviewDialogOpen(true)
-                          }}
-                          className="h-8 w-8 p-0"
-                          title="Preview master playlist"
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        <TooltipProvider>
+                          <BlobServerBadge
+                            blobs={asset.master.uploadedBlobs}
+                            icon={<LucideBookUp className="h-4 w-4 text-green-500" />}
+                            label={t('upload.videoTable.uploadedTo')}
+                          />
+                          <BlobServerBadge
+                            blobs={asset.master.mirroredBlobs}
+                            icon={<Copy className="h-4 w-4 text-blue-500" />}
+                            label={t('upload.videoTable.mirroredTo')}
+                          />
+                        </TooltipProvider>
+                        {asset.master.url && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setHlsPreviewUrl(asset.master.url!)
+                              setIsHlsPreviewDialogOpen(true)
+                            }}
+                            className="h-8 w-8 p-0"
+                            title="Preview master playlist"
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>,
-                ...asset.streams.map((stream, streamIndex) => (
-                  <TableRow key={`hls-${masterIndex}-${streamIndex}`}>
+                ...videoStreams.map((stream, streamIndex) => (
+                  <TableRow key={`hls-${masterIndex}-v${streamIndex}`}>
                     <TableCell className="font-medium">{streamIndex + 1}</TableCell>
                     <TableCell>
                       <span className="inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
@@ -345,6 +410,50 @@ export function VideoVariantsTable({
                         }}
                         className="h-8 w-8 p-0"
                         title={t('upload.videoTable.preview')}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )),
+                ...audioStreams.map((stream, streamIndex) => (
+                  <TableRow key={`hls-${masterIndex}-a${streamIndex}`}>
+                    <TableCell className="font-medium">
+                      <Music className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-block px-2 py-1 text-xs font-semibold bg-muted text-muted-foreground rounded">
+                        {stream.qualityLabel}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {stream.language ?? '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {stream.sizeMB ? `${stream.sizeMB.toFixed(2)} MB` : '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">A:</span>
+                        <span className="truncate max-w-[100px]" title={stream.audioCodec}>
+                          {stream.audioCodec || '-'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">Audio Rendition</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setHlsPreviewUrl(stream.url)
+                          setIsHlsPreviewDialogOpen(true)
+                        }}
+                        className="h-8 w-8 p-0"
+                        title="Preview audio playlist"
                       >
                         <Play className="h-4 w-4" />
                       </Button>

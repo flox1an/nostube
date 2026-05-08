@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- HLS audio renditions are now tracked as separate streams throughout the upload pipeline: `HlsVariantStream` gains `type` and `language` fields; `browser-transcode-upload-manager` parses `#EXT-X-MEDIA:TYPE=AUDIO` entries from the master playlist, includes their segments in the upload segment grid, and pushes audio entries into `hlsVariants`; `VideoVariantsTable` renders audio rendition rows (with music icon, language column, "Audio Rendition" badge) separately from video variant rows
+
 ### Changed
 
 - Updated all dependencies to latest compatible versions: applesauce-\* 5.x→6.x, blossom-client-sdk 4.x→5.x, @hono/node-server 1.x→2.x, hls.js, nostr-tools, react, react-router-dom, tailwindcss, and many others; TypeScript stays on 5.9.x and Vite on 7.x due to transitive dependency constraints

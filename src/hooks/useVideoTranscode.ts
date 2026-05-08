@@ -170,9 +170,11 @@ export function useVideoTranscode(): UseVideoTranscodeReturn {
           )
         },
         signal
-      )
-
-      abortRef.current = null
+      ).finally(() => {
+        if (abortRef.current === controller) {
+          abortRef.current = null
+        }
+      })
 
       const hasResults = results instanceof Array ? results.length > 0 : results.size > 0
 

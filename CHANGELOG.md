@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated all dependencies to latest compatible versions: applesauce-* 5.x→6.x, blossom-client-sdk 4.x→5.x, @hono/node-server 1.x→2.x, hls.js, nostr-tools, react, react-router-dom, tailwindcss, and many others; TypeScript stays on 5.9.x and Vite on 7.x due to transitive dependency constraints
+- Updated all dependencies to latest compatible versions: applesauce-\* 5.x→6.x, blossom-client-sdk 4.x→5.x, @hono/node-server 1.x→2.x, hls.js, nostr-tools, react, react-router-dom, tailwindcss, and many others; TypeScript stays on 5.9.x and Vite on 7.x due to transitive dependency constraints
 - Migrated to applesauce v6 API: replaced `FactoryProvider`/`FactoryContext` with `ActionsProvider`/`ActionsContext` and `ActionRunner`; replaced `BlossomClient.createUploadAuth/createDeleteAuth` with standalone functions; updated `relayPool.req()` subscriber to handle `GroupReqMessage` (type-discriminated messages)
 - ESLint config now explicitly lists only classic react-hooks rules (`rules-of-hooks`, `exhaustive-deps`) instead of spreading `recommended`, avoiding unintended React Compiler rules from eslint-plugin-react-hooks v7.1.1
 - Vitest now excludes `.claude/` and `.worktrees/` directories to prevent picking up test files from git worktrees

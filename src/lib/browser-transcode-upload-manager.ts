@@ -187,15 +187,19 @@ async function uploadAndProcessFile(
   initialServers: string[],
   mirrorServers: string[],
   signer: Signer,
-  onProgress: (progress: ChunkedUploadProgress) => void
+  onProgress: (progress: ChunkedUploadProgress) => void,
+  signal?: AbortSignal
 ): Promise<VideoVariant> {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
   const uploadedBlobs = await uploadFileToMultipleServersChunked({
     file,
     servers: initialServers,
     signer,
     options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
     callbacks: { onProgress },
+    signal,
   })
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
   let mirroredBlobs: BlobDescriptor[] = []
   if (mirrorServers.length > 0 && uploadedBlobs.length > 0) {
@@ -246,8 +250,10 @@ async function uploadAndGetUrl(
   file: File,
   initialServers: string[],
   signer: Signer,
-  onProgress?: (progress: ChunkedUploadProgress) => void
+  onProgress?: (progress: ChunkedUploadProgress) => void,
+  signal?: AbortSignal
 ): Promise<{ url: string; blobs: BlobDescriptor[] }> {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
   const uploadFile = normaliseHlsFile(file)
   const blobs = await uploadFileToMultipleServersChunked({
     file: uploadFile,
@@ -256,7 +262,9 @@ async function uploadAndGetUrl(
     options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
     callbacks: { onProgress },
     skipExistenceCheck: true, // HLS files are freshly generated — skip the HEAD round-trip
+    signal,
   })
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
   // uploadFileToMultipleServersChunked now throws when all servers fail,
   // so an empty array here means servers is an empty list.
@@ -459,8 +467,15 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       let segmentsUploaded = 0
       await runWithConcurrency(
         segmentPaths.map(path => async () => {
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
           const hlsFile = transcodedFiles.get(path)!
-          const { url, blobs } = await uploadAndGetUrl(hlsFile, initialServers, signer)
+          const { url, blobs } = await uploadAndGetUrl(
+            hlsFile,
+            initialServers,
+            signer,
+            undefined,
+            controller.signal
+          )
           uploadedUrls.set(path, url)
           allHlsBlobs.push(...blobs)
           uploadedBytes += hlsFile.size
@@ -475,6 +490,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
 
       // Stage 2: Rewrite and upload variant playlists
       const rewrittenFiles = await rewriteHlsPlaylists(transcodedFiles, uploadedUrls)
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       const masterPlaylistForMetadata = rewrittenFiles.get('master.m3u8')
       const streamMap = masterPlaylistForMetadata
         ? parseMasterPlaylistStreams(await masterPlaylistForMetadata.text())
@@ -496,8 +512,15 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       let playlistsUploaded = 0
       await runWithConcurrency(
         playlistPaths.map(path => async () => {
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
           const playlistFile = rewrittenFiles.get(path)!
-          const { url, blobs } = await uploadAndGetUrl(playlistFile, initialServers, signer)
+          const { url, blobs } = await uploadAndGetUrl(
+            playlistFile,
+            initialServers,
+            signer,
+            undefined,
+            controller.signal
+          )
           uploadedUrls.set(path, url)
           allHlsBlobs.push(...blobs)
 
@@ -533,6 +556,7 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       )
 
       // Stage 3: Rewrite and upload master playlist
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       const masterFile = rewrittenFiles.get('master.m3u8')!
       const finalRewritten = await rewriteHlsPlaylists(
         new Map([['master.m3u8', masterFile]]),
@@ -542,7 +566,9 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
       const { url: masterUrl, blobs: masterBlobs } = await uploadAndGetUrl(
         finalMaster,
         initialServers,
-        signer
+        signer,
+        undefined,
+        controller.signal
       )
       allHlsBlobs.push(...masterBlobs)
       uploadedBytes += finalMaster.size
@@ -585,7 +611,8 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
               updatedAt: Date.now(),
               uploadProgress: progress,
             }))
-          }
+          },
+          controller.signal
         )
         uploadedVideos.push(video)
       }

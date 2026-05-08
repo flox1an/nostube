@@ -85,7 +85,6 @@ class BrowserTranscodeWorkerQueue {
 
       const abort = () => {
         this.cancel(jobId)
-        reject(new DOMException('Aborted', 'AbortError'))
       }
 
       if (signal.aborted) {
@@ -110,13 +109,20 @@ class BrowserTranscodeWorkerQueue {
   }
 
   cancel(jobId: string) {
+    const job = this.pendingJobs.get(jobId)
+
     if (this.activeJobId === jobId) {
       this.worker?.postMessage({ type: 'cancel', jobId })
+      this.worker?.terminate()
+      this.worker = null
+      job?.reject(new DOMException('Aborted', 'AbortError'))
+      this.finishJob(jobId)
       return
     }
 
     this.queuedJobIds = this.queuedJobIds.filter(id => id !== jobId)
     this.pendingJobs.delete(jobId)
+    job?.reject(new DOMException('Aborted', 'AbortError'))
   }
 
   private getWorker() {

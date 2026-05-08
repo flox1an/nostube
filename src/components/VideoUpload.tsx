@@ -24,11 +24,15 @@ import {
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
-import { deleteBlobsFromServers } from '@/lib/blossom-upload'
+import { deleteBlobsFromServers, type DeleteBlobsProgress } from '@/lib/blossom-upload'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 import { useToast } from '@/hooks/useToast'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
 import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
+import type {
+  BrowserTranscodePrimaryActionState,
+  BrowserTranscodeStepHandle,
+} from './video-upload/BrowserTranscodeStep'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -126,6 +130,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     handleBrowserTranscodeComplete,
     handleBrowserTranscodeSkip,
     handleStartBrowserTranscodeUpload,
+    handleCancelBrowserTranscodeUpload,
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
@@ -209,56 +214,64 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   }, [deleteDraft, draft.id, removeByDraftId, toast, t, onBack])
 
   // Handle delete draft with all uploaded media
-  const handleDeleteWithMedia = useCallback(async () => {
-    if (!user?.signer) {
-      throw new Error('User not logged in')
-    }
+  const handleDeleteWithMedia = useCallback(
+    async (onProgress: (progress: DeleteBlobsProgress) => void) => {
+      if (!user?.signer) {
+        throw new Error('User not logged in')
+      }
 
-    // Collect all blobs from videos and thumbnails
-    const allBlobs = [
-      ...draft.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
-      ...draft.thumbnailUploadInfo.uploadedBlobs,
-      ...draft.thumbnailUploadInfo.mirroredBlobs,
-    ]
+      // Collect all blobs from videos and thumbnails
+      const allBlobs = [
+        ...draft.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
+        ...draft.thumbnailUploadInfo.uploadedBlobs,
+        ...draft.thumbnailUploadInfo.mirroredBlobs,
+        ...(draft.subtitles ?? []).flatMap(subtitle => [
+          ...subtitle.uploadedBlobs,
+          ...subtitle.mirroredBlobs,
+        ]),
+      ]
 
-    // Delete all blobs from their servers
-    const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
-      allBlobs,
-      async eventDraft => await user.signer.signEvent(eventDraft)
-    )
+      // Delete all blobs from their servers
+      const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+        allBlobs,
+        async eventDraft => await user.signer.signEvent(eventDraft),
+        { concurrency: 3, onProgress }
+      )
 
-    // Delete the draft and related notifications
-    deleteDraft(draft.id)
-    removeByDraftId(draft.id)
+      // Delete the draft and related notifications
+      deleteDraft(draft.id)
+      removeByDraftId(draft.id)
 
-    // Show result toast
-    if (totalSuccessful > 0 && totalFailed === 0) {
-      toast({
-        title: t('upload.draft.deletedWithMedia'),
-        description: t('upload.draft.deletedWithMediaDescription', { count: totalSuccessful }),
-        duration: 3000,
-      })
-    } else if (totalSuccessful > 0 && totalFailed > 0) {
-      toast({
-        title: t('upload.draft.deletedPartial'),
-        description: t('upload.draft.deletedPartialDescription', {
-          successful: totalSuccessful,
-          failed: totalFailed,
-        }),
-        duration: 5000,
-      })
-    } else {
-      toast({
-        title: t('upload.draft.deletedMediaFailed'),
-        description: t('upload.draft.deletedMediaFailedDescription'),
-        variant: 'destructive',
-        duration: 5000,
-      })
-    }
+      // Show result toast
+      if (totalSuccessful > 0 && totalFailed === 0) {
+        toast({
+          title: t('upload.draft.deletedWithMedia'),
+          description: t('upload.draft.deletedWithMediaDescription', { count: totalSuccessful }),
+          duration: 3000,
+        })
+      } else if (totalSuccessful > 0 && totalFailed > 0) {
+        toast({
+          title: t('upload.draft.deletedPartial'),
+          description: t('upload.draft.deletedPartialDescription', {
+            successful: totalSuccessful,
+            failed: totalFailed,
+          }),
+          duration: 5000,
+        })
+      } else {
+        toast({
+          title: t('upload.draft.deletedMediaFailed'),
+          description: t('upload.draft.deletedMediaFailedDescription'),
+          variant: 'destructive',
+          duration: 5000,
+        })
+      }
 
-    // Navigate back to draft picker
-    if (onBack) onBack()
-  }, [user, draft, deleteDraft, removeByDraftId, toast, t, onBack])
+      // Navigate back to draft picker
+      if (onBack) onBack()
+    },
+    [user, draft, deleteDraft, removeByDraftId, toast, t, onBack]
+  )
 
   // Show toast when metadata is auto-populated
   useEffect(() => {
@@ -275,13 +288,13 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Only allow publishing from step 5
-    if (currentStep !== 5) {
+    // Only allow publishing from final step
+    if (currentStep !== 6) {
       if (import.meta.env.DEV) {
         console.warn(
           '[VideoUpload] Form submission blocked: currentStep is',
           currentStep,
-          'but must be 5 to publish. This may indicate an unexpected Enter key press or HMR issue.'
+          'but must be 6 to publish. This may indicate an unexpected Enter key press or HMR issue.'
         )
       }
       return
@@ -353,12 +366,15 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     const stepParam = searchParams.get('step')
     if (stepParam) {
       const parsed = parseInt(stepParam, 10)
-      if (parsed >= 1 && parsed <= 5) return parsed
+      if (parsed >= 1 && parsed <= 6) return parsed
     }
     return 1
-  }) // 1: Video Upload, 2: Form, 3: Thumbnail
+  }) // 1: Source, 2: Browser Transcode, 3: Details, 4: Thumbnail, 5: Subtitles, 6: Additional
   const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
   const [justArrivedAtStep5, setJustArrivedAtStep5] = useState(false)
+  const browserTranscodeRef = useRef<BrowserTranscodeStepHandle>(null)
+  const [browserTranscodePrimaryAction, setBrowserTranscodePrimaryAction] =
+    useState<BrowserTranscodePrimaryActionState | null>(null)
 
   // Local server lists for the BlossomOnboardingStep dialog editor.
   // Re-derived from config each time the dialog opens.
@@ -445,19 +461,41 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     onPersist,
   ])
 
+  // Move to transcode step as soon as local file processing starts.
+  useEffect(() => {
+    if (currentStep === 1 && inputMethod === 'file' && file && uploadState === 'transcoding') {
+      setCurrentStep(2)
+    }
+  }, [currentStep, file, inputMethod, uploadState])
+
   if (!user) {
     return <div>{t('upload.loginRequired')}</div>
   }
 
   // Validation for each step
-  const canProceedToStep2 = uploadInfo.videos.length > 0
-  const canProceedToStep3 = title.trim().length > 0
+  const canProceedToStep2 = inputMethod === 'file' ? !!file : uploadInfo.videos.length > 0
+  const canProceedToStep3 = uploadInfo.videos.length > 0
+  const canProceedToStep4 = title.trim().length > 0
   const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
   const hasThumbnailSet = thumbnailBlob || thumbnail || hasUploadedThumbnail
-  const canProceedToStep4 = hasThumbnailSet
+  const canProceedToStep5 = hasThumbnailSet
   const isTranscoding = transcodeStatus === 'transcoding' || transcodeStatus === 'mirroring'
   const canPublish =
     uploadInfo.videos.length > 0 && title.trim().length > 0 && hasThumbnailSet && !isTranscoding
+  const hasHlsVideo = uploadInfo.videos.some(
+    video =>
+      video.mimeType === 'application/vnd.apple.mpegurl' || (video.hlsVariants?.length ?? 0) > 0
+  )
+  const shouldShowBrowserTranscodeStep =
+    inputMethod === 'file' && (uploadState === 'transcoding' || !!browserTranscodeState)
+  const browserTranscodeActionVisible =
+    currentStep === 2 &&
+    shouldShowBrowserTranscodeStep &&
+    browserTranscodePrimaryAction?.visible === true
+  const nextButtonLabel =
+    browserTranscodeActionVisible && browserTranscodePrimaryAction
+      ? browserTranscodePrimaryAction.label
+      : t('upload.next', { defaultValue: 'Next' })
 
   return (
     <>
@@ -466,34 +504,40 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           <CardTitle className="flex items-center justify-between">
             <span>
               {currentStep === 1 && t('upload.step1.title', { defaultValue: 'Upload Video' })}
-              {currentStep === 2 && t('upload.step2.title', { defaultValue: 'Video Details' })}
-              {currentStep === 3 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
-              {currentStep === 4 && t('upload.step4.title', { defaultValue: 'Subtitles' })}
-              {currentStep === 5 &&
+              {currentStep === 2 &&
+                t('upload.step2Transcode.title', { defaultValue: 'Transcode Settings' })}
+              {currentStep === 3 && t('upload.step2.title', { defaultValue: 'Video Details' })}
+              {currentStep === 4 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
+              {currentStep === 5 && t('upload.step4.title', { defaultValue: 'Subtitles' })}
+              {currentStep === 6 &&
                 t('upload.step5.title', { defaultValue: 'Additional Settings' })}
             </span>
             <span className="text-sm text-muted-foreground font-normal">
-              {t('upload.stepIndicator', { current: currentStep, total: 5 })}
+              {t('upload.stepIndicator', { current: currentStep, total: 6 })}
             </span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
             {currentStep === 1 &&
-              t('upload.step1.description', {
-                defaultValue: 'Upload at least one video to continue',
+              t('upload.step1Source.description', {
+                defaultValue: 'Choose file upload or URL to start',
               })}
             {currentStep === 2 &&
+              t('upload.step2Transcode.description', {
+                defaultValue: 'Configure browser transcode and wait for processing to complete',
+              })}
+            {currentStep === 3 &&
               t('upload.step2.description', {
                 defaultValue: 'Fill in the required fields (* indicates required)',
               })}
-            {currentStep === 3 &&
+            {currentStep === 4 &&
               t('upload.step3.description', {
                 defaultValue: 'Select or upload a thumbnail for your video',
               })}
-            {currentStep === 4 &&
+            {currentStep === 5 &&
               t('upload.step4.description', {
                 defaultValue: 'Add subtitle files for accessibility (optional)',
               })}
-            {currentStep === 5 &&
+            {currentStep === 6 &&
               t('upload.step5.description', {
                 defaultValue: 'Configure optional settings for your video',
               })}
@@ -557,21 +601,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     />
                   )}
 
-                {/* Browser transcode step - shown after drop, before upload */}
-                {uploadState === 'transcoding' && inputMethod === 'file' && (
-                  <BrowserTranscodeStep
-                    file={file}
-                    backgroundState={browserTranscodeState}
-                    previewUrl={
-                      uploadInfo.videos.find(v => v.mimeType === 'application/vnd.apple.mpegurl')
-                        ?.url
-                    }
-                    onStartBackground={handleStartBrowserTranscodeUpload}
-                    onComplete={handleBrowserTranscodeComplete}
-                    onSkip={handleBrowserTranscodeSkip}
-                  />
-                )}
-
                 {/* Upload progress */}
                 {uploadState === 'uploading' && !uploadProgress && (
                   <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
@@ -599,7 +628,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     />
 
                     {/* DVM Transcode Alert - always shown when a DVM is available */}
-                    {uploadState === 'finished' && uploadInfo.videos[0] ? (
+                    {uploadState === 'finished' && uploadInfo.videos[0] && !hasHlsVideo ? (
                       <DvmTranscodeAlert
                         draftId={draft.id}
                         video={uploadInfo.videos[0]}
@@ -633,8 +662,96 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               </div>
             )}
 
-            {/* Step 2: Form Fields */}
+            {/* Step 2: Browser Transcode */}
             {currentStep === 2 && (
+              <div className="space-y-4">
+                {inputMethod === 'file' ? (
+                  <>
+                    {shouldShowBrowserTranscodeStep && (
+                      <BrowserTranscodeStep
+                        ref={browserTranscodeRef}
+                        file={file}
+                        backgroundState={browserTranscodeState}
+                        hidePrimaryAction
+                        onPrimaryActionChange={setBrowserTranscodePrimaryAction}
+                        onStartBackground={handleStartBrowserTranscodeUpload}
+                        onCancelBackground={handleCancelBrowserTranscodeUpload}
+                        onComplete={handleBrowserTranscodeComplete}
+                        onSkip={handleBrowserTranscodeSkip}
+                      />
+                    )}
+
+                    {/* Upload progress */}
+                    {uploadState === 'uploading' && !uploadProgress && (
+                      <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{t('upload.uploading')}</span>
+                      </div>
+                    )}
+                    {uploadProgress && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>{t('upload.uploading')}</span>
+                          <span>{Math.round(uploadProgress.percentage)}%</span>
+                        </div>
+                        <Progress value={uploadProgress.percentage} />
+                      </div>
+                    )}
+
+                    {/* Video variants table */}
+                    {uploadInfo.videos.length > 0 && (
+                      <div className="space-y-4">
+                        <VideoVariantsTable
+                          videos={uploadInfo.videos}
+                          onRemove={handleRemoveVideo}
+                          deletingIndex={deletingIndex}
+                        />
+
+                        {/* DVM Transcode Alert - always shown when a DVM is available */}
+                        {uploadState === 'finished' && uploadInfo.videos[0] && !hasHlsVideo ? (
+                          <DvmTranscodeAlert
+                            draftId={draft.id}
+                            video={uploadInfo.videos[0]}
+                            existingResolutions={uploadInfo.videos
+                              .map(v => v.qualityLabel)
+                              .filter((label): label is string => !!label)}
+                            onComplete={videoUploadState.handleAddTranscodedVideo}
+                            onStatusChange={setTranscodeStatus}
+                          />
+                        ) : null}
+
+                        {/* Add another quality button */}
+                        {uploadState === 'finished' && (
+                          <div className="border-2 border-dashed rounded-lg p-4">
+                            <div
+                              {...getRootPropsAdditional()}
+                              className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+                            >
+                              <input {...getInputPropsAdditional()} />
+                              <Button type="button" variant="outline" className="cursor-pointer">
+                                {t('upload.addAnotherQuality')}
+                              </Button>
+                              <p className="text-xs text-muted-foreground text-center">
+                                {t('upload.addAnotherQualityHint')}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">
+                    {t('upload.step2Transcode.notNeeded', {
+                      defaultValue: 'Browser transcode is only used for local file uploads.',
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Form Fields */}
+            {currentStep === 3 && (
               <div className="space-y-4">
                 <FormFields
                   title={title}
@@ -649,8 +766,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               </div>
             )}
 
-            {/* Step 3: Thumbnail */}
-            {currentStep === 3 && (
+            {/* Step 4: Thumbnail */}
+            {currentStep === 4 && (
               <div className="space-y-4">
                 <ThumbnailSection
                   thumbnailSource={thumbnailSource}
@@ -672,8 +789,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               </div>
             )}
 
-            {/* Step 4: Subtitles */}
-            {currentStep === 4 && (
+            {/* Step 5: Subtitles */}
+            {currentStep === 5 && (
               <div className="space-y-4">
                 <SubtitleSection
                   subtitles={subtitles}
@@ -685,8 +802,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               </div>
             )}
 
-            {/* Step 5: Additional Settings */}
-            {currentStep === 5 && (
+            {/* Step 6: Additional Settings */}
+            {currentStep === 6 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-6">
                   <PublishDateSection value={publishAt} onChange={setPublishAt} />
@@ -739,12 +856,17 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                   </>
                 )}
 
-                {currentStep < 5 ? (
+                {currentStep < 6 ? (
                   <Button
                     type="button"
                     onClick={() => {
-                      const nextStep = Math.min(5, currentStep + 1)
-                      if (nextStep === 5) {
+                      if (browserTranscodeActionVisible) {
+                        browserTranscodeRef.current?.start()
+                        return
+                      }
+
+                      const nextStep = Math.min(6, currentStep + 1)
+                      if (nextStep === 6) {
                         // Prevent accidental double-click from triggering publish
                         setJustArrivedAtStep5(true)
                         setTimeout(() => setJustArrivedAtStep5(false), 500)
@@ -753,15 +875,19 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                     }}
                     disabled={
                       (currentStep === 1 && !canProceedToStep2) ||
-                      (currentStep === 2 && !canProceedToStep3) ||
-                      (currentStep === 3 && !canProceedToStep4)
-                      // Step 4 (Subtitles) is optional - always can proceed
+                      (currentStep === 2 &&
+                        (browserTranscodeActionVisible
+                          ? browserTranscodePrimaryAction?.disabled
+                          : !canProceedToStep3)) ||
+                      (currentStep === 3 && !canProceedToStep4) ||
+                      (currentStep === 4 && !canProceedToStep5)
+                      // Step 5 (Subtitles) is optional - always can proceed
                     }
                   >
-                    <span className="hidden md:inline">
-                      {t('upload.next', { defaultValue: 'Next' })}
+                    <span className={browserTranscodeActionVisible ? 'inline' : 'hidden md:inline'}>
+                      {nextButtonLabel}
                     </span>
-                    <ChevronRight className="h-4 w-4 md:ml-2" />
+                    {!browserTranscodeActionVisible && <ChevronRight className="h-4 w-4 md:ml-2" />}
                   </Button>
                 ) : (
                   <PublishButton

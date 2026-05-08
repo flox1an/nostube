@@ -4,12 +4,13 @@ import type { VideoCodec } from 'mediabunny'
 export const BITRATE_CUTOFF_MBPS = 8
 export const PRIMARY_TARGET_HEIGHT = 1080
 export const FALLBACK_TARGET_HEIGHT = 480
-export const TARGET_1080P_BITRATE = 8_000_000
+export const BROWSER_TRANSCODE_1080P_BITRATE = 4_500_000
 export const TARGET_1080P_WIDTH = 1920
 export const TARGET_FPS = 30
 export const HLS_TARGET_DURATION = 4
-export const BPP_MEDIUM =
-  TARGET_1080P_BITRATE / (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
+export const BROWSER_TRANSCODE_AUDIO_BITRATE = 96_000
+export const BROWSER_TRANSCODE_BPP =
+  BROWSER_TRANSCODE_1080P_BITRATE / (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
 
 export interface TranscodeSourceMeta {
   width: number
@@ -260,16 +261,8 @@ export async function transcodeFile(
 ): Promise<File> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-  const {
-    Input,
-    Output,
-    Conversion,
-    ALL_FORMATS,
-    BlobSource,
-    Mp4OutputFormat,
-    BufferTarget,
-    QUALITY_MEDIUM,
-  } = await import('mediabunny')
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, Mp4OutputFormat, BufferTarget } =
+    await import('mediabunny')
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
   const { width: targetWidth, height: targetHeight } = computeTargetDimensions(
@@ -277,7 +270,7 @@ export async function transcodeFile(
     sourceMeta.height,
     variant.targetHeight
   )
-  const targetBitrate = Math.round(targetWidth * targetHeight * 30 * BPP_MEDIUM)
+  const targetBitrate = Math.round(targetWidth * targetHeight * TARGET_FPS * BROWSER_TRANSCODE_BPP)
 
   const createConversion = async (hardwareAcceleration: 'prefer-hardware' | 'no-preference') => {
     const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) })
@@ -297,7 +290,7 @@ export async function transcodeFile(
         keyFrameInterval: 2,
         forceTranscode: true,
       },
-      audio: { bitrate: QUALITY_MEDIUM },
+      audio: { bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE },
       tags: {},
     })
 
@@ -359,7 +352,6 @@ export async function transcodeToHls(
     CmafOutputFormat,
     BufferTarget,
     PathedTarget,
-    QUALITY_MEDIUM,
   } = await import('mediabunny')
 
   const outputFiles = new Map<string, File>()
@@ -395,7 +387,7 @@ export async function transcodeToHls(
         sourceMeta.height,
         v.targetHeight
       )
-      const bitrate = Math.round(width * height * 30 * BPP_MEDIUM)
+      const bitrate = Math.round(width * height * TARGET_FPS * BROWSER_TRANSCODE_BPP)
       return {
         width,
         height,
@@ -406,7 +398,7 @@ export async function transcodeToHls(
         forceTranscode: true,
       }
     }),
-    audio: { bitrate: QUALITY_MEDIUM },
+    audio: { bitrate: BROWSER_TRANSCODE_AUDIO_BITRATE },
   })
 
   if (!conversion.isValid) throw new Error('HLS conversion not valid')

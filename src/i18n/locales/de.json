@@ -452,7 +452,9 @@
         "descriptionWithMedia": "Dieser Entwurf enthält hochgeladene Videos und Miniaturansichten. Was möchten Sie tun?",
         "descriptionNoMedia": "Möchten Sie diesen Entwurf wirklich löschen?",
         "deleteDraftOnly": "Nur Entwurf löschen",
-        "deleteVideoAndThumbnails": "Entwurf + Medien löschen"
+        "deleteVideoAndThumbnails": "Entwurf + Medien löschen",
+        "mediaFileCount": "{{count}} Mediendateien werden gelöscht",
+        "deleteProgress": "{{completed}} von {{total}} Mediendateien werden gelöscht..."
       },
       "deletedWithMedia": "Entwurf und Medien gelöscht",
       "deletedWithMediaDescription": "{{count}} Dateien erfolgreich von Servern gelöscht",

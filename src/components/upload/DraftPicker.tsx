@@ -6,7 +6,7 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { DraftCard } from './DraftCard'
 import { DeleteDraftDialog } from './DeleteDraftDialog'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { deleteBlobsFromServers } from '@/lib/blossom-upload'
+import { deleteBlobsFromServers, type DeleteBlobsProgress } from '@/lib/blossom-upload'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 
 interface DraftPickerProps {
@@ -50,7 +50,7 @@ export function DraftPicker({
     }
   }
 
-  const handleDeleteWithMedia = async () => {
+  const handleDeleteWithMedia = async (onProgress: (progress: DeleteBlobsProgress) => void) => {
     if (!draftToDelete || !user?.signer) {
       throw new Error('No draft to delete or user not logged in')
     }
@@ -60,12 +60,17 @@ export function DraftPicker({
       ...draftToDelete.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
       ...draftToDelete.thumbnailUploadInfo.uploadedBlobs,
       ...draftToDelete.thumbnailUploadInfo.mirroredBlobs,
+      ...(draftToDelete.subtitles ?? []).flatMap(subtitle => [
+        ...subtitle.uploadedBlobs,
+        ...subtitle.mirroredBlobs,
+      ]),
     ]
 
     // Delete all blobs from their servers
     const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
       allBlobs,
-      async draft => await user.signer.signEvent(draft)
+      async draft => await user.signer.signEvent(draft),
+      { concurrency: 3, onProgress }
     )
 
     // Delete the draft and related notifications

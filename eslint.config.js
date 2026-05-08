@@ -8,7 +8,16 @@ import htmlParser from '@html-eslint/parser'
 import customRules from './eslint-rules/index.js'
 
 export default tseslint.config(
-  { ignores: ['dist', 'public/embed-*test*.html', '.worktrees', '.claude', 'src-tauri'] },
+  {
+    ignores: [
+      'dist',
+      'public/embed-*test*.html',
+      'docs/prototypes/*.html',
+      '.worktrees',
+      '.claude',
+      'src-tauri',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

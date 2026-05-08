@@ -24,6 +24,7 @@ import type {
   UploadDraft,
 } from '@/types/upload-draft'
 import {
+  cancelBrowserTranscodeUpload,
   clearBrowserTranscodeUpload,
   getBrowserTranscodeUploadDraft,
   startBrowserTranscodeUploadJob,
@@ -312,12 +313,17 @@ export function useVideoUpload(
       ) {
         setUploadState('transcoding')
       } else if (backgroundStatus === 'error' || backgroundStatus === 'cancelled') {
-        setUploadState(uploadInfo.videos.length > 0 ? 'finished' : 'initial')
+        if (backgroundStatus === 'cancelled') {
+          setBrowserTranscodeState(undefined)
+          clearBrowserTranscodeUpload(draftId)
+        }
+        setUploadState(uploadInfo.videos.length > 0 ? 'finished' : file ? 'transcoding' : 'initial')
+        setUploadProgress(null)
       }
     })
 
     return unsubscribe
-  }, [draftId, uploadInfo.videos.length])
+  }, [draftId, file, uploadInfo.videos.length])
 
   // Auto-populate form fields from extracted metadata
   const metadataAppliedRef = useRef(false)
@@ -621,6 +627,13 @@ export function useVideoUpload(
       mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
       signer,
     })
+  }
+
+  const handleCancelBrowserTranscodeUpload = () => {
+    cancelBrowserTranscodeUpload(draftId)
+    setBrowserTranscodeState(undefined)
+    setUploadState(uploadInfo.videos.length > 0 ? 'finished' : file ? 'transcoding' : 'initial')
+    setUploadProgress(null)
   }
 
   const uploadFileAndProcess = async (fileToUpload: File): Promise<VideoVariant> => {
@@ -1238,6 +1251,7 @@ export function useVideoUpload(
     handleBrowserTranscodeComplete,
     handleBrowserTranscodeSkip,
     handleStartBrowserTranscodeUpload,
+    handleCancelBrowserTranscodeUpload,
     handleReset,
     handleSubmit,
     handleAddVideo,

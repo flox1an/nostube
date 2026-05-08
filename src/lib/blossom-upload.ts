@@ -13,6 +13,18 @@ export interface UploadFileWithProgressProps {
   signer: Signer
 }
 
+export interface DeleteBlobsProgress {
+  completed: number
+  total: number
+  successful: number
+  failed: number
+}
+
+export interface DeleteBlobsOptions {
+  concurrency?: number
+  onProgress?: (progress: DeleteBlobsProgress) => void
+}
+
 /**
  * Custom implementation of blob mirroring without X-SHA-256 header
  * Makes a PUT request to /mirror endpoint with the blob URL to copy
@@ -120,6 +132,10 @@ export interface ChunkedUploadCallbacks {
   onChunkComplete?: (chunkIndex: number, totalChunks: number) => void
 }
 
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+}
+
 /**
  * Create a mock BlobDescriptor for existing files
  */
@@ -145,14 +161,20 @@ function createMockBlobDescriptor(
  * Check if a file already exists on a server by making a HEAD request
  * with the SHA256 hash in the URL or as a query parameter
  */
-export async function checkFileExists(server: string, fileHash: string): Promise<boolean> {
+export async function checkFileExists(
+  server: string,
+  fileHash: string,
+  signal?: AbortSignal
+): Promise<boolean> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
   try {
+    throwIfAborted(signal)
     // Try HEAD request with hash as path parameter
     const response = await fetch(`${normalizedServer}/${fileHash}`, {
       method: 'HEAD',
+      signal,
     })
 
     console.debug(`File existence check for ${normalizedServer}:`, response.status)
@@ -160,6 +182,7 @@ export async function checkFileExists(server: string, fileHash: string): Promise
     // 200 means file exists, 404 means it doesn't exist
     return response.status === 200
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     console.debug(`Failed to check file existence for ${server}:`, error)
     return false
   }
@@ -289,7 +312,7 @@ export function createFileChunks(file: File, chunkSize: number = 8 * 1024 * 1024
  * Safely calculate SHA256 hash of a blob using streaming approach
  * NEVER loads entire file into memory - uses Blob.slice() only
  */
-export async function calculateSHA256(blob: Blob): Promise<string> {
+export async function calculateSHA256(blob: Blob, signal?: AbortSignal): Promise<string> {
   if (import.meta.env.DEV) {
     console.log(
       `[SHA256] Starting hash calculation for file: ${(blob.size / (1024 * 1024)).toFixed(2)}MB`
@@ -298,7 +321,7 @@ export async function calculateSHA256(blob: Blob): Promise<string> {
   const startTime = Date.now()
 
   // Always use streaming approach to avoid memory issues
-  const hash = await calculateSHA256Streaming(blob)
+  const hash = await calculateSHA256Streaming(blob, signal)
 
   const duration = Date.now() - startTime
   if (import.meta.env.DEV) {
@@ -312,7 +335,7 @@ export async function calculateSHA256(blob: Blob): Promise<string> {
  * Calculate SHA256 hash using streaming approach with hash-wasm
  * Streams file in chunks to avoid loading entire file into memory
  */
-async function calculateSHA256Streaming(blob: Blob): Promise<string> {
+async function calculateSHA256Streaming(blob: Blob, signal?: AbortSignal): Promise<string> {
   const chunkSize = 20 * 1024 * 1024 // 20MB chunks
   if (import.meta.env.DEV) {
     console.log(
@@ -329,11 +352,13 @@ async function calculateSHA256Streaming(blob: Blob): Promise<string> {
     let chunkCount = 0
 
     while (offset < blob.size) {
+      throwIfAborted(signal)
       const end = Math.min(offset + chunkSize, blob.size)
       const chunk = blob.slice(offset, end)
 
       // Read chunk into memory
       const chunkBuffer = await chunk.arrayBuffer()
+      throwIfAborted(signal)
 
       // Update hash with chunk data
       hasher.update(new Uint8Array(chunkBuffer))
@@ -409,7 +434,8 @@ export async function uploadChunk(
   fileType: string,
   fileSize: number,
   offset: number,
-  authToken: string
+  authToken: string,
+  signal?: AbortSignal
 ): Promise<Response> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
@@ -421,6 +447,7 @@ export async function uploadChunk(
     )
   }
 
+  throwIfAborted(signal)
   const response = await fetch(`${normalizedServer}/upload`, {
     method: 'PATCH',
     headers: {
@@ -433,6 +460,7 @@ export async function uploadChunk(
       Authorization: `Nostr ${authToken}`,
     },
     body: chunk,
+    signal,
   })
 
   if (import.meta.env.DEV) {
@@ -463,13 +491,16 @@ export async function uploadFileChunked(
   signer: Signer,
   options: ChunkedUploadOptions = {},
   callbacks: ChunkedUploadCallbacks = {},
-  providedFileHash?: string
+  providedFileHash?: string,
+  signal?: AbortSignal
 ): Promise<BlobDescriptor> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
+  throwIfAborted(signal)
   // BUD-10: First negotiate capabilities via OPTIONS
   const capabilities = await getUploadCapabilities(normalizedServer)
+  throwIfAborted(signal)
 
   if (!capabilities.supportsPatch) {
     throw new Error(
@@ -506,23 +537,25 @@ export async function uploadFileChunked(
       console.log(
         `[UPLOAD] Calculating SHA256 for large file (${(file.size / (1024 * 1024)).toFixed(2)}MB) before chunked upload`
       )
-      fileHash = await calculateSHA256(file)
+      fileHash = await calculateSHA256(file, signal)
       console.log(`[UPLOAD] SHA256 calculation completed: ${fileHash.substring(0, 16)}...`)
     } else {
       console.log(`[UPLOAD] Starting SHA256 calculation...`)
-      fileHash = await calculateSHA256(file)
+      fileHash = await calculateSHA256(file, signal)
       console.log(`[UPLOAD] SHA256 calculation completed: ${fileHash.substring(0, 16)}...`)
     }
   }
 
   // Create chunks using Blob.slice() only - never loads entire file
   const chunks = createFileChunks(file, chunkSize)
+  throwIfAborted(signal)
   console.log(`[UPLOAD] Chunks created successfully: ${chunks.length} chunks`)
 
   // Create authorization using the hash instead of reading the file again
   // Include server tag for BUD-11 scoping
   console.log(`[UPLOAD] Creating authorization token...`)
   const authToken = await createChunkedUploadAuthWithHash(signer, fileHash, normalizedServer)
+  throwIfAborted(signal)
   console.log(`[UPLOAD] Authorization token created successfully`)
 
   try {
@@ -546,6 +579,7 @@ export async function uploadFileChunked(
     )
 
     for (let i = 0; i < chunksToUpload.length; i += maxConcurrentChunks) {
+      throwIfAborted(signal)
       const batch = chunksToUpload.slice(i, i + maxConcurrentChunks)
       console.log(
         `[UPLOAD] Processing batch ${Math.floor(i / maxConcurrentChunks) + 1}: chunks ${i + 1}-${Math.min(i + maxConcurrentChunks, chunksToUpload.length)}`
@@ -568,7 +602,8 @@ export async function uploadFileChunked(
           file.type,
           file.size,
           offset,
-          authToken
+          authToken,
+          signal
         )
 
         uploadedBytes += chunk.size
@@ -610,6 +645,7 @@ export async function uploadFileChunked(
 
     // Upload the last chunk after all previous chunks are complete
     if (lastChunk) {
+      throwIfAborted(signal)
       const lastChunkIndex = chunks.length - 1
       const lastOffset = lastChunkIndex * chunkSize
 
@@ -626,7 +662,8 @@ export async function uploadFileChunked(
         file.type,
         file.size,
         lastOffset,
-        authToken
+        authToken,
+        signal
       )
 
       uploadedBytes += lastChunk.size
@@ -670,6 +707,7 @@ export async function uploadFileChunked(
     console.error(`[UPLOAD] Upload failed: Final response status ${finalResponse.status}`)
     throw new Error('Chunked upload failed: No blob descriptor returned')
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     console.debug(`BUD-10 PATCH chunked upload failed for ${server}:`, error)
     // NO PUT fallback - BUD-10 requires PATCH-only uploads
     throw new Error(
@@ -690,6 +728,7 @@ export async function uploadFileToMultipleServersChunked({
   options = {},
   callbacks = {},
   skipExistenceCheck = false,
+  signal,
 }: {
   file: File
   servers: string[]
@@ -698,14 +737,16 @@ export async function uploadFileToMultipleServersChunked({
   callbacks?: ChunkedUploadCallbacks
   /** Skip the HEAD existence check — use when the file is known to be new (e.g. freshly generated HLS segments). */
   skipExistenceCheck?: boolean
+  signal?: AbortSignal
 }): Promise<BlobDescriptor[]> {
   // Calculate file hash once for all servers
-  const fileHash = await calculateSHA256(file)
+  const fileHash = await calculateSHA256(file, signal)
+  throwIfAborted(signal)
 
   const results = await Promise.allSettled(
     servers.map(async server => {
       if (!skipExistenceCheck) {
-        const fileExists = await checkFileExists(server, fileHash)
+        const fileExists = await checkFileExists(server, fileHash, signal)
         if (fileExists) {
           console.debug(`File already exists on ${server}, skipping upload`)
           return createMockBlobDescriptor(server, fileHash, file.size, file.type)
@@ -721,7 +762,7 @@ export async function uploadFileToMultipleServersChunked({
       if (useChunked) {
         try {
           console.debug(`File does not exist on ${server}, attempting chunked upload (large file)`)
-          return await uploadFileChunked(file, server, signer, options, callbacks, fileHash)
+          return await uploadFileChunked(file, server, signer, options, callbacks, fileHash, signal)
         } catch (chunkedError) {
           console.debug(
             `Chunked upload failed for ${server}, falling back to regular upload:`,
@@ -731,13 +772,14 @@ export async function uploadFileToMultipleServersChunked({
       }
 
       console.debug(`File does not exist on ${server}, uploading via regular PUT`)
-      return await uploadFileToSingleServer(file, server, signer, fileHash)
+      return await uploadFileToSingleServer(file, server, signer, fileHash, signal)
     })
   )
 
   const successful = results
     .filter((r): r is PromiseFulfilledResult<BlobDescriptor> => r.status === 'fulfilled')
     .map(r => r.value)
+  throwIfAborted(signal)
 
   // Surface the first real error when all servers fail so callers see why instead of
   // receiving a silent empty array.
@@ -764,18 +806,21 @@ async function uploadFileToSingleServer(
   file: File,
   server: string,
   signer: Signer,
-  fileHash: string
+  fileHash: string,
+  signal?: AbortSignal
 ): Promise<BlobDescriptor> {
   // Normalize server URL to prevent double slashes
   const normalizedServer = normalizeServerUrl(server)
 
   console.log(`[UPLOAD] Starting regular upload to ${normalizedServer}`)
 
+  throwIfAborted(signal)
   // Create auth with server tag for BUD-11 scoping
   const authEvent = await createUploadAuth(signer, fileHash, {
     servers: [extractServerDomain(normalizedServer)],
   })
   const authToken = encodeAuthToken(authEvent)
+  throwIfAborted(signal)
 
   // Upload file
   const response = await fetch(`${normalizedServer}/upload`, {
@@ -786,6 +831,7 @@ async function uploadFileToSingleServer(
       Authorization: `Nostr ${authToken}`,
     },
     body: file,
+    signal,
   })
 
   if (!response.ok) {
@@ -882,72 +928,88 @@ export async function deleteBlobFromMultipleServers(
   return { successful, failed }
 }
 
-/**
- * Delete blobs from their servers based on BlobDescriptor arrays
- * Groups blobs by hash to avoid duplicate deletions
- * @param blobs - Array of BlobDescriptor objects to delete
- * @param signer - Function to sign the delete authorization
- * @returns Object with totalSuccessful and totalFailed counts
- */
-export async function deleteBlobsFromServers(
-  blobs: BlobDescriptor[],
-  signer: Signer
-): Promise<{ totalSuccessful: number; totalFailed: number }> {
-  if (blobs.length === 0) {
-    return { totalSuccessful: 0, totalFailed: 0 }
-  }
-
-  // Group blobs by hash and collect unique servers for each
-  const blobsToDelete: { hash: string; servers: string[] }[] = []
+function getBlobDeletionTargets(blobs: BlobDescriptor[]): { hash: string; server: string }[] {
+  const targets = new Map<string, { hash: string; server: string }>()
 
   for (const blob of blobs) {
     try {
       const url = new URL(blob.url)
-      const serverUrl = `${url.protocol}//${url.host}`
-
-      const existing = blobsToDelete.find(b => b.hash === blob.sha256)
-      if (existing) {
-        if (!existing.servers.includes(serverUrl)) {
-          existing.servers.push(serverUrl)
-        }
-      } else {
-        blobsToDelete.push({
-          hash: blob.sha256,
-          servers: [serverUrl],
-        })
-      }
+      const server = `${url.protocol}//${url.host}`
+      const key = `${blob.sha256}:${server}`
+      targets.set(key, { hash: blob.sha256, server })
     } catch {
       // Skip invalid URLs
     }
   }
 
-  if (blobsToDelete.length === 0) {
+  return Array.from(targets.values())
+}
+
+export function countBlobDeletionTargets(blobs: BlobDescriptor[]): number {
+  return getBlobDeletionTargets(blobs).length
+}
+
+/**
+ * Delete blobs from their servers based on BlobDescriptor arrays
+ * Groups blobs by hash to avoid duplicate deletions
+ * @param blobs - Array of BlobDescriptor objects to delete
+ * @param signer - Function to sign the delete authorization
+ * @param options - Optional progress callback and concurrency limit
+ * @returns Object with totalSuccessful and totalFailed counts
+ */
+export async function deleteBlobsFromServers(
+  blobs: BlobDescriptor[],
+  signer: Signer,
+  options: DeleteBlobsOptions = {}
+): Promise<{ totalSuccessful: number; totalFailed: number }> {
+  if (blobs.length === 0) {
+    return { totalSuccessful: 0, totalFailed: 0 }
+  }
+
+  const targets = getBlobDeletionTargets(blobs)
+
+  if (targets.length === 0) {
     return { totalSuccessful: 0, totalFailed: 0 }
   }
 
   if (import.meta.env.DEV) {
-    console.log('[DELETE BLOBS] Deleting blobs:', blobsToDelete)
+    console.log('[DELETE BLOBS] Deleting blobs:', targets)
   }
 
-  // Delete all blobs from their servers
-  const deletionPromises = blobsToDelete.map(({ hash, servers }) =>
-    deleteBlobFromMultipleServers(servers, hash, signer)
-  )
-
-  const results = await Promise.allSettled(deletionPromises)
-
-  // Count successful deletions
   let totalSuccessful = 0
   let totalFailed = 0
+  let completed = 0
+  let nextIndex = 0
+  const concurrency = Math.max(1, options.concurrency ?? 3)
 
-  results.forEach(result => {
-    if (result.status === 'fulfilled') {
-      totalSuccessful += result.value.successful.length
-      totalFailed += result.value.failed.length
-    } else {
-      totalFailed++
+  const notifyProgress = () => {
+    options.onProgress?.({
+      completed,
+      total: targets.length,
+      successful: totalSuccessful,
+      failed: totalFailed,
+    })
+  }
+
+  notifyProgress()
+
+  async function worker() {
+    while (nextIndex < targets.length) {
+      const target = targets[nextIndex]
+      nextIndex += 1
+
+      const successful = await deleteBlobFromServer(target.server, target.hash, signer)
+      if (successful) {
+        totalSuccessful += 1
+      } else {
+        totalFailed += 1
+      }
+      completed += 1
+      notifyProgress()
     }
-  })
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, () => worker()))
 
   if (import.meta.env.DEV) {
     console.log(

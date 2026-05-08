@@ -464,7 +464,9 @@
         "descriptionWithMedia": "This draft contains uploaded videos and thumbnails. What would you like to do?",
         "descriptionNoMedia": "Are you sure you want to delete this draft?",
         "deleteDraftOnly": "Delete Draft Only",
-        "deleteVideoAndThumbnails": "Delete Draft + Media"
+        "deleteVideoAndThumbnails": "Delete Draft + Media",
+        "mediaFileCount": "{{count}} media files will be deleted",
+        "deleteProgress": "Deleting {{completed}} of {{total}} media files..."
       },
       "deletedWithMedia": "Draft and media deleted",
       "deletedWithMediaDescription": "Successfully deleted {{count}} files from servers",

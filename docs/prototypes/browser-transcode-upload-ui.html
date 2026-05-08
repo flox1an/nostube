@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Prototype for nostube browser transcode upload settings and progress screens."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="nostube Browser Transcode Upload UI Prototype" />
+    <meta
+      property="og:description"
+      content="Prototype for nostube browser transcode upload settings and progress screens."
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>nostube Browser Transcode Upload UI Prototype</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f5;
+        --panel: #ffffff;
+        --panel-subtle: #fbfbfa;
+        --text: #171717;
+        --muted: #666660;
+        --line: #deded8;
+        --line-strong: #c9c9c1;
+        --primary: #2563eb;
+        --primary-soft: #dbeafe;
+        --primary-ink: #1e3a8a;
+        --success: #16803c;
+        --success-soft: #dcfce7;
+        --warning: #9a5b00;
+        --warning-soft: #fff4d6;
+        --danger: #c02626;
+        --danger-soft: #fee2e2;
+        --shadow: 0 22px 60px rgba(15, 23, 42, 0.09);
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)), var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 32px auto;
+      }
+
+      .shell {
+        display: grid;
+        gap: 20px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .upload-card {
+        overflow: hidden;
+      }
+
+      .upload-header {
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, var(--panel), var(--panel-subtle));
+      }
+
+      .step-meta {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .step-pill {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--text);
+        background: var(--panel);
+        font-weight: 600;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 22px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .upload-header p {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+
+      .content {
+        padding: 18px;
+      }
+
+      .server-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-subtle);
+        margin-bottom: 16px;
+      }
+
+      .server-bar strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .server-bar span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .ghost-button,
+      .primary-button,
+      .quiet-button {
+        min-height: 36px;
+        border-radius: 7px;
+        border: 1px solid transparent;
+        padding: 0 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .primary-button {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+
+      .ghost-button {
+        background: var(--panel);
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
+      .quiet-button {
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+      }
+
+      .input-methods {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .method {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: var(--radius);
+        padding: 12px;
+        display: flex;
+        gap: 10px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .method[aria-pressed='true'] {
+        border-color: rgba(37, 99, 235, 0.55);
+        background: var(--primary-soft);
+      }
+
+      .method svg {
+        flex: 0 0 auto;
+      }
+
+      .method strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .method span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .dropzone {
+        border: 1.5px dashed var(--line-strong);
+        background: var(--panel-subtle);
+        border-radius: var(--radius);
+        padding: 18px;
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .file-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--radius);
+        background: #111827;
+        color: #fff;
+        display: grid;
+        place-items: center;
+      }
+
+      .dropzone h2 {
+        font-size: 15px;
+        line-height: 1.25;
+      }
+
+      .dropzone p {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .transcode-panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .transcode-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-subtle);
+      }
+
+      .title-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--success);
+        box-shadow: 0 0 0 3px var(--success-soft);
+      }
+
+      .transcode-top h2 {
+        font-size: 15px;
+        letter-spacing: 0;
+      }
+
+      .estimate {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        min-width: 0;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .estimate small {
+        color: inherit;
+        font-size: inherit;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .estimate strong {
+        color: var(--text);
+        font-size: 14px;
+        margin-top: 0;
+      }
+
+      .estimate span {
+        color: var(--muted);
+        font-size: inherit;
+        margin-top: 0;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .format-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .format-option {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 11px;
+        cursor: pointer;
+        background: var(--panel);
+      }
+
+      .format-option.active {
+        border-color: rgba(37, 99, 235, 0.58);
+        background: var(--primary-soft);
+      }
+
+      .format-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .format-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .format-label strong {
+        font-size: 14px;
+      }
+
+      .format-option p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+        line-height: 1.35;
+      }
+
+      .resolution-list {
+        display: grid;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .resolution-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 11px 12px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .resolution-row:last-child {
+        border-bottom: 0;
+      }
+
+      .resolution-row.original {
+        background: var(--panel-subtle);
+      }
+
+      .resolution-row input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--primary);
+      }
+
+      .resolution-main {
+        min-width: 0;
+      }
+
+      .resolution-main strong {
+        font-size: 14px;
+      }
+
+      .resolution-main p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .codec {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .option-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-top: 1px solid var(--line);
+        background: var(--panel-subtle);
+      }
+
+      .footer-spacer {
+        min-height: 1px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .screen {
+        display: block;
+      }
+
+      .screen + .screen {
+        margin-top: 20px;
+      }
+
+      .progress-card {
+        overflow: hidden;
+      }
+
+      .progress-rail {
+        display: grid;
+        gap: 12px;
+      }
+
+      .progress-item {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+      }
+
+      .step-circle {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line-strong);
+        color: var(--muted);
+        font-size: 12px;
+        background: var(--panel);
+      }
+
+      .progress-item.done .step-circle {
+        background: var(--success-soft);
+        border-color: rgba(22, 128, 60, 0.25);
+        color: var(--success);
+      }
+
+      .progress-item.active .step-circle {
+        background: var(--primary-soft);
+        border-color: rgba(37, 99, 235, 0.35);
+        color: var(--primary);
+      }
+
+      .progress-copy strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .progress-copy span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .meter {
+        height: 7px;
+        border-radius: 999px;
+        background: #e9e9e4;
+        overflow: hidden;
+        margin-top: 7px;
+      }
+
+      .meter div {
+        height: 100%;
+        width: var(--value, 50%);
+        background: linear-gradient(90deg, var(--primary), #14b8a6);
+        border-radius: inherit;
+      }
+
+      .variant-progress {
+        display: grid;
+        gap: 10px;
+      }
+
+      .mini-row {
+        display: grid;
+        gap: 5px;
+      }
+
+      .mini-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .progress-layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 18px;
+        padding: 18px;
+      }
+
+      .progress-panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .progress-panel h2 {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .progress-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-subtle);
+        padding: 10px;
+      }
+
+      .stat small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 18px;
+        margin-top: 3px;
+      }
+
+      .progress-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-top: 1px solid var(--line);
+        background: var(--panel-subtle);
+      }
+
+      .progress-footer p {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .done-card {
+        margin-top: 14px;
+        border: 1px solid rgba(22, 128, 60, 0.18);
+        border-radius: var(--radius);
+        background: var(--success-soft);
+        padding: 12px;
+      }
+
+      .done-card h3 {
+        font-size: 14px;
+      }
+
+      .done-card p {
+        color: #14532d;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .mobile-showcase {
+        margin-top: 28px;
+      }
+
+      .showcase-heading {
+        margin-bottom: 14px;
+      }
+
+      .showcase-heading h2 {
+        font-size: 18px;
+      }
+
+      .showcase-heading p {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .phone-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 390px));
+        gap: 18px;
+        align-items: start;
+      }
+
+      .phone-frame {
+        width: min(100%, 390px);
+        border: 1px solid var(--line-strong);
+        border-radius: 28px;
+        background: #111827;
+        padding: 10px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+      }
+
+      .phone-screen {
+        min-height: 720px;
+        overflow: hidden;
+        border-radius: 20px;
+        background: var(--bg);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .mobile-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .mobile-topbar strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .mobile-topbar span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .icon-button {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+      }
+
+      .mobile-body {
+        padding: 12px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .mobile-file {
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 10px;
+      }
+
+      .mobile-file .file-icon {
+        width: 46px;
+        height: 46px;
+      }
+
+      .mobile-file strong {
+        display: block;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-file span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .mobile-panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .mobile-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 11px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-subtle);
+      }
+
+      .mobile-panel-header h3 {
+        font-size: 14px;
+      }
+
+      .mobile-estimate {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .mobile-estimate strong {
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .mobile-section {
+        padding: 11px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .mobile-section:last-child {
+        border-bottom: 0;
+      }
+
+      .mobile-segment {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .mobile-segment button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--text);
+        font-weight: 650;
+      }
+
+      .mobile-segment button.active {
+        border-color: rgba(37, 99, 235, 0.45);
+        background: var(--primary-soft);
+        color: var(--primary-ink);
+      }
+
+      .mobile-options {
+        display: grid;
+        gap: 7px;
+      }
+
+      .mobile-option {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 9px;
+        background: var(--panel);
+      }
+
+      .mobile-option input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--primary);
+      }
+
+      .mobile-option strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .mobile-option span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 1px;
+      }
+
+      .mobile-sticky-action {
+        position: sticky;
+        bottom: 0;
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border-top: 1px solid var(--line);
+        background: rgba(247, 247, 245, 0.94);
+        backdrop-filter: blur(12px);
+      }
+
+      .mobile-sticky-action .primary-button,
+      .mobile-sticky-action .quiet-button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .mobile-progress-hero {
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .mobile-progress-hero h3 {
+        font-size: 16px;
+      }
+
+      .mobile-progress-hero p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      .mobile-big-percent {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .mobile-big-percent strong {
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      .mobile-big-percent span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .mobile-progress-list {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .mobile-progress-step {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      @media (max-width: 920px) {
+        .settings-grid,
+        .progress-layout,
+        .progress-summary,
+        .phone-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .transcode-top {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .dropzone {
+          grid-template-columns: 52px minmax(0, 1fr);
+        }
+
+        .dropzone .ghost-button {
+          grid-column: 1 / -1;
+          justify-content: center;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .page {
+          width: min(100vw - 20px, 1180px);
+          margin: 10px auto;
+        }
+
+        .input-methods,
+        .option-footer {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+
+        .actions {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .primary-button,
+        .ghost-button,
+        .quiet-button {
+          justify-content: center;
+        }
+
+        .server-bar {
+          align-items: stretch;
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="shell">
+        <section class="card upload-card screen" aria-labelledby="upload-title">
+          <header class="upload-header">
+            <div class="step-meta">
+              <span class="step-pill">Step 1 of 5</span>
+              <span>Video upload</span>
+            </div>
+            <h1 id="upload-title">Upload a video</h1>
+            <p>Upload at least one video to continue.</p>
+          </header>
+
+          <div class="content">
+            <div class="server-bar">
+              <div>
+                <strong>Blossom routing ready</strong>
+                <span>2 initial upload servers · 3 mirror servers</span>
+              </div>
+              <button class="ghost-button" type="button">Advanced</button>
+            </div>
+
+            <div class="input-methods" aria-label="Input method">
+              <button class="method" type="button" aria-pressed="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 15V3m0 0 4 4m-4-4L8 7M5 15v4h14v-4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span>
+                  <strong>File upload</strong>
+                  <span>Optimise locally, then upload.</span>
+                </span>
+              </button>
+              <button class="method" type="button" aria-pressed="false">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 0 0 7.07 7.07L13 19.07"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <span>
+                  <strong>Video URL</strong>
+                  <span>Attach an already hosted file.</span>
+                </span>
+              </button>
+            </div>
+
+            <div class="dropzone">
+              <div class="file-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M14 2v6h6M10 12l5 3-5 3v-6z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2>city-night-walk-4k.mov</h2>
+                <p>4K · 12:34 · 1.8 GB · 62 Mbps · HEVC</p>
+              </div>
+              <button class="ghost-button" type="button">Replace</button>
+            </div>
+
+            <div class="transcode-panel">
+              <div class="transcode-top">
+                <div>
+                  <div class="title-row">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <h2>Optimise for Nostr</h2>
+                  </div>
+                </div>
+                <div class="estimate">
+                  <small>Estimated output</small>
+                  <strong>438 MB</strong>
+                  <span>total for selected variants</span>
+                </div>
+              </div>
+
+              <div class="settings-grid">
+                <div>
+                  <h3 class="section-title">Output format</h3>
+                  <div class="format-stack">
+                    <label class="format-option">
+                      <input type="radio" name="format" value="mp4" />
+                      <span class="format-label">
+                        <strong>MP4</strong>
+                      </span>
+                      <p>Best when you want one compatible upload variant.</p>
+                    </label>
+                    <label class="format-option active">
+                      <input type="radio" name="format" value="hls" checked />
+                      <span class="format-label">
+                        <strong>HLS Adaptive</strong>
+                      </span>
+                      <p>
+                        Creates multiple qualities for smoother playback on slow relays and mobile.
+                      </p>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="section-title">Resolutions</h3>
+                  <div class="resolution-list">
+                    <label class="resolution-row original">
+                      <input type="checkbox" checked />
+                      <span class="resolution-main">
+                        <strong>Source / Original</strong>
+                        <p>
+                          Use the uploaded file as one HLS variant when the source codec can pass
+                          through.
+                        </p>
+                      </span>
+                      <span class="codec">2160p · HEVC</span>
+                    </label>
+                    <label class="resolution-row">
+                      <input type="checkbox" checked />
+                      <span class="resolution-main">
+                        <strong>1080p</strong>
+                        <p>Good desktop quality, higher processing cost.</p>
+                      </span>
+                      <span class="codec">HEVC</span>
+                    </label>
+                    <label class="resolution-row">
+                      <input type="checkbox" checked />
+                      <span class="resolution-main">
+                        <strong>720p</strong>
+                        <p>Balanced default for most feeds.</p>
+                      </span>
+                      <span class="codec">HEVC</span>
+                    </label>
+                    <label class="resolution-row">
+                      <input type="checkbox" checked />
+                      <span class="resolution-main">
+                        <strong>360p</strong>
+                        <p>Standard fallback resolution for weak connections.</p>
+                      </span>
+                      <span class="codec">H.264</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="option-footer">
+                <span class="footer-spacer" aria-hidden="true"></span>
+                <div class="actions">
+                  <button class="quiet-button" type="button">Upload original only</button>
+                  <button class="primary-button" type="button">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="m13 2-2 8h7l-7 12 2-8H6z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Generate HLS & Upload
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card progress-card screen" aria-labelledby="progress-title">
+          <header class="upload-header">
+            <div class="step-meta">
+              <span class="step-pill">Screen 2</span>
+              <span>After Generate HLS & Upload</span>
+            </div>
+            <h1 id="progress-title">Optimising and uploading</h1>
+            <p>
+              Dedicated progress view while nostube generates and uploads the selected variants.
+            </p>
+          </header>
+
+          <div class="progress-layout">
+            <div class="progress-panel">
+              <h2>Background progress</h2>
+              <div class="progress-rail">
+                <div class="progress-item done">
+                  <div class="step-circle">✓</div>
+                  <div class="progress-copy">
+                    <strong>Analysed source</strong>
+                    <span>3840×2160 · HEVC · 1.8 GB</span>
+                  </div>
+                </div>
+                <div class="progress-item active">
+                  <div class="step-circle">2</div>
+                  <div class="progress-copy">
+                    <strong>Optimising video</strong>
+                    <span>Estimated time remaining: 04:20</span>
+                    <div class="meter" aria-label="Overall transcode progress">
+                      <div style="--value: 64%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="progress-item">
+                  <div class="step-circle">3</div>
+                  <div class="progress-copy">
+                    <strong>Uploading files</strong>
+                    <span>Starts automatically after encoding.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="progress-summary" aria-label="Progress summary">
+                <div class="stat">
+                  <small>Overall</small>
+                  <strong>64%</strong>
+                </div>
+                <div class="stat">
+                  <small>Output</small>
+                  <strong>HLS</strong>
+                </div>
+                <div class="stat">
+                  <small>Files</small>
+                  <strong>1 / 4</strong>
+                </div>
+              </div>
+
+              <div class="progress-panel">
+                <h2>Variant progress</h2>
+                <div class="variant-progress">
+                  <div class="mini-row">
+                    <div class="mini-label">
+                      <span>Source / Original 2160p</span><strong>Ready</strong>
+                    </div>
+                    <div class="meter"><div style="--value: 100%"></div></div>
+                  </div>
+                  <div class="mini-row">
+                    <div class="mini-label"><span>1080p HEVC</span><strong>Done</strong></div>
+                    <div class="meter"><div style="--value: 100%"></div></div>
+                  </div>
+                  <div class="mini-row">
+                    <div class="mini-label"><span>720p HEVC</span><strong>64%</strong></div>
+                    <div class="meter"><div style="--value: 64%"></div></div>
+                  </div>
+                  <div class="mini-row">
+                    <div class="mini-label"><span>360p H.264</span><strong>Waiting</strong></div>
+                    <div class="meter"><div style="--value: 0%"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="done-card">
+                <h3>Next step appears after upload completes</h3>
+                <p>
+                  When the HLS playlist is uploaded, this screen can offer Preview HLS and Continue
+                  to metadata.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="progress-footer">
+            <p>
+              This is the dedicated screen after Generate HLS & Upload. Settings are no longer
+              editable here.
+            </p>
+            <div class="actions">
+              <button class="ghost-button" type="button">Cancel</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="mobile-showcase" aria-labelledby="mobile-title">
+        <div class="showcase-heading">
+          <h2 id="mobile-title">Mobile screen drafts</h2>
+          <p>Same upload flow, shaped for a narrow viewport with a sticky primary action.</p>
+        </div>
+
+        <div class="phone-grid">
+          <article class="phone-frame" aria-labelledby="mobile-settings-title">
+            <div class="phone-screen">
+              <div class="mobile-topbar">
+                <button class="icon-button" type="button" aria-label="Back">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="m15 18-6-6 6-6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+                <div>
+                  <strong id="mobile-settings-title">Video upload</strong>
+                  <span>Step 1 · Optimise locally</span>
+                </div>
+                <button class="icon-button" type="button" aria-label="Advanced">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6l-.14.14a2 2 0 0 1-3.72-1.05V19a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 13a1.7 1.7 0 0 0-.6-1l-.14-.14A2 2 0 0 1 4.91 8.14H5a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 11 4.6a1.7 1.7 0 0 0 1-.6l.14-.14a2 2 0 0 1 3.72 1.05V5a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 11c.1.35.1.65 0 1Z"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="mobile-body">
+                <div class="mobile-file">
+                  <div class="file-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <path
+                        d="M14 2v6h6M10 12l5 3-5 3v-6z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>city-night-walk-4k.mov</strong>
+                    <span>4K · 12:34 · 1.8 GB · HEVC</span>
+                  </div>
+                </div>
+
+                <div class="mobile-panel">
+                  <div class="mobile-panel-header">
+                    <h3>Optimise for Nostr</h3>
+                    <div class="mobile-estimate"><strong>438 MB</strong> est.</div>
+                  </div>
+                  <div class="mobile-section">
+                    <h3 class="section-title">Output format</h3>
+                    <div class="mobile-segment" aria-label="Output format">
+                      <button type="button">MP4</button>
+                      <button class="active" type="button">HLS</button>
+                    </div>
+                  </div>
+                  <div class="mobile-section">
+                    <h3 class="section-title">Resolutions</h3>
+                    <div class="mobile-options">
+                      <label class="mobile-option">
+                        <input type="checkbox" checked />
+                        <span>
+                          <strong>Source / Original</strong>
+                          <span>2160p · HEVC passthrough</span>
+                        </span>
+                        <span class="codec">Ready</span>
+                      </label>
+                      <label class="mobile-option">
+                        <input type="checkbox" checked />
+                        <span>
+                          <strong>1080p</strong>
+                          <span>High quality desktop</span>
+                        </span>
+                        <span class="codec">HEVC</span>
+                      </label>
+                      <label class="mobile-option">
+                        <input type="checkbox" checked />
+                        <span>
+                          <strong>720p</strong>
+                          <span>Balanced default</span>
+                        </span>
+                        <span class="codec">HEVC</span>
+                      </label>
+                      <label class="mobile-option">
+                        <input type="checkbox" checked />
+                        <span>
+                          <strong>360p</strong>
+                          <span>Fallback stream</span>
+                        </span>
+                        <span class="codec">H.264</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-sticky-action">
+                <button class="primary-button" type="button">Generate HLS & Upload</button>
+                <button class="quiet-button" type="button">Upload original only</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="phone-frame" aria-labelledby="mobile-progress-title">
+            <div class="phone-screen">
+              <div class="mobile-topbar">
+                <button class="icon-button" type="button" aria-label="Back">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="m15 18-6-6 6-6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+                <div>
+                  <strong id="mobile-progress-title">Optimising</strong>
+                  <span>Screen 2 · Settings locked</span>
+                </div>
+                <button class="icon-button" type="button" aria-label="Cancel">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M18 6 6 18M6 6l12 12"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="mobile-progress-hero">
+                <h3>Generating HLS & uploading</h3>
+                <p>nostube is creating the selected variants in the background.</p>
+                <div class="mobile-big-percent">
+                  <strong>64%</strong>
+                  <span>about 04:20 left</span>
+                </div>
+                <div class="meter" aria-label="Mobile total progress">
+                  <div style="--value: 64%"></div>
+                </div>
+              </div>
+
+              <div class="mobile-progress-list">
+                <div class="mobile-progress-step">
+                  <div class="step-circle">✓</div>
+                  <div class="progress-copy">
+                    <strong>Analysed source</strong>
+                    <span>3840×2160 · HEVC · 1.8 GB</span>
+                  </div>
+                </div>
+                <div class="mobile-progress-step">
+                  <div class="step-circle">2</div>
+                  <div class="progress-copy">
+                    <strong>Optimising video</strong>
+                    <span>720p HEVC currently processing</span>
+                  </div>
+                </div>
+                <div class="mobile-progress-step">
+                  <div class="step-circle">3</div>
+                  <div class="progress-copy">
+                    <strong>Uploading files</strong>
+                    <span>Starts automatically after encoding</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-body">
+                <div class="mobile-panel">
+                  <div class="mobile-panel-header">
+                    <h3>Variant progress</h3>
+                    <div class="mobile-estimate">1 / 4 files</div>
+                  </div>
+                  <div class="mobile-section">
+                    <div class="variant-progress">
+                      <div class="mini-row">
+                        <div class="mini-label">
+                          <span>Source / Original 2160p</span><strong>Ready</strong>
+                        </div>
+                        <div class="meter"><div style="--value: 100%"></div></div>
+                      </div>
+                      <div class="mini-row">
+                        <div class="mini-label"><span>1080p HEVC</span><strong>Done</strong></div>
+                        <div class="meter"><div style="--value: 100%"></div></div>
+                      </div>
+                      <div class="mini-row">
+                        <div class="mini-label"><span>720p HEVC</span><strong>64%</strong></div>
+                        <div class="meter"><div style="--value: 64%"></div></div>
+                      </div>
+                      <div class="mini-row">
+                        <div class="mini-label">
+                          <span>360p H.264</span><strong>Waiting</strong>
+                        </div>
+                        <div class="meter"><div style="--value: 0%"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-sticky-action">
+                <button class="ghost-button" type="button">Cancel</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const formatOptions = [...document.querySelectorAll('.format-option')]
+      formatOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          formatOptions.forEach(item => item.classList.remove('active'))
+          option.classList.add('active')
+        })
+      })
+    </script>
+  </body>
+</html>

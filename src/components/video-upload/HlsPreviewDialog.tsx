@@ -180,7 +180,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-[90vw] max-w-5xl">
         <DialogHeader>
           <DialogTitle>HLS Preview</DialogTitle>
         </DialogHeader>

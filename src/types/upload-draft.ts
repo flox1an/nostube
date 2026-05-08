@@ -49,6 +49,21 @@ export interface BrowserTranscodeState {
     totalChunks: number
     speedMBps?: number
   }
+  mirrorProgress?: {
+    mirrored: number
+    total: number
+    percentage: number
+  }
+  segmentStates?: Array<{
+    streamLabel: string
+    serverLabel?: string // set only when uploading to multiple servers
+    statuses: Array<'pending' | 'uploading' | 'done' | 'error'>
+  }>
+  mirrorSegmentStates?: Array<{
+    streamLabel: string
+    serverLabel?: string
+    statuses: Array<'pending' | 'mirroring' | 'done' | 'error'>
+  }>
   message?: string
   error?: string
 }

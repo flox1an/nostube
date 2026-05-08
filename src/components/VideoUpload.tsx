@@ -640,8 +640,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                       />
                     ) : null}
 
-                    {/* Add another quality button */}
-                    {uploadState === 'finished' && (
+                    {/* Add another quality button — hidden for HLS streams */}
+                    {uploadState === 'finished' && !hasHlsVideo && (
                       <div className="border-2 border-dashed rounded-lg p-4">
                         <div
                           {...getRootPropsAdditional()}
@@ -720,8 +720,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                           />
                         ) : null}
 
-                        {/* Add another quality button */}
-                        {uploadState === 'finished' && (
+                        {/* Add another quality button — hidden for HLS streams */}
+                        {uploadState === 'finished' && !hasHlsVideo && (
                           <div className="border-2 border-dashed rounded-lg p-4">
                             <div
                               {...getRootPropsAdditional()}
@@ -828,7 +828,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 type="button"
                 variant="outline"
                 onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || currentStep === 2}
               >
                 <ChevronLeft className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">

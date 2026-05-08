@@ -19,6 +19,7 @@ import {
 } from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
+import { HlsSegmentGrid } from '@/components/hls-segment-grid'
 import { Layers, Loader2, Upload, X, Zap } from 'lucide-react'
 
 interface BrowserTranscodeStepProps {
@@ -437,6 +438,9 @@ export const BrowserTranscodeStep = forwardRef<
         description={shouldShowBackgroundMessage ? backgroundState.message : undefined}
         variants={backgroundState.variants}
         uploadProgress={backgroundState.uploadProgress}
+        mirrorProgress={backgroundState.mirrorProgress}
+        segmentStates={backgroundState.segmentStates}
+        mirrorSegmentStates={backgroundState.mirrorSegmentStates}
         etaSeconds={backgroundEtaSeconds}
         error={backgroundState.error}
         canCancel={backgroundState.status !== 'error' && backgroundState.status !== 'cancelled'}
@@ -762,6 +766,9 @@ interface TranscodeProgressScreenProps {
   description?: string
   variants: ProgressVariant[]
   uploadProgress?: BrowserTranscodeState['uploadProgress']
+  mirrorProgress?: BrowserTranscodeState['mirrorProgress']
+  segmentStates?: BrowserTranscodeState['segmentStates']
+  mirrorSegmentStates?: BrowserTranscodeState['mirrorSegmentStates']
   etaSeconds?: number
   error?: string
   canCancel: boolean
@@ -773,6 +780,9 @@ function TranscodeProgressScreen({
   description,
   variants,
   uploadProgress,
+  mirrorProgress,
+  segmentStates,
+  mirrorSegmentStates,
   etaSeconds,
   error,
   canCancel,
@@ -791,12 +801,15 @@ function TranscodeProgressScreen({
             100
         )
   const uploadPercent = uploadProgress?.percentage ?? 0
+  // When both a transcode and an upload phase exist, split the overall bar 50/50
+  // so the bar never jumps backward: transcode fills 0→50%, upload fills 50→100%.
+  // If there's only an upload phase (no variants), use the full 0→100% range.
   const overallPercent =
-    uploadProgress !== undefined
-      ? variants.length === 0
-        ? uploadPercent
-        : Math.round((transcodePercent + uploadPercent) / 2)
-      : transcodePercent
+    variants.length === 0
+      ? uploadPercent
+      : uploadProgress !== undefined
+        ? Math.round(transcodePercent / 2 + uploadPercent / 2)
+        : Math.round(transcodePercent / 2)
 
   return (
     <div className="space-y-4">
@@ -822,12 +835,9 @@ function TranscodeProgressScreen({
         <p className="text-xs leading-tight text-muted-foreground sm:text-sm">{description}</p>
       )}
 
-      {variants.length > 0 && (
+      {variants.length > 0 && uploadProgress === undefined && !segmentStates && (
         <div className="space-y-2">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs font-medium sm:text-sm">Transcode variants</p>
-            <span className="text-xs text-muted-foreground tabular-nums">{transcodePercent}%</span>
-          </div>
+          <p className="text-xs font-medium sm:text-sm">Transcode variants</p>
           {variants.map(variant => (
             <div key={variant.label} className="space-y-1 border-b py-2 last:border-b-0">
               <div className="flex items-start justify-between gap-2 text-xs sm:text-sm">
@@ -850,7 +860,25 @@ function TranscodeProgressScreen({
         </div>
       )}
 
-      {uploadProgress !== undefined && (
+      {/* Upload progress — segment grid for HLS, progress bar for regular files */}
+      {segmentStates && segmentStates.length > 0 ? (
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium sm:text-sm">Upload progress</p>
+            {uploadProgress !== undefined && (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {uploadProgress.percentage}%
+              </span>
+            )}
+          </div>
+          <HlsSegmentGrid
+            streams={segmentStates.map(s => ({
+              label: s.serverLabel ? `${s.streamLabel} · ${s.serverLabel}` : s.streamLabel,
+              statuses: s.statuses,
+            }))}
+          />
+        </div>
+      ) : uploadProgress !== undefined ? (
         <div className="space-y-2 border-t pt-4">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-xs font-medium sm:text-sm">Upload progress</p>
@@ -873,7 +901,40 @@ function TranscodeProgressScreen({
             </span>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {/* Mirror progress — segment grid for HLS, progress bar otherwise */}
+      {mirrorSegmentStates && mirrorSegmentStates.length > 0 ? (
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium sm:text-sm">Mirror progress</p>
+            {mirrorProgress !== undefined && (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {mirrorProgress.percentage}%
+              </span>
+            )}
+          </div>
+          <HlsSegmentGrid
+            streams={mirrorSegmentStates.map(s => ({
+              label: s.streamLabel,
+              statuses: s.statuses,
+            }))}
+          />
+        </div>
+      ) : mirrorProgress !== undefined ? (
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium sm:text-sm">Mirror progress</p>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {mirrorProgress.percentage}%
+            </span>
+          </div>
+          <Progress value={mirrorProgress.percentage} className="h-1.5" />
+          <p className="text-[11px] text-muted-foreground sm:text-xs">
+            {mirrorProgress.mirrored}/{mirrorProgress.total} blobs mirrored
+          </p>
+        </div>
+      ) : null}
 
       {etaSeconds !== undefined && (
         <p className="text-[11px] leading-tight text-muted-foreground sm:text-xs">

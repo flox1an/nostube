@@ -18,7 +18,7 @@ interface UseControlsVisibilityResult {
 export function useControlsVisibility({
   isPlaying,
   isSeeking = false,
-  hideDelay = 3000,
+  hideDelay = 1000,
 }: UseControlsVisibilityProps): UseControlsVisibilityResult {
   const [isInteracting, setIsInteracting] = useState(true)
   const timeoutRef = useRef<number | null>(null)

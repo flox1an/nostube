@@ -20,7 +20,6 @@ import {
   Captions,
   ChevronRight,
   Radio,
-  FileVideo,
   Film,
   Layers,
   Package,
@@ -29,6 +28,8 @@ import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { HlsSegmentGrid } from '@/components/hls-segment-grid'
+import type { SegmentStatus } from '@/components/hls-segment-grid'
 import { useAppContext } from '@/hooks/useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
@@ -212,6 +213,112 @@ function useNodeCheck(url: string | null, configServers: BlossomServer[]) {
   return { check, serverChecks }
 }
 
+// ── Segment availability hook ─────────────────────────────────────────────────
+
+/** HEAD-checks a list of segment URLs with max 6 concurrent requests. */
+function useSegmentAvailability(segmentUrls: string[], enabled: boolean) {
+  const [statuses, setStatuses] = useState<SegmentStatus[]>([])
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    if (!enabled || segmentUrls.length === 0) return
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setStatuses(segmentUrls.map(() => 'pending'))
+
+    let active = 0
+    const MAX = 6
+    let idx = 0
+
+    const checkNext = () => {
+      while (active < MAX && idx < segmentUrls.length) {
+        const i = idx++
+        active++
+        setStatuses(prev => prev.map((s, j) => (j === i ? 'checking' : s)))
+        fetch(segmentUrls[i], { method: 'HEAD', signal: controller.signal })
+          .then(r => {
+            setStatuses(prev =>
+              prev.map((s, j) => (j === i ? (r.ok ? 'available' : 'unavailable') : s))
+            )
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) {
+              setStatuses(prev => prev.map((s, j) => (j === i ? 'unavailable' : s)))
+            }
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) {
+              active--
+              checkNext()
+            }
+          })
+      }
+    }
+    checkNext()
+
+    return () => controller.abort()
+  }, [segmentUrls, enabled])
+
+  return statuses
+}
+
+// ── Variant segment content (init items + availability grid) ─────────────────
+
+function VariantSegmentContent({
+  stream,
+  nodeClass,
+  shortUrl,
+  onSelectUrl,
+}: {
+  stream: HlsStreamInfo
+  nodeClass: (url: string) => string
+  shortUrl: (url: string) => string
+  onSelectUrl: (url: string) => void
+}) {
+  const nonInitSegments = stream.segments.filter(s => !s.isInit)
+  const segmentUrls = useMemo(() => nonInitSegments.map(s => s.url), [nonInitSegments])
+  const availabilityStatuses = useSegmentAvailability(
+    segmentUrls,
+    stream.loadState === 'done' && segmentUrls.length > 0
+  )
+
+  return (
+    <div className="ml-5 space-y-1.5 mt-0.5">
+      {/* Init file(s) — keep clickable */}
+      {stream.segments
+        .filter(s => s.isInit)
+        .map((seg, i) => (
+          <div key={i} className={nodeClass(seg.url)} onClick={() => onSelectUrl(seg.url)}>
+            <Package className="w-3 h-3 shrink-0 text-orange-400" />
+            <span className="truncate font-mono">init · {shortUrl(seg.url)}</span>
+          </div>
+        ))}
+
+      {/* Segment availability grid */}
+      {nonInitSegments.length > 0 && (
+        <div className="px-1 pb-1">
+          <HlsSegmentGrid
+            streams={[
+              {
+                label: `${nonInitSegments.length} segments`,
+                statuses:
+                  availabilityStatuses.length > 0
+                    ? availabilityStatuses
+                    : nonInitSegments.map(() => 'pending' as const),
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      {stream.loadState === 'error' && <div className="px-2 text-red-500">Failed to fetch</div>}
+    </div>
+  )
+}
+
 // ── HLS tree component ────────────────────────────────────────────────────────
 
 // Renders only the tree (left panel). selectedUrl and onSelectUrl are controlled externally.
@@ -328,55 +435,12 @@ function HlsStreamTree({
             </div>
 
             <CollapsibleContent>
-              <div className="ml-5 space-y-0.5 mt-0.5">
-                {stream.segments
-                  .filter(s => s.isInit)
-                  .map((seg, i) => (
-                    <div
-                      key={i}
-                      className={nodeClass(seg.url)}
-                      onClick={() => onSelectUrl(seg.url)}
-                    >
-                      <Package className="w-3 h-3 shrink-0 text-orange-400" />
-                      <span className="truncate font-mono">init · {shortUrl(seg.url)}</span>
-                    </div>
-                  ))}
-                {stream.segments.filter(s => !s.isInit).length > 0 && (
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <button className={`${nodeClass('')} w-full text-left`}>
-                        <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90 shrink-0" />
-                        <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
-                        <span>{stream.segments.filter(s => !s.isInit).length} segments</span>
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="ml-4 space-y-0.5 max-h-48 overflow-y-auto">
-                        {stream.segments
-                          .filter(s => !s.isInit)
-                          .map((seg, i) => (
-                            <div
-                              key={i}
-                              className={nodeClass(seg.url)}
-                              onClick={() => onSelectUrl(seg.url)}
-                            >
-                              <FileVideo className="w-3 h-3 shrink-0 text-muted-foreground" />
-                              <span className="truncate font-mono">{shortUrl(seg.url)}</span>
-                              {seg.duration && (
-                                <span className="ml-auto shrink-0 text-muted-foreground">
-                                  {seg.duration.toFixed(1)}s
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-                {stream.loadState === 'error' && (
-                  <div className="px-2 text-red-500">Failed to fetch</div>
-                )}
-              </div>
+              <VariantSegmentContent
+                stream={stream}
+                nodeClass={nodeClass}
+                shortUrl={shortUrl}
+                onSelectUrl={onSelectUrl}
+              />
             </CollapsibleContent>
           </Collapsible>
         </div>

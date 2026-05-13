@@ -22,15 +22,26 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   // Store subscription reference for cleanup
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  // Track event count before load to detect if new events were added
-  const eventCountBeforeLoadRef = useRef(0)
-
   // Track safety timeout to clear it properly
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Early-complete timer: fires 500ms after the first event arrives so fast-relay
-  // results are shown immediately without waiting for slow relays to finish.
+  // Early-complete timer: fires 300ms after the first new video appears so results
+  // are shown immediately without waiting for slow relays or EOSE.
   const earlyCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Refs so next() doesn't capture stale loading/exhausted values — prevents the
+  // re-subscribe loop when early-complete fires and useInfiniteScroll re-triggers.
+  const loadingRef = useRef(loading)
+  loadingRef.current = loading
+  const exhaustedRef = useRef(exhausted)
+  exhaustedRef.current = exhausted
+
+  // Always-current snapshot of the processed video count.
+  // Read inside next() to capture the pre-load baseline without needing an extra effect.
+  const videoCountRef = useRef(0)
+
+  // Track processed video count before each load to detect new results.
+  const videoCountBeforeLoadRef = useRef(0)
 
   // Cleanup subscription and timeout on unmount
   useEffect(() => {
@@ -53,9 +64,11 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   // Track if this is the first load to allow calling next() when loading=true initially
   const isFirstLoadRef = useRef(true)
 
+  // Stable callback — uses refs so it never changes reference when loading/exhausted
+  // change, avoiding the stale-closure re-trigger loop in useInfiniteScroll.
   const next = useCallback(() => {
     // Allow first load even if loading is true (initial state)
-    if (!loader || (loading && !isFirstLoadRef.current) || exhausted) {
+    if (!loader || (loadingRef.current && !isFirstLoadRef.current) || exhaustedRef.current) {
       return
     }
     isFirstLoadRef.current = false
@@ -73,34 +86,27 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     setLoading(true)
     setSubscriptionActive(true)
 
-    // Store the current event count before loading
-    setEvents(prev => {
-      eventCountBeforeLoadRef.current = prev.length
-      return prev
-    })
+    // Capture current video count as the baseline for early-complete detection.
+    // videoCountRef is synced on every render (after the videos memo), so it holds
+    // the correct pre-load value here — no separate effect or render needed.
+    videoCountBeforeLoadRef.current = videoCountRef.current
 
     let receivedAnyEvents = false
 
-    // Safety timeout: force complete after 5 seconds
-    // Note: applesauce loaders may not call complete() if relays are slow
+    // Safety timeout: force complete after 2 seconds if relays never send EOSE.
+    // Reduced from 5s — the cursor in loadBackwardBlocks advances per-event so paging
+    // state is already correct even if we cut the subscription short.
     safetyTimeoutRef.current = setTimeout(() => {
       subscriptionRef.current?.unsubscribe()
       safetyTimeoutRef.current = null
 
-      // Check if we actually added new events (not just received duplicates)
-      setEvents(currentEvents => {
-        const addedNewEvents = currentEvents.length > eventCountBeforeLoadRef.current
-
-        if (!addedNewEvents) {
-          setExhausted(true)
-        }
-
-        return currentEvents
-      })
+      if (!receivedAnyEvents) {
+        setExhausted(true)
+      }
 
       setLoading(false)
       setSubscriptionActive(false)
-    }, 5000)
+    }, 2000)
 
     subscriptionRef.current = loader()().subscribe({
       next: event => {
@@ -112,21 +118,6 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
           const newList = Array.from(insertEventIntoDescendingList(prev, event))
           return newList
         })
-        // After the first event arrives, start a 500ms timer to release the loading
-        // state early. This lets fast-relay results show up without waiting for slow
-        // relays. Slow relays keep streaming in the background; the next loadMore call
-        // will safely re-query them from their current cursor.
-        if (!earlyCompleteTimerRef.current) {
-          earlyCompleteTimerRef.current = setTimeout(() => {
-            earlyCompleteTimerRef.current = null
-            setEvents(currentEvents => {
-              if (currentEvents.length > eventCountBeforeLoadRef.current) {
-                setLoading(false)
-              }
-              return currentEvents
-            })
-          }, 500)
-        }
       },
       complete: () => {
         if (safetyTimeoutRef.current) {
@@ -138,25 +129,11 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
           earlyCompleteTimerRef.current = null
         }
 
-        // Check immediately if we received any events from the loader
         if (!receivedAnyEvents) {
           setExhausted(true)
-          setLoading(false)
-          setSubscriptionActive(false)
-          return
         }
 
-        // If we received events, check if any were actually added (not duplicates)
-        setEvents(currentEvents => {
-          const addedNewEvents = currentEvents.length > eventCountBeforeLoadRef.current
-
-          if (!addedNewEvents) {
-            setExhausted(true)
-          }
-
-          setLoading(false)
-          return currentEvents
-        })
+        setLoading(false)
         setSubscriptionActive(false)
       },
       error: err => {
@@ -171,10 +148,9 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         console.error('[useInfiniteTimeline] Load error:', err)
         setLoading(false)
         setSubscriptionActive(false)
-        // Don't mark as exhausted on error, allow retry
       },
     })
-  }, [loader, loading, exhausted])
+  }, [loader]) // stable — loading/exhausted read via refs
 
   // Process events to VideoEvent format and sort by publish date
   const videos = useMemo(() => {
@@ -193,7 +169,6 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     if (import.meta.env.DEV) {
       console.log('[useInfiniteTimeline] processed to', processed.length, 'videos')
     }
-    // Sort by publish date descending (newest first), fallback to created_at
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,
@@ -204,67 +179,28 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
   ])
-  /*
-  const videos = useObservableMemo(
-    () =>
-      relayPool
-        .group(readRelays)
-        .subscription({ kinds: getKindsForType('videos'), limit: 20 })
-        .pipe(
-          onlyEvents(),
-          mapEventsToStore(eventStore),
-          mapEventsToTimeline(),
-          map(events => processEvents(events, readRelays, blockedPubkeys))
-        ),
-    [readRelays]
-  );
-  */
 
-  /*
+  // Keep videoCountRef in sync with the latest processed count on every render.
+  // next() reads this synchronously so it always gets the correct pre-load baseline.
+  videoCountRef.current = videos.length
 
-  const loadMore = useCallback(() => {
-    if (loading || exhausted || !loader) {
-      console.log('loadMore: early return - loading:', loading, 'exhausted:', exhausted, 'loader:', !!loader);
-      return;
+  // Early-complete: release loading/subscriptionActive as soon as new processed videos
+  // appear, without waiting for EOSE or the safety timeout. The loadBackwardBlocks cursor
+  // in getTimelineLoader advances per-event (via tap), so the next page loads from the
+  // correct position even though the relay subscription is still open.
+  useEffect(() => {
+    if (!loading || !subscriptionActive) return
+    if (videos.length <= videoCountBeforeLoadRef.current) return
+
+    if (!earlyCompleteTimerRef.current) {
+      earlyCompleteTimerRef.current = setTimeout(() => {
+        earlyCompleteTimerRef.current = null
+        setLoading(false)
+        setSubscriptionActive(false)
+      }, 300)
     }
-    setLoading(true);
+  }, [videos.length, loading, subscriptionActive])
 
-    // The loader is a function that returns an observable
-    const sub = loader()
-      .pipe(
-        finalize(() => setLoading(false)) // egal ob complete/error
-      )
-      .subscribe({
-        next: (e) => {
-          console.log('Event received:', e.id, e.kind, e.content.slice(0, 50));
-          setEvents(prev => (prev.some(x => x.id === e.id) ? prev : [...prev, e]));
-        },
-        complete: () => {
-          console.log('Loader completed');
-          // Simple Heuristik: nichts Neues? -> eventuell „am Ende"
-          setExhausted(prev => prev || false);
-        },
-        error: (err) => {
-          console.log('Loader error:', err);
-          // Fehler beendet diesen Page-Load, aber wir lassen die Liste stehen
-        }
-      });
-
-    return () => { console.log("unsubscribe"); sub.unsubscribe(); }
-  }, [loading, exhausted, loader]); // Include readRelays for relay updates
-
-  // Reset (z. B. beim Filterwechsel)
-  const reset = useCallback(() => {
-    setEvents([]);
-    setExhausted(false);
-    setLoading(false);
-  }, []);
-
-  // Process events to VideoEvent format
-  const videos = useMemo(() => {
-    return processEvents(events, readRelays, blockedPubkeys);
-  }, [events, readRelays, blockedPubkeys]);
-*/
   const reset = useCallback(() => {
     subscriptionRef.current?.unsubscribe()
     subscriptionRef.current = null
@@ -285,25 +221,19 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   // Trigger initial load when loader becomes available
   useEffect(() => {
     if (loader && isFirstLoadRef.current) {
-      // Defer to avoid synchronous setState in effect
       queueMicrotask(() => next())
     }
   }, [loader, next])
 
   // Reset when loader changes (e.g., when relays or filters change)
-  // Use a ref to track the loader and only reset if it actually changed
   const loaderRef = useRef(loader)
 
   useEffect(() => {
-    // On initial mount, just set the ref without triggering reset
-    // This handles both cases: loader undefined or loader defined on first render
     if (loaderRef.current === undefined) {
       loaderRef.current = loader
       return
     }
 
-    // If loader changed from a previous value, reset
-    // The loading guard in `next()` will prevent new loads while loading
     if (loaderRef.current !== loader) {
       loaderRef.current = loader
       let cancelled = false
@@ -311,8 +241,6 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
         await Promise.resolve()
         if (!cancelled) {
           reset()
-          // Trigger load after reset completes
-          // Use queueMicrotask to ensure reset state updates are applied first
           queueMicrotask(() => {
             if (!cancelled) {
               next()

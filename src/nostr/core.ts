@@ -62,7 +62,7 @@ export async function cacheRequest(filters: Filter[]) {
 export const eventStore = new EventStore()
 export const relayPool = new RelayPool()
 
-const REQUEST_TIMEOUT_MS = 5000
+const REQUEST_TIMEOUT_MS = 2000
 const originalRequest = relayPool.request.bind(relayPool)
 
 relayPool.request = ((relays, filters, opts) => {

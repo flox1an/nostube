@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Infinite scroll paging delay reduced from ~5s to ~300ms — early-complete now watches the processed video list instead of raw events; `loading` and `subscriptionActive` are released as soon as the first new videos appear in the rendered grid rather than waiting for relay EOSE or a safety timeout; relay request timeout reduced from 5 s to 2 s as a fallback for silent relays; `next()` uses refs for `loading`/`exhausted` so its callback reference is stable and the re-subscribe loop that caused the previous OOM fix cannot recur
+
 ### Added
 
 - HLS audio renditions are now tracked as separate streams throughout the upload pipeline: `HlsVariantStream` gains `type` and `language` fields; `browser-transcode-upload-manager` parses `#EXT-X-MEDIA:TYPE=AUDIO` entries from the master playlist, includes their segments in the upload segment grid, and pushes audio entries into `hlsVariants`; `VideoVariantsTable` renders audio rendition rows (with music icon, language column, "Audio Rendition" badge) separately from video variant rows

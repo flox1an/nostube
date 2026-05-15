@@ -1,6 +1,6 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useFollowedAuthors, useStableRelays } from '@/hooks'
-import { useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
@@ -29,11 +29,11 @@ export function SubscriptionsPage() {
   // Stable key based on sorted pubkeys — only recreate loader when actual follows change
   const pubkeysKey = useMemo(() => [...followedPubkeys].sort().join(','), [followedPubkeys])
 
-  const loader = useMemo(() => {
+  const videosLoader = useMemo(() => {
     if (followedPubkeys.length === 0) return undefined
     const timelineLoader = getTimelineLoader(
-      `subscriptions:${pubkeysKey}`,
-      { kinds: getKindsForType('all'), authors: followedPubkeys },
+      `subscriptions:videos:${pubkeysKey}`,
+      { kinds: getKindsForType('videos'), authors: followedPubkeys },
       relays
     )
     return () => timelineLoader
@@ -41,16 +41,65 @@ export function SubscriptionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pubkeysKey, relays])
 
-  const timelineFilter = useMemo(() => {
+  const shortsLoader = useMemo(() => {
     if (followedPubkeys.length === 0) return undefined
-    return { kinds: getKindsForType('all'), authors: followedPubkeys }
+    const timelineLoader = getTimelineLoader(
+      `subscriptions:shorts:${pubkeysKey}`,
+      { kinds: getKindsForType('shorts'), authors: followedPubkeys },
+      relays
+    )
+    return () => timelineLoader
+    // pubkeysKey captures followedPubkeys changes; relays is separately tracked
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkeysKey, relays])
+
+  const videosFilter = useMemo(() => {
+    if (followedPubkeys.length === 0) return undefined
+    return { kinds: getKindsForType('videos'), authors: followedPubkeys }
     // pubkeysKey captures followedPubkeys changes with stable ordering.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pubkeysKey])
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, relays, {
-    filters: timelineFilter,
+  const shortsFilter = useMemo(() => {
+    if (followedPubkeys.length === 0) return undefined
+    return { kinds: getKindsForType('shorts'), authors: followedPubkeys }
+    // pubkeysKey captures followedPubkeys changes with stable ordering.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkeysKey])
+
+  const {
+    videos: horizontalVideos,
+    loading: loadingVideos,
+    exhausted: exhaustedVideos,
+    loadMore: loadMoreVideos,
+  } = useInfiniteTimeline(videosLoader, relays, {
+    filters: videosFilter,
   })
+
+  const {
+    videos: verticalVideos,
+    loading: loadingShorts,
+    exhausted: exhaustedShorts,
+    loadMore: loadMoreShorts,
+  } = useInfiniteTimeline(shortsLoader, relays, {
+    filters: shortsFilter,
+  })
+
+  const videos = useMemo(
+    () =>
+      [...horizontalVideos, ...verticalVideos].sort(
+        (a, b) => getPublishDate(b) - getPublishDate(a)
+      ),
+    [horizontalVideos, verticalVideos]
+  )
+
+  const loading = loadingVideos || loadingShorts
+  const exhausted = exhaustedVideos && exhaustedShorts
+
+  const loadMore = useCallback(() => {
+    loadMoreVideos()
+    loadMoreShorts()
+  }, [loadMoreVideos, loadMoreShorts])
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {

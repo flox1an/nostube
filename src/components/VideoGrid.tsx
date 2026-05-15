@@ -216,62 +216,6 @@ export function VideoGrid({
       }
     }
 
-    // Add skeleton rows when loading more videos (pagination)
-    if (isLoading && showSkeletons && filteredVideos.length > 0) {
-      const wideCols = getCols('horizontal')
-      const portraitCols = getCols('vertical')
-
-      // Calculate how many items are in the last row to fill it up
-      const wideItemsInLastRow = wideVideos.length % wideCols
-      const portraitItemsInLastRow = portraitVideos.length % portraitCols
-
-      // If last wide row is partial, fill it first
-      if (wideItemsInLastRow > 0) {
-        const skeletonsNeeded = wideCols - wideItemsInLastRow
-        rows.push(
-          <div key={`loading-wide-fill`} className={`grid ${gridColsClass(wideCols)}`}>
-            {Array.from({ length: skeletonsNeeded }).map((_, j) => (
-              <VideoCardSkeleton key={j} format="horizontal" />
-            ))}
-          </div>
-        )
-      }
-
-      // Add 2 full rows of horizontal skeletons
-      for (let i = 0; i < 2; i++) {
-        rows.push(
-          <div key={`loading-wide-${i}`} className={`grid ${gridColsClass(wideCols)}`}>
-            {Array.from({ length: wideCols }).map((_, j) => (
-              <VideoCardSkeleton key={j} format="horizontal" />
-            ))}
-          </div>
-        )
-      }
-
-      // If last portrait row is partial, fill it first
-      if (portraitItemsInLastRow > 0) {
-        const skeletonsNeeded = portraitCols - portraitItemsInLastRow
-        rows.push(
-          <div key={`loading-portrait-fill`} className={`grid ${gridColsClass(portraitCols)}`}>
-            {Array.from({ length: skeletonsNeeded }).map((_, j) => (
-              <VideoCardSkeleton key={j} format="vertical" />
-            ))}
-          </div>
-        )
-      }
-
-      // Add 2 full rows of portrait skeletons
-      for (let i = 0; i < 2; i++) {
-        rows.push(
-          <div key={`loading-portrait-${i}`} className={`grid ${gridColsClass(portraitCols)}`}>
-            {Array.from({ length: portraitCols }).map((_, j) => (
-              <VideoCardSkeleton key={j} format="vertical" />
-            ))}
-          </div>
-        )
-      }
-    }
-
     return <div className="flex flex-col">{rows}</div>
   }
 
@@ -289,19 +233,6 @@ export function VideoGrid({
       willPassAllVideos: isShort,
       firstVideoTitle: filteredVideos[0]?.title,
     })
-  }
-
-  // Calculate number of skeleton items based on layout mode
-  const cols = isShort ? getCols('vertical') : getCols('horizontal')
-  let skeletonCount = 0
-
-  if (isLoading && filteredVideos.length > 0) {
-    // Calculate how many items are in the last row
-    const itemsInLastRow = filteredVideos.length % cols
-    // Fill the last row if partial
-    const fillSkeletons = itemsInLastRow > 0 ? cols - itemsInLastRow : 0
-    // Add 2 full rows of skeletons
-    skeletonCount = fillSkeletons + cols * 2
   }
 
   return (
@@ -324,10 +255,6 @@ export function VideoGrid({
           allVideos={isShort ? filteredVideos : undefined}
           videoIndex={isShort ? index : undefined}
         />
-      ))}
-      {/* Add skeleton placeholders when loading more (pagination) */}
-      {Array.from({ length: skeletonCount }).map((_, i) => (
-        <VideoCardSkeleton key={`loading-${i}`} format={cardFormat} />
       ))}
     </div>
   )

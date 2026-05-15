@@ -7,6 +7,7 @@ import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
+import { getKindsForType } from '@/lib/video-types'
 
 export function ShortsPage() {
   const { t } = useTranslation()
@@ -33,10 +34,12 @@ export function ShortsPage() {
     [effectiveRelays, relayOverride]
   )
 
-  const { videos, loading, exhausted, subscriptionActive, loadMore } = useInfiniteTimeline(
-    loader,
-    effectiveRelays
-  )
+  const timelineFilter = useMemo(() => ({ kinds: getKindsForType('shorts') }), [])
+
+  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays, {
+    filters: timelineFilter,
+    directMode: !!relayOverride,
+  })
   const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   return (
@@ -52,7 +55,6 @@ export function ShortsPage() {
         videos={filteredVideos ?? []}
         loading={loading}
         exhausted={exhausted}
-        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
         layoutMode="vertical"
         emptyMessage={t('pages.shorts.noShorts')}

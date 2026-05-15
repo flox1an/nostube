@@ -30,6 +30,7 @@ import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
 import type { VideoEvent } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
+import { getKindsForType } from '@/lib/video-types'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
@@ -428,19 +429,22 @@ export function AuthorPage() {
     return authorVideoLoader(pubkey, relays)
   }, [pubkey, relays])
 
+  const timelineFilter = useMemo(
+    () => ({ kinds: getKindsForType('all'), authors: [pubkey] }),
+    [pubkey]
+  )
+
   const {
     videos: allVideos,
     loading,
     exhausted,
-    subscriptionActive,
     loadMore,
-  } = useInfiniteTimeline(loader, relays)
+  } = useInfiniteTimeline(loader, relays, { filters: timelineFilter })
 
   const { ref } = useInfiniteScroll({
     onLoadMore: loadMore,
     loading,
     exhausted,
-    subscriptionActive,
   })
 
   const shorts = useMemo(() => allVideos.filter(v => v.type == 'shorts'), [allVideos])

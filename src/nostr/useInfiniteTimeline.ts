@@ -2,46 +2,56 @@ import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useReportedPubkeys, useAppContext, useMissingVideos } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type TimelineLoader } from 'applesauce-loaders/loaders'
-import { type NostrEvent } from 'nostr-tools'
+import { useEventStore, use$ } from 'applesauce-react/hooks'
+import { type Filter, type NostrEvent } from 'nostr-tools'
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
+import { auditTime, of } from 'rxjs'
 
-export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: string[] = []) {
+type TimelinePhase = 'idle' | 'loading-initial' | 'ready' | 'loading-more' | 'exhausted' | 'error'
+
+interface UseInfiniteTimelineOptions {
+  filters?: Filter | Filter[]
+  directMode?: boolean
+  firstEventTimeoutMs?: number
+  pageSettleMs?: number
+}
+
+const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 4000
+const DEFAULT_PAGE_SETTLE_MS = 3000
+
+export function useInfiniteTimeline(
+  loader?: () => TimelineLoader,
+  readRelays: string[] = [],
+  options: UseInfiniteTimelineOptions = {}
+) {
   const blockedPubkeys = useReportedPubkeys()
   const { config } = useAppContext()
   const { getAllMissingVideos } = useMissingVideos()
   const { presetContent } = useSelectedPreset()
+  const eventStore = useEventStore()
+  const {
+    filters,
+    directMode = false,
+    firstEventTimeoutMs = DEFAULT_FIRST_EVENT_TIMEOUT_MS,
+    pageSettleMs = DEFAULT_PAGE_SETTLE_MS,
+  } = options
 
-  const [events, setEvents] = useState<NostrEvent[]>([])
-  const [loading, setLoading] = useState(true)
+  const [directEvents, setDirectEvents] = useState<NostrEvent[]>([])
+  const [fallbackEvents, setFallbackEvents] = useState<NostrEvent[]>([])
+  const [phase, setPhase] = useState<TimelinePhase>('idle')
   const [exhausted, setExhausted] = useState(false)
-  // True while a relay subscription is actively open (even after early-complete sets loading=false).
-  // Prevents useInfiniteScroll from firing loadMore again during that window.
-  const [subscriptionActive, setSubscriptionActive] = useState(false)
 
   // Store subscription reference for cleanup
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   // Track safety timeout to clear it properly
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Early-complete timer: fires 300ms after the first new video appears so results
-  // are shown immediately without waiting for slow relays or EOSE.
-  const earlyCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Refs so next() doesn't capture stale loading/exhausted values — prevents the
-  // re-subscribe loop when early-complete fires and useInfiniteScroll re-triggers.
-  const loadingRef = useRef(loading)
-  loadingRef.current = loading
+  const inFlightRef = useRef(false)
   const exhaustedRef = useRef(exhausted)
   exhaustedRef.current = exhausted
-
-  // Always-current snapshot of the processed video count.
-  // Read inside next() to capture the pre-load baseline without needing an extra effect.
-  const videoCountRef = useRef(0)
-
-  // Track processed video count before each load to detect new results.
-  const videoCountBeforeLoadRef = useRef(0)
 
   // Cleanup subscription and timeout on unmount
   useEffect(() => {
@@ -50,8 +60,8 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current)
       }
-      if (earlyCompleteTimerRef.current) {
-        clearTimeout(earlyCompleteTimerRef.current)
+      if (settleTimeoutRef.current) {
+        clearTimeout(settleTimeoutRef.current)
       }
     }
   }, [])
@@ -64,13 +74,17 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
   // Track if this is the first load to allow calling next() when loading=true initially
   const isFirstLoadRef = useRef(true)
 
-  // Stable callback — uses refs so it never changes reference when loading/exhausted
-  // change, avoiding the stale-closure re-trigger loop in useInfiniteScroll.
+  const storeEvents = use$(() => {
+    if (directMode || !filters) return of<NostrEvent[]>([])
+    return eventStore.timeline(filters).pipe(auditTime(100))
+  }, [eventStore, filters, directMode])
+
+  // Stable callback — uses refs so it never changes reference when loading/exhausted changes.
   const next = useCallback(() => {
-    // Allow first load even if loading is true (initial state)
-    if (!loader || (loadingRef.current && !isFirstLoadRef.current) || exhaustedRef.current) {
+    if (!loader || inFlightRef.current || exhaustedRef.current) {
       return
     }
+
     isFirstLoadRef.current = false
 
     // Cleanup previous subscription and timeouts before creating a new one
@@ -78,85 +92,93 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     if (safetyTimeoutRef.current) {
       clearTimeout(safetyTimeoutRef.current)
     }
-    if (earlyCompleteTimerRef.current) {
-      clearTimeout(earlyCompleteTimerRef.current)
-      earlyCompleteTimerRef.current = null
+    if (settleTimeoutRef.current) {
+      clearTimeout(settleTimeoutRef.current)
+      settleTimeoutRef.current = null
     }
 
-    setLoading(true)
-    setSubscriptionActive(true)
-
-    // Capture current video count as the baseline for early-complete detection.
-    // videoCountRef is synced on every render (after the videos memo), so it holds
-    // the correct pre-load value here — no separate effect or render needed.
-    videoCountBeforeLoadRef.current = videoCountRef.current
+    inFlightRef.current = true
+    setPhase(prev => (prev === 'idle' ? 'loading-initial' : 'loading-more'))
 
     let receivedAnyEvents = false
+    let settled = false
 
-    // Safety timeout: force complete after 2 seconds if relays never send EOSE.
-    // Reduced from 5s — the cursor in loadBackwardBlocks advances per-event so paging
-    // state is already correct even if we cut the subscription short.
-    safetyTimeoutRef.current = setTimeout(() => {
-      subscriptionRef.current?.unsubscribe()
-      safetyTimeoutRef.current = null
+    const finish = (nextPhase: TimelinePhase) => {
+      if (settled) return
+      settled = true
+      inFlightRef.current = false
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current)
+        safetyTimeoutRef.current = null
+      }
+      if (settleTimeoutRef.current) {
+        clearTimeout(settleTimeoutRef.current)
+        settleTimeoutRef.current = null
+      }
+      setPhase(nextPhase)
+    }
 
-      if (!receivedAnyEvents) {
-        setExhausted(true)
+    const scheduleSettle = () => {
+      if (settleTimeoutRef.current) {
+        clearTimeout(settleTimeoutRef.current)
       }
 
-      setLoading(false)
-      setSubscriptionActive(false)
-    }, 2000)
+      settleTimeoutRef.current = setTimeout(() => {
+        subscriptionRef.current?.unsubscribe()
+        finish('ready')
+      }, pageSettleMs)
+    }
+
+    // If nothing answers at all, release the pagination gate. Once events start
+    // flowing, pageSettleMs takes over and waits for an idle period.
+    safetyTimeoutRef.current = setTimeout(() => {
+      subscriptionRef.current?.unsubscribe()
+
+      setExhausted(true)
+      finish('exhausted')
+    }, firstEventTimeoutMs)
 
     subscriptionRef.current = loader()().subscribe({
       next: event => {
-        receivedAnyEvents = true
-        if (import.meta.env.DEV) {
-          console.log('[useInfiniteTimeline] event received:', event.kind, event.id.slice(0, 8))
+        if (!receivedAnyEvents && safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current)
+          safetyTimeoutRef.current = null
         }
-        setEvents(prev => {
-          const newList = Array.from(insertEventIntoDescendingList(prev, event))
-          return newList
-        })
+        receivedAnyEvents = true
+        scheduleSettle()
+        if (directMode) {
+          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+        } else if (!filters) {
+          // Compatibility path for callers that have not provided a store timeline filter yet.
+          setFallbackEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+        } else {
+          eventStore.add(event)
+        }
       },
       complete: () => {
-        if (safetyTimeoutRef.current) {
-          clearTimeout(safetyTimeoutRef.current)
-          safetyTimeoutRef.current = null
-        }
-        if (earlyCompleteTimerRef.current) {
-          clearTimeout(earlyCompleteTimerRef.current)
-          earlyCompleteTimerRef.current = null
-        }
-
         if (!receivedAnyEvents) {
           setExhausted(true)
+          finish('exhausted')
+          return
         }
 
-        setLoading(false)
-        setSubscriptionActive(false)
+        finish('ready')
       },
       error: err => {
-        if (safetyTimeoutRef.current) {
-          clearTimeout(safetyTimeoutRef.current)
-          safetyTimeoutRef.current = null
-        }
-        if (earlyCompleteTimerRef.current) {
-          clearTimeout(earlyCompleteTimerRef.current)
-          earlyCompleteTimerRef.current = null
-        }
         console.error('[useInfiniteTimeline] Load error:', err)
-        setLoading(false)
-        setSubscriptionActive(false)
+        finish(receivedAnyEvents ? 'ready' : 'error')
       },
     })
-  }, [loader]) // stable — loading/exhausted read via refs
+  }, [loader, directMode, filters, eventStore, firstEventTimeoutMs, pageSettleMs])
+
+  const events = useMemo(() => {
+    if (directMode) return directEvents
+    if (filters) return storeEvents ?? []
+    return fallbackEvents
+  }, [directMode, directEvents, filters, storeEvents, fallbackEvents])
 
   // Process events to VideoEvent format and sort by publish date
   const videos = useMemo(() => {
-    if (import.meta.env.DEV) {
-      console.log('[useInfiniteTimeline] processing', events.length, 'events')
-    }
     const processed = processEvents(
       events,
       readRelays,
@@ -166,9 +188,6 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       presetContent.nsfwPubkeys,
       config.reportedEventIds
     )
-    if (import.meta.env.DEV) {
-      console.log('[useInfiniteTimeline] processed to', processed.length, 'videos')
-    }
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,
@@ -180,27 +199,6 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
     config.reportedEventIds,
   ])
 
-  // Keep videoCountRef in sync with the latest processed count on every render.
-  // next() reads this synchronously so it always gets the correct pre-load baseline.
-  videoCountRef.current = videos.length
-
-  // Early-complete: release loading/subscriptionActive as soon as new processed videos
-  // appear, without waiting for EOSE or the safety timeout. The loadBackwardBlocks cursor
-  // in getTimelineLoader advances per-event (via tap), so the next page loads from the
-  // correct position even though the relay subscription is still open.
-  useEffect(() => {
-    if (!loading || !subscriptionActive) return
-    if (videos.length <= videoCountBeforeLoadRef.current) return
-
-    if (!earlyCompleteTimerRef.current) {
-      earlyCompleteTimerRef.current = setTimeout(() => {
-        earlyCompleteTimerRef.current = null
-        setLoading(false)
-        setSubscriptionActive(false)
-      }, 300)
-    }
-  }, [videos.length, loading, subscriptionActive])
-
   const reset = useCallback(() => {
     subscriptionRef.current?.unsubscribe()
     subscriptionRef.current = null
@@ -208,13 +206,15 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
       clearTimeout(safetyTimeoutRef.current)
       safetyTimeoutRef.current = null
     }
-    if (earlyCompleteTimerRef.current) {
-      clearTimeout(earlyCompleteTimerRef.current)
-      earlyCompleteTimerRef.current = null
+    if (settleTimeoutRef.current) {
+      clearTimeout(settleTimeoutRef.current)
+      settleTimeoutRef.current = null
     }
-    setEvents([])
+    inFlightRef.current = false
+    setDirectEvents([])
+    setFallbackEvents([])
     setExhausted(false)
-    setLoading(true)
+    setPhase('idle')
     isFirstLoadRef.current = true
   }, [])
 
@@ -256,9 +256,11 @@ export function useInfiniteTimeline(loader?: () => TimelineLoader, readRelays: s
 
   return {
     videos,
-    loading,
+    loading: phase === 'loading-initial' || phase === 'loading-more',
+    isInitialLoading: phase === 'loading-initial',
+    isLoadingMore: phase === 'loading-more',
     exhausted,
-    subscriptionActive,
+    phase,
     loadMore: next,
     reset,
   }

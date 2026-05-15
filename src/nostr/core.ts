@@ -12,18 +12,7 @@ import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
-import {
-  BehaviorSubject,
-  Observable,
-  merge,
-  share,
-  EMPTY,
-  filter,
-  mergeMap,
-  race,
-  throwError,
-  timer,
-} from 'rxjs'
+import { BehaviorSubject, Observable, merge, share, EMPTY, filter } from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
 
@@ -62,27 +51,68 @@ export async function cacheRequest(filters: Filter[]) {
 export const eventStore = new EventStore()
 export const relayPool = new RelayPool()
 
-const REQUEST_TIMEOUT_MS = 2000
+const REQUEST_IDLE_TIMEOUT_MS = 3000
 const originalRequest = relayPool.request.bind(relayPool)
 
+function withIdleTimeout<T>(source: Observable<T>, message: string): Observable<T> {
+  return new Observable(observer => {
+    let timeout: ReturnType<typeof setTimeout> | null = null
+    let sub: { unsubscribe: () => void } | null = null
+
+    const clear = () => {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+    }
+
+    const reset = () => {
+      clear()
+      timeout = setTimeout(() => {
+        sub?.unsubscribe()
+        if (import.meta.env.DEV) {
+          console.warn(message)
+        }
+        observer.complete()
+      }, REQUEST_IDLE_TIMEOUT_MS)
+    }
+
+    reset()
+    sub = source.subscribe({
+      next: value => {
+        reset()
+        observer.next(value)
+      },
+      error: err => {
+        clear()
+        observer.error(err)
+      },
+      complete: () => {
+        clear()
+        observer.complete()
+      },
+    })
+
+    return () => {
+      clear()
+      sub?.unsubscribe()
+    }
+  })
+}
+
 relayPool.request = ((relays, filters, opts) => {
+  const relayList = Array.isArray(relays) ? relays : [relays]
+  const timeoutMessage = `Relay request idle timed out after ${REQUEST_IDLE_TIMEOUT_MS}ms`
+
   if (import.meta.env.DEV) {
     const start = Date.now()
-    const relayList = Array.isArray(relays) ? relays : [relays]
     console.log(`[relay] request to ${relayList.length} relay(s): ${JSON.stringify(relayList)}`)
-    const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
-      mergeMap(() => {
-        console.warn(
-          `[relay] ⏱ TIMEOUT after ${REQUEST_TIMEOUT_MS}ms for relays: ${JSON.stringify(relayList)}`
-        )
-        return throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`))
-      })
-    )
+
     let eventCount = 0
-    return race(
+    return withIdleTimeout(
       new Observable(observer => {
         const sub = originalRequest(relays, filters, opts).subscribe({
-          next: (event: unknown) => {
+          next: event => {
             eventCount++
             if (eventCount === 1) {
               console.log(
@@ -91,7 +121,7 @@ relayPool.request = ((relays, filters, opts) => {
             }
             observer.next(event)
           },
-          error: (err: unknown) => {
+          error: err => {
             console.warn(
               `[relay] ❌ error after ${Date.now() - start}ms from: ${JSON.stringify(relayList)}`,
               err
@@ -107,15 +137,13 @@ relayPool.request = ((relays, filters, opts) => {
         })
         return () => sub.unsubscribe()
       }),
-      timeout$
+      `${timeoutMessage} for relays: ${JSON.stringify(relayList)}`
     )
   }
-  const timeout$ = timer(REQUEST_TIMEOUT_MS).pipe(
-    mergeMap(() =>
-      throwError(() => new Error(`Relay request timed out after ${REQUEST_TIMEOUT_MS}ms`))
-    )
+  return withIdleTimeout(
+    originalRequest(relays, filters, opts),
+    `${timeoutMessage} for relays: ${JSON.stringify(relayList)}`
   )
-  return race(originalRequest(relays, filters, opts), timeout$)
 }) as typeof relayPool.request
 
 // Configure unified event loader for all pointer types
@@ -179,7 +207,7 @@ export function getTimelineLoader(
     relays.map(relay => [relay, baseFilters])
   )
 
-  const limit = 50
+  const limit = 100
   const window$ = new BehaviorSubject<{ since?: number; until?: number }>({})
 
   // Per-relay loading: each relay advances its own cursor independently

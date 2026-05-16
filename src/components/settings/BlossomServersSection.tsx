@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useUserBlossomServers, useSelectedPreset } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Cog, XIcon } from 'lucide-react'
-import { type BlossomServerTag } from '@/contexts/AppContext'
+import { type BlossomServer, type BlossomServerTag } from '@/contexts/AppContext'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -19,12 +19,66 @@ import { toast } from '@/hooks/useToast'
 
 const availableTags: BlossomServerTag[] = ['mirror', 'initial upload']
 
+function deriveServerName(url: string): string {
+  return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+function normalizeServerUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed
+  }
+  return `https://${trimmed}`
+}
+
+function normalizeBlossomServers(servers: unknown): BlossomServer[] {
+  if (!Array.isArray(servers)) return []
+
+  return servers
+    .filter(
+      (server): server is { url?: unknown; name?: unknown; tags?: unknown } =>
+        typeof server === 'object' && server !== null
+    )
+    .map(server => {
+      const url = typeof server.url === 'string' ? normalizeServerUrl(server.url) : ''
+      const name =
+        typeof server.name === 'string' && server.name.trim().length > 0
+          ? server.name
+          : deriveServerName(url)
+      const tags = Array.isArray(server.tags)
+        ? server.tags.filter(
+            (tag): tag is BlossomServerTag => tag === 'mirror' || tag === 'initial upload'
+          )
+        : []
+
+      return { url, name, tags }
+    })
+    .filter(server => server.url.length > 0)
+}
+
 export function BlossomServersSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const [newServerUrl, setNewServerUrl] = useState('')
   const userBlossomServers = useUserBlossomServers()
+  const blossomServers = useMemo(
+    () => normalizeBlossomServers(config.blossomServers),
+    [config.blossomServers]
+  )
+
+  // Self-heal malformed/legacy local config so Settings never crashes on invalid entries.
+  useEffect(() => {
+    const current = config.blossomServers
+    if (!Array.isArray(current)) return
+    const normalized = normalizeBlossomServers(current)
+    const currentJson = JSON.stringify(current)
+    const normalizedJson = JSON.stringify(normalized)
+    if (currentJson !== normalizedJson) {
+      updateConfig(currentConfig => ({ ...currentConfig, blossomServers: normalized }))
+    }
+  }, [config.blossomServers, updateConfig])
 
   /*
   Would be good for initial load of the app, but not for the dialog
@@ -54,7 +108,7 @@ export function BlossomServersSection() {
       }
 
       updateConfig(currentConfig => {
-        const servers = currentConfig.blossomServers || []
+        const servers = normalizeBlossomServers(currentConfig.blossomServers)
         if (servers.some(s => s.url === normalizedUrl)) return currentConfig
         const name = deriveServerName(normalizedUrl)
         return {
@@ -69,7 +123,9 @@ export function BlossomServersSection() {
   const handleRemoveServer = (urlToRemove: string) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
-      blossomServers: (currentConfig.blossomServers || []).filter(s => s.url !== urlToRemove),
+      blossomServers: normalizeBlossomServers(currentConfig.blossomServers).filter(
+        s => s.url !== urlToRemove
+      ),
     }))
   }
 
@@ -106,7 +162,7 @@ export function BlossomServersSection() {
   const handleToggleTag = (serverUrl: string, tag: BlossomServerTag) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
-      blossomServers: (currentConfig.blossomServers || []).map(s =>
+      blossomServers: normalizeBlossomServers(currentConfig.blossomServers).map(s =>
         s.url === serverUrl
           ? {
               ...s,
@@ -117,30 +173,17 @@ export function BlossomServersSection() {
     }))
   }
 
-  const normalizeServerUrl = (url: string): string => {
-    const trimmed = url.trim()
-    if (!trimmed) return trimmed
-    if (trimmed.startsWith('http')) {
-      return trimmed
-    }
-    return `https://${trimmed}`
-  }
-
-  const deriveServerName = (url: string): string => {
-    return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  }
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{t('settings.blossom.description')}</p>
 
       <div>
-        {(config.blossomServers?.length ?? 0) === 0 ? (
+        {blossomServers.length === 0 ? (
           <p className="text-muted-foreground">{t('settings.blossom.noServers')}</p>
         ) : (
           <ScrollArea className="w-full rounded-md border p-4">
             <ul className="space-y-2">
-              {config.blossomServers?.map(server => (
+              {blossomServers.map(server => (
                 <li key={server.url} className="flex items-center justify-between text-sm">
                   <div className="flex flex-col gap-1">
                     <div className="flex gap-2 mt-1">

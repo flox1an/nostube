@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon, LoaderIcon } from 'lucide-react'
+import { type CachingServer } from '@/contexts/AppContext'
 
 type ServerStatus = 'checking' | 'online' | 'offline'
 
@@ -48,9 +49,42 @@ function useServerStatus(urls: string[]) {
       controllers.forEach(c => c.abort())
       controllers.clear()
     }
-  }, [urlsKey, urls, checkServer])
+  }, [urlsKey, checkServer])
 
   return statuses
+}
+
+function normalizeServerUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  let normalized = trimmed
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = `https://${normalized}`
+  }
+  return normalized.replace(/\/+$/, '')
+}
+
+function deriveServerName(url: string): string {
+  return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+function normalizeCachingServers(servers: unknown): CachingServer[] {
+  if (!Array.isArray(servers)) return []
+
+  return servers
+    .filter(
+      (server): server is { url?: unknown; name?: unknown } =>
+        typeof server === 'object' && server !== null
+    )
+    .map(server => {
+      const url = typeof server.url === 'string' ? normalizeServerUrl(server.url) : ''
+      const name =
+        typeof server.name === 'string' && server.name.trim().length > 0
+          ? server.name
+          : deriveServerName(url)
+      return { url, name }
+    })
+    .filter(server => server.url.length > 0)
 }
 
 function StatusDot({ status }: { status: ServerStatus | undefined }) {
@@ -68,14 +102,30 @@ export function CachingServersSection() {
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const [newServerUrl, setNewServerUrl] = useState('http://127.0.0.1:24242')
-  const serverUrls = (config.cachingServers || []).map(s => s.url)
+  const cachingServers = useMemo(
+    () => normalizeCachingServers(config.cachingServers),
+    [config.cachingServers]
+  )
+  const serverUrls = useMemo(() => cachingServers.map(s => s.url), [cachingServers])
   const serverStatuses = useServerStatus(serverUrls)
+
+  // Self-heal malformed/legacy local config entries.
+  useEffect(() => {
+    const current = config.cachingServers
+    if (!Array.isArray(current)) return
+    const normalized = normalizeCachingServers(current)
+    const currentJson = JSON.stringify(current)
+    const normalizedJson = JSON.stringify(normalized)
+    if (currentJson !== normalizedJson) {
+      updateConfig(currentConfig => ({ ...currentConfig, cachingServers: normalized }))
+    }
+  }, [config.cachingServers, updateConfig])
 
   const handleAddServer = () => {
     if (newServerUrl.trim()) {
       const normalizedUrl = normalizeServerUrl(newServerUrl.trim())
       updateConfig(currentConfig => {
-        const servers = currentConfig.cachingServers || []
+        const servers = normalizeCachingServers(currentConfig.cachingServers)
         if (servers.some(s => s.url === normalizedUrl)) return currentConfig
         const name = deriveServerName(normalizedUrl)
         return {
@@ -90,7 +140,9 @@ export function CachingServersSection() {
   const handleRemoveServer = (urlToRemove: string) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
-      cachingServers: (currentConfig.cachingServers || []).filter(s => s.url !== urlToRemove),
+      cachingServers: normalizeCachingServers(currentConfig.cachingServers).filter(
+        s => s.url !== urlToRemove
+      ),
     }))
   }
 
@@ -110,20 +162,6 @@ export function CachingServersSection() {
     })
   }
 
-  const normalizeServerUrl = (url: string): string => {
-    const trimmed = url.trim()
-    if (!trimmed) return trimmed
-    let normalized = trimmed
-    if (!normalized.startsWith('http')) {
-      normalized = `https://${normalized}`
-    }
-    return normalized.replace(/\/+$/, '')
-  }
-
-  const deriveServerName = (url: string): string => {
-    return url.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  }
-
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground space-y-2">
@@ -135,12 +173,12 @@ export function CachingServersSection() {
       </div>
 
       <div>
-        {(config.cachingServers?.length ?? 0) === 0 ? (
+        {cachingServers.length === 0 ? (
           <p className="text-muted-foreground">{t('settings.caching.noServers')}</p>
         ) : (
           <ScrollArea className="w-full rounded-md border p-4">
             <ul className="space-y-2">
-              {config.cachingServers?.map(server => (
+              {cachingServers.map(server => (
                 <li key={server.url} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <StatusDot status={serverStatuses[server.url]} />

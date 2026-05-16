@@ -246,7 +246,7 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
             </h4>
             <div className="border rounded-md">
               {Object.entries(validators)
-                .sort(([, a], [, b]) => b.score - a.score)
+                .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
                 .map(([name, validator]) => (
                   <ValidatorRow key={name} name={name} validator={validator} />
                 ))}

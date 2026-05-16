@@ -72,6 +72,9 @@ export function SubscriptionsPage() {
     loading: loadingVideos,
     exhausted: exhaustedVideos,
     loadMore: loadMoreVideos,
+    prefetchMore: prefetchMoreVideos,
+    isPrefetching: prefetchingVideos,
+    subscriptionActive: subscriptionActiveVideos,
   } = useInfiniteTimeline(videosLoader, relays, {
     filters: videosFilter,
   })
@@ -81,6 +84,9 @@ export function SubscriptionsPage() {
     loading: loadingShorts,
     exhausted: exhaustedShorts,
     loadMore: loadMoreShorts,
+    prefetchMore: prefetchMoreShorts,
+    isPrefetching: prefetchingShorts,
+    subscriptionActive: subscriptionActiveShorts,
   } = useInfiniteTimeline(shortsLoader, relays, {
     filters: shortsFilter,
   })
@@ -95,11 +101,18 @@ export function SubscriptionsPage() {
 
   const loading = loadingVideos || loadingShorts
   const exhausted = exhaustedVideos && exhaustedShorts
+  const prefetching = prefetchingVideos || prefetchingShorts
+  const subscriptionActive = subscriptionActiveVideos || subscriptionActiveShorts
 
   const loadMore = useCallback(() => {
     loadMoreVideos()
     loadMoreShorts()
   }, [loadMoreVideos, loadMoreShorts])
+
+  const prefetchMore = useCallback(() => {
+    prefetchMoreVideos()
+    prefetchMoreShorts()
+  }, [prefetchMoreShorts, prefetchMoreVideos])
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {
@@ -131,7 +144,10 @@ export function SubscriptionsPage() {
         videos={dedupedVideos}
         loading={loading}
         exhausted={exhausted}
+        prefetching={prefetching}
+        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
+        onPrefetch={prefetchMore}
         layoutMode="auto"
         emptyMessage={
           followedPubkeys.length === 0

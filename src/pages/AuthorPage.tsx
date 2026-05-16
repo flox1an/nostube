@@ -441,7 +441,7 @@ export function AuthorPage() {
     loadMore,
   } = useInfiniteTimeline(loader, relays, { filters: timelineFilter })
 
-  const { ref } = useInfiniteScroll({
+  const { loadMoreRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     loading,
     exhausted,
@@ -582,9 +582,8 @@ export function AuthorPage() {
         {activeTab === 'videos' && (
           <div className="mt-6">
             <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
-
             <InfiniteScrollTrigger
-              triggerRef={ref}
+              triggerRef={loadMoreRef}
               loading={loading && videos.length > 0}
               exhausted={exhausted}
               itemCount={videos.length}
@@ -603,9 +602,8 @@ export function AuthorPage() {
               showSkeletons={true}
               layoutMode="vertical"
             />
-
             <InfiniteScrollTrigger
-              triggerRef={ref}
+              triggerRef={loadMoreRef}
               loading={loading && shorts.length > 0}
               exhausted={exhausted}
               itemCount={shorts.length}

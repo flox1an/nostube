@@ -9,16 +9,19 @@ import { insertEventIntoDescendingList } from 'nostr-tools/utils'
 import { auditTime, of } from 'rxjs'
 
 type TimelinePhase = 'idle' | 'loading-initial' | 'ready' | 'loading-more' | 'exhausted' | 'error'
+type LoadIntent = 'initial' | 'load-more' | 'prefetch'
 
 interface UseInfiniteTimelineOptions {
   filters?: Filter | Filter[]
   directMode?: boolean
   firstEventTimeoutMs?: number
   pageSettleMs?: number
+  firstUsefulTimeoutMs?: number
 }
 
 const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 4000
 const DEFAULT_PAGE_SETTLE_MS = 3000
+const DEFAULT_FIRST_USEFUL_TIMEOUT_MS = 900
 
 export function useInfiniteTimeline(
   loader?: () => TimelineLoader,
@@ -35,12 +38,14 @@ export function useInfiniteTimeline(
     directMode = false,
     firstEventTimeoutMs = DEFAULT_FIRST_EVENT_TIMEOUT_MS,
     pageSettleMs = DEFAULT_PAGE_SETTLE_MS,
+    firstUsefulTimeoutMs = DEFAULT_FIRST_USEFUL_TIMEOUT_MS,
   } = options
 
   const [directEvents, setDirectEvents] = useState<NostrEvent[]>([])
   const [fallbackEvents, setFallbackEvents] = useState<NostrEvent[]>([])
-  const [phase, setPhase] = useState<TimelinePhase>('idle')
+  const [phase, setPhase] = useState<TimelinePhase | 'prefetching'>('idle')
   const [exhausted, setExhausted] = useState(false)
+  const [subscriptionActive, setSubscriptionActive] = useState(false)
 
   // Store subscription reference for cleanup
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
@@ -48,6 +53,7 @@ export function useInfiniteTimeline(
   // Track safety timeout to clear it properly
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const firstUsefulTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const inFlightRef = useRef(false)
   const exhaustedRef = useRef(exhausted)
@@ -62,6 +68,9 @@ export function useInfiniteTimeline(
       }
       if (settleTimeoutRef.current) {
         clearTimeout(settleTimeoutRef.current)
+      }
+      if (firstUsefulTimeoutRef.current) {
+        clearTimeout(firstUsefulTimeoutRef.current)
       }
     }
   }, [])
@@ -80,7 +89,8 @@ export function useInfiniteTimeline(
   }, [eventStore, filters, directMode])
 
   // Stable callback — uses refs so it never changes reference when loading/exhausted changes.
-  const next = useCallback(() => {
+  const startLoad = useCallback(
+    (intent: LoadIntent) => {
     if (!loader || inFlightRef.current || exhaustedRef.current) {
       return
     }
@@ -96,17 +106,35 @@ export function useInfiniteTimeline(
       clearTimeout(settleTimeoutRef.current)
       settleTimeoutRef.current = null
     }
+    if (firstUsefulTimeoutRef.current) {
+      clearTimeout(firstUsefulTimeoutRef.current)
+      firstUsefulTimeoutRef.current = null
+    }
 
     inFlightRef.current = true
-    setPhase(prev => (prev === 'idle' ? 'loading-initial' : 'loading-more'))
+    setSubscriptionActive(true)
+
+    if (intent === 'prefetch') {
+      setPhase('prefetching')
+    } else {
+      setPhase(prev => (prev === 'idle' || intent === 'initial' ? 'loading-initial' : 'loading-more'))
+    }
 
     let receivedAnyEvents = false
     let settled = false
+    let readyVisible = false
 
-    const finish = (nextPhase: TimelinePhase) => {
+    const setReadyVisible = () => {
+      if (readyVisible || intent === 'prefetch') return
+      readyVisible = true
+      setPhase('ready')
+    }
+
+    const finish = (nextPhase: TimelinePhase | 'prefetching') => {
       if (settled) return
       settled = true
       inFlightRef.current = false
+      setSubscriptionActive(false)
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current)
         safetyTimeoutRef.current = null
@@ -114,6 +142,10 @@ export function useInfiniteTimeline(
       if (settleTimeoutRef.current) {
         clearTimeout(settleTimeoutRef.current)
         settleTimeoutRef.current = null
+      }
+      if (firstUsefulTimeoutRef.current) {
+        clearTimeout(firstUsefulTimeoutRef.current)
+        firstUsefulTimeoutRef.current = null
       }
       setPhase(nextPhase)
     }
@@ -138,6 +170,14 @@ export function useInfiniteTimeline(
       finish('exhausted')
     }, firstEventTimeoutMs)
 
+    if (intent !== 'prefetch') {
+      firstUsefulTimeoutRef.current = setTimeout(() => {
+        if (receivedAnyEvents) {
+          setReadyVisible()
+        }
+      }, firstUsefulTimeoutMs)
+    }
+
     subscriptionRef.current = loader()().subscribe({
       next: event => {
         if (!receivedAnyEvents && safetyTimeoutRef.current) {
@@ -145,6 +185,7 @@ export function useInfiniteTimeline(
           safetyTimeoutRef.current = null
         }
         receivedAnyEvents = true
+        setReadyVisible()
         scheduleSettle()
         if (directMode) {
           setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
@@ -169,7 +210,12 @@ export function useInfiniteTimeline(
         finish(receivedAnyEvents ? 'ready' : 'error')
       },
     })
-  }, [loader, directMode, filters, eventStore, firstEventTimeoutMs, pageSettleMs])
+    },
+    [loader, directMode, filters, eventStore, firstEventTimeoutMs, firstUsefulTimeoutMs, pageSettleMs]
+  )
+
+  const next = useCallback(() => startLoad('load-more'), [startLoad])
+  const prefetchMore = useCallback(() => startLoad('prefetch'), [startLoad])
 
   const events = useMemo(() => {
     if (directMode) return directEvents
@@ -210,7 +256,12 @@ export function useInfiniteTimeline(
       clearTimeout(settleTimeoutRef.current)
       settleTimeoutRef.current = null
     }
+    if (firstUsefulTimeoutRef.current) {
+      clearTimeout(firstUsefulTimeoutRef.current)
+      firstUsefulTimeoutRef.current = null
+    }
     inFlightRef.current = false
+    setSubscriptionActive(false)
     setDirectEvents([])
     setFallbackEvents([])
     setExhausted(false)
@@ -221,9 +272,9 @@ export function useInfiniteTimeline(
   // Trigger initial load when loader becomes available
   useEffect(() => {
     if (loader && isFirstLoadRef.current) {
-      queueMicrotask(() => next())
+      queueMicrotask(() => startLoad('initial'))
     }
-  }, [loader, next])
+  }, [loader, startLoad])
 
   // Reset when loader changes (e.g., when relays or filters change)
   const loaderRef = useRef(loader)
@@ -243,7 +294,7 @@ export function useInfiniteTimeline(
           reset()
           queueMicrotask(() => {
             if (!cancelled) {
-              next()
+              startLoad('initial')
             }
           })
         }
@@ -252,16 +303,19 @@ export function useInfiniteTimeline(
         cancelled = true
       }
     }
-  }, [loader, reset, next])
+  }, [loader, reset, startLoad])
 
   return {
     videos,
     loading: phase === 'loading-initial' || phase === 'loading-more',
     isInitialLoading: phase === 'loading-initial',
     isLoadingMore: phase === 'loading-more',
+    isPrefetching: phase === 'prefetching',
+    subscriptionActive,
     exhausted,
     phase,
     loadMore: next,
+    prefetchMore,
     reset,
   }
 }

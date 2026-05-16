@@ -36,7 +36,8 @@ export function HomePage() {
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('videos') }), [])
 
-  const { videos, loading, exhausted, loadMore } = useInfiniteTimeline(loader, effectiveRelays, {
+  const { videos, loading, exhausted, loadMore, prefetchMore, isPrefetching, subscriptionActive } =
+    useInfiniteTimeline(loader, effectiveRelays, {
     filters: timelineFilter,
     directMode: !!relayOverride,
   })
@@ -81,7 +82,10 @@ export function HomePage() {
         videos={filteredVideos}
         loading={loading}
         exhausted={exhausted}
+        prefetching={isPrefetching}
+        subscriptionActive={subscriptionActive}
         onLoadMore={loadMore}
+        onPrefetch={prefetchMore}
         layoutMode="horizontal"
         emptyMessage={t('pages.home.noVideos')}
         exhaustedMessage={t('pages.home.noMore')}

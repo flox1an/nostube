@@ -2,14 +2,17 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { useInfiniteScroll } from '@/hooks'
 import type { VideoEvent } from '@/utils/video-event'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface VideoTimelinePageProps {
   videos: VideoEvent[]
   loading: boolean
   exhausted: boolean
+  prefetching?: boolean
   subscriptionActive?: boolean
   onLoadMore: () => void
+  onPrefetch?: () => void
   layoutMode?: 'horizontal' | 'vertical' | 'auto'
   emptyMessage?: string
   loadingMessage?: string
@@ -28,8 +31,10 @@ export function VideoTimelinePage({
   videos,
   loading,
   exhausted,
+  prefetching = false,
   subscriptionActive,
   onLoadMore,
+  onPrefetch,
   layoutMode = 'horizontal',
   emptyMessage,
   loadingMessage,
@@ -38,12 +43,21 @@ export function VideoTimelinePage({
   className = 'sm:p-4',
 }: VideoTimelinePageProps) {
   const { t } = useTranslation()
-  const { ref } = useInfiniteScroll({
+  const { loadMoreRef, prefetchRef } = useInfiniteScroll({
     onLoadMore,
+    onPrefetch,
     loading,
+    prefetching,
     exhausted,
     subscriptionActive,
   })
+  const triggerRef = useCallback(
+    (node: Element | null) => {
+      loadMoreRef(node)
+      prefetchRef(node)
+    },
+    [loadMoreRef, prefetchRef]
+  )
 
   // Use translations for default messages if not provided
   const defaultEmptyMessage = emptyMessage ?? t('video.noVideosFound')
@@ -62,7 +76,7 @@ export function VideoTimelinePage({
       />
 
       <InfiniteScrollTrigger
-        triggerRef={ref}
+        triggerRef={triggerRef}
         loading={isLoadingMore}
         exhausted={exhausted}
         itemCount={videos.length}

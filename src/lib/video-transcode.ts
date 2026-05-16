@@ -4,13 +4,25 @@ import type { VideoCodec } from 'mediabunny'
 export const BITRATE_CUTOFF_MBPS = 8
 export const PRIMARY_TARGET_HEIGHT = 1080
 export const FALLBACK_TARGET_HEIGHT = 480
-export const BROWSER_TRANSCODE_1080P_BITRATE = 4_500_000
+export const BROWSER_TRANSCODE_1080P_BITRATES = {
+  compact: 4_500_000,
+  balanced: 6_750_000,
+  'high-motion': 9_000_000,
+} as const
+export const BROWSER_TRANSCODE_1080P_BITRATE = BROWSER_TRANSCODE_1080P_BITRATES.balanced
 export const TARGET_1080P_WIDTH = 1920
 export const TARGET_FPS = 30
 export const HLS_TARGET_DURATION = 4
 export const BROWSER_TRANSCODE_AUDIO_BITRATE = 96_000
 export const BROWSER_TRANSCODE_BPP =
   BROWSER_TRANSCODE_1080P_BITRATE / (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
+export type BrowserTranscodeQualityPreset = keyof typeof BROWSER_TRANSCODE_1080P_BITRATES
+
+const SOURCE_AWARE_MAX_MULTIPLIERS: Record<BrowserTranscodeQualityPreset, number> = {
+  compact: 1,
+  balanced: 1.35,
+  'high-motion': 1.5,
+}
 
 export interface TranscodeSourceMeta {
   width: number
@@ -30,6 +42,7 @@ export interface BrowserTranscodeVariant {
   format: 'mp4' | 'hls'
   label: string
   passthrough?: boolean
+  qualityPreset?: BrowserTranscodeQualityPreset
 }
 
 export async function probeTranscodeSource(file: File): Promise<TranscodeSourceMeta> {
@@ -142,6 +155,42 @@ export function computeTargetDimensions(
     : { width: finalLong, height: finalShort }
 }
 
+export function computeBrowserTranscodeVideoBitrate(
+  width: number,
+  height: number,
+  qualityPreset: BrowserTranscodeQualityPreset = 'balanced',
+  sourceMeta?: Pick<TranscodeSourceMeta, 'width' | 'height' | 'bitrateMbps'>
+): number {
+  const bpp =
+    BROWSER_TRANSCODE_1080P_BITRATES[qualityPreset] /
+    (TARGET_1080P_WIDTH * PRIMARY_TARGET_HEIGHT * TARGET_FPS)
+  const presetBitrate = Math.round(width * height * TARGET_FPS * bpp)
+
+  if (
+    !sourceMeta ||
+    sourceMeta.bitrateMbps <= 0 ||
+    sourceMeta.width <= 0 ||
+    sourceMeta.height <= 0
+  ) {
+    return presetBitrate
+  }
+
+  const sourceVideoBitrate = Math.max(
+    0,
+    sourceMeta.bitrateMbps * 1_000_000 - BROWSER_TRANSCODE_AUDIO_BITRATE
+  )
+  const sourcePixels = sourceMeta.width * sourceMeta.height
+  const targetPixels = width * height
+  const resolutionScale = Math.min(1, targetPixels / sourcePixels)
+  const sourceGuidedBitrate = sourceVideoBitrate * resolutionScale * 0.65
+  const cappedSourceGuidedBitrate = Math.min(
+    sourceGuidedBitrate,
+    presetBitrate * SOURCE_AWARE_MAX_MULTIPLIERS[qualityPreset]
+  )
+
+  return Math.round(Math.max(presetBitrate, cappedSourceGuidedBitrate))
+}
+
 /** A resolution option the user can select in the transcode UI. */
 export interface ResolutionOption {
   height: number
@@ -215,7 +264,8 @@ export function defaultResolutions(
 export function buildVariants(
   resolutions: ResolutionOption[],
   format: 'mp4' | 'hls',
-  mp4Codec?: 'hevc' | 'avc'
+  mp4Codec?: 'hevc' | 'avc',
+  qualityPreset: BrowserTranscodeQualityPreset = 'balanced'
 ): BrowserTranscodeVariant[] {
   if (format === 'hls') {
     return resolutions.map(r => ({
@@ -223,6 +273,7 @@ export function buildVariants(
       targetHeight: r.height,
       format: 'hls' as const,
       label: `${r.height}p`,
+      qualityPreset,
     }))
   }
   return resolutions.map(r => {
@@ -232,6 +283,7 @@ export function buildVariants(
       targetHeight: r.height,
       format: 'mp4' as const,
       label: `${r.height}p ${codec === 'hevc' ? 'HEVC' : 'H.264'}`,
+      qualityPreset,
     }
   })
 }
@@ -270,7 +322,12 @@ export async function transcodeFile(
     sourceMeta.height,
     variant.targetHeight
   )
-  const targetBitrate = Math.round(targetWidth * targetHeight * TARGET_FPS * BROWSER_TRANSCODE_BPP)
+  const targetBitrate = computeBrowserTranscodeVideoBitrate(
+    targetWidth,
+    targetHeight,
+    variant.qualityPreset,
+    sourceMeta
+  )
 
   const createConversion = async (hardwareAcceleration: 'prefer-hardware' | 'no-preference') => {
     const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) })
@@ -387,7 +444,12 @@ export async function transcodeToHls(
         sourceMeta.height,
         v.targetHeight
       )
-      const bitrate = Math.round(width * height * TARGET_FPS * BROWSER_TRANSCODE_BPP)
+      const bitrate = computeBrowserTranscodeVideoBitrate(
+        width,
+        height,
+        v.qualityPreset,
+        sourceMeta
+      )
       return {
         width,
         height,

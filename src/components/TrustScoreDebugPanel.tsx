@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type TrustScoreResult, getGlobalScore } from '@/nostr/contextvm'
 
@@ -267,10 +267,17 @@ interface TrustScoreDialogProps {
 export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialogProps) {
   const { t } = useTranslation()
   const { result, isLoading } = useTrustScoreDetail(pubkey)
+  const stopEventPropagation = (event: SyntheticEvent) => {
+    event.stopPropagation()
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
+        onClickCapture={stopEventPropagation}
+        onPointerDownCapture={stopEventPropagation}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />

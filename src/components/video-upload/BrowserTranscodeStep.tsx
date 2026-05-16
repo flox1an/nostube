@@ -9,12 +9,12 @@ import { useVideoTranscode } from '@/hooks/useVideoTranscode'
 import { formatDuration } from '@/lib/formatDuration'
 import {
   BROWSER_TRANSCODE_AUDIO_BITRATE,
-  BROWSER_TRANSCODE_BPP,
-  TARGET_FPS,
   assignMp4ResolutionCodecs,
   buildVariants,
   canUseOriginalHlsVariant,
+  computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
+  type BrowserTranscodeQualityPreset,
   type ResolutionOption,
 } from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
@@ -75,7 +75,12 @@ function estimateVariantSizeMB(
     sourceMeta.height,
     variant.targetHeight
   )
-  const videoBitrateBps = Math.round(width * height * TARGET_FPS * BROWSER_TRANSCODE_BPP)
+  const videoBitrateBps = computeBrowserTranscodeVideoBitrate(
+    width,
+    height,
+    variant.qualityPreset,
+    sourceMeta
+  )
   const audioBitrateBps = BROWSER_TRANSCODE_AUDIO_BITRATE
   const bytes = ((videoBitrateBps + audioBitrateBps) * sourceMeta.duration) / 8
   return bytes / (1024 * 1024)
@@ -121,6 +126,7 @@ export const BrowserTranscodeStep = forwardRef<
   const [selectedHeights, setSelectedHeights] = useState<number[] | null>(null)
   const [keepOriginal, setKeepOriginal] = useState(false)
   const [includeSourceVariant, setIncludeSourceVariant] = useState(true)
+  const [qualityPreset, setQualityPreset] = useState<BrowserTranscodeQualityPreset>('balanced')
 
   const {
     status,
@@ -238,7 +244,7 @@ export const BrowserTranscodeStep = forwardRef<
 
     // Sort descending (highest first) — mediabunny expects highest bitrate first for HLS
     selectedWithCodecs.sort((a, b) => b.height - a.height)
-    const variants = buildVariants(selectedWithCodecs, outputFormat)
+    const variants = buildVariants(selectedWithCodecs, outputFormat, undefined, qualityPreset)
     if (!sourceMeta || outputFormat !== 'hls' || !canUseOriginalHlsVariant(sourceMeta)) {
       return variants
     }
@@ -261,6 +267,7 @@ export const BrowserTranscodeStep = forwardRef<
     hasOriginalHlsVariant,
     includeSourceVariant,
     outputFormat,
+    qualityPreset,
     sourceMeta,
     sourceShortSide,
     supportsHevc,
@@ -622,6 +629,49 @@ export const BrowserTranscodeStep = forwardRef<
                   </div>
                 </div>
               </div>
+
+              {outputFormat !== 'upload-only' && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium sm:text-sm">
+                    {t('upload.browserTranscode.qualityPreset', {
+                      defaultValue: 'Quality preset',
+                    })}
+                  </p>
+                  <ToggleGroup
+                    type="single"
+                    value={qualityPreset}
+                    onValueChange={value => {
+                      if (value) setQualityPreset(value as BrowserTranscodeQualityPreset)
+                    }}
+                    className="grid w-full grid-cols-1 gap-1 sm:grid-cols-3"
+                  >
+                    <ToggleGroupItem
+                      value="compact"
+                      size="sm"
+                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    >
+                      Compact
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="balanced"
+                      size="sm"
+                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    >
+                      Balanced
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="high-motion"
+                      size="sm"
+                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    >
+                      High motion
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                    Higher presets use more bitrate for motion-heavy videos.
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-2">
                 {!hidePrimaryAction && (

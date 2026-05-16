@@ -3,6 +3,7 @@ import {
   assessTranscodeNeed,
   assignMp4ResolutionCodecs,
   canUseOriginalHlsVariant,
+  computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
   defaultVariants,
   type TranscodeSourceMeta,
@@ -118,6 +119,37 @@ describe('computeTargetDimensions', () => {
     const { width, height } = computeTargetDimensions(1080, 1920, 1080)
     expect(width).toBe(1080)
     expect(height).toBe(1920)
+  })
+})
+
+describe('computeBrowserTranscodeVideoBitrate', () => {
+  it('uses balanced as the default browser transcode bitrate', () => {
+    expect(computeBrowserTranscodeVideoBitrate(1280, 720)).toBe(3_000_000)
+  })
+
+  it('supports compact and high motion presets', () => {
+    expect(computeBrowserTranscodeVideoBitrate(1280, 720, 'compact')).toBe(2_000_000)
+    expect(computeBrowserTranscodeVideoBitrate(1280, 720, 'high-motion')).toBe(4_000_000)
+  })
+
+  it('lets a high-bitrate source pull balanced upward within the preset cap', () => {
+    expect(
+      computeBrowserTranscodeVideoBitrate(1280, 720, 'balanced', {
+        width: 1280,
+        height: 720,
+        bitrateMbps: 10,
+      })
+    ).toBe(4_050_000)
+  })
+
+  it('does not let a low-bitrate source pull balanced below its floor', () => {
+    expect(
+      computeBrowserTranscodeVideoBitrate(1280, 720, 'balanced', {
+        width: 1280,
+        height: 720,
+        bitrateMbps: 1.5,
+      })
+    ).toBe(3_000_000)
   })
 })
 

@@ -16,7 +16,7 @@
     "server:dev": "npx tsx --watch server/standalone.ts"
   },
   "dependencies": {
-    "@contextvm/sdk": "^0.7.8",
+    "@contextvm/sdk": "^0.11.8",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

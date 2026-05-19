@@ -55,7 +55,7 @@ function logHlsJson(label: string, details: Record<string, unknown>) {
  * Hook to manage hls.js instance and quality levels
  */
 export function useHls(
-  videoRef: React.RefObject<HTMLVideoElement | null>,
+  videoRef: React.RefObject<HTMLMediaElement | null>,
   src: string | null,
   isHlsSource: boolean,
   authorPubkey?: string,

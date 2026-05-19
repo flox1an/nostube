@@ -49,14 +49,14 @@ export function useVideoPlayPosition({
   const [currentPlayPos, setCurrentPlayPos] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastWriteRef = useRef<number>(0)
-  const videoElementRef = useRef<HTMLVideoElement | null>(null)
+  const videoElementRef = useRef<HTMLMediaElement | null>(null)
   // Track actual duration from video element (more reliable than event metadata)
   const actualDurationRef = useRef<number>(0)
   // Track when video element is set so we can attach listeners
   const [videoElementReady, setVideoElementReady] = useState(false)
 
   // Wrapper to set videoElementRef and trigger effect
-  const setVideoElement = (el: HTMLVideoElement | null) => {
+  const setVideoElement = (el: HTMLMediaElement | null) => {
     videoElementRef.current = el
     setVideoElementReady(!!el)
   }

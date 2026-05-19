@@ -10,7 +10,7 @@ import type { VideoVariant } from '@/utils/video-event'
 import { useAppContext } from '@/hooks/useAppContext'
 
 interface UseVideoVariantSelectorOptions {
-  videoRef: RefObject<HTMLVideoElement | null>
+  videoRef: RefObject<HTMLMediaElement | null>
   videoVariants?: VideoVariant[]
   urls: string[]
   sha256?: string

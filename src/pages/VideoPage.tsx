@@ -406,7 +406,7 @@ export function VideoPage() {
   })
 
   // State for active video element
-  const [activeVideoElement, setActiveVideoElement] = useState<HTMLVideoElement | null>(null)
+  const [activeVideoElement, setActiveVideoElement] = useState<HTMLMediaElement | null>(null)
 
   // Use keyboard shortcuts hook
   useVideoKeyboardShortcuts({
@@ -488,7 +488,7 @@ export function VideoPage() {
 
   // Handle video element ready callback (stable reference)
   const handleVideoElementReady = useCallback(
-    (element: HTMLVideoElement | null) => {
+    (element: HTMLMediaElement | null) => {
       setVideoElement(element)
       setActiveVideoElement(element)
     },
@@ -568,6 +568,7 @@ export function VideoPage() {
         urls={video.urls}
         textTracks={video.textTracks}
         mime={video.mimeType || ''}
+        mediaType={video.mediaType}
         poster={video.images[0] || ''}
         posterHash={video.thumbnailVariants?.[0]?.hash}
         loop={shouldVideoLoop(video.kind)}

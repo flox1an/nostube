@@ -392,6 +392,74 @@ describe('processEvent', () => {
       expect(result?.tags).toEqual([])
     })
 
+    it('should process audio-only imeta events as playable media', () => {
+      const audioEvent = {
+        content: 'Audio-only episode',
+        created_at: 1763200000,
+        id: 'audio-event',
+        kind: 34235,
+        pubkey: 'audio-pubkey',
+        sig: 'audio-sig',
+        tags: [
+          ['d', 'episode-1'],
+          ['title', 'Episode 1'],
+          ['duration', '180'],
+          [
+            'imeta',
+            'url https://example.com/episode.mp3',
+            'm audio/mpeg',
+            'x 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+            'image https://example.com/episode.jpg',
+          ],
+        ],
+      }
+
+      const result = processEvent(audioEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.mediaType).toBe('audio')
+      expect(result?.mimeType).toBe('audio/mpeg')
+      expect(result?.urls).toEqual(['https://example.com/episode.mp3'])
+      expect(result?.images).toEqual(['https://example.com/episode.jpg'])
+      expect(result?.videoVariants[0]).toMatchObject({
+        mediaType: 'audio',
+        url: 'https://example.com/episode.mp3',
+      })
+    })
+
+    it('should process audio/ogg imeta events as playable audio', () => {
+      const oggEvent = {
+        content: 'Ogg audio episode',
+        created_at: 1763200001,
+        id: 'ogg-audio-event',
+        kind: 34235,
+        pubkey: 'audio-pubkey',
+        sig: 'audio-sig',
+        tags: [
+          ['d', 'ogg-episode-1'],
+          ['title', 'Ogg Episode'],
+          [
+            'imeta',
+            'url https://example.com/episode.ogg',
+            'm audio/ogg',
+            'image https://example.com/episode.jpg',
+          ],
+        ],
+      }
+
+      const result = processEvent(oggEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.mediaType).toBe('audio')
+      expect(result?.mimeType).toBe('audio/ogg')
+      expect(result?.urls).toEqual(['https://example.com/episode.ogg'])
+      expect(result?.videoVariants[0]).toMatchObject({
+        mediaType: 'audio',
+        mimeType: 'audio/ogg',
+        url: 'https://example.com/episode.ogg',
+      })
+    })
+
     it('should process nostube event with multiple images and fallback URLs', () => {
       const result = processEvent(nostubeEvent, defaultRelays)
 

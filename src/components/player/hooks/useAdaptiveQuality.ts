@@ -8,7 +8,7 @@ const QUALITY_ORDER = ['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p
 const EMPTY_INDICES: number[] = []
 
 interface UseAdaptiveQualityOptions {
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  videoRef: React.RefObject<HTMLMediaElement | null>
   videoVariants?: VideoVariant[]
   selectedVariantIndex: number
   onVariantChange: (index: number) => void

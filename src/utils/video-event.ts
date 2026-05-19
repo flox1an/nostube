@@ -38,6 +38,7 @@ export type VideoVariant = {
   size?: number // bytes
   dimensions?: string // e.g., "1920x1080"
   mimeType?: string
+  mediaType?: 'video' | 'audio' | 'image'
   quality?: string // e.g., "1080p", "720p", "480p"
   fallbackUrls: string[] // fallback URLs for this variant
   blurhash?: string // for thumbnails
@@ -58,6 +59,7 @@ export interface VideoEvent {
   searchText: string
   urls: string[]
   mimeType?: string
+  mediaType?: 'video' | 'audio'
   dimensions?: string
   size?: number
   link: string
@@ -84,6 +86,45 @@ export function getPublishDate(video: VideoEvent): number {
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(' ')}`.toLowerCase()
+}
+
+const AUDIO_URL_EXTENSIONS = ['.mp3', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.wav', '.flac']
+const AUDIO_CONTAINER_MIME_TYPES = new Set([
+  'application/ogg',
+  'application/x-ogg',
+  'application/opus',
+])
+
+function getBaseMimeType(mimeType?: string): string {
+  return mimeType?.split(';')[0]?.trim().toLowerCase() ?? ''
+}
+
+function getUrlPathname(url: string): string {
+  try {
+    return new URL(url).pathname.toLowerCase()
+  } catch {
+    return url.toLowerCase().split('?')[0]
+  }
+}
+
+function isAudioMimeType(mimeType?: string): boolean {
+  const baseMimeType = getBaseMimeType(mimeType)
+  return baseMimeType.startsWith('audio/') || AUDIO_CONTAINER_MIME_TYPES.has(baseMimeType)
+}
+
+function isAudioUrl(url?: string): boolean {
+  if (!url) return false
+  const pathname = getUrlPathname(url)
+  return AUDIO_URL_EXTENSIONS.some(extension => pathname.endsWith(extension))
+}
+
+function getVariantMediaType(
+  mimeType: string | undefined,
+  url: string
+): 'video' | 'audio' | 'image' {
+  if (isAudioMimeType(mimeType) || isAudioUrl(url)) return 'audio'
+  if (getBaseMimeType(mimeType).startsWith('image/')) return 'image'
+  return 'video'
 }
 
 /**
@@ -148,6 +189,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
   const size = imetaValues.get('size')?.[0] ? parseInt(imetaValues.get('size')![0]) : undefined
   const hash = imetaValues.get('x')?.[0]
   const blurhash = imetaValues.get('blurhash')?.[0]
+  const mediaType = getVariantMediaType(mimeType, url)
 
   // Collect fallback URLs
   const fallbackUrls: string[] = []
@@ -169,6 +211,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
     size,
     dimensions,
     mimeType,
+    mediaType,
     quality,
     fallbackUrls,
     blurhash,
@@ -379,11 +422,14 @@ export function processEvent(
       }
     }
 
-    // Separate video variants from thumbnail variants
-    // Also accept HLS master playlists (application/vnd.apple.mpegurl) and .m3u8 URLs
+    // Separate playable media variants from thumbnail variants.
+    // NIP-71 video events can legitimately carry audio-only media (e.g. MP3 podcasts).
+    // Also accept HLS master playlists (application/vnd.apple.mpegurl) and .m3u8 URLs.
     const parsedVideoVariants = allVariants.filter(
       v =>
         v.mimeType?.startsWith('video/') ||
+        isAudioMimeType(v.mimeType) ||
+        isAudioUrl(v.url) ||
         v.mimeType === 'application/vnd.apple.mpegurl' ||
         v.url?.endsWith('.m3u8')
     )
@@ -495,6 +541,7 @@ export function processEvent(
     // Get mime type and dimensions from highest quality variant (first one)
     const primaryVariant = videoVariants[0]
     const primaryMimeType = primaryVariant?.mimeType || mimeType
+    const primaryMediaType = primaryVariant?.mediaType === 'audio' ? 'audio' : 'video'
     const primaryDimensions = primaryVariant?.dimensions
 
     const videoEvent: VideoEvent = {
@@ -513,6 +560,7 @@ export function processEvent(
       searchText: '',
       urls: finalUrls,
       mimeType: primaryMimeType,
+      mediaType: primaryMediaType,
       dimensions: primaryDimensions,
       textTracks,
       link: generateEventLink(event, identifier, eventRelays),
@@ -573,6 +621,7 @@ export function processEvent(
             size: size || undefined,
             dimensions,
             mimeType,
+            mediaType: getVariantMediaType(mimeType, url),
             fallbackUrls: [],
           },
         ]
@@ -603,6 +652,7 @@ export function processEvent(
       urls: finalUrls,
       textTracks: [],
       mimeType,
+      mediaType: getVariantMediaType(mimeType, url) === 'audio' ? 'audio' : 'video',
       dimensions,
       size: size || undefined,
       x,

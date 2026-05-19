@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 interface UseVideoKeyboardShortcutsProps {
-  videoElement: HTMLVideoElement | null
+  videoElement: HTMLMediaElement | null
   toggleCinemaMode: () => void
   onPreviousVideo?: () => void
   onNextVideo?: () => void
@@ -24,7 +24,7 @@ export function useVideoKeyboardShortcuts({
   onNextVideo,
   isPlaylistMode,
 }: UseVideoKeyboardShortcutsProps) {
-  const activeVideoElement = useRef<HTMLVideoElement | null>(null)
+  const activeVideoElement = useRef<HTMLMediaElement | null>(null)
 
   // Update active video element ref
   useEffect(() => {

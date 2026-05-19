@@ -26,7 +26,7 @@ function saveVolume(volume: number): void {
 }
 
 interface UsePlayerStateProps {
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  videoRef: React.RefObject<HTMLMediaElement | null>
   onTimeUpdate?: (time: number) => void
 }
 
@@ -77,7 +77,7 @@ export function usePlayerState({
   const lastTimeUpdateRef = useRef(0)
 
   // Track the current video element to detect when it changes
-  const currentVideoRef = useRef<HTMLVideoElement | null>(null)
+  const currentVideoRef = useRef<HTMLMediaElement | null>(null)
 
   // Track when video element becomes available
   const [videoReady, setVideoReady] = useState(false)

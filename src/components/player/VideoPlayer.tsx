@@ -27,6 +27,7 @@ interface VideoPlayerProps {
   loop?: boolean
   textTracks: TextTrack[]
   mime: string
+  mediaType?: 'video' | 'audio'
   poster?: string
   posterHash?: string
   onTimeUpdate?: (time: number) => void
@@ -41,7 +42,7 @@ interface VideoPlayerProps {
   onToggleCinemaMode?: () => void
   onVideoDimensionsLoaded?: (width: number, height: number) => void
   onEnded?: () => void
-  onVideoElementReady?: (element: HTMLVideoElement | null) => void
+  onVideoElementReady?: (element: HTMLMediaElement | null) => void
   videoVariants?: VideoVariant[]
   title?: string
   authorName?: string
@@ -54,6 +55,7 @@ const LOOP_STORAGE_KEY = 'nostube:video-loop'
 export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
   mime,
+  mediaType,
   poster,
   posterHash,
   textTracks,
@@ -78,7 +80,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   onNextTrack,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLMediaElement | null>(null)
+  const setMediaElementRef = useCallback((element: HTMLMediaElement | null) => {
+    videoRef.current = element
+  }, [])
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [captionsEnabled, setCaptionsEnabled] = useState(false)
@@ -109,6 +114,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const spinnerTimeoutRef = useRef<number | null>(null)
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
+  const isAudioOnly = mediaType === 'audio' || mime.startsWith('audio/')
+  const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
 
   // Video quality variant selector with position preservation
   const { selectedVariantIndex, effectiveUrls, effectiveSha256, handleVariantChange } =
@@ -179,7 +186,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     isLoading: isLoadingVideoUrls,
   } = useMediaUrls({
     urls: effectiveUrls,
-    mediaType: 'video',
+    mediaType: isAudioOnly ? 'audio' : 'video',
     sha256: effectiveSha256,
     kind: 34235,
     authorPubkey,
@@ -373,7 +380,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Notify parent when video element is ready
   useEffect(() => {
     onVideoElementReady?.(videoRef.current)
-  }, [onVideoElementReady])
+  }, [onVideoElementReady, isAudioOnly])
 
   // Detect video dimensions
   useEffect(() => {
@@ -381,13 +388,23 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (!el) return
 
     const handleLoadedMetadata = () => {
-      if (onVideoDimensionsLoaded && el.videoWidth > 0 && el.videoHeight > 0) {
+      if (
+        onVideoDimensionsLoaded &&
+        el instanceof HTMLVideoElement &&
+        el.videoWidth > 0 &&
+        el.videoHeight > 0
+      ) {
         onVideoDimensionsLoaded(el.videoWidth, el.videoHeight)
       }
     }
 
     el.addEventListener('loadedmetadata', handleLoadedMetadata)
-    if (el.readyState >= 1 && el.videoWidth > 0 && el.videoHeight > 0) {
+    if (
+      el instanceof HTMLVideoElement &&
+      el.readyState >= 1 &&
+      el.videoWidth > 0 &&
+      el.videoHeight > 0
+    ) {
       handleLoadedMetadata()
     }
 
@@ -565,6 +582,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       }
 
       // Fallback: iPhone and older iPad where the standard API is not available
+      if (!(video instanceof HTMLVideoElement)) return
       const videoEl = video as HTMLVideoElement & {
         webkitEnterFullscreen?: () => void
       }
@@ -585,7 +603,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         return
       }
       // Handle exit for webkit fullscreen path (iPhone, older iPad)
-      const videoEl = videoRef.current as HTMLVideoElement & {
+      const video = videoRef.current
+      if (!(video instanceof HTMLVideoElement)) return
+      const videoEl = video as HTMLVideoElement & {
         webkitExitFullscreen?: () => void
       }
       videoEl?.webkitExitFullscreen?.()
@@ -597,7 +617,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
-    const videoEl = videoRef.current as HTMLVideoElement & {
+    const videoEl = videoRef.current as HTMLMediaElement & {
       webkitDisplayingFullscreen?: boolean
     }
     if (document.fullscreenElement || videoEl?.webkitDisplayingFullscreen) {
@@ -638,7 +658,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const isPipSupported = 'pictureInPictureEnabled' in document
   const togglePip = useCallback(async () => {
     const el = videoRef.current
-    if (!el) return
+    if (!(el instanceof HTMLVideoElement)) return
 
     try {
       if (document.pictureInPictureElement) {
@@ -887,13 +907,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }
 
   const hasCaptions = validatedTracks.length > 0
+  const showPipButton = isPipSupported && !isAudioOnly
+  const controlsVisibleForRender = isAudioOnly ? true : controlsVisible
 
   return (
     <div
       ref={containerRef}
       className={`relative bg-black overflow-hidden ${className || ''} ${
-        !controlsVisible && playerState.isPlaying ? 'cursor-none' : ''
-      } ${cinemaMode && !isFullscreen ? 'flex items-center justify-center' : ''}`}
+        !controlsVisibleForRender && playerState.isPlaying ? 'cursor-none' : ''
+      } ${effectiveCinemaMode && !isFullscreen ? 'flex items-center justify-center' : ''}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {}}
     >
@@ -903,27 +925,68 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           src={blurhashPlaceholder}
           alt=""
           aria-hidden="true"
-          className={`absolute inset-0 w-full h-full object-cover ${cinemaMode && !isFullscreen ? 'max-h-[80dvh]' : ''}`}
+          className={`absolute inset-0 w-full h-full object-cover ${effectiveCinemaMode && !isFullscreen ? 'max-h-[80dvh]' : ''}`}
         />
       )}
 
-      {/* Video element */}
-      <video
-        ref={videoRef}
-        src={isHls ? undefined : videoUrl}
-        poster={posterUrl ?? undefined}
-        loop={loopEnabled}
-        autoPlay={!contentWarning}
-        playsInline
-        crossOrigin="anonymous"
-        className={`w-full object-contain ${cinemaMode && !isFullscreen ? 'max-h-[80dvh]' : 'h-full'}`}
-        onError={handleVideoError}
-        onClick={handleTogglePlay}
-      >
-        {validatedTracks.map(track => (
-          <track key={track.lang} kind="captions" srcLang={track.lang} src={track.validatedUrl} />
-        ))}
-      </video>
+      {isAudioOnly ? (
+        <>
+          {posterUrl && (
+            <button
+              type="button"
+              className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
+              onClick={handleTogglePlay}
+              aria-label={playerState.isPlaying ? 'Pause audio' : 'Play audio'}
+            >
+              <img src={posterUrl} alt="" className="h-full w-full object-contain" />
+            </button>
+          )}
+          {!posterUrl && (
+            <button
+              type="button"
+              className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
+              onClick={handleTogglePlay}
+              aria-label={playerState.isPlaying ? 'Pause audio' : 'Play audio'}
+            />
+          )}
+          <audio
+            ref={setMediaElementRef}
+            src={isHls ? undefined : videoUrl}
+            loop={loopEnabled}
+            autoPlay={!contentWarning}
+            playsInline
+            crossOrigin="anonymous"
+            className="absolute h-px w-px opacity-0 pointer-events-none"
+            onError={handleVideoError}
+          >
+            {validatedTracks.map(track => (
+              <track
+                key={track.lang}
+                kind="captions"
+                srcLang={track.lang}
+                src={track.validatedUrl}
+              />
+            ))}
+          </audio>
+        </>
+      ) : (
+        <video
+          ref={setMediaElementRef}
+          src={isHls ? undefined : videoUrl}
+          poster={posterUrl ?? undefined}
+          loop={loopEnabled}
+          autoPlay={!contentWarning}
+          playsInline
+          crossOrigin="anonymous"
+          className={`w-full object-contain ${effectiveCinemaMode && !isFullscreen ? 'max-h-[80dvh]' : 'h-full'}`}
+          onError={handleVideoError}
+          onClick={handleTogglePlay}
+        >
+          {validatedTracks.map(track => (
+            <track key={track.lang} kind="captions" srcLang={track.lang} src={track.validatedUrl} />
+          ))}
+        </video>
+      )}
 
       {/* Loading spinner */}
       <LoadingSpinner isVisible={showBufferingSpinner} />
@@ -958,7 +1021,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
       {/* Control bar */}
       <ControlBar
-        isVisible={controlsVisible}
+        isVisible={controlsVisibleForRender}
         isPlaying={playerState.isPlaying}
         currentTime={playerState.currentTime}
         duration={playerState.duration}
@@ -987,10 +1050,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         textTracks={validatedTracks}
         selectedSubtitleLang={selectedSubtitleLang}
         onSubtitleChange={handleSubtitleChange}
-        isPipSupported={isPipSupported}
+        isPipSupported={showPipButton}
         onTogglePip={togglePip}
-        cinemaMode={cinemaMode}
-        onToggleCinemaMode={onToggleCinemaMode}
+        cinemaMode={effectiveCinemaMode}
+        onToggleCinemaMode={isAudioOnly ? undefined : onToggleCinemaMode}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
         eventId={eventId}

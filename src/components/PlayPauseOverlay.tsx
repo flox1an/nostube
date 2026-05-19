@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface PlayPauseOverlayProps {
   /**
-   * Reference to the video element to track play/pause events
+   * Reference to the media element to track play/pause events
    */
-  videoRef: React.RefObject<HTMLVideoElement | null>
+  videoRef: React.RefObject<HTMLMediaElement | null>
   /**
    * Optional class name for the overlay container
    */

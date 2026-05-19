@@ -275,8 +275,8 @@ export function TrustScoreDialog({ pubkey, open, onOpenChange }: TrustScoreDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
-        onClickCapture={stopEventPropagation}
-        onPointerDownCapture={stopEventPropagation}
+        onClick={stopEventPropagation}
+        onPointerDown={stopEventPropagation}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

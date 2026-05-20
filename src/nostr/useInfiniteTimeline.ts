@@ -19,7 +19,7 @@ interface UseInfiniteTimelineOptions {
   firstUsefulTimeoutMs?: number
 }
 
-const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 4000
+const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 10000
 const DEFAULT_PAGE_SETTLE_MS = 3000
 const DEFAULT_FIRST_USEFUL_TIMEOUT_MS = 900
 
@@ -91,53 +91,16 @@ export function useInfiniteTimeline(
   // Stable callback — uses refs so it never changes reference when loading/exhausted changes.
   const startLoad = useCallback(
     (intent: LoadIntent) => {
-    if (!loader || inFlightRef.current || exhaustedRef.current) {
-      return
-    }
+      if (!loader || inFlightRef.current || exhaustedRef.current) {
+        return
+      }
 
-    isFirstLoadRef.current = false
+      isFirstLoadRef.current = false
 
-    // Cleanup previous subscription and timeouts before creating a new one
-    subscriptionRef.current?.unsubscribe()
-    if (safetyTimeoutRef.current) {
-      clearTimeout(safetyTimeoutRef.current)
-    }
-    if (settleTimeoutRef.current) {
-      clearTimeout(settleTimeoutRef.current)
-      settleTimeoutRef.current = null
-    }
-    if (firstUsefulTimeoutRef.current) {
-      clearTimeout(firstUsefulTimeoutRef.current)
-      firstUsefulTimeoutRef.current = null
-    }
-
-    inFlightRef.current = true
-    setSubscriptionActive(true)
-
-    if (intent === 'prefetch') {
-      setPhase('prefetching')
-    } else {
-      setPhase(prev => (prev === 'idle' || intent === 'initial' ? 'loading-initial' : 'loading-more'))
-    }
-
-    let receivedAnyEvents = false
-    let settled = false
-    let readyVisible = false
-
-    const setReadyVisible = () => {
-      if (readyVisible || intent === 'prefetch') return
-      readyVisible = true
-      setPhase('ready')
-    }
-
-    const finish = (nextPhase: TimelinePhase | 'prefetching') => {
-      if (settled) return
-      settled = true
-      inFlightRef.current = false
-      setSubscriptionActive(false)
+      // Cleanup previous subscription and timeouts before creating a new one
+      subscriptionRef.current?.unsubscribe()
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current)
-        safetyTimeoutRef.current = null
       }
       if (settleTimeoutRef.current) {
         clearTimeout(settleTimeoutRef.current)
@@ -147,71 +110,118 @@ export function useInfiniteTimeline(
         clearTimeout(firstUsefulTimeoutRef.current)
         firstUsefulTimeoutRef.current = null
       }
-      setPhase(nextPhase)
-    }
 
-    const scheduleSettle = () => {
-      if (settleTimeoutRef.current) {
-        clearTimeout(settleTimeoutRef.current)
+      inFlightRef.current = true
+      setSubscriptionActive(true)
+
+      if (intent === 'prefetch') {
+        setPhase('prefetching')
+      } else {
+        setPhase(prev =>
+          prev === 'idle' || intent === 'initial' ? 'loading-initial' : 'loading-more'
+        )
       }
 
-      settleTimeoutRef.current = setTimeout(() => {
-        subscriptionRef.current?.unsubscribe()
-        finish('ready')
-      }, pageSettleMs)
-    }
+      let receivedAnyEvents = false
+      let settled = false
+      let readyVisible = false
 
-    // If nothing answers at all, release the pagination gate. Once events start
-    // flowing, pageSettleMs takes over and waits for an idle period.
-    safetyTimeoutRef.current = setTimeout(() => {
-      subscriptionRef.current?.unsubscribe()
+      const setReadyVisible = () => {
+        if (readyVisible || intent === 'prefetch') return
+        readyVisible = true
+        setPhase('ready')
+      }
 
-      setExhausted(true)
-      finish('exhausted')
-    }, firstEventTimeoutMs)
-
-    if (intent !== 'prefetch') {
-      firstUsefulTimeoutRef.current = setTimeout(() => {
-        if (receivedAnyEvents) {
-          setReadyVisible()
-        }
-      }, firstUsefulTimeoutMs)
-    }
-
-    subscriptionRef.current = loader()().subscribe({
-      next: event => {
-        if (!receivedAnyEvents && safetyTimeoutRef.current) {
+      const finish = (nextPhase: TimelinePhase | 'prefetching') => {
+        if (settled) return
+        settled = true
+        inFlightRef.current = false
+        setSubscriptionActive(false)
+        if (safetyTimeoutRef.current) {
           clearTimeout(safetyTimeoutRef.current)
           safetyTimeoutRef.current = null
         }
-        receivedAnyEvents = true
-        setReadyVisible()
-        scheduleSettle()
-        if (directMode) {
-          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
-        } else if (!filters) {
-          // Compatibility path for callers that have not provided a store timeline filter yet.
-          setFallbackEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
-        } else {
-          eventStore.add(event)
+        if (settleTimeoutRef.current) {
+          clearTimeout(settleTimeoutRef.current)
+          settleTimeoutRef.current = null
         }
-      },
-      complete: () => {
-        if (!receivedAnyEvents) {
-          setExhausted(true)
-          finish('exhausted')
-          return
+        if (firstUsefulTimeoutRef.current) {
+          clearTimeout(firstUsefulTimeoutRef.current)
+          firstUsefulTimeoutRef.current = null
+        }
+        setPhase(nextPhase)
+      }
+
+      const scheduleSettle = () => {
+        if (settleTimeoutRef.current) {
+          clearTimeout(settleTimeoutRef.current)
         }
 
-        finish('ready')
-      },
-      error: err => {
-        console.error('[useInfiniteTimeline] Load error:', err)
-        finish(receivedAnyEvents ? 'ready' : 'error')
-      },
-    })
+        settleTimeoutRef.current = setTimeout(() => {
+          subscriptionRef.current?.unsubscribe()
+          finish('ready')
+        }, pageSettleMs)
+      }
+
+      // If nothing answers at all, release the pagination gate. Once events start
+      // flowing, pageSettleMs takes over and waits for an idle period.
+      safetyTimeoutRef.current = setTimeout(() => {
+        subscriptionRef.current?.unsubscribe()
+
+        setExhausted(true)
+        finish('exhausted')
+      }, firstEventTimeoutMs)
+
+      if (intent !== 'prefetch') {
+        firstUsefulTimeoutRef.current = setTimeout(() => {
+          if (receivedAnyEvents) {
+            setReadyVisible()
+          }
+        }, firstUsefulTimeoutMs)
+      }
+
+      subscriptionRef.current = loader()().subscribe({
+        next: event => {
+          if (!receivedAnyEvents && safetyTimeoutRef.current) {
+            clearTimeout(safetyTimeoutRef.current)
+            safetyTimeoutRef.current = null
+          }
+          receivedAnyEvents = true
+          setReadyVisible()
+          scheduleSettle()
+          if (directMode) {
+            setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          } else if (!filters) {
+            // Compatibility path for callers that have not provided a store timeline filter yet.
+            setFallbackEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          } else {
+            eventStore.add(event)
+          }
+        },
+        complete: () => {
+          if (!receivedAnyEvents) {
+            setExhausted(true)
+            finish('exhausted')
+            return
+          }
+
+          finish('ready')
+        },
+        error: err => {
+          console.error('[useInfiniteTimeline] Load error:', err)
+          finish(receivedAnyEvents ? 'ready' : 'error')
+        },
+      })
     },
-    [loader, directMode, filters, eventStore, firstEventTimeoutMs, firstUsefulTimeoutMs, pageSettleMs]
+    [
+      loader,
+      directMode,
+      filters,
+      eventStore,
+      firstEventTimeoutMs,
+      firstUsefulTimeoutMs,
+      pageSettleMs,
+    ]
   )
 
   const next = useCallback(() => startLoad('load-more'), [startLoad])

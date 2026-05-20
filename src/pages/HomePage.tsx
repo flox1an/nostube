@@ -38,9 +38,9 @@ export function HomePage() {
 
   const { videos, loading, exhausted, loadMore, prefetchMore, isPrefetching, subscriptionActive } =
     useInfiniteTimeline(loader, effectiveRelays, {
-    filters: timelineFilter,
-    directMode: !!relayOverride,
-  })
+      filters: timelineFilter,
+      directMode: !!relayOverride,
+    })
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {

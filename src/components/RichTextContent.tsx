@@ -24,9 +24,12 @@ const socialMediaPlatforms: SocialMediaPlatform[] = [
     icon: YoutubeIcon,
     patterns: [/youtube\.com/, /youtu\.be/],
     extractTitle: (url: string) => {
+      const channelIdMatch = url.match(/youtube\.com\/channel\/([^/?]+)/)
+      if (channelIdMatch) return channelIdMatch[1]
+
       // Handle channel links like youtube.com/@username
-      const channelMatch = url.match(/youtube\.com\/([^/?]+)\/?/)
-      if (channelMatch) return `@${channelMatch[1]}`
+      const handleMatch = url.match(/youtube\.com\/@([^/?]+)\/?/)
+      if (handleMatch) return `@${handleMatch[1]}`
 
       // Handle video links (watch, shorts, youtu.be)
       const videoMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?/]+)/)
@@ -138,6 +141,8 @@ const shortenUrl = (url: string, maxLength = 20, tailLength = 4): string => {
   return `${url.slice(0, maxLength)}...${url.slice(-tailLength)}`
 }
 
+const trimTrailingUrlPunctuation = (url: string): string => url.replace(/[.,!?;:]+$/, '')
+
 // Helper component to display user mentions
 function NostrMention({
   profilePointer,
@@ -212,14 +217,17 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
     let match: RegExpExecArray | null
 
     while ((match = combinedRegex.exec(content)) !== null) {
-      const [fullMatch, _openParen, url, _closeParen, nostrPrefix, nostrData, hashtag] = match
+      const [fullMatch, openParen, url, _closeParen, nostrPrefix, nostrData, hashtag] = match
 
       if (url) {
+        const trimmedUrl = trimTrailingUrlPunctuation(url)
+        const start = match.index + (openParen ? openParen.length : 0)
+
         matches.push({
-          start: match.index,
-          end: match.index + fullMatch.length,
+          start,
+          end: start + trimmedUrl.length,
           type: 'url',
-          data: url,
+          data: trimmedUrl,
         })
       } else if (nostrPrefix && nostrData) {
         const nostrId = `${nostrPrefix}${nostrData}`

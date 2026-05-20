@@ -51,7 +51,7 @@ export async function cacheRequest(filters: Filter[]) {
 export const eventStore = new EventStore()
 export const relayPool = new RelayPool()
 
-const REQUEST_IDLE_TIMEOUT_MS = 3000
+const REQUEST_IDLE_TIMEOUT_MS = 8000
 const originalRequest = relayPool.request.bind(relayPool)
 
 function withIdleTimeout<T>(source: Observable<T>, message: string): Observable<T> {

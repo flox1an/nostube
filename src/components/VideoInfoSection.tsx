@@ -173,7 +173,8 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     )
   }
 
-  if (!video || video.urls.length === 0) return null
+  const hasYouTubeOrigin = video?.origins.some(o => o.platform === 'youtube')
+  if (!video || (video.urls.length === 0 && !hasYouTubeOrigin)) return null
 
   const handleDelete = async () => {
     if (!video) return

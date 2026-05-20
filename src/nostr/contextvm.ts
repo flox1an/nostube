@@ -43,7 +43,6 @@ export interface TrustScoreResult {
  * - video_viewer_engagement
  * - video_creator_comments
  */
-const VIDEO_VALIDATOR_PUBKEY = 'd3aa7e54cc5fc3e2390984bfc6faabfa1a9316118c30dff53b47e3dabe655aef'
 const VIDEO_INDICATORS = new Set([
   'video_creator_activity',
   'video_viewer_engagement',
@@ -66,10 +65,8 @@ export function getGlobalScore(result: TrustScoreResult): number | null {
   const videoScores: number[] = []
   let reportPenalty = 1.0 // default: no penalty
   for (const [key, val] of Object.entries(validators)) {
-    const indicator = key.startsWith(VIDEO_VALIDATOR_PUBKEY + ':')
-      ? key.slice(VIDEO_VALIDATOR_PUBKEY.length + 1)
-      : null
-    if (indicator && VIDEO_INDICATORS.has(indicator)) {
+    const indicator = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key
+    if (VIDEO_INDICATORS.has(indicator)) {
       videoScores.push(val.score)
     }
     if (key.endsWith(':report_penalty')) {

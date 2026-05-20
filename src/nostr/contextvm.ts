@@ -63,20 +63,15 @@ export function getGlobalScore(result: TrustScoreResult): number | null {
   if (!validators || typeof validators !== 'object') return null
 
   const videoScores: number[] = []
-  let reportPenalty = 1.0 // default: no penalty
   for (const [key, val] of Object.entries(validators)) {
     const indicator = key.includes(':') ? key.slice(key.indexOf(':') + 1) : key
     if (VIDEO_INDICATORS.has(indicator)) {
       videoScores.push(val.score)
     }
-    if (key.endsWith(':report_penalty')) {
-      reportPenalty = val.score
-    }
   }
 
   if (videoScores.length === 0) return null
-  const avg = videoScores.reduce((sum, s) => sum + s, 0) / videoScores.length
-  return avg * reportPenalty
+  return videoScores.reduce((sum, s) => sum + s, 0) / videoScores.length
 }
 
 // Singleton state

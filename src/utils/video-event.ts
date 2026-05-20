@@ -353,9 +353,6 @@ export function processEvents(
       (video): video is VideoEvent =>
         video !== undefined &&
         Boolean(video.id) &&
-        Boolean(video.urls) &&
-        video?.urls !== undefined &&
-        video.urls[0]?.indexOf('youtube.com') < 0 &&
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
         (!missingVideoIds || !missingVideoIds.has(video.id)) &&
         (!reportedSet || !reportedSet.has(video.id))

@@ -3,6 +3,7 @@ import { getTypeForKind, type VideoType } from '@/lib/video-types'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { nip19 } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
+import { YOUTUBE_REGEX } from './origin-utils'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
@@ -495,6 +496,30 @@ export function processEvent(
       originalUrl: tag[3],
       metadata: tag[4],
     }))
+
+    // Auto-detect YouTube from imeta URLs (m text/html) or r tags when no explicit origin tag
+    if (origins.length === 0) {
+      const allUrls = [
+        ...imetaTags.flatMap(tag =>
+          tag
+            .slice(1)
+            .filter(v => v.startsWith('url '))
+            .map(v => v.slice(4))
+        ),
+        ...event.tags
+          .filter(t => t[0] === 'r')
+          .map(t => t[1])
+          .filter(Boolean),
+      ]
+      for (const u of allUrls) {
+        const match = u.match(YOUTUBE_REGEX)
+        if (match?.[1]) {
+          origins.push({ platform: 'youtube', externalId: match[1], originalUrl: u })
+          break
+        }
+      }
+    }
+
     const origin = origins[0]
 
     // Only process if it's a video

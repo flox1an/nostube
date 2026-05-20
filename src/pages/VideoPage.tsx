@@ -5,6 +5,7 @@ import { switchMap, catchError, take } from 'rxjs/operators'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import type { NostrEvent } from 'nostr-tools'
 import { VideoPlayer } from '@/components/VideoPlayer'
+import { YouTubePlayer } from '@/components/YouTubePlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
@@ -552,6 +553,20 @@ export function VideoPage() {
   const videoPlayer = useMemo(() => {
     if (isLoading) {
       return <Skeleton className="w-full aspect-video" />
+    }
+
+    const youtubeOrigin = video?.origins.find(o => o.platform === 'youtube')
+    if (video && youtubeOrigin && video.urls.length === 0) {
+      return (
+        <YouTubePlayer
+          videoId={youtubeOrigin.externalId}
+          className={
+            cinemaMode
+              ? 'w-full max-h-[80dvh] aspect-video'
+              : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
+          }
+        />
+      )
     }
 
     if (!video || video.urls.length === 0) {

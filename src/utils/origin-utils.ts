@@ -1,11 +1,13 @@
 import { decodeNip19 } from '@/lib/nip19'
 
+export const YOUTUBE_REGEX =
+  /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?/\s]{11})/i
+
 export const PLATFORMS = [
   {
     name: 'youtube',
     color: 'bg-[#FF0000] text-white',
-    regex:
-      /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?/\s]{11})/i,
+    regex: YOUTUBE_REGEX,
   },
   { name: 'tiktok', color: 'bg-[#000000] text-white', regex: /tiktok\.com\/.*\/video\/(\d+)/i },
   {

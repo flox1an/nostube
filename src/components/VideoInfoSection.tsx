@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { TrustBadge } from '@/components/TrustBadge'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
@@ -10,7 +10,11 @@ import { formatDistance } from 'date-fns/formatDistance'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
-import { useNostrPublish } from '@/hooks'
+import { useAppContext, useNostrPublish } from '@/hooks'
+import { use$, useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { toast } from 'sonner'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -33,6 +37,8 @@ import {
   Bug,
   Copy,
   MapPin,
+  Pin,
+  PinOff,
   Tag,
   Flag,
   Clock,
@@ -122,12 +128,16 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 }: VideoInfoSectionProps) {
   const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
+  const { publish: publishPin, isPending: isPinning } = useNostrPublish()
+  const { pool } = useAppContext()
+  const eventStore = useEventStore()
   const isMobile = useIsMobile()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDebugDialog, setShowDebugDialog] = useState(false)
   const [showLabelDialog, setShowLabelDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const loadedPinListKeyRef = useRef<string | null>(null)
 
   // Check if video is editable (owner + addressable event)
   const isOwner = userPubkey === video?.pubkey
@@ -135,6 +145,48 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
+
+  const pinFilters = useMemo(
+    () => [{ kinds: [10001], authors: userPubkey ? [userPubkey] : [] }],
+    [userPubkey]
+  )
+  const rawPinEvents = use$(() => eventStore.timeline(pinFilters), [eventStore, pinFilters])
+  const pinEvents = useMemo(() => rawPinEvents ?? [], [rawPinEvents])
+  const pinListEvent = useMemo(
+    () => [...pinEvents].sort((a, b) => b.created_at - a.created_at)[0],
+    [pinEvents]
+  )
+  const videoAddress = useMemo(() => {
+    if (!video || !isAddressableKind(video.kind) || !video.identifier) return undefined
+    return `${video.kind}:${video.pubkey}:${video.identifier}`
+  }, [video])
+  const matchesCurrentVideoPin = useMemo(
+    () => (tag: string[]) => {
+      if (!video) return false
+      if (tag[0] === 'e' && tag[1] === video.id) return true
+      if (tag[0] === 'a' && videoAddress && tag[1] === videoAddress) return true
+      return false
+    },
+    [video, videoAddress]
+  )
+  const isVideoPinned = useMemo(
+    () => Boolean(pinListEvent?.tags.some(matchesCurrentVideoPin)),
+    [pinListEvent, matchesCurrentVideoPin]
+  )
+
+  useEffect(() => {
+    const pinListKey = `${userPubkey ?? ''}:${relaysToUse.join(',')}`
+    if (!userPubkey || loadedPinListKeyRef.current === pinListKey) return
+    loadedPinListKeyRef.current = pinListKey
+
+    const loader = createTimelineLoader(pool, relaysToUse, pinFilters, { eventStore })
+    const sub = loader().subscribe({
+      next: event => eventStore.add(event),
+      error: () => {},
+    })
+
+    return () => sub.unsubscribe()
+  }, [userPubkey, pool, relaysToUse, pinFilters, eventStore])
 
   // Extract expiration timestamp from video event (NIP-40)
   // Calculate once - expiration status won't change during component lifetime
@@ -190,6 +242,40 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     setShowDeleteDialog(false)
     if (onDelete) {
       onDelete()
+    }
+  }
+
+  const handleToggleProfilePin = async () => {
+    if (!video || !userPubkey) return
+
+    const seenRelays = videoEvent ? getSeenRelays(videoEvent) : undefined
+    const relayHint = (seenRelays ? Array.from(seenRelays)[0] : undefined) || relaysToUse[0]
+    const pinTag =
+      videoAddress && isAddressableKind(video.kind)
+        ? ['a', videoAddress, relayHint].filter(Boolean)
+        : ['e', video.id, relayHint].filter(Boolean)
+    const existingTags = pinListEvent?.tags ?? []
+    const cleanedTags = existingTags.filter(tag => !matchesCurrentVideoPin(tag))
+    const nextTags = isVideoPinned ? cleanedTags : [...cleanedTags, pinTag]
+
+    try {
+      await publishPin({
+        event: {
+          kind: 10001,
+          content: pinListEvent?.content ?? '',
+          tags: nextTags,
+          created_at: nowInSecs(),
+        },
+        relays: configRelays.map(r => r.url),
+      })
+      toast.success(
+        isVideoPinned
+          ? t('video.unpinnedFromProfile', 'Removed from profile pins')
+          : t('video.pinnedToProfile', 'Pinned to your profile')
+      )
+    } catch (error) {
+      console.error('Failed to update profile pins:', error)
+      toast.error(t('video.profilePinError', 'Failed to update profile pins'))
     }
   }
 
@@ -294,6 +380,15 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     videoTitle={video.title}
                     asMenuItem
                   />
+                )}
+                {userPubkey && (
+                  <DropdownMenuItem onSelect={handleToggleProfilePin} disabled={isPinning}>
+                    {isVideoPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
+                    &nbsp;{' '}
+                    {isVideoPinned
+                      ? t('video.unpinFromProfile', 'Unpin from profile')
+                      : t('video.pinToProfile', 'Pin to profile')}
+                  </DropdownMenuItem>
                 )}
                 {isEditable && videoEvent && (
                   <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>

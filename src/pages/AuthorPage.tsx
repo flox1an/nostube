@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { VideoGrid } from '@/components/VideoGrid'
+import { VideoCard } from '@/components/VideoCard'
+import { PlaylistThumbnailCollage } from '@/components/playlists/PlaylistThumbnailCollage'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
@@ -32,12 +35,18 @@ import type { VideoEvent } from '@/utils/video-event'
 import type { NostrEvent } from 'nostr-tools'
 import { getKindsForType } from '@/lib/video-types'
 import { useEventStore } from 'applesauce-react/hooks'
+import { use$ } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { useTranslation } from 'react-i18next'
 import { TrustBadge } from '@/components/TrustBadge'
 
-type Tabs = 'videos' | 'shorts' | string
+type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
+
+interface PinRef {
+  id?: string
+  address?: string
+}
 
 function AuthorBanner({
   pubkey,
@@ -196,7 +205,7 @@ function AuthorProfile({
 export function AuthorPage() {
   const { t } = useTranslation()
   const { nprofile } = useParams<{ nprofile: string }>()
-  const [activeTab, setActiveTab] = useState<Tabs>('videos')
+  const [activeTab, setActiveTab] = useState<Tabs>('overview')
   const setShortsFeedVideos = useShortsFeedStore(state => state.setVideos)
 
   // Decode nprofile to get pubkey and relays
@@ -252,21 +261,40 @@ export function AuthorPage() {
     pubkey,
     relays
   )
+  const pinFilter = useMemo(() => [{ kinds: [10001], authors: pubkey ? [pubkey] : [] }], [pubkey])
+  const rawPinEvents = use$(
+    () => eventStoreInstance.timeline(pinFilter),
+    [eventStoreInstance, pinFilter]
+  )
+  const pinEvents = useMemo(() => rawPinEvents ?? [], [rawPinEvents])
+  const [pinnedVideos, setPinnedVideos] = useState<VideoEvent[]>([])
+  const loadedPinsKeyRef = useRef<string | null>(null)
 
   // Helper to fetch full video events for a playlist
   const fetchPlaylistVideos = useCallback(
     async (playlist: Playlist) => {
       if (!playlist || !playlist.videos?.length) return []
       setLoadingPlaylist(playlist.identifier)
-      const ids = playlist.videos.map(v => v.id)
 
       try {
+        const refs = playlist.videos.map(v => ({ id: v.id, address: v.address }))
         // Check which events are missing from store
-        const missingIds = ids.filter(id => !eventStoreInstance.getEvent(id))
+        const missingRefs = refs.filter(ref => {
+          if (ref.address) {
+            const parts = ref.address.split(':')
+            if (parts.length < 3) return false
+            const kind = parseInt(parts[0], 10)
+            const author = parts[1]
+            const identifier = parts.slice(2).join(':')
+            return !eventStoreInstance.getReplaceable(kind, author, identifier)
+          }
+          return !eventStoreInstance.getEvent(ref.id)
+        })
 
-        if (missingIds.length > 0) {
+        if (missingRefs.length > 0) {
           // Create a loader to fetch the missing events with proper relays
-          const { createEventLoader } = await import('applesauce-loaders/loaders')
+          const { createEventLoader, createAddressLoader } =
+            await import('applesauce-loaders/loaders')
 
           // Get relay hints from where the playlist itself was seen
           const playlistEvent = playlist.eventId
@@ -276,9 +304,9 @@ export function AuthorPage() {
           const playlistSeenRelays = playlistSeenRelaysSet ? Array.from(playlistSeenRelaysSet) : []
 
           // Fetch missing events with relay hints
-          const fetchPromises = missingIds.map(id => {
+          const fetchPromises = missingRefs.map(ref => {
             // Get relay hints from where this event has been seen before
-            const referencedEvent = eventStoreInstance.getEvent(id)
+            const referencedEvent = ref.id ? eventStoreInstance.getEvent(ref.id) : undefined
             const seenRelaysSet = referencedEvent ? getSeenRelays(referencedEvent) : undefined
             const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
 
@@ -286,15 +314,34 @@ export function AuthorPage() {
             const videoRelays = combineRelays([seenRelays, playlistSeenRelays, relays])
 
             // Create loader with specific relay hints for this video
+            if (ref.address) {
+              const parts = ref.address.split(':')
+              if (parts.length >= 3) {
+                const loader = createAddressLoader(pool, {
+                  eventStore: eventStoreInstance,
+                  extraRelays: videoRelays,
+                })
+                return loader({
+                  kind: parseInt(parts[0], 10),
+                  pubkey: parts[1],
+                  identifier: parts.slice(2).join(':'),
+                })
+                  .toPromise()
+                  .catch(err => {
+                    console.warn(`Failed to fetch address ${ref.address}:`, err)
+                    return null
+                  })
+              }
+            }
+
             const loader = createEventLoader(pool, {
               eventStore: eventStoreInstance,
               extraRelays: videoRelays,
             })
-
-            return loader({ id })
+            return loader({ id: ref.id })
               .toPromise()
               .catch(err => {
-                console.warn(`Failed to fetch event ${id}:`, err)
+                console.warn(`Failed to fetch event ${ref.id}:`, err)
                 return null
               })
           })
@@ -308,8 +355,19 @@ export function AuthorPage() {
         }
 
         // Get all events from store (both existing and newly fetched)
-        const events = ids
-          .map(id => eventStoreInstance.getEvent(id))
+        const events = refs
+          .map(ref => {
+            if (ref.address) {
+              const parts = ref.address.split(':')
+              if (parts.length >= 3) {
+                const kind = parseInt(parts[0], 10)
+                const author = parts[1]
+                const identifier = parts.slice(2).join(':')
+                return eventStoreInstance.getReplaceable(kind, author, identifier)
+              }
+            }
+            return eventStoreInstance.getEvent(ref.id)
+          })
           .filter((e): e is NostrEvent => !!e)
 
         // Process events to VideoEvent format
@@ -405,6 +463,127 @@ export function AuthorPage() {
     config.reportedEventIds,
   ])
 
+  useEffect(() => {
+    const pinsKey = `${pubkey}:${relays.join(',')}`
+    if (!pubkey || loadedPinsKeyRef.current === pinsKey) return
+    loadedPinsKeyRef.current = pinsKey
+    let unsubscribe: (() => void) | undefined
+
+    const loadPinList = async () => {
+      try {
+        const { createTimelineLoader } = await import('applesauce-loaders/loaders')
+        const pinLoader = createTimelineLoader(pool, relays, pinFilter, {
+          eventStore: eventStoreInstance,
+        })
+        const sub = pinLoader().subscribe({
+          next: event => eventStoreInstance.add(event),
+          error: () => {},
+        })
+        unsubscribe = () => sub.unsubscribe()
+      } catch (error) {
+        console.error('Failed to load pin list:', error)
+      }
+    }
+
+    void loadPinList()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [pubkey, pool, relays, pinFilter, eventStoreInstance])
+
+  useEffect(() => {
+    if (!pubkey) return
+    let cancelled = false
+
+    const loadPinnedVideos = async () => {
+      try {
+        const { createEventLoader, createAddressLoader } =
+          await import('applesauce-loaders/loaders')
+        const { processEvents } = await import('@/utils/video-event')
+
+        const latestPinEvent = [...pinEvents].sort((a, b) => b.created_at - a.created_at)[0]
+        if (!latestPinEvent) {
+          if (!cancelled) setPinnedVideos([])
+          return
+        }
+
+        const refs: PinRef[] = latestPinEvent.tags.flatMap((tag): PinRef[] => {
+          if (tag[0] === 'e' && tag[1]) return [{ id: tag[1] }]
+          if (tag[0] === 'a' && tag[1]) {
+            const parts = tag[1].split(':')
+            const kind = parseInt(parts[0] || '0', 10)
+            if (kind === 34235 || kind === 34236) return [{ address: tag[1] }]
+          }
+          return []
+        })
+
+        if (refs.length === 0) {
+          if (!cancelled) setPinnedVideos([])
+          return
+        }
+
+        const fetches = refs.map(async ref => {
+          if (ref.address) {
+            const parts = ref.address.split(':')
+            if (parts.length < 3) return null
+            const kind = parseInt(parts[0], 10)
+            const author = parts[1]
+            const identifier = parts.slice(2).join(':')
+            const existing = eventStoreInstance.getReplaceable(kind, author, identifier)
+            if (existing) return existing
+            const loader = createAddressLoader(pool, {
+              eventStore: eventStoreInstance,
+              extraRelays: relays,
+            })
+            return loader({ kind, pubkey: author, identifier })
+              .toPromise()
+              .catch(() => null)
+          }
+
+          if (!ref.id) return null
+          const existing = eventStoreInstance.getEvent(ref.id)
+          if (existing) return existing
+          const loader = createEventLoader(pool, {
+            eventStore: eventStoreInstance,
+            extraRelays: relays,
+          })
+          return loader({ id: ref.id })
+            .toPromise()
+            .catch(() => null)
+        })
+
+        const loadedEvents = (await Promise.all(fetches)).filter((e): e is NostrEvent => Boolean(e))
+        const processed = processEvents(
+          loadedEvents,
+          relays,
+          undefined,
+          config.blossomServers,
+          undefined,
+          presetContent.nsfwPubkeys,
+          config.reportedEventIds
+        )
+        const deduped = Array.from(new Map(processed.map(video => [video.id, video])).values())
+        if (!cancelled) setPinnedVideos(deduped)
+      } catch (error) {
+        console.error('Failed to load pinned videos:', error)
+      }
+    }
+
+    loadPinnedVideos()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    pubkey,
+    pinEvents,
+    pool,
+    relays,
+    eventStoreInstance,
+    config.blossomServers,
+    presetContent.nsfwPubkeys,
+    config.reportedEventIds,
+  ])
+
   // Auto-fetch video events for all playlists when playlists are loaded
   useEffect(() => {
     // Only start fetching videos after playlists have finished loading
@@ -457,22 +636,6 @@ export function AuthorPage() {
 
   const videos = useMemo(() => allVideos.filter(v => v.type == 'videos'), [allVideos])
 
-  // Set initial tab based on content type (only once when first videos load)
-  const hasSetInitialTab = useRef(false)
-  useEffect(() => {
-    if (hasSetInitialTab.current) return
-    // Wait for at least one type of content to load
-    if (videos.length === 0 && shorts.length === 0) return
-
-    hasSetInitialTab.current = true
-    // Prefer videos over shorts, but select whichever has content
-    if (videos.length >= shorts.length) {
-      setActiveTab('videos')
-    } else {
-      setActiveTab('shorts')
-    }
-  }, [shorts.length, videos.length])
-
   const authorMeta = useProfile({ pubkey })
   const authorName = authorMeta?.display_name || authorMeta?.name || pubkey?.slice(0, 8) || pubkey
 
@@ -495,6 +658,11 @@ export function AuthorPage() {
 
   if (!pubkey) return null
 
+  const overviewPlaylists = playlists
+    .filter(playlist => playlist.videos && playlist.videos.length > 0)
+    .sort((a, b) => b.videos.length - a.videos.length)
+    .slice(0, 8)
+
   return (
     <div className="max-w-560 mx-auto sm:p-4">
       <AuthorBanner pubkey={pubkey} onLoad={handleBannerLoad} onError={handleBannerError} />
@@ -505,6 +673,14 @@ export function AuthorPage() {
         {/* Scrollable tab bar */}
         <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide -mx-2 px-2 py-2">
           <div className="flex gap-2 min-w-max">
+            <Button
+              variant={activeTab === 'overview' ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 rounded-full px-4"
+              onClick={() => setActiveTab('overview')}
+            >
+              {t('pages.author.overview', 'Overview')}
+            </Button>
             {videos.length > 0 && (
               <Button
                 variant={activeTab === 'videos' ? 'default' : 'outline'}
@@ -526,30 +702,14 @@ export function AuthorPage() {
               </Button>
             )}
 
-            {isLoadingPlaylists && (
-              <div className="flex items-center shrink-0">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {playlists
-              .filter(playlist => playlist.videos && playlist.videos.length > 0)
-              .sort((a, b) => b.videos.length - a.videos.length)
-              .map(playlist => (
-                <Button
-                  key={playlist.identifier}
-                  variant={activeTab === playlist.identifier ? 'default' : 'outline'}
-                  size="sm"
-                  className="shrink-0 rounded-full px-4"
-                  onClick={async () => {
-                    setActiveTab(playlist.identifier)
-                    if (!playlistVideos[playlist.identifier]) {
-                      await fetchPlaylistVideos(playlist)
-                    }
-                  }}
-                >
-                  {playlist.name}
-                </Button>
-              ))}
+            <Button
+              variant={activeTab === 'playlists' ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 rounded-full px-4"
+              onClick={() => setActiveTab('playlists')}
+            >
+              {t('pages.author.playlists', 'Playlists ({{count}})', { count: playlists.length })}
+            </Button>
             {likedCount > 0 && (
               <Button
                 variant={activeTab === 'liked' ? 'default' : 'outline'}
@@ -579,6 +739,120 @@ export function AuthorPage() {
         </div>
 
         {/* Tab content */}
+        {activeTab === 'overview' && (
+          <div className="mt-6 space-y-8">
+            {pinnedVideos.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base font-semibold">{t('pages.author.pinned', 'Pinned')}</h2>
+                </div>
+                <div className="w-full overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-2 min-w-max">
+                    {pinnedVideos.map(video => (
+                      <div key={`pinned-${video.id}`} className="w-72 shrink-0">
+                        <VideoCard
+                          video={video}
+                          format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+            {videos.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base font-semibold">
+                    {t('pages.author.latestVideos', 'Latest videos')}
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('videos')}>
+                    {t('common.viewAll', 'View all')}
+                  </Button>
+                </div>
+                <div className="w-full overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-2 min-w-max">
+                    {videos.slice(0, 10).map(video => (
+                      <div key={`latest-video-${video.id}`} className="w-80 shrink-0">
+                        <VideoCard video={video} format="horizontal" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+            {shorts.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base font-semibold">
+                    {t('pages.author.latestShorts', 'Latest shorts')}
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('shorts')}>
+                    {t('common.viewAll', 'View all')}
+                  </Button>
+                </div>
+                <div className="w-full overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-2 min-w-max">
+                    {shorts.slice(0, 10).map((video, index) => (
+                      <div key={`latest-short-${video.id}`} className="w-44 shrink-0">
+                        <VideoCard
+                          video={video}
+                          format="vertical"
+                          allVideos={shorts}
+                          videoIndex={index}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+            {overviewPlaylists.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base font-semibold">
+                    {t('pages.author.playlistsTitle', 'Playlists')}
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('playlists')}>
+                    {t('common.viewAll', 'View all')}
+                  </Button>
+                </div>
+                <div className="w-full overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-3 min-w-max">
+                    {overviewPlaylists.map(playlist => {
+                      const playlistNaddr = nip19.naddrEncode({
+                        kind: 30005,
+                        pubkey,
+                        identifier: playlist.identifier,
+                        relays: relays.slice(0, 3),
+                      })
+                      const videoIds = playlist.videos.map(video => video.id)
+                      return (
+                        <Link
+                          key={`playlist-overview-${playlist.identifier}`}
+                          to={`/playlist/${playlistNaddr}`}
+                          className="group w-72 shrink-0 rounded-lg p-2 transition-colors hover:bg-accent"
+                        >
+                          <PlaylistThumbnailCollage
+                            videoIds={videoIds}
+                            className="rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
+                          />
+                          <div className="pt-3">
+                            <div className="font-medium line-clamp-1">{playlist.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {playlist.videos.length} videos
+                            </div>
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
         {activeTab === 'videos' && (
           <div className="mt-6">
             <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
@@ -630,37 +904,74 @@ export function AuthorPage() {
           </div>
         )}
 
-        {playlists.map(playlist => {
-          if (activeTab !== playlist.identifier) return null
-
-          const isLoading = loadingPlaylist === playlist.identifier
-          const hasLoadedVideos = playlistVideos[playlist.identifier] !== undefined
-          const hasAttemptedLoad = loadedPlaylistsRef.current.has(playlist.identifier)
-          const playlistHasVideoIds = playlist.videos && playlist.videos.length > 0
-
-          // Show skeleton only if:
-          // 1. Currently loading, OR
-          // 2. Has video IDs in playlist AND hasn't loaded yet AND not currently loading
-          const showSkeleton =
-            isLoading || (playlistHasVideoIds && !hasLoadedVideos && !hasAttemptedLoad)
-
-          return (
-            <div key={playlist.identifier} className="mt-6">
-              <VideoGrid
-                videos={playlistVideos[playlist.identifier] || []}
-                isLoading={showSkeleton}
-                showSkeletons={true}
-                layoutMode="auto"
-                playlistParam={nip19.naddrEncode({
-                  kind: 30005,
-                  pubkey,
-                  identifier: playlist.identifier,
-                  relays: relays.slice(0, 3),
-                })}
-              />
-            </div>
-          )
-        })}
+        {activeTab === 'playlists' && (
+          <div className="mt-6 space-y-6">
+            {isLoadingPlaylists && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('pages.author.loadingPlaylists')}
+              </div>
+            )}
+            {playlists.length === 0 && !isLoadingPlaylists && (
+              <div className="text-center py-12 text-muted-foreground">
+                {t('pages.author.noPlaylists', 'No playlists yet.')}
+              </div>
+            )}
+            {playlists.map(playlist => {
+              const playlistNaddr = nip19.naddrEncode({
+                kind: 30005,
+                pubkey,
+                identifier: playlist.identifier,
+                relays: relays.slice(0, 3),
+              })
+              const isLoading = loadingPlaylist === playlist.identifier
+              const previewVideos = (playlistVideos[playlist.identifier] || []).slice(0, 10)
+              return (
+                <section key={`playlist-tab-${playlist.identifier}`} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <h2 className="text-base font-semibold truncate">{playlist.name}</h2>
+                      <p className="text-xs text-muted-foreground">
+                        {playlist.videos.length} videos
+                      </p>
+                    </div>
+                    <Link to={`/playlist/${playlistNaddr}`}>
+                      <Button variant="outline" size="sm">
+                        {t('pages.author.openPlaylist', 'Open playlist')}
+                      </Button>
+                    </Link>
+                  </div>
+                  {isLoading && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t('pages.author.loadingPreview', 'Loading preview...')}
+                    </div>
+                  )}
+                  <div className="w-full overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-2 min-w-max">
+                      {previewVideos.length === 0 && !isLoading && (
+                        <div className="text-xs text-muted-foreground">
+                          {t('pages.author.noPlaylistVideos', 'No videos in this playlist.')}
+                        </div>
+                      )}
+                      {previewVideos.map(video => (
+                        <div
+                          key={`playlist-tab-video-${playlist.identifier}-${video.id}`}
+                          className="w-72 shrink-0"
+                        >
+                          <VideoCard
+                            video={video}
+                            format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )
+            })}
+          </div>
+        )}
 
         {activeTab === 'following' && (
           <div className="mt-6">

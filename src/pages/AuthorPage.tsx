@@ -702,14 +702,16 @@ export function AuthorPage() {
               </Button>
             )}
 
-            <Button
-              variant={activeTab === 'playlists' ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4"
-              onClick={() => setActiveTab('playlists')}
-            >
-              {t('pages.author.playlists', 'Playlists ({{count}})', { count: playlists.length })}
-            </Button>
+            {(isLoadingPlaylists || playlists.length > 0) && (
+              <Button
+                variant={activeTab === 'playlists' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={() => setActiveTab('playlists')}
+              >
+                {t('pages.author.playlists', 'Playlists ({{count}})', { count: playlists.length })}
+              </Button>
+            )}
             {likedCount > 0 && (
               <Button
                 variant={activeTab === 'liked' ? 'default' : 'outline'}

@@ -162,11 +162,13 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   relays,
   cinemaMode,
 }: VideoSuggestionsProps) {
+  const { t } = useTranslation()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
   const readRelays = useReadRelays()
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
 
   // Combine provided relays with config relays (prioritize provided relays)
   // Use combineRelays to normalize URLs and remove duplicates (e.g., 'nos.lol' vs 'nos.lol/')
@@ -181,8 +183,11 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   useEffect(() => {
     if (relaysToUse.length === 0) {
       if (import.meta.env.DEV) console.log('[VideoSuggestions] No relays available, skipping load')
+      setIsLoadingSuggestions(false)
       return
     }
+
+    setIsLoadingSuggestions(true)
 
     if (import.meta.env.DEV) {
       console.log('[VideoSuggestions] Loading suggestions from relays:', relaysToUse)
@@ -220,8 +225,10 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       },
       error: err => {
         console.error('[VideoSuggestions] Error loading events:', err)
+        setIsLoadingSuggestions(false)
       },
       complete: () => {
+        setIsLoadingSuggestions(false)
         logSubscriptionClosed(subId)
       },
     })
@@ -244,7 +251,6 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     [eventStore, authorPubkey]
   )
   const authorSuggestions = useMemo(() => rawAuthorSuggestions ?? [], [rawAuthorSuggestions])
-  const authorIsLoading = authorPubkey && authorSuggestions.length === 0
 
   // Use EventStore timeline for global suggestions
   const rawGlobalSuggestions = use$(
@@ -258,7 +264,6 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     [eventStore, currentVideoType]
   )
   const globalSuggestions = useMemo(() => rawGlobalSuggestions ?? [], [rawGlobalSuggestions])
-  const globalIsLoading = globalSuggestions.length === 0
 
   const suggestions = useMemo(() => {
     // Process author videos separately
@@ -360,20 +365,28 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     })
   }, [suggestions, personalScores, globalScores, followedSet])
 
+  const showLoadingSkeletons = isLoadingSuggestions && suggestions.length === 0
+
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div
       className={`sm:grid grid-cols-2 ${cinemaMode ? '' : 'lg:block'} ${shouldFadeIn ? 'animate-in fade-in duration-200' : ''}`}
     >
-      {authorIsLoading || globalIsLoading
-        ? Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
-        : filteredSuggestions.map(video => (
-            <VideoSuggestionItem
-              key={video.id}
-              video={video}
-              thumbResizeServerUrl={config.thumbResizeServerUrl}
-            />
-          ))}
+      {showLoadingSkeletons ? (
+        Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
+      ) : filteredSuggestions.length > 0 ? (
+        filteredSuggestions.map(video => (
+          <VideoSuggestionItem
+            key={video.id}
+            video={video}
+            thumbResizeServerUrl={config.thumbResizeServerUrl}
+          />
+        ))
+      ) : (
+        <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
+          {t('video.noSuggestions', 'No suggestions yet.')}
+        </div>
+      )}
     </div>
   )
 })

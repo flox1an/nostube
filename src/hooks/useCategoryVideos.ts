@@ -98,7 +98,8 @@ export function useCategoryVideos({
       config.blossomServers,
       undefined,
       presetContent.nsfwPubkeys,
-      config.reportedEventIds
+      config.reportedEventIds,
+      { includeYouTube: config.showYouTubeContent ?? true }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -108,6 +109,7 @@ export function useCategoryVideos({
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   // Reset state when tags or relays change to trigger reload

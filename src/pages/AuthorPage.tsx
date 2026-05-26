@@ -379,7 +379,8 @@ export function AuthorPage() {
           config.blossomServers,
           undefined,
           presetContent.nsfwPubkeys,
-          config.reportedEventIds
+          config.reportedEventIds,
+          { includeYouTube: config.showYouTubeContent ?? true }
         )
 
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
@@ -442,7 +443,8 @@ export function AuthorPage() {
         config.blossomServers,
         undefined,
         presetContent.nsfwPubkeys,
-        config.reportedEventIds
+        config.reportedEventIds,
+        { includeYouTube: config.showYouTubeContent ?? true }
       )
 
       setLikedVideos(processedVideos)
@@ -461,6 +463,7 @@ export function AuthorPage() {
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   useEffect(() => {
@@ -560,7 +563,8 @@ export function AuthorPage() {
           config.blossomServers,
           undefined,
           presetContent.nsfwPubkeys,
-          config.reportedEventIds
+          config.reportedEventIds,
+          { includeYouTube: config.showYouTubeContent ?? true }
         )
         const deduped = Array.from(new Map(processed.map(video => [video.id, video])).values())
         if (!cancelled) setPinnedVideos(deduped)
@@ -582,6 +586,7 @@ export function AuthorPage() {
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   // Auto-fetch video events for all playlists when playlists are loaded

@@ -505,6 +505,10 @@
       "colorThemeDescription": "Choisissez un jeu de couleurs pour l'interface de l'application.",
       "thumbnailServer": "URL du serveur de redimensionnement des miniatures",
       "thumbnailServerDescription": "URL du serveur pour redimensionner les miniatures de vidéo et les images de profil.",
+      "contentFilters": "Filtres de contenu",
+      "contentFiltersDescription": "Contrôlez les types de contenu affichés dans les fils et les suggestions.",
+      "youtubeContent": "Contenu YouTube",
+      "youtubeContentDescription": "Afficher les vidéos qui lient ou intègrent du contenu YouTube.",
       "nsfwFilter": "Filtre de contenu NSFW",
       "nsfwHide": "Masquer - Ne pas afficher le contenu NSFW",
       "nsfwWarning": "Avertissement - Afficher flouté avec avertissement",
@@ -591,6 +595,30 @@
       "readyToRetry": "Prêt à réessayer",
       "cooldown": "Temps d'attente",
       "ready": "Prêt à réessayer"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Theme, colors, language"
+    },
+    "content": {
+      "title": "Content",
+      "description": "Quality, filters, playback"
+    },
+    "network": {
+      "title": "Network",
+      "description": "Relays, hosting, streaming"
+    },
+    "storage": {
+      "title": "Storage",
+      "description": "Cache, missing videos"
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "Lightning, Cashu"
+    },
+    "data": {
+      "title": "Data & Privacy",
+      "description": "Subscriptions, reports"
     }
   },
   "addToPlaylist": {

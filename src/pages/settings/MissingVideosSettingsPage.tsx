@@ -1,5 +1,5 @@
-import { MissingVideosSection } from '@/components/settings/MissingVideosSection'
+import { Navigate } from 'react-router-dom'
 
 export function MissingVideosSettingsPage() {
-  return <MissingVideosSection />
+  return <Navigate to="/settings/storage" replace />
 }

@@ -121,20 +121,6 @@ export const VideoCard = React.memo(function VideoCard({
     videoIndex,
   ])
 
-  // Debug: Log navigation state for shorts (DEV only)
-  if (import.meta.env.DEV && video.type === 'shorts') {
-    console.debug('[VideoCard] Creating shorts link:', {
-      videoTitle: video.title,
-      videoType: video.type,
-      hasAllVideos: !!allVideos,
-      allVideosCount: allVideos?.length,
-      videoIndex,
-      willPassState: !!(allVideos && videoIndex !== undefined),
-      toValue: to,
-      toType: typeof to,
-    })
-  }
-
   const handleMouseEnter = () => {
     // don't show hover preview for video with content warning (when warning mode is active)
     if (showNsfwWarning) return
@@ -159,7 +145,6 @@ export const VideoCard = React.memo(function VideoCard({
   }
 
   const handleThumbnailError = () => {
-    console.debug('Thumbnail failed to load:', video.images[0])
     // Only try video fallback once to avoid infinite loops
     if (!thumbnailError) {
       setThumbnailError(true)
@@ -177,14 +162,6 @@ export const VideoCard = React.memo(function VideoCard({
   // Handle shorts click - populate store with video list
   const handleShortsClick = () => {
     if (video.type === 'shorts' && allVideos && videoIndex !== undefined) {
-      if (import.meta.env.DEV) {
-        console.debug('[VideoCard] Populating store with shorts:', {
-          videoCount: allVideos.length,
-          startIndex: videoIndex,
-          clickedTitle: video.title,
-        })
-      }
-
       // Populate the store with the shorts list and starting index
       setVideos(allVideos, videoIndex)
     }

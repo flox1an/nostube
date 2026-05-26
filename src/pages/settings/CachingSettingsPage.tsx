@@ -1,5 +1,5 @@
-import { CachingServersSection } from '@/components/settings/CachingServersSection'
+import { Navigate } from 'react-router-dom'
 
 export function CachingSettingsPage() {
-  return <CachingServersSection />
+  return <Navigate to="/settings/network#caching" replace />
 }

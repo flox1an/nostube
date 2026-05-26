@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { extractBlossomHash, processEvent, processEvents } from './video-event'
+import { extractBlossomHash, isYouTubeVideo, processEvent, processEvents } from './video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
 
 // Mock dependencies
@@ -867,6 +867,74 @@ describe('processEvent', () => {
   })
 })
 
+describe('isYouTubeVideo', () => {
+  const defaultRelays = ['wss://relay.example.com']
+
+  it('returns true for YouTube origin tags', () => {
+    const video = processEvent(
+      {
+        ...zapStreamEvent,
+        tags: [
+          ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+          ['origin', 'youtube', 'dQw4w9WgXcQ', 'https://youtube.com/watch?v=dQw4w9WgXcQ'],
+          ['title', 'YouTube origin video'],
+        ],
+      },
+      defaultRelays
+    )
+
+    expect(video).toBeDefined()
+    expect(isYouTubeVideo(video!)).toBe(true)
+  })
+
+  it('returns true for YouTube URL matches', () => {
+    const urls = [
+      'https://youtu.be/dQw4w9WgXcQ',
+      'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+    ]
+
+    for (const url of urls) {
+      const video = processEvent(
+        {
+          ...zapStreamEvent,
+          tags: [
+            ['imeta', `url ${url}`, 'm text/html'],
+            ['title', 'YouTube URL video'],
+          ],
+        },
+        defaultRelays
+      )
+
+      expect(video).toBeDefined()
+      expect(isYouTubeVideo(video!)).toBe(true)
+    }
+  })
+
+  it('returns false for non-YouTube videos', () => {
+    const video = processEvent(nostubeEvent, defaultRelays)
+
+    expect(video).toBeDefined()
+    expect(isYouTubeVideo(video!)).toBe(false)
+  })
+
+  it('matches YouTube origins case-insensitively', () => {
+    const video = processEvent(
+      {
+        ...zapStreamEvent,
+        tags: [
+          ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+          ['origin', 'YouTube', 'dQw4w9WgXcQ', 'https://youtube.com/watch?v=dQw4w9WgXcQ'],
+          ['title', 'Mixed-case YouTube origin video'],
+        ],
+      },
+      defaultRelays
+    )
+
+    expect(video).toBeDefined()
+    expect(isYouTubeVideo(video!)).toBe(true)
+  })
+})
+
 describe('processEvents', () => {
   const defaultRelays = ['wss://relay.example.com']
 
@@ -902,22 +970,69 @@ describe('processEvents', () => {
 
     const results = processEvents([eventWithNoUrl], defaultRelays)
 
-    // processEvent returns VideoEvent with urls: [''], which passes the filter
-    // since Boolean(['']) is true and ''?.indexOf('youtube.com') returns -1 (< 0)
     expect(results).toHaveLength(1)
     expect(results[0].urls).toEqual([''])
   })
 
-  it('should filter out YouTube URLs', () => {
+  it('should include YouTube URLs by default', () => {
     const youtubeEvent = {
       ...zapStreamEvent,
       tags: [
-        ['imeta', 'url https://youtube.com/watch?v=123', 'm video/mp4'],
+        ['imeta', 'url https://youtube.com/watch?v=dQw4w9WgXcQ', 'm video/mp4'],
         ['title', 'YouTube Video'],
       ],
     }
 
     const results = processEvents([youtubeEvent], defaultRelays)
+
+    expect(results).toHaveLength(1)
+    expect(results[0].origin?.platform).toBe('youtube')
+  })
+
+  it('should filter out YouTube URLs when disabled', () => {
+    const youtubeEvent = {
+      ...zapStreamEvent,
+      tags: [
+        ['imeta', 'url https://youtube.com/watch?v=dQw4w9WgXcQ', 'm video/mp4'],
+        ['title', 'YouTube Video'],
+      ],
+    }
+
+    const results = processEvents(
+      [youtubeEvent, nostubeEvent],
+      defaultRelays,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { includeYouTube: false }
+    )
+
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe(nostubeEvent.id)
+  })
+
+  it('should filter out YouTube origin tags when disabled', () => {
+    const youtubeOriginEvent = {
+      ...zapStreamEvent,
+      tags: [
+        ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+        ['origin', 'youtube', 'dQw4w9WgXcQ', 'https://youtu.be/dQw4w9WgXcQ'],
+        ['title', 'YouTube Origin Video'],
+      ],
+    }
+
+    const results = processEvents(
+      [youtubeOriginEvent],
+      defaultRelays,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { includeYouTube: false }
+    )
 
     expect(results).toHaveLength(0)
   })

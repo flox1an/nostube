@@ -35,7 +35,7 @@ export function BlossomOnboarding({
             </div>
           </div>
           <Button
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/settings/network#blossom')}
             variant="ghost"
             size="sm"
             className="text-green-700 hover:text-green-900 dark:text-green-300 dark:hover:text-green-100 h-8"
@@ -86,7 +86,7 @@ export function BlossomOnboarding({
         <div className="flex items-center justify-center gap-2 text-xs text-blue-700 dark:text-blue-300">
           <span>{t('upload.onboarding.orConfigure')}</span>
           <Button
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/settings/network#blossom')}
             variant="link"
             size="sm"
             className="text-blue-700 dark:text-blue-300 h-auto p-0 font-medium underline"

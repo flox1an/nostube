@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAppContext, useVideoHistory } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
-import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import {
@@ -36,8 +36,11 @@ export function HistoryPage() {
           return null
         }
       })
-      .filter((video): video is VideoEvent => video !== null)
-  }, [history, config.blossomServers, presetContent.nsfwPubkeys])
+      .filter(
+        (video): video is VideoEvent =>
+          video != null && ((config.showYouTubeContent ?? true) || !isYouTubeVideo(video))
+      )
+  }, [history, config.blossomServers, config.showYouTubeContent, presetContent.nsfwPubkeys])
 
   // Update document title
   useEffect(() => {

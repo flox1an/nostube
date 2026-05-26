@@ -1,5 +1,5 @@
-import { BlossomServersSection } from '@/components/settings/BlossomServersSection'
+import { Navigate } from 'react-router-dom'
 
 export function BlossomSettingsPage() {
-  return <BlossomServersSection />
+  return <Navigate to="/settings/network#blossom" replace />
 }

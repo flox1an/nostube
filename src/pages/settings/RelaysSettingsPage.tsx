@@ -1,5 +1,5 @@
-import { RelaySettingsSection } from '@/components/settings/RelaySettingsSection'
+import { Navigate } from 'react-router-dom'
 
 export function RelaysSettingsPage() {
-  return <RelaySettingsSection />
+  return <Navigate to="/settings/network#relays" replace />
 }

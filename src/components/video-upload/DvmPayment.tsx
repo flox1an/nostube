@@ -202,7 +202,7 @@ export function DvmPayment({
           </Button>
         ) : (
           <Button size="sm" variant="outline" asChild className="cursor-pointer">
-            <a href="/settings" target="_blank" rel="noopener noreferrer">
+            <a href="/settings/wallet" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4 mr-2" />
               Open Wallet Settings
             </a>

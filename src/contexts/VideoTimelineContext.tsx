@@ -98,7 +98,8 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
               config.blossomServers,
               undefined,
               presetContent.nsfwPubkeys,
-              config.reportedEventIds
+              config.reportedEventIds,
+              { includeYouTube: config.showYouTubeContent ?? true }
             )
           )
         )
@@ -140,6 +141,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       config.relays,
       config.blossomServers,
       config.reportedEventIds,
+      config.showYouTubeContent,
       pool,
       presetContent.nsfwPubkeys,
     ]

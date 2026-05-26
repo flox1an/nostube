@@ -8,6 +8,7 @@ import {
   processEvents,
   deduplicateByIdentifier,
   getPublishDate,
+  isYouTubeVideo,
   type VideoEvent,
 } from '@/utils/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
@@ -108,7 +109,8 @@ export function useHashtagVideos({
       config.blossomServers,
       undefined,
       presetContent.nsfwPubkeys,
-      config.reportedEventIds
+      config.reportedEventIds,
+      { includeYouTube: config.showYouTubeContent ?? true }
     )
   }, [
     nativeEvents,
@@ -117,6 +119,7 @@ export function useHashtagVideos({
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   // Reset state when tag changes
@@ -270,7 +273,10 @@ export function useHashtagVideos({
                 config.blossomServers,
                 presetContent.nsfwPubkeys
               )
-              if (processed) {
+              if (
+                processed &&
+                ((config.showYouTubeContent ?? true) || !isYouTubeVideo(processed))
+              ) {
                 fetchedVideos.push(processed)
               }
             },
@@ -300,6 +306,7 @@ export function useHashtagVideos({
     videoKinds,
     eventStore,
     config.blossomServers,
+    config.showYouTubeContent,
     presetContent.nsfwPubkeys,
   ])
 

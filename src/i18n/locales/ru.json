@@ -472,11 +472,16 @@
       "colorThemeDescription": "Выберите цветовую схему для интерфейса приложения.",
       "thumbnailServer": "URL сервера миниатюр (Расширенные)",
       "thumbnailServerDescription": "Сервер для изменения размера миниатюр. Большинству пользователей не нужно это менять.",
+      "contentFilters": "Фильтры контента",
+      "contentFiltersDescription": "Управляйте тем, какие типы контента отображаются в лентах и рекомендациях.",
+      "youtubeContent": "Контент YouTube",
+      "youtubeContentDescription": "Показывать видео, которые ссылаются на контент YouTube или встраивают его.",
       "nsfwFilter": "Фильтр NSFW контента",
       "nsfwHide": "Скрыть - Не показывать NSFW контент",
       "nsfwWarning": "Предупреждение - Показывать размытым с предупреждением",
       "nsfwShow": "Показывать - Всегда показывать NSFW контент",
       "nsfwFilterDescription": "Контролируйте, как отображается NSFW (небезопасный для работы) контент в приложении.",
+      "nsfwLockedInfo": "NSFW-контент скрыт, потому что ваш рейтинг доверия NosTube ниже 20% или пока недоступен. Повышайте рейтинг, взаимодействуя с платформой.",
       "language": "Язык",
       "selectLanguage": "Выбрать язык",
       "languageDescription": "Выберите язык для интерфейса пользователя.",
@@ -559,6 +564,30 @@
       "readyToRetry": "Готово к повтору",
       "cooldown": "Период ожидания",
       "ready": "Готово к повтору"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Theme, colors, language"
+    },
+    "content": {
+      "title": "Content",
+      "description": "Quality, filters, playback"
+    },
+    "network": {
+      "title": "Network",
+      "description": "Relays, hosting, streaming"
+    },
+    "storage": {
+      "title": "Storage",
+      "description": "Cache, missing videos"
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "Lightning, Cashu"
+    },
+    "data": {
+      "title": "Data & Privacy",
+      "description": "Subscriptions, reports"
     }
   },
   "addToPlaylist": {

@@ -1,95 +1,204 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Radio, HardDrive, Play, Trash2, AlertTriangle } from 'lucide-react'
+import {
+  Palette,
+  Shirt,
+  SlidersHorizontal,
+  Network,
+  Database,
+  Shield,
+  Wallet,
+  Settings,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
-interface SettingsMenuItem {
-  path: string
+interface SettingsCategory {
+  id: string
   labelKey: string
   icon: React.ElementType
+  description: string
 }
 
-const menuItems: SettingsMenuItem[] = [
-  { path: 'general', labelKey: 'settings.general.title', icon: Settings },
-  { path: 'presets', labelKey: 'settings.presets.title', icon: Palette },
-  { path: 'relays', labelKey: 'settings.relays.title', icon: Radio },
-  { path: 'blossom', labelKey: 'settings.blossom.title', icon: HardDrive },
-  { path: 'caching', labelKey: 'settings.caching.title', icon: Play },
-  { path: 'cache', labelKey: 'settings.cache.title', icon: Trash2 },
-  { path: 'missing-videos', labelKey: 'settings.missingVideos.title', icon: AlertTriangle },
+const categories: SettingsCategory[] = [
+  {
+    id: 'appearance',
+    labelKey: 'settings.appearance.title',
+    icon: Shirt,
+    description: 'settings.appearance.description',
+  },
+  {
+    id: 'content',
+    labelKey: 'settings.content.title',
+    icon: SlidersHorizontal,
+    description: 'settings.content.description',
+  },
+  {
+    id: 'presets',
+    labelKey: 'settings.presets.title',
+    icon: Palette,
+    description: 'settings.presets.description',
+  },
+  {
+    id: 'network',
+    labelKey: 'settings.network.title',
+    icon: Network,
+    description: 'settings.network.description',
+  },
+  {
+    id: 'storage',
+    labelKey: 'settings.storage.title',
+    icon: Database,
+    description: 'settings.storage.description',
+  },
+  {
+    id: 'wallet',
+    labelKey: 'settings.wallet.title',
+    icon: Wallet,
+    description: 'settings.wallet.description',
+  },
+  {
+    id: 'data',
+    labelKey: 'settings.data.title',
+    icon: Shield,
+    description: 'settings.data.description',
+  },
 ]
 
-function SettingsTabs() {
+// Maps old URL paths to new category paths for redirects
+const oldPathToNew: Record<string, string> = {
+  general: 'appearance',
+  relays: 'network#relays',
+  blossom: 'network#blossom',
+  caching: 'network#caching',
+  cache: 'storage',
+  'missing-videos': 'storage',
+}
+
+function SettingsSidebar() {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Get current section from URL or default to general
-  const currentPath = location.pathname.split('/').pop() || 'general'
-  // Handle case where we might be at /settings (though we redirect, it's safe)
-  const activePath = location.pathname === '/settings' ? 'general' : currentPath
+  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/'
+  const currentPath = normalizedPath.split('/').pop() || 'appearance'
+  const activeCategory = currentPath === 'settings' ? 'appearance' : currentPath
+
+  const handleCategoryChange = useCallback(
+    (categoryId: string) => {
+      navigate(`/settings/${categoryId}`)
+    },
+    [navigate]
+  )
 
   return (
-    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 -mx-4 px-4 md:mx-0 md:px-0 mb-6 border-b md:border-none py-2">
-      <div className="flex gap-2 min-w-max">
-        {menuItems.map(item => {
-          const isActive = activePath === item.path
+    <>
+      {/* Mobile: dropdown select */}
+      <div className="md:hidden w-full mb-6">
+        <Select value={activeCategory} onValueChange={handleCategoryChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t('settings.selectSection')} />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map(cat => (
+              <SelectItem key={cat.id} value={cat.id}>
+                <div className="flex items-center gap-2">
+                  <cat.icon className="h-4 w-4" />
+                  <span>{t(cat.labelKey)}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
+      {/* Desktop: side navigation */}
+      <nav className="hidden md:flex flex-col gap-1 w-56 shrink-0 sticky top-20 self-start">
+        {categories.map(cat => {
+          const isActive = activeCategory === cat.id
           return (
             <Button
-              key={item.path}
-              variant={isActive ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4 gap-2"
-              onClick={() => navigate(`/settings/${item.path}`)}
+              key={cat.id}
+              variant="ghost"
+              className={cn(
+                'justify-start gap-3 h-auto py-2.5 px-3 text-sm font-normal rounded-lg',
+                isActive
+                  ? 'bg-accent text-accent-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              )}
+              onClick={() => navigate(`/settings/${cat.id}`)}
             >
-              <item.icon className="h-4 w-4" />
-              {t(item.labelKey)}
+              <cat.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : '')} />
+              <div className="text-left leading-tight min-w-0">
+                <span className="block truncate">{t(cat.labelKey)}</span>
+                <span className="block truncate text-[11px] text-muted-foreground font-normal">
+                  {t(cat.description)}
+                </span>
+              </div>
             </Button>
           )
         })}
-      </div>
-    </div>
+      </nav>
+    </>
   )
 }
 
 export function SettingsLayout() {
   const { t } = useTranslation()
   const location = useLocation()
-  const isIndex = location.pathname === '/settings'
 
-  // Find current section from path
-  const currentPath = location.pathname.split('/').pop()
-  const currentMenuItem = menuItems.find(item => item.path === currentPath)
+  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/'
+  const isIndex = normalizedPath === '/settings'
+  const currentPath = normalizedPath.split('/').pop() || ''
+  const activeCategory = isIndex ? 'appearance' : currentPath
+  const currentCategory = categories.find(c => c.id === activeCategory)
+  const needsOldRedirect = oldPathToNew[currentPath] && currentPath !== oldPathToNew[currentPath]
+  const redirectTarget = needsOldRedirect ? oldPathToNew[currentPath] : null
 
+  // Update document title — call BEFORE any early returns per Rules of Hooks
   useEffect(() => {
     if (isIndex) {
       document.title = `${t('settings.title')} - nostube`
-    } else if (currentMenuItem) {
-      document.title = `${t(currentMenuItem.labelKey)} - nostube`
+    } else if (currentCategory) {
+      document.title = `${t(currentCategory.labelKey)} - nostube`
     } else {
       document.title = `${t('settings.title')} - nostube`
     }
     return () => {
       document.title = 'nostube'
     }
-  }, [t, isIndex, currentMenuItem])
+  }, [t, isIndex, currentCategory])
 
+  // Old URL redirect
+  if (redirectTarget) {
+    return <Navigate to={`/settings/${redirectTarget}`} replace />
+  }
+
+  // Index redirect
   if (isIndex) {
-    return <Navigate to="general" replace />
+    return <Navigate to="appearance" replace />
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl px-4">
-      <div className="flex items-center gap-3 mb-2">
-        <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex items-center gap-3 mb-6">
+        <Settings className="h-6 w-6 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
       </div>
 
-      <SettingsTabs />
-
-      <div className="mt-6">
-        <Outlet />
+      <div className="flex flex-col md:flex-row gap-8">
+        <SettingsSidebar />
+        <main className="flex-1 min-w-0 max-w-2xl">
+          <Outlet />
+        </main>
       </div>
     </div>
   )

@@ -45,6 +45,11 @@ export type VideoVariant = {
   blurhash?: string // for thumbnails
 }
 
+export interface ProcessEventsOptions {
+  /** Include videos that point to YouTube origins/URLs. Defaults to true. */
+  includeYouTube?: boolean
+}
+
 export interface VideoEvent {
   id: string
   kind: number
@@ -117,6 +122,13 @@ function isAudioUrl(url?: string): boolean {
   if (!url) return false
   const pathname = getUrlPathname(url)
   return AUDIO_URL_EXTENSIONS.some(extension => pathname.endsWith(extension))
+}
+
+export function isYouTubeVideo(video: VideoEvent): boolean {
+  return (
+    video.origins.some(origin => origin.platform?.toLowerCase() === 'youtube') ||
+    video.urls.some(url => YOUTUBE_REGEX.test(url))
+  )
 }
 
 function getVariantMediaType(
@@ -343,9 +355,11 @@ export function processEvents(
   blossomServers?: BlossomServer[],
   missingVideoIds?: Set<string>,
   nsfwPubkeys?: string[],
-  reportedEventIds?: string[]
+  reportedEventIds?: string[],
+  options?: ProcessEventsOptions
 ): VideoEvent[] {
   const reportedSet = reportedEventIds?.length ? new Set(reportedEventIds) : undefined
+  const includeYouTube = options?.includeYouTube ?? true
   const processed = events
     .filter((event): event is Event => event !== undefined)
     .map(event => processEvent(event, relays, blossomServers, nsfwPubkeys))
@@ -353,6 +367,7 @@ export function processEvents(
       (video): video is VideoEvent =>
         video !== undefined &&
         Boolean(video.id) &&
+        (includeYouTube || !isYouTubeVideo(video)) &&
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
         (!missingVideoIds || !missingVideoIds.has(video.id)) &&
         (!reportedSet || !reportedSet.has(video.id))

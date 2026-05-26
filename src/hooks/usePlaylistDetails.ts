@@ -470,7 +470,8 @@ export function usePlaylistDetails(
             config.blossomServers,
             undefined,
             presetContent.nsfwPubkeys,
-            config.reportedEventIds
+            config.reportedEventIds,
+            { includeYouTube: config.showYouTubeContent ?? true }
           )
         )
       })
@@ -482,6 +483,7 @@ export function usePlaylistDetails(
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   const videoEvents = use$(() => videoEventsObservable, [videoEventsObservable]) ?? []

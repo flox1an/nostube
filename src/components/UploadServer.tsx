@@ -43,7 +43,7 @@ export function UploadServer({
           <span>
             You do not have any Blossom server tagged with <b>"initial upload"</b>.<br />
             Please go to{' '}
-            <a href="/settings" className="underline text-blue-600">
+            <a href="/settings/network#blossom" className="underline text-blue-600">
               Settings
             </a>{' '}
             and assign the <b>"initial upload"</b> tag to at least one server.

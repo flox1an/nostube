@@ -1,5 +1,5 @@
-import { GeneralSettingsSection } from '@/components/settings/GeneralSettingsSection'
+import { Navigate } from 'react-router-dom'
 
 export function GeneralSettingsPage() {
-  return <GeneralSettingsSection />
+  return <Navigate to="/settings/appearance" replace />
 }

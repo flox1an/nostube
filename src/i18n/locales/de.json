@@ -508,6 +508,10 @@
       "colorThemeDescription": "Wähle ein Farbschema für die Anwendungsoberfläche.",
       "thumbnailServer": "Vorschaubild-Resize-Server-URL",
       "thumbnailServerDescription": "Server-URL zum Skalieren von Video-Vorschaubildern und Profilbildern.",
+      "contentFilters": "Inhaltsfilter",
+      "contentFiltersDescription": "Steuere, welche Inhaltstypen in Feeds und Vorschlägen angezeigt werden.",
+      "youtubeContent": "YouTube-Inhalte",
+      "youtubeContentDescription": "Videos anzeigen, die auf YouTube-Inhalte verlinken oder diese einbetten.",
       "nsfwFilter": "NSFW-Inhaltsfilter",
       "nsfwHide": "Ausblenden - NSFW-Inhalte nicht anzeigen",
       "nsfwWarning": "Warnung - Unscharf mit Warnung anzeigen",
@@ -594,6 +598,30 @@
       "readyToRetry": "Bereit zum Wiederholen",
       "cooldown": "Cooldown",
       "ready": "Bereit zum Wiederholen"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Theme, colors, language"
+    },
+    "content": {
+      "title": "Content",
+      "description": "Quality, filters, playback"
+    },
+    "network": {
+      "title": "Network",
+      "description": "Relays, hosting, streaming"
+    },
+    "storage": {
+      "title": "Storage",
+      "description": "Cache, missing videos"
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "Lightning, Cashu"
+    },
+    "data": {
+      "title": "Data & Privacy",
+      "description": "Subscriptions, reports"
     }
   },
   "addToPlaylist": {

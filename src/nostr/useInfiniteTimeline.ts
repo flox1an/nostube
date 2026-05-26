@@ -58,6 +58,7 @@ export function useInfiniteTimeline(
   const inFlightRef = useRef(false)
   const exhaustedRef = useRef(exhausted)
   exhaustedRef.current = exhausted
+  const eventsRef = useRef<NostrEvent[]>([])
 
   // Cleanup subscription and timeout on unmount
   useEffect(() => {
@@ -180,7 +181,18 @@ export function useInfiniteTimeline(
         }, firstUsefulTimeoutMs)
       }
 
-      subscriptionRef.current = loader()().subscribe({
+      const currentEvents = eventsRef.current
+      const oldestCreatedAt =
+        currentEvents.length > 0
+          ? Math.min(...currentEvents.map(event => event.created_at))
+          : undefined
+      const loadWindow =
+        intent === 'initial' || oldestCreatedAt === undefined
+          ? undefined
+          : { until: oldestCreatedAt - 1 }
+      const timelineLoader = loader()
+
+      subscriptionRef.current = timelineLoader(loadWindow).subscribe({
         next: event => {
           if (!receivedAnyEvents && safetyTimeoutRef.current) {
             clearTimeout(safetyTimeoutRef.current)
@@ -233,6 +245,10 @@ export function useInfiniteTimeline(
     return fallbackEvents
   }, [directMode, directEvents, filters, storeEvents, fallbackEvents])
 
+  useEffect(() => {
+    eventsRef.current = events
+  }, [events])
+
   // Process events to VideoEvent format and sort by publish date
   const videos = useMemo(() => {
     const processed = processEvents(
@@ -242,7 +258,8 @@ export function useInfiniteTimeline(
       config.blossomServers,
       missingVideoIds,
       presetContent.nsfwPubkeys,
-      config.reportedEventIds
+      config.reportedEventIds,
+      { includeYouTube: config.showYouTubeContent ?? true }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -253,6 +270,7 @@ export function useInfiniteTimeline(
     missingVideoIds,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   const reset = useCallback(() => {
@@ -274,6 +292,7 @@ export function useInfiniteTimeline(
     setSubscriptionActive(false)
     setDirectEvents([])
     setFallbackEvents([])
+    eventsRef.current = []
     setExhausted(false)
     setPhase('idle')
     isFirstLoadRef.current = true

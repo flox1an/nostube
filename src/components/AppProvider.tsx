@@ -29,6 +29,16 @@ export function AppProvider(props: AppProviderProps) {
     }
   }, [config.nsfwFilter, setConfig])
 
+  // MIGRATION: Show YouTube content by default for existing saved configs.
+  useEffect(() => {
+    if (config.showYouTubeContent === undefined) {
+      setConfig(currentConfig => ({
+        ...currentConfig,
+        showYouTubeContent: true,
+      }))
+    }
+  }, [config.showYouTubeContent, setConfig])
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [relayOverride, setRelayOverride] = useState<string | null>(null)
 

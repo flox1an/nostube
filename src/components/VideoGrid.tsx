@@ -161,16 +161,6 @@ export function VideoGrid({
   }
 
   if (layoutMode === 'auto') {
-    // Debug: Log auto layout rendering (DEV only)
-    if (import.meta.env.DEV && portraitVideos.length > 0) {
-      console.debug('[VideoGrid] Rendering auto layout with shorts:', {
-        layoutMode,
-        wideVideosCount: wideVideos.length,
-        portraitVideosCount: portraitVideos.length,
-        firstPortraitTitle: portraitVideos[0]?.title,
-      })
-    }
-
     // Interleave rows: 2 wide rows per 1 portrait row
     const wideRows = chunk(wideVideos, getCols('horizontal'))
     const portraitRows = chunk(portraitVideos, getCols('vertical'))
@@ -223,17 +213,6 @@ export function VideoGrid({
   const isShort = layoutMode === 'vertical'
   const isHorizontal = layoutMode === 'horizontal'
   const cardFormat = isShort ? 'vertical' : isHorizontal ? 'horizontal' : 'horizontal'
-
-  // Debug: Log what we're passing to VideoCard for shorts (DEV only)
-  if (import.meta.env.DEV && isShort && filteredVideos.length > 0) {
-    console.log('[VideoGrid] Rendering shorts (vertical layout):', {
-      layoutMode,
-      isShort,
-      filteredVideosCount: filteredVideos.length,
-      willPassAllVideos: isShort,
-      firstVideoTitle: filteredVideos[0]?.title,
-    })
-  }
 
   return (
     <div

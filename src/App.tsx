@@ -39,6 +39,7 @@ const defaultConfig: AppConfig = {
   blossomServers: [...presetBlossomServers],
   cachingServers: [...presetCachingServers],
   nsfwFilter: 'hide',
+  showYouTubeContent: true,
   thumbResizeServerUrl: defaultResizeServer,
   media: {
     failover: {

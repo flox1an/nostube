@@ -1,7 +1,7 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { processEvent, type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { processEvent, type VideoEvent, getPublishDate, isYouTubeVideo } from '@/utils/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
@@ -275,7 +275,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
         config.blossomServers,
         presetContent.nsfwPubkeys
       )
-      if (processed) {
+      if (processed && ((config.showYouTubeContent ?? true) || !isYouTubeVideo(processed))) {
         authorVideos.push(processed)
       }
     }
@@ -289,7 +289,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
         config.blossomServers,
         presetContent.nsfwPubkeys
       )
-      if (processed) {
+      if (processed && ((config.showYouTubeContent ?? true) || !isYouTubeVideo(processed))) {
         globalVideos.push(processed)
       }
     }
@@ -320,6 +320,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     currentVideoId,
     readRelays,
     config.blossomServers,
+    config.showYouTubeContent,
     presetContent.nsfwPubkeys,
   ])
 

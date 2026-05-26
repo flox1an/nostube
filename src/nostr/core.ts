@@ -207,7 +207,7 @@ export function getTimelineLoader(
     relays.map(relay => [relay, baseFilters])
   )
 
-  const limit = 100
+  const limit = baseFilters.limit ?? 100
   const window$ = new BehaviorSubject<{ since?: number; until?: number }>({})
 
   // Per-relay loading: each relay advances its own cursor independently

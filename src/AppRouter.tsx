@@ -66,6 +66,9 @@ const PresetsSettingsPage = lazy(() =>
     default: m.PresetsSettingsPage,
   }))
 )
+const CategorySettingsPage = lazy(() =>
+  import('./pages/settings/CategorySettingsPage').then(m => ({ default: m.CategorySettingsPage }))
+)
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
 const Mp4DebugPage = lazy(() =>
   import('./pages/Mp4DebugPage').then(m => ({ default: m.Mp4DebugPage }))
@@ -310,19 +313,29 @@ export function AppRouter() {
               </Suspense>
             }
           >
-            <Route
-              path="general"
-              element={
-                <Suspense fallback={<SettingsContentLoader />}>
-                  <GeneralSettingsPage />
-                </Suspense>
-              }
-            />
+            {/* New category routes: presets has its own component, :category is the generic handler */}
             <Route
               path="presets"
               element={
                 <Suspense fallback={<SettingsContentLoader />}>
                   <PresetsSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":category"
+              element={
+                <Suspense fallback={<SettingsContentLoader />}>
+                  <CategorySettingsPage />
+                </Suspense>
+              }
+            />
+            {/* Legacy redirect routes (kept for backward compatibility) */}
+            <Route
+              path="general"
+              element={
+                <Suspense fallback={<SettingsContentLoader />}>
+                  <GeneralSettingsPage />
                 </Suspense>
               }
             />

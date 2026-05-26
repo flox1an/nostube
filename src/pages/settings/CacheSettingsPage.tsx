@@ -1,5 +1,5 @@
-import { CacheSettingsSection } from '@/components/settings/CacheSettingsSection'
+import { Navigate } from 'react-router-dom'
 
 export function CacheSettingsPage() {
-  return <CacheSettingsSection />
+  return <Navigate to="/settings/storage" replace />
 }

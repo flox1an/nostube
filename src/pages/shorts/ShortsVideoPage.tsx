@@ -325,7 +325,8 @@ export function ShortsVideoPage() {
             config.blossomServers,
             undefined,
             presetContent.nsfwPubkeys,
-            config.reportedEventIds
+            config.reportedEventIds,
+            { includeYouTube: config.showYouTubeContent ?? true }
           ).filter(v => v.type === 'shorts')
         })
       )
@@ -350,8 +351,8 @@ export function ShortsVideoPage() {
       subscription.unsubscribe()
       shortsSub.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally limited deps: adding relay/filter/processing deps would cause unwanted resubscriptions on every render
-  }, [initialVideo, authorParam, allVideos.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally limited deps: adding full relay/filter/processing deps would cause unwanted resubscriptions on every render
+  }, [initialVideo, authorParam, allVideos.length, config.showYouTubeContent])
 
   // Track if we've done the initial scroll
   const hasScrolledRef = useRef(false)

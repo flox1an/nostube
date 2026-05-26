@@ -343,7 +343,8 @@ export function useSearchVideos({
       config.blossomServers,
       undefined,
       presetContent.nsfwPubkeys,
-      config.reportedEventIds
+      config.reportedEventIds,
+      { includeYouTube: config.showYouTubeContent ?? true }
     )
 
     // Sort by publish date descending (newest first)
@@ -357,6 +358,7 @@ export function useSearchVideos({
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   // Load more is a no-op for now since we load all at once

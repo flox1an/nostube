@@ -72,7 +72,8 @@ export function LikedVideosPage() {
       config.blossomServers,
       undefined,
       presetContent.nsfwPubkeys,
-      config.reportedEventIds
+      config.reportedEventIds,
+      { includeYouTube: config.showYouTubeContent ?? true }
     )
 
     // Final deduplication: filter out any duplicate videos by ID (just in case)
@@ -94,6 +95,7 @@ export function LikedVideosPage() {
     config.blossomServers,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
+    config.showYouTubeContent,
   ])
 
   // Load missing video events from relays

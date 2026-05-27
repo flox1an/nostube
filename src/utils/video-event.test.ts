@@ -888,10 +888,7 @@ describe('isYouTubeVideo', () => {
   })
 
   it('returns true for YouTube URL matches', () => {
-    const urls = [
-      'https://youtu.be/dQw4w9WgXcQ',
-      'https://www.youtube.com/shorts/dQw4w9WgXcQ',
-    ]
+    const urls = ['https://youtu.be/dQw4w9WgXcQ', 'https://www.youtube.com/shorts/dQw4w9WgXcQ']
 
     for (const url of urls) {
       const video = processEvent(

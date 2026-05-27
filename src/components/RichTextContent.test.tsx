@@ -10,10 +10,7 @@ describe('RichTextContent', () => {
 
     const link = screen.getByRole('link', { name: /YouTube/i })
 
-    expect(link).toHaveAttribute(
-      'href',
-      'https://www.youtube.com/channel/UCqDgpnqBDNHUjM5AQ4jsz4A'
-    )
+    expect(link).toHaveAttribute('href', 'https://www.youtube.com/channel/UCqDgpnqBDNHUjM5AQ4jsz4A')
     expect(link).toHaveTextContent('UCqDgpnqBDNHUjM5AQ4jsz4A')
     expect(container).toHaveTextContent(/UCqDgpnqBDNHUjM5AQ4jsz4A\.$/)
   })

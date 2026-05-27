@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react'
+import { useState } from 'react'
 import { useAppContext, useSelectedPreset, useFollowSet, useCurrentUser } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,20 +61,6 @@ export function GeneralSettingsSection() {
       ...currentConfig,
       preferredQuality: value,
     }))
-  }
-
-  const handleRadioRowClick = <T extends string>(
-    event: MouseEvent<HTMLDivElement>,
-    value: T,
-    onChange: (nextValue: T) => void,
-    disabled = false,
-  ) => {
-    if (disabled) return
-
-    const target = event.target as HTMLElement
-    if (target.closest('[role="radio"]') || target.closest('label')) return
-
-    onChange(value)
   }
 
   const handleLanguageChange = (lng: string) => {
@@ -215,9 +201,14 @@ export function GeneralSettingsSection() {
             </p>
           </div>
         )}
-        <div className={`flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4 ${nsfwLocked ? 'opacity-50' : ''}`}>
+        <div
+          className={`flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4 ${nsfwLocked ? 'opacity-50' : ''}`}
+        >
           <div className="min-w-0 flex-1 space-y-1">
-            <Label htmlFor="nsfw-filter" className={nsfwLocked ? 'cursor-not-allowed font-medium' : 'font-medium'}>
+            <Label
+              htmlFor="nsfw-filter"
+              className={nsfwLocked ? 'cursor-not-allowed font-medium' : 'font-medium'}
+            >
               {t('settings.general.nsfwFilter')}
             </Label>
           </div>

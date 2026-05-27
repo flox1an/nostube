@@ -85,7 +85,10 @@ export function ContentSettingsSection() {
             value={config.preferredQuality ?? '720p'}
             onValueChange={value => handlePreferredQualityChange(value as PreferredQuality)}
           >
-            <SelectTrigger id="content-quality-select" className="w-full max-w-sm shrink-0 sm:w-[200px]">
+            <SelectTrigger
+              id="content-quality-select"
+              className="w-full max-w-sm shrink-0 sm:w-[200px]"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

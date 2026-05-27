@@ -6,13 +6,16 @@ import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent, kinds } from 'nostr-tools'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { relayPool } from '@/nostr/core'
 import type { IEventStore } from 'applesauce-core'
+import { getTypeForKind } from '@/lib/video-types'
 
 // Search configuration
 const SEARCH_LIMIT = 1000 // Max events to load from relays
 const VIDEO_KINDS = [21, 22, 34235, 34236]
+const EXTERNAL_SEARCH_URL = 'https://nostube-search.apps2.slidestr.net'
+const EXTERNAL_SEARCH_TIMEOUT_MS = 5000
 
 function extractHashtags(text: string): string[] {
   const hashtagRegex = /#(\w+)/g
@@ -32,9 +35,66 @@ interface IndexedVideo {
   authorName?: string
 }
 
-/**
- * Create or get the MiniSearch index
- */
+interface ExternalSearchHit {
+  event_id: string
+  title: string
+  content_preview: string
+  pubkey: string
+  kind: number
+  created_at: number
+  thumbnail: string | null
+  videoUrl: string | null
+  tags: string[]
+  authorDisplayName: string | null
+  rankingScore: number
+  nostrUrl: string
+}
+
+function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
+  const type = getTypeForKind(hit.kind)
+  const videoVariants: VideoVariant[] = hit.videoUrl
+    ? [{ url: hit.videoUrl, fallbackUrls: [] }]
+    : []
+  const thumbnailVariants: VideoVariant[] = hit.thumbnail
+    ? [{ url: hit.thumbnail, fallbackUrls: [], mediaType: 'image' as const }]
+    : []
+  return {
+    id: hit.event_id,
+    kind: hit.kind,
+    title: hit.title,
+    description: hit.content_preview,
+    images: hit.thumbnail ? [hit.thumbnail] : [],
+    pubkey: hit.pubkey,
+    created_at: hit.created_at,
+    duration: 0,
+    tags: Array.isArray(hit.tags) ? hit.tags : [],
+    searchText: `${hit.title} ${hit.content_preview}`,
+    urls: hit.videoUrl ? [hit.videoUrl] : [],
+    link: hit.nostrUrl,
+    type,
+    textTracks: [],
+    contentWarning: undefined,
+    origins: [],
+    videoVariants,
+    thumbnailVariants,
+  }
+}
+
+async function fetchExternalSearchResults(
+  query: string,
+  signal: AbortSignal
+): Promise<VideoEvent[] | null> {
+  try {
+    const url = `${EXTERNAL_SEARCH_URL}/api/search?q=${encodeURIComponent(query)}&limit=50`
+    const res = await fetch(url, { signal })
+    if (!res.ok) return null
+    const data = (await res.json()) as { hits: ExternalSearchHit[] }
+    return (data.hits ?? []).map(mapExternalHitToVideoEvent)
+  } catch {
+    return null
+  }
+}
+
 function getSearchIndex(): MiniSearch<IndexedVideo> {
   if (!searchIndex) {
     searchIndex = new MiniSearch<IndexedVideo>({
@@ -50,26 +110,19 @@ function getSearchIndex(): MiniSearch<IndexedVideo> {
   return searchIndex
 }
 
-/**
- * Get author display name from profile in IEventStore
- */
 function getAuthorName(pubkey: string, eventStore: IEventStore): string | undefined {
   try {
-    // Try to get the profile event from the store
     const profileEvent = eventStore.getReplaceable(kinds.Metadata, pubkey)
     if (profileEvent) {
       const profile = JSON.parse(profileEvent.content)
       return profile.display_name || profile.name || undefined
     }
   } catch {
-    // Profile not found or invalid JSON
+    // ignore
   }
   return undefined
 }
 
-/**
- * Extract searchable text from a Nostr event
- */
 function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): IndexedVideo {
   const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
   const description =
@@ -79,38 +132,23 @@ function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): In
     .map(t => t[1])
     .join(' ')
   const authorName = getAuthorName(event.pubkey, eventStore)
-
-  return {
-    id: event.id,
-    title,
-    description,
-    tags: hashtags,
-    authorName,
-  }
+  return { id: event.id, title, description, tags: hashtags, authorName }
 }
 
-/**
- * Add events to the search index
- */
 function indexEvents(events: NostrEvent[], eventStore: IEventStore): void {
   const index = getSearchIndex()
   const newDocs: IndexedVideo[] = []
-
   for (const event of events) {
     if (!indexedEventIds.has(event.id)) {
       indexedEventIds.add(event.id)
       newDocs.push(extractSearchableFields(event, eventStore))
     }
   }
-
   if (newDocs.length > 0) {
     index.addAll(newDocs)
   }
 }
 
-/**
- * Search the index and return matching event IDs
- */
 function searchIndexForQuery(query: string): Set<string> {
   const index = getSearchIndex()
   const results = index.search(query)
@@ -118,32 +156,11 @@ function searchIndexForQuery(query: string): Set<string> {
 }
 
 interface UseSearchVideosOptions {
-  /**
-   * Search query string
-   */
   query: string | null
-
-  /**
-   * Video kinds to search (default: all video kinds)
-   */
   kinds?: number[]
-
-  /**
-   * Optional limit for relay fetch (default: 1000)
-   */
   limit?: number
 }
 
-/**
- * Hook for searching videos using client-side full-text search with MiniSearch.
- * Hybrid approach:
- * 1. Immediately search events already in IEventStore
- * 2. Fetch more events from relays (without NIP-50)
- * 3. Index and search progressively as events arrive
- *
- * @example
- * const { videos, loading, loadMore } = useSearchVideos({ query: 'bitcoin' })
- */
 export function useSearchVideos({
   query,
   kinds = VIDEO_KINDS,
@@ -159,6 +176,13 @@ export function useSearchVideos({
   const blockedPubkeys = useReportedPubkeys()
   const { presetContent } = useSelectedPreset()
   const readRelays = useReadRelays()
+
+  // External search state
+  const [externalVideos, setExternalVideos] = useState<VideoEvent[] | null>(null)
+  const [externalLoading, setExternalLoading] = useState(false)
+  const [externalFailed, setExternalFailed] = useState(false)
+
+  // Local search state (fallback)
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [matchingIds, setMatchingIds] = useState<Set<string>>(new Set())
@@ -166,32 +190,57 @@ export function useSearchVideos({
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const hasFetchedRef = useRef(false)
 
-  // Index events already in IEventStore and search immediately when query changes
+  // External search: try the remote API first
   useEffect(() => {
     if (!query) {
+      setExternalVideos(null)
+      setExternalFailed(false)
+      setExternalLoading(false)
+      return
+    }
+
+    setExternalVideos(null)
+    setExternalFailed(false)
+    setExternalLoading(true)
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_SEARCH_TIMEOUT_MS)
+
+    fetchExternalSearchResults(query, controller.signal).then(results => {
+      clearTimeout(timeoutId)
+      if (controller.signal.aborted) return
+      if (results !== null) {
+        setExternalVideos(results)
+      } else {
+        setExternalFailed(true)
+      }
+      setExternalLoading(false)
+    })
+
+    return () => {
+      clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [query])
+
+  // Local fallback: index events already in IEventStore when external fails
+  useEffect(() => {
+    if (!externalFailed || !query) {
       queueMicrotask(() => setMatchingIds(new Set()))
       return
     }
 
-    // Get events from IEventStore synchronously if available
     const storeEvents: NostrEvent[] = []
     const timeline = eventStore.timeline({ kinds })
-
-    // Subscribe briefly to get current events
     const sub = timeline.subscribe({
       next: events => {
-        if (events && events.length > 0) {
-          storeEvents.push(...events)
-        }
+        if (events && events.length > 0) storeEvents.push(...events)
       },
     })
 
-    // Unsubscribe after getting initial batch
     queueMicrotask(() => {
       sub.unsubscribe()
-
       if (storeEvents.length > 0) {
-        // Index the events
         indexEvents(storeEvents, eventStore)
         setAllEvents(prev => {
           const existingIds = new Set(prev.map(e => e.id))
@@ -199,16 +248,15 @@ export function useSearchVideos({
           if (newEvents.length === 0) return prev
           return [...prev, ...newEvents]
         })
-
-        // Search and update matching IDs
         const matches = searchIndexForQuery(query)
         setMatchingIds(matches)
       }
     })
-  }, [query, kinds, eventStore])
+  }, [query, kinds, eventStore, externalFailed])
 
-  // Fetch events from relays on first search
+  // Local fallback: fetch from relays when external fails
   useEffect(() => {
+    if (!externalFailed) return
     if (!query || hasFetchedRef.current) return
     if (readRelays.length === 0) return
 
@@ -216,60 +264,39 @@ export function useSearchVideos({
     setLoading(true)
 
     const hashtags = extractHashtags(query)
-
     const filters: { kinds: number[]; limit: number; search?: string; '#t'?: string[] }[] = []
-
-    // Filter 1: Latest events (always include)
     filters.push({ kinds, limit })
 
-    // Filter 2: NIP-50 search (if query has non-hashtag part)
     const nonHashtagQuery = query.replace(/#(\w+)/g, '').trim()
     if (nonHashtagQuery.length > 0) {
       filters.push({ kinds, limit, search: nonHashtagQuery })
     }
-
-    // Filter 3: Tag search (if hashtags are present)
     if (hashtags.length > 0) {
       filters.push({ kinds, limit, '#t': hashtags })
     }
 
     if (import.meta.env.DEV) {
-      console.log(
-        `🔍 Fetching up to ${limit} video events for search indexing with filters:`,
-        filters
-      )
+      console.log(`🔍 External search failed, fetching from relays with filters:`, filters)
     }
 
     const loader = createTimelineLoader(relayPool, readRelays, filters, { eventStore })
     let eventCount = 0
 
-    // Set a timeout to mark loading as complete (relay subscriptions often don't "complete")
     const timeoutId = setTimeout(() => {
       setLoading(false)
       setHasLoaded(true)
       subscriptionRef.current?.unsubscribe()
-      if (import.meta.env.DEV) {
-        console.log(`🔍 Search timeout reached. Index has ${indexedEventIds.size} events`)
-      }
-    }, 10000) // 10 second timeout
+    }, 10000)
 
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
         eventCount++
-
-        // Add to IEventStore
         eventStore.add(event)
-
-        // Index the event
         indexEvents([event], eventStore)
-
-        // Update allEvents
         setAllEvents(prev => {
           if (prev.some(e => e.id === event.id)) return prev
           return [...prev, event]
         })
-
-        // Update search results periodically (every 50 events) for progressive display
         if (eventCount % 50 === 0 && query) {
           const matches = searchIndexForQuery(query)
           setMatchingIds(matches)
@@ -279,14 +306,9 @@ export function useSearchVideos({
         clearTimeout(timeoutId)
         setLoading(false)
         setHasLoaded(true)
-
-        // Re-run search with current query after all events loaded
         if (query) {
           const matches = searchIndexForQuery(query)
           setMatchingIds(matches)
-          if (import.meta.env.DEV) {
-            console.log(`🔍 Search complete. Index has ${indexedEventIds.size} events`)
-          }
         }
       },
       error: err => {
@@ -303,22 +325,29 @@ export function useSearchVideos({
       clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [query, readRelays, eventStore, kinds, limit])
+  }, [query, readRelays, eventStore, kinds, limit, externalFailed])
 
-  // Re-search when query changes (after initial load)
+  // Re-search local index when query changes (after initial load, fallback only)
   useEffect(() => {
-    if (!query) {
+    if (!externalFailed || !query) {
       queueMicrotask(() => setMatchingIds(new Set()))
       return
     }
-
-    // Search existing index immediately
     if (indexedEventIds.size > 0) {
       queueMicrotask(() => {
         const matches = searchIndexForQuery(query)
         setMatchingIds(matches)
       })
     }
+  }, [query, externalFailed])
+
+  // Reset local search state when query changes
+  useEffect(() => {
+    hasFetchedRef.current = false
+    setAllEvents([])
+    setMatchingIds(new Set())
+    setHasLoaded(false)
+    setLoading(false)
   }, [query])
 
   // Cleanup on unmount
@@ -328,14 +357,10 @@ export function useSearchVideos({
     }
   }, [])
 
-  // Filter and process matching events
-  const videos = useMemo(() => {
+  // Local search result processing (fallback)
+  const localVideos = useMemo(() => {
     if (!query || matchingIds.size === 0) return []
-
-    // Filter events to only matching ones
     const matchingEvents = allEvents.filter(e => matchingIds.has(e.id))
-
-    // Process into VideoEvent format
     const processed = processEvents(
       matchingEvents,
       readRelays,
@@ -346,8 +371,6 @@ export function useSearchVideos({
       config.reportedEventIds,
       { includeYouTube: config.showYouTubeContent ?? true }
     )
-
-    // Sort by publish date descending (newest first)
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     query,
@@ -361,15 +384,23 @@ export function useSearchVideos({
     config.showYouTubeContent,
   ])
 
-  // Load more is a no-op for now since we load all at once
-  const loadMore = useCallback(() => {
-    // Could implement pagination in the future
-  }, [])
+  // Filter external results by blocked pubkeys
+  const filteredExternalVideos = useMemo(() => {
+    if (!externalVideos) return []
+    return externalVideos.filter(v => !blockedPubkeys?.[v.pubkey])
+  }, [externalVideos, blockedPubkeys])
 
-  return {
-    videos,
-    loading,
-    hasLoaded,
-    loadMore,
+  const loadMore = useCallback(() => {}, [])
+
+  // Return external results when available, otherwise fall back to local
+  if (externalVideos !== null) {
+    return { videos: filteredExternalVideos, loading: false, hasLoaded: true, loadMore }
   }
+
+  if (externalLoading) {
+    return { videos: [], loading: true, hasLoaded: false, loadMore }
+  }
+
+  // externalFailed: return local search results
+  return { videos: localVideos, loading, hasLoaded, loadMore }
 }

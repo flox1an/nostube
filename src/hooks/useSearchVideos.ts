@@ -5,7 +5,7 @@ import MiniSearch from 'minisearch'
 import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { type NostrEvent, kinds } from 'nostr-tools'
+import { type NostrEvent, kinds, nip19 } from 'nostr-tools'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { relayPool } from '@/nostr/core'
 import type { IEventStore } from 'applesauce-core'
@@ -70,7 +70,7 @@ function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
     tags: Array.isArray(hit.tags) ? hit.tags : [],
     searchText: `${hit.title} ${hit.content_preview}`,
     urls: hit.videoUrl ? [hit.videoUrl] : [],
-    link: hit.nostrUrl,
+    link: nip19.neventEncode({ kind: hit.kind, id: hit.event_id, author: hit.pubkey, relays: [] }),
     type,
     textTracks: [],
     contentWarning: undefined,

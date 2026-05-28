@@ -15,6 +15,7 @@ import { buildProfileUrl } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
+import audioFallback from '@/assets/audio-fallback.webp'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
 import { formatDate } from 'date-fns'
@@ -180,12 +181,21 @@ export const VideoCard = React.memo(function VideoCard({
           <div className={cn('w-full overflow-hidden sm:rounded-lg relative', aspectRatio)}>
             {/* Show error state if both thumbnail and fallback failed */}
             {fallbackFailed ? (
-              <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <ImageOff className="h-12 w-12" />
-                  <span className="text-sm">{t('video.thumbnailUnavailable')}</span>
+              video.mediaType === 'audio' ? (
+                <img
+                  src={audioFallback}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <ImageOff className="h-12 w-12" />
+                    <span className="text-sm">{t('video.thumbnailUnavailable')}</span>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <>
                 {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}

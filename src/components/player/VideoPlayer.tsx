@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
-import { Loader2, Music2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
 import {
@@ -944,16 +945,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           {!posterUrl && (
             <button
               type="button"
-              className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-0"
+              className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
               onClick={handleTogglePlay}
               aria-label={playerState.isPlaying ? 'Pause audio' : 'Play audio'}
             >
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_45%),radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.08),transparent_50%)]" />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="rounded-full border border-white/20 bg-black/25 p-4 backdrop-blur-sm">
-                  <Music2 className="h-12 w-12 text-white/80" />
-                </div>
-              </div>
+              <img src={audioFallback} alt="" className="h-full w-full object-contain" />
             </button>
           )}
           <audio

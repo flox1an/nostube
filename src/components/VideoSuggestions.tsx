@@ -16,6 +16,7 @@ import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { MIN_PERSONAL_SCORE, MIN_GLOBAL_SCORE } from '@/hooks/useTrustFilter'
 import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
+import audioFallback from '@/assets/audio-fallback.webp'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
@@ -45,17 +46,26 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
+  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
   const [thumbnailError, setThumbnailError] = useState(false)
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
 
   const thumbnailUrl = useMemo(() => {
+    if (hasNoThumbnail) return video.mediaType === 'audio' ? audioFallback : ''
     // If thumbnail failed and we have video URLs, try generating thumbnail from video
     if (thumbnailError && video.urls && video.urls.length > 0) {
       return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
     }
     // Otherwise use the original image thumbnail
     return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
-  }, [thumbnailError, video.images, video.urls, thumbResizeServerUrl])
+  }, [
+    hasNoThumbnail,
+    thumbnailError,
+    video.images,
+    video.urls,
+    video.mediaType,
+    thumbResizeServerUrl,
+  ])
 
   // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
   const blurhashPlaceholder = useMemo(() => {

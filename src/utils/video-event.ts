@@ -587,7 +587,12 @@ export function processEvent(
       identifier,
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
-      images: images.length > 0 ? images : [url || blurHashToDataURL(blurhash) || ''], // use the video url, which is converted to an image by the image proxy
+      images:
+        images.length > 0
+          ? images
+          : primaryMediaType === 'audio'
+            ? []
+            : [url || blurHashToDataURL(blurhash) || ''], // for audio without images, use empty array; for video, the image proxy can generate a thumbnail from the video URL
       pubkey: event.pubkey,
       created_at: event.created_at,
       published_at,

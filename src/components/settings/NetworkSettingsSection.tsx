@@ -22,6 +22,7 @@ import {
   type BlossomServerTag,
   type CachingServer,
 } from '@/contexts/AppContext'
+import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -370,6 +371,22 @@ function BlossomSubSection() {
             tags: ['initial upload'] as BlossomServerTag[],
           })
         }
+        DEFAULT_UPLOAD_SERVERS.forEach(url => {
+          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
+          servers.push({
+            url,
+            name: deriveServerName(url),
+            tags: ['initial upload'],
+          })
+        })
+        DEFAULT_MIRROR_SERVERS.forEach(url => {
+          if (servers.some(server => server.url === url) || isBlossomServerBlocked(url)) return
+          servers.push({
+            url,
+            name: deriveServerName(url),
+            tags: ['mirror'],
+          })
+        })
         return { ...currentConfig, blossomServers: servers }
       })
     }

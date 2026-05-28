@@ -5,6 +5,17 @@ import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoCard } from '@/components/VideoCard'
 import { PlaylistThumbnailCollage } from '@/components/playlists/PlaylistThumbnailCollage'
@@ -12,7 +23,7 @@ import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
 import { FollowingList } from '@/components/FollowingList'
-import { Plus, Minus, Loader2 } from 'lucide-react'
+import { Camera, Plus, Minus, Loader2, Upload } from 'lucide-react'
 import {
   useProfile,
   useUserPlaylists,
@@ -26,6 +37,8 @@ import {
   useAuthorLikedVideos,
   useReportedPubkeys,
   useAuthorFollowing,
+  useNostrPublish,
+  useUserBlossomServers,
 } from '@/hooks'
 import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
@@ -40,8 +53,25 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { useTranslation } from 'react-i18next'
 import { TrustBadge } from '@/components/TrustBadge'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
+import { toast } from 'sonner'
+import type { Signer } from 'blossom-client-sdk'
+import type { ReactNode } from 'react'
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
+type EditableProfile = Record<string, unknown> & {
+  name?: string
+  display_name?: string
+  displayName?: string
+  about?: string
+  website?: string
+  nip05?: string
+  lud06?: string
+  lud16?: string
+  picture?: string
+  banner?: string
+}
 
 interface PinRef {
   id?: string
@@ -86,6 +116,7 @@ function AuthorProfile({
 }) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
@@ -147,6 +178,16 @@ function AuthorProfile({
             <TrustBadge pubkey={pubkey} />
           </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 pr-4">
+            {isOwnProfile && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsEditOpen(true)}
+                className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+              >
+                {t('pages.author.editProfile', 'Edit profile')}
+              </Button>
+            )}
             {canFollow && (
               <Button
                 variant="ghost"
@@ -198,6 +239,351 @@ function AuthorProfile({
           </div>
         )}
       </div>
+      {isOwnProfile && (
+        <EditProfileDialog
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          pubkey={pubkey}
+          metadata={metadata as EditableProfile | undefined}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditProfileDialog({
+  open,
+  onOpenChange,
+  pubkey,
+  metadata,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  pubkey: string
+  metadata?: EditableProfile
+}) {
+  const { t } = useTranslation()
+  const { user } = useCurrentUser()
+  const { config } = useAppContext()
+  const eventStore = useEventStore()
+  const { publish, isPending } = useNostrPublish()
+  const { data: userBlossomServers } = useUserBlossomServers()
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [form, setForm] = useState({
+    name: '',
+    about: '',
+    website: '',
+    nip05: '',
+    lightning: '',
+    picture: '',
+    banner: '',
+  })
+  const [fieldError, setFieldError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null)
+
+  const setField = (field: keyof typeof form, value: string) => {
+    setFieldError(null)
+    setForm(current => ({ ...current, [field]: value }))
+  }
+
+  const configInitialServers =
+    config.blossomServers
+      ?.filter(server => server.tags.includes('initial upload'))
+      .map(server => server.url) || []
+  const configMirrorServers =
+    config.blossomServers
+      ?.filter(server => server.tags.includes('mirror'))
+      .map(server => server.url) || []
+  const initialServers = configInitialServers.length
+    ? configInitialServers
+    : userBlossomServers.slice(0, 1).concat(userBlossomServers.length ? [] : DEFAULT_UPLOAD_SERVERS)
+  const mirrorServers = configMirrorServers.length
+    ? configMirrorServers
+    : userBlossomServers
+        .filter(server => !initialServers.includes(server))
+        .concat(userBlossomServers.length ? [] : DEFAULT_MIRROR_SERVERS)
+  const canUpload = !!user && initialServers.length > 0
+  const signer = user
+    ? ((async draft => user.signer.signEvent(draft)) as Signer)
+    : ((async draft => draft) as Signer)
+  const fileUpload = useFileUpload({
+    initialServers,
+    mirrorServers,
+    signer,
+  })
+  const {
+    upload,
+    progress: fileUploadProgress,
+    uploading: isFileUploading,
+    reset: resetFileUpload,
+  } = fileUpload
+
+  useEffect(() => {
+    if (!open) return
+
+    setForm({
+      name: metadata?.display_name || metadata?.displayName || metadata?.name || '',
+      about: metadata?.about || '',
+      website: metadata?.website || '',
+      nip05: metadata?.nip05 || '',
+      lightning: metadata?.lud16 || metadata?.lud06 || '',
+      picture: metadata?.picture || '',
+      banner: metadata?.banner || '',
+    })
+    setFieldError(null)
+    setUploading(null)
+    resetFileUpload()
+  }, [metadata, open, resetFileUpload])
+
+  const handleImageUpload = async (field: 'picture' | 'banner', file?: File) => {
+    if (!file || !user) return
+    if (!file.type.startsWith('image/')) {
+      setFieldError(t('pages.author.imageOnly', 'Please choose an image file.'))
+      return
+    }
+    if (!canUpload) {
+      setFieldError(
+        t('pages.author.noBlossomServers', 'Add a Blossom upload server before uploading images.')
+      )
+      return
+    }
+
+    setUploading(field)
+    try {
+      const { uploadedBlobs } = await upload(file)
+      const primaryBlob = uploadedBlobs[0]
+      if (!primaryBlob?.url) throw new Error('No uploaded image URL returned')
+
+      setField(field, primaryBlob.url)
+      toast.success(t('pages.author.imageUploaded', 'Image uploaded'))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setFieldError(message)
+      toast.error(t('pages.author.imageUploadFailed', 'Image upload failed'))
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!user || user.pubkey !== pubkey) return
+
+    const lightning = form.lightning.trim()
+    const nextProfile: EditableProfile = { ...(metadata || {}) }
+    const name = form.name.trim()
+
+    nextProfile.name = name
+    nextProfile.display_name = name
+    nextProfile.displayName = name
+    nextProfile.about = form.about.trim()
+    nextProfile.website = form.website.trim()
+    nextProfile.nip05 = form.nip05.trim()
+    nextProfile.picture = form.picture.trim()
+    nextProfile.banner = form.banner.trim()
+
+    delete nextProfile.lud06
+    delete nextProfile.lud16
+    if (lightning) {
+      if (lightning.startsWith('lnurl')) {
+        nextProfile.lud06 = lightning
+      } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lightning)) {
+        nextProfile.lud16 = lightning
+      } else {
+        setFieldError(t('pages.author.invalidLightning', 'Enter a Lightning address or LNURL.'))
+        return
+      }
+    }
+
+    try {
+      const event = await publish({
+        event: {
+          kind: 0,
+          content: JSON.stringify(nextProfile),
+          tags: [],
+          created_at: Math.floor(Date.now() / 1000),
+        },
+      })
+      eventStore.add(event)
+      toast.success(t('pages.author.profileSaved', 'Profile saved'))
+      onOpenChange(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setFieldError(message)
+      toast.error(t('pages.author.profileSaveFailed', 'Profile save failed'))
+    }
+  }
+
+  const fallbackPicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
+  const isSaving = isPending || !!uploading || isFileUploading
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('pages.author.editProfile', 'Edit profile')}</DialogTitle>
+          <DialogDescription>
+            {t('pages.author.editProfileDescription', 'Update your public Nostr profile.')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="relative">
+            <button
+              type="button"
+              className="group relative h-32 w-full overflow-hidden rounded-lg border bg-muted sm:h-40"
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={isSaving}
+            >
+              {form.banner ? (
+                <img src={form.banner} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('pages.author.addBanner', 'Add banner')}
+                </div>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                {uploading === 'banner' ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Upload className="h-6 w-6" />
+                )}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="group absolute -bottom-10 left-4 h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-muted"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={isSaving}
+            >
+              <img
+                src={form.picture || fallbackPicture}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={event => {
+                  event.currentTarget.src = fallbackPicture
+                }}
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                {uploading === 'picture' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5" />
+                )}
+              </span>
+            </button>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={event => handleImageUpload('banner', event.target.files?.[0])}
+            />
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={event => handleImageUpload('picture', event.target.files?.[0])}
+            />
+          </div>
+
+          <div className="grid gap-4 pt-10 sm:grid-cols-2">
+            <ProfileField label={t('pages.author.avatarUrl', 'Avatar URL')} htmlFor="avatar-url">
+              <Input
+                id="avatar-url"
+                value={form.picture}
+                placeholder="https://..."
+                onChange={event => setField('picture', event.target.value)}
+              />
+            </ProfileField>
+            <ProfileField label={t('pages.author.bannerUrl', 'Banner URL')} htmlFor="banner-url">
+              <Input
+                id="banner-url"
+                value={form.banner}
+                placeholder="https://..."
+                onChange={event => setField('banner', event.target.value)}
+              />
+            </ProfileField>
+            <ProfileField label={t('pages.author.displayName', 'Display name')} htmlFor="name">
+              <Input
+                id="name"
+                value={form.name}
+                onChange={event => setField('name', event.target.value)}
+              />
+            </ProfileField>
+            <ProfileField label={t('pages.author.website', 'Website')} htmlFor="website">
+              <Input
+                id="website"
+                value={form.website}
+                placeholder="https://..."
+                onChange={event => setField('website', event.target.value)}
+              />
+            </ProfileField>
+            <ProfileField label={t('pages.author.nip05', 'Nostr address')} htmlFor="nip05">
+              <Input
+                id="nip05"
+                value={form.nip05}
+                placeholder="name@example.com"
+                onChange={event => setField('nip05', event.target.value)}
+              />
+            </ProfileField>
+            <ProfileField label={t('pages.author.lightning', 'Lightning')} htmlFor="lightning">
+              <Input
+                id="lightning"
+                value={form.lightning}
+                placeholder="name@example.com"
+                onChange={event => setField('lightning', event.target.value)}
+              />
+            </ProfileField>
+            <div className="sm:col-span-2">
+              <ProfileField label={t('pages.author.bio', 'Bio')} htmlFor="bio">
+                <Textarea
+                  id="bio"
+                  value={form.about}
+                  className="min-h-28"
+                  onChange={event => setField('about', event.target.value)}
+                />
+              </ProfileField>
+            </div>
+          </div>
+
+          {uploading && fileUploadProgress && (
+            <div className="text-sm text-muted-foreground">
+              {t('pages.author.uploadingImage', 'Uploading image')}{' '}
+              {Math.round(fileUploadProgress.percentage)}%
+            </div>
+          )}
+          {fieldError && <div className="text-sm text-destructive">{fieldError}</div>}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('common.save', 'Save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ProfileField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string
+  htmlFor: string
+  children: ReactNode
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
     </div>
   )
 }

@@ -121,12 +121,16 @@ export const RECOMMENDED_BLOSSOM_SERVERS: BlossomServerInfo[] = [
 /**
  * Default upload servers for new users
  */
-export const DEFAULT_UPLOAD_SERVERS: string[] = []
+export const DEFAULT_UPLOAD_SERVERS = [
+  'https://blossom.primal.net',
+  'https://nostr.download',
+  'https://almond.slidestr.net',
+]
 
 /**
  * Default mirror servers for new users
  */
-export const DEFAULT_MIRROR_SERVERS = ['https://blossom.primal.net', 'https://24242.io']
+export const DEFAULT_MIRROR_SERVERS: string[] = []
 
 /**
  * Derive a display name from a server URL

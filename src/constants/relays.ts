@@ -1,4 +1,14 @@
-import { type Relay, type BlossomServer, type CachingServer } from '@/contexts/AppContext'
+import {
+  type Relay,
+  type BlossomServer,
+  type BlossomServerTag,
+  type CachingServer,
+} from '@/contexts/AppContext'
+import {
+  DEFAULT_MIRROR_SERVERS,
+  DEFAULT_UPLOAD_SERVERS,
+  deriveServerName,
+} from '@/lib/blossom-servers'
 
 // Re-export from unified blossom-url module for backwards compatibility
 export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@/lib/blossom-url'
@@ -27,6 +37,17 @@ export const INDEXER_RELAYS: string[] = [
   'wss://relay.snort.social', // Snort relay
 ]
 
-export const presetBlossomServers: BlossomServer[] = []
+export const presetBlossomServers: BlossomServer[] = [
+  ...DEFAULT_UPLOAD_SERVERS.map(url => ({
+    url,
+    name: deriveServerName(url),
+    tags: ['initial upload' as BlossomServerTag],
+  })),
+  ...DEFAULT_MIRROR_SERVERS.map(url => ({
+    url,
+    name: deriveServerName(url),
+    tags: ['mirror' as BlossomServerTag],
+  })),
+]
 
 export const presetCachingServers: CachingServer[] = []

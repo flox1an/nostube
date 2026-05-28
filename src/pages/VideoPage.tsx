@@ -187,7 +187,7 @@ export function VideoPage() {
         })
     }
 
-    // Cleanup: always unsubscribe and log closure
+    // Cleanup: unsubscribe, log closure, and reset video so old content clears immediately on navigation
     return () => {
       if (sub) {
         sub.unsubscribe()
@@ -195,6 +195,7 @@ export function VideoPage() {
       if (subId) {
         logSubscriptionClosed(subId)
       }
+      setVideoEvent(undefined)
     }
   }, [eventStore, eventLoader, addressLoader, videoIdentifier, initialRelays])
 

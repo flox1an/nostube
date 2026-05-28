@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
-import { Loader2 } from 'lucide-react'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
@@ -112,7 +111,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       return newValue
     })
   }, [])
-  const spinnerTimeoutRef = useRef<number | null>(null)
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
   const isAudioOnly = mediaType === 'audio' || mime.startsWith('audio/')
@@ -412,43 +410,40 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     return () => el.removeEventListener('loadedmetadata', handleLoadedMetadata)
   }, [onVideoDimensionsLoaded])
 
-  // Handle buffering spinner
+  // Show spinner 500ms after videoUrl changes if the media hasn't started playing yet.
+  // Always schedule on URL change — canplay/playing cancel it if the server is fast.
   useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-
-    const showSpinnerDelayed = () => {
-      if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current)
-      }
-      spinnerTimeoutRef.current = window.setTimeout(() => {
-        setShowBufferingSpinner(true)
-      }, 200)
-    }
-
-    const hideSpinner = () => {
+    if (!videoUrl) {
       setShowBufferingSpinner(false)
-      if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current)
-        spinnerTimeoutRef.current = null
+      return
+    }
+
+    let timer: number | null = window.setTimeout(() => {
+      setShowBufferingSpinner(true)
+    }, 500)
+
+    const hide = () => {
+      setShowBufferingSpinner(false)
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
       }
     }
 
-    el.addEventListener('loadstart', showSpinnerDelayed)
-    el.addEventListener('waiting', showSpinnerDelayed)
-    el.addEventListener('canplay', hideSpinner)
-    el.addEventListener('playing', hideSpinner)
+    const el = videoRef.current
+    if (el) {
+      el.addEventListener('canplay', hide)
+      el.addEventListener('playing', hide)
+    }
 
     return () => {
-      el.removeEventListener('loadstart', showSpinnerDelayed)
-      el.removeEventListener('waiting', showSpinnerDelayed)
-      el.removeEventListener('canplay', hideSpinner)
-      el.removeEventListener('playing', hideSpinner)
-      if (spinnerTimeoutRef.current !== null) {
-        clearTimeout(spinnerTimeoutRef.current)
+      if (timer !== null) clearTimeout(timer)
+      if (el) {
+        el.removeEventListener('canplay', hide)
+        el.removeEventListener('playing', hide)
       }
     }
-  }, [])
+  }, [videoUrl])
 
   // Handle video ended
   useEffect(() => {
@@ -898,15 +893,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [posterUrl])
 
-  // Show loading state if video URLs are still loading
-  if (isLoadingVideoUrls || !videoUrl) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-32 w-32 animate-spin" />
-      </div>
-    )
-  }
-
   const hasCaptions = validatedTracks.length > 0
   const showPipButton = isPipSupported && !isAudioOnly
   const controlsVisibleForRender = isAudioOnly ? true : controlsVisible
@@ -954,7 +940,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           )}
           <audio
             ref={setMediaElementRef}
-            src={isHls ? undefined : videoUrl}
+            src={isHls ? undefined : (videoUrl ?? undefined)}
             loop={loopEnabled}
             autoPlay={!contentWarning}
             playsInline
@@ -975,7 +961,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       ) : (
         <video
           ref={setMediaElementRef}
-          src={isHls ? undefined : videoUrl}
+          src={isHls ? undefined : (videoUrl ?? undefined)}
           poster={posterUrl ?? undefined}
           loop={loopEnabled}
           autoPlay={!contentWarning}

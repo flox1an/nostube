@@ -768,7 +768,7 @@ export function AuthorPage() {
           config.reportedEventIds,
           {
             includeYouTube: config.showYouTubeContent ?? true,
-            includeAudio: config.showAudioContent ?? true,
+            includeAudio: true,
           }
         )
 
@@ -835,7 +835,7 @@ export function AuthorPage() {
         config.reportedEventIds,
         {
           includeYouTube: config.showYouTubeContent ?? true,
-          includeAudio: config.showAudioContent ?? true,
+          includeAudio: true,
         }
       )
 
@@ -856,7 +856,6 @@ export function AuthorPage() {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
-    config.showAudioContent,
   ])
 
   useEffect(() => {
@@ -959,7 +958,7 @@ export function AuthorPage() {
           config.reportedEventIds,
           {
             includeYouTube: config.showYouTubeContent ?? true,
-            includeAudio: config.showAudioContent ?? true,
+            includeAudio: true,
           }
         )
         const deduped = Array.from(new Map(processed.map(video => [video.id, video])).values())
@@ -983,7 +982,6 @@ export function AuthorPage() {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
-    config.showAudioContent,
   ])
 
   // Auto-fetch video events for all playlists when playlists are loaded
@@ -1020,7 +1018,7 @@ export function AuthorPage() {
     loading,
     exhausted,
     loadMore,
-  } = useInfiniteTimeline(loader, relays, { filters: timelineFilter })
+  } = useInfiniteTimeline(loader, relays, { filters: timelineFilter, includeAudio: true })
 
   const { loadMoreRef } = useInfiniteScroll({
     onLoadMore: loadMore,

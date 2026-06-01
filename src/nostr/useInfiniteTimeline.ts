@@ -14,6 +14,7 @@ type LoadIntent = 'initial' | 'load-more' | 'prefetch'
 interface UseInfiniteTimelineOptions {
   filters?: Filter | Filter[]
   directMode?: boolean
+  includeAudio?: boolean
   firstEventTimeoutMs?: number
   pageSettleMs?: number
   firstUsefulTimeoutMs?: number
@@ -36,6 +37,7 @@ export function useInfiniteTimeline(
   const {
     filters,
     directMode = false,
+    includeAudio,
     firstEventTimeoutMs = DEFAULT_FIRST_EVENT_TIMEOUT_MS,
     pageSettleMs = DEFAULT_PAGE_SETTLE_MS,
     firstUsefulTimeoutMs = DEFAULT_FIRST_USEFUL_TIMEOUT_MS,
@@ -261,7 +263,7 @@ export function useInfiniteTimeline(
       config.reportedEventIds,
       {
         includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
+        includeAudio: includeAudio ?? config.showAudioContent ?? true,
       }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
@@ -275,6 +277,7 @@ export function useInfiniteTimeline(
     config.reportedEventIds,
     config.showYouTubeContent,
     config.showAudioContent,
+    includeAudio,
   ])
 
   const reset = useCallback(() => {

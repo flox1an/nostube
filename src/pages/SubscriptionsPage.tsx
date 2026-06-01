@@ -1,6 +1,8 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useFollowedAuthors, useStableRelays } from '@/hooks'
 import { useCallback, useMemo, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
@@ -10,6 +12,7 @@ import type { VideoEvent } from '@/utils/video-event'
 
 export function SubscriptionsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     document.title = `${t('navigation.subscriptions')} - nostube`
@@ -138,6 +141,23 @@ export function SubscriptionsPage() {
     return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [videos])
 
+  if (followedPubkeys.length === 0) {
+    return (
+      <div className="max-w-560 mx-auto sm:p-4">
+        <div className="rounded-xl border p-8 text-center space-y-3">
+          <h2 className="text-xl font-semibold">{t('pages.subscriptions.welcomeTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('pages.subscriptions.welcomeDescription')}</p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={() => navigate('/explore')}>{t('pages.subscriptions.exploreButton')}</Button>
+            <Button variant="outline" onClick={() => navigate('/search')}>
+              {t('pages.subscriptions.findCreators')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-560 mx-auto">
       <VideoTimelinePage
@@ -149,11 +169,7 @@ export function SubscriptionsPage() {
         onLoadMore={loadMore}
         onPrefetch={prefetchMore}
         layoutMode="auto"
-        emptyMessage={
-          followedPubkeys.length === 0
-            ? t('pages.subscriptions.emptyState')
-            : t('pages.subscriptions.noVideos')
-        }
+        emptyMessage={t('pages.subscriptions.noVideos')}
         exhaustedMessage={t('pages.subscriptions.noMore')}
         className="sm:p-4"
       />

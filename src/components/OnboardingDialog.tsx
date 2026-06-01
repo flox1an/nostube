@@ -1,34 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { useTranslation } from 'react-i18next'
-import { FollowImportStep } from './onboarding/FollowImportStep'
+import { PhasedOnboardingDialog } from './onboarding/PhasedOnboardingDialog'
 
 const FOLLOW_IMPORT_STORAGE_KEY = 'nostube_onboarding_follow_import'
-
-function OnboardingDialogContent({ onComplete }: { onComplete: () => void }) {
-  const { t } = useTranslation()
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t('onboarding.followImport.title')}</DialogTitle>
-        <DialogDescription>{t('onboarding.followImport.description')}</DialogDescription>
-      </DialogHeader>
-
-      <div className="py-4">
-        <FollowImportStep onComplete={onComplete} onSkip={onComplete} />
-      </div>
-    </>
-  )
-}
+const NEW_USER_STORAGE_KEY = 'nostube_onboarding_new_user'
 
 export function OnboardingDialog() {
   const { user } = useCurrentUser()
@@ -37,25 +13,19 @@ export function OnboardingDialog() {
 
   const shouldShow = useMemo(() => {
     if (!user?.pubkey || isCompleted) return false
-
-    // Wait until the follow set query has completed before deciding
     if (!followSetLoaded) return false
 
     const followImportCompleted = localStorage.getItem(FOLLOW_IMPORT_STORAGE_KEY)
+    const isNewUser = localStorage.getItem(NEW_USER_STORAGE_KEY) === '1'
 
-    // Only show if user has kind 3 contacts but no follow set and hasn't completed import
-    return !followImportCompleted && !hasFollowSet && hasKind3Contacts
+    return isNewUser || (!followImportCompleted && !hasFollowSet && hasKind3Contacts)
   }, [user?.pubkey, hasFollowSet, followSetLoaded, hasKind3Contacts, isCompleted])
 
   const handleComplete = () => {
+    localStorage.setItem(FOLLOW_IMPORT_STORAGE_KEY, 'done')
+    localStorage.removeItem(NEW_USER_STORAGE_KEY)
     setIsCompleted(true)
   }
 
-  return (
-    <Dialog open={shouldShow} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-2xl" hideCloseButton>
-        <OnboardingDialogContent onComplete={handleComplete} />
-      </DialogContent>
-    </Dialog>
-  )
+  return <PhasedOnboardingDialog open={shouldShow} onOpenChange={() => {}} onComplete={handleComplete} />
 }

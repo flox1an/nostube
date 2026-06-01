@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useState } from 'react'
-import { Download, Key } from 'lucide-react'
+import { Key } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import {
   Dialog,
@@ -14,30 +14,57 @@ import {
 import { toast, useLoginActions } from '@/hooks'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { useTranslation } from 'react-i18next'
+import { SeedBackupStep } from '@/components/onboarding/SeedBackupStep'
 
 interface SignupDialogProps {
   isOpen: boolean
   onClose: () => void
 }
 
+async function encryptAndStoreNsec(nsec: string, password: string) {
+  const enc = new TextEncoder()
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveKey',
+  ])
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  )
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(nsec))
+
+  localStorage.setItem(
+    'nostube:encrypted-nsec',
+    JSON.stringify({
+      version: 1,
+      algorithm: 'AES-GCM',
+      kdf: 'PBKDF2',
+      iterations: 250000,
+      salt: btoa(String.fromCharCode(...salt)),
+      iv: btoa(String.fromCharCode(...iv)),
+      ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+    })
+  )
+}
+
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation()
-  const [step, setStep] = useState<'generate' | 'download' | 'done'>('generate')
+  const [step, setStep] = useState<'generate' | 'backup' | 'done'>('generate')
   const [isLoading, setIsLoading] = useState(false)
   const [nsec, setNsec] = useState('')
   const login = useLoginActions()
 
-  // Generate a proper nsec key using nostr-tools
   const generateKey = () => {
     setIsLoading(true)
 
     try {
-      // Generate a new secret key
       const sk = generateSecretKey()
-
-      // Convert to nsec format
       setNsec(nip19.nsecEncode(sk))
-      setStep('download')
+      setStep('backup')
     } catch (error) {
       console.error('Failed to generate key:', error)
       toast({
@@ -50,32 +77,14 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     }
   }
 
-  const downloadKey = () => {
-    // Create a blob with the key text
-    const blob = new Blob([nsec], { type: 'text/plain' })
-    const url = globalThis.URL.createObjectURL(blob)
-
-    // Create a temporary link element and trigger download
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'nsec.txt'
-    document.body.appendChild(a)
-    a.click()
-
-    // Clean up
-    globalThis.URL.revokeObjectURL(url)
-    document.body.removeChild(a)
-
-    toast({
-      title: t('auth.signup.keyDownloaded'),
-      description: t('auth.signup.keyDownloadedMessage'),
-    })
-  }
-
-  const finishSignup = async () => {
+  const finishSignup = async (password?: string) => {
     setIsLoading(true)
     try {
+      if (password) {
+        await encryptAndStoreNsec(nsec, password)
+      }
       await login.nsec(nsec)
+      localStorage.setItem('nostube_onboarding_new_user', '1')
       setStep('done')
       onClose()
 
@@ -99,12 +108,12 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
             {step === 'generate' && t('auth.signup.title')}
-            {step === 'download' && t('auth.signup.downloadTitle')}
+            {step === 'backup' && t('auth.signup.downloadTitle')}
             {step === 'done' && t('auth.signup.settingUpTitle')}
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground mt-2">
             {step === 'generate' && t('auth.signup.generateDescription')}
-            {step === 'download' && t('auth.signup.keepSafeDescription')}
+            {step === 'backup' && t('auth.signup.keepSafeDescription')}
             {step === 'done' && t('auth.signup.finalizingDescription')}
           </DialogDescription>
         </DialogHeader>
@@ -115,9 +124,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                 <Key className="w-16 h-16 text-primary" />
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {t('auth.signup.introText')}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{t('auth.signup.introText')}</p>
               <Button
                 className="w-full rounded-full py-6"
                 onClick={generateKey}
@@ -128,32 +135,12 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {step === 'download' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 overflow-auto">
-                <code className="text-xs break-all">{nsec}</code>
-              </div>
-
-              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                <p className="font-medium text-red-500">{t('auth.signup.important')}</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>{t('auth.signup.importantItem1')}</li>
-                  <li>{t('auth.signup.importantItem2')}</li>
-                  <li>{t('auth.signup.importantItem3')}</li>
-                </ul>
-              </div>
-
-              <div className="flex flex-col space-y-3">
-                <Button variant="outline" className="w-full" onClick={downloadKey}>
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('auth.signup.downloadKey')}
-                </Button>
-
-                <Button className="w-full rounded-full py-6" onClick={finishSignup}>
-                  {t('auth.signup.savedKey')}
-                </Button>
-              </div>
-            </div>
+          {step === 'backup' && (
+            <SeedBackupStep
+              nsec={nsec}
+              onConfirmed={password => finishSignup(password)}
+              onBack={() => setStep('generate')}
+            />
           )}
 
           {step === 'done' && (

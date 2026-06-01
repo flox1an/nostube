@@ -4,6 +4,7 @@
     "submit": "Submit",
     "cancel": "Cancel",
     "save": "Save",
+    "back": "Back",
     "delete": "Delete",
     "deleting": "Deleting...",
     "edit": "Edit",
@@ -721,12 +722,16 @@
       "clearButton": "Clear History",
       "confirmTitle": "Clear watch history?",
       "confirmMessage": "This will permanently delete your entire watch history. This action cannot be undone.",
-      "emptyState": "Your watch history is empty. Start watching videos to see them here."
+      "emptyState": "Your watch history is empty. Start watching videos to see them here.",
+      "browseButton": "Browse Videos"
     },
     "likedVideos": {
       "title": "Liked Videos",
       "noVideos": "No liked videos found.",
-      "emptyState": "Like some videos to see them here!"
+      "emptyState": "Like some videos to see them here!",
+      "exploreTitle": "No liked videos yet",
+      "exploreDescription": "Start exploring and like videos you enjoy",
+      "exploreButton": "Browse Videos"
     },
     "search": {
       "emptyState": "Enter a search query to find videos",
@@ -762,7 +767,11 @@
     "subscriptions": {
       "emptyState": "Follow some authors to see their videos here.",
       "noVideos": "No videos found from your subscriptions.",
-      "noMore": "You've seen all videos from your subscriptions."
+      "noMore": "You've seen all videos from your subscriptions.",
+      "welcomeTitle": "Welcome to nostube!",
+      "welcomeDescription": "Follow some creators to see their videos here",
+      "exploreButton": "Explore Videos",
+      "findCreators": "Find Creators"
     },
     "videoNotes": {
       "title": "Video Notes",
@@ -925,6 +934,55 @@
       },
       "continue": "Continue",
       "stepIndicator": "Step {{current}} of {{total}}"
+    },
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "important": "This is your only way to access your account",
+      "warning1": "If you lose this key, you lose access to your account forever",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or paper backup",
+      "warning3": "Never share this key with anyone - anyone with it can control your account",
+      "downloadKey": "Download Key File",
+      "downloadAgain": "Download Again",
+      "downloaded": "Key file downloaded!",
+      "confirmBackup": "I have saved my key and understand it cannot be recovered if lost",
+      "passwordProtect": "Protect with password (optional)",
+      "passwordPlaceholder": "Enter a password to encrypt your stored key",
+      "passwordHint": "Your encrypted key will be stored locally for convenience. You can always save your raw key for full portability.",
+      "continue": "Continue to nostube"
+    },
+    "phasedOnboarding": {
+      "step1": "Account",
+      "step2": "Follows",
+      "step3": "Ready",
+      "welcome": "Welcome to nostube",
+      "welcomeDescription": "Let's get you set up in just a few steps",
+      "getStarted": "Get Started"
+    },
+    "identityStep": {
+      "title": "Your Account",
+      "hasKey": "I have a Nostr key",
+      "hasKeyDescription": "Sign in with your existing account",
+      "newUser": "I'm new to Nostr",
+      "newUserDescription": "Create a new account",
+      "loggedInAs": "Logged in as",
+      "continue": "Continue"
+    },
+    "feedStep": {
+      "title": "Your Feed",
+      "description": "Follow creators to see their videos in your feed",
+      "importFollows": "Import from existing follows",
+      "importDescription": "Import your Nostr follow list to find video creators",
+      "discover": "Discover creators",
+      "discoverDescription": "Browse recommended video creators",
+      "skip": "Skip for now"
+    },
+    "readyStep": {
+      "title": "You're all set!",
+      "description": "Your account is ready. Here's what you can do next:",
+      "explore": "Explore Videos",
+      "upload": "Upload a Video",
+      "settings": "Customize Settings",
+      "startWatching": "Start Watching"
     }
   },
   "uploadOnboarding": {

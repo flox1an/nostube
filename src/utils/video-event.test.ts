@@ -986,6 +986,47 @@ describe('processEvents', () => {
     expect(results[0].origin?.platform).toBe('youtube')
   })
 
+  it('should include audio-only events by default', () => {
+    const audioEvent = {
+      ...zapStreamEvent,
+      id: 'audio-event',
+      tags: [
+        ['imeta', 'url https://example.com/episode.mp3', 'm audio/mpeg'],
+        ['title', 'Podcast Episode'],
+      ],
+    }
+
+    const results = processEvents([audioEvent], defaultRelays)
+
+    expect(results).toHaveLength(1)
+    expect(results[0].mediaType).toBe('audio')
+  })
+
+  it('should filter out audio-only events when disabled', () => {
+    const audioEvent = {
+      ...zapStreamEvent,
+      id: 'audio-event',
+      tags: [
+        ['imeta', 'url https://example.com/episode.mp3', 'm audio/mpeg'],
+        ['title', 'Podcast Episode'],
+      ],
+    }
+
+    const results = processEvents(
+      [audioEvent, nostubeEvent],
+      defaultRelays,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { includeAudio: false }
+    )
+
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe(nostubeEvent.id)
+  })
+
   it('should filter out YouTube URLs when disabled', () => {
     const youtubeEvent = {
       ...zapStreamEvent,

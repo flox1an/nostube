@@ -48,6 +48,8 @@ export type VideoVariant = {
 export interface ProcessEventsOptions {
   /** Include videos that point to YouTube origins/URLs. Defaults to true. */
   includeYouTube?: boolean
+  /** Include audio-only content such as MP3 podcast episodes. Defaults to true. */
+  includeAudio?: boolean
 }
 
 export interface VideoEvent {
@@ -129,6 +131,10 @@ export function isYouTubeVideo(video: VideoEvent): boolean {
     video.origins.some(origin => origin.platform?.toLowerCase() === 'youtube') ||
     video.urls.some(url => YOUTUBE_REGEX.test(url))
   )
+}
+
+export function isAudioVideo(video: VideoEvent): boolean {
+  return video.mediaType === 'audio'
 }
 
 function getVariantMediaType(
@@ -360,6 +366,7 @@ export function processEvents(
 ): VideoEvent[] {
   const reportedSet = reportedEventIds?.length ? new Set(reportedEventIds) : undefined
   const includeYouTube = options?.includeYouTube ?? true
+  const includeAudio = options?.includeAudio ?? true
   const processed = events
     .filter((event): event is Event => event !== undefined)
     .map(event => processEvent(event, relays, blossomServers, nsfwPubkeys))
@@ -368,6 +375,7 @@ export function processEvents(
         video !== undefined &&
         Boolean(video.id) &&
         (includeYouTube || !isYouTubeVideo(video)) &&
+        (includeAudio || !isAudioVideo(video)) &&
         (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
         (!missingVideoIds || !missingVideoIds.has(video.id)) &&
         (!reportedSet || !reportedSet.has(video.id))

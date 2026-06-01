@@ -524,6 +524,8 @@
       "contentFiltersDescription": "Control which types of content are shown in feeds and suggestions.",
       "youtubeContent": "YouTube content",
       "youtubeContentDescription": "Show videos that link to or embed YouTube content.",
+      "audioContent": "Audio content",
+      "audioContentDescription": "Show audio-only posts such as MP3 podcast episodes.",
       "nsfwFilter": "NSFW Content Filter",
       "nsfwHide": "Hide - Don't show NSFW content",
       "nsfwWarning": "Warning - Show blurred with warning",
@@ -533,8 +535,6 @@
       "language": "Language",
       "selectLanguage": "Select language",
       "languageDescription": "Choose the language for the user interface.",
-      "hoverPreview": "Hover Previews",
-      "hoverPreviewDescription": "Enable muted video playback when hovering over video thumbnails.",
       "importFollows": "Import Subscriptions",
       "importFollowsButton": "Import from Nostr contacts ({{count}})",
       "importFollowsDescription": "Re-import your Nostr contact list. Only creators who have posted videos will be added to your Nostube subscriptions."

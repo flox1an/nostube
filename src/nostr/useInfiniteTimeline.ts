@@ -259,7 +259,10 @@ export function useInfiniteTimeline(
       missingVideoIds,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -271,6 +274,7 @@ export function useInfiniteTimeline(
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   const reset = useCallback(() => {

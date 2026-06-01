@@ -471,7 +471,10 @@ export function usePlaylistDetails(
             undefined,
             presetContent.nsfwPubkeys,
             config.reportedEventIds,
-            { includeYouTube: config.showYouTubeContent ?? true }
+            {
+              includeYouTube: config.showYouTubeContent ?? true,
+              includeAudio: config.showAudioContent ?? true,
+            }
           )
         )
       })
@@ -484,6 +487,7 @@ export function usePlaylistDetails(
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   const videoEvents = use$(() => videoEventsObservable, [videoEventsObservable]) ?? []

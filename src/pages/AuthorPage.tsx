@@ -766,7 +766,10 @@ export function AuthorPage() {
           undefined,
           presetContent.nsfwPubkeys,
           config.reportedEventIds,
-          { includeYouTube: config.showYouTubeContent ?? true }
+          {
+            includeYouTube: config.showYouTubeContent ?? true,
+            includeAudio: config.showAudioContent ?? true,
+          }
         )
 
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
@@ -830,7 +833,10 @@ export function AuthorPage() {
         undefined,
         presetContent.nsfwPubkeys,
         config.reportedEventIds,
-        { includeYouTube: config.showYouTubeContent ?? true }
+        {
+          includeYouTube: config.showYouTubeContent ?? true,
+          includeAudio: config.showAudioContent ?? true,
+        }
       )
 
       setLikedVideos(processedVideos)
@@ -850,6 +856,7 @@ export function AuthorPage() {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   useEffect(() => {
@@ -950,7 +957,10 @@ export function AuthorPage() {
           undefined,
           presetContent.nsfwPubkeys,
           config.reportedEventIds,
-          { includeYouTube: config.showYouTubeContent ?? true }
+          {
+            includeYouTube: config.showYouTubeContent ?? true,
+            includeAudio: config.showAudioContent ?? true,
+          }
         )
         const deduped = Array.from(new Map(processed.map(video => [video.id, video])).values())
         if (!cancelled) setPinnedVideos(deduped)
@@ -973,6 +983,7 @@ export function AuthorPage() {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Auto-fetch video events for all playlists when playlists are loaded

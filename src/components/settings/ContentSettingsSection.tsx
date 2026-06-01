@@ -38,6 +38,13 @@ export function ContentSettingsSection() {
     }))
   }
 
+  const handleAudioContentChange = (checked: boolean) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      showAudioContent: checked,
+    }))
+  }
+
   const handlePreferredQualityChange = (value: PreferredQuality) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
@@ -49,13 +56,6 @@ export function ContentSettingsSection() {
     updateConfig(currentConfig => ({
       ...currentConfig,
       thumbResizeServerUrl: value.trim() || undefined,
-    }))
-  }
-
-  const handleHoverPreviewChange = (checked: boolean) => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      hoverPreview: checked,
     }))
   }
 
@@ -103,29 +103,6 @@ export function ContentSettingsSection() {
         </div>
       </div>
 
-      {/* Hover Preview */}
-      <div className="py-6">
-        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
-          <div className="min-w-0 flex-1 space-y-1">
-            <Label htmlFor="content-hover-preview" className="cursor-pointer font-medium">
-              {t('settings.general.hoverPreview', { defaultValue: 'Hover Previews' })}
-            </Label>
-            <p id="content-hover-preview-description" className="text-xs text-muted-foreground">
-              {t('settings.general.hoverPreviewDescription', {
-                defaultValue: 'Enable muted video playback when hovering over video thumbnails.',
-              })}
-            </p>
-          </div>
-          <Switch
-            id="content-hover-preview"
-            className="mt-0.5 shrink-0 sm:mt-0"
-            checked={config.hoverPreview ?? true}
-            onCheckedChange={handleHoverPreviewChange}
-            aria-describedby="content-hover-preview-description"
-          />
-        </div>
-      </div>
-
       {/* Content Filters */}
       <div className="space-y-3 py-6">
         <div>
@@ -157,6 +134,27 @@ export function ContentSettingsSection() {
             checked={config.showYouTubeContent ?? true}
             onCheckedChange={handleYouTubeContentChange}
             aria-describedby="content-youtube-description"
+          />
+        </div>
+
+        {/* Audio content toggle */}
+        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <Label htmlFor="content-audio" className="cursor-pointer font-medium">
+              {t('settings.general.audioContent', { defaultValue: 'Audio content' })}
+            </Label>
+            <p id="content-audio-description" className="text-xs text-muted-foreground">
+              {t('settings.general.audioContentDescription', {
+                defaultValue: 'Show audio-only posts such as MP3 podcast episodes.',
+              })}
+            </p>
+          </div>
+          <Switch
+            id="content-audio"
+            className="mt-0.5 shrink-0 sm:mt-0"
+            checked={config.showAudioContent ?? true}
+            onCheckedChange={handleAudioContentChange}
+            aria-describedby="content-audio-description"
           />
         </div>
 

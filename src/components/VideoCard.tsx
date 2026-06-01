@@ -6,7 +6,7 @@ import { formatDuration } from '../lib/formatDuration'
 import { UserAvatar } from '@/components/UserAvatar'
 import { cn, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-import React, { useRef, useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
@@ -61,17 +61,11 @@ export const VideoCard = React.memo(function VideoCard({
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isHovered, setIsHovered] = useState(false)
-  const [videoLoaded, setVideoLoaded] = useState(false)
   const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
   // Check if we have no thumbnail at all - immediately mark as failed
   const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
   const [fallbackFailed, setFallbackFailed] = useState(hasNoThumbnail)
-
-  // Hover preview disabled - causes unnecessary bandwidth usage
-  const hoverPreviewEnabled = false
 
   // Generate thumbnail URL with fallback to video URL if image fails
   const thumbnailUrl = useMemo(() => {
@@ -122,29 +116,6 @@ export const VideoCard = React.memo(function VideoCard({
     videoIndex,
   ])
 
-  const handleMouseEnter = () => {
-    // don't show hover preview for video with content warning (when warning mode is active)
-    if (showNsfwWarning) return
-
-    if (video) {
-      setIsHovered(true)
-    }
-  }
-
-  const handleMouseLeave = () => {
-    setIsHovered(false)
-    setVideoLoaded(false)
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.currentTime = 0
-    }
-  }
-
-  const handleVideoLoadedData = () => {
-    setVideoLoaded(true)
-    videoRef.current?.play().catch(error => console.error('Video autoplay blocked:', error))
-  }
-
   const handleThumbnailError = () => {
     // Only try video fallback once to avoid infinite loops
     if (!thumbnailError) {
@@ -172,8 +143,6 @@ export const VideoCard = React.memo(function VideoCard({
     <div
       className="p-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
       style={{ contain: 'layout style paint' }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <div>
         <Link to={to} onClick={handleShortsClick}>
@@ -218,7 +187,6 @@ export const VideoCard = React.memo(function VideoCard({
                   className={cn(
                     showNsfwWarning ? 'blur-lg' : '',
                     'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
-                    isHovered && videoLoaded ? 'opacity-0' : 'opacity-100',
                     !thumbnailLoaded && 'opacity-0'
                   )}
                   onError={handleThumbnailError}
@@ -236,22 +204,6 @@ export const VideoCard = React.memo(function VideoCard({
             )}
             {/* Progress bar at bottom of thumbnail */}
             <PlayProgressBar videoId={video.id} duration={video.duration} />
-            {isHovered && hoverPreviewEnabled && video.urls && video.urls.length > 0 && (
-              <video
-                ref={videoRef}
-                src={video.urls[0]}
-                muted
-                autoPlay={false}
-                loop
-                playsInline
-                preload="metadata"
-                onLoadedData={handleVideoLoadedData}
-                className={cn(
-                  'absolute inset-0 w-full h-full object-cover sm:rounded-lg transition-opacity duration-300',
-                  videoLoaded ? 'opacity-100' : 'opacity-0 hidden'
-                )}
-              />
-            )}
             {video.duration > 0 && (
               <div className="absolute bottom-2 right-2 bg-black/50 text-white px-1 rounded text-sm">
                 {formatDuration(video.duration)}

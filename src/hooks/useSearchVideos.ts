@@ -369,7 +369,10 @@ export function useSearchVideos({
       undefined,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -382,6 +385,7 @@ export function useSearchVideos({
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Filter external results by blocked pubkeys

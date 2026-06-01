@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppContext, useVideoHistory } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
-import { isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
+import { isAudioVideo, isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import {
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 export function HistoryPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const { history, clearHistory } = useVideoHistory()
@@ -38,9 +40,17 @@ export function HistoryPage() {
       })
       .filter(
         (video): video is VideoEvent =>
-          video != null && ((config.showYouTubeContent ?? true) || !isYouTubeVideo(video))
+          video != null &&
+          ((config.showYouTubeContent ?? true) || !isYouTubeVideo(video)) &&
+          ((config.showAudioContent ?? true) || !isAudioVideo(video))
       )
-  }, [history, config.blossomServers, config.showYouTubeContent, presetContent.nsfwPubkeys])
+  }, [
+    history,
+    config.blossomServers,
+    config.showYouTubeContent,
+    config.showAudioContent,
+    presetContent.nsfwPubkeys,
+  ])
 
   // Update document title
   useEffect(() => {
@@ -88,8 +98,9 @@ export function HistoryPage() {
       </div>
 
       {videos.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 space-y-3">
           <p className="text-muted-foreground">{t('pages.history.emptyState')}</p>
+          <Button onClick={() => navigate('/explore')}>{t('pages.history.browseButton')}</Button>
         </div>
       ) : (
         <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />

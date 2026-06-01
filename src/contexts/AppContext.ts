@@ -63,12 +63,12 @@ export interface AppConfig {
   nsfwFilter: NsfwFilter
   /** Show videos that point to YouTube origins/URLs */
   showYouTubeContent?: boolean
+  /** Show audio-only content such as podcast episodes */
+  showAudioContent?: boolean
   /** Media failover configuration */
   media?: MediaConfig
   /** Selected preset pubkey (null = use default preset) */
   selectedPresetPubkey?: string | null
-  /** Enable hover previews for videos */
-  hoverPreview?: boolean
   /** Preferred default video quality: 'highest' selects best available, '720p' selects mid quality */
   preferredQuality?: PreferredQuality
   /** Event IDs the user has reported (hidden from feeds) */

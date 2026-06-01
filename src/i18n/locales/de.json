@@ -512,6 +512,8 @@
       "contentFiltersDescription": "Steuere, welche Inhaltstypen in Feeds und Vorschlägen angezeigt werden.",
       "youtubeContent": "YouTube-Inhalte",
       "youtubeContentDescription": "Videos anzeigen, die auf YouTube-Inhalte verlinken oder diese einbetten.",
+      "audioContent": "Audio-Inhalte",
+      "audioContentDescription": "Audio-only-Beiträge wie MP3-Podcastfolgen anzeigen.",
       "nsfwFilter": "NSFW-Inhaltsfilter",
       "nsfwHide": "Ausblenden - NSFW-Inhalte nicht anzeigen",
       "nsfwWarning": "Warnung - Unscharf mit Warnung anzeigen",
@@ -600,28 +602,28 @@
       "ready": "Bereit zum Wiederholen"
     },
     "appearance": {
-      "title": "Appearance",
-      "description": "Theme, colors, language"
+      "title": "Erscheinungsbild",
+      "description": "Design, Farben, Sprache"
     },
     "content": {
-      "title": "Content",
-      "description": "Quality, filters, playback"
+      "title": "Inhalte",
+      "description": "Qualität, Filter, Wiedergabe"
     },
     "network": {
-      "title": "Network",
-      "description": "Relays, hosting, streaming"
+      "title": "Netzwerk",
+      "description": "Relays, Hosting, Streaming"
     },
     "storage": {
-      "title": "Storage",
-      "description": "Cache, missing videos"
+      "title": "Speicher",
+      "description": "Cache, fehlende Videos"
     },
     "wallet": {
       "title": "Wallet",
       "description": "Lightning, Cashu"
     },
     "data": {
-      "title": "Data & Privacy",
-      "description": "Subscriptions, reports"
+      "title": "Daten & Datenschutz",
+      "description": "Abonnements, Meldungen"
     }
   },
   "addToPlaylist": {

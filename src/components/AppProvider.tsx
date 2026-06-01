@@ -39,6 +39,16 @@ export function AppProvider(props: AppProviderProps) {
     }
   }, [config.showYouTubeContent, setConfig])
 
+  // MIGRATION: Show audio-only content by default for existing saved configs.
+  useEffect(() => {
+    if (config.showAudioContent === undefined) {
+      setConfig(currentConfig => ({
+        ...currentConfig,
+        showAudioContent: true,
+      }))
+    }
+  }, [config.showAudioContent, setConfig])
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [relayOverride, setRelayOverride] = useState<string | null>(null)
 

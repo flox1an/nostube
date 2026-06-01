@@ -82,7 +82,10 @@ export function useTimelineLoader({
       undefined,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -93,6 +96,7 @@ export function useTimelineLoader({
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Load initial events from relays

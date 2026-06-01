@@ -8,6 +8,7 @@ import {
   processEvents,
   deduplicateByIdentifier,
   getPublishDate,
+  isAudioVideo,
   isYouTubeVideo,
   type VideoEvent,
 } from '@/utils/video-event'
@@ -110,7 +111,10 @@ export function useHashtagVideos({
       undefined,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
   }, [
     nativeEvents,
@@ -120,6 +124,7 @@ export function useHashtagVideos({
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Reset state when tag changes
@@ -275,7 +280,8 @@ export function useHashtagVideos({
               )
               if (
                 processed &&
-                ((config.showYouTubeContent ?? true) || !isYouTubeVideo(processed))
+                ((config.showYouTubeContent ?? true) || !isYouTubeVideo(processed)) &&
+                ((config.showAudioContent ?? true) || !isAudioVideo(processed))
               ) {
                 fetchedVideos.push(processed)
               }
@@ -307,6 +313,7 @@ export function useHashtagVideos({
     eventStore,
     config.blossomServers,
     config.showYouTubeContent,
+    config.showAudioContent,
     presetContent.nsfwPubkeys,
   ])
 

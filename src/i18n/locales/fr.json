@@ -509,6 +509,8 @@
       "contentFiltersDescription": "Contrôlez les types de contenu affichés dans les fils et les suggestions.",
       "youtubeContent": "Contenu YouTube",
       "youtubeContentDescription": "Afficher les vidéos qui lient ou intègrent du contenu YouTube.",
+      "audioContent": "Contenu audio",
+      "audioContentDescription": "Afficher les publications uniquement audio, comme les épisodes de podcast MP3.",
       "nsfwFilter": "Filtre de contenu NSFW",
       "nsfwHide": "Masquer - Ne pas afficher le contenu NSFW",
       "nsfwWarning": "Avertissement - Afficher flouté avec avertissement",

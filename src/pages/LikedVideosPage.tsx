@@ -8,6 +8,8 @@ import {
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
@@ -15,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 
 export function LikedVideosPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { data: likedEventIds = [], isLoading: isLoadingReactions } = useLikedEvents()
   const { data: zappedEventIds = [], isLoading: isLoadingZaps } = useZappedEvents()
   const { pool, config } = useAppContext()
@@ -73,7 +76,10 @@ export function LikedVideosPage() {
       undefined,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
 
     // Final deduplication: filter out any duplicate videos by ID (just in case)
@@ -96,6 +102,7 @@ export function LikedVideosPage() {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Load missing video events from relays
@@ -184,9 +191,19 @@ export function LikedVideosPage() {
       <VideoGrid videos={videos} isLoading={isLoading} showSkeletons={true} layoutMode="auto" />
 
       {videos.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>{t('pages.likedVideos.noVideos')}</p>
-          <p className="text-sm mt-2">{t('pages.likedVideos.emptyState')}</p>
+        <div className="text-center py-12 text-muted-foreground space-y-3">
+          <p className="text-lg font-medium text-foreground">
+            {t('pages.likedVideos.exploreTitle')}
+          </p>
+          <p className="text-sm">{t('pages.likedVideos.exploreDescription')}</p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={() => navigate('/explore')}>
+              {t('pages.likedVideos.exploreButton')}
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/search')}>
+              {t('pages.subscriptions.findCreators')}
+            </Button>
+          </div>
         </div>
       )}
     </div>

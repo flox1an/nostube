@@ -40,6 +40,7 @@ const defaultConfig: AppConfig = {
   cachingServers: [...presetCachingServers],
   nsfwFilter: 'hide',
   showYouTubeContent: true,
+  showAudioContent: true,
   thumbResizeServerUrl: defaultResizeServer,
   media: {
     failover: {

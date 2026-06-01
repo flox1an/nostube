@@ -87,22 +87,23 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
 
       // Create videos observable
-      const videos$ = eventStore
-        .timeline(filter)
-        .pipe(
-          map(events =>
-            processEvents(
-              events,
-              readRelays,
-              blockedPubkeys,
-              config.blossomServers,
-              undefined,
-              presetContent.nsfwPubkeys,
-              config.reportedEventIds,
-              { includeYouTube: config.showYouTubeContent ?? true }
-            )
+      const videos$ = eventStore.timeline(filter).pipe(
+        map(events =>
+          processEvents(
+            events,
+            readRelays,
+            blockedPubkeys,
+            config.blossomServers,
+            undefined,
+            presetContent.nsfwPubkeys,
+            config.reportedEventIds,
+            {
+              includeYouTube: config.showYouTubeContent ?? true,
+              includeAudio: config.showAudioContent ?? true,
+            }
           )
         )
+      )
 
       // Subscribe to videos observable with cleanup tracking
       videosSubscriptionRef.current = videos$.subscribe(events => {
@@ -142,6 +143,7 @@ export function VideoTimelineProvider({ children }: { children: React.ReactNode 
       config.blossomServers,
       config.reportedEventIds,
       config.showYouTubeContent,
+      config.showAudioContent,
       pool,
       presetContent.nsfwPubkeys,
     ]

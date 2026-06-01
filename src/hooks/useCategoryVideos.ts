@@ -99,7 +99,10 @@ export function useCategoryVideos({
       undefined,
       presetContent.nsfwPubkeys,
       config.reportedEventIds,
-      { includeYouTube: config.showYouTubeContent ?? true }
+      {
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: config.showAudioContent ?? true,
+      }
     )
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
@@ -110,6 +113,7 @@ export function useCategoryVideos({
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   // Reset state when tags or relays change to trigger reload

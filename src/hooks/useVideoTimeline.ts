@@ -52,7 +52,10 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
           missingVideoIds,
           presetContent.nsfwPubkeys,
           config.reportedEventIds,
-          { includeYouTube: config.showYouTubeContent ?? true }
+          {
+            includeYouTube: config.showYouTubeContent ?? true,
+            includeAudio: config.showAudioContent ?? true,
+          }
         )
         // Sort by publish date descending (newest first), fallback to created_at
         return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
@@ -69,6 +72,7 @@ export default function useVideoTimeline(type: VideoType, authors?: string[]) {
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
+    config.showAudioContent,
   ])
 
   const videos = use$(() => videos$, [videos$]) ?? []

@@ -6,7 +6,7 @@ import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { type NostrEvent, kinds, nip19 } from 'nostr-tools'
-import type { VideoEvent, VideoVariant } from '@/utils/video-event'
+import type { TextTrack, VideoEvent, VideoVariant } from '@/utils/video-event'
 import { relayPool } from '@/nostr/core'
 import type { IEventStore } from 'applesauce-core'
 import { getTypeForKind } from '@/lib/video-types'
@@ -33,6 +33,14 @@ interface IndexedVideo {
   description: string
   tags: string
   authorName?: string
+  kind: number
+  type: string
+  created_at: number
+  published_at?: number
+  duration: number
+  hasCaptions: boolean
+  hasContentWarning: boolean
+  dimensions?: string
 }
 
 interface ExternalSearchHit {
@@ -42,12 +50,19 @@ interface ExternalSearchHit {
   pubkey: string
   kind: number
   created_at: number
+  published_at?: number | null
+  duration?: number | null
   thumbnail: string | null
   videoUrl: string | null
   tags: string[]
   authorDisplayName: string | null
   rankingScore: number
   nostrUrl: string
+  contentWarning?: string | null
+  textTracks?: TextTrack[]
+  dimensions?: string | null
+  mimeType?: string | null
+  mediaType?: 'video' | 'audio' | null
 }
 
 function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
@@ -66,14 +81,18 @@ function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
     images: hit.thumbnail ? [hit.thumbnail] : [],
     pubkey: hit.pubkey,
     created_at: hit.created_at,
-    duration: 0,
+    published_at: hit.published_at ?? undefined,
+    duration: hit.duration ?? 0,
     tags: Array.isArray(hit.tags) ? hit.tags : [],
     searchText: `${hit.title} ${hit.content_preview}`,
     urls: hit.videoUrl ? [hit.videoUrl] : [],
+    mimeType: hit.mimeType ?? undefined,
+    mediaType: hit.mediaType ?? undefined,
+    dimensions: hit.dimensions ?? undefined,
     link: nip19.neventEncode({ kind: hit.kind, id: hit.event_id, author: hit.pubkey, relays: [] }),
     type,
-    textTracks: [],
-    contentWarning: undefined,
+    textTracks: hit.textTracks ?? [],
+    contentWarning: hit.contentWarning ?? undefined,
     origins: [],
     videoVariants,
     thumbnailVariants,
@@ -99,7 +118,17 @@ function getSearchIndex(): MiniSearch<IndexedVideo> {
   if (!searchIndex) {
     searchIndex = new MiniSearch<IndexedVideo>({
       fields: ['title', 'description', 'tags', 'authorName'],
-      storeFields: ['id'],
+      storeFields: [
+        'id',
+        'kind',
+        'type',
+        'created_at',
+        'published_at',
+        'duration',
+        'hasCaptions',
+        'hasContentWarning',
+        'dimensions',
+      ],
       searchOptions: {
         boost: { title: 3, tags: 2, description: 1, authorName: 0.5 },
         fuzzy: 0.2,
@@ -127,12 +156,33 @@ function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): In
   const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
   const description =
     event.tags.find(t => t[0] === 'summary')?.[1] || event.tags.find(t => t[0] === 'alt')?.[1] || ''
+  const publishedAt = event.tags.find(t => t[0] === 'published_at')?.[1]
+  const duration = event.tags.find(t => t[0] === 'duration')?.[1]
+  const dimensions = event.tags
+    .filter(t => t[0] === 'imeta')
+    .flatMap(t => t.slice(1))
+    .find(value => value.startsWith('dim '))
+    ?.slice(4)
   const hashtags = event.tags
     .filter(t => t[0] === 't')
     .map(t => t[1])
     .join(' ')
   const authorName = getAuthorName(event.pubkey, eventStore)
-  return { id: event.id, title, description, tags: hashtags, authorName }
+  return {
+    id: event.id,
+    title,
+    description,
+    tags: hashtags,
+    authorName,
+    kind: event.kind,
+    type: getTypeForKind(event.kind),
+    created_at: event.created_at,
+    published_at: publishedAt ? parseInt(publishedAt, 10) : undefined,
+    duration: duration ? parseInt(duration, 10) : 0,
+    hasCaptions: event.tags.some(t => t[0] === 'text-track'),
+    hasContentWarning: event.tags.some(t => t[0] === 'content-warning'),
+    dimensions,
+  }
 }
 
 function indexEvents(events: NostrEvent[], eventStore: IEventStore): void {

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useAppContext, useSelectedPreset, useCurrentUser } from '@/hooks'
-import { useGlobalScore } from '@/hooks/useTrustScore'
+import { useAppContext, useSelectedPreset } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -12,19 +11,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { defaultResizeServer } from '@/constants/servers'
-import { Info } from 'lucide-react'
 import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
 
 export function ContentSettingsSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const { presetContent } = useSelectedPreset()
-  const { user } = useCurrentUser()
-  const { globalScore, isLoading: scoreLoading } = useGlobalScore(user?.pubkey)
-  const nsfwLocked = !scoreLoading && (globalScore === null || globalScore < 0.2)
 
   const handleNsfwFilterChange = (value: NsfwFilter) => {
-    if (nsfwLocked) return
     updateConfig(currentConfig => ({
       ...currentConfig,
       nsfwFilter: value,
@@ -159,32 +153,15 @@ export function ContentSettingsSection() {
         </div>
 
         {/* NSFW filter */}
-        {nsfwLocked && (
-          <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              {t('settings.general.nsfwLockedInfo', {
-                defaultValue:
-                  'NSFW content is hidden because your NosTube trust score is below 20% or not yet available. Build your score by engaging with the platform.',
-              })}
-            </p>
-          </div>
-        )}
-        <div
-          className={`flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4 ${nsfwLocked ? 'opacity-50' : ''}`}
-        >
+        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
           <div className="min-w-0 flex-1 space-y-1">
-            <Label
-              htmlFor="content-nsfw"
-              className={nsfwLocked ? 'cursor-not-allowed font-medium' : 'font-medium'}
-            >
+            <Label htmlFor="content-nsfw" className="font-medium">
               {t('settings.general.nsfwFilter')}
             </Label>
           </div>
           <Select
-            value={nsfwLocked ? 'hide' : (config.nsfwFilter ?? 'hide')}
+            value={config.nsfwFilter ?? 'hide'}
             onValueChange={value => handleNsfwFilterChange(value as NsfwFilter)}
-            disabled={nsfwLocked}
           >
             <SelectTrigger id="content-nsfw" className="w-full max-w-sm shrink-0 sm:w-[360px]">
               <SelectValue />

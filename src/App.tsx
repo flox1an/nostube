@@ -18,8 +18,7 @@ import 'applesauce-common'
 import { eventStore, publishMethod } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
-import { useTrustScoreProvider, useGlobalScore } from '@/hooks/useTrustScore'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
@@ -108,26 +107,6 @@ function TrustScoreProviderInit() {
   return null
 }
 
-/** Force nsfwFilter to 'hide' when user has no/low global trust score */
-function NsfwTrustGate() {
-  const { user } = useCurrentUser()
-  const { globalScore, isLoading } = useGlobalScore(user?.pubkey)
-  const { config, updateConfig } = useAppContext()
-
-  useEffect(() => {
-    // Wait until score has actually loaded
-    if (isLoading) return
-    // Only enforce 'hide' when score is definitively null (unavailable) or below 20%
-    if (globalScore === null || globalScore < 0.2) {
-      if (config.nsfwFilter !== 'hide') {
-        updateConfig(c => ({ ...c, nsfwFilter: 'hide' }))
-      }
-    }
-  }, [globalScore, isLoading, config.nsfwFilter, updateConfig])
-
-  return null
-}
-
 function LoginTimeTrackingInit() {
   useLoginTimeTracking()
   return null
@@ -170,7 +149,6 @@ export function App() {
                         <RelayPoolSync />
                         <BatchedProfileLoaderInit />
                         <TrustScoreProviderInit />
-                        <NsfwTrustGate />
                         <LoginTimeTrackingInit />
                         <BlossomServerSync />
                         <OnboardingDialog />

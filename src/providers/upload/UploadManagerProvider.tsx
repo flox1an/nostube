@@ -53,6 +53,7 @@ import {
 import { extractBlossomHash } from '@/utils/video-event'
 import { getTrackedDvms } from '@/hooks/useDvmTracker'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BlobDescriptor } from 'blossom-client-sdk'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
@@ -1573,6 +1574,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     [tasks]
   )
 
+  const getWorkflowState = useCallback(
+    (taskId: string) => {
+      const task = tasks.get(taskId)
+      return task ? workflowStateFromUploadTask(task) : undefined
+    },
+    [tasks]
+  )
+
   const hasActiveTask = useCallback(
     (draftId: string): boolean => {
       const task = tasks.get(draftId)
@@ -1637,6 +1646,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       resumeTranscode,
       cancelTranscode,
       getTask,
+      getWorkflowState,
       hasActiveTask,
       getActiveTasksForDraft,
       hasActiveUploads,
@@ -1662,6 +1672,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       resumeTranscode,
       cancelTranscode,
       getTask,
+      getWorkflowState,
       hasActiveTask,
       getActiveTasksForDraft,
       hasActiveUploads,

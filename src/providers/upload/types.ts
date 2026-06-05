@@ -9,6 +9,7 @@ import type { UploadTask, TranscodeState } from '@/types/upload-manager'
 import type { UploadDraft } from '@/types/upload-draft'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { TranscodeCodec, DvmBid } from '@/lib/dvm-utils'
+import type { PublishedVideo, WorkflowState } from '@/lib/video-publishing-workflow'
 
 /**
  * Active transcode job state
@@ -70,6 +71,7 @@ export interface UploadManagerContextType {
 
   // Query helpers
   getTask(taskId: string): UploadTask | undefined
+  getWorkflowState(taskId: string): WorkflowState<PublishedVideo> | undefined
   hasActiveTask(draftId: string): boolean
   getActiveTasksForDraft(draftId: string): UploadTask[]
 

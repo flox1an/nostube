@@ -39,6 +39,11 @@ import {
   getMirrorAnnouncementRelays,
   type MirrorAnnouncementOptions,
 } from '@/lib/mirror-announcements'
+import {
+  runVideoPublishingWorkflow,
+  type PublishedVideo,
+  type WorkflowState,
+} from '@/lib/video-publishing-workflow'
 
 interface BuildVideoEventParams {
   videos: VideoVariant[]
@@ -266,6 +271,7 @@ export function useVideoUpload(
   )
   const [publishAt, setPublishAt] = useState<number | undefined>(initialDraft?.publishAt)
   const [uploadProgress, setUploadProgress] = useState<ChunkedUploadProgress | null>(null)
+  const [workflowState, setWorkflowState] = useState<WorkflowState<PublishedVideo> | null>(null)
   const [publishSummary, setPublishSummary] = useState<PublishSummary>({ fallbackUrls: [] })
   const [publishRelays, setPublishRelays] = useState<string[] | null>(null) // null = use all write relays
 
@@ -378,7 +384,7 @@ export function useVideoUpload(
 
   const { user } = useCurrentUser()
   const { config } = useAppContext()
-  const { publish, isPending: isPublishing } = useNostrPublish()
+  const { publish, isPending: isNostrPublishPending } = useNostrPublish()
 
   const blossomInitalUploadServers = config.blossomServers?.filter(server =>
     server.tags.includes('initial upload')
@@ -886,179 +892,205 @@ export function useVideoUpload(
     e: React.FormEvent
   ): Promise<{ id: string; kind: number; pubkey: string; identifier: string } | undefined> => {
     e.preventDefault()
-    if (!user) return undefined
 
     setPublishSummary({ fallbackUrls: [] })
 
-    // Validate that we have at least one video
-    if (uploadInfo.videos.length === 0) return undefined
-
     let thumbnailUploadedBlobs: BlobDescriptor[] = []
     let thumbnailMirroredBlobs: BlobDescriptor[] = []
+    let allFallbackUrls: string[] = []
+    let primaryVideoUrl: string | undefined
 
-    // If we have uploaded blobs already (from manual upload or "Set as Thumbnail"), use them
-    if ((thumbnailUploadInfo.uploadedBlobs?.length ?? 0) > 0) {
-      thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
-      thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
-    } else if (thumbnailSource === 'generated' && thumbnailBlob) {
-      // Fallback for any legacy flow or auto-upload on publish
-      const thumbnailFile = new File([thumbnailBlob], 'thumbnail.webp', {
-        type: thumbnailBlob.type || 'image/webp',
-        lastModified: Date.now(),
-      })
-
-      try {
-        const result = await fileUpload.upload(thumbnailFile)
-        thumbnailUploadedBlobs = result.uploadedBlobs
-        thumbnailMirroredBlobs = result.mirroredBlobs
-      } catch (error) {
-        console.error('Failed to upload generated thumbnail:', error)
-        throw new Error('Failed to upload generated thumbnail')
-      }
-    }
-
-    if (thumbnailUploadedBlobs.length === 0) {
-      throw new Error('No valid thumbnail available')
-    }
-
-    try {
-      // Build the event using the shared function
-      const { event, allFallbackUrls, primaryVideoUrl } = buildVideoEvent({
-        videos: uploadInfo.videos,
-        title,
-        description,
-        tags,
-        language,
-        people,
-        contentWarningEnabled,
-        contentWarningReason,
-        expiration,
-        thumbnailUploadedBlobs,
-        thumbnailMirroredBlobs,
-        subtitles,
-        draftId,
-        thumbnailBlurhash,
-        isPreview: false,
-        publishAt,
-        origins,
-      })
-
-      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-      const relaysToPublishTo = publishRelays ?? writeRelays
-
-      const publishedEvent = await publish({
-        event: event as { kind: number; content: string; created_at: number; tags: string[][] },
-        relays: relaysToPublishTo,
-      })
-
-      // Publish kind 1063 events for mirrored blobs (non-blocking)
-      // This announces the new file locations so other viewers can discover them
-      try {
-        // Build announcements directly from uploadInfo (more efficient than building VideoEvent)
-        const announcements: MirrorAnnouncementOptions[] = []
-        const relayHint = writeRelays[0] || ''
-
-        // Add video mirrored blobs
-        for (const video of uploadInfo.videos) {
-          if (video.mirroredBlobs.length > 0 && video.uploadedBlobs[0]?.sha256 && video.url) {
-            announcements.push({
-              blob: {
-                type: 'video',
-                variant: {
-                  url: video.url,
-                  hash: video.uploadedBlobs[0].sha256,
-                  size: video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined,
-                  dimensions: video.dimension,
-                  mimeType: video.file?.type,
-                  quality: video.qualityLabel,
-                  fallbackUrls: video.mirroredBlobs.map(b => b.url),
-                },
-                label: `Video ${video.qualityLabel || video.dimension}`,
-                hash: video.uploadedBlobs[0].sha256,
-                ext: 'mp4',
-              },
-              mirrorResults: video.mirroredBlobs,
-              videoEvent: {
-                id: publishedEvent.id,
-                kind: publishedEvent.kind,
-                pubkey: publishedEvent.pubkey,
-                dTag: draftId,
-              },
-              relayHint,
-            })
+    const workflow = await runVideoPublishingWorkflow<PublishedVideo>({
+      onStateChange: setWorkflowState,
+      steps: {
+        validate: () => {
+          if (!user) throw new Error('User not logged in')
+          if (uploadInfo.videos.length === 0) throw new Error('No video variants available')
+        },
+        upload: async ({ reportProgress }) => {
+          // If we have uploaded blobs already (from manual upload or "Set as Thumbnail"), use them.
+          if ((thumbnailUploadInfo.uploadedBlobs?.length ?? 0) > 0) {
+            thumbnailUploadedBlobs = thumbnailUploadInfo.uploadedBlobs
+            thumbnailMirroredBlobs = thumbnailUploadInfo.mirroredBlobs
+            reportProgress(100)
+            return
           }
-        }
 
-        // Add thumbnail mirrored blobs
-        if (thumbnailMirroredBlobs.length > 0 && thumbnailUploadedBlobs[0]?.sha256) {
-          announcements.push({
-            blob: {
-              type: 'thumbnail',
-              variant: {
-                url: thumbnailUploadedBlobs[0].url,
-                hash: thumbnailUploadedBlobs[0].sha256,
-                size: thumbnailUploadedBlobs[0].size,
-                fallbackUrls: thumbnailMirroredBlobs.map(b => b.url),
-              },
-              label: 'Thumbnail',
-              hash: thumbnailUploadedBlobs[0].sha256,
-              ext: 'webp',
-            },
-            mirrorResults: thumbnailMirroredBlobs,
-            videoEvent: {
-              id: publishedEvent.id,
-              kind: publishedEvent.kind,
-              pubkey: publishedEvent.pubkey,
-              dTag: draftId,
-            },
-            relayHint,
+          if (thumbnailSource === 'generated' && thumbnailBlob) {
+            const thumbnailFile = new File([thumbnailBlob], 'thumbnail.webp', {
+              type: thumbnailBlob.type || 'image/webp',
+              lastModified: Date.now(),
+            })
+
+            try {
+              const result = await fileUpload.upload(thumbnailFile)
+              thumbnailUploadedBlobs = result.uploadedBlobs
+              thumbnailMirroredBlobs = result.mirroredBlobs
+              reportProgress(100)
+              return
+            } catch (error) {
+              console.error('Failed to upload generated thumbnail:', error)
+              throw new Error('Failed to upload generated thumbnail')
+            }
+          }
+
+          throw new Error('No valid thumbnail available')
+        },
+        mirror: ({ reportProgress }) => {
+          if (thumbnailUploadedBlobs.length === 0) {
+            throw new Error('No valid thumbnail available')
+          }
+          reportProgress(100)
+        },
+        publish: async () => {
+          const {
+            event,
+            allFallbackUrls: fallbackUrls,
+            primaryVideoUrl: primaryUrl,
+          } = buildVideoEvent({
+            videos: uploadInfo.videos,
+            title,
+            description,
+            tags,
+            language,
+            people,
+            contentWarningEnabled,
+            contentWarningReason,
+            expiration,
+            thumbnailUploadedBlobs,
+            thumbnailMirroredBlobs,
+            subtitles,
+            draftId,
+            thumbnailBlurhash,
+            isPreview: false,
+            publishAt,
+            origins,
           })
-        }
 
-        // Add subtitle mirrored blobs
-        for (const subtitle of subtitles) {
-          if (subtitle.mirroredBlobs.length > 0 && subtitle.uploadedBlobs[0]?.sha256) {
-            announcements.push({
-              blob: {
-                type: 'subtitle',
-                variant: {
-                  url: subtitle.uploadedBlobs[0].url,
-                  hash: subtitle.uploadedBlobs[0].sha256,
-                  mimeType: 'text/vtt',
-                  fallbackUrls: subtitle.mirroredBlobs.map(b => b.url),
+          allFallbackUrls = fallbackUrls
+          primaryVideoUrl = primaryUrl
+
+          const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+          const relaysToPublishTo = publishRelays ?? writeRelays
+
+          const publishedEvent = await publish({
+            event: event as { kind: number; content: string; created_at: number; tags: string[][] },
+            relays: relaysToPublishTo,
+          })
+
+          // Publish kind 1063 events for mirrored blobs (non-blocking).
+          // This announces the new file locations so other viewers can discover them.
+          try {
+            const announcements: MirrorAnnouncementOptions[] = []
+            const relayHint = writeRelays[0] || ''
+
+            for (const video of uploadInfo.videos) {
+              if (video.mirroredBlobs.length > 0 && video.uploadedBlobs[0]?.sha256 && video.url) {
+                announcements.push({
+                  blob: {
+                    type: 'video',
+                    variant: {
+                      url: video.url,
+                      hash: video.uploadedBlobs[0].sha256,
+                      size: video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined,
+                      dimensions: video.dimension,
+                      mimeType: video.file?.type,
+                      quality: video.qualityLabel,
+                      fallbackUrls: video.mirroredBlobs.map(b => b.url),
+                    },
+                    label: `Video ${video.qualityLabel || video.dimension}`,
+                    hash: video.uploadedBlobs[0].sha256,
+                    ext: 'mp4',
+                  },
+                  mirrorResults: video.mirroredBlobs,
+                  videoEvent: {
+                    id: publishedEvent.id,
+                    kind: publishedEvent.kind,
+                    pubkey: publishedEvent.pubkey,
+                    dTag: draftId,
+                  },
+                  relayHint,
+                })
+              }
+            }
+
+            if (thumbnailMirroredBlobs.length > 0 && thumbnailUploadedBlobs[0]?.sha256) {
+              announcements.push({
+                blob: {
+                  type: 'thumbnail',
+                  variant: {
+                    url: thumbnailUploadedBlobs[0].url,
+                    hash: thumbnailUploadedBlobs[0].sha256,
+                    size: thumbnailUploadedBlobs[0].size,
+                    fallbackUrls: thumbnailMirroredBlobs.map(b => b.url),
+                  },
+                  label: 'Thumbnail',
+                  hash: thumbnailUploadedBlobs[0].sha256,
+                  ext: 'webp',
                 },
-                label: `Subtitle (${subtitle.lang})`,
-                hash: subtitle.uploadedBlobs[0].sha256,
-                ext: 'vtt',
-              },
-              mirrorResults: subtitle.mirroredBlobs,
-              videoEvent: {
-                id: publishedEvent.id,
-                kind: publishedEvent.kind,
-                pubkey: publishedEvent.pubkey,
-                dTag: draftId,
-              },
-              relayHint,
-            })
+                mirrorResults: thumbnailMirroredBlobs,
+                videoEvent: {
+                  id: publishedEvent.id,
+                  kind: publishedEvent.kind,
+                  pubkey: publishedEvent.pubkey,
+                  dTag: draftId,
+                },
+                relayHint,
+              })
+            }
+
+            for (const subtitle of subtitles) {
+              if (subtitle.mirroredBlobs.length > 0 && subtitle.uploadedBlobs[0]?.sha256) {
+                announcements.push({
+                  blob: {
+                    type: 'subtitle',
+                    variant: {
+                      url: subtitle.uploadedBlobs[0].url,
+                      hash: subtitle.uploadedBlobs[0].sha256,
+                      mimeType: 'text/vtt',
+                      fallbackUrls: subtitle.mirroredBlobs.map(b => b.url),
+                    },
+                    label: `Subtitle (${subtitle.lang})`,
+                    hash: subtitle.uploadedBlobs[0].sha256,
+                    ext: 'vtt',
+                  },
+                  mirrorResults: subtitle.mirroredBlobs,
+                  videoEvent: {
+                    id: publishedEvent.id,
+                    kind: publishedEvent.kind,
+                    pubkey: publishedEvent.pubkey,
+                    dTag: draftId,
+                  },
+                  relayHint,
+                })
+              }
+            }
+
+            if (announcements.length > 0 && user) {
+              const publishRelays = getMirrorAnnouncementRelays(writeRelays, writeRelays)
+              await publishMirrorAnnouncements(
+                announcements,
+                { signEvent: async eventTemplate => await user.signer.signEvent(eventTemplate) },
+                publishRelays
+              )
+            }
+          } catch (err) {
+            console.warn('[useVideoUpload] Failed to publish 1063 mirror announcements:', err)
           }
-        }
 
-        // Publish 1063 events if we have any announcements
-        if (announcements.length > 0 && user) {
-          const publishRelays = getMirrorAnnouncementRelays(writeRelays, writeRelays)
-          await publishMirrorAnnouncements(
-            announcements,
-            { signEvent: async eventTemplate => await user.signer.signEvent(eventTemplate) },
-            publishRelays
-          )
-        }
-      } catch (err) {
-        // Log but don't fail - the video publish already succeeded
-        console.warn('[useVideoUpload] Failed to publish 1063 mirror announcements:', err)
-      }
+          return {
+            id: publishedEvent.id,
+            kind: publishedEvent.kind,
+            pubkey: publishedEvent.pubkey,
+            identifier: draftId,
+          }
+        },
+      },
+    })
 
+    if (workflow.phase === 'done' && workflow.result) {
       setPublishSummary({
-        eventId: publishedEvent.id,
+        eventId: workflow.result.id,
         primaryUrl: primaryVideoUrl,
         fallbackUrls: allFallbackUrls,
       })
@@ -1071,16 +1103,10 @@ export function useVideoUpload(
       setLanguage('en')
 
       // Return event info for navigation
-      return {
-        id: publishedEvent.id,
-        kind: publishedEvent.kind,
-        pubkey: publishedEvent.pubkey,
-        identifier: draftId,
-      }
-    } catch {
-      // Upload failed
-      return undefined
+      return workflow.result
     }
+
+    return undefined
   }
 
   // Sync form field changes back to draft (debounced in useUploadDrafts)
@@ -1225,6 +1251,7 @@ export function useVideoUpload(
     publishAt,
     setPublishAt,
     uploadProgress,
+    workflowState,
     browserTranscodeState,
     publishSummary,
     publishRelays,
@@ -1232,7 +1259,13 @@ export function useVideoUpload(
     writeRelays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
     blossomInitalUploadServers,
     blossomMirrorServers,
-    isPublishing,
+    isPublishing:
+      isNostrPublishPending ||
+      workflowState?.phase === 'validating' ||
+      workflowState?.phase === 'uploading' ||
+      workflowState?.phase === 'transcoding' ||
+      workflowState?.phase === 'mirroring' ||
+      workflowState?.phase === 'publishing',
     thumbnailUrl,
     previewEvent,
     videoToDelete,

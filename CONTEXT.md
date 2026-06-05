@@ -1,87 +1,45 @@
-# Code Context
+# NosTube — Domain Glossary
 
-## Files Retrieved
+## Blob
 
-1. `src/components/settings/GeneralSettingsSection.tsx` (lines 24-350) - zentrale UI für General Settings inkl. neuem YouTube-Content-Toggle, NSFW-Filter, Qualität.
-2. `src/pages/settings/GeneralSettingsPage.tsx` (lines 1-5) - Page ist nur ein Wrapper um `GeneralSettingsSection`.
-3. `src/pages/settings/SettingsLayout.tsx` (lines 13-95) - Settings-Navigation/Tabs, mobile horizontale Scroll-Leiste, Container-Breite/Spacing.
-4. `src/contexts/AppContext.ts` (lines 49-76) - `AppConfig`-Schema mit `showYouTubeContent`, `nsfwFilter`, `preferredQuality`, `hoverPreview`.
-5. `src/components/AppProvider.tsx` (lines 19-40, 49-54) - Persistenz via localStorage + Migration Defaults (YouTube true).
-6. `src/App.tsx` (lines 35-43, 110-126) - globale Defaults + NSFW Trust-Gate Erzwingung (`hide` bei low/no score).
-7. `src/nostr/useInfiniteTimeline.ts` (lines 236-258) - Datenfluss: `config.showYouTubeContent` wird an `processEvents` durchgereicht.
-8. `src/utils/video-event.ts` (lines 351-374) - tatsächliche Filterlogik: `includeYouTube || !isYouTubeVideo(video)`.
-9. `src/components/ui/switch.tsx` (lines 10-21) - Switch-Größe (`h-6 w-11`) relevant für Touch-Target.
-10. `src/components/ui/radio-group.tsx` (lines 20-31) - Radio-Item-Größe (`h-4 w-4`) sehr klein.
-11. `src/components/ui/button-variants.ts` (lines 15-20) - `size="sm"` ist `h-9` (36px), relevant für mobile Tabs.
-12. `src/i18n/locales/en.json` (lines 523-540) - i18n-Status: Content-Filter/YouTube vorhanden, aber keine Keys für Preferred-Quality-Texte.
-13. `src/components/VideoCard.tsx` (lines 72-73) - `hoverPreview` derzeit hart deaktiviert (`false`) trotz Config/i18n-Feldern.
-14. `src/hooks/useAppContext.ts` (full file) - faktischer “UseSettings”-Zugriff: kein separates `useSettings`, sondern `useAppContext`.
+A media file (video, image, thumbnail) identified by its SHA256 hash. Blobs are content-addressed: the same bytes produce the same hash regardless of which server hosts the file. See also: Blossom Server.
 
-## Key Code
+## Blossom Server
 
-- **Kein dediziertes `useSettings`-Hook**: Settings laufen über `useAppContext()` (`src/hooks/useAppContext.ts`).
-- **State-Modell**: `AppConfig.showYouTubeContent?: boolean` (`src/contexts/AppContext.ts:64-65`).
-- **Default/Migration**:
-  - App-Default: `showYouTubeContent: true` (`src/App.tsx:35-43`).
-  - Migration alter LocalStorage-Werte: setzt `true`, wenn undefiniert (`src/components/AppProvider.tsx:32-40`).
-- **UI-Toggle**: YouTube-Switch in Content-Filters (`src/components/settings/GeneralSettingsSection.tsx:173-189`).
-- **Wirksamer Filter**:
-  - Übergabe in Timeline-Verarbeitung (`src/nostr/useInfiniteTimeline.ts:238-247`).
-  - Filterung selbst (`src/utils/video-event.ts:362-371`).
-- **NSFW-Sonderfall**:
-  - UI-Lock mit Hinweis (`src/components/settings/GeneralSettingsSection.tsx:191-236`).
-  - Zusätzlich harte globale Erzwingung im App-Layer (`src/App.tsx:110-126`).
+A server implementing the Blossom protocol (BUD-01/BUD-03) for blob storage. Clients upload blobs and receive a URL; any Blossom server can host any blob, enabling third-party mirroring. A user's server list is published in a Nostr kind 10063 event.
 
-## Architecture
+## Video Event
 
-- **Layer 1 (Config/Persistenz):** `AppProvider` hält `config` in LocalStorage, `updateConfig` als zentrale Mutation.
-- **Layer 2 (Settings-UI):** `GeneralSettingsSection` liest/schreibt `config` über `useAppContext`.
-- **Layer 3 (Domain/Feed-Processing):** Hooks wie `useInfiniteTimeline` nutzen Config-Werte und reichen sie an `processEvents`.
-- **Layer 4 (Filterentscheid):** `processEvents` entscheidet final, ob YouTube-Videos in Ergebnislisten landen.
+A Nostr addressable event (kind 34235 for landscape, kind 34236 for portrait/shorts) representing a published video, as defined by NIP-71. The event's `imeta` tags carry media URLs, hashes, codec info, and thumbnail references. A Video Event is permanent once published; changes require replacing the event via its `d` tag.
 
-## Ist-Zustand (UI/Toggle + Mobile)
+## Short Video
 
-- General Settings sind vertikal segmentiert (`divide-y`, Abschnittsblöcke), funktional klar.
-- Neuer YouTube-Filter ist als einzelnes Card-Row-Toggle in „Content Filters“ platziert.
-- NSFW ist im selben Abschnitt, aber anderes Interaktionsmuster (Radio statt Switch).
-- Mobile Navigation für Settings nutzt horizontales Scroll-Tabband (`SettingsLayout`), aber Buttons sind `size="sm"` (36px Höhe).
-- Toggle/Selection Targets:
-  - Switch: 24px hoch (`h-6`), Label klickbar, aber ganze Zeile nicht als ein großer Touch-Target verdrahtet.
-  - Radio-Controls: 16px (`h-4 w-4`), visuell/physisch klein; Label hilft, aber Trefferfläche bleibt inkonsistent.
+A Video Event of kind 34236, used for portrait-orientation video (height > width). Displayed in the vertical shorts feed. Distinct from a landscape Video Event (34235) so clients and relays can filter by consumption context.
 
-## Inkonsistenzen
+## imeta tag
 
-1. **UseSettings-Begriff vs. Realität:** kein `useSettings`, sondern `useAppContext` als globales Config-Hook.
-2. **Interaktionsmuster gemischt im gleichen Kontext:** YouTube via Switch-Card, NSFW via Radio-Liste ohne gleiches „Setting Row“-Pattern.
-3. **Mobile Touch-Targets grenzwertig:** Tabs (36px), Switch (24px), Radios (16px) unter häufigen 44px-Empfehlungen.
-4. **Teilweise unvollständige i18n für General Settings:** Preferred-Quality-Strings fehlen in Locale-Dateien (UI nutzt `defaultValue` Fallbacks).
-5. **Config-/UI-Drift:** `hoverPreview` existiert in Config + i18n, aber Feature ist in `VideoCard` hart deaktiviert.
+A structured tag inside a Video Event that describes one media variant: URL, SHA256 hash, MIME type, dimensions, codec, bitrate, and optional thumbnail. Multiple imeta tags in one event represent alternative variants (different resolutions or codecs).
 
-## 2-3 konkrete Redesign-Optionen (mit Trade-offs)
+## Draft
 
-1. **Option A: Einheitliche „Setting Row“-Komponente für alle booleans + Auswahlkarten**
-   - Idee: Jede Einstellung als große tappbare Zeile (Label+Description links, Control rechts), inkl. YouTube und ggf. NSFW als segmented card.
-   - Vorteil: konsistente UX, bessere mobile Bedienung, weniger visuelle Brüche.
-   - Nachteil: etwas Refactor-Aufwand (GeneralSection + evtl. Shared-Component).
+An unpublished Video Event under construction. Drafts persist to localStorage and survive page reloads. A Draft transitions through states (editing → transcoding → uploading → published) before becoming a Video Event.
 
-2. **Option B: Mobile-first Dichte reduzieren + Touch-Targets anheben**
-   - Idee: `sm`-Tabs auf mindestens 44px Höhe, Radio/Switch-Zeilen mit `min-h-11/12`, ganze Zeile klickbar.
-   - Vorteil: schnelle UX-Verbesserung ohne großes Informations-Redesign.
-   - Nachteil: löst nicht alle semantischen Inkonsistenzen (Switch vs Radio-Struktur bleibt).
+## DVM (Data Vending Machine)
 
-3. **Option C: Content-Filters als eigenständiger Unterblock mit klarer Hierarchie**
-   - Idee: eigener Sub-Abschnitt „Sichtbarkeit & Sicherheit“: YouTube (switch), NSFW (radio), später Hover Preview dort integrierbar.
-   - Vorteil: bessere Gruppierung, skaliert für weitere Filter.
-   - Nachteil: mehr Navigations-/Layout-Entscheidungen (evtl. zusätzliche Seite/Accordion nötig).
+A Nostr-native compute service. NosTube uses DVMs (kind 5207 request / 6207 result) as an optional server-side transcoding fallback when browser-based transcoding is unavailable or unsuitable.
 
-## Kleine empfohlene Umsetzungsreihenfolge (ohne Codeänderungen)
+## Blossom Mirror
 
-1. **Zielbild festlegen:** Option A+B kombiniert als Standard (Konsistenz + Touch-Targets).
-2. **UX-Definition:** verbindliche Mobile-Minima festlegen (44px target, row-click behavior, spacing).
-3. **Struktur entscheiden:** Content-Filter in klaren Subblock ziehen (Option C light, innerhalb General Seite).
-4. **Aufräumliste vor Implementierung:** i18n-Keys für Preferred Quality ergänzen; entscheiden, ob `hoverPreview` reaktiviert, entfernt oder als „coming soon“ markiert wird.
-5. **Dann erst Umsetzung in kleinen Schritten:** (a) Tab/Row-Touchgrößen, (b) einheitliche Setting Rows, (c) NSFW/YouTube Harmonisierung.
+The act of re-uploading an existing blob (by hash) to an additional Blossom Server. Mirroring adds redundancy: multiple URLs pointing to the same verified content appear in the Video Event's imeta tags.
 
-## Start Here
+## Preset
 
-`src/components/settings/GeneralSettingsSection.tsx` zuerst öffnen: dort liegen fast alle relevanten Entscheidungen zu Toggle-UI, Gruppierung und aktuellem YouTube-Filter-Verhalten.
+A curator-defined content configuration: a set of relays and filter rules that shape the video feed for a given audience. A user can switch between their personal relay configuration and a Preset.
+
+## Transcoding Tier
+
+One level in the three-tier encoding pipeline: (1) local browser transcoding via WebCodecs, (2) remote DVM transcoding, (3) direct upload fallback. The pipeline attempts each tier in order.
+
+## Trust Score
+
+A reputation signal derived from a user's Nostr social graph. The Trust Score gates NSFW content visibility: users with low or no trust score cannot override the NSFW filter.

@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { useMemo } from 'react'
 import { useAppContext } from './useAppContext'
 import { METADATA_RELAY, presetRelays } from '@/constants/relays'
 import {
@@ -11,6 +9,7 @@ import {
   EMPTY_PRESET_CONTENT,
 } from '@/types/preset'
 import type { NostrEvent } from 'nostr-tools'
+import { useNostrQuery } from '@/nostr/useNostrQuery'
 
 /**
  * Parse a preset event into a NostubePreset object
@@ -45,28 +44,14 @@ export function parsePresetEvent(event: NostrEvent): NostubePreset | null {
   }
 }
 
+const PRESET_FILTER = { kinds: [PRESET_EVENT_KIND], '#d': [PRESET_D_TAG], limit: 100 }
+
 /**
  * Hook to fetch all nostube presets from relays
  */
 export function usePresets() {
-  const eventStore = useEventStore()
-  const { pool, config } = useAppContext()
-  const [isLoading, setIsLoading] = useState(true)
+  const { config } = useAppContext()
 
-  // Query event store for all preset events
-  const rawPresetEvents = use$(
-    () =>
-      eventStore.timeline([
-        {
-          kinds: [PRESET_EVENT_KIND],
-          '#d': [PRESET_D_TAG],
-        },
-      ]),
-    [eventStore]
-  )
-  const presetEvents = useMemo(() => rawPresetEvents ?? [], [rawPresetEvents])
-
-  // Build list of relays to query
   const discoveryRelays = useMemo(() => {
     const urls = new Set<string>()
     config.relays.forEach(relay => urls.add(relay.url))
@@ -75,51 +60,10 @@ export function usePresets() {
     return Array.from(urls)
   }, [config.relays])
 
-  // Fetch presets from relays
-  useEffect(() => {
-    if (discoveryRelays.length === 0) return
+  const { events: presetEvents, isLoading } = useNostrQuery(PRESET_FILTER, {
+    relays: discoveryRelays,
+  })
 
-    queueMicrotask(() => setIsLoading(true))
-
-    const loader = createTimelineLoader(
-      pool,
-      discoveryRelays,
-      {
-        kinds: [PRESET_EVENT_KIND],
-        '#d': [PRESET_D_TAG],
-        limit: 100,
-      },
-      {
-        eventStore,
-        limit: 100,
-      }
-    )
-
-    const subscription = loader().subscribe({
-      next: event => {
-        eventStore.add(event)
-      },
-      error: err => {
-        console.warn('[usePresets] Failed to load presets:', err)
-        setIsLoading(false)
-      },
-      complete: () => {
-        setIsLoading(false)
-      },
-    })
-
-    // Set loading to false after a timeout if no events received
-    const timeout = setTimeout(() => {
-      setIsLoading(false)
-    }, 5000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
-  }, [discoveryRelays, pool, eventStore])
-
-  // Parse events into preset objects, deduplicate by pubkey (keep newest)
   const presets = useMemo(() => {
     const presetMap = new Map<string, NostubePreset>()
 
@@ -133,12 +77,8 @@ export function usePresets() {
       }
     }
 
-    // Sort by createdAt descending (newest first)
     return Array.from(presetMap.values()).sort((a, b) => b.createdAt - a.createdAt)
   }, [presetEvents])
 
-  return {
-    presets,
-    isLoading,
-  }
+  return { presets, isLoading }
 }

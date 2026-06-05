@@ -1,0 +1,3 @@
+display_name: Nostr Video Publisher
+short_description: Create NosTube-compatible Nostr video events, uploads, and transcodes.
+default_prompt: Help me publish a NosTube-compatible Nostr video event.

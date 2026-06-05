@@ -463,19 +463,13 @@ export function usePlaylistDetails(
       switchMap(events => {
         const filteredEvents = events.filter((event): event is NostrEvent => Boolean(event))
         return of(
-          processEvents(
-            filteredEvents,
-            readRelays,
-            undefined,
-            config.blossomServers,
-            undefined,
-            presetContent.nsfwPubkeys,
-            config.reportedEventIds,
-            {
-              includeYouTube: config.showYouTubeContent ?? true,
-              includeAudio: config.showAudioContent ?? true,
-            }
-          )
+          processEvents(filteredEvents, readRelays, {
+            blossomServers: config.blossomServers,
+            nsfwPubkeys: presetContent.nsfwPubkeys,
+            reportedEventIds: config.reportedEventIds,
+            includeYouTube: config.showYouTubeContent ?? true,
+            includeAudio: config.showAudioContent ?? true,
+          })
         )
       })
     )

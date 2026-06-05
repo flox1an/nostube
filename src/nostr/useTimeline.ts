@@ -89,8 +89,7 @@ export function useTimeline(
     if (providedLoader || !isSingleFilter(filters)) return undefined
 
     const key =
-      cacheKey ??
-      String(hashObjectBigInt({ filters, relays: [...relays].sort(), skipCache }))
+      cacheKey ?? String(hashObjectBigInt({ filters, relays: [...relays].sort(), skipCache }))
     const timelineLoader = getTimelineLoader(key, filters, relays, { skipCache })
     return () => timelineLoader
   }, [cacheKey, filters, providedLoader, relays, skipCache])
@@ -301,19 +300,15 @@ export function useTimeline(
   }, [events])
 
   const videos = useMemo(() => {
-    const processed = processEvents(
-      events,
-      relays,
-      blockedPubkeys,
-      config.blossomServers,
+    const processed = processEvents(events, relays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
       missingVideoIds,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: includeAudio ?? config.showAudioContent ?? true,
-      }
-    )
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: includeAudio ?? config.showAudioContent ?? true,
+    })
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,

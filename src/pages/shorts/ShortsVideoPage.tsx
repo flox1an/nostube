@@ -318,19 +318,14 @@ export function ShortsVideoPage() {
     const shortsSub = shortsObservable
       .pipe(
         map(events => {
-          return processEvents(
-            events,
-            readRelays,
-            blockedPubkeys,
-            config.blossomServers,
-            undefined,
-            presetContent.nsfwPubkeys,
-            config.reportedEventIds,
-            {
-              includeYouTube: config.showYouTubeContent ?? true,
-              includeAudio: config.showAudioContent ?? true,
-            }
-          ).filter(v => v.type === 'shorts')
+          return processEvents(events, readRelays, {
+            blockPubkeys: blockedPubkeys,
+            blossomServers: config.blossomServers,
+            nsfwPubkeys: presetContent.nsfwPubkeys,
+            reportedEventIds: config.reportedEventIds,
+            includeYouTube: config.showYouTubeContent ?? true,
+            includeAudio: config.showAudioContent ?? true,
+          }).filter(v => v.type === 'shorts')
         })
       )
       .subscribe(videos => {

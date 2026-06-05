@@ -91,19 +91,14 @@ export function useCategoryVideos({
   // Sort by publish date descending (newest first), fallback to created_at
   const videos = useMemo(() => {
     const eventList = events ?? []
-    const processed = processEvents(
-      eventList,
-      relays,
-      blockedPubkeys,
-      config.blossomServers,
-      undefined,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
-      }
-    )
+    const processed = processEvents(eventList, relays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: config.showAudioContent ?? true,
+    })
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,

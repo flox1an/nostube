@@ -74,19 +74,14 @@ export function useTimelineLoader({
   // Process events separately so changes to relays/blockedPubkeys don't recreate the observable
   // Sort by publish date descending (newest first), fallback to created_at
   const videos = useMemo(() => {
-    const processed = processEvents(
-      events,
-      relays,
-      blockedPubkeys,
-      config.blossomServers,
-      undefined,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
-      }
-    )
+    const processed = processEvents(events, relays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: config.showAudioContent ?? true,
+    })
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,

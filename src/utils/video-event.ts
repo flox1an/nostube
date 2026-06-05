@@ -1,4 +1,3 @@
-import type { ReportedPubkeys } from '@/hooks'
 import { getTypeForKind, type VideoType } from '@/lib/video-types'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { nip19 } from 'nostr-tools'
@@ -11,7 +10,7 @@ import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { sanitizeRelayUrl } from '@/lib/utils'
 
 // Define a simple Event interface that matches what we need
-interface Event {
+export interface Event {
   id: string
   pubkey: string
   created_at: number
@@ -353,38 +352,6 @@ export function deduplicateByIdentifier(videos: VideoEvent[]): VideoEvent[] {
   return Array.from(seen.values())
 }
 
-// Process Nostr events into cache entries
-export function processEvents(
-  events: (Event | undefined)[],
-  relays: string[],
-  blockPubkeys?: ReportedPubkeys,
-  blossomServers?: BlossomServer[],
-  missingVideoIds?: Set<string>,
-  nsfwPubkeys?: string[],
-  reportedEventIds?: string[],
-  options?: ProcessEventsOptions
-): VideoEvent[] {
-  const reportedSet = reportedEventIds?.length ? new Set(reportedEventIds) : undefined
-  const includeYouTube = options?.includeYouTube ?? true
-  const includeAudio = options?.includeAudio ?? true
-  const processed = events
-    .filter((event): event is Event => event !== undefined)
-    .map(event => processEvent(event, relays, blossomServers, nsfwPubkeys))
-    .filter(
-      (video): video is VideoEvent =>
-        video !== undefined &&
-        Boolean(video.id) &&
-        (includeYouTube || !isYouTubeVideo(video)) &&
-        (includeAudio || !isAudioVideo(video)) &&
-        (!blockPubkeys || !blockPubkeys[video.pubkey]) &&
-        (!missingVideoIds || !missingVideoIds.has(video.id)) &&
-        (!reportedSet || !reportedSet.has(video.id))
-    )
-
-  // Deduplicate videos posted as both addressable (34235/34236) and regular (21/22) events
-  return deduplicateByIdentifier(processed)
-}
-
 export function processEvent(
   event: Event,
   relays: string[],
@@ -722,3 +689,5 @@ export function processEvent(
     return videoEvent
   }
 }
+
+export * from './video-event-pipeline'

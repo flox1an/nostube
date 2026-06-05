@@ -411,19 +411,14 @@ export function useSearchVideos({
   const localVideos = useMemo(() => {
     if (!query || matchingIds.size === 0) return []
     const matchingEvents = allEvents.filter(e => matchingIds.has(e.id))
-    const processed = processEvents(
-      matchingEvents,
-      readRelays,
-      blockedPubkeys,
-      config.blossomServers,
-      undefined,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
-      }
-    )
+    const processed = processEvents(matchingEvents, readRelays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: config.showAudioContent ?? true,
+    })
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     query,

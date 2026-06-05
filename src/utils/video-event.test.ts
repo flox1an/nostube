@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { extractBlossomHash, isYouTubeVideo, processEvent, processEvents } from './video-event'
+import {
+  deduplicateVideoEvents,
+  extractBlossomHash,
+  filterVideoEvents,
+  isYouTubeVideo,
+  processEvent,
+  processEvents,
+  processVideoEventPipeline,
+  transformVideoEvents,
+  validateVideoEvents,
+} from './video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
 
 // Mock dependencies
@@ -1000,6 +1010,46 @@ describe('processEvents', () => {
 
     expect(results).toHaveLength(1)
     expect(results[0].mediaType).toBe('audio')
+  })
+
+  it('should accept filter policy object instead of positional filters', () => {
+    const audioEvent = {
+      ...zapStreamEvent,
+      id: 'audio-event',
+      tags: [
+        ['imeta', 'url https://example.com/episode.mp3', 'm audio/mpeg'],
+        ['title', 'Podcast Episode'],
+      ],
+    }
+
+    const results = processEvents([audioEvent, nostubeEvent], defaultRelays, {
+      includeAudio: false,
+    })
+
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe(nostubeEvent.id)
+  })
+
+  it('exposes the processing pipeline as composable stages', () => {
+    const validEvents = validateVideoEvents([zapStreamEvent, undefined, nostubeEvent])
+    const transformedEvents = transformVideoEvents(validEvents, defaultRelays)
+    const filteredEvents = filterVideoEvents(transformedEvents, {
+      blockPubkeys: { [zapStreamEvent.pubkey]: true },
+    })
+    const deduplicatedEvents = deduplicateVideoEvents(filteredEvents)
+
+    expect(validEvents).toHaveLength(2)
+    expect(transformedEvents).toHaveLength(2)
+    expect(filteredEvents.map(video => video.id)).toEqual([nostubeEvent.id])
+    expect(deduplicatedEvents.map(video => video.id)).toEqual([nostubeEvent.id])
+  })
+
+  it('composes the same stages in processVideoEventPipeline', () => {
+    const results = processVideoEventPipeline([zapStreamEvent, nostubeEvent], defaultRelays, {
+      blockPubkeys: { [zapStreamEvent.pubkey]: true },
+    })
+
+    expect(results.map(video => video.id)).toEqual([nostubeEvent.id])
   })
 
   it('should filter out audio-only events when disabled', () => {

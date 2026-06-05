@@ -68,19 +68,14 @@ export function LikedVideosPage() {
     // Get events directly from EventStore
     const events = combinedEventIds.map(id => eventStore.getEvent(id)).filter(Boolean)
 
-    const processed = processEvents(
-      events,
-      readRelays,
-      blockedPubkeys,
-      config.blossomServers,
-      undefined,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
-      }
-    )
+    const processed = processEvents(events, readRelays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: config.showAudioContent ?? true,
+    })
 
     // Final deduplication: filter out any duplicate videos by ID (just in case)
     const seenIds = new Set<string>()

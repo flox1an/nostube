@@ -103,19 +103,14 @@ export function useHashtagVideos({
   // Process native events
   const nativeVideos = useMemo(() => {
     const eventList = nativeEvents ?? []
-    return processEvents(
-      eventList,
-      relays,
-      blockedPubkeys,
-      config.blossomServers,
-      undefined,
-      presetContent.nsfwPubkeys,
-      config.reportedEventIds,
-      {
-        includeYouTube: config.showYouTubeContent ?? true,
-        includeAudio: config.showAudioContent ?? true,
-      }
-    )
+    return processEvents(eventList, relays, {
+      blockPubkeys: blockedPubkeys,
+      blossomServers: config.blossomServers,
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      reportedEventIds: config.reportedEventIds,
+      includeYouTube: config.showYouTubeContent ?? true,
+      includeAudio: config.showAudioContent ?? true,
+    })
   }, [
     nativeEvents,
     relays,

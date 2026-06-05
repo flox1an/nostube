@@ -758,19 +758,13 @@ export function AuthorPage() {
 
         // Process events to VideoEvent format
         const { processEvents } = await import('@/utils/video-event')
-        const processedVideos = processEvents(
-          events,
-          relays,
-          undefined,
-          config.blossomServers,
-          undefined,
-          presetContent.nsfwPubkeys,
-          config.reportedEventIds,
-          {
-            includeYouTube: config.showYouTubeContent ?? true,
-            includeAudio: true,
-          }
-        )
+        const processedVideos = processEvents(events, relays, {
+          blossomServers: config.blossomServers,
+          nsfwPubkeys: presetContent.nsfwPubkeys,
+          reportedEventIds: config.reportedEventIds,
+          includeYouTube: config.showYouTubeContent ?? true,
+          includeAudio: true,
+        })
 
         setPlaylistVideos(prev => ({ ...prev, [playlist.identifier]: processedVideos }))
         loadedPlaylistsRef.current.add(playlist.identifier)
@@ -825,19 +819,14 @@ export function AuthorPage() {
         .map(id => eventStoreInstance.getEvent(id))
         .filter((e): e is NostrEvent => !!e)
 
-      const processedVideos = processEvents(
-        events,
-        relays,
-        blockedPubkeys,
-        config.blossomServers,
-        undefined,
-        presetContent.nsfwPubkeys,
-        config.reportedEventIds,
-        {
-          includeYouTube: config.showYouTubeContent ?? true,
-          includeAudio: true,
-        }
-      )
+      const processedVideos = processEvents(events, relays, {
+        blockPubkeys: blockedPubkeys,
+        blossomServers: config.blossomServers,
+        nsfwPubkeys: presetContent.nsfwPubkeys,
+        reportedEventIds: config.reportedEventIds,
+        includeYouTube: config.showYouTubeContent ?? true,
+        includeAudio: true,
+      })
 
       setLikedVideos(processedVideos)
       likedVideosLoadedRef.current = true
@@ -948,19 +937,13 @@ export function AuthorPage() {
         })
 
         const loadedEvents = (await Promise.all(fetches)).filter((e): e is NostrEvent => Boolean(e))
-        const processed = processEvents(
-          loadedEvents,
-          relays,
-          undefined,
-          config.blossomServers,
-          undefined,
-          presetContent.nsfwPubkeys,
-          config.reportedEventIds,
-          {
-            includeYouTube: config.showYouTubeContent ?? true,
-            includeAudio: true,
-          }
-        )
+        const processed = processEvents(loadedEvents, relays, {
+          blossomServers: config.blossomServers,
+          nsfwPubkeys: presetContent.nsfwPubkeys,
+          reportedEventIds: config.reportedEventIds,
+          includeYouTube: config.showYouTubeContent ?? true,
+          includeAudio: true,
+        })
         const deduped = Array.from(new Map(processed.map(video => [video.id, video])).values())
         if (!cancelled) setPinnedVideos(deduped)
       } catch (error) {

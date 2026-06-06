@@ -8,25 +8,25 @@ The main app is a client-side SPA (`index.html`). Crawlers and link-unfurlers (T
 
 ## Routes
 
-| Public URL | Edge function | Handler |
-|---|---|---|
-| `/v/:nevent` | `api/v/[nevent].ts` | `handleVideoPage(…, 'video')` |
-| `/short/:nevent` | `api/short/[nevent].ts` | `handleVideoPage(…, 'short')` |
+| Public URL         | Edge function             | Handler                          |
+| ------------------ | ------------------------- | -------------------------------- |
+| `/v/:nevent`       | `api/v/[nevent].ts`       | `handleVideoPage(…, 'video')`    |
+| `/short/:nevent`   | `api/short/[nevent].ts`   | `handleVideoPage(…, 'short')`    |
 | `/playlist/:nip19` | `api/playlist/[nip19].ts` | `handleVideoPage(…, 'playlist')` |
-| `/oembed` | `api/oembed.ts` | `handleOEmbed(…)` |
-| `/api/index` | `api/index.ts` | health check |
+| `/oembed`          | `api/oembed.ts`           | `handleOEmbed(…)`                |
+| `/api/index`       | `api/index.ts`            | health check                     |
 
 ## Internal modules (`server/`)
 
 The shared logic lives in `server/` and is imported by the edge functions:
 
-| Module | Responsibility |
-|---|---|
-| `server/nostr.ts` | Decode NIP-19 identifiers, fetch Nostr events from relays |
-| `server/meta.ts` | Extract video metadata from events, build `<meta>` tag strings |
-| `server/oembed.ts` | Build the oEmbed JSON response |
-| `server/template.ts` | Inject `<meta>` tags into the cached `index.html` |
-| `server/detect.ts` | Bot / crawler user-agent detection |
+| Module               | Responsibility                                                 |
+| -------------------- | -------------------------------------------------------------- |
+| `server/nostr.ts`    | Decode NIP-19 identifiers, fetch Nostr events from relays      |
+| `server/meta.ts`     | Extract video metadata from events, build `<meta>` tag strings |
+| `server/oembed.ts`   | Build the oEmbed JSON response                                 |
+| `server/template.ts` | Inject `<meta>` tags into the cached `index.html`              |
+| `server/detect.ts`   | Bot / crawler user-agent detection                             |
 
 `api/_nostr.ts` re-exports the two main handlers (`handleVideoPage`, `handleOEmbed`) so each route file stays to a few lines.
 

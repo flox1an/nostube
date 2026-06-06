@@ -27,5 +27,7 @@ export function OnboardingDialog() {
     setIsCompleted(true)
   }
 
-  return <PhasedOnboardingDialog open={shouldShow} onOpenChange={() => {}} onComplete={handleComplete} />
+  return (
+    <PhasedOnboardingDialog open={shouldShow} onOpenChange={() => {}} onComplete={handleComplete} />
+  )
 }

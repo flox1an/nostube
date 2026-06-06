@@ -545,6 +545,7 @@ export function VideoPage() {
           currentVideoType={video?.type}
           relays={relaysToUse}
           cinemaMode={cinemaMode}
+          videoRef={nevent}
         />
       </>
     )

@@ -20,7 +20,11 @@ interface PhasedOnboardingDialogProps {
 
 type Step = 1 | 2 | 3
 
-export function PhasedOnboardingDialog({ open, onOpenChange, onComplete }: PhasedOnboardingDialogProps) {
+export function PhasedOnboardingDialog({
+  open,
+  onOpenChange,
+  onComplete,
+}: PhasedOnboardingDialogProps) {
   const { t } = useTranslation()
   const [step, setStep] = useState<Step>(1)
 
@@ -48,7 +52,9 @@ export function PhasedOnboardingDialog({ open, onOpenChange, onComplete }: Phase
       <DialogContent className="sm:max-w-2xl" hideCloseButton>
         <DialogHeader>
           <DialogTitle>{t('onboarding.phasedOnboarding.welcome')}</DialogTitle>
-          <DialogDescription>{t('onboarding.phasedOnboarding.welcomeDescription')}</DialogDescription>
+          <DialogDescription>
+            {t('onboarding.phasedOnboarding.welcomeDescription')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -64,7 +70,11 @@ export function PhasedOnboardingDialog({ open, onOpenChange, onComplete }: Phase
           {step === 1 && <PhaseIdentityStep onComplete={() => setStep(2)} />}
           {step === 2 && <PhaseFeedStep onComplete={() => setStep(3)} onExplore={handleExplore} />}
           {step === 3 && (
-            <PhaseReadyStep onComplete={closeDone} onExplore={handleExplore} onUpload={handleUpload} />
+            <PhaseReadyStep
+              onComplete={closeDone}
+              onExplore={handleExplore}
+              onUpload={handleUpload}
+            />
           )}
         </div>
       </DialogContent>

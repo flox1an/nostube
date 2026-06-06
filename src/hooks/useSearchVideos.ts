@@ -14,7 +14,8 @@ import { getTypeForKind } from '@/lib/video-types'
 // Search configuration
 const SEARCH_LIMIT = 1000 // Max events to load from relays
 const VIDEO_KINDS = [21, 22, 34235, 34236]
-const EXTERNAL_SEARCH_URL = 'https://nostube-search.apps2.slidestr.net'
+import { SEARCH_SERVICE_URL } from '@/lib/search-client'
+const EXTERNAL_SEARCH_URL = SEARCH_SERVICE_URL
 const EXTERNAL_SEARCH_TIMEOUT_MS = 5000
 
 function extractHashtags(text: string): string[] {

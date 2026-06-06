@@ -124,7 +124,9 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                 <Key className="w-16 h-16 text-primary" />
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{t('auth.signup.introText')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {t('auth.signup.introText')}
+              </p>
               <Button
                 className="w-full rounded-full py-6"
                 onClick={generateKey}

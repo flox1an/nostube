@@ -58,7 +58,11 @@ export function SeedBackupStep({ nsec, onConfirmed, onBack }: SeedBackupStepProp
         </div>
       </div>
 
-      <Button variant={hasDownloaded ? 'outline' : 'default'} className="w-full" onClick={downloadKey}>
+      <Button
+        variant={hasDownloaded ? 'outline' : 'default'}
+        className="w-full"
+        onClick={downloadKey}
+      >
         <Download className="h-4 w-4 mr-2" />
         {hasDownloaded
           ? t('onboarding.seedBackup.downloadAgain')
@@ -102,7 +106,9 @@ export function SeedBackupStep({ nsec, onConfirmed, onBack }: SeedBackupStepProp
               placeholder={t('onboarding.seedBackup.passwordPlaceholder')}
               className="max-w-sm"
             />
-            <p className="text-xs text-muted-foreground">{t('onboarding.seedBackup.passwordHint')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('onboarding.seedBackup.passwordHint')}
+            </p>
           </div>
         )}
       </div>
@@ -113,7 +119,11 @@ export function SeedBackupStep({ nsec, onConfirmed, onBack }: SeedBackupStepProp
             {t('common.back')}
           </Button>
         )}
-        <Button onClick={() => onConfirmed(password || undefined)} disabled={!canProceed} className="flex-1">
+        <Button
+          onClick={() => onConfirmed(password || undefined)}
+          disabled={!canProceed}
+          className="flex-1"
+        >
           {t('onboarding.seedBackup.continue')}
         </Button>
       </div>

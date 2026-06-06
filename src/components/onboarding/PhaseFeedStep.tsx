@@ -28,7 +28,9 @@ export function PhaseFeedStep({ onComplete, onExplore }: PhaseFeedStepProps) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">{t('onboarding.feedStep.discover')}</h3>
-        <p className="text-sm text-muted-foreground">{t('onboarding.feedStep.discoverDescription')}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('onboarding.feedStep.discoverDescription')}
+        </p>
         <div className="space-y-2">
           {RECOMMENDED_CREATORS.map(name => (
             <Card key={name}>

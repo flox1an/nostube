@@ -28,6 +28,10 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { UserAvatar } from '@/components/UserAvatar'
 import { getDateLocale } from '@/lib/date-locale'
+import { useSearchRecommendations } from '@/hooks/useSearchRecommendations'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import type { RecommendationVideo } from '@/types/recommendation'
 
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -148,6 +152,105 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   )
 })
 
+const RecommendationVideoSuggestionItem = React.memo(function RecommendationVideoSuggestionItem({
+  video,
+  thumbResizeServerUrl,
+}: {
+  video: RecommendationVideo
+  thumbResizeServerUrl?: string
+}) {
+  const { i18n } = useTranslation()
+  const dateLocale = getDateLocale(i18n.language)
+  const metadata = useProfile({ pubkey: video.pubkey })
+  const name = metadata?.name || video.pubkey.slice(0, 8)
+  const authorPicture = metadata?.picture
+  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
+  const [thumbnailError, setThumbnailError] = useState(false)
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
+
+  const thumbnailUrl = useMemo(() => {
+    if (hasNoThumbnail) return video.mediaType === 'audio' ? audioFallback : ''
+    if (thumbnailError && video.urls && video.urls.length > 0) {
+      return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
+    }
+    return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
+  }, [
+    hasNoThumbnail,
+    thumbnailError,
+    video.images,
+    video.urls,
+    video.mediaType,
+    thumbResizeServerUrl,
+  ])
+
+  const blurhashPlaceholder = useMemo(() => {
+    const blurhash = video.thumbnailVariants?.[0]?.blurhash
+    return blurHashToDataURL(blurhash)
+  }, [video.thumbnailVariants])
+
+  const handleThumbnailError = () => {
+    if (!thumbnailError) {
+      setThumbnailError(true)
+      setThumbnailLoaded(false)
+    }
+  }
+
+  const publishDate = video.published_at ?? video.created_at
+  const linkTo = buildVideoPath(video.link, video.type === 'shorts' ? 'shorts' : 'video')
+
+  return (
+    <Link to={linkTo} className="group">
+      <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
+        <div className="relative w-40 h-24 shrink-0">
+          {!thumbnailLoaded &&
+            (blurhashPlaceholder ? (
+              <img
+                src={blurhashPlaceholder}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover rounded-md absolute"
+              />
+            ) : (
+              <Skeleton className="w-full h-full rounded-md absolute" />
+            ))}
+          <img
+            src={thumbnailUrl}
+            loading="lazy"
+            alt={video.title}
+            className="w-full h-full object-cover rounded-md"
+            onError={handleThumbnailError}
+            onLoad={() => setThumbnailLoaded(true)}
+          />
+          <PlayProgressBar videoId={video.id} duration={video.duration} />
+          {video.duration > 0 && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1 rounded text-xs">
+              {formatDuration(video.duration)}
+            </div>
+          )}
+        </div>
+        <div className="relative pl-3">
+          <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <UserAvatar
+              picture={authorPicture}
+              pubkey={video.pubkey}
+              name={name}
+              className="h-4 w-4"
+            />
+            <div className="text-xs text-muted-foreground">{name}</div>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {formatDistance(new Date(publishDate * 1000), new Date(), {
+              addSuffix: true,
+              locale: dateLocale,
+            })}
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+})
+
 function VideoSuggestionItemSkeleton() {
   return (
     <div className="flex p-2">
@@ -169,6 +272,7 @@ interface VideoSuggestionsProps {
   currentVideoType?: VideoType
   relays?: string[] // Relays from nevent or other sources
   cinemaMode?: boolean
+  videoRef?: string // nevent or naddr for the search service recommendations
 }
 
 export const VideoSuggestions = React.memo(function VideoSuggestions({
@@ -177,14 +281,30 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   authorPubkey,
   relays,
   cinemaMode,
+  videoRef,
 }: VideoSuggestionsProps) {
   const { t } = useTranslation()
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
+  const { user } = useCurrentUser()
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
   const readRelays = useReadRelays()
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+
+  // Search service recommendations (primary source)
+  const excludeContentWarnings = config.nsfwFilter === 'hide'
+  const { videos: serviceVideos, isLoading: isLoadingService } = useSearchRecommendations({
+    videoRef,
+    userPubkey: user?.pubkey,
+    excludeContentWarnings,
+    limit: 30,
+  })
+
+  const filteredServiceVideos = useMemo(() => {
+    if (!serviceVideos) return null
+    return serviceVideos.filter(v => !isNSFWAuthor(v.pubkey, presetContent.nsfwPubkeys))
+  }, [serviceVideos, presetContent.nsfwPubkeys])
 
   // Combine provided relays with config relays (prioritize provided relays)
   // Use combineRelays to normalize URLs and remove duplicates (e.g., 'nos.lol' vs 'nos.lol/')
@@ -391,7 +511,12 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     })
   }, [suggestions, personalScores, globalScores, followedSet])
 
-  const showLoadingSkeletons = isLoadingSuggestions && suggestions.length === 0
+  const showLoadingSkeletons =
+    (isLoadingService && filteredServiceVideos === null) ||
+    (!filteredServiceVideos && isLoadingSuggestions && suggestions.length === 0)
+
+  // Use service results when available, fall back to relay-based suggestions
+  const useServiceResults = filteredServiceVideos !== null
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
@@ -400,6 +525,20 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     >
       {showLoadingSkeletons ? (
         Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
+      ) : useServiceResults ? (
+        filteredServiceVideos!.length > 0 ? (
+          filteredServiceVideos!.map(video => (
+            <RecommendationVideoSuggestionItem
+              key={video.id}
+              video={video}
+              thumbResizeServerUrl={config.thumbResizeServerUrl}
+            />
+          ))
+        ) : (
+          <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
+            {t('video.noSuggestions', 'No suggestions yet.')}
+          </div>
+        )
       ) : filteredSuggestions.length > 0 ? (
         filteredSuggestions.map(video => (
           <VideoSuggestionItem

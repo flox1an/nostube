@@ -146,9 +146,13 @@ export function SubscriptionsPage() {
       <div className="max-w-560 mx-auto sm:p-4">
         <div className="rounded-xl border p-8 text-center space-y-3">
           <h2 className="text-xl font-semibold">{t('pages.subscriptions.welcomeTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('pages.subscriptions.welcomeDescription')}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('pages.subscriptions.welcomeDescription')}
+          </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => navigate('/explore')}>{t('pages.subscriptions.exploreButton')}</Button>
+            <Button onClick={() => navigate('/explore')}>
+              {t('pages.subscriptions.exploreButton')}
+            </Button>
             <Button variant="outline" onClick={() => navigate('/search')}>
               {t('pages.subscriptions.findCreators')}
             </Button>

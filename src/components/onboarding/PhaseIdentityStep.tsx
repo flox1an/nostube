@@ -151,8 +151,14 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <SeedBackupStep nsec={generatedNsec} onConfirmed={handleConfirmSeed} onBack={() => setMode('choose')} />
-        {isLoading && <p className="text-sm text-muted-foreground">{t('auth.signup.finalizingDescription')}</p>}
+        <SeedBackupStep
+          nsec={generatedNsec}
+          onConfirmed={handleConfirmSeed}
+          onBack={() => setMode('choose')}
+        />
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">{t('auth.signup.finalizingDescription')}</p>
+        )}
       </div>
     )
   }
@@ -231,7 +237,11 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
             onChange={e => setBunkerUri(e.target.value)}
             placeholder={t('auth.login.bunkerPlaceholder')}
           />
-          <Button onClick={handleBunkerLogin} disabled={isLoading || !bunkerUri.trim()} className="w-full">
+          <Button
+            onClick={handleBunkerLogin}
+            disabled={isLoading || !bunkerUri.trim()}
+            className="w-full"
+          >
             {t('auth.login.loginWithBunker')}
           </Button>
         </TabsContent>

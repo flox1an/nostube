@@ -164,24 +164,19 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
-  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
+  // thumbnailVariants[0].url is the primary source from the search API; images[0] is the fallback
+  const primaryImage = video.thumbnailVariants?.[0]?.url ?? video.images?.[0]
+  const hasNoThumbnail = !primaryImage
   const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
 
   const thumbnailUrl = useMemo(() => {
-    if (hasNoThumbnail) return video.mediaType === 'audio' ? audioFallback : ''
+    if (!primaryImage) return video.mediaType === 'audio' ? audioFallback : ''
     if (thumbnailError && video.urls && video.urls.length > 0) {
       return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
     }
-    return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
-  }, [
-    hasNoThumbnail,
-    thumbnailError,
-    video.images,
-    video.urls,
-    video.mediaType,
-    thumbResizeServerUrl,
-  ])
+    return imageProxyVideoPreview(primaryImage, thumbResizeServerUrl)
+  }, [primaryImage, thumbnailError, video.urls, video.mediaType, thumbResizeServerUrl])
 
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash

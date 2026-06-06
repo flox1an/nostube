@@ -317,11 +317,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     if (!el || hasSetInitialPos.current) return
 
     const setInitialPosition = () => {
+      hasSetInitialPos.current = true
       // Use ref to get latest value, avoiding stale closure issues
       const pos = initialPlayPosRef.current
       if (pos > 0 && Math.abs(el.currentTime - pos) > 1) {
         el.currentTime = pos
-        hasSetInitialPos.current = true
       }
     }
 

@@ -477,8 +477,12 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     () => [...new Set(suggestions.map(v => v.pubkey))],
     [suggestions]
   )
-  const personalScores = useTrustScores(suggestionPubkeys)
-  const globalScores = useGlobalScores(suggestionPubkeys)
+
+  // Don't request trust scores for relay suggestions when service results are shown —
+  // they won't be rendered, so the ContextVM calls would be wasted.
+  const trustPubkeys = filteredServiceVideos !== null ? [] : suggestionPubkeys
+  const personalScores = useTrustScores(trustPubkeys)
+  const globalScores = useGlobalScores(trustPubkeys)
 
   // Track if scores arrived after initial render (deferred filtering)
   const [scoresReady, setScoresReady] = useState(false)

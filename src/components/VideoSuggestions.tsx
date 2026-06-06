@@ -166,17 +166,22 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   const authorPicture = metadata?.picture
   // thumbnailVariants[0].url is the primary source from the search API; images[0] is the fallback
   const primaryImage = video.thumbnailVariants?.[0]?.url ?? video.images?.[0]
-  const hasNoThumbnail = !primaryImage
+  const videoUrl = video.urls?.[0]
+  const hasNoThumbnail = !primaryImage && !videoUrl && video.mediaType !== 'audio'
   const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
 
   const thumbnailUrl = useMemo(() => {
-    if (!primaryImage) return video.mediaType === 'audio' ? audioFallback : ''
-    if (thumbnailError && video.urls && video.urls.length > 0) {
-      return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
+    // Has a good image thumbnail and no error — use it through the proxy
+    if (primaryImage && !thumbnailError) {
+      return imageProxyVideoPreview(primaryImage, thumbResizeServerUrl)
     }
-    return imageProxyVideoPreview(primaryImage, thumbResizeServerUrl)
-  }, [primaryImage, thumbnailError, video.urls, video.mediaType, thumbResizeServerUrl])
+    // No image (or image errored) — generate from video URL via imgproxy
+    if (videoUrl) {
+      return imageProxyVideoThumbnail(videoUrl, thumbResizeServerUrl)
+    }
+    return video.mediaType === 'audio' ? audioFallback : ''
+  }, [primaryImage, videoUrl, thumbnailError, video.mediaType, thumbResizeServerUrl])
 
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash

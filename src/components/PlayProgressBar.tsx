@@ -1,6 +1,6 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMemo, useState, useEffect } from 'react'
-import { parseStoredPosition, getPlayPosCache, getCacheVersion } from '@/lib/play-position-storage'
+import { useMemo } from 'react'
+import { parseStoredPosition, getPlayPosCache } from '@/lib/play-position-storage'
 
 interface PlayProgressBarProps {
   videoId: string
@@ -9,16 +9,6 @@ interface PlayProgressBarProps {
 
 export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
   const { user } = useCurrentUser()
-  // Force re-render when cache is invalidated
-  const [_version, setVersion] = useState(getCacheVersion())
-
-  useEffect(() => {
-    // Check for cache invalidation periodically
-    const interval = setInterval(() => {
-      setVersion(v => (v !== getCacheVersion() ? getCacheVersion() : v))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   const posData = useMemo(() => {
     const pubkey = user?.pubkey
@@ -38,7 +28,6 @@ export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
     const data = parseStoredPosition(val)
     getPlayPosCache().set(key, data)
     return data
-    // Note: cacheVersion triggers re-reads from localStorage via setVersion
   }, [user?.pubkey, videoId])
 
   // Use stored duration if available, fall back to prop

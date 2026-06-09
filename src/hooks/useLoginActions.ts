@@ -5,6 +5,7 @@ import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-si
 import { nip19 } from 'nostr-tools'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
 import { isNip05, resolveNip05ToBunkerUri } from '@/lib/nip05-bunker'
+import { decryptNcryptsec } from '@/lib/nip49'
 
 // NOTE: This file should not be edited except for adding new login methods.
 
@@ -47,6 +48,28 @@ export function useLoginActions() {
         saveActiveAccount(pubkey)
       } catch (error) {
         console.error('Nsec login failed:', error)
+        throw error
+      }
+    },
+    // Login with a NIP-49 password-protected secret key
+    async ncryptsec(_ncryptsec: string, password: string): Promise<void> {
+      try {
+        if (!_ncryptsec.trim()) {
+          throw new Error('Encrypted key cannot be empty')
+        }
+
+        const { privateKey } = await decryptNcryptsec(_ncryptsec, password)
+        const signer = new SimpleSigner(privateKey)
+        const pubkey = await signer.getPublicKey()
+        const account = new SimpleAccount(pubkey, signer)
+
+        await accountManager.addAccount(account)
+        accountManager.setActive(account)
+
+        saveAccountToStorage(account, 'nsec')
+        saveActiveAccount(pubkey)
+      } catch (error) {
+        console.error('Encrypted key login failed:', error)
         throw error
       }
     },

@@ -18,6 +18,7 @@ import { useLoginActions } from '@/hooks/useLoginActions'
 import { useTranslation } from 'react-i18next'
 import { QRCodeLogin } from './QRCodeLogin'
 import { isNip05 } from '@/lib/nip05-bunker'
+import { NIP49_RAW_KEY_CONFIRMATION } from '@/lib/nip49'
 
 interface LoginDialogProps {
   isOpen: boolean
@@ -31,12 +32,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
+  const [nsecConfirmation, setNsecConfirmation] = useState('')
+  const [ncryptsec, setNcryptsec] = useState('')
+  const [ncryptsecPassword, setNcryptsecPassword] = useState('')
   const [bunkerUri, setBunkerUri] = useState(
     () => localStorage.getItem('nostube:last-bunker') || ''
   )
   const [authUrl, setAuthUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
+  const nsecUnlocked = nsecConfirmation.trim() === NIP49_RAW_KEY_CONFIRMATION
 
   const handleBunkerAuth = useCallback(async (url: string) => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -65,6 +70,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   }
 
   const handleKeyLogin = async () => {
+    if (!nsecUnlocked) {
+      setError(`Type "${NIP49_RAW_KEY_CONFIRMATION}" to use a raw private key`)
+      return
+    }
+
     if (!nsec.trim()) {
       setError('Please enter your nsec key')
       return
@@ -85,6 +95,33 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           : 'Nsec login failed. Please check your key and try again.'
       setError(errorMessage)
       console.error('Nsec login failed:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleProtectedKeyLogin = async () => {
+    if (!ncryptsec.trim()) {
+      setError('Please enter your password-protected key')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await login.ncryptsec(ncryptsec, ncryptsecPassword)
+      setNcryptsec('')
+      setNcryptsecPassword('')
+      onLogin()
+      onClose()
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Encrypted key login failed. Please check your key and password.'
+      setError(errorMessage)
+      console.error('Encrypted key login failed:', error)
     } finally {
       setIsLoading(false)
     }
@@ -136,7 +173,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     const reader = new FileReader()
     reader.onload = event => {
       const content = event.target?.result as string
-      setNsec(content.trim())
+      setNcryptsec(content.trim())
     }
     reader.readAsText(file)
   }
@@ -150,7 +187,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg p-0 rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
             {t('auth.login.title')}
@@ -169,14 +206,17 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           )}
 
           <Tabs defaultValue="qr" className="w-full" onValueChange={() => setError(null)}>
-            <TabsList className="grid grid-cols-4 mb-6">
+            <TabsList className="grid h-auto grid-cols-3 sm:grid-cols-5 mb-6">
               <TabsTrigger value="qr">
                 <QrCode className="w-4 h-4 mr-1" />
                 {t('auth.login.qr', 'QR')}
               </TabsTrigger>
               <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
-              <TabsTrigger value="key">{t('auth.login.nsec')}</TabsTrigger>
+              <TabsTrigger value="protected">
+                {t('auth.login.protectedKey', 'Protected')}
+              </TabsTrigger>
               <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
+              <TabsTrigger value="advanced">{t('auth.login.advanced', 'Advanced')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="qr" className="space-y-4">
@@ -203,21 +243,38 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               </div>
             </TabsContent>
 
-            <TabsContent value="key" className="space-y-4">
+            <TabsContent value="protected" className="space-y-4">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label
-                    htmlFor="nsec"
+                    htmlFor="ncryptsec"
                     className="text-sm font-medium text-gray-700 dark:text-gray-400"
                   >
-                    {t('auth.login.enterNsec')}
+                    {t('auth.login.enterProtectedKey', 'Password-protected key')}
                   </label>
                   <Input
-                    id="nsec"
-                    value={nsec}
-                    onChange={e => setNsec(e.target.value)}
+                    id="ncryptsec"
+                    value={ncryptsec}
+                    onChange={e => setNcryptsec(e.target.value)}
                     className="rounded-lg focus-visible:ring-primary"
-                    placeholder={t('auth.login.nsecPlaceholder')}
+                    placeholder="ncryptsec1..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="ncryptsec-password"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-400"
+                  >
+                    {t('auth.login.protectedKeyPassword', 'Backup password')}
+                  </label>
+                  <Input
+                    id="ncryptsec-password"
+                    type="password"
+                    value={ncryptsecPassword}
+                    onChange={e => setNcryptsecPassword(e.target.value)}
+                    className="rounded-lg focus-visible:ring-primary"
+                    placeholder={t('auth.login.protectedKeyPassword', 'Backup password')}
                   />
                 </div>
 
@@ -236,18 +293,73 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    {t('auth.login.uploadNsecFile')}
+                    {t('auth.login.uploadProtectedKeyFile', 'Upload encrypted key file')}
                   </Button>
                 </div>
 
                 <Button
                   className="w-full rounded-full py-6 mt-4"
-                  onClick={handleKeyLogin}
-                  disabled={isLoading || !nsec.trim()}
+                  onClick={handleProtectedKeyLogin}
+                  disabled={isLoading || !ncryptsec.trim() || !ncryptsecPassword}
                 >
-                  {isLoading ? t('auth.login.verifying') : t('auth.login.loginWithNsec')}
+                  {isLoading
+                    ? t('auth.login.verifying')
+                    : t('auth.login.loginWithProtectedKey', 'Unlock and log in')}
                 </Button>
               </div>
+            </TabsContent>
+
+            <TabsContent value="advanced" className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {t(
+                    'auth.login.rawKeyWarning',
+                    'Raw private keys give full control of your account. Use this only if you know where the key came from.'
+                  )}
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="nsec-confirmation"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-400"
+                >
+                  {t('auth.login.rawKeyConfirmation', 'Confirmation')}
+                </label>
+                <Input
+                  id="nsec-confirmation"
+                  value={nsecConfirmation}
+                  onChange={e => setNsecConfirmation(e.target.value)}
+                  className="rounded-lg focus-visible:ring-primary"
+                  placeholder={`Type "${NIP49_RAW_KEY_CONFIRMATION}"`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="nsec"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-400"
+                >
+                  {t('auth.login.enterNsec')}
+                </label>
+                <Input
+                  id="nsec"
+                  value={nsec}
+                  onChange={e => setNsec(e.target.value)}
+                  className="rounded-lg focus-visible:ring-primary"
+                  placeholder={t('auth.login.nsecPlaceholder')}
+                  disabled={!nsecUnlocked}
+                />
+              </div>
+
+              <Button
+                className="w-full rounded-full py-6 mt-4"
+                onClick={handleKeyLogin}
+                disabled={isLoading || !nsec.trim() || !nsecUnlocked}
+              >
+                {isLoading ? t('auth.login.verifying') : t('auth.login.loginWithNsec')}
+              </Button>
             </TabsContent>
 
             <TabsContent value="bunker" className="space-y-4">

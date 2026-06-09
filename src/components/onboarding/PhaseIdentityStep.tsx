@@ -12,42 +12,13 @@ import { useLoginActions } from '@/hooks/useLoginActions'
 import { isNip05 } from '@/lib/nip05-bunker'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { AlertCircle, KeyRound, Sparkles, Shield, User } from 'lucide-react'
+import { NIP49_RAW_KEY_CONFIRMATION } from '@/lib/nip49'
 
 interface PhaseIdentityStepProps {
   onComplete: () => void
 }
 
 type Mode = 'choose' | 'login' | 'backup'
-
-async function encryptAndStoreNsec(nsec: string, password: string) {
-  const enc = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
-    'deriveKey',
-  ])
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt']
-  )
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(nsec))
-
-  localStorage.setItem(
-    'nostube:encrypted-nsec',
-    JSON.stringify({
-      version: 1,
-      algorithm: 'AES-GCM',
-      kdf: 'PBKDF2',
-      iterations: 250000,
-      salt: btoa(String.fromCharCode(...salt)),
-      iv: btoa(String.fromCharCode(...iv)),
-      ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-    })
-  )
-}
 
 export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
   const { t } = useTranslation()
@@ -57,8 +28,12 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [nsec, setNsec] = useState('')
+  const [nsecConfirmation, setNsecConfirmation] = useState('')
+  const [ncryptsec, setNcryptsec] = useState('')
+  const [ncryptsecPassword, setNcryptsecPassword] = useState('')
   const [bunkerUri, setBunkerUri] = useState('')
   const [generatedNsec, setGeneratedNsec] = useState('')
+  const nsecUnlocked = nsecConfirmation.trim() === NIP49_RAW_KEY_CONFIRMATION
 
   if (user?.pubkey) {
     return (
@@ -91,10 +66,30 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
   }
 
   const handleNsecLogin = async () => {
+    if (!nsecUnlocked) {
+      setError(`Type "${NIP49_RAW_KEY_CONFIRMATION}" to use a raw private key`)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
       await login.nsec(nsec)
+      onComplete()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNcryptsecLogin = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      await login.ncryptsec(ncryptsec, ncryptsecPassword)
+      setNcryptsec('')
+      setNcryptsecPassword('')
       onComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -126,11 +121,10 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
     setMode('backup')
   }
 
-  const handleConfirmSeed = async (password?: string) => {
+  const handleConfirmSeed = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      if (password) await encryptAndStoreNsec(generatedNsec, password)
       await login.nsec(generatedNsec)
       localStorage.setItem('nostube_onboarding_new_user', '1')
       onComplete()
@@ -208,11 +202,12 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
       )}
 
       <Tabs defaultValue="qr" className="w-full">
-        <TabsList className="grid grid-cols-4">
+        <TabsList className="grid h-auto grid-cols-3 sm:grid-cols-5">
           <TabsTrigger value="qr">QR</TabsTrigger>
           <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
-          <TabsTrigger value="nsec">{t('auth.login.nsec')}</TabsTrigger>
+          <TabsTrigger value="ncryptsec">{t('auth.login.protectedKey', 'Protected')}</TabsTrigger>
           <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
+          <TabsTrigger value="advanced">{t('auth.login.advanced', 'Advanced')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="qr" className="pt-4">
@@ -224,9 +219,53 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
             {t('auth.login.loginWithExtension')}
           </Button>
         </TabsContent>
-        <TabsContent value="nsec" className="pt-4 space-y-2">
-          <Input value={nsec} onChange={e => setNsec(e.target.value)} placeholder="nsec1..." />
-          <Button onClick={handleNsecLogin} disabled={isLoading || !nsec.trim()} className="w-full">
+        <TabsContent value="ncryptsec" className="pt-4 space-y-2">
+          <Input
+            value={ncryptsec}
+            onChange={e => setNcryptsec(e.target.value)}
+            placeholder="ncryptsec1..."
+          />
+          <Input
+            type="password"
+            value={ncryptsecPassword}
+            onChange={e => setNcryptsecPassword(e.target.value)}
+            placeholder={t('auth.login.protectedKeyPassword', 'Backup password')}
+          />
+          <Button
+            onClick={handleNcryptsecLogin}
+            disabled={isLoading || !ncryptsec.trim() || !ncryptsecPassword}
+            className="w-full"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            {t('auth.login.loginWithProtectedKey', 'Unlock and log in')}
+          </Button>
+        </TabsContent>
+        <TabsContent value="advanced" className="pt-4 space-y-3">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {t(
+                'auth.login.rawKeyWarning',
+                'Raw private keys give full control of your account. Use this only if you know where the key came from.'
+              )}
+            </AlertDescription>
+          </Alert>
+          <Input
+            value={nsecConfirmation}
+            onChange={e => setNsecConfirmation(e.target.value)}
+            placeholder={`Type "${NIP49_RAW_KEY_CONFIRMATION}"`}
+          />
+          <Input
+            value={nsec}
+            onChange={e => setNsec(e.target.value)}
+            placeholder="nsec1..."
+            disabled={!nsecUnlocked}
+          />
+          <Button
+            onClick={handleNsecLogin}
+            disabled={isLoading || !nsec.trim() || !nsecUnlocked}
+            className="w-full"
+          >
             <User className="h-4 w-4 mr-2" />
             {t('auth.login.loginWithNsec')}
           </Button>

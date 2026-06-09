@@ -49,7 +49,7 @@ export function PhasedOnboardingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" hideCloseButton>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" hideCloseButton>
         <DialogHeader>
           <DialogTitle>{t('onboarding.phasedOnboarding.welcome')}</DialogTitle>
           <DialogDescription>

@@ -21,36 +21,6 @@ interface SignupDialogProps {
   onClose: () => void
 }
 
-async function encryptAndStoreNsec(nsec: string, password: string) {
-  const enc = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
-    'deriveKey',
-  ])
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt']
-  )
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(nsec))
-
-  localStorage.setItem(
-    'nostube:encrypted-nsec',
-    JSON.stringify({
-      version: 1,
-      algorithm: 'AES-GCM',
-      kdf: 'PBKDF2',
-      iterations: 250000,
-      salt: btoa(String.fromCharCode(...salt)),
-      iv: btoa(String.fromCharCode(...iv)),
-      ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-    })
-  )
-}
-
 const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation()
   const [step, setStep] = useState<'generate' | 'backup' | 'done'>('generate')
@@ -77,12 +47,9 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     }
   }
 
-  const finishSignup = async (password?: string) => {
+  const finishSignup = async () => {
     setIsLoading(true)
     try {
-      if (password) {
-        await encryptAndStoreNsec(nsec, password)
-      }
       await login.nsec(nsec)
       localStorage.setItem('nostube_onboarding_new_user', '1')
       setStep('done')
@@ -104,7 +71,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md p-0 rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-0 relative">
           <DialogTitle className="text-xl font-semibold text-center">
             {step === 'generate' && t('auth.signup.title')}
@@ -140,7 +107,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
           {step === 'backup' && (
             <SeedBackupStep
               nsec={nsec}
-              onConfirmed={password => finishSignup(password)}
+              onConfirmed={finishSignup}
               onBack={() => setStep('generate')}
             />
           )}

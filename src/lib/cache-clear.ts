@@ -26,6 +26,7 @@ export async function checkAndClearCache(): Promise<boolean> {
       databases = [
         { name: 'nostr-events', version: 1 },
         { name: 'nostr-idb', version: 1 },
+        { name: 'nostube-p2p-hls-blob-cache', version: 1 },
       ] as IDBDatabaseInfo[]
     }
 
@@ -68,6 +69,10 @@ export async function checkAndClearCache(): Promise<boolean> {
       Promise.all(deletePromises),
       new Promise(resolve => setTimeout(resolve, 5000)), // 5 second timeout
     ])
+
+    if ('caches' in window) {
+      await window.caches.delete('nostube-p2p-hls-blobs-v1')
+    }
 
     if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
     return true

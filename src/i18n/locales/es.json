@@ -556,7 +556,9 @@
       "noServers": "No hay servidores de streaming configurados. Los vídeos se reproducirán directamente desde los servidores de alojamiento.",
       "addPlaceholder": "Añadir URL del servidor de streaming",
       "addButton": "Añadir servidor",
-      "resetButton": "Restablecer"
+      "resetButton": "Restablecer",
+      "p2pCacheTitle": "Compartición P2P de HLS",
+      "p2pCacheDescription": "Guarda segmentos HLS verificados localmente, pídelos a pares y comparte segmentos en caché con pares."
     },
     "cache": {
       "title": "Administración de Caché",

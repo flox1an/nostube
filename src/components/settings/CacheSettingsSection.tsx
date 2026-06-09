@@ -58,16 +58,30 @@ export function CacheSettingsSection() {
     setShowClearDialog(false)
 
     try {
-      // Delete the nostr-idb IndexedDB database
-      await new Promise<void>((resolve, reject) => {
-        const request = window.indexedDB.deleteDatabase('nostr-idb')
-        request.onsuccess = () => resolve()
-        request.onerror = () => reject(new Error('Failed to delete database'))
-        request.onblocked = () => {
-          // Database is blocked, but we'll reload anyway
-          resolve()
-        }
-      })
+      await Promise.all([
+        new Promise<void>((resolve, reject) => {
+          const request = window.indexedDB.deleteDatabase('nostr-idb')
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(new Error('Failed to delete database'))
+          request.onblocked = () => {
+            // Database is blocked, but we'll reload anyway
+            resolve()
+          }
+        }),
+        new Promise<void>(resolve => {
+          if (!('caches' in window)) {
+            resolve()
+            return
+          }
+          window.caches.delete('nostube-p2p-hls-blobs-v1').finally(() => resolve())
+        }),
+        new Promise<void>(resolve => {
+          const request = window.indexedDB.deleteDatabase('nostube-p2p-hls-blob-cache')
+          request.onsuccess = () => resolve()
+          request.onerror = () => resolve()
+          request.onblocked = () => resolve()
+        }),
+      ])
     } catch (error) {
       console.error('Failed to clear cache:', error)
     }

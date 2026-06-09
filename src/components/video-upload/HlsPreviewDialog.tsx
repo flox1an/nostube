@@ -7,6 +7,8 @@ import { Copy, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
+import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 
 interface HlsPreviewDialogProps {
   url: string | null
@@ -15,6 +17,8 @@ interface HlsPreviewDialogProps {
 }
 
 const LOG = '[HlsPreviewDialog]'
+const EMPTY_BLOSSOM_SERVERS: BlossomServer[] = []
+const EMPTY_CACHING_SERVERS: CachingServer[] = []
 
 export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -24,8 +28,10 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
   const appContext = useAppContextSafe()
-  const blossomServers = appContext?.config.blossomServers ?? []
-  const cachingServers = appContext?.config.cachingServers ?? []
+  const blossomServers = appContext?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
+  const cachingServers = appContext?.config.cachingServers ?? EMPTY_CACHING_SERVERS
+  const p2pHlsBlobCacheEnabled = appContext?.config.p2p?.hlsBlobCacheEnabled ?? false
+  const p2pBlobMesh = appContext ? getDefaultP2PBlobMesh(appContext.pool) : undefined
 
   useEffect(() => {
     console.log(LOG, 'effect triggered', {
@@ -70,6 +76,8 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
           blossomServers,
           cachingServers,
           masterUrl: url,
+          p2pHlsBlobCacheEnabled,
+          p2pBlobMesh,
         }),
       })
       hlsRef.current = hls
@@ -159,7 +167,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
       setIsLoading(false)
       setError('HLS playback is not supported in this browser.')
     }, 0)
-  }, [url, open, blossomServers, cachingServers, videoElement])
+  }, [url, open, blossomServers, cachingServers, p2pHlsBlobCacheEnabled, p2pBlobMesh, videoElement])
 
   useEffect(() => {
     if (!open) {

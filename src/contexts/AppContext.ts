@@ -46,6 +46,11 @@ export interface MediaConfig {
   }
 }
 
+export interface P2PConfig {
+  /** Cache verified HLS Blossom blobs locally and prepare them for future P2P sharing */
+  hlsBlobCacheEnabled: boolean
+}
+
 export interface AppConfig {
   /** Current theme */
   theme: Theme
@@ -67,6 +72,8 @@ export interface AppConfig {
   showAudioContent?: boolean
   /** Media failover configuration */
   media?: MediaConfig
+  /** Peer-to-peer and verified browser cache configuration */
+  p2p?: P2PConfig
   /** Selected preset pubkey (null = use default preset) */
   selectedPresetPubkey?: string | null
   /** Preferred default video quality: 'highest' selects best available, '720p' selects mid quality */

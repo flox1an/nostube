@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { XIcon, Cog, LoaderIcon, ChevronDown, ChevronRight } from 'lucide-react'
 import { normalizeRelayUrl, cn } from '@/lib/utils'
 import { isBlossomServerBlocked } from '@/constants/relays'
@@ -545,6 +547,7 @@ function CachingSubSection() {
   )
   const serverUrls = useMemo(() => cachingServers.map(s => s.url), [cachingServers])
   const serverStatuses = useServerStatus(serverUrls)
+  const p2pHlsBlobCacheEnabled = config.p2p?.hlsBlobCacheEnabled ?? false
 
   useEffect(() => {
     const current = config.cachingServers
@@ -595,8 +598,33 @@ function CachingSubSection() {
     })
   }
 
+  const handleToggleP2PCache = (enabled: boolean) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      p2p: {
+        ...currentConfig.p2p,
+        hlsBlobCacheEnabled: enabled,
+      },
+    }))
+  }
+
   return (
     <>
+      <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="p2p-hls-blob-cache" className="text-sm font-medium">
+            {t('settings.caching.p2pCacheTitle')}
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.caching.p2pCacheDescription')}
+          </p>
+        </div>
+        <Switch
+          id="p2p-hls-blob-cache"
+          checked={p2pHlsBlobCacheEnabled}
+          onCheckedChange={handleToggleP2PCache}
+        />
+      </div>
       <div className="text-xs text-muted-foreground space-y-1">
         <p>{t('settings.caching.description')}</p>
         <ul className="list-disc list-inside ml-1">

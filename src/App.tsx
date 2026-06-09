@@ -25,11 +25,13 @@ import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
 import { PresetProvider } from '@/contexts/PresetContext'
 import { useAppContext } from '@/hooks'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
 import { defaultResizeServer } from '@/constants/servers'
+import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 
 const defaultConfig: AppConfig = {
   theme: 'dark',
@@ -41,6 +43,9 @@ const defaultConfig: AppConfig = {
   showYouTubeContent: true,
   showAudioContent: true,
   thumbResizeServerUrl: defaultResizeServer,
+  p2p: {
+    hlsBlobCacheEnabled: false,
+  },
   media: {
     failover: {
       enabled: true,
@@ -128,6 +133,48 @@ function RelayPoolSync() {
   return null
 }
 
+function P2PHlsBlobSharingSync() {
+  const { config, pool } = useAppContext()
+  const { user } = useCurrentUser()
+  const { readRelays, writeRelays } = useUserRelaysContext()
+  const pubkey = user?.pubkey
+  const signer = user?.signer
+
+  useEffect(() => {
+    const mesh = getDefaultP2PBlobMesh(pool)
+    const enabled = config.p2p?.hlsBlobCacheEnabled ?? false
+
+    if (!enabled || !pubkey || !signer) {
+      mesh.stop()
+      return
+    }
+
+    const relaySet = new Set<string>([
+      ...(readRelays ?? []),
+      ...(writeRelays ?? []),
+      ...config.relays.map(relay => relay.url),
+    ])
+
+    mesh.start({
+      pubkey,
+      signer,
+      relays: Array.from(relaySet),
+    })
+
+    return () => mesh.stop()
+  }, [
+    config.p2p?.hlsBlobCacheEnabled,
+    config.relays,
+    pool,
+    pubkey,
+    readRelays,
+    signer,
+    writeRelays,
+  ])
+
+  return null
+}
+
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
@@ -147,6 +194,7 @@ export function App() {
                         <AccountRestoreInit />
                         <UserRelaySync />
                         <RelayPoolSync />
+                        <P2PHlsBlobSharingSync />
                         <BatchedProfileLoaderInit />
                         <TrustScoreProviderInit />
                         <LoginTimeTrackingInit />

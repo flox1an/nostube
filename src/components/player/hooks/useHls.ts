@@ -3,6 +3,8 @@ import Hls from 'hls.js'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@/lib/hls-failover-debug'
+import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 
 export interface HlsQualityLevel {
   index: number
@@ -23,6 +25,8 @@ interface UseHlsResult {
 
 // Empty array constant to avoid new array on every render
 const EMPTY_LEVELS: HlsQualityLevel[] = []
+const EMPTY_BLOSSOM_SERVERS: BlossomServer[] = []
+const EMPTY_CACHING_SERVERS: CachingServer[] = []
 
 function getHighestLevelIndex(levels: HlsQualityLevel[]) {
   return [...levels].sort((a, b) => b.height - a.height || b.bitrate - a.bitrate)[0]?.index
@@ -64,8 +68,10 @@ export function useHls(
 ): UseHlsResult {
   const hlsRef = useRef<Hls | null>(null)
   const appContext = useAppContextSafe()
-  const blossomServers = appContext?.config.blossomServers ?? []
-  const cachingServers = appContext?.config.cachingServers ?? []
+  const blossomServers = appContext?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
+  const cachingServers = appContext?.config.cachingServers ?? EMPTY_CACHING_SERVERS
+  const p2pHlsBlobCacheEnabled = appContext?.config.p2p?.hlsBlobCacheEnabled ?? false
+  const p2pBlobMesh = appContext ? getDefaultP2PBlobMesh(appContext.pool) : undefined
   // State for HLS-specific data (set via HLS event callbacks)
   const [hlsLevels, setHlsLevels] = useState<HlsQualityLevel[]>(EMPTY_LEVELS)
   const [hlsCurrentLevel, setHlsCurrentLevel] = useState(-1)
@@ -144,6 +150,8 @@ export function useHls(
         videoId,
         masterUrl: src,
         localhostProxyMode,
+        p2pHlsBlobCacheEnabled,
+        p2pBlobMesh,
       }),
     })
 
@@ -379,6 +387,8 @@ export function useHls(
     shouldBeActive,
     blossomServers,
     cachingServers,
+    p2pHlsBlobCacheEnabled,
+    p2pBlobMesh,
     authorPubkey,
     videoId,
     localhostProxyMode,

@@ -933,7 +933,7 @@ export function VideoDebugInfo({
                           <ChevronDown className="h-4 w-4 ml-2" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-80">
+                      <DropdownMenuContent align="end" className="z-[100] w-80">
                         <DropdownMenuLabel>Broadcast to relays</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <div className="max-h-64 overflow-y-auto">

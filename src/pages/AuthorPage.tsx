@@ -1315,7 +1315,11 @@ export function AuthorPage() {
                 <section key={`playlist-tab-${playlist.identifier}`} className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <h2 className="text-base font-semibold truncate">{playlist.name}</h2>
+                      <h2 className="text-base font-semibold truncate">
+                        <Link to={`/playlist/${playlistNaddr}`} className="hover:underline">
+                          {playlist.name}
+                        </Link>
+                      </h2>
                       <p className="text-xs text-muted-foreground">
                         {playlist.videos.length} videos
                       </p>

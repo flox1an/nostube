@@ -2,33 +2,21 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
-import { type EventTemplate, type NostrEvent } from 'nostr-tools'
+import { type EventTemplate } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
 import { type BlobDescriptor } from 'blossom-client-sdk'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
+import { buildDvmEncryptedContent, type DvmHandlerInfo, type TranscodeCodec } from '@/lib/dvm-utils'
 import {
-  parseDvmResultContent,
-  parseCodecsFromMimetype,
-  RESOLUTION_DIMENSIONS,
-  buildDvmEncryptedContent,
-  parseDvmEncryptedStatus,
-  parseDvmBid,
-  type DvmBid,
-  type DvmHandlerInfo,
-  type TranscodeCodec,
-} from '@/lib/dvm-utils'
+  DVMTranscodeSession,
+  DVM_REQUEST_KIND,
+  DVM_EVENT_EXPIRATION_SECS,
+  TRANSCODE_JOB_TIMEOUT_MS,
+  type DVMFeedback,
+} from '@/lib/dvm-transcode-session'
 import { extractBlossomHash } from '@/utils/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
-import type { Subscription } from 'rxjs'
 import { useMemo } from 'react'
-
-// DVM kinds for video transform
-const DVM_REQUEST_KIND = 5207
-const DVM_RESULT_KIND = 6207
-const DVM_FEEDBACK_KIND = 7000
-
-// DVM event expiration (24 hours)
-const DVM_EVENT_EXPIRATION_SECS = 24 * 60 * 60
 
 export type TranscodeStatus =
   | 'idle'
@@ -79,18 +67,6 @@ export interface TranscodeProgress {
   }
 }
 
-/**
- * Detect the current transcode phase from a DVM feedback message.
- * DVM sends "Transcoding..." during re-encoding and "Uploading..." when uploading results.
- */
-function detectPhaseFromMessage(message?: string): 'transcoding' | 'uploading' | 'mirroring' {
-  if (!message) return 'transcoding'
-  const lower = message.toLowerCase()
-  if (lower.startsWith('uploading')) return 'uploading'
-  if (lower.startsWith('transcoding') || lower.startsWith('re-encoding')) return 'transcoding'
-  return 'transcoding'
-}
-
 export interface UseDvmTranscodeOptions {
   onComplete?: (video: VideoVariant) => void
   onAllComplete?: () => void
@@ -111,16 +87,6 @@ export interface UseDvmTranscodeResult {
   transcodedVideo: VideoVariant | null
 }
 
-// 12 hour timeout for resumable jobs
-const TRANSCODE_JOB_TIMEOUT_MS = 12 * 60 * 60 * 1000
-
-/**
- * Check if a Nostr event has the encrypted tag
- */
-function hasEncryptedTag(event: NostrEvent): boolean {
-  return event.tags.some(t => t[0] === 'encrypted')
-}
-
 /**
  * Hook for managing DVM video transcoding workflow
  * Supports resuming transcodes after navigation away
@@ -139,7 +105,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
   const [transcodedVideo, setTranscodedVideo] = useState<VideoVariant | null>(null)
 
   const abortControllerRef = useRef<AbortController | null>(null)
-  const subscriptionRef = useRef<Subscription | null>(null)
+  const sessionRef = useRef<DVMTranscodeSession | null>(null)
   const requestEventIdRef = useRef<string | null>(null)
   const currentStateRef = useRef<PersistableTranscodeState | null>(null)
 
@@ -152,426 +118,17 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
     return Array.from(combined)
   }, [config.relays, relayOverride])
 
-  // Cleanup subscriptions on unmount
+  // Stable ref so callbacks always have the current relay set without deps
+  const dvmRelaysRef = useRef(dvmRelays)
+  dvmRelaysRef.current = dvmRelays
+
+  // Cleanup session on unmount
   useEffect(() => {
     return () => {
-      subscriptionRef.current?.unsubscribe()
+      sessionRef.current?.cancel()
       abortControllerRef.current?.abort()
     }
   }, [])
-
-  /**
-   * Collect bids for a job request
-   */
-  const collectBids = useCallback(
-    async (requestEventId: string, timeoutMs: number = 5000): Promise<DvmBid[]> => {
-      return new Promise(resolve => {
-        const bids: DvmBid[] = []
-        const sub = relayPool
-          .subscription(dvmRelays, [
-            {
-              kinds: [DVM_FEEDBACK_KIND],
-              '#e': [requestEventId],
-            },
-          ])
-          .subscribe({
-            next: event => {
-              if (typeof event === 'string') return
-              const nostrEvent = event as NostrEvent
-
-              // Log the feedback event (bids are usually unencrypted)
-              console.log('[DVM] Bid feedback event:', {
-                id: nostrEvent.id,
-                pubkey: nostrEvent.pubkey,
-                content: nostrEvent.content,
-                tags: nostrEvent.tags,
-              })
-
-              const bid = parseDvmBid(event)
-              if (bid) {
-                bids.push(bid)
-              }
-            },
-          })
-
-        setTimeout(() => {
-          sub.unsubscribe()
-          resolve(bids)
-        }, timeoutMs)
-      })
-    },
-    [dvmRelays]
-  )
-
-  /**
-   * Approve a DVM bid
-   */
-  const approveBid = useCallback(
-    async (requestEventId: string, dvmPubkey: string) => {
-      if (!user) throw new Error('User not logged in')
-
-      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-
-      const approvalEvent: EventTemplate = {
-        kind: DVM_FEEDBACK_KIND,
-        content: '',
-        created_at: nowInSecs(),
-        tags: [
-          ['e', requestEventId],
-          ['p', dvmPubkey],
-          ['status', 'approved'],
-          ['expiration', String(nowInSecs() + DVM_EVENT_EXPIRATION_SECS)],
-        ],
-      }
-
-      const signedApproval = await user.signer.signEvent(approvalEvent)
-
-      console.log('[DVM] Sending bid approval:', {
-        requestEventId,
-        dvmPubkey,
-        tags: signedApproval.tags,
-      })
-
-      await relayPool.publish(writeRelays, signedApproval)
-      return signedApproval
-    },
-    [user, config.relays]
-  )
-
-  /**
-   * Subscribe to DVM responses for a job request
-   * Supports both encrypted (NIP-04) and unencrypted responses
-   */
-  const subscribeToDvmResponses = useCallback(
-    (
-      requestEventId: string,
-      dvmPubkey: string,
-      originalDuration?: number,
-      requestedResolution?: string,
-      wasEncrypted: boolean = false
-    ): Promise<VideoVariant> => {
-      return new Promise((resolve, reject) => {
-        const timeout = setTimeout(
-          () => {
-            subscriptionRef.current?.unsubscribe()
-            reject(new Error('DVM job timed out after 10 minutes'))
-          },
-          10 * 60 * 1000
-        ) // 10 minute timeout
-
-        subscriptionRef.current = relayPool
-          .subscription(dvmRelays, [
-            {
-              kinds: [DVM_FEEDBACK_KIND, DVM_RESULT_KIND],
-              authors: [dvmPubkey],
-              '#e': [requestEventId],
-            },
-          ])
-          .subscribe({
-            next: async event => {
-              if (typeof event === 'string') return // EOSE
-
-              const nostrEvent = event as NostrEvent
-              const currentUser = user // user from outer scope
-
-              if (nostrEvent.kind === DVM_FEEDBACK_KIND) {
-                // Handle feedback - check if encrypted
-                const isEncrypted = hasEncryptedTag(nostrEvent)
-
-                let feedbackStatus: string | undefined
-                let message: string | undefined
-                let eta: number | undefined
-
-                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
-                  // Decrypt the status content
-                  try {
-                    const decrypted = await currentUser.signer.nip04.decrypt(
-                      dvmPubkey,
-                      nostrEvent.content
-                    )
-
-                    // Log the unencrypted event content
-                    console.log('[DVM] Decrypted feedback event:', {
-                      id: nostrEvent.id,
-                      pubkey: nostrEvent.pubkey,
-                      content: decrypted,
-                      tags: nostrEvent.tags,
-                    })
-
-                    const parsed = parseDvmEncryptedStatus(decrypted)
-                    if (parsed) {
-                      feedbackStatus = parsed.status
-                      message = parsed.message || undefined
-                      eta = parsed.eta || undefined
-                    } else if (import.meta.env.DEV) {
-                      console.warn('[DVM] Failed to parse decrypted status:', decrypted)
-                    }
-                  } catch (err) {
-                    console.warn('[DVM] Failed to decrypt status event:', err)
-                    // Try to fall back to tags if decryption fails
-                    const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
-                    if (statusTag) {
-                      const [, status, statusExtraInfo] = statusTag
-                      feedbackStatus = status
-                      message = statusExtraInfo || 'Processing...'
-                    }
-                  }
-                } else {
-                  // Log the unencrypted event
-                  console.log('[DVM] Feedback event:', {
-                    id: nostrEvent.id,
-                    pubkey: nostrEvent.pubkey,
-                    content: nostrEvent.content,
-                    tags: nostrEvent.tags,
-                  })
-
-                  // Parse from tags (unencrypted)
-                  const statusTag = nostrEvent.tags.find(t => t[0] === 'status')
-                  if (statusTag) {
-                    const [, status, statusExtraInfo] = statusTag
-                    feedbackStatus = status
-                    const contentTag = nostrEvent.tags.find(t => t[0] === 'content')
-                    message =
-                      contentTag?.[1] ||
-                      statusExtraInfo ||
-                      (feedbackStatus === 'processing' ? 'Processing video...' : 'Processing...')
-                    const etaTag = nostrEvent.tags.find(t => t[0] === 'eta')
-                    eta = etaTag?.[1] ? parseInt(etaTag[1], 10) : undefined
-                  }
-                }
-
-                if (feedbackStatus) {
-                  // Extract percentage from progress tag first, then fallback to message regex
-                  const progressTag = nostrEvent.tags.find(t => t[0] === 'progress')
-                  let percentage = progressTag?.[1] ? parseInt(progressTag[1], 10) : undefined
-
-                  if (percentage === undefined) {
-                    const percentMatch = message?.match(/(\d+)%/)
-                    percentage = percentMatch ? parseInt(percentMatch[1], 10) : undefined
-                  }
-
-                  if (feedbackStatus === 'processing' || feedbackStatus === 'partial') {
-                    const phase = detectPhaseFromMessage(message)
-                    setProgress(prev => {
-                      // Skip duplicate consecutive messages
-                      const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
-                      if (
-                        lastMsg?.message === message &&
-                        prev.percentage === percentage &&
-                        prev.phase === phase
-                      ) {
-                        return {
-                          ...prev,
-                          status: 'transcoding',
-                          message: message || '',
-                          eta,
-                          percentage,
-                          phase,
-                        }
-                      }
-                      return {
-                        status: 'transcoding',
-                        message: message || 'Processing...',
-                        eta,
-                        percentage,
-                        phase,
-                        statusMessages: [
-                          ...prev.statusMessages,
-                          {
-                            timestamp: Date.now(),
-                            message: message || 'Processing...',
-                            percentage,
-                          },
-                        ],
-                      }
-                    })
-                  } else if (feedbackStatus === 'error') {
-                    clearTimeout(timeout)
-                    subscriptionRef.current?.unsubscribe()
-                    reject(new Error(message || 'DVM processing error'))
-                  }
-                }
-              } else if (nostrEvent.kind === DVM_RESULT_KIND) {
-                // Handle result - check if encrypted
-                clearTimeout(timeout)
-                subscriptionRef.current?.unsubscribe()
-
-                let resultContent = nostrEvent.content
-                const isEncrypted = hasEncryptedTag(nostrEvent)
-
-                if (isEncrypted && wasEncrypted && currentUser?.signer.nip04) {
-                  // Decrypt the result content
-                  try {
-                    resultContent = await currentUser.signer.nip04.decrypt(
-                      dvmPubkey,
-                      nostrEvent.content
-                    )
-
-                    // Log the unencrypted result
-                    console.log('[DVM] Decrypted result event:', {
-                      id: nostrEvent.id,
-                      pubkey: nostrEvent.pubkey,
-                      content: resultContent,
-                      tags: nostrEvent.tags,
-                    })
-                  } catch {
-                    reject(new Error('Failed to decrypt DVM result'))
-                    return
-                  }
-                } else {
-                  // Log the unencrypted result
-                  console.log('[DVM] Result event:', {
-                    id: nostrEvent.id,
-                    pubkey: nostrEvent.pubkey,
-                    content: nostrEvent.content,
-                    tags: nostrEvent.tags,
-                  })
-                }
-
-                const result = parseDvmResultContent(resultContent)
-                if (!result || !result.urls || result.urls.length === 0) {
-                  reject(new Error('Invalid DVM result: no URLs returned'))
-                  return
-                }
-
-                // Parse codecs from mimetype
-                const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
-
-                // Use duration from DVM result, or fall back to original video duration
-                const duration = result.duration || originalDuration || 0
-
-                // Calculate bitrate if we have size and duration
-                // Bitrate = (size in bytes * 8) / duration in seconds
-                let bitrate = result.bitrate
-                if (!bitrate && result.size_bytes && duration > 0) {
-                  bitrate = Math.round((result.size_bytes * 8) / duration)
-                }
-
-                // Use resolution from result, or fall back to requested resolution
-                const resolution = result.resolution || requestedResolution || '720p'
-                const dimension = RESOLUTION_DIMENSIONS[resolution] || '1280x720'
-
-                // Build VideoVariant from DVM result
-                const videoVariant: VideoVariant = {
-                  url: result.urls[0],
-                  dimension,
-                  sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
-                  duration,
-                  bitrate,
-                  videoCodec,
-                  audioCodec,
-                  uploadedBlobs: [],
-                  mirroredBlobs: [],
-                  inputMethod: 'url',
-                  qualityLabel: resolution,
-                }
-
-                resolve(videoVariant)
-              }
-            },
-            error: err => {
-              clearTimeout(timeout)
-              reject(err)
-            },
-          })
-      })
-    },
-    [dvmRelays, user]
-  )
-
-  /**
-   * Query for an existing DVM result event (for resuming)
-   */
-  const queryForExistingResult = useCallback(
-    async (requestEventId: string, dvmPubkey: string): Promise<NostrEvent | null> => {
-      return new Promise(resolve => {
-        let found = false
-        const timeout = setTimeout(() => {
-          if (!found) {
-            sub.unsubscribe()
-            resolve(null)
-          }
-        }, 5000)
-
-        const sub = relayPool
-          .request(dvmRelays, [
-            {
-              kinds: [DVM_RESULT_KIND],
-              authors: [dvmPubkey],
-              '#e': [requestEventId],
-              limit: 1,
-            },
-          ])
-          .subscribe({
-            next: event => {
-              if (typeof event === 'string') return // EOSE
-              found = true
-              clearTimeout(timeout)
-              sub.unsubscribe()
-
-              const nostrEvent = event as NostrEvent
-              console.log('[DVM] Found existing result event:', {
-                id: nostrEvent.id,
-                pubkey: nostrEvent.pubkey,
-                content: nostrEvent.content,
-                tags: nostrEvent.tags,
-              })
-
-              resolve(nostrEvent)
-            },
-            complete: () => {
-              if (!found) {
-                clearTimeout(timeout)
-                resolve(null)
-              }
-            },
-          })
-      })
-    },
-    [dvmRelays]
-  )
-
-  /**
-   * Build VideoVariant from DVM result content
-   */
-  const buildVideoVariantFromResult = useCallback(
-    (
-      result: ReturnType<typeof parseDvmResultContent>,
-      originalDuration?: number,
-      requestedResolution?: string
-    ): VideoVariant => {
-      if (!result || !result.urls || result.urls.length === 0) {
-        throw new Error('Invalid DVM result: no URLs returned')
-      }
-
-      const { videoCodec, audioCodec } = parseCodecsFromMimetype(result.mimetype || '')
-      const duration = result.duration || originalDuration || 0
-
-      let bitrate = result.bitrate
-      if (!bitrate && result.size_bytes && duration > 0) {
-        bitrate = Math.round((result.size_bytes * 8) / duration)
-      }
-
-      // Use resolution from result, or fall back to requested resolution, or default to 720p
-      const resolution = result.resolution || requestedResolution || '720p'
-      const dimension = RESOLUTION_DIMENSIONS[resolution] || '1280x720'
-
-      return {
-        url: result.urls[0],
-        dimension,
-        sizeMB: result.size_bytes ? result.size_bytes / (1024 * 1024) : undefined,
-        duration,
-        bitrate,
-        videoCodec,
-        audioCodec,
-        uploadedBlobs: [],
-        mirroredBlobs: [],
-        inputMethod: 'url',
-        qualityLabel: resolution,
-      }
-    },
-    []
-  )
 
   /**
    * Mirror transcoded video to user's Blossom servers
@@ -790,7 +347,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
           ],
         }))
 
-        const bids = await collectBids(signedRequest.id)
+        const bids = await sessionRef.current!.collectBids(signedRequest.id)
         if (bids.length === 0) {
           throw new Error('No DVMs responded to the request')
         }
@@ -804,7 +361,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }
 
         // Approve
-        await approveBid(signedRequest.id, selectedDvmPubkey!)
+        await sessionRef.current!.approveBid(signedRequest.id, selectedDvmPubkey!, writeRelays)
 
         setStatus('transcoding')
         setProgress(prev => ({
@@ -860,13 +417,48 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         queue: queueInfo,
       }))
 
-      const transcodedResult = await subscribeToDvmResponses(
-        signedRequest.id,
-        selectedDvmPubkey!,
+      const transcodedResult = await sessionRef.current!.subscribeToDvmResponses({
+        requestEventId: signedRequest.id,
+        dvmPubkey: selectedDvmPubkey!,
         originalDuration,
-        resolution,
-        wasEncrypted
-      )
+        requestedResolution: resolution,
+        wasEncrypted,
+        onFeedback: (feedback: DVMFeedback) => {
+          setProgress(prev => {
+            // Skip duplicate consecutive messages
+            const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
+            if (
+              lastMsg?.message === feedback.message &&
+              prev.percentage === feedback.percentage &&
+              prev.phase === feedback.phase
+            ) {
+              return {
+                ...prev,
+                status: 'transcoding',
+                message: feedback.message,
+                eta: feedback.eta,
+                percentage: feedback.percentage,
+                phase: feedback.phase,
+              }
+            }
+            return {
+              status: 'transcoding',
+              message: feedback.message,
+              eta: feedback.eta,
+              percentage: feedback.percentage,
+              phase: feedback.phase,
+              statusMessages: [
+                ...prev.statusMessages,
+                {
+                  timestamp: Date.now(),
+                  message: feedback.message,
+                  percentage: feedback.percentage,
+                },
+              ],
+            }
+          })
+        },
+      })
 
       // Check if cancelled
       if (abortControllerRef.current?.signal.aborted) {
@@ -899,15 +491,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
       return { ...mirroredVideo, dvmPubkey: selectedDvmPubkey! }
     },
-    [
-      config.relays,
-      user,
-      collectBids,
-      approveBid,
-      subscribeToDvmResponses,
-      mirrorTranscodedVideo,
-      onStateChange,
-    ]
+    [config.relays, user, mirrorTranscodedVideo, onStateChange]
   )
 
   /**
@@ -953,25 +537,22 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       abortControllerRef.current = new AbortController()
       currentStateRef.current = persistedState
 
+      // Create a fresh session for this resume operation
+      sessionRef.current?.cancel()
+      sessionRef.current = new DVMTranscodeSession(dvmRelaysRef.current, user, relayPool)
+
       try {
-        // Check if result already exists (DVM finished while we were away)
-        const existingResult = await queryForExistingResult(
+        const existingVideo = await sessionRef.current.queryForExistingResult(
           persistedState.requestEventId,
-          persistedState.dvmPubkey
+          persistedState.dvmPubkey,
+          persistedState.originalDuration,
+          currentResolution
         )
 
         let mirroredVideo: VideoVariant
 
-        if (existingResult) {
+        if (existingVideo) {
           // DVM finished - start mirroring
-          const result = parseDvmResultContent(existingResult.content)
-          const videoVariant = buildVideoVariantFromResult(
-            result,
-            persistedState.originalDuration,
-            currentResolution
-          )
-
-          // Update state to mirroring
           const mirroringState: PersistableTranscodeState = {
             ...persistedState,
             status: 'mirroring',
@@ -994,7 +575,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
             queue: queueInfo,
           }))
 
-          mirroredVideo = await mirrorTranscodedVideo(videoVariant)
+          mirroredVideo = await mirrorTranscodedVideo(existingVideo)
         } else {
           // DVM still processing - resubscribe
           setStatus('transcoding')
@@ -1011,12 +592,46 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
 
           requestEventIdRef.current = persistedState.requestEventId
 
-          const transcodedResult = await subscribeToDvmResponses(
-            persistedState.requestEventId,
-            persistedState.dvmPubkey,
-            persistedState.originalDuration,
-            currentResolution
-          )
+          const transcodedResult = await sessionRef.current.subscribeToDvmResponses({
+            requestEventId: persistedState.requestEventId,
+            dvmPubkey: persistedState.dvmPubkey,
+            originalDuration: persistedState.originalDuration,
+            requestedResolution: currentResolution,
+            onFeedback: (feedback: DVMFeedback) => {
+              setProgress(prev => {
+                const lastMsg = prev.statusMessages[prev.statusMessages.length - 1]
+                if (
+                  lastMsg?.message === feedback.message &&
+                  prev.percentage === feedback.percentage &&
+                  prev.phase === feedback.phase
+                ) {
+                  return {
+                    ...prev,
+                    status: 'transcoding',
+                    message: feedback.message,
+                    eta: feedback.eta,
+                    percentage: feedback.percentage,
+                    phase: feedback.phase,
+                  }
+                }
+                return {
+                  status: 'transcoding',
+                  message: feedback.message,
+                  eta: feedback.eta,
+                  percentage: feedback.percentage,
+                  phase: feedback.phase,
+                  statusMessages: [
+                    ...prev.statusMessages,
+                    {
+                      timestamp: Date.now(),
+                      message: feedback.message,
+                      percentage: feedback.percentage,
+                    },
+                  ],
+                }
+              })
+            },
+          })
 
           // Check if cancelled
           if (abortControllerRef.current?.signal.aborted) {
@@ -1158,17 +773,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
         }))
       }
     },
-    [
-      user,
-      onStateChange,
-      onComplete,
-      onAllComplete,
-      queryForExistingResult,
-      buildVideoVariantFromResult,
-      subscribeToDvmResponses,
-      mirrorTranscodedVideo,
-      processResolution,
-    ]
+    [user, onStateChange, onComplete, onAllComplete, mirrorTranscodedVideo, processResolution]
   )
 
   /**
@@ -1185,6 +790,10 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
       setError(null)
       setTranscodedVideo(null)
       abortControllerRef.current = new AbortController()
+
+      // Create a fresh session for this transcode job
+      sessionRef.current?.cancel()
+      sessionRef.current = new DVMTranscodeSession(dvmRelaysRef.current, user, relayPool)
 
       const completedResolutions: string[] = []
 
@@ -1300,7 +909,7 @@ export function useDvmTranscode(options: UseDvmTranscodeOptions = {}): UseDvmTra
    */
   const cancel = useCallback(() => {
     abortControllerRef.current?.abort()
-    subscriptionRef.current?.unsubscribe()
+    sessionRef.current?.cancel()
 
     // Clear persisted state
     currentStateRef.current = null

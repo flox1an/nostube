@@ -4,7 +4,7 @@
  * Shared types for the upload manager provider and related hooks.
  */
 
-import type { Subscription } from 'rxjs'
+import type { DVMTranscodeSession } from '@/lib/dvm-transcode-session'
 import type { UploadTask, TranscodeState } from '@/types/upload-manager'
 import type { UploadDraft } from '@/types/upload-draft'
 import type { VideoVariant } from '@/lib/video-processing'
@@ -15,7 +15,7 @@ import type { PublishedVideo, WorkflowState } from '@/lib/video-publishing-workf
  * Active transcode job state
  */
 export interface TranscodeJob {
-  subscription: Subscription | null
+  session: DVMTranscodeSession | null
   abortController: AbortController
   onComplete?: (video: VideoVariant) => void
   onAllComplete?: () => void

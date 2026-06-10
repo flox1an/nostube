@@ -1,7 +1,86 @@
 /**
  * Cache clearing utility
- * This runs on app initialization to clear IndexedDB if requested
+ * This runs on app initialization to clear IndexedDB if requested.
  */
+
+const FALLBACK_INDEXED_DB_CACHE_NAMES = [
+  'nostr-events',
+  'nostr-idb',
+  'nostube-p2p-hls-blob-cache',
+]
+
+function deleteDatabase(name: string): Promise<void> {
+  return new Promise(resolve => {
+    if (import.meta.env.DEV) console.log(`[Cache Clear] Deleting database: ${name}`)
+
+    const request = window.indexedDB.deleteDatabase(name)
+    let settled = false
+
+    const finish = (message?: string) => {
+      if (settled) return
+      settled = true
+      if (message && import.meta.env.DEV) console.log(message)
+      resolve()
+    }
+
+    request.onsuccess = () => finish(`[Cache Clear] Successfully deleted: ${name}`)
+    request.onerror = () => {
+      console.error(`[Cache Clear] Failed to delete: ${name}`)
+      finish()
+    }
+    request.onblocked = () => {
+      console.warn(`[Cache Clear] Database ${name} is blocked`)
+      finish()
+    }
+  })
+}
+
+async function getIndexedDatabaseNames(): Promise<string[]> {
+  if ('databases' in window.indexedDB) {
+    const databases = await window.indexedDB.databases()
+
+    if (import.meta.env.DEV) {
+      console.log(
+        '[Cache Clear] Found databases:',
+        databases.map(db => db.name)
+      )
+    }
+
+    return databases
+      .map(database => database.name)
+      .filter((name): name is string => typeof name === 'string' && name.length > 0)
+  }
+
+  return FALLBACK_INDEXED_DB_CACHE_NAMES
+}
+
+async function deleteIndexedDatabaseCaches(): Promise<void> {
+  const databaseNames = await getIndexedDatabaseNames()
+
+  await Promise.race([
+    Promise.all(databaseNames.map(deleteDatabase)),
+    new Promise(resolve => setTimeout(resolve, 5000)),
+  ])
+}
+
+async function deleteCacheStorageCaches(): Promise<void> {
+  if (!('caches' in window)) return
+
+  const cacheNames = await window.caches.keys()
+  await Promise.all(cacheNames.map(cacheName => window.caches.delete(cacheName)))
+}
+
+export async function clearBrowserCacheData(): Promise<boolean> {
+  try {
+    await Promise.all([deleteIndexedDatabaseCaches(), deleteCacheStorageCaches()])
+
+    if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
+    return true
+  } catch (error) {
+    console.error('[Cache Clear] Error clearing cache:', error)
+    return false
+  }
+}
 
 export async function checkAndClearCache(): Promise<boolean> {
   const shouldClear = sessionStorage.getItem('clearCacheOnLoad')
@@ -15,69 +94,5 @@ export async function checkAndClearCache(): Promise<boolean> {
 
   if (import.meta.env.DEV) console.log('[Cache Clear] Starting cache clear operation...')
 
-  try {
-    // Get all databases
-    let databases: IDBDatabaseInfo[] = []
-
-    if ('databases' in window.indexedDB) {
-      databases = await window.indexedDB.databases()
-    } else {
-      // Fallback for browsers without databases() API
-      databases = [
-        { name: 'nostr-events', version: 1 },
-        { name: 'nostr-idb', version: 1 },
-        { name: 'nostube-p2p-hls-blob-cache', version: 1 },
-      ] as IDBDatabaseInfo[]
-    }
-
-    if (import.meta.env.DEV) {
-      console.log(
-        '[Cache Clear] Found databases:',
-        databases.map(db => db.name)
-      )
-    }
-
-    // Delete each database
-    const deletePromises = databases
-      .filter(db => db.name)
-      .map(db => {
-        return new Promise<void>((resolve, _reject) => {
-          if (import.meta.env.DEV) console.log(`[Cache Clear] Deleting database: ${db.name}`)
-          const request = window.indexedDB.deleteDatabase(db.name!)
-
-          request.onsuccess = () => {
-            if (import.meta.env.DEV) console.log(`[Cache Clear] Successfully deleted: ${db.name}`)
-            resolve()
-          }
-
-          request.onerror = () => {
-            console.error(`[Cache Clear] Failed to delete: ${db.name}`)
-            // Don't reject, continue with others
-            resolve()
-          }
-
-          request.onblocked = () => {
-            console.warn(`[Cache Clear] Database ${db.name} is blocked`)
-            // Don't wait, continue
-            resolve()
-          }
-        })
-      })
-
-    // Wait for all deletions with timeout
-    await Promise.race([
-      Promise.all(deletePromises),
-      new Promise(resolve => setTimeout(resolve, 5000)), // 5 second timeout
-    ])
-
-    if ('caches' in window) {
-      await window.caches.delete('nostube-p2p-hls-blobs-v1')
-    }
-
-    if (import.meta.env.DEV) console.log('[Cache Clear] Cache clear completed')
-    return true
-  } catch (error) {
-    console.error('[Cache Clear] Error clearing cache:', error)
-    return false
-  }
+  return clearBrowserCacheData()
 }

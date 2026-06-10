@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { clearBrowserCacheData } from '@/lib/cache-clear'
+import { resetNostrRuntimeCache } from '@/nostr/core'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,30 +60,8 @@ export function CacheSettingsSection() {
     setShowClearDialog(false)
 
     try {
-      await Promise.all([
-        new Promise<void>((resolve, reject) => {
-          const request = window.indexedDB.deleteDatabase('nostr-idb')
-          request.onsuccess = () => resolve()
-          request.onerror = () => reject(new Error('Failed to delete database'))
-          request.onblocked = () => {
-            // Database is blocked, but we'll reload anyway
-            resolve()
-          }
-        }),
-        new Promise<void>(resolve => {
-          if (!('caches' in window)) {
-            resolve()
-            return
-          }
-          window.caches.delete('nostube-p2p-hls-blobs-v1').finally(() => resolve())
-        }),
-        new Promise<void>(resolve => {
-          const request = window.indexedDB.deleteDatabase('nostube-p2p-hls-blob-cache')
-          request.onsuccess = () => resolve()
-          request.onerror = () => resolve()
-          request.onblocked = () => resolve()
-        }),
-      ])
+      resetNostrRuntimeCache()
+      await clearBrowserCacheData()
     } catch (error) {
       console.error('Failed to clear cache:', error)
     }

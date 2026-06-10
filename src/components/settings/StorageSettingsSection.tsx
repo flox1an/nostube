@@ -18,6 +18,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { RefreshCw } from 'lucide-react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { getDateLocale } from '@/lib/date-locale'
+import { clearBrowserCacheData } from '@/lib/cache-clear'
+import { resetNostrRuntimeCache } from '@/nostr/core'
 
 // ─── Cache Clear Section ─────────────────────────────
 
@@ -62,12 +64,8 @@ function CacheClearSection() {
     setIsClearing(true)
     setShowClearDialog(false)
     try {
-      await new Promise<void>((resolve, reject) => {
-        const request = window.indexedDB.deleteDatabase('nostr-idb')
-        request.onsuccess = () => resolve()
-        request.onerror = () => reject(new Error('Failed to delete database'))
-        request.onblocked = () => resolve()
-      })
+      resetNostrRuntimeCache()
+      await clearBrowserCacheData()
     } catch (error) {
       console.error('Failed to clear cache:', error)
     }

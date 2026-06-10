@@ -15,6 +15,7 @@ import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-sig
 import { BehaviorSubject, Observable, merge, share, EMPTY, filter } from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
+import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
 
 // Default relays for video content - these will be overridden by user config
 export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
@@ -30,6 +31,18 @@ async function ensureCache() {
   return cache
 }
 ensureCache()
+
+export function resetNostrRuntimeCache() {
+  eventStore.removeByFilters({})
+  lastLoadedTimestamp.clear()
+
+  for (const relay of [...relayPool.relays.keys()]) {
+    relayPool.remove(relay)
+  }
+
+  cache?.close()
+  cache = undefined
+}
 
 // Only return cached events whose created_at is within this window.
 // Older events are ignored so timeline loaders always fetch fresh data from relays.

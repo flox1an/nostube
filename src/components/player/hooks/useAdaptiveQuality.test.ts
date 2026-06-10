@@ -76,4 +76,33 @@ describe('useAdaptiveQuality', () => {
 
     expect(onVariantChange).not.toHaveBeenCalled()
   })
+
+  it('ignores buffering events briefly after seeking', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-10T12:00:00Z'))
+
+    const video = document.createElement('video')
+    const onVariantChange = vi.fn()
+
+    renderHook(useAdaptiveQualityHarness, {
+      initialProps: {
+        video,
+        selectedVariantIndex: 0,
+        onVariantChange,
+      },
+    })
+
+    act(() => {
+      video.dispatchEvent(new Event('seeking'))
+      vi.advanceTimersByTime(1000)
+      video.dispatchEvent(new Event('seeked'))
+
+      for (let i = 0; i < 3; i++) {
+        video.dispatchEvent(new Event('waiting'))
+        video.dispatchEvent(new Event('playing'))
+      }
+    })
+
+    expect(onVariantChange).not.toHaveBeenCalled()
+  })
 })

@@ -234,7 +234,23 @@ export function AppRouter() {
             }
           />
           <Route
+            path="/author/:nprofile/:tab"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <AuthorPage />
+              </Suspense>
+            }
+          />
+          <Route
             path="/p/:nprofile"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <AuthorPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/p/:nprofile/:tab"
             element={
               <Suspense fallback={<PageLoader />}>
                 <AuthorPage />

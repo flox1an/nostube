@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
@@ -60,6 +59,11 @@ import type { Signer } from 'blossom-client-sdk'
 import type { ReactNode } from 'react'
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
+const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
+
+function isAuthorTab(tab: string | undefined): tab is Tabs {
+  return !!tab && AUTHOR_TABS.includes(tab as Tabs)
+}
 type EditableProfile = Record<string, unknown> & {
   name?: string
   display_name?: string
@@ -590,8 +594,9 @@ function ProfileField({
 
 export function AuthorPage() {
   const { t } = useTranslation()
-  const { nprofile } = useParams<{ nprofile: string }>()
-  const [activeTab, setActiveTab] = useState<Tabs>('overview')
+  const { nprofile, tab } = useParams<{ nprofile: string; tab?: string }>()
+  const location = useLocation()
+  const activeTab: Tabs = isAuthorTab(tab) ? tab : 'overview'
   const setShortsFeedVideos = useShortsFeedStore(state => state.setVideos)
 
   // Decode nprofile to get pubkey and relays
@@ -602,6 +607,9 @@ export function AuthorPage() {
 
   const pubkey = profileData?.pubkey || ''
   const nprofileRelays = profileData?.relays || []
+  const profileBasePath = `${location.pathname.startsWith('/author/') ? '/author' : '/p'}/${nprofile}`
+  const getTabPath = (nextTab: Tabs) =>
+    nextTab === 'overview' ? profileBasePath : `${profileBasePath}/${nextTab}`
 
   // State for selected playlist videos
   const [playlistVideos, setPlaylistVideos] = useState<Record<string, VideoEvent[]>>({})
@@ -848,6 +856,12 @@ export function AuthorPage() {
   ])
 
   useEffect(() => {
+    if (activeTab === 'liked' && !likedVideosLoadedRef.current) {
+      void fetchLikedVideos()
+    }
+  }, [activeTab, fetchLikedVideos])
+
+  useEffect(() => {
     const pinsKey = `${pubkey}:${relays.join(',')}`
     if (!pubkey || loadedPinsKeyRef.current === pinsKey) return
     loadedPinsKeyRef.current = pinsKey
@@ -1060,18 +1074,20 @@ export function AuthorPage() {
               variant={activeTab === 'overview' ? 'default' : 'outline'}
               size="sm"
               className="shrink-0 rounded-full px-4"
-              onClick={() => setActiveTab('overview')}
+              asChild
             >
-              {t('pages.author.overview', 'Overview')}
+              <Link to={getTabPath('overview')}>{t('pages.author.overview', 'Overview')}</Link>
             </Button>
             {videos.length > 0 && (
               <Button
                 variant={activeTab === 'videos' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
-                onClick={() => setActiveTab('videos')}
+                asChild
               >
-                {t('pages.author.allVideos', { count: videos.length })}
+                <Link to={getTabPath('videos')}>
+                  {t('pages.author.allVideos', { count: videos.length })}
+                </Link>
               </Button>
             )}
             {shorts.length > 0 && (
@@ -1079,9 +1095,11 @@ export function AuthorPage() {
                 variant={activeTab === 'shorts' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
-                onClick={() => setActiveTab('shorts')}
+                asChild
               >
-                {t('pages.author.allShorts', { count: shorts.length })}
+                <Link to={getTabPath('shorts')}>
+                  {t('pages.author.allShorts', { count: shorts.length })}
+                </Link>
               </Button>
             )}
 
@@ -1090,9 +1108,13 @@ export function AuthorPage() {
                 variant={activeTab === 'playlists' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
-                onClick={() => setActiveTab('playlists')}
+                asChild
               >
-                {t('pages.author.playlists', 'Playlists ({{count}})', { count: playlists.length })}
+                <Link to={getTabPath('playlists')}>
+                  {t('pages.author.playlists', 'Playlists ({{count}})', {
+                    count: playlists.length,
+                  })}
+                </Link>
               </Button>
             )}
             {likedCount > 0 && (
@@ -1100,14 +1122,9 @@ export function AuthorPage() {
                 variant={activeTab === 'liked' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
-                onClick={async () => {
-                  setActiveTab('liked')
-                  if (!likedVideosLoadedRef.current) {
-                    await fetchLikedVideos()
-                  }
-                }}
+                asChild
               >
-                {t('pages.author.liked', { count: likedCount })}
+                <Link to={getTabPath('liked')}>{t('pages.author.liked', { count: likedCount })}</Link>
               </Button>
             )}
             {authorFollowing.length > 0 && (
@@ -1115,9 +1132,11 @@ export function AuthorPage() {
                 variant={activeTab === 'following' ? 'default' : 'outline'}
                 size="sm"
                 className="shrink-0 rounded-full px-4"
-                onClick={() => setActiveTab('following')}
+                asChild
               >
-                {t('pages.author.following', { count: authorFollowing.length })}
+                <Link to={getTabPath('following')}>
+                  {t('pages.author.following', { count: authorFollowing.length })}
+                </Link>
               </Button>
             )}
           </div>
@@ -1151,8 +1170,8 @@ export function AuthorPage() {
                   <h2 className="text-base font-semibold">
                     {t('pages.author.latestVideos', 'Latest videos')}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('videos')}>
-                    {t('common.viewAll', 'View all')}
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={getTabPath('videos')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
                 <div className="w-full overflow-x-auto scrollbar-hide">
@@ -1172,8 +1191,8 @@ export function AuthorPage() {
                   <h2 className="text-base font-semibold">
                     {t('pages.author.latestShorts', 'Latest shorts')}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('shorts')}>
-                    {t('common.viewAll', 'View all')}
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={getTabPath('shorts')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
                 <div className="w-full overflow-x-auto scrollbar-hide">
@@ -1198,8 +1217,8 @@ export function AuthorPage() {
                   <h2 className="text-base font-semibold">
                     {t('pages.author.playlistsTitle', 'Playlists')}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('playlists')}>
-                    {t('common.viewAll', 'View all')}
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={getTabPath('playlists')}>{t('common.viewAll', 'View all')}</Link>
                   </Button>
                 </div>
                 <div className="w-full overflow-x-auto scrollbar-hide">

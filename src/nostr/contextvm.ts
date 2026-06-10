@@ -233,9 +233,8 @@ function extractTrustScores(result: any): TrustScoreResult[] {
 
   // Try structuredContent first (preferred by relatr server)
   if (result.structuredContent) {
-    const sc = result.structuredContent
-    if (Array.isArray(sc.trustScores)) return sc.trustScores as TrustScoreResult[]
-    if (sc.trustScore) return [sc.trustScore as TrustScoreResult]
+    const scores = extractTrustScoresFromPayload(result.structuredContent)
+    if (scores.length > 0) return scores
   }
 
   // Fall back to text content
@@ -243,10 +242,21 @@ function extractTrustScores(result: any): TrustScoreResult[] {
     const text = extractTextContent(result)
     if (!text) return []
     const parsed = JSON.parse(text)
-    return Array.isArray(parsed) ? (parsed as TrustScoreResult[]) : [parsed as TrustScoreResult]
+    return extractTrustScoresFromPayload(parsed)
   } catch {
     return []
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function extractTrustScoresFromPayload(payload: any): TrustScoreResult[] {
+  if (!payload) return []
+
+  if (Array.isArray(payload)) return payload as TrustScoreResult[]
+  if (Array.isArray(payload.trustScores)) return payload.trustScores as TrustScoreResult[]
+  if (payload.trustScore) return [payload.trustScore as TrustScoreResult]
+
+  return []
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

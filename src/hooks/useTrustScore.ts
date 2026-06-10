@@ -73,11 +73,17 @@ function notifyListeners() {
 
 const BATCH_DELAY = 300 // ms — collect pubkeys over this window
 const MAX_BATCH_SIZE = 20 // max pubkeys per relatr request (NIP-44 plaintext limit is 65535 bytes)
+const CHUNK_DELAY = 1000 // ms — avoid bursting follow-list score requests into the relay
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
 // Pubkeys that have been checked against IDB and confirmed missing/stale
 const confirmedMissing = new Set<string>()
 let currentPrivateKeyHex: string | null = null
+let isProcessingBatches = false
+
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 /**
  * Request trust score for a pubkey.
@@ -155,50 +161,63 @@ async function processBatches() {
   if (pendingPubkeys.size === 0 || !currentPrivateKeyHex) {
     return
   }
-
-  const allPubkeys = Array.from(pendingPubkeys)
-  pendingPubkeys.clear()
-
-  if (import.meta.env.DEV) {
-    console.log('[TrustScore] Fetching', allPubkeys.length, 'pubkeys from relatr')
+  if (isProcessingBatches) {
+    return
   }
 
-  // Split into chunks of MAX_BATCH_SIZE
-  const chunks: string[][] = []
-  for (let i = 0; i < allPubkeys.length; i += MAX_BATCH_SIZE) {
-    chunks.push(allPubkeys.slice(i, i + MAX_BATCH_SIZE))
-  }
+  isProcessingBatches = true
 
   try {
-    const client = await connectContextVM(currentPrivateKeyHex)
+    while (pendingPubkeys.size > 0 && currentPrivateKeyHex) {
+      const allPubkeys = Array.from(pendingPubkeys)
+      pendingPubkeys.clear()
 
-    for (const chunk of chunks) {
-      try {
-        const results: TrustScoreResult[] = await calculateTrustScores(client, chunk)
+      if (import.meta.env.DEV) {
+        console.log('[TrustScore] Fetching', allPubkeys.length, 'pubkeys from relatr')
+      }
 
-        if (import.meta.env.DEV) {
-          console.log('[TrustScore] Got', results.length, 'results for', chunk.length, 'requested')
+      // Split into chunks of MAX_BATCH_SIZE
+      const chunks: string[][] = []
+      for (let i = 0; i < allPubkeys.length; i += MAX_BATCH_SIZE) {
+        chunks.push(allPubkeys.slice(i, i + MAX_BATCH_SIZE))
+      }
+
+      const client = await connectContextVM(currentPrivateKeyHex)
+
+      for (const [index, chunk] of chunks.entries()) {
+        if (index > 0) await wait(CHUNK_DELAY)
+
+        try {
+          const results: TrustScoreResult[] = await calculateTrustScores(client, chunk)
+
+          if (import.meta.env.DEV) {
+            console.log('[TrustScore] Got', results.length, 'results for', chunk.length, 'requested')
+          }
+
+          const validResults = results.filter(
+            r => r && typeof r.score === 'number' && typeof r.targetPubkey === 'string'
+          )
+
+          // Update in-memory cache
+          setMemCached(validResults)
+
+          // Remove from confirmedMissing
+          for (const r of validResults) confirmedMissing.delete(r.targetPubkey)
+
+          // Persist to IndexedDB
+          await setCachedResults(validResults)
+
+          // Notify after each chunk so UI updates progressively
+          notifyListeners()
+        } catch (error) {
+          console.error('[TrustScore] Chunk fetch error:', error)
         }
-
-        const validResults = results.filter(r => r && typeof r.score === 'number')
-
-        // Update in-memory cache
-        setMemCached(validResults)
-
-        // Remove from confirmedMissing
-        for (const r of validResults) confirmedMissing.delete(r.targetPubkey)
-
-        // Persist to IndexedDB
-        await setCachedResults(validResults)
-
-        // Notify after each chunk so UI updates progressively
-        notifyListeners()
-      } catch (error) {
-        console.error('[TrustScore] Chunk fetch error:', error)
       }
     }
   } catch (error) {
     console.error('[TrustScore] Connection error:', error)
+  } finally {
+    isProcessingBatches = false
   }
 }
 

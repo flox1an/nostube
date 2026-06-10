@@ -12,11 +12,24 @@ interface TrustBadgeProps {
 }
 
 export function TrustBadge({ pubkey, className }: TrustBadgeProps) {
-  const { t } = useTranslation()
   const { score, isLoading } = useTrustScore(pubkey)
+
+  if (isLoading) return null
+
+  return <TrustBadgeDisplay pubkey={pubkey} score={score} className={className} />
+}
+
+interface TrustBadgeDisplayProps {
+  pubkey: string
+  score: number | null | undefined
+  className?: string
+}
+
+export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDisplayProps) {
+  const { t } = useTranslation()
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  if (isLoading || score === null) return null
+  if (score === null || score === undefined) return null
 
   const percentage = Math.round(score * 100)
   const trust = getTrustColor(score)

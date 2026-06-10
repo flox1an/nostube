@@ -4,14 +4,20 @@ import { useProfile } from '@/hooks/useProfile'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
-import { TrustBadge } from '@/components/TrustBadge'
+import { TrustBadgeDisplay } from '@/components/TrustBadge'
+import { useTrustScores } from '@/hooks/useTrustScore'
 
 interface FollowingItemProps {
   pubkey: string
   relays: string[]
+  trustScore: number | null | undefined
 }
 
-const FollowingItem = React.memo(function FollowingItem({ pubkey, relays }: FollowingItemProps) {
+const FollowingItem = React.memo(function FollowingItem({
+  pubkey,
+  relays,
+  trustScore,
+}: FollowingItemProps) {
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name || metadata?.name || pubkey.slice(0, 12) + '...'
   const profileUrl = buildProfileUrlFromPubkey(pubkey, relays)
@@ -30,7 +36,7 @@ const FollowingItem = React.memo(function FollowingItem({ pubkey, relays }: Foll
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate flex items-center gap-1">
           {displayName}
-          <TrustBadge pubkey={pubkey} />
+          <TrustBadgeDisplay pubkey={pubkey} score={trustScore} />
         </p>
         {metadata?.nip05 && (
           <p className="text-sm text-muted-foreground truncate">{metadata.nip05}</p>
@@ -51,6 +57,8 @@ export const FollowingList = React.memo(function FollowingList({
   relays,
   isLoading = false,
 }: FollowingListProps) {
+  const trustScores = useTrustScores(pubkeys)
+
   if (isLoading) {
     return (
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -74,7 +82,12 @@ export const FollowingList = React.memo(function FollowingList({
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {pubkeys.map(pubkey => (
-        <FollowingItem key={pubkey} pubkey={pubkey} relays={relays} />
+        <FollowingItem
+          key={pubkey}
+          pubkey={pubkey}
+          relays={relays}
+          trustScore={trustScores.get(pubkey)}
+        />
       ))}
     </div>
   )

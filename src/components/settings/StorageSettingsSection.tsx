@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { RefreshCw } from 'lucide-react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { getDateLocale } from '@/lib/date-locale'
-import { clearBrowserCacheData } from '@/lib/cache-clear'
+import { clearBrowserCacheDataOnReload } from '@/lib/cache-clear'
 import { resetNostrRuntimeCache } from '@/nostr/core'
 
 // ─── Cache Clear Section ─────────────────────────────
@@ -65,11 +65,11 @@ function CacheClearSection() {
     setShowClearDialog(false)
     try {
       resetNostrRuntimeCache()
-      await clearBrowserCacheData()
+      clearBrowserCacheDataOnReload()
     } catch (error) {
       console.error('Failed to clear cache:', error)
+      window.location.reload()
     }
-    window.location.reload()
   }
 
   return (

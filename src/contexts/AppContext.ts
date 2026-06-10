@@ -66,7 +66,7 @@ export interface AppConfig {
   thumbResizeServerUrl?: string
   /** NSFW content filter setting */
   nsfwFilter: NsfwFilter
-  /** Show videos that point to YouTube origins/URLs */
+  /** Show videos whose playable media URL points to YouTube */
   showYouTubeContent?: boolean
   /** Show audio-only content such as podcast episodes */
   showAudioContent?: boolean

@@ -880,7 +880,7 @@ describe('processEvent', () => {
 describe('isYouTubeVideo', () => {
   const defaultRelays = ['wss://relay.example.com']
 
-  it('returns true for YouTube origin tags', () => {
+  it('returns false for YouTube origin tags when the playable URL is not YouTube', () => {
     const video = processEvent(
       {
         ...zapStreamEvent,
@@ -894,7 +894,8 @@ describe('isYouTubeVideo', () => {
     )
 
     expect(video).toBeDefined()
-    expect(isYouTubeVideo(video!)).toBe(true)
+    expect(video!.origin?.platform).toBe('youtube')
+    expect(isYouTubeVideo(video!)).toBe(false)
   })
 
   it('returns true for YouTube URL matches', () => {
@@ -924,7 +925,7 @@ describe('isYouTubeVideo', () => {
     expect(isYouTubeVideo(video!)).toBe(false)
   })
 
-  it('matches YouTube origins case-insensitively', () => {
+  it('returns false for mixed-case YouTube origins when the playable URL is not YouTube', () => {
     const video = processEvent(
       {
         ...zapStreamEvent,
@@ -938,7 +939,8 @@ describe('isYouTubeVideo', () => {
     )
 
     expect(video).toBeDefined()
-    expect(isYouTubeVideo(video!)).toBe(true)
+    expect(video!.origin?.platform).toBe('YouTube')
+    expect(isYouTubeVideo(video!)).toBe(false)
   })
 })
 
@@ -1101,7 +1103,7 @@ describe('processEvents', () => {
     expect(results[0].id).toBe(nostubeEvent.id)
   })
 
-  it('should filter out YouTube origin tags when disabled', () => {
+  it('should keep YouTube origin tags when disabled if the playable URL is not YouTube', () => {
     const youtubeOriginEvent = {
       ...zapStreamEvent,
       tags: [
@@ -1122,7 +1124,33 @@ describe('processEvents', () => {
       { includeYouTube: false }
     )
 
-    expect(results).toHaveLength(0)
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe(youtubeOriginEvent.id)
+  })
+
+  it('should keep YouTube r tags when disabled if the media source is not YouTube', () => {
+    const youtubeReferenceEvent = {
+      ...zapStreamEvent,
+      tags: [
+        ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+        ['r', 'https://youtu.be/dQw4w9WgXcQ'],
+        ['title', 'Video with YouTube reference'],
+      ],
+    }
+
+    const results = processEvents(
+      [youtubeReferenceEvent],
+      defaultRelays,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { includeYouTube: false }
+    )
+
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe(youtubeReferenceEvent.id)
   })
 
   it('should filter out blocked pubkeys', () => {

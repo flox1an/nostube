@@ -532,7 +532,7 @@
       "contentFilters": "Content Filters",
       "contentFiltersDescription": "Control which types of content are shown in feeds and suggestions.",
       "youtubeContent": "YouTube content",
-      "youtubeContentDescription": "Show videos that link to or embed YouTube content.",
+      "youtubeContentDescription": "Show videos whose media source is a YouTube URL.",
       "audioContent": "Audio content",
       "audioContentDescription": "Show audio-only posts such as MP3 podcast episodes.",
       "nsfwFilter": "NSFW Content Filter",

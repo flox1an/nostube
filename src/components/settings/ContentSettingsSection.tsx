@@ -118,7 +118,7 @@ export function ContentSettingsSection() {
             </Label>
             <p id="content-youtube-description" className="text-xs text-muted-foreground">
               {t('settings.general.youtubeContentDescription', {
-                defaultValue: 'Show videos that link to or embed YouTube content.',
+                defaultValue: 'Show videos whose media source is a YouTube URL.',
               })}
             </p>
           </div>

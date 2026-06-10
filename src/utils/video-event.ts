@@ -45,7 +45,7 @@ export type VideoVariant = {
 }
 
 export interface ProcessEventsOptions {
-  /** Include videos that point to YouTube origins/URLs. Defaults to true. */
+  /** Include videos whose playable media URL points to YouTube. Defaults to true. */
   includeYouTube?: boolean
   /** Include audio-only content such as MP3 podcast episodes. Defaults to true. */
   includeAudio?: boolean
@@ -65,6 +65,7 @@ export interface VideoEvent {
   tags: string[]
   searchText: string
   urls: string[]
+  sourceUrls?: string[]
   mimeType?: string
   mediaType?: 'video' | 'audio'
   dimensions?: string
@@ -126,10 +127,7 @@ function isAudioUrl(url?: string): boolean {
 }
 
 export function isYouTubeVideo(video: VideoEvent): boolean {
-  return (
-    video.origins.some(origin => origin.platform?.toLowerCase() === 'youtube') ||
-    video.urls.some(url => YOUTUBE_REGEX.test(url))
-  )
+  return (video.sourceUrls ?? video.urls).some(url => YOUTUBE_REGEX.test(url))
 }
 
 export function isAudioVideo(video: VideoEvent): boolean {
@@ -383,6 +381,7 @@ export function processEvent(
     const allVariants = imetaTags
       .map(tag => parseImetaTag(tag))
       .filter((v): v is VideoVariant => v !== null)
+    const sourceUrls = allVariants.flatMap(variant => [variant.url, ...variant.fallbackUrls])
 
     // Extract thumbnail variants from 'image' fields in imeta tags
     // Multiple 'image' fields in the same imeta tag are fallback URLs for the SAME thumbnail
@@ -576,6 +575,7 @@ export function processEvent(
       tags,
       searchText: '',
       urls: finalUrls,
+      sourceUrls,
       mimeType: primaryMimeType,
       mediaType: primaryMediaType,
       dimensions: primaryDimensions,
@@ -667,6 +667,7 @@ export function processEvent(
       tags,
       searchText: '',
       urls: finalUrls,
+      sourceUrls: finalUrls,
       textTracks: [],
       mimeType,
       mediaType: getVariantMediaType(mimeType, url) === 'audio' ? 'audio' : 'video',

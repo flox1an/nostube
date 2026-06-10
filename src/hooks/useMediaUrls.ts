@@ -134,6 +134,11 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
 
   // Serialize URL arrays for stable comparison
   const originalUrlsKey = useMemo(() => originalUrls.join('|'), [originalUrls])
+  const sourceMediaKey = useMemo(
+    () => [mediaType, kind ?? '', sha256 ?? '', authorPubkey ?? '', originalUrlsKey].join('|'),
+    [authorPubkey, kind, mediaType, originalUrlsKey, sha256]
+  )
+  const previousSourceMediaKeyRef = useRef<string | null>(null)
   const blossomServersKey = useMemo(
     () => blossomServers.map(s => s.url).join('|'),
     [blossomServers]
@@ -162,11 +167,14 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
         authorPubkey,
       })
 
+      const sourceMediaChanged = previousSourceMediaKeyRef.current !== sourceMediaKey
+      previousSourceMediaKeyRef.current = sourceMediaKey
+
       setGeneratedUrls(prev => {
         // If we already have URLs and the current one is still in the new list,
         // merge new URLs without disrupting playback. This prevents glitches when
         // config changes (e.g. blossom servers loading from relays after video started).
-        if (prev.urls.length > 0) {
+        if (!sourceMediaChanged && prev.urls.length > 0) {
           const existingSet = new Set(prev.urls)
           const newUrls = generated.urls.filter(u => !existingSet.has(u))
           if (newUrls.length > 0) {
@@ -179,7 +187,9 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
           // No new URLs, keep everything as-is (don't reset index)
           return prev
         }
-        // First load: full reset
+        // First load or media source change: full reset. This is required when
+        // switching between quality variants, where the first generated URL must
+        // become active instead of being appended behind the previous stream.
         setCurrentIndex(0)
         return generated
       })
@@ -192,6 +202,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     }
   }, [
     originalUrlsKey,
+    sourceMediaKey,
     originalUrls,
     mediaType,
     sha256,

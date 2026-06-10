@@ -11,6 +11,14 @@ import { extractBlossomHash } from '@/utils/video-event'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { Button } from '@/components/ui/button'
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Check,
   Circle,
   Loader2,
@@ -23,6 +31,7 @@ import {
   Film,
   Layers,
   Package,
+  ChevronDown,
 } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
@@ -613,6 +622,21 @@ export function VideoDebugInfo({
     failed: number
     total: number
   } | null>(null)
+  const [selectedBroadcastRelays, setSelectedBroadcastRelays] = useState<string[]>([])
+
+  const broadcastRelays = useMemo(() => {
+    if (!videoEvent) return []
+
+    // Combine all known relays: user's read + write relays, default relays, seen relays
+    const userRelays = config.relays.map(r => r.url)
+    const seenRelays = Array.from(getSeenRelays(videoEvent) || [])
+    return Array.from(new Set([...userRelays, ...DEFAULT_RELAYS, ...seenRelays]))
+  }, [videoEvent, config.relays])
+
+  useEffect(() => {
+    if (!open || !videoEvent) return
+    setSelectedBroadcastRelays(broadcastRelays)
+  }, [open, videoEvent, broadcastRelays])
 
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
@@ -626,25 +650,24 @@ export function VideoDebugInfo({
   )
 
   const handleBroadcast = useCallback(async () => {
-    if (!videoEvent) return
+    if (!videoEvent || selectedBroadcastRelays.length === 0) return
 
     setBroadcastStatus('broadcasting')
     setBroadcastResult(null)
 
-    // Combine all known relays: user's read + write relays, default relays, seen relays
-    const userRelays = config.relays.map(r => r.url)
-    const seenRelays = videoEvent ? Array.from(getSeenRelays(videoEvent) || []) : []
-    const allRelays = Array.from(new Set([...userRelays, ...DEFAULT_RELAYS, ...seenRelays]))
-
     try {
-      const results = await relayPool.publish(allRelays, videoEvent)
+      const results = await relayPool.publish(selectedBroadcastRelays, videoEvent)
       const success = results.filter(r => r).length
-      setBroadcastResult({ success, failed: allRelays.length - success, total: allRelays.length })
+      setBroadcastResult({
+        success,
+        failed: selectedBroadcastRelays.length - success,
+        total: selectedBroadcastRelays.length,
+      })
       setBroadcastStatus('done')
     } catch {
       setBroadcastStatus('error')
     }
-  }, [videoEvent, config.relays])
+  }, [videoEvent, selectedBroadcastRelays])
 
   // Deduplicate thumbnails with same URL or hash
   const deduplicatedThumbnails = useMemo(
@@ -889,20 +912,71 @@ export function VideoDebugInfo({
                 </div>
                 {videoEvent && (
                   <div className="shrink-0 flex flex-col items-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleBroadcast}
-                      disabled={broadcastStatus === 'broadcasting'}
-                      className="cursor-pointer"
-                    >
-                      {broadcastStatus === 'broadcasting' ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Radio className="h-4 w-4 mr-2" />
-                      )}
-                      {broadcastStatus === 'broadcasting' ? 'Broadcasting...' : 'Broadcast'}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={
+                            broadcastStatus === 'broadcasting' || broadcastRelays.length === 0
+                          }
+                          className="cursor-pointer"
+                        >
+                          {broadcastStatus === 'broadcasting' ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Radio className="h-4 w-4 mr-2" />
+                          )}
+                          {broadcastStatus === 'broadcasting'
+                            ? 'Broadcasting...'
+                            : `Broadcast (${selectedBroadcastRelays.length})`}
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-80">
+                        <DropdownMenuLabel>Broadcast to relays</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <div className="max-h-64 overflow-y-auto">
+                          {broadcastRelays.map(relay => (
+                            <DropdownMenuCheckboxItem
+                              key={relay}
+                              checked={selectedBroadcastRelays.includes(relay)}
+                              onCheckedChange={checked => {
+                                setBroadcastStatus('idle')
+                                setBroadcastResult(null)
+                                setSelectedBroadcastRelays(current =>
+                                  checked
+                                    ? Array.from(new Set([...current, relay]))
+                                    : current.filter(selectedRelay => selectedRelay !== relay)
+                                )
+                              }}
+                              onSelect={event => event.preventDefault()}
+                            >
+                              <code className="truncate text-xs">{relay}</code>
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </div>
+                        <DropdownMenuSeparator />
+                        <div className="p-1">
+                          <Button
+                            size="sm"
+                            className="w-full cursor-pointer"
+                            onClick={handleBroadcast}
+                            disabled={
+                              broadcastStatus === 'broadcasting' ||
+                              selectedBroadcastRelays.length === 0
+                            }
+                          >
+                            {broadcastStatus === 'broadcasting' ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Radio className="h-4 w-4 mr-2" />
+                            )}
+                            Broadcast Now
+                          </Button>
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     {broadcastStatus === 'done' && broadcastResult && (
                       <span className="text-sm text-green-600">
                         {broadcastResult.success}/{broadcastResult.total} relays

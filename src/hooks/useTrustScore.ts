@@ -73,16 +73,43 @@ function notifyListeners() {
 
 const BATCH_DELAY = 300 // ms — collect pubkeys over this window
 const MAX_BATCH_SIZE = 20 // max pubkeys per relatr request (NIP-44 plaintext limit is 65535 bytes)
-const CHUNK_DELAY = 1000 // ms — avoid bursting follow-list score requests into the relay
+const REQUEST_DELAY = 10000 // ms — send at most one trust score request every 10 seconds
+const MAX_FETCH_ATTEMPTS = 3
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
 const pendingPubkeys = new Set<string>()
 // Pubkeys that have been checked against IDB and confirmed missing/stale
 const confirmedMissing = new Set<string>()
+const fetchAttempts = new Map<string, number>()
 let currentPrivateKeyHex: string | null = null
 let isProcessingBatches = false
 
 function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function retryPubkeys(pubkeys: string[]) {
+  const retryable: string[] = []
+  let exhausted = false
+
+  for (const pubkey of pubkeys) {
+    const attempts = (fetchAttempts.get(pubkey) ?? 0) + 1
+    fetchAttempts.set(pubkey, attempts)
+
+    if (attempts < MAX_FETCH_ATTEMPTS) {
+      retryable.push(pubkey)
+    } else {
+      confirmedMissing.add(pubkey)
+      exhausted = true
+    }
+  }
+
+  if (exhausted) notifyListeners()
+  if (retryable.length === 0) return
+
+  setTimeout(() => {
+    for (const pubkey of retryable) pendingPubkeys.add(pubkey)
+    void processBatches()
+  }, REQUEST_DELAY)
 }
 
 /**
@@ -129,7 +156,6 @@ async function checkCacheAndFetch() {
         memCache.set(pk, result)
       } else {
         missing.push(pk)
-        confirmedMissing.add(pk)
       }
     }
 
@@ -148,7 +174,6 @@ async function checkCacheAndFetch() {
     // IDB failed — treat all as uncached
     for (const pk of pubkeys) {
       pendingPubkeys.add(pk)
-      confirmedMissing.add(pk)
     }
     void processBatches()
   }
@@ -185,7 +210,7 @@ async function processBatches() {
       const client = await connectContextVM(currentPrivateKeyHex)
 
       for (const [index, chunk] of chunks.entries()) {
-        if (index > 0) await wait(CHUNK_DELAY)
+        if (index > 0) await wait(REQUEST_DELAY)
 
         try {
           const results: TrustScoreResult[] = await calculateTrustScores(client, chunk)
@@ -202,15 +227,23 @@ async function processBatches() {
           setMemCached(validResults)
 
           // Remove from confirmedMissing
-          for (const r of validResults) confirmedMissing.delete(r.targetPubkey)
+          for (const r of validResults) {
+            confirmedMissing.delete(r.targetPubkey)
+            fetchAttempts.delete(r.targetPubkey)
+          }
 
           // Persist to IndexedDB
           await setCachedResults(validResults)
+
+          const returnedPubkeys = new Set(validResults.map(r => r.targetPubkey))
+          const missingFromResponse = chunk.filter(pubkey => !returnedPubkeys.has(pubkey))
+          retryPubkeys(missingFromResponse)
 
           // Notify after each chunk so UI updates progressively
           notifyListeners()
         } catch (error) {
           console.error('[TrustScore] Chunk fetch error:', error)
+          retryPubkeys(chunk)
         }
       }
     }
@@ -262,6 +295,7 @@ export function useTrustScoreProvider() {
       memCache.clear()
       pendingPubkeys.clear()
       confirmedMissing.clear()
+      fetchAttempts.clear()
       void clearAllCached()
       notifyListeners()
       if (import.meta.env.DEV) console.log('[TrustScore] Account switch, cleared caches')

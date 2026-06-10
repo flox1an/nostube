@@ -6,6 +6,7 @@ const QUALITY_ORDER = ['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p
 
 // Empty array constant to avoid creating new array on every render
 const EMPTY_INDICES: number[] = []
+const QUALITY_SWITCH_GRACE_MS = 8000
 
 interface UseAdaptiveQualityOptions {
   videoRef: React.RefObject<HTMLMediaElement | null>
@@ -32,7 +33,13 @@ export function useAdaptiveQuality({
 }: UseAdaptiveQualityOptions) {
   const bufferingEventsRef = useRef<number[]>([])
   const lastDowngradeTimeRef = useRef<number>(0)
+  const lastVariantSwitchTimeRef = useRef<number>(0)
+  const previousVariantIndexRef = useRef(selectedVariantIndex)
   const isBufferingRef = useRef(false)
+
+  const isInQualitySwitchGracePeriod = useCallback(() => {
+    return Date.now() - lastVariantSwitchTimeRef.current < QUALITY_SWITCH_GRACE_MS
+  }, [])
 
   // Memoized sorted variant indices (highest to lowest quality)
   const sortedVariantIndices = useMemo(() => {
@@ -69,6 +76,13 @@ export function useAdaptiveQuality({
   const attemptDowngrade = useCallback(() => {
     const now = Date.now()
 
+    if (isInQualitySwitchGracePeriod()) {
+      if (import.meta.env.DEV) {
+        console.log('[AdaptiveQuality] Skipping downgrade during quality switch grace period')
+      }
+      return
+    }
+
     // Don't downgrade more than once every 10 seconds
     if (now - lastDowngradeTimeRef.current < 10000) return
 
@@ -90,7 +104,13 @@ export function useAdaptiveQuality({
     lastDowngradeTimeRef.current = now
     bufferingEventsRef.current = [] // Reset buffering counter after downgrade
     onVariantChange(nextLowerIndex)
-  }, [getNextLowerQualityIndex, videoVariants, selectedVariantIndex, onVariantChange])
+  }, [
+    getNextLowerQualityIndex,
+    isInQualitySwitchGracePeriod,
+    videoVariants,
+    selectedVariantIndex,
+    onVariantChange,
+  ])
 
   useEffect(() => {
     if (!enabled) return
@@ -100,6 +120,7 @@ export function useAdaptiveQuality({
     if (!video) return
 
     const handleWaiting = () => {
+      if (isInQualitySwitchGracePeriod()) return
       if (isBufferingRef.current) return
       isBufferingRef.current = true
 
@@ -138,6 +159,7 @@ export function useAdaptiveQuality({
 
       bufferCheckInterval = window.setInterval(() => {
         if (video.paused || video.ended) return
+        if (isInQualitySwitchGracePeriod()) return
 
         const buffered = video.buffered
         if (buffered.length === 0) return
@@ -193,10 +215,15 @@ export function useAdaptiveQuality({
       video.removeEventListener('ended', handleEnded)
       stopBufferCheck()
     }
-  }, [enabled, videoRef, videoVariants, attemptDowngrade])
+  }, [enabled, videoRef, videoVariants, attemptDowngrade, isInQualitySwitchGracePeriod])
 
   // Reset buffering counter when variant changes
   useEffect(() => {
+    if (previousVariantIndexRef.current !== selectedVariantIndex) {
+      lastVariantSwitchTimeRef.current = Date.now()
+      previousVariantIndexRef.current = selectedVariantIndex
+    }
     bufferingEventsRef.current = []
+    isBufferingRef.current = false
   }, [selectedVariantIndex])
 }

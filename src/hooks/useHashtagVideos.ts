@@ -18,7 +18,7 @@ import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 import type { RelayReqEventMessage } from 'applesauce-relay'
 import { of, type Subscription } from 'rxjs'
-import { fetchExternalSearchResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
+import { fetchTagResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
 
 interface UseHashtagVideosOptions {
   tag: string | undefined
@@ -152,7 +152,7 @@ export function useHashtagVideos({
     const controller = new AbortController()
     const serviceUrl = config.searchServiceUrl || SEARCH_SERVICE_URL
 
-    fetchExternalSearchResults(`#${tag}`, controller.signal, serviceUrl).then(results => {
+    fetchTagResults(tag, controller.signal, serviceUrl).then(results => {
       if (!controller.signal.aborted && results) {
         setExternalVideos(results)
       }

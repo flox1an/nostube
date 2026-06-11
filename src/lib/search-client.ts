@@ -75,3 +75,20 @@ export async function fetchExternalSearchResults(
     return null
   }
 }
+
+export async function fetchTagResults(
+  tag: string,
+  signal: AbortSignal,
+  serviceUrl: string = SEARCH_SERVICE_URL,
+  limit = 100
+): Promise<VideoEvent[] | null> {
+  try {
+    const url = `${serviceUrl}/api/tags?t=${encodeURIComponent(tag.toLowerCase())}&limit=${limit}`
+    const res = await fetch(url, { signal })
+    if (!res.ok) return null
+    const data = (await res.json()) as { hits: ExternalSearchHit[] }
+    return (data.hits ?? []).map(mapExternalHitToVideoEvent)
+  } catch {
+    return null
+  }
+}

@@ -7,12 +7,12 @@ import {
   type TimelineLoader,
 } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
-import { openDB, getEventsForFilters, addEvents } from 'nostr-idb'
+import { openDB, getEventsForFilters, addEvents, deleteEvent, deleteReplaceable } from 'nostr-idb'
 import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
-import { BehaviorSubject, Observable, merge, share, EMPTY, filter } from 'rxjs'
+import { BehaviorSubject, Observable, merge, share, EMPTY, filter, tap } from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
 import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
@@ -31,6 +31,75 @@ async function ensureCache() {
   return cache
 }
 ensureCache()
+
+function buildDeletionFilters(filters: Filter[]): Filter[] {
+  return filters
+    .filter(filter => !filter.kinds?.includes(5))
+    .map(filter => ({
+      kinds: [5],
+      authors: filter.authors,
+      since: filter.since,
+      until: filter.until,
+      limit: filter.limit,
+    }))
+}
+
+function getDeleteCoordinates(event: NostrEvent) {
+  return event.tags
+    .filter(tag => tag[0] === 'a' && tag[1])
+    .map(tag => {
+      const [kind, pubkey, ...identifierParts] = tag[1].split(':')
+      const parsedKind = Number(kind)
+      const identifier = identifierParts.join(':')
+
+      if (!Number.isInteger(parsedKind) || !pubkey) return undefined
+
+      return { kind: parsedKind, pubkey, identifier }
+    })
+    .filter(
+      (
+        pointer
+      ): pointer is {
+        kind: number
+        pubkey: string
+        identifier: string
+      } => pointer !== undefined
+    )
+}
+
+async function applyDeletionEventsToCache(db: NostrIDBDatabase, events: NostrEvent[]) {
+  const deletionEvents = events.filter(event => event.kind === 5)
+  if (deletionEvents.length === 0) return
+
+  await addEvents(db, deletionEvents)
+
+  for (const deletionEvent of deletionEvents) {
+    const deletedIds = deletionEvent.tags.filter(tag => tag[0] === 'e' && tag[1]).map(tag => tag[1])
+
+    await Promise.all(deletedIds.map(id => deleteEvent(db, id)))
+
+    const deletedCoordinates = getDeleteCoordinates(deletionEvent)
+    await Promise.all(
+      deletedCoordinates.map(pointer =>
+        deleteReplaceable(db, pointer.pubkey, pointer.kind, pointer.identifier)
+      )
+    )
+  }
+}
+
+async function persistEventsToLocalCache(db: NostrIDBDatabase, events: NostrEvent[]) {
+  await applyDeletionEventsToCache(db, events)
+
+  const nonDeletionEvents = events.filter(event => event.kind !== 5)
+  if (nonDeletionEvents.length > 0) {
+    await addEvents(db, nonDeletionEvents)
+  }
+}
+
+export async function cacheEvents(events: NostrEvent[]) {
+  const db = await ensureCache()
+  await persistEventsToLocalCache(db, events)
+}
 
 export function resetNostrRuntimeCache() {
   eventStore.removeByFilters({})
@@ -51,7 +120,7 @@ const CACHE_TTL_SECONDS = 4 * 60 * 60 // 4 hours
 export async function cacheRequest(filters: Filter[]) {
   try {
     const cache = await ensureCache()
-    const events = await getEventsForFilters(cache, filters)
+    const events = await getEventsForFilters(cache, [...filters, ...buildDeletionFilters(filters)])
     const cutoff = Math.floor(Date.now() / 1000) - CACHE_TTL_SECONDS
     return events.filter(e => e.created_at >= cutoff)
   } catch (error) {
@@ -171,8 +240,8 @@ createEventLoaderForStore(eventStore, relayPool, {
 
 console.log('📡 Configured unified EventStore loader with relays:', DEFAULT_RELAYS)
 
-// Save all new events to the cache
-presistEventsToCache(eventStore, events => addEvents(cache!, events))
+// Save new events to the cache. Kind 5 tombstones are cached explicitly in loaders.
+presistEventsToCache(eventStore, cacheEvents)
 
 // Configure NostrConnectSigner with relay pool methods
 // This is required for NIP-46 bunker:// URI login to work
@@ -216,8 +285,9 @@ export function getTimelineLoader(
   // across all relays. This causes a gap when Relay A returns dense recent
   // events (shallow cursor) while Relay B has older events (deep cursor) —
   // Relay A's middle window gets permanently skipped on subsequent pages.
-  const relayMap: Record<string, Filter> = Object.fromEntries(
-    relays.map(relay => [relay, baseFilters])
+  const relayFilters = [baseFilters, ...buildDeletionFilters([baseFilters])]
+  const relayMap: Record<string, Filter[]> = Object.fromEntries(
+    relays.map(relay => [relay, relayFilters])
   )
 
   const limit = baseFilters.limit ?? 100
@@ -233,7 +303,13 @@ export function getTimelineLoader(
 
   // Deduplicate via EventStore and share the subscription across all callers.
   // This mirrors the internals of the (unexported) wrapTimelineLoader helper.
-  const singleton$ = merge(cache$, relays$).pipe(filterDuplicateEvents(eventStore), share())
+  const singleton$ = merge(cache$, relays$).pipe(
+    tap(event => {
+      if (event.kind === 5) void cacheEvents([event])
+    }),
+    filterDuplicateEvents(eventStore),
+    share()
+  )
 
   return (since?: number | { since?: number; until?: number }) =>
     new Observable(observer => {

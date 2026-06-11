@@ -2,6 +2,7 @@ import { useAppContext } from '@/hooks/useAppContext'
 import { useMissingVideos } from '@/hooks/useMissingVideos'
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
+import { isDeletedByEvent } from '@/lib/deletions'
 import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
 import { hashObjectBigInt } from '@/lib/utils'
 import { getPublishDate, processEvents, type VideoEvent } from '@/utils/video-event'
@@ -118,6 +119,14 @@ export function useTimeline(
   const isFirstLoadRef = useRef(true)
 
   exhaustedRef.current = exhausted
+
+  const hasAcceptedEvent = useCallback(
+    (event: NostrEvent) => {
+      if (typeof eventStore.hasEvent !== 'function') return true
+      return eventStore.hasEvent(event.id)
+    },
+    [eventStore]
+  )
 
   const clearTimers = useCallback(() => {
     if (safetyTimeoutRef.current) {
@@ -248,10 +257,22 @@ export function useTimeline(
           receivedAnyEvents = true
           setReadyVisible()
           scheduleSettle()
+          if (event.kind === 5) {
+            if (directMode) {
+              setDirectEvents(prev => prev.filter(existing => !isDeletedByEvent(event, existing)))
+            } else if (!filters) {
+              setFallbackEvents(prev => prev.filter(existing => !isDeletedByEvent(event, existing)))
+            }
+            return
+          }
           if (directMode) {
-            setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+            if (hasAcceptedEvent(event)) {
+              setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+            }
           } else if (!filters) {
-            setFallbackEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+            if (hasAcceptedEvent(event)) {
+              setFallbackEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+            }
           } else {
             eventStore.add(event)
           }
@@ -281,6 +302,7 @@ export function useTimeline(
       firstUsefulTimeoutMs,
       loader,
       pageSettleMs,
+      hasAcceptedEvent,
       staleTimeMs,
       timelineCacheKey,
     ]

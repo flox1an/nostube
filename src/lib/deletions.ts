@@ -1,6 +1,28 @@
 import type { IEventStore } from 'applesauce-core'
 import type { NostrEvent } from 'nostr-tools'
 
+export function isDeletedByEvent(deletionEvent: NostrEvent, event: NostrEvent): boolean {
+  if (deletionEvent.kind !== 5) return false
+  if (deletionEvent.pubkey !== event.pubkey) return false
+  if (deletionEvent.created_at < event.created_at) return false
+
+  const deletedIds = deletionEvent.tags.filter(t => t[0] === 'e').map(t => t[1])
+  if (deletedIds.includes(event.id)) {
+    return true
+  }
+
+  if (event.kind >= 30000 && event.kind < 40000) {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || ''
+    const coordinate = `${event.kind}:${event.pubkey}:${dTag}`
+    const deletedCoordinates = deletionEvent.tags.filter(t => t[0] === 'a').map(t => t[1])
+    if (deletedCoordinates.includes(coordinate)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 /**
  * Check if an event has been deleted by its author
  * @param eventStore The EventStore instance
@@ -16,27 +38,7 @@ export function isEventDeleted(eventStore: IEventStore, event: NostrEvent): bool
 
   // Check if any deletion event references this event
   for (const deletionEvent of deletionEvents) {
-    // Check if this deletion is newer than the event
-    if (deletionEvent.created_at < event.created_at) {
-      continue
-    }
-
-    // Check for 'e' tags (event deletion by ID)
-    const deletedIds = deletionEvent.tags.filter(t => t[0] === 'e').map(t => t[1])
-    if (deletedIds.includes(event.id)) {
-      return true
-    }
-
-    // Check for 'a' tags (addressable/replaceable event deletion)
-    // Format: kind:pubkey:d-tag
-    if (event.kind >= 30000 && event.kind < 40000) {
-      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || ''
-      const coordinate = `${event.kind}:${event.pubkey}:${dTag}`
-      const deletedCoordinates = deletionEvent.tags.filter(t => t[0] === 'a').map(t => t[1])
-      if (deletedCoordinates.includes(coordinate)) {
-        return true
-      }
-    }
+    if (isDeletedByEvent(deletionEvent, event)) return true
   }
 
   return false

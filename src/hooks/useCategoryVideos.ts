@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getTimelineLoader } from '@/nostr/core'
+import { isDeletedByEvent } from '@/lib/deletions'
 import { processEvents, getPublishDate, type VideoEvent } from '@/utils/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
@@ -68,6 +69,14 @@ export function useCategoryVideos({
 
   // Normalize tags to lowercase
   const normalizedTags = useMemo(() => tags.map(tag => tag.toLowerCase()), [tags])
+
+  const hasAcceptedEvent = useCallback(
+    (event: NostrEvent) => {
+      if (typeof eventStore.hasEvent !== 'function') return true
+      return eventStore.hasEvent(event.id)
+    },
+    [eventStore]
+  )
 
   // Build filter for EventStore subscription
   const filters = useMemo((): Filter | null => {
@@ -145,8 +154,19 @@ export function useCategoryVideos({
     let eventCount = 0
     const subscription = loader().subscribe({
       next: (event: NostrEvent) => {
+        if (event.kind === 5) {
+          if (directMode) {
+            setDirectEvents(prev => prev.filter(existing => !isDeletedByEvent(event, existing)))
+          } else {
+            eventStore.add(event)
+          }
+          return
+        }
+
         if (directMode) {
-          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          if (hasAcceptedEvent(event)) {
+            setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          }
         } else {
           eventStore.add(event)
         }
@@ -170,7 +190,7 @@ export function useCategoryVideos({
     return () => {
       subscription.unsubscribe()
     }
-  }, [filters, relays, eventStore, hasLoaded, limit, normalizedTags, directMode])
+  }, [filters, relays, eventStore, hasLoaded, limit, normalizedTags, directMode, hasAcceptedEvent])
 
   // Cleanup loadMore subscription on unmount
   useEffect(() => {
@@ -194,8 +214,19 @@ export function useCategoryVideos({
     let eventCount = 0
     loadMoreSubscriptionRef.current = loaderRef.current().subscribe({
       next: (event: NostrEvent) => {
+        if (event.kind === 5) {
+          if (directMode) {
+            setDirectEvents(prev => prev.filter(existing => !isDeletedByEvent(event, existing)))
+          } else {
+            eventStore.add(event)
+          }
+          return
+        }
+
         if (directMode) {
-          setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          if (hasAcceptedEvent(event)) {
+            setDirectEvents(prev => Array.from(insertEventIntoDescendingList(prev, event)))
+          }
         } else {
           eventStore.add(event)
         }
@@ -212,7 +243,7 @@ export function useCategoryVideos({
         setLoading(false)
       },
     })
-  }, [loading, exhausted, videos.length, directMode, eventStore])
+  }, [loading, exhausted, videos.length, directMode, eventStore, hasAcceptedEvent])
 
   return {
     videos,

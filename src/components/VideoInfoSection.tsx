@@ -57,6 +57,7 @@ import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
 import { type VideoEvent, isAddressableKind, getPublishDate } from '../utils/video-event'
 import { type BlossomServer } from '@/contexts/AppContext'
+import { cacheEvents } from '@/nostr/core'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
 import { isBetaUser } from '@/lib/beta-users'
@@ -230,15 +231,28 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   const handleDelete = async () => {
     if (!video) return
-    await publish({
+
+    const tags = [
+      ['e', video.id],
+      ['k', String(video.kind)],
+    ]
+
+    if (videoAddress) {
+      tags.push(['a', videoAddress])
+    }
+
+    const signedDeleteEvent = await publish({
       event: {
         kind: 5,
         content: t('video.deletedByAuthor'),
-        tags: [['e', video.id]],
+        tags,
         created_at: nowInSecs(),
       },
       relays: configRelays.map(r => r.url),
     })
+
+    eventStore.add(signedDeleteEvent)
+    await cacheEvents([signedDeleteEvent])
     setShowDeleteDialog(false)
     if (onDelete) {
       onDelete()

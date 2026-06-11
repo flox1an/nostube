@@ -260,7 +260,15 @@
       "backupServers": "Serveurs de Sauvegarde",
       "explanation": "Vous téléchargez votre vidéo une seule fois sur un serveur principal. Elle est ensuite automatiquement copiée sur les serveurs de sauvegarde — sans bande passante supplémentaire de votre côté. Vous pouvez changer de serveurs à tout moment dans Paramètres > Hébergement Vidéo.",
       "getStarted": "Commencer",
-      "chooseOwn": "Choisir mes propres serveurs"
+      "chooseOwn": "Choisir mes propres serveurs",
+      "readyToUpload": "Prêt à télécharger",
+      "serversConfigured": "Vos serveurs sont configurés pour la publication",
+      "setupRequired": "Configuration du serveur de téléchargement requise",
+      "quickSetupTitle": "Configuration rapide",
+      "quickSetupDescription": "Configurer automatiquement les serveurs Blossom recommandés",
+      "quickSetupButton": "Configuration rapide",
+      "orConfigure": "ou",
+      "manualSetup": "Configurer manuellement"
     },
     "uploadInfo": "Mise en ligne directe vers {{upload}} serveur(s). Duplication vers {{mirror}} serveur(s).",
     "advanced": "Hébergement Vidéo",
@@ -352,7 +360,8 @@
       "setAsThumbnail": "Définir comme miniature",
       "currentThumbnail": "Miniature actuelle",
       "uploadingThumbnail": "Téléchargement de la miniature...",
-      "thumbnailSet": "Miniature mise à jour !"
+      "thumbnailSet": "Miniature mise à jour !",
+      "autoCaptured": "Généré automatiquement à partir de la vidéo — remplacez-le si vous le souhaitez"
     },
     "videoTable": {
       "quality": "Qualité",
@@ -368,7 +377,10 @@
       "closePreview": "Fermer",
       "uploadedTo": "Téléchargé sur",
       "mirroredTo": "Mis en miroir sur",
-      "servers": "serveur(s)"
+      "servers": "serveur(s)",
+      "qualities": "qualités",
+      "uploaded": "téléchargé",
+      "mirrored": "mis en miroir"
     },
     "deleteVideoDialog": {
       "title": "Supprimer la variante vidéo",
@@ -385,6 +397,10 @@
     "addAnotherQualityHint": "Téléchargez la même vidéo dans une résolution différente (par ex. 1080p, 720p, 480p)",
     "uploadingVideo": "Téléchargement de la vidéo...",
     "processingVideo": "Traitement de la vidéo...",
+    "metadata_detected": "Métadonnées vidéo détectées",
+    "metadata_auto_populated": "Le titre, la description et la date de publication ont été automatiquement remplis à partir du fichier vidéo. Vous pouvez les modifier si nécessaire.",
+    "showDetails": "Afficher les détails",
+    "codecWarning": "Avertissement de compatibilité du codec",
     "transcode": {
       "title": "Créer des versions supplémentaires ?",
       "suggestion": "La création de versions plus petites améliore la compatibilité de lecture sur tous les appareils.",
@@ -394,6 +410,7 @@
       "skip": "Passer",
       "allExist": "Toutes les résolutions disponibles existent déjà.",
       "discovering": "Recherche du service de transcodage...",
+      "bidding": "En attente d'offres DVM...",
       "resuming": "Reconnexion au transcodage...",
       "transcoding": "Transcodage de la vidéo...",
       "transcodingMulti": "Résolution {{current}} sur {{total}} : {{resolution}}",
@@ -425,7 +442,13 @@
       "uploadOriginal": "Upload original",
       "transcoding": "Optimising video...",
       "cancel": "Cancel - upload original",
-      "errorTitle": "Transcode failed"
+      "errorTitle": "Transcode failed",
+      "uploadOriginalOnly": "Télécharger uniquement",
+      "generateHls": "Générer HLS et télécharger",
+      "backgroundUploading": "Téléchargement de la vidéo optimisée...",
+      "backgroundTranscoding": "Optimisation de la vidéo en arrière-plan...",
+      "notSupported": "L'optimisation du navigateur n'est pas disponible",
+      "keepOriginal": "Conserver l'original"
     },
     "origins": {
       "label": "Références externes",
@@ -439,6 +462,7 @@
       "yourDrafts": "Vos brouillons ({{count}})",
       "untitled": "Sans titre",
       "backToDrafts": "Retour aux brouillons",
+      "saveDraft": "Enregistrer le brouillon",
       "status": {
         "addVideo": "Ajouter une vidéo pour commencer",
         "addTitle": "Ajouter un titre pour publier",
@@ -455,7 +479,9 @@
         "descriptionWithMedia": "Ce brouillon contient des vidéos et des miniatures téléchargées. Que souhaitez-vous faire?",
         "descriptionNoMedia": "Êtes-vous sûr de vouloir supprimer ce brouillon?",
         "deleteDraftOnly": "Supprimer le brouillon uniquement",
-        "deleteVideoAndThumbnails": "Supprimer brouillon + médias"
+        "deleteVideoAndThumbnails": "Supprimer brouillon + médias",
+        "mediaFileCount": "{{count}} fichiers multimédias seront supprimés",
+        "deleteProgress": "Suppression de {{completed}} sur {{total}} fichiers multimédias..."
       },
       "deletedWithMedia": "Brouillon et médias supprimés",
       "deletedWithMediaDescription": "{{count}} fichiers supprimés avec succès des serveurs",
@@ -477,7 +503,18 @@
       "saveFailed": "Échec de la synchronisation du brouillon avec Nostr. Modifications enregistrées localement.",
       "syncFailed": "Échec de la synchronisation du brouillon. Votre travail est en sécurité localement.",
       "notFound": "Brouillon non trouvé",
-      "notFoundDescription": "Ce brouillon a peut-être été supprimé ou a expiré."
+      "notFoundDescription": "Ce brouillon a peut-être été supprimé ou a expiré.",
+      "screen": {"source":{"title":"Mettre en ligne une vidéo","description":"Choisissez le téléchargement de fichier ou une URL pour commencer"},"details":{"title":"Détails","description":"Ajoutez des détails pendant que votre vidéo est traitée"},"review":{"title":"Vérifier et publier","description":"Vérifiez et publiez votre vidéo"}},
+      "source": {"servers":"Serveurs : {{upload}} téléchargement · {{mirror}} miroir","configure":"Configurer","jobRunning":"Le traitement continue en arrière-plan — gérez-le sur l'écran Détails"},
+      "rail": {"queued":"En attente...","transcoding":"Traitement...","uploading":"Téléchargement...","complete":"Terminé","error":"Échec du traitement","cancelled":"Traitement annulé","cancelConfirmTitle":"Annuler le téléchargement ?","cancelConfirmBody":"Le téléchargement est en cours. Annuler quand même ?","retry":"Réessayer","changeSettings":"Modifier les paramètres","filesUploaded":"{{count}} fichier téléchargé","filesUploaded_other":"{{count}} fichiers téléchargés","eta":"Temps restant estimé : {{eta}}"},
+      "review": {"checklist":{"video":"Fichiers vidéo","videoProcessing":"Traitement...","title":"Titre","thumbnail":"Miniature","subtitles":"Sous-titres","scheduled":"Programmé","contentWarning":"Avertissement de contenu","expiration":"Expiration"},"rawEvent":"Voir l'événement brut"},
+      "details": {"sections":{"subtitles":"Sous-titres","schedule":"Programmation et visibilité","attribution":"Attribution"}},
+      "eventPreview": {"title":"Aperçu de l'événement","copied":"Copié","copy":"Copier","noVideo":"Téléchargez une vidéo pour voir l'aperçu de l'événement","description":"Ceci est un aperçu de l'événement Nostr qui sera publié. Certaines valeurs comme les horodatages et les URLs des miniatures seront générées au moment de la publication."},
+      "publishVideoToRelays": "Publier sur {{count}} relais",
+      "selectRelays": "Sélectionner les relais",
+      "publishToRelays": "Publier sur les relais",
+      "selectAllRelays": "Tout sélectionner",
+      "upload": "Télécharger"
     }
   },
   "settings": {

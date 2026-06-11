@@ -260,7 +260,15 @@
       "backupServers": "Servidores de Respaldo",
       "explanation": "Subes tu video una vez a un servidor principal. Luego se copia automáticamente a los servidores de respaldo — sin ancho de banda adicional de tu parte. Puedes cambiar los servidores en cualquier momento en Ajustes > Alojamiento de Vídeo.",
       "getStarted": "Empezar",
-      "chooseOwn": "Elegir mis propios servidores"
+      "chooseOwn": "Elegir mis propios servidores",
+      "readyToUpload": "Listo para subir",
+      "serversConfigured": "Tus servidores están configurados para publicar",
+      "setupRequired": "Configuración del servidor de carga requerida",
+      "quickSetupTitle": "Configuración rápida",
+      "quickSetupDescription": "Configurar automáticamente los servidores Blossom recomendados",
+      "quickSetupButton": "Configuración rápida",
+      "orConfigure": "o",
+      "manualSetup": "Configurar manualmente"
     },
     "uploadInfo": "Subiendo directamente a {{upload}} servidor(es). Replicando a {{mirror}} servidor(es).",
     "advanced": "Alojamiento de Vídeo",
@@ -352,7 +360,8 @@
       "setAsThumbnail": "Establecer como miniatura",
       "currentThumbnail": "Miniatura actual",
       "uploadingThumbnail": "Subiendo miniatura...",
-      "thumbnailSet": "¡Miniatura actualizada!"
+      "thumbnailSet": "¡Miniatura actualizada!",
+      "autoCaptured": "Generado automáticamente del video — reemplácelo si lo desea"
     },
     "videoTable": {
       "quality": "Calidad",
@@ -368,7 +377,10 @@
       "closePreview": "Cerrar",
       "uploadedTo": "Subido a",
       "mirroredTo": "Replicado en",
-      "servers": "servidor(es)"
+      "servers": "servidor(es)",
+      "qualities": "calidades",
+      "uploaded": "subido",
+      "mirrored": "replicado"
     },
     "deleteVideoDialog": {
       "title": "Eliminar variante de vídeo",
@@ -385,6 +397,10 @@
     "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
     "uploadingVideo": "Subiendo vídeo...",
     "processingVideo": "Procesando vídeo...",
+    "metadata_detected": "Metadatos de video detectados",
+    "metadata_auto_populated": "El título, la descripción y la fecha de publicación se han rellenado automáticamente desde el archivo de video. Puede editarlos según sea necesario.",
+    "showDetails": "Mostrar detalles",
+    "codecWarning": "Advertencia de compatibilidad de códec",
     "transcode": {
       "title": "¿Crear versiones adicionales?",
       "suggestion": "La creación de versiones más pequeñas mejora la compatibilidad de reproducción en todos los dispositivos.",
@@ -394,6 +410,7 @@
       "skip": "Omitir",
       "allExist": "Todas las resoluciones disponibles ya existen.",
       "discovering": "Buscando servicio de transcodificación...",
+      "bidding": "Esperando ofertas DVM...",
       "resuming": "Reconectando a la transcodificación...",
       "transcoding": "Transcodificando video...",
       "transcodingMulti": "Resolución {{current}} de {{total}}: {{resolution}}",
@@ -425,7 +442,13 @@
       "uploadOriginal": "Upload original",
       "transcoding": "Optimising video...",
       "cancel": "Cancel - upload original",
-      "errorTitle": "Transcode failed"
+      "errorTitle": "Transcode failed",
+      "uploadOriginalOnly": "Solo subir",
+      "generateHls": "Generar HLS y subir",
+      "backgroundUploading": "Subiendo video optimizado...",
+      "backgroundTranscoding": "Optimizando video en segundo plano...",
+      "notSupported": "La optimización del navegador no está disponible",
+      "keepOriginal": "Mantener original"
     },
     "origins": {
       "label": "Referencias externas",
@@ -439,6 +462,7 @@
       "yourDrafts": "Tus borradores ({{count}})",
       "untitled": "Sin título",
       "backToDrafts": "Volver a borradores",
+      "saveDraft": "Guardar borrador",
       "status": {
         "addVideo": "Agregar video para comenzar",
         "addTitle": "Agregar título para publicar",
@@ -455,7 +479,9 @@
         "descriptionWithMedia": "Este borrador contiene videos y miniaturas subidas. ¿Qué desea hacer?",
         "descriptionNoMedia": "¿Está seguro de que desea eliminar este borrador?",
         "deleteDraftOnly": "Eliminar solo el borrador",
-        "deleteVideoAndThumbnails": "Eliminar borrador + medios"
+        "deleteVideoAndThumbnails": "Eliminar borrador + medios",
+        "mediaFileCount": "{{count}} archivos multimedia serán eliminados",
+        "deleteProgress": "Eliminando {{completed}} de {{total}} archivos multimedia..."
       },
       "deletedWithMedia": "Borrador y medios eliminados",
       "deletedWithMediaDescription": "{{count}} archivos eliminados exitosamente de los servidores",
@@ -479,7 +505,18 @@
       "syncFailed": "Falló la sincronización del borrador. Tu trabajo está seguro localmente.",
       "notFound": "Borrador no encontrado",
       "notFoundDescription": "Este borrador puede haber sido eliminado o ha expirado."
-    }
+    },
+    "screen": {"source":{"title":"Subir video","description":"Elija carga de archivo o URL para comenzar"},"details":{"title":"Detalles","description":"Agregue detalles mientras se procesa su video"},"review":{"title":"Revisar y publicar","description":"Revise y publique su video"}},
+    "source": {"servers":"Servidores: {{upload}} carga · {{mirror}} réplica","configure":"Configurar","jobRunning":"El procesamiento continúa en segundo plano — adminístrelo en la pantalla de Detalles"},
+    "rail": {"queued":"En cola...","transcoding":"Procesando...","uploading":"Subiendo...","complete":"Completado","error":"Procesamiento fallido","cancelled":"Procesamiento cancelado","cancelConfirmTitle":"¿Cancelar carga?","cancelConfirmBody":"La carga está en progreso. ¿Cancelar de todos modos?","retry":"Reintentar","changeSettings":"Cambiar ajustes","filesUploaded":"{{count}} archivo subido","filesUploaded_other":"{{count}} archivos subidos","eta":"Tiempo restante {{eta}}"},
+    "review": {"checklist":{"video":"Archivos de video","videoProcessing":"Procesando...","title":"Título","thumbnail":"Miniatura","subtitles":"Subtítulos","scheduled":"Programado","contentWarning":"Advertencia de contenido","expiration":"Expiración"},"rawEvent":"Ver evento sin procesar"},
+    "details": {"sections":{"subtitles":"Subtítulos","schedule":"Horario y visibilidad","attribution":"Atribución"}},
+    "eventPreview": {"title":"Vista previa del evento","copied":"Copiado","copy":"Copiar","noVideo":"Suba un video para ver la vista previa del evento","description":"Esta es una vista previa del evento Nostr que se publicará. Algunos valores como marcas de tiempo y URLs de miniaturas se generarán al momento de la publicación."},
+    "publishVideoToRelays": "Publicar en {{count}} relays",
+    "selectRelays": "Seleccionar relays",
+    "publishToRelays": "Publicar en relays",
+    "selectAllRelays": "Seleccionar todo",
+    "upload": "Subir"
   },
   "settings": {
     "title": "Ajustes",

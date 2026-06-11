@@ -7,6 +7,8 @@ import de from './locales/de.json'
 import fr from './locales/fr.json'
 import es from './locales/es.json'
 import ru from './locales/ru.json'
+import zh from './locales/zh.json'
+import ja from './locales/ja.json'
 
 i18n
   .use(LanguageDetector)
@@ -18,6 +20,8 @@ i18n
       fr: { translation: fr },
       es: { translation: es },
       ru: { translation: ru },
+      zh: { translation: zh },
+      ja: { translation: ja }
     },
     fallbackLng: 'en',
     debug: false,

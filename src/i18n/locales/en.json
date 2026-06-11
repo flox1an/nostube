@@ -288,7 +288,15 @@
       "backupServers": "Backup Servers",
       "explanation": "You upload your video once to a primary server. It's then automatically copied to backup servers for resilience — no extra bandwidth on your end. You can change servers anytime in Settings > Video Hosting.",
       "getStarted": "Get Started",
-      "chooseOwn": "Choose my own servers"
+      "chooseOwn": "Choose my own servers",
+      "readyToUpload": "Ready to Upload",
+      "serversConfigured": "Your servers are configured for publishing",
+      "setupRequired": "Upload Server Setup Required",
+      "quickSetupTitle": "Quick Setup",
+      "quickSetupDescription": "Automatically configure recommended Blossom servers",
+      "quickSetupButton": "Quick Setup",
+      "orConfigure": "or",
+      "manualSetup": "Configure Manually"
     },
     "uploadInfo": "Uploading directly to {{upload}} server(s). Mirroring to {{mirror}} server(s).",
     "advanced": "Video Hosting",
@@ -415,6 +423,7 @@
       "skip": "Skip",
       "allExist": "All available resolutions already exist.",
       "discovering": "Finding transcoding service...",
+      "bidding": "Waiting for DVM bids...",
       "resuming": "Reconnecting to transcode...",
       "transcoding": "Transcoding video...",
       "transcodingMulti": "Resolution {{current}} of {{total}}: {{resolution}}",
@@ -446,7 +455,13 @@
       "uploadOriginal": "Upload original",
       "transcoding": "Optimising video...",
       "cancel": "Cancel - upload original",
-      "errorTitle": "Transcode failed"
+      "errorTitle": "Transcode failed",
+      "uploadOriginalOnly": "Upload only",
+      "generateHls": "Generate HLS & Upload",
+      "backgroundUploading": "Uploading optimised video...",
+      "backgroundTranscoding": "Optimising video in background...",
+      "notSupported": "Browser optimisation is not available",
+      "keepOriginal": "Keep original"
     },
     "screen": {
       "source": {
@@ -557,7 +572,19 @@
       "syncFailed": "Draft sync failed. Your work is safe locally.",
       "notFound": "Draft not found",
       "notFoundDescription": "This draft may have been deleted or expired."
-    }
+    },
+    "eventPreview": {
+      "title": "Event Preview",
+      "copied": "Copied",
+      "copy": "Copy",
+      "noVideo": "Upload a video to see the event preview",
+      "description": "This is a preview of the Nostr event that will be published. Some values like timestamps and thumbnail URLs will be generated at publish time."
+    },
+    "publishVideoToRelays": "Publish to {{count}} relays",
+    "selectRelays": "Select relays",
+    "publishToRelays": "Publish to relays",
+    "selectAllRelays": "Select all",
+    "upload": "Upload"
   },
   "settings": {
     "title": "Settings",

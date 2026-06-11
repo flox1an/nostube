@@ -260,7 +260,15 @@
       "backupServers": "Backup-Server",
       "explanation": "Du lädst dein Video einmal auf einen primären Server hoch. Es wird dann automatisch auf Backup-Server kopiert — ohne zusätzlichen Datenverbrauch auf deiner Seite. Du kannst die Server jederzeit in Einstellungen > Video-Hosting ändern.",
       "getStarted": "Los geht's",
-      "chooseOwn": "Eigene Server wählen"
+      "chooseOwn": "Eigene Server wählen",
+      "readyToUpload": "Bereit zum Hochladen",
+      "serversConfigured": "Deine Server sind für die Veröffentlichung konfiguriert",
+      "setupRequired": "Upload-Server-Einrichtung erforderlich",
+      "quickSetupTitle": "Schnelleinrichtung",
+      "quickSetupDescription": "Empfohlene Blossom-Server automatisch konfigurieren",
+      "quickSetupButton": "Schnelleinrichtung",
+      "orConfigure": "oder",
+      "manualSetup": "Manuell konfigurieren"
     },
     "uploadInfo": "Wird direkt auf {{upload}} Server hochgeladen. Spiegelt auf {{mirror}} Server.",
     "advanced": "Video-Hosting",
@@ -352,7 +360,8 @@
       "setAsThumbnail": "Als Vorschaubild festlegen",
       "currentThumbnail": "Aktuelles Vorschaubild",
       "uploadingThumbnail": "Vorschaubild wird hochgeladen...",
-      "thumbnailSet": "Vorschaubild aktualisiert!"
+      "thumbnailSet": "Vorschaubild aktualisiert!",
+      "autoCaptured": "Automatisch aus Video generiert — bei Bedarf ersetzen"
     },
     "videoTable": {
       "quality": "Qualität",
@@ -368,7 +377,10 @@
       "closePreview": "Schließen",
       "uploadedTo": "Hochgeladen auf",
       "mirroredTo": "Gespiegelt auf",
-      "servers": "Server"
+      "servers": "Server",
+      "qualities": "Qualitäten",
+      "uploaded": "hochgeladen",
+      "mirrored": "gespiegelt"
     },
     "deleteVideoDialog": {
       "title": "Video-Variante löschen",
@@ -385,6 +397,10 @@
     "addAnotherQualityHint": "Laden Sie dasselbe Video in einer anderen Auflösung hoch (z. B. 1080p, 720p, 480p)",
     "uploadingVideo": "Video wird hochgeladen...",
     "processingVideo": "Video wird verarbeitet...",
+    "metadata_detected": "Videometadaten erkannt",
+    "metadata_auto_populated": "Titel, Beschreibung und Veröffentlichungsdatum wurden automatisch aus der Videodatei übernommen. Du kannst sie nach Bedarf bearbeiten.",
+    "showDetails": "Details anzeigen",
+    "codecWarning": "Codec-Kompatibilitätswarnung",
     "transcode": {
       "title": "Zusätzliche Versionen erstellen?",
       "suggestion": "Das Erstellen kleinerer Versionen verbessert die Wiedergabekompatibilität auf allen Geräten.",
@@ -394,6 +410,7 @@
       "skip": "Überspringen",
       "allExist": "Alle verfügbaren Auflösungen sind bereits vorhanden.",
       "discovering": "Transkodierungsdienst wird gesucht...",
+      "bidding": "Warte auf DVM-Gebote...",
       "resuming": "Verbindung zur Transkodierung wird wiederhergestellt...",
       "transcoding": "Video wird transkodiert...",
       "transcodingMulti": "Auflösung {{current}} von {{total}}: {{resolution}}",
@@ -425,7 +442,13 @@
       "uploadOriginal": "Upload original",
       "transcoding": "Optimising video...",
       "cancel": "Cancel - upload original",
-      "errorTitle": "Transcode failed"
+      "errorTitle": "Transcode failed",
+      "uploadOriginalOnly": "Nur hochladen",
+      "generateHls": "HLS generieren und hochladen",
+      "backgroundUploading": "Optimiere Video und lade hoch...",
+      "backgroundTranscoding": "Optimiere Video im Hintergrund...",
+      "notSupported": "Browser-Optimierung nicht verfügbar",
+      "keepOriginal": "Original behalten"
     },
     "origins": {
       "label": "Externe Referenzen",
@@ -439,6 +462,7 @@
       "yourDrafts": "Ihre Entwürfe ({{count}})",
       "untitled": "Ohne Titel",
       "backToDrafts": "Zurück zu Entwürfen",
+      "saveDraft": "Entwurf speichern",
       "status": {
         "addVideo": "Video hinzufügen zum Starten",
         "addTitle": "Titel hinzufügen zum Veröffentlichen",
@@ -481,7 +505,67 @@
       "syncFailed": "Entwurf-Synchronisierung fehlgeschlagen. Ihre Arbeit ist lokal sicher.",
       "notFound": "Entwurf nicht gefunden",
       "notFoundDescription": "Dieser Entwurf wurde möglicherweise gelöscht oder ist abgelaufen."
-    }
+    },
+    "screen": {
+      "source": "Video hochladen",
+      "sourceDescription": "Datei-Upload oder URL wählen",
+      "details": "Details",
+      "detailsDescription": "Details hinzufügen während das Video verarbeitet wird",
+      "review": "Prüfen und veröffentlichen",
+      "reviewDescription": "Video prüfen und veröffentlichen"
+    },
+    "source": {
+      "servers": "Server: {{upload}} Upload · {{mirror}} Spiegel",
+      "configure": "Konfigurieren",
+      "jobRunning": "Die Verarbeitung läuft im Hintergrund — auf dem Detail-Bildschirm verwalten"
+    },
+    "rail": {
+      "queued": "Wartet...",
+      "transcoding": "Verarbeitung...",
+      "uploading": "Lade hoch...",
+      "complete": "Fertig",
+      "error": "Verarbeitung fehlgeschlagen",
+      "cancelled": "Verarbeitung abgebrochen",
+      "cancelConfirmTitle": "Upload abbrechen?",
+      "cancelConfirmBody": "Upload läuft. Trotzdem abbrechen?",
+      "retry": "Wiederholen",
+      "changeSettings": "Einstellungen ändern",
+      "filesUploaded": "{{count}} Datei hochgeladen",
+      "filesUploaded_other": "{{count}} Dateien hochgeladen",
+      "eta": "Voraussichtlich {{eta}}"
+    },
+    "review": {
+      "checklist": {
+        "video": "Videodateien",
+        "videoProcessing": "Verarbeitung...",
+        "title": "Titel",
+        "thumbnail": "Vorschaubild",
+        "subtitles": "Untertitel",
+        "scheduled": "Geplant",
+        "contentWarning": "Inhaltswarnung",
+        "expiration": "Ablauf"
+      },
+      "rawEvent": "Rohdaten anzeigen"
+    },
+    "details": {
+      "sections": {
+        "subtitles": "Untertitel",
+        "schedule": "Zeitplan und Sichtbarkeit",
+        "attribution": "Namensnennung"
+      }
+    },
+    "eventPreview": {
+      "title": "Ereignisvorschau",
+      "copied": "Kopiert",
+      "copy": "Kopieren",
+      "noVideo": "Lade ein Video hoch, um die Ereignisvorschau zu sehen",
+      "description": "Dies ist eine Vorschau des Nostr-Ereignisses, das veröffentlicht wird. Einige Werte wie Zeitstempel und Miniaturbild-URLs werden zum Zeitpunkt der Veröffentlichung generiert."
+    },
+    "publishVideoToRelays": "An {{count}} Relays veröffentlichen",
+    "selectRelays": "Relays auswählen",
+    "publishToRelays": "An Relays veröffentlichen",
+    "selectAllRelays": "Alle auswählen",
+    "upload": "Hochladen"
   },
   "settings": {
     "title": "Einstellungen",

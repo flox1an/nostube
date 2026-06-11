@@ -85,6 +85,8 @@ export function AppearanceSection() {
             <SelectItem value="es">{t('languages.es')}</SelectItem>
             <SelectItem value="fr">{t('languages.fr')}</SelectItem>
             <SelectItem value="ru">{t('languages.ru')}</SelectItem>
+            <SelectItem value="zh">{t('languages.zh')}</SelectItem>
+            <SelectItem value="ja">{t('languages.ja')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">{t('settings.general.languageDescription')}</p>

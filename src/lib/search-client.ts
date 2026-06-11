@@ -1,5 +1,5 @@
 import { nip19 } from 'nostr-tools'
-import type { TextTrack, VideoEvent, VideoVariant } from '@/utils/video-event'
+import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { getTypeForKind } from '@/lib/video-types'
 
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
@@ -16,14 +16,11 @@ export interface ExternalSearchHit {
   thumbnail: string | null
   videoUrl: string | null
   tags: string[]
-  authorDisplayName: string | null
-  rankingScore: number
-  nostrUrl: string
-  contentWarning?: string | null
-  textTracks?: TextTrack[]
-  dimensions?: string | null
   mimeType?: string | null
   mediaType?: 'video' | 'audio' | null
+  dimensions?: string | null
+  textTracks?: Array<{ url: string; lang?: string | null }>
+  contentWarning?: string | null
 }
 
 export function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
@@ -52,7 +49,7 @@ export function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
     dimensions: hit.dimensions ?? undefined,
     link: nip19.neventEncode({ kind: hit.kind, id: hit.event_id, author: hit.pubkey, relays: [] }),
     type,
-    textTracks: hit.textTracks ?? [],
+    textTracks: (hit.textTracks ?? []).filter(t => t.lang).map(t => ({ url: t.url, lang: t.lang! })),
     contentWarning: hit.contentWarning ?? undefined,
     origins: [],
     videoVariants,

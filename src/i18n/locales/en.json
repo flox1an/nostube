@@ -32,7 +32,8 @@
     "done": "Done",
     "follow": "Follow",
     "following": "Following",
-    "pleaseWait": "Please wait..."
+    "pleaseWait": "Please wait...",
+    "undo": "Undo"
   },
   "navigation": {
     "home": "Home",
@@ -157,6 +158,8 @@
       "loadMore": "Load more comments",
       "remaining": "remaining",
       "reportComment": "Report comment",
+      "muteUser": "Mute user",
+      "userMuted": "User muted",
       "showReplies": "Show replies",
       "hideReplies": "Hide replies",
       "replyingTo": "Replying to",
@@ -364,7 +367,8 @@
       "setAsThumbnail": "Set as Thumbnail",
       "currentThumbnail": "Current Thumbnail",
       "uploadingThumbnail": "Uploading thumbnail...",
-      "thumbnailSet": "Thumbnail updated!"
+      "thumbnailSet": "Thumbnail updated!",
+      "autoCaptured": "Auto-generated from video — replace if you like"
     },
     "videoTable": {
       "quality": "Quality",
@@ -443,6 +447,60 @@
       "transcoding": "Optimising video...",
       "cancel": "Cancel - upload original",
       "errorTitle": "Transcode failed"
+    },
+    "screen": {
+      "source": {
+        "title": "Upload video",
+        "description": "Choose file upload or URL to start"
+      },
+      "details": {
+        "title": "Details",
+        "description": "Add details while your video is processed"
+      },
+      "review": {
+        "title": "Review & publish",
+        "description": "Review and publish your video"
+      }
+    },
+    "source": {
+      "servers": "Servers: {{upload}} upload · {{mirror}} mirror",
+      "configure": "Configure",
+      "jobRunning": "Processing continues in the background — manage it on the Details screen"
+    },
+    "rail": {
+      "queued": "Queued...",
+      "transcoding": "Processing...",
+      "uploading": "Uploading...",
+      "complete": "Complete",
+      "error": "Processing failed",
+      "cancelled": "Processing cancelled",
+      "cancelConfirmTitle": "Cancel upload?",
+      "cancelConfirmBody": "Upload is in progress. Cancel processing anyway?",
+      "retry": "Retry",
+      "changeSettings": "Change settings",
+      "filesUploaded": "{{count}} file uploaded",
+      "filesUploaded_other": "{{count}} files uploaded",
+      "eta": "ETA {{eta}}"
+    },
+    "review": {
+      "checklist": {
+        "video": "Video files",
+        "videoProcessing": "Processing...",
+        "title": "Title",
+        "thumbnail": "Thumbnail",
+        "subtitles": "Subtitles",
+        "scheduled": "Scheduled",
+        "contentWarning": "Content warning",
+        "expiration": "Expiration"
+      },
+      "rawEvent": "View raw event"
+    },
+    "details": {
+      "sections": {
+        "subtitles": "Subtitles",
+        "schedule": "Schedule & visibility",
+        "attribution": "Attribution"
+      }
     },
     "origins": {
       "label": "External References",

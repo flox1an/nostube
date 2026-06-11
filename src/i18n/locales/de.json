@@ -29,7 +29,8 @@
     "done": "Fertig",
     "follow": "Folgen",
     "following": "Gefolgt",
-    "pleaseWait": "Bitte warten..."
+    "pleaseWait": "Bitte warten...",
+    "undo": "Rückgängig"
   },
   "navigation": {
     "home": "Startseite",
@@ -146,6 +147,8 @@
       "loadMore": "Mehr Kommentare laden",
       "remaining": "verbleibend",
       "reportComment": "Kommentar melden",
+      "muteUser": "Nutzer stummschalten",
+      "userMuted": "Nutzer stummgeschaltet",
       "showReplies": "Antworten anzeigen",
       "hideReplies": "Antworten ausblenden",
       "replyingTo": "Antwort an",

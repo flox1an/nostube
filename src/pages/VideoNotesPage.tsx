@@ -308,7 +308,7 @@ export function VideoNotesPage() {
           ...(people.length > 0 && { people }),
         })
 
-        navigate(`/upload?draft=${draft.id}&step=2`)
+        navigate(`/upload?draft=${draft.id}&screen=details`)
       } catch {
         toast({
           title: t('upload.draft.maxDraftsReached'),

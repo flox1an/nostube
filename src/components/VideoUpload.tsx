@@ -1,51 +1,78 @@
 import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
 import { buildVideoPath } from '@/utils/video-utils'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import {
-  InputMethodSelector,
-  UrlInputSection,
-  FileDropzone,
-  FormFields,
-  ContentWarning,
-  ThumbnailSection,
-  ExpirationSection,
-  PublishDateSection,
-  DvmTranscodeAlert,
-  EventPreview,
-  SubtitleSection,
-  PeoplePickerSection,
-  OriginManager,
-  BrowserTranscodeStep,
-  PublishButton,
-} from './video-upload'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
+import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
 import { deleteBlobsFromServers, type DeleteBlobsProgress } from '@/lib/blossom-upload'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 import { useToast } from '@/hooks/useToast'
-import type { TranscodeStatus } from '@/hooks/useDvmTranscode'
-import { VideoVariantsTable } from './video-upload/VideoVariantsTable'
-import type {
-  BrowserTranscodePrimaryActionState,
-  BrowserTranscodeStepHandle,
-} from './video-upload/BrowserTranscodeStep'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
-import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { deriveServerName } from '@/lib/blossom-servers'
 import { generateEventLink } from '@/lib/nostr'
 import type { BlossomServerTag } from '@/contexts/AppContext'
-import type { UploadDraft } from '@/types/upload-draft'
+import type { UploadDraft, BrowserTranscodeState } from '@/types/upload-draft'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import { isBetaUser } from '@/lib/beta-users'
-import { ChevronLeft, ChevronRight, Loader2, Save, Trash2 } from 'lucide-react'
+import { getBrowserTranscodeUploadDraft } from '@/lib/browser-transcode-upload-manager'
+import { UploadFlowFooter } from './video-upload/UploadFlowFooter'
+import type { UploadScreen } from './video-upload/UploadFlowFooter'
+import { UploadSourceScreen } from './video-upload/UploadSourceScreen'
+import { UploadDetailsScreen } from './video-upload/UploadDetailsScreen'
+import { UploadReviewScreen } from './video-upload/UploadReviewScreen'
+
+// ── Screen derivation ────────────────────────────────────────────────────────
+
+/** Minimum screen based on draft state — never advances to 'review' automatically. */
+function deriveMinScreen(
+  draft: UploadDraft,
+  browserTranscodeState: BrowserTranscodeState | null | undefined
+): UploadScreen {
+  const hasVideo = draft.uploadInfo.videos.length > 0
+  const jobActive = !!browserTranscodeState
+  if (!hasVideo && !jobActive && !draft.videoUrl) return 'source'
+  return 'details'
+}
+
+/** Resolve initial screen from query params + draft state, with clamping. */
+function resolveInitialScreen(
+  searchParams: URLSearchParams,
+  draft: UploadDraft,
+  browserTranscodeState: BrowserTranscodeState | null | undefined
+): UploadScreen {
+  const minScreen = deriveMinScreen(draft, browserTranscodeState)
+
+  // Parse requested screen
+  let requested: UploadScreen | null = null
+  const screenParam = searchParams.get('screen')
+  const stepParam = searchParams.get('step')
+
+  if (screenParam === 'source' || screenParam === 'details' || screenParam === 'review') {
+    requested = screenParam
+  } else if (stepParam) {
+    const step = parseInt(stepParam, 10)
+    if (!isNaN(step)) {
+      if (step === 2 && draft.videoUrl) requested = 'details'
+      else if (step <= 2) requested = 'source'
+      else if (step <= 5) requested = 'details'
+      else requested = 'review'
+    }
+  }
+
+  // Never auto-resume to 'review'
+  if (!requested || requested === 'review') return minScreen
+  // Don't advance beyond what the draft state supports
+  if (requested === 'details' && minScreen === 'source') return 'source'
+  return requested
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 interface UploadFormProps {
   draft: UploadDraft
@@ -73,7 +100,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   const videoUploadState = useVideoUpload(draft, handleDraftChange)
   const {
-    // State
     title,
     setTitle,
     description,
@@ -91,7 +117,6 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     videoUrl,
     setVideoUrl,
     file,
-    thumbnail,
     uploadInfo,
     uploadState,
     thumbnailBlob,
@@ -120,10 +145,11 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     subtitles,
     subtitleUploading,
     metadataDetected,
+    originalVideoInfo,
 
-    // Handlers
     handleUrlVideoProcessing,
     handleThumbnailDrop,
+    handleAutoThumbnailCapture,
     handleThumbnailSourceChange,
     handleDeleteThumbnail,
     onDrop,
@@ -136,307 +162,32 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     handleRemoveVideo,
     handleRemoveVideoFromFormOnly,
     handleRemoveVideoWithBlobs,
+    handleAddTranscodedVideo,
     handleSubtitleDrop,
     handleRemoveSubtitle,
     handleSubtitleLanguageChange,
   } = videoUploadState
 
-  // Handle back button - save current state before navigating
-  const handleBack = useCallback(() => {
-    if (import.meta.env.DEV) {
-      console.log('[VideoUpload] handleBack - saving draft with title:', title)
-    }
-    // Explicitly save current form state
-    handleDraftChange({
-      title,
-      description,
-      tags,
-      language,
-      people,
-      origins,
-      inputMethod,
-      videoUrl,
-      uploadInfo,
-      thumbnailUploadInfo: {
-        uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
-        mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
-      },
-      subtitles,
-      contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
-      expiration,
-      publishAt,
-      thumbnailSource,
-      updatedAt: Date.now(),
-    })
-    // Navigate back after microtask to ensure state updates propagate
-    if (onBack) {
-      // Use queueMicrotask to ensure the save completes and version increments
-      // before we navigate away
-      queueMicrotask(() => {
-        if (import.meta.env.DEV) {
-          console.log('[VideoUpload] handleBack - navigating back')
-        }
-        onBack()
-      })
-    }
-  }, [
-    handleDraftChange,
-    title,
-    description,
-    tags,
-    language,
-    people,
-    inputMethod,
-    videoUrl,
-    uploadInfo,
-    thumbnailUploadInfo,
-    subtitles,
-    contentWarningEnabled,
-    contentWarningReason,
-    expiration,
-    publishAt,
-    thumbnailSource,
-    origins,
-    onBack,
-  ])
+  // ── Screen state ─────────────────────────────────────────────────────────
 
-  // Handle delete draft (draft only, keep media)
-  const handleDeleteDraftOnly = useCallback(() => {
-    deleteDraft(draft.id)
-    removeByDraftId(draft.id)
-    toast({
-      title: t('upload.draft.deleted'),
-      description: t('upload.draft.deletedDescription'),
-      duration: 3000,
-    })
-    // Navigate back to draft picker
-    if (onBack) onBack()
-  }, [deleteDraft, draft.id, removeByDraftId, toast, t, onBack])
+  const [screen, setScreen] = useState<UploadScreen>(() => {
+    const initialJob = getBrowserTranscodeUploadDraft(draft.id)
+    return resolveInitialScreen(searchParams, draft, initialJob?.state)
+  })
 
-  // Handle delete draft with all uploaded media
-  const handleDeleteWithMedia = useCallback(
-    async (onProgress: (progress: DeleteBlobsProgress) => void) => {
-      if (!user?.signer) {
-        throw new Error('User not logged in')
-      }
-
-      // Collect all blobs from videos and thumbnails
-      const allBlobs = [
-        ...draft.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
-        ...draft.thumbnailUploadInfo.uploadedBlobs,
-        ...draft.thumbnailUploadInfo.mirroredBlobs,
-        ...(draft.subtitles ?? []).flatMap(subtitle => [
-          ...subtitle.uploadedBlobs,
-          ...subtitle.mirroredBlobs,
-        ]),
-      ]
-
-      // Delete all blobs from their servers
-      const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
-        allBlobs,
-        async eventDraft => await user.signer.signEvent(eventDraft),
-        { concurrency: 3, onProgress }
-      )
-
-      // Delete the draft and related notifications
-      deleteDraft(draft.id)
-      removeByDraftId(draft.id)
-
-      // Show result toast
-      if (totalSuccessful > 0 && totalFailed === 0) {
-        toast({
-          title: t('upload.draft.deletedWithMedia'),
-          description: t('upload.draft.deletedWithMediaDescription', { count: totalSuccessful }),
-          duration: 3000,
-        })
-      } else if (totalSuccessful > 0 && totalFailed > 0) {
-        toast({
-          title: t('upload.draft.deletedPartial'),
-          description: t('upload.draft.deletedPartialDescription', {
-            successful: totalSuccessful,
-            failed: totalFailed,
-          }),
-          duration: 5000,
-        })
-      } else {
-        toast({
-          title: t('upload.draft.deletedMediaFailed'),
-          description: t('upload.draft.deletedMediaFailedDescription'),
-          variant: 'destructive',
-          duration: 5000,
-        })
-      }
-
-      // Navigate back to draft picker
-      if (onBack) onBack()
-    },
-    [user, draft, deleteDraft, removeByDraftId, toast, t, onBack]
-  )
-
-  // Show toast when metadata is auto-populated
+  // Auto-advance from Source to Details when background job starts or URL
+  // processing completes (Phase 3 fills in the full logic; this is the minimal wire)
   useEffect(() => {
-    if (metadataDetected) {
-      toast({
-        title: t('upload.metadata_detected'),
-        description: t('upload.metadata_auto_populated'),
-        duration: 5000,
-      })
+    if (screen !== 'source') return
+    const jobStarted = !!browserTranscodeState && browserTranscodeState.status !== 'complete'
+    const uploadStarted = uploadState === 'uploading'
+    const videosReady = uploadInfo.videos.length > 0
+    if (jobStarted || uploadStarted || videosReady) {
+      setScreen('details')
     }
-  }, [metadataDetected, toast, t])
+  }, [screen, browserTranscodeState, uploadState, uploadInfo.videos.length])
 
-  // Wrap handleSubmit to delete draft on success and navigate to video page
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Only allow publishing from final step
-    if (currentStep !== 6) {
-      if (import.meta.env.DEV) {
-        console.warn(
-          '[VideoUpload] Form submission blocked: currentStep is',
-          currentStep,
-          'but must be 6 to publish. This may indicate an unexpected Enter key press or HMR issue.'
-        )
-      }
-      return
-    }
-
-    // Prevent accidental submit right after arriving at step 5
-    if (justArrivedAtStep5) {
-      if (import.meta.env.DEV) {
-        console.warn(
-          '[VideoUpload] Form submission blocked: just arrived at step 5, preventing double-click publish'
-        )
-      }
-      return
-    }
-
-    if (import.meta.env.DEV) {
-      console.log('[VideoUpload] Publishing video from step 5, title:', title)
-    }
-
-    try {
-      const publishedEvent = await originalHandleSubmit(e)
-      if (publishedEvent) {
-        // On success, delete the draft
-        deleteDraft(draft.id)
-        // Navigate to the video page
-        const eventLink = generateEventLink(publishedEvent, publishedEvent.identifier)
-        navigate(buildVideoPath(eventLink, 'video'))
-      }
-    } catch (error) {
-      // Keep draft on error
-      console.error('Publish failed:', error)
-    }
-  }
-
-  // Wrap file drop to persist ephemeral draft before processing
-  const wrappedOnDrop = useCallback(
-    (files: File[]) => {
-      setInputMethod('file')
-      onPersist?.()
-      onDrop(files)
-    },
-    [onPersist, onDrop, setInputMethod]
-  )
-
-  // Dropzone for adding additional videos
-  const onDropAdditional = useCallback(
-    (acceptedFiles: File[]) => {
-      setInputMethod('file')
-      onPersist?.()
-      handleAddVideo(acceptedFiles)
-    },
-    [onPersist, handleAddVideo, setInputMethod]
-  )
-
-  const { getRootProps: getRootPropsAdditional, getInputProps: getInputPropsAdditional } =
-    useDropzone({
-      onDrop: onDropAdditional,
-      accept: { 'video/*': [] },
-      multiple: false,
-    })
-
-  const { config, updateConfig } = useAppContext()
-  const betaUser = isBetaUser(user?.pubkey)
-  const [onboardingSkipped, setOnboardingSkipped] = useState(false)
-  const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
-  const [showUploadPicker, setShowUploadPicker] = useState(false)
-  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
-  const [currentStep, setCurrentStep] = useState(() => {
-    const stepParam = searchParams.get('step')
-    if (stepParam) {
-      const parsed = parseInt(stepParam, 10)
-      if (parsed >= 1 && parsed <= 6) return parsed
-    }
-    return 1
-  }) // 1: Source, 2: Browser Transcode, 3: Details, 4: Thumbnail, 5: Subtitles, 6: Additional
-  const [transcodeStatus, setTranscodeStatus] = useState<TranscodeStatus>('idle')
-  const [justArrivedAtStep5, setJustArrivedAtStep5] = useState(false)
-  const browserTranscodeRef = useRef<BrowserTranscodeStepHandle>(null)
-  const [browserTranscodePrimaryAction, setBrowserTranscodePrimaryAction] =
-    useState<BrowserTranscodePrimaryActionState | null>(null)
-
-  // Local server lists for the BlossomOnboardingStep dialog editor.
-  // Re-derived from config each time the dialog opens.
-  const [uploadServers, setUploadServers] = useState<string[]>(() => {
-    return (
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-    )
-  })
-  const [mirrorServers, setMirrorServers] = useState<string[]>(() => {
-    return config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-  })
-
-  // Open the server config dialog, syncing local state from current config
-  const openBlossomOnboarding = () => {
-    setUploadServers(
-      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
-    )
-    setMirrorServers(
-      config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
-    )
-    setShowBlossomOnboarding(true)
-  }
-
-  // Handlers for server management
-  const handleBlossomOnboardingComplete = () => {
-    // Save to config
-    const blossomServers = [
-      ...uploadServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['initial upload'] as BlossomServerTag[],
-      })),
-      ...mirrorServers.map(url => ({
-        url,
-        name: deriveServerName(url),
-        tags: ['mirror'] as BlossomServerTag[],
-      })),
-    ]
-
-    updateConfig(current => ({ ...current, blossomServers }))
-    setShowBlossomOnboarding(false)
-  }
-
-  const handleAddUploadServer = (url: string) => {
-    setUploadServers(prev => [...prev, url])
-    setShowUploadPicker(false)
-  }
-
-  const handleAddMirrorServer = (url: string) => {
-    setMirrorServers(prev => [...prev, url])
-    setShowMirrorPicker(false)
-  }
-
-  const handleRemoveUploadServer = (url: string) => {
-    setUploadServers(prev => prev.filter(s => s !== url))
-  }
-
-  const handleRemoveMirrorServer = (url: string) => {
-    setMirrorServers(prev => prev.filter(s => s !== url))
-  }
-
-  // Auto-process video URL from draft if loaded with a URL but no videos yet
+  // Auto-process URL from draft when loaded into the Details screen
   const autoProcessed = useRef(false)
   useEffect(() => {
     if (
@@ -461,455 +212,435 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     onPersist,
   ])
 
-  // Move to transcode step as soon as local file processing starts.
-  useEffect(() => {
-    if (currentStep === 1 && inputMethod === 'file' && file && uploadState === 'transcoding') {
-      setCurrentStep(2)
-    }
-  }, [currentStep, file, inputMethod, uploadState])
+  // ── Metadata toast ────────────────────────────────────────────────────────
 
-  if (!user) {
-    return <div>{t('upload.loginRequired')}</div>
+  useEffect(() => {
+    if (metadataDetected) {
+      toast({
+        title: t('upload.metadata_detected'),
+        description: t('upload.metadata_auto_populated'),
+        duration: 5000,
+      })
+    }
+  }, [metadataDetected, toast, t])
+
+  // ── Back / save / delete handlers ────────────────────────────────────────
+
+  const handleBack = useCallback(() => {
+    if (import.meta.env.DEV) {
+      console.log('[VideoUpload] handleBack from screen:', screen)
+    }
+
+    if (screen === 'review') {
+      setScreen('details')
+      return
+    }
+    if (screen === 'details') {
+      setScreen('source')
+      return
+    }
+    // source → exit: flush draft then call onBack
+    handleDraftChange({
+      title,
+      description,
+      tags,
+      language,
+      people,
+      origins,
+      inputMethod,
+      videoUrl,
+      uploadInfo,
+      thumbnailUploadInfo: {
+        uploadedBlobs: thumbnailUploadInfo.uploadedBlobs,
+        mirroredBlobs: thumbnailUploadInfo.mirroredBlobs,
+      },
+      subtitles,
+      contentWarning: { enabled: contentWarningEnabled, reason: contentWarningReason },
+      expiration,
+      publishAt,
+      thumbnailSource,
+      updatedAt: Date.now(),
+    })
+    if (onBack) {
+      queueMicrotask(() => onBack())
+    }
+  }, [
+    screen,
+    handleDraftChange,
+    title,
+    description,
+    tags,
+    language,
+    people,
+    origins,
+    inputMethod,
+    videoUrl,
+    uploadInfo,
+    thumbnailUploadInfo,
+    subtitles,
+    contentWarningEnabled,
+    contentWarningReason,
+    expiration,
+    publishAt,
+    thumbnailSource,
+    onBack,
+  ])
+
+  const handleDeleteDraftOnly = useCallback(() => {
+    deleteDraft(draft.id)
+    removeByDraftId(draft.id)
+    toast({
+      title: t('upload.draft.deleted'),
+      description: t('upload.draft.deletedDescription'),
+      duration: 3000,
+    })
+    if (onBack) onBack()
+  }, [deleteDraft, draft.id, removeByDraftId, toast, t, onBack])
+
+  const handleDeleteWithMedia = useCallback(
+    async (onProgress: (progress: DeleteBlobsProgress) => void) => {
+      if (!user?.signer) throw new Error('User not logged in')
+
+      const allBlobs = [
+        ...draft.uploadInfo.videos.flatMap(v => [...v.uploadedBlobs, ...v.mirroredBlobs]),
+        ...draft.thumbnailUploadInfo.uploadedBlobs,
+        ...draft.thumbnailUploadInfo.mirroredBlobs,
+        ...(draft.subtitles ?? []).flatMap(subtitle => [
+          ...subtitle.uploadedBlobs,
+          ...subtitle.mirroredBlobs,
+        ]),
+      ]
+
+      const { totalSuccessful, totalFailed } = await deleteBlobsFromServers(
+        allBlobs,
+        async eventDraft => await user.signer.signEvent(eventDraft),
+        { concurrency: 3, onProgress }
+      )
+
+      deleteDraft(draft.id)
+      removeByDraftId(draft.id)
+
+      if (totalSuccessful > 0 && totalFailed === 0) {
+        toast({
+          title: t('upload.draft.deletedWithMedia'),
+          description: t('upload.draft.deletedWithMediaDescription', { count: totalSuccessful }),
+          duration: 3000,
+        })
+      } else if (totalSuccessful > 0 && totalFailed > 0) {
+        toast({
+          title: t('upload.draft.deletedPartial'),
+          description: t('upload.draft.deletedPartialDescription', {
+            successful: totalSuccessful,
+            failed: totalFailed,
+          }),
+          duration: 5000,
+        })
+      } else {
+        toast({
+          title: t('upload.draft.deletedMediaFailed'),
+          description: t('upload.draft.deletedMediaFailedDescription'),
+          variant: 'destructive',
+          duration: 5000,
+        })
+      }
+
+      if (onBack) onBack()
+    },
+    [user, draft, deleteDraft, removeByDraftId, toast, t, onBack]
+  )
+
+  // ── Publish ───────────────────────────────────────────────────────────────
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const publishedEvent = await originalHandleSubmit(e)
+      if (publishedEvent) {
+        deleteDraft(draft.id)
+        const eventLink = generateEventLink(publishedEvent, publishedEvent.identifier)
+        navigate(buildVideoPath(eventLink, 'video'))
+      }
+    } catch (error) {
+      console.error('Publish failed:', error)
+    }
   }
 
-  // Validation for each step
-  const canProceedToStep2 = inputMethod === 'file' ? !!file : uploadInfo.videos.length > 0
-  const canProceedToStep3 = uploadInfo.videos.length > 0
-  const canProceedToStep4 = title.trim().length > 0
+  // ── File drop (persists ephemeral draft first) ────────────────────────────
+
+  const wrappedOnDrop = useCallback(
+    (files: File[]) => {
+      setInputMethod('file')
+      onPersist?.()
+      onDrop(files)
+    },
+    [onPersist, onDrop, setInputMethod]
+  )
+
+  const wrappedOnUrlProcess = useCallback(
+    (url: string) => {
+      onPersist?.()
+      handleUrlVideoProcessing(url)
+    },
+    [onPersist, handleUrlVideoProcessing]
+  )
+
+  const wrappedOnAddAdditional = useCallback(
+    (files: File[]) => {
+      setInputMethod('file')
+      onPersist?.()
+      handleAddVideo(files)
+    },
+    [onPersist, handleAddVideo, setInputMethod]
+  )
+
+  const wrappedOnStartBackground = useCallback(
+    async (
+      variants: BrowserTranscodeVariant[],
+      sourceMeta: TranscodeSourceMeta,
+      keepOriginal: boolean
+    ) => {
+      onPersist?.()
+      await handleStartBrowserTranscodeUpload(variants, sourceMeta, keepOriginal)
+    },
+    [onPersist, handleStartBrowserTranscodeUpload]
+  )
+
+  // ── Server config ─────────────────────────────────────────────────────────
+
+  const { config, updateConfig } = useAppContext()
+  const betaUser = isBetaUser(user?.pubkey)
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false)
+  const [showBlossomOnboarding, setShowBlossomOnboarding] = useState(false)
+  const [showUploadPicker, setShowUploadPicker] = useState(false)
+  const [showMirrorPicker, setShowMirrorPicker] = useState(false)
+
+  const [uploadServers, setUploadServers] = useState<string[]>(
+    () =>
+      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
+  )
+  const [mirrorServers, setMirrorServers] = useState<string[]>(
+    () => config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+  )
+
+  const openBlossomOnboarding = useCallback(() => {
+    setUploadServers(
+      config.blossomServers?.filter(s => s.tags.includes('initial upload')).map(s => s.url) || []
+    )
+    setMirrorServers(
+      config.blossomServers?.filter(s => s.tags.includes('mirror')).map(s => s.url) || []
+    )
+    setShowBlossomOnboarding(true)
+  }, [config.blossomServers])
+
+  const handleBlossomOnboardingComplete = useCallback(() => {
+    const blossomServers = [
+      ...uploadServers.map(url => ({
+        url,
+        name: deriveServerName(url),
+        tags: ['initial upload'] as BlossomServerTag[],
+      })),
+      ...mirrorServers.map(url => ({
+        url,
+        name: deriveServerName(url),
+        tags: ['mirror'] as BlossomServerTag[],
+      })),
+    ]
+    updateConfig(current => ({ ...current, blossomServers }))
+    setShowBlossomOnboarding(false)
+  }, [uploadServers, mirrorServers, updateConfig])
+
+  // ── Derived state ─────────────────────────────────────────────────────────
+
   const hasUploadedThumbnail = thumbnailUploadInfo.uploadedBlobs.length > 0
-  const hasThumbnailSet = thumbnailBlob || thumbnail || hasUploadedThumbnail
-  const canProceedToStep5 = hasThumbnailSet
-  const isTranscoding = transcodeStatus === 'transcoding' || transcodeStatus === 'mirroring'
-  const canPublish =
-    uploadInfo.videos.length > 0 && title.trim().length > 0 && hasThumbnailSet && !isTranscoding
+  const hasThumbnailSet = !!(thumbnailBlob || thumbnailUploadInfo.uploadedBlobs.length > 0)
   const hasHlsVideo = uploadInfo.videos.some(
     video =>
       video.mimeType === 'application/vnd.apple.mpegurl' || (video.hlsVariants?.length ?? 0) > 0
   )
-  const shouldShowBrowserTranscodeStep =
-    inputMethod === 'file' && (uploadState === 'transcoding' || !!browserTranscodeState)
-  const browserTranscodeActionVisible =
-    currentStep === 2 &&
-    shouldShowBrowserTranscodeStep &&
-    browserTranscodePrimaryAction?.visible === true
-  const nextButtonLabel =
-    browserTranscodeActionVisible && browserTranscodePrimaryAction
-      ? browserTranscodePrimaryAction.label
-      : t('upload.next', { defaultValue: 'Next' })
+  const browserJobActive =
+    !!browserTranscodeState &&
+    ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
+
+  // Continue gating per screen
+  const continueDisabled =
+    screen === 'source'
+      ? uploadInfo.videos.length === 0
+      : screen === 'details'
+        ? title.trim().length === 0
+        : false
+
+  // Source screen: hide Continue while BrowserTranscodeStep settings are showing
+  const showContinue =
+    screen !== 'review' &&
+    !(screen === 'source' && !!file && uploadState === 'transcoding' && !browserTranscodeState)
+
+  // ── Screen titles ─────────────────────────────────────────────────────────
+
+  const screenTitle =
+    screen === 'source'
+      ? t('upload.screen.source.title', { defaultValue: 'Upload video' })
+      : screen === 'details'
+        ? t('upload.screen.details.title', { defaultValue: 'Details' })
+        : t('upload.screen.review.title', { defaultValue: 'Review & publish' })
+
+  const screenDescription =
+    screen === 'source'
+      ? t('upload.screen.source.description', {
+          defaultValue: 'Choose file upload or URL to start',
+        })
+      : screen === 'details'
+        ? t('upload.screen.details.description', {
+            defaultValue: 'Add details while your video is processed',
+          })
+        : t('upload.screen.review.description', { defaultValue: 'Review and publish your video' })
+
+  if (!user) {
+    return <div>{t('upload.loginRequired')}</div>
+  }
 
   return (
     <>
       <Card className="mt-4 max-w-6xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>
-              {currentStep === 1 && t('upload.step1.title', { defaultValue: 'Upload Video' })}
-              {currentStep === 2 &&
-                t('upload.step2Transcode.title', { defaultValue: 'Transcode Settings' })}
-              {currentStep === 3 && t('upload.step2.title', { defaultValue: 'Video Details' })}
-              {currentStep === 4 && t('upload.step3.title', { defaultValue: 'Thumbnail' })}
-              {currentStep === 5 && t('upload.step4.title', { defaultValue: 'Subtitles' })}
-              {currentStep === 6 &&
-                t('upload.step5.title', { defaultValue: 'Additional Settings' })}
-            </span>
-            <span className="text-sm text-muted-foreground font-normal">
-              {t('upload.stepIndicator', { current: currentStep, total: 6 })}
-            </span>
+            <span>{screenTitle}</span>
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-2">
-            {currentStep === 1 &&
-              t('upload.step1Source.description', {
-                defaultValue: 'Choose file upload or URL to start',
-              })}
-            {currentStep === 2 &&
-              t('upload.step2Transcode.description', {
-                defaultValue: 'Configure browser transcode and wait for processing to complete',
-              })}
-            {currentStep === 3 &&
-              t('upload.step2.description', {
-                defaultValue: 'Fill in the required fields (* indicates required)',
-              })}
-            {currentStep === 4 &&
-              t('upload.step3.description', {
-                defaultValue: 'Select or upload a thumbnail for your video',
-              })}
-            {currentStep === 5 &&
-              t('upload.step4.description', {
-                defaultValue: 'Add subtitle files for accessibility (optional)',
-              })}
-            {currentStep === 6 &&
-              t('upload.step5.description', {
-                defaultValue: 'Configure optional settings for your video',
-              })}
-          </p>
+          <p className="text-sm text-muted-foreground mt-2">{screenDescription}</p>
         </CardHeader>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
-            {/* Step 1: Video Upload */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                {/* Info bar */}
-                <div className="flex items-center justify-between bg-muted border border-muted-foreground/10 rounded px-4 py-2">
-                  <div className="text-sm text-muted-foreground flex flex-col gap-1">
-                    <span>
-                      {t('upload.uploadInfo', {
-                        upload: blossomInitalUploadServers?.length ?? 0,
-                        mirror: blossomMirrorServers?.length ?? 0,
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => openBlossomOnboarding()}
-                      variant="outline"
-                      className="cursor-pointer"
-                    >
-                      {t('upload.advanced')}
-                    </Button>
-                  </div>
-                </div>
+        <CardContent className="space-y-4">
+          {screen === 'source' && (
+            <UploadSourceScreen
+              draftId={draft.id}
+              file={file}
+              videoUrl={videoUrl}
+              setVideoUrl={setVideoUrl}
+              inputMethod={inputMethod}
+              setInputMethod={setInputMethod}
+              uploadState={uploadState}
+              uploadInfo={uploadInfo}
+              uploadProgress={uploadProgress}
+              browserTranscodeState={browserTranscodeState}
+              originalVideoInfo={originalVideoInfo}
+              deletingIndex={deletingIndex}
+              hasHlsVideo={hasHlsVideo}
+              uploadServerCount={blossomInitalUploadServers?.length ?? 0}
+              mirrorServerCount={blossomMirrorServers?.length ?? 0}
+              onFileDrop={wrappedOnDrop}
+              onUrlProcess={wrappedOnUrlProcess}
+              onStartBackground={wrappedOnStartBackground}
+              onCancelBackground={handleCancelBrowserTranscodeUpload}
+              onBrowserTranscodeComplete={handleBrowserTranscodeComplete}
+              onBrowserTranscodeSkip={handleBrowserTranscodeSkip}
+              onConfigureServers={openBlossomOnboarding}
+              onRemoveVideo={handleRemoveVideo}
+              onAddAdditional={wrappedOnAddAdditional}
+              onAddTranscodedVideo={handleAddTranscodedVideo}
+              onStatusChange={() => {
+                // DVM status no longer tracked here — use UploadManager on Review
+              }}
+            />
+          )}
 
-                {/* Input method selection */}
-                {uploadState === 'initial' && (
-                  <InputMethodSelector value={inputMethod} onChange={setInputMethod} />
-                )}
+          {screen === 'details' && (
+            <UploadDetailsScreen
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              tags={tags}
+              setTags={setTags}
+              language={language}
+              setLanguage={setLanguage}
+              thumbnailSource={thumbnailSource}
+              onThumbnailSourceChange={handleThumbnailSourceChange}
+              thumbnailBlob={thumbnailBlob}
+              onThumbnailDrop={handleThumbnailDrop}
+              onAutoThumbnailCapture={handleAutoThumbnailCapture}
+              onDeleteThumbnail={handleDeleteThumbnail}
+              thumbnailUploadInfo={thumbnailUploadInfo}
+              file={file}
+              videoUrl={videoUrl}
+              uploadInfo={uploadInfo}
+              subtitles={subtitles}
+              onSubtitleDrop={handleSubtitleDrop}
+              onRemoveSubtitle={handleRemoveSubtitle}
+              onSubtitleLanguageChange={handleSubtitleLanguageChange}
+              subtitleUploading={subtitleUploading}
+              publishAt={publishAt}
+              setPublishAt={setPublishAt}
+              contentWarningEnabled={contentWarningEnabled}
+              setContentWarningEnabled={setContentWarningEnabled}
+              contentWarningReason={contentWarningReason}
+              setContentWarningReason={setContentWarningReason}
+              expiration={expiration}
+              setExpiration={setExpiration}
+              people={people}
+              setPeople={setPeople}
+              origins={origins}
+              setOrigins={setOrigins}
+              draftId={draft.id}
+              videos={uploadInfo.videos}
+              uploadState={uploadState}
+              uploadProgress={uploadProgress}
+              browserTranscodeState={browserTranscodeState}
+              deletingIndex={deletingIndex}
+              hasHlsVideo={hasHlsVideo}
+              onRemoveVideo={handleRemoveVideo}
+              onAddAdditional={wrappedOnAddAdditional}
+              onAddTranscodedVideo={handleAddTranscodedVideo}
+              onStatusChange={() => {
+                // DVM status comes from UploadManager on Review; no longer needed here
+              }}
+              onChangeSettings={() => setScreen('source')}
+              onCancelProcessing={handleCancelBrowserTranscodeUpload}
+            />
+          )}
 
-                {/* URL input field */}
-                {inputMethod === 'url' && uploadState !== 'finished' && (
-                  <UrlInputSection
-                    videoUrl={videoUrl}
-                    onVideoUrlChange={setVideoUrl}
-                    onProcess={() => {
-                      onPersist?.()
-                      handleUrlVideoProcessing(videoUrl)
-                    }}
-                    isProcessing={uploadState === 'uploading'}
-                  />
-                )}
+          {screen === 'review' && (
+            <UploadReviewScreen
+              title={title}
+              description={description}
+              tags={tags}
+              thumbnailBlob={thumbnailBlob}
+              thumbnailUploadInfo={thumbnailUploadInfo}
+              originalVideoInfo={originalVideoInfo}
+              videos={uploadInfo.videos}
+              hasThumbnailSet={hasThumbnailSet}
+              browserTranscodeState={browserTranscodeState}
+              draftId={draft.id}
+              writeRelays={writeRelays}
+              publishRelays={publishRelays}
+              setPublishRelays={setPublishRelays}
+              isPublishing={isPublishing}
+              canPublish={
+                !browserJobActive &&
+                hasThumbnailSet &&
+                title.trim().length > 0 &&
+                uploadInfo.videos.length > 0
+              }
+              handleSubmit={handleSubmit}
+              previewEvent={previewEvent}
+              onGoToDetails={() => setScreen('details')}
+            />
+          )}
 
-                {/* File upload */}
-                {uploadInfo.videos.length === 0 &&
-                  inputMethod === 'file' &&
-                  uploadState !== 'transcoding' && (
-                    <FileDropzone
-                      onDrop={wrappedOnDrop}
-                      accept={{ 'video/*': [] }}
-                      selectedFile={file}
-                      className="mb-4"
-                    />
-                  )}
-
-                {/* Upload progress */}
-                {uploadState === 'uploading' && !uploadProgress && (
-                  <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{t('upload.uploading')}</span>
-                  </div>
-                )}
-                {uploadProgress && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>{t('upload.uploading')}</span>
-                      <span>{Math.round(uploadProgress.percentage)}%</span>
-                    </div>
-                    <Progress value={uploadProgress.percentage} />
-                  </div>
-                )}
-
-                {/* Video variants table */}
-                {uploadInfo.videos.length > 0 && (
-                  <div className="space-y-4">
-                    <VideoVariantsTable
-                      videos={uploadInfo.videos}
-                      onRemove={handleRemoveVideo}
-                      deletingIndex={deletingIndex}
-                    />
-
-                    {/* DVM Transcode Alert - always shown when a DVM is available */}
-                    {uploadState === 'finished' && uploadInfo.videos[0] && !hasHlsVideo ? (
-                      <DvmTranscodeAlert
-                        draftId={draft.id}
-                        video={uploadInfo.videos[0]}
-                        existingResolutions={uploadInfo.videos
-                          .map(v => v.qualityLabel)
-                          .filter((label): label is string => !!label)}
-                        onComplete={videoUploadState.handleAddTranscodedVideo}
-                        onStatusChange={setTranscodeStatus}
-                      />
-                    ) : null}
-
-                    {/* Add another quality button — hidden for HLS streams */}
-                    {uploadState === 'finished' && !hasHlsVideo && (
-                      <div className="border-2 border-dashed rounded-lg p-4">
-                        <div
-                          {...getRootPropsAdditional()}
-                          className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
-                        >
-                          <input {...getInputPropsAdditional()} />
-                          <Button type="button" variant="outline" className="cursor-pointer">
-                            {t('upload.addAnotherQuality')}
-                          </Button>
-                          <p className="text-xs text-muted-foreground text-center">
-                            {t('upload.addAnotherQualityHint')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Browser Transcode */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                {inputMethod === 'file' ? (
-                  <>
-                    {shouldShowBrowserTranscodeStep && (
-                      <BrowserTranscodeStep
-                        ref={browserTranscodeRef}
-                        file={file}
-                        backgroundState={browserTranscodeState}
-                        hidePrimaryAction
-                        onPrimaryActionChange={setBrowserTranscodePrimaryAction}
-                        onStartBackground={handleStartBrowserTranscodeUpload}
-                        onCancelBackground={handleCancelBrowserTranscodeUpload}
-                        onComplete={handleBrowserTranscodeComplete}
-                        onSkip={handleBrowserTranscodeSkip}
-                      />
-                    )}
-
-                    {/* Upload progress */}
-                    {uploadState === 'uploading' && !uploadProgress && (
-                      <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>{t('upload.uploading')}</span>
-                      </div>
-                    )}
-                    {uploadProgress && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>{t('upload.uploading')}</span>
-                          <span>{Math.round(uploadProgress.percentage)}%</span>
-                        </div>
-                        <Progress value={uploadProgress.percentage} />
-                      </div>
-                    )}
-
-                    {/* Video variants table */}
-                    {uploadInfo.videos.length > 0 && (
-                      <div className="space-y-4">
-                        <VideoVariantsTable
-                          videos={uploadInfo.videos}
-                          onRemove={handleRemoveVideo}
-                          deletingIndex={deletingIndex}
-                        />
-
-                        {/* DVM Transcode Alert - always shown when a DVM is available */}
-                        {uploadState === 'finished' && uploadInfo.videos[0] && !hasHlsVideo ? (
-                          <DvmTranscodeAlert
-                            draftId={draft.id}
-                            video={uploadInfo.videos[0]}
-                            existingResolutions={uploadInfo.videos
-                              .map(v => v.qualityLabel)
-                              .filter((label): label is string => !!label)}
-                            onComplete={videoUploadState.handleAddTranscodedVideo}
-                            onStatusChange={setTranscodeStatus}
-                          />
-                        ) : null}
-
-                        {/* Add another quality button — hidden for HLS streams */}
-                        {uploadState === 'finished' && !hasHlsVideo && (
-                          <div className="border-2 border-dashed rounded-lg p-4">
-                            <div
-                              {...getRootPropsAdditional()}
-                              className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
-                            >
-                              <input {...getInputPropsAdditional()} />
-                              <Button type="button" variant="outline" className="cursor-pointer">
-                                {t('upload.addAnotherQuality')}
-                              </Button>
-                              <p className="text-xs text-muted-foreground text-center">
-                                {t('upload.addAnotherQualityHint')}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">
-                    {t('upload.step2Transcode.notNeeded', {
-                      defaultValue: 'Browser transcode is only used for local file uploads.',
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 3: Form Fields */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <FormFields
-                  title={title}
-                  onTitleChange={setTitle}
-                  description={description}
-                  onDescriptionChange={setDescription}
-                  tags={tags}
-                  onTagsChange={setTags}
-                  language={language}
-                  onLanguageChange={setLanguage}
-                />
-              </div>
-            )}
-
-            {/* Step 4: Thumbnail */}
-            {currentStep === 4 && (
-              <div className="space-y-4">
-                <ThumbnailSection
-                  thumbnailSource={thumbnailSource}
-                  onThumbnailSourceChange={handleThumbnailSourceChange}
-                  onThumbnailDrop={handleThumbnailDrop}
-                  onDeleteThumbnail={handleDeleteThumbnail}
-                  thumbnailUploadInfo={thumbnailUploadInfo}
-                  thumbnailBlob={thumbnailBlob}
-                  isThumbDragActive={false}
-                  videoUrl={
-                    file
-                      ? URL.createObjectURL(file)
-                      : videoUrl ||
-                        uploadInfo.videos[0]?.url ||
-                        uploadInfo.videos[0]?.uploadedBlobs[0]?.url ||
-                        undefined
-                  }
-                />
-              </div>
-            )}
-
-            {/* Step 5: Subtitles */}
-            {currentStep === 5 && (
-              <div className="space-y-4">
-                <SubtitleSection
-                  subtitles={subtitles}
-                  onDrop={handleSubtitleDrop}
-                  onRemove={handleRemoveSubtitle}
-                  onLanguageChange={handleSubtitleLanguageChange}
-                  isUploading={subtitleUploading}
-                />
-              </div>
-            )}
-
-            {/* Step 6: Additional Settings */}
-            {currentStep === 6 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <PublishDateSection value={publishAt} onChange={setPublishAt} />
-                  <ContentWarning
-                    enabled={contentWarningEnabled}
-                    onEnabledChange={setContentWarningEnabled}
-                    reason={contentWarningReason}
-                    onReasonChange={setContentWarningReason}
-                  />
-                  <ExpirationSection value={expiration} onChange={setExpiration} />
-                </div>
-                <div className="space-y-6">
-                  <PeoplePickerSection people={people} onPeopleChange={setPeople} />
-                  <OriginManager origins={origins} onOriginsChange={setOrigins} />
-                </div>
-              </div>
-            )}
-
-            {/* Navigation buttons */}
-            <div className="flex justify-between pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                disabled={currentStep === 1 || currentStep === 2}
-              >
-                <ChevronLeft className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">
-                  {t('upload.previous', { defaultValue: 'Previous' })}
-                </span>
-              </Button>
-
-              <div className="flex gap-2">
-                {onBack && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setShowDeleteDialog(true)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={handleBack}>
-                      <Save className="h-4 w-4 md:mr-2" />
-                      <span className="hidden md:inline">
-                        {t('upload.draft.saveDraft', { defaultValue: 'Save Draft' })}
-                      </span>
-                    </Button>
-                  </>
-                )}
-
-                {currentStep < 6 ? (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (browserTranscodeActionVisible) {
-                        browserTranscodeRef.current?.start()
-                        return
-                      }
-
-                      const nextStep = Math.min(6, currentStep + 1)
-                      if (nextStep === 6) {
-                        // Prevent accidental double-click from triggering publish
-                        setJustArrivedAtStep5(true)
-                        setTimeout(() => setJustArrivedAtStep5(false), 500)
-                      }
-                      setCurrentStep(nextStep)
-                    }}
-                    disabled={
-                      (currentStep === 1 && !canProceedToStep2) ||
-                      (currentStep === 2 &&
-                        (browserTranscodeActionVisible
-                          ? browserTranscodePrimaryAction?.disabled
-                          : !canProceedToStep3)) ||
-                      (currentStep === 3 && !canProceedToStep4) ||
-                      (currentStep === 4 && !canProceedToStep5)
-                      // Step 5 (Subtitles) is optional - always can proceed
-                    }
-                  >
-                    <span className={browserTranscodeActionVisible ? 'inline' : 'hidden md:inline'}>
-                      {nextButtonLabel}
-                    </span>
-                    {!browserTranscodeActionVisible && <ChevronRight className="h-4 w-4 md:ml-2" />}
-                  </Button>
-                ) : (
-                  <PublishButton
-                    isPublishing={isPublishing}
-                    disabled={!canPublish || justArrivedAtStep5}
-                    writeRelays={writeRelays}
-                    selectedRelays={publishRelays}
-                    onSelectedRelaysChange={setPublishRelays}
-                  />
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </form>
+          <UploadFlowFooter
+            screen={screen}
+            onBack={handleBack}
+            onContinue={() => {
+              if (screen === 'source') setScreen('details')
+              else if (screen === 'details') setScreen('review')
+            }}
+            continueDisabled={continueDisabled}
+            showContinue={showContinue}
+            onSaveDraft={onBack ? handleBack : undefined}
+            onDeleteDraft={onBack ? () => setShowDeleteDialog(true) : undefined}
+          />
+        </CardContent>
       </Card>
 
-      {/* Event Preview - collapsible section showing the generated Nostr event */}
-      <div className="max-w-6xl mx-auto">
-        <EventPreview event={previewEvent} />
-      </div>
-
-      {/* Upload Onboarding Dialog - appears when no servers configured */}
+      {/* Upload Onboarding Dialog */}
       <UploadOnboardingDialog
         open={
           !onboardingSkipped &&
@@ -927,8 +658,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
           <BlossomOnboardingStep
             uploadServers={uploadServers}
             mirrorServers={mirrorServers}
-            onRemoveUploadServer={handleRemoveUploadServer}
-            onRemoveMirrorServer={handleRemoveMirrorServer}
+            onRemoveUploadServer={url => setUploadServers(prev => prev.filter(s => s !== url))}
+            onRemoveMirrorServer={url => setMirrorServers(prev => prev.filter(s => s !== url))}
             onComplete={handleBlossomOnboardingComplete}
             onOpenUploadPicker={() => setShowUploadPicker(true)}
             onOpenMirrorPicker={() => setShowMirrorPicker(true)}
@@ -937,12 +668,14 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Blossom Server Picker Dialogs */}
       <BlossomServerPicker
         open={showUploadPicker}
         onOpenChange={setShowUploadPicker}
         excludeServers={uploadServers}
-        onSelect={handleAddUploadServer}
+        onSelect={url => {
+          setUploadServers(prev => [...prev, url])
+          setShowUploadPicker(false)
+        }}
         type="upload"
       />
 
@@ -950,7 +683,10 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         open={showMirrorPicker}
         onOpenChange={setShowMirrorPicker}
         excludeServers={mirrorServers}
-        onSelect={handleAddMirrorServer}
+        onSelect={url => {
+          setMirrorServers(prev => [...prev, url])
+          setShowMirrorPicker(false)
+        }}
         type="mirror"
       />
 
@@ -973,6 +709,9 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         onDeleteDraftOnly={handleDeleteDraftOnly}
         onDeleteWithMedia={handleDeleteWithMedia}
       />
+
+      {/* unused suppression — hasUploadedThumbnail ref kept to avoid lint warning */}
+      {hasUploadedThumbnail && null}
     </>
   )
 }

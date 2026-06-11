@@ -32,11 +32,11 @@ export type { Account } from './useLoggedInAccounts'
 // PROFILE & SOCIAL
 // ============================================================================
 export { useProfile } from './useProfile'
-export { useBatchedProfileLoader, requestProfile } from './useBatchedProfiles'
+export { useMutedPubkeys } from './useMutedPubkeys'
 export { useFollowedAuthors } from './useFollowedAuthors'
 export { useFollowSet } from './useFollowSet'
 export { useAuthorFollowing } from './useAuthorFollowing'
-export { useReactions } from './useReactions'
+export { useBatchedProfileLoader, requestProfile } from './useBatchedProfiles'
 export { useLikedEvents } from './useLikedEvents'
 export { useAuthorLikedVideos } from './useAuthorLikedVideos'
 export { useCommentCount } from './useCommentCount'

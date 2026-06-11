@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 
 import { useReports, type ProcessedReportEvent } from './useReports'
 import { useSelectedPreset } from './useSelectedPreset'
+import { useMutedPubkeys } from './useMutedPubkeys'
 
 export type ReportedPubkeys = Record<string, ProcessedReportEvent | boolean>
 
 export const useReportedPubkeys = (): ReportedPubkeys | undefined => {
   const { data: reports } = useReports({})
   const { presetContent } = useSelectedPreset()
+  const { mutedPubkeys } = useMutedPubkeys()
 
   const reportedPubkeys = useMemo(() => {
     // Convert preset's blocked pubkeys to Record format
@@ -16,8 +18,14 @@ export const useReportedPubkeys = (): ReportedPubkeys | undefined => {
       {}
     )
 
+    // Convert muted pubkeys to Record format
+    const mutedPubkeysRecord: Record<string, boolean> = mutedPubkeys.reduce(
+      (acc, pubkey) => ({ ...acc, [pubkey]: true }),
+      {} as Record<string, boolean>
+    )
+
     if (!reports) {
-      return presetBlockedPubkeys
+      return { ...presetBlockedPubkeys, ...mutedPubkeysRecord }
     }
 
     const illegalReports = reports
@@ -34,8 +42,8 @@ export const useReportedPubkeys = (): ReportedPubkeys | undefined => {
         return acc
       }, {})
 
-    return { ...presetBlockedPubkeys, ...illegalReports }
-  }, [reports, presetContent.blockedPubkeys])
+    return { ...presetBlockedPubkeys, ...mutedPubkeysRecord, ...illegalReports }
+  }, [reports, presetContent.blockedPubkeys, mutedPubkeys])
 
   return reportedPubkeys
 }

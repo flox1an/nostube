@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import type { EventTemplate } from 'nostr-tools'
 import { useCurrentUser, useAppContext, useNostrPublish } from '@/hooks'
 import {
   mirrorBlobsToServers,
@@ -382,6 +383,16 @@ export function useVideoUpload(
     }
   }, [originalVideoInfo, uploadInfo.videos, title, description, tags.length, publishAt])
 
+  // Prefer a useful draft title even when the file has no embedded metadata.
+  const filenameTitleAppliedRef = useRef(false)
+  useEffect(() => {
+    if (filenameTitleAppliedRef.current || title || !originalVideoInfo?.name) return
+    const nameWithoutExtension = originalVideoInfo.name.replace(/\.[^/.]+$/, '').trim()
+    if (!nameWithoutExtension) return
+    filenameTitleAppliedRef.current = true
+    setTitle(nameWithoutExtension)
+  }, [originalVideoInfo?.name, title])
+
   const { user } = useCurrentUser()
   const { config } = useAppContext()
   const { publish, isPending: isNostrPublishPending } = useNostrPublish()
@@ -394,8 +405,7 @@ export function useVideoUpload(
   )
 
   const signer = user
-    ? async (draft: Parameters<typeof user.signer.signEvent>[0]) =>
-        await user.signer.signEvent(draft)
+    ? async (draft: EventTemplate) => await user.signer.signEvent(draft)
     : undefined
 
   const fileUpload = useFileUpload({
@@ -483,6 +493,32 @@ export function useVideoUpload(
       })
     }
   }
+
+  const handleAutoThumbnailCapture = useCallback(
+    async (blob: Blob) => {
+      if (
+        thumbnailSource !== 'generated' ||
+        thumbnailBlob ||
+        thumbnail ||
+        thumbnailUploadInfo.uploadedBlobs.length > 0
+      ) {
+        return
+      }
+
+      setThumbnailBlob(blob)
+
+      try {
+        const thumbnailFile = new File([blob], 'thumbnail.webp', {
+          type: blob.type || 'image/webp',
+        })
+        const blurhash = await generateBlurhash(thumbnailFile)
+        setThumbnailBlurhash(blurhash)
+      } catch (error) {
+        console.warn('[useVideoUpload] Failed to generate auto-thumbnail blurhash:', error)
+      }
+    },
+    [thumbnail, thumbnailBlob, thumbnailSource, thumbnailUploadInfo.uploadedBlobs.length]
+  )
 
   const handleThumbnailSourceChange = (value: string) => {
     setThumbnailSource(value as 'generated' | 'upload')
@@ -1278,6 +1314,7 @@ export function useVideoUpload(
     // Handlers
     handleUrlVideoProcessing,
     handleThumbnailDrop,
+    handleAutoThumbnailCapture,
     handleThumbnailSourceChange,
     handleDeleteThumbnail,
     onDrop,

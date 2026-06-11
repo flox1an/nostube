@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
+import type { TranscodeSourceMeta } from '@/lib/video-transcode'
 import { formatDuration } from '@/lib/formatDuration'
 import {
   BROWSER_TRANSCODE_AUDIO_BITRATE,
@@ -21,6 +22,7 @@ import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
 import { Layers, Loader2, Upload, X, Zap } from 'lucide-react'
+import { estimateRemainingSeconds } from '@/lib/transcode-progress'
 
 interface BrowserTranscodeStepProps {
   file: File | null
@@ -29,7 +31,7 @@ interface BrowserTranscodeStepProps {
   onPrimaryActionChange?: (state: BrowserTranscodePrimaryActionState) => void
   onStartBackground?: (
     variants: BrowserTranscodeVariant[],
-    sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>,
+    sourceMeta: TranscodeSourceMeta,
     keepOriginal: boolean
   ) => Promise<void>
   onCancelBackground?: () => void
@@ -49,24 +51,9 @@ export interface BrowserTranscodePrimaryActionState {
 
 type BrowserOutputFormat = 'upload-only' | 'mp4' | 'hls'
 
-function estimateRemainingSeconds(
-  progress: number | undefined,
-  startedAt: number,
-  updatedAt?: number
-): number | undefined {
-  if (!progress || progress <= 0.01 || progress >= 0.99) return undefined
-  const now = updatedAt ?? Date.now()
-  const elapsedSeconds = Math.max(0, (now - startedAt) / 1000)
-  if (elapsedSeconds < 1) return undefined
-  const totalSeconds = elapsedSeconds / progress
-  const remaining = Math.round(totalSeconds - elapsedSeconds)
-  if (!Number.isFinite(remaining) || remaining <= 0) return undefined
-  return remaining
-}
-
 function estimateVariantSizeMB(
   variant: BrowserTranscodeVariant,
-  sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>
+  sourceMeta: TranscodeSourceMeta
 ): number {
   if (variant.passthrough) return sourceMeta.sizeMB
 
@@ -96,7 +83,7 @@ function getCodecLabel(codec: ResolutionOption['suggestedCodec']): string {
 }
 
 function getSourceVariantCodec(
-  sourceMeta: NonNullable<ReturnType<typeof useVideoTranscode>['sourceMeta']>
+  sourceMeta: TranscodeSourceMeta
 ): ResolutionOption['suggestedCodec'] {
   const codec = sourceMeta.videoCodec?.toLowerCase()
   return codec?.startsWith('hvc1') || codec?.startsWith('hev1') ? 'hevc' : 'avc'

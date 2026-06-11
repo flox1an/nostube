@@ -12,7 +12,14 @@ import { map } from 'rxjs/operators'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Filter } from 'nostr-tools'
-import { useCurrentUser, useNostrPublish, useProfile, useAppContext, useUserRelays } from '@/hooks'
+import {
+  useCurrentUser,
+  useNostrPublish,
+  useProfile,
+  useAppContext,
+  useUserRelays,
+  useReportedPubkeys,
+} from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { CommentInput } from '@/components/CommentInput'
 import { nowInSecs } from '@/lib/utils'
@@ -227,15 +234,22 @@ export function VideoComments({
       [eventStore, allFilters, videoId, videoAddress]
     ) ?? flatComments
 
-  // Build threaded comment structure
-  const threadedComments = useMemo(() => {
-    return buildCommentTree(allComments)
-  }, [allComments])
+  // Filter out comments from blocked/muted pubkeys
+  const reportedPubkeys = useReportedPubkeys()
+  const filteredComments = useMemo(() => {
+    if (!reportedPubkeys) return allComments
+    return allComments.filter(c => !reportedPubkeys[c.pubkey])
+  }, [allComments, reportedPubkeys])
 
-  // Update comment parent map whenever comments change
+  // Build threaded comment structure from filtered comments
+  const threadedComments = useMemo(() => {
+    return buildCommentTree(filteredComments)
+  }, [filteredComments])
+
+  // Update comment parent map with visible comments
   useEffect(() => {
-    setCommentParentMap(allComments)
-  }, [allComments, setCommentParentMap])
+    setCommentParentMap(filteredComments)
+  }, [filteredComments, setCommentParentMap])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

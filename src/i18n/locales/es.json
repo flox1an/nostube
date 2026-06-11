@@ -29,7 +29,8 @@
     "done": "Listo",
     "follow": "Seguir",
     "following": "Siguiendo",
-    "pleaseWait": "Por favor, espere..."
+    "pleaseWait": "Por favor, espere...",
+    "undo": "Deshacer"
   },
   "navigation": {
     "home": "Inicio",
@@ -146,6 +147,8 @@
       "loadMore": "Cargar más comentarios",
       "remaining": "restantes",
       "reportComment": "Reportar comentario",
+      "muteUser": "Silenciar usuario",
+      "userMuted": "Usuario silenciado",
       "showReplies": "Mostrar respuestas",
       "hideReplies": "Ocultar respuestas",
       "replyingTo": "Respondiendo a",

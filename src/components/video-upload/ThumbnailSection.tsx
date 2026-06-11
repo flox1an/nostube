@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { FileDropzone } from './FileDropzone'
@@ -25,6 +25,7 @@ interface ThumbnailSectionProps {
     error?: string
   }
   videoUrl?: string
+  onAutoCapture?: (blob: Blob) => void
 }
 
 export function ThumbnailSection({
@@ -34,6 +35,7 @@ export function ThumbnailSection({
   onDeleteThumbnail,
   thumbnailUploadInfo,
   videoUrl,
+  onAutoCapture,
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
@@ -44,6 +46,7 @@ export function ThumbnailSection({
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
+  const hasAutoCapturedRef = useRef(false)
 
   // URL Input State
   const [urlInput, setUrlInput] = useState('')
@@ -69,33 +72,28 @@ export function ThumbnailSection({
   }
 
   const captureCurrentFrame = useCallback((callback?: (blob: Blob) => void) => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const ctx = canvas.getContext('2d')
+    if (!videoRef.current || !canvasRef.current) return
 
-      if (ctx) {
-        // Set canvas dimensions to video dimensions
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-        // Draw the current video frame onto the canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-        // Convert canvas content to a Blob
-        canvas.toBlob(
-          blob => {
-            if (blob) {
-              setPreviewBlob(blob)
-              if (callback) {
-                callback(blob)
-              }
-            }
-          },
-          'image/webp',
-          0.85
-        )
-      }
+    try {
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        blob => {
+          if (!blob) return
+          setPreviewBlob(blob)
+          callback?.(blob)
+        },
+        'image/webp',
+        0.85
+      )
+    } catch {
+      // Remote video URLs can taint the canvas. Manual thumbnail paths still work.
     }
   }, [])
 
@@ -155,14 +153,17 @@ export function ThumbnailSection({
   }, [uploadedThumbnailUrl, thumbnailBlob])
 
   const handleLoadedMetadata = useCallback(() => {
-    if (videoRef.current) {
-      setVideoDuration(videoRef.current.duration)
+    const video = videoRef.current
+    if (!video) return
+    setVideoDuration(video.duration)
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      const representativeTime = Math.min(video.duration * 0.1, 10)
+      setCurrentVideoTime(representativeTime)
+      video.currentTime = representativeTime
     }
   }, [])
 
   const handleLoadedData = useCallback(() => {
-    // Capture the first frame once actual pixel data is available
-    // (loadedmetadata only guarantees dimensions, not frame pixels)
     updatePreview()
   }, [updatePreview])
 
@@ -175,7 +176,11 @@ export function ThumbnailSection({
   }
 
   const handleSeeked = () => {
-    // Update preview when user seeks to a new position
+    if (!hasAutoCapturedRef.current && onAutoCapture) {
+      hasAutoCapturedRef.current = true
+      captureCurrentFrame(onAutoCapture)
+      return
+    }
     updatePreview()
   }
 
@@ -188,9 +193,18 @@ export function ThumbnailSection({
     }
   }
 
+  const thumbnailSrc = useMemo(() => {
+    if (uploadedThumbnailUrl) return uploadedThumbnailUrl
+    if (!thumbnailBlob) return ''
+    return URL.createObjectURL(thumbnailBlob)
+  }, [thumbnailBlob, uploadedThumbnailUrl])
+
+  useEffect(() => {
+    if (!thumbnailBlob || !thumbnailSrc || uploadedThumbnailUrl) return
+    return () => URL.revokeObjectURL(thumbnailSrc)
+  }, [thumbnailBlob, thumbnailSrc, uploadedThumbnailUrl])
+
   if (hasThumbnail) {
-    const thumbnailSrc =
-      uploadedThumbnailUrl || (thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : '')
     return (
       <div className="flex flex-col gap-2">
         <Label>{t('upload.thumbnail.title')}</Label>
@@ -224,6 +238,13 @@ export function ThumbnailSection({
               </Button>
             )}
           </div>
+          {thumbnailBlob && !hasUploadedThumbnail && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('upload.thumbnail.autoCaptured', {
+                defaultValue: 'Auto-generated from video — replace if you like',
+              })}
+            </p>
+          )}
 
           {/* Show upload server status for the existing thumbnail */}
           {hasUploadedThumbnail && (

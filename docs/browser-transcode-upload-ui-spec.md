@@ -1,5 +1,7 @@
 # Browser Transcode Upload UI Spec
 
+Note: in the parallel upload flow (`docs/plans/2026-06-11-parallel-upload-flow-design.md`), this spec's progress screen is implemented as `ProcessingRail` on the Details screen; `BrowserTranscodeStep` now only owns source/settings.
+
 ## Goal
 
 Improve the browser-based transcode step in the upload flow without changing the core upload/transcode capabilities. The new UI should keep every current input and state, but make the settings step cleaner and move progress into a dedicated follow-up screen once the job starts.

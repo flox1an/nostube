@@ -7,10 +7,10 @@
 
 import React, { useState } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy } from 'lucide-react'
+import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy, VolumeX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
-import { useProfile } from '@/hooks'
+import { useProfile, useMutedPubkeys } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -19,6 +19,8 @@ import { CommentInput } from '@/components/CommentInput'
 import { CommentReactions } from '@/components/CommentReactions'
 import { ReportDialog } from '@/components/ReportDialog'
 import { TrustBadge } from '@/components/TrustBadge'
+import { ToastAction } from '@/components/ui/toast'
+import { useToast } from '@/hooks/useToast'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -80,7 +82,26 @@ export const CommentItem = React.memo(function CommentItem({
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
   const eventStore = useEventStore()
+  const { mutePubkey, unmutePubkey } = useMutedPubkeys()
+  const { toast } = useToast()
   const showDebug = isBetaUser(currentUserPubkey)
+
+  const isOwnComment = currentUserPubkey ? comment.pubkey === currentUserPubkey : false
+
+  const handleMuteUser = () => {
+    mutePubkey(comment.pubkey)
+    toast({
+      title: t('video.comments.userMuted'),
+      action: (
+        <ToastAction
+          altText={t('common.undo', { defaultValue: 'Undo' })}
+          onClick={() => unmutePubkey(comment.pubkey)}
+        >
+          {t('common.undo', { defaultValue: 'Undo' })}
+        </ToastAction>
+      ),
+    })
+  }
 
   // Root comments (depth=0) have big avatars, nested have small avatars
   const isRootComment = depth === 0
@@ -125,6 +146,12 @@ export const CommentItem = React.memo(function CommentItem({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {!isOwnComment && currentUserPubkey && (
+                    <DropdownMenuItem onSelect={handleMuteUser} className="text-destructive">
+                      <VolumeX className="w-4 h-4 mr-2" />
+                      {t('video.comments.muteUser')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
                     <Flag className="w-4 h-4 mr-2" />
                     {t('video.comments.reportComment')}

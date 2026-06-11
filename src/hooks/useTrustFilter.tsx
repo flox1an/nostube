@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,6 +29,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     localStorage.setItem('trustFilter.enabled', String(enabled))
   }, [enabled])
   const { followedPubkeys } = useFollowSet()
+  const { user } = useCurrentUser()
 
   const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])
 
@@ -43,7 +45,9 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     if (!enabled) return videos
 
     return videos.filter(v => {
-      // Always show videos from followed authors
+      // Always show own videos
+      if (user?.pubkey && v.pubkey === user.pubkey) return true
+      // Always show videos from followed authors (kind 10020)
       if (followedSet.has(v.pubkey)) return true
       const personal = personalScores.get(v.pubkey)
       const global = globalScores.get(v.pubkey)

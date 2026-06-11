@@ -18,6 +18,7 @@ import type { NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools/filter'
 import type { RelayReqEventMessage } from 'applesauce-relay'
 import { of, type Subscription } from 'rxjs'
+import { fetchExternalSearchResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
 
 interface UseHashtagVideosOptions {
   tag: string | undefined
@@ -75,6 +76,9 @@ export function useHashtagVideos({
   const loadMoreSubscriptionRef = useRef<Subscription | null>(null)
   // Persist the loader across loadMore calls so per-relay cursors advance correctly
   const loaderRef = useRef<ReturnType<typeof getTimelineLoader> | null>(null)
+
+  // External search: case-insensitive supplement for NRelay tag queries
+  const [externalVideos, setExternalVideos] = useState<VideoEvent[]>([])
 
   // Build tag variants: lowercase, Capitalized, UPPERCASE
   const tagVariants = useMemo(() => {
@@ -137,6 +141,25 @@ export function useHashtagVideos({
     phase1Relays.current = []
     loaderRef.current = null
   }, [tag])
+
+  // External search: fetch case-insensitive results from search service in parallel
+  useEffect(() => {
+    if (!tag) {
+      setExternalVideos([])
+      return
+    }
+
+    const controller = new AbortController()
+    const serviceUrl = config.searchServiceUrl || SEARCH_SERVICE_URL
+
+    fetchExternalSearchResults(`#${tag}`, controller.signal, serviceUrl).then(results => {
+      if (!controller.signal.aborted && results) {
+        setExternalVideos(results)
+      }
+    })
+
+    return () => controller.abort()
+  }, [tag, config.searchServiceUrl])
 
   // Phase 1: Load native videos from relays into EventStore
   useEffect(() => {
@@ -329,12 +352,19 @@ export function useHashtagVideos({
       }
     })
 
+    // Add external search results (case-insensitive supplement, skip duplicates)
+    externalVideos.forEach(video => {
+      if (!videoMap.has(video.id)) {
+        videoMap.set(video.id, video)
+      }
+    })
+
     // Deduplicate by identifier (same video posted as both addressable and regular events)
     const deduplicated = deduplicateByIdentifier(Array.from(videoMap.values()))
 
     // Sort by publish date descending (newest first), fallback to created_at
     return deduplicated.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [nativeVideos, labeledVideos])
+  }, [nativeVideos, labeledVideos, externalVideos])
 
   // Cleanup loadMore subscription on unmount
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
@@ -19,7 +19,14 @@ export const MIN_GLOBAL_SCORE = 0.2
  */
 export function useTrustFilter(videos: VideoEvent[] | null) {
   const { t } = useTranslation()
-  const [enabled, setEnabled] = useState(true)
+  const [enabled, setEnabled] = useState(() => {
+    const stored = localStorage.getItem('trustFilter.enabled')
+    return stored === null ? true : stored === 'true'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('trustFilter.enabled', String(enabled))
+  }, [enabled])
   const { followedPubkeys } = useFollowSet()
 
   const followedSet = useMemo(() => new Set(followedPubkeys), [followedPubkeys])

@@ -38,7 +38,7 @@ export const videoTypeLoader = (
 ) => {
   const loader = getTimelineLoader(
     `k21:type:${type}`,
-    { kinds: getKindsForType(type), limit: 20 },
+    { kinds: getKindsForType(type), limit: 100 },
     relays,
     options
   )

@@ -55,7 +55,7 @@ export interface UseTimelineResult {
 }
 
 const DEFAULT_FIRST_EVENT_TIMEOUT_MS = 10000
-const DEFAULT_PAGE_SETTLE_MS = 3000
+const DEFAULT_PAGE_SETTLE_MS = 5000
 const DEFAULT_FIRST_USEFUL_TIMEOUT_MS = 900
 
 function isSingleFilter(filters?: Filter | Filter[]): filters is Filter {

@@ -37,6 +37,17 @@ export const INDEXER_RELAYS: string[] = [
   'wss://relay.snort.social', // Snort relay
 ]
 
+/**
+ * Well-known relays that reliably store zap receipts (kind 9735).
+ * Used as fallback when the user has no read relays configured,
+ * and as supplement to ensure zap events are found.
+ */
+export const ZAP_RELAYS: string[] = [
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
+  'wss://nos.lol',
+]
+
 export const presetBlossomServers: BlossomServer[] = [
   ...DEFAULT_UPLOAD_SERVERS.map(url => ({
     url,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAppContext } from '@/hooks'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 import type { RecommendationVideo } from '@/types/recommendation'
 
@@ -11,6 +12,7 @@ export function useSearchRecommendations(params: {
   limit?: number
 }): { videos: RecommendationVideo[] | null; isLoading: boolean } {
   const { videoRef, userPubkey, excludeContentWarnings, limit = 30 } = params
+  const { config } = useAppContext()
   const [videos, setVideos] = useState<RecommendationVideo[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -24,7 +26,7 @@ export function useSearchRecommendations(params: {
     setIsLoading(true)
     setVideos(null)
 
-    fetch(`${SEARCH_SERVICE_URL}/api/recommendations/related`, {
+    fetch(`${config.searchServiceUrl || SEARCH_SERVICE_URL}/api/recommendations/related`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -55,7 +57,7 @@ export function useSearchRecommendations(params: {
       controller.abort()
       clearTimeout(timeoutId)
     }
-  }, [videoRef, userPubkey, excludeContentWarnings, limit])
+  }, [videoRef, userPubkey, excludeContentWarnings, limit, config.searchServiceUrl])
 
   return { videos, isLoading }
 }

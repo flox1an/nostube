@@ -10,7 +10,7 @@ import { nip19 } from 'nostr-tools'
 
 // ContextVM server identity
 const SERVER_NPUB = 'npub16w48u4xvtlp7ywgfsjlud74tlgdfx9s33scdlafmgl3a40n9tthsu6ty8g'
-const CONTEXTVM_RELAYS = ['wss://relay2.contextvm.org']
+const CONTEXTVM_RELAYS = ['wss://relay2.contextvm.org', 'wss://relay.contextvm.org', 'wss://relay.nostu.be']
 
 // Decode server npub to hex
 const decoded = nip19.decode(SERVER_NPUB)

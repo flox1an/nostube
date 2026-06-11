@@ -13,11 +13,9 @@ import { useCurrentUser } from './useCurrentUser'
 import { useEventStore } from 'applesauce-react/hooks'
 import { relayPool } from '@/nostr/core'
 import { useReadRelays } from './useReadRelays'
+import { ZAP_RELAYS } from '@/constants/relays'
 
 const POLL_INTERVAL_MS = 150000 // 2.5 minutes
-
-// Popular relays that typically have zap receipts
-const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
 
 /**
  * Parse the zap request from a zap receipt to extract sender info

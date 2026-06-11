@@ -9,8 +9,7 @@ import { combineRelays } from '@/lib/utils'
 import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
-// Popular relays that typically have zap receipts
-const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
+import { ZAP_RELAYS } from '@/constants/relays'
 
 /** Emoji reactions treated as negative/downvote */
 const NEGATIVE_REACTION_EMOJI = new Set([

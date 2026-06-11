@@ -15,7 +15,6 @@ import { getTypeForKind } from '@/lib/video-types'
 const SEARCH_LIMIT = 1000 // Max events to load from relays
 const VIDEO_KINDS = [21, 22, 34235, 34236]
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
-const EXTERNAL_SEARCH_URL = SEARCH_SERVICE_URL
 const EXTERNAL_SEARCH_TIMEOUT_MS = 5000
 
 function extractHashtags(text: string): string[] {
@@ -102,10 +101,11 @@ function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
 
 async function fetchExternalSearchResults(
   query: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  serviceUrl: string
 ): Promise<VideoEvent[] | null> {
   try {
-    const url = `${EXTERNAL_SEARCH_URL}/api/search?q=${encodeURIComponent(query)}&limit=50`
+    const url = `${serviceUrl}/api/search?q=${encodeURIComponent(query)}&limit=50`
     const res = await fetch(url, { signal })
     if (!res.ok) return null
     const data = (await res.json()) as { hits: ExternalSearchHit[] }
@@ -257,7 +257,7 @@ export function useSearchVideos({
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_SEARCH_TIMEOUT_MS)
 
-    fetchExternalSearchResults(query, controller.signal).then(results => {
+    fetchExternalSearchResults(query, controller.signal, config.searchServiceUrl || SEARCH_SERVICE_URL).then(results => {
       clearTimeout(timeoutId)
       if (controller.signal.aborted) return
       if (results !== null) {
@@ -272,7 +272,7 @@ export function useSearchVideos({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [query])
+  }, [query, config.searchServiceUrl])
 
   // Local fallback: index events already in IEventStore when external fails
   useEffect(() => {

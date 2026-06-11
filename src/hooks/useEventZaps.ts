@@ -5,8 +5,7 @@ import { useAppContext } from '@/hooks/useAppContext'
 import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
-// Popular relays that typically have zap receipts
-const ZAP_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
+import { ZAP_RELAYS } from '@/constants/relays'
 
 const ZAP_CACHE_KEY = 'zap-totals-cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour

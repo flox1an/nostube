@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
 import { defaultResizeServer } from '@/constants/servers'
+import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
 import {
@@ -35,6 +36,13 @@ export function GeneralSettingsSection() {
     updateConfig(currentConfig => ({
       ...currentConfig,
       thumbResizeServerUrl: value.trim() || undefined,
+    }))
+  }
+
+  const handleSearchServiceUrlChange = (value: string) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      searchServiceUrl: value.trim() || undefined,
     }))
   }
 
@@ -150,6 +158,26 @@ export function GeneralSettingsSection() {
         />
         <p className="text-xs text-muted-foreground">
           {t('settings.general.thumbnailServerDescription')}
+        </p>
+      </div>
+
+      {/* Search Service URL */}
+      <div className="space-y-2 py-6">
+        <h3 className="text-base font-semibold">
+          {t('settings.general.searchServiceUrl', { defaultValue: 'Search Service URL' })}
+        </h3>
+        <Input
+          id="search-service-url"
+          type="url"
+          placeholder={SEARCH_SERVICE_URL}
+          value={config.searchServiceUrl || ''}
+          onChange={e => handleSearchServiceUrlChange(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t('settings.general.searchServiceUrlDescription', {
+            defaultValue:
+              'Base URL of the external video search API. Leave empty to use the default.',
+          })}
         </p>
       </div>
 

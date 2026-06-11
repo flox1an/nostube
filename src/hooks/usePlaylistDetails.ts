@@ -19,8 +19,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useReadRelays } from './useReadRelays'
 import { useSelectedPreset } from './useSelectedPreset'
 
-// Constant fallback relays - defined outside component to prevent re-renders
-const VIDEO_RELAY_FALLBACKS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol']
+import { ZAP_RELAYS } from '@/constants/relays'
 
 type NeventPointer = { id: string }
 type NaddrPointer = { identifier: string; pubkey: string; kind: number }
@@ -115,7 +114,7 @@ export function usePlaylistDetails(
   const relaysToUse = useMemo(() => {
     const pointerRelays = (playlistPointer as { relays?: string[] } | null)?.relays || []
     const videoRelays = videoEventRelays || []
-    return combineRelays([videoRelays, pointerRelays, allConfigRelays, VIDEO_RELAY_FALLBACKS])
+    return combineRelays([videoRelays, pointerRelays, allConfigRelays, ZAP_RELAYS])
   }, [playlistPointer, allConfigRelays, videoEventRelays])
 
   const eventLoader = useMemo(

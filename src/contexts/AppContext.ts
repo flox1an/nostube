@@ -80,6 +80,8 @@ export interface AppConfig {
   preferredQuality?: PreferredQuality
   /** Event IDs the user has reported (hidden from feeds) */
   reportedEventIds?: string[]
+  /** External search service base URL (overrides built-in default) */
+  searchServiceUrl?: string
 }
 
 export interface AppContextType {

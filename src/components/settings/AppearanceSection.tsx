@@ -80,13 +80,13 @@ export function AppearanceSection() {
             <SelectValue placeholder={t('settings.general.selectLanguage')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="en">{t('languages.en')}</SelectItem>
-            <SelectItem value="de">{t('languages.de')}</SelectItem>
-            <SelectItem value="es">{t('languages.es')}</SelectItem>
-            <SelectItem value="fr">{t('languages.fr')}</SelectItem>
-            <SelectItem value="ru">{t('languages.ru')}</SelectItem>
-            <SelectItem value="zh">{t('languages.zh')}</SelectItem>
-            <SelectItem value="ja">{t('languages.ja')}</SelectItem>
+            <SelectItem value="en">🇺🇸 {t('languages.en')}</SelectItem>
+            <SelectItem value="de">🇩🇪 {t('languages.de')}</SelectItem>
+            <SelectItem value="es">🇪🇸 {t('languages.es')}</SelectItem>
+            <SelectItem value="fr">🇫🇷 {t('languages.fr')}</SelectItem>
+            <SelectItem value="ru">🇷🇺 {t('languages.ru')}</SelectItem>
+            <SelectItem value="zh">🇨🇳 {t('languages.zh')}</SelectItem>
+            <SelectItem value="ja">🇯🇵 {t('languages.ja')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">{t('settings.general.languageDescription')}</p>

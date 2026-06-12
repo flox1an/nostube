@@ -6,6 +6,7 @@ import {
   computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
   defaultVariants,
+  repairDuplicateAvcNalHeadersInMp4,
   type TranscodeSourceMeta,
 } from './video-transcode'
 
@@ -218,5 +219,76 @@ describe('defaultVariants', () => {
     )
     expect(variants).toHaveLength(1)
     expect(variants[0]).toMatchObject({ codec: 'avc', targetHeight: 480 })
+  })
+})
+
+function box(type: string, payload: Uint8Array): Uint8Array {
+  const bytes = new Uint8Array(8 + payload.byteLength)
+  const view = new DataView(bytes.buffer)
+  view.setUint32(0, bytes.byteLength)
+  for (let i = 0; i < 4; i++) bytes[4 + i] = type.charCodeAt(i)
+  bytes.set(payload, 8)
+  return bytes
+}
+
+function concat(...chunks: Uint8Array[]): Uint8Array {
+  const bytes = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0))
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return bytes
+}
+
+function findAscii(bytes: Uint8Array, text: string): number {
+  const needle = new TextEncoder().encode(text)
+  for (let i = 0; i <= bytes.byteLength - needle.byteLength; i++) {
+    if (needle.every((byte, j) => bytes[i + j] === byte)) return i
+  }
+  return -1
+}
+
+describe('repairDuplicateAvcNalHeadersInMp4', () => {
+  it('repairs duplicated SPS and PPS NAL headers in nested avcC boxes', () => {
+    const avcConfig = new Uint8Array([
+      0x01, 0x64, 0x00, 0x1e, 0xff, 0xe1, 0x00, 0x04, 0x67, 0x67, 0x64, 0x00, 0x01, 0x00, 0x03,
+      0x68, 0x68, 0xce,
+    ])
+    const sampleEntryPrefix = new Uint8Array(78)
+    const source = box(
+      'moov',
+      box(
+        'trak',
+        box(
+          'mdia',
+          box(
+            'minf',
+            box(
+              'stbl',
+              box(
+                'stsd',
+                concat(
+                  new Uint8Array(8),
+                  box('avc1', concat(sampleEntryPrefix, box('avcC', avcConfig)))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+    const repaired = repairDuplicateAvcNalHeadersInMp4(source)
+    const avcCTypeOffset = findAscii(repaired, 'avcC')
+    const avcCPayloadOffset = avcCTypeOffset + 4
+
+    expect(repaired.byteLength).toBe(source.byteLength - 2)
+    expect(avcCTypeOffset).toBeGreaterThan(0)
+    expect(Array.from(repaired.subarray(avcCPayloadOffset, avcCPayloadOffset + 16))).toEqual([
+      0x01, 0x64, 0x00, 0x1e, 0xff, 0xe1, 0x00, 0x03, 0x67, 0x64, 0x00, 0x01, 0x00, 0x02, 0x68,
+      0xce,
+    ])
+    expect(new DataView(repaired.buffer).getUint32(0, false)).toBe(repaired.byteLength)
   })
 })

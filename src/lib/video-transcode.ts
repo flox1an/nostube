@@ -482,7 +482,189 @@ export async function transcodeToHls(
     signal.removeEventListener('abort', abortConversion)
   }
 
-  return outputFiles
+  return repairGeneratedHlsInitSegments(outputFiles)
+}
+
+const MP4_CONTAINER_BOXES = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl'])
+const MP4_SAMPLE_ENTRY_BOXES = new Set(['avc1', 'avc3'])
+
+function readAscii(bytes: Uint8Array, offset: number, length: number): string {
+  let value = ''
+  for (let i = 0; i < length; i++) value += String.fromCharCode(bytes[offset + i] ?? 0)
+  return value
+}
+
+function writeUint32(bytes: Uint8Array, offset: number, value: number) {
+  bytes[offset] = (value >>> 24) & 0xff
+  bytes[offset + 1] = (value >>> 16) & 0xff
+  bytes[offset + 2] = (value >>> 8) & 0xff
+  bytes[offset + 3] = value & 0xff
+}
+
+function concatByteArrays(chunks: Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
+  const result = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    result.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return result
+}
+
+function maybeRemoveDuplicatedAvcNalHeader(nal: Uint8Array, expectedType: number): Uint8Array {
+  if (nal.byteLength < 2) return nal
+  if ((nal[0] & 0x1f) !== expectedType) return nal
+  if (nal[0] !== nal[1]) return nal
+
+  const repaired = new Uint8Array(nal.byteLength - 1)
+  repaired[0] = nal[0]
+  repaired.set(nal.subarray(2), 1)
+  return repaired
+}
+
+function repairAvcConfigBoxPayload(payload: Uint8Array): { bytes: Uint8Array; changed: boolean } {
+  if (payload.byteLength < 7) return { bytes: payload, changed: false }
+
+  const chunks: Uint8Array[] = [payload.subarray(0, 6)]
+  let offset = 6
+  let changed = false
+  const spsCount = payload[5] & 0x1f
+
+  for (let i = 0; i < spsCount; i++) {
+    if (offset + 2 > payload.byteLength) return { bytes: payload, changed: false }
+    const length = (payload[offset] << 8) | payload[offset + 1]
+    offset += 2
+    if (offset + length > payload.byteLength) return { bytes: payload, changed: false }
+
+    const nal = payload.subarray(offset, offset + length)
+    const repaired = maybeRemoveDuplicatedAvcNalHeader(nal, 7)
+    const lengthBytes = new Uint8Array(2)
+    lengthBytes[0] = (repaired.byteLength >>> 8) & 0xff
+    lengthBytes[1] = repaired.byteLength & 0xff
+    chunks.push(lengthBytes, repaired)
+    changed ||= repaired.byteLength !== nal.byteLength
+    offset += length
+  }
+
+  if (offset >= payload.byteLength) return { bytes: payload, changed: false }
+  const ppsCountOffset = offset
+  const ppsCount = payload[offset]
+  chunks.push(payload.subarray(ppsCountOffset, ppsCountOffset + 1))
+  offset += 1
+
+  for (let i = 0; i < ppsCount; i++) {
+    if (offset + 2 > payload.byteLength) return { bytes: payload, changed: false }
+    const length = (payload[offset] << 8) | payload[offset + 1]
+    offset += 2
+    if (offset + length > payload.byteLength) return { bytes: payload, changed: false }
+
+    const nal = payload.subarray(offset, offset + length)
+    const repaired = maybeRemoveDuplicatedAvcNalHeader(nal, 8)
+    const lengthBytes = new Uint8Array(2)
+    lengthBytes[0] = (repaired.byteLength >>> 8) & 0xff
+    lengthBytes[1] = repaired.byteLength & 0xff
+    chunks.push(lengthBytes, repaired)
+    changed ||= repaired.byteLength !== nal.byteLength
+    offset += length
+  }
+
+  chunks.push(payload.subarray(offset))
+  return changed ? { bytes: concatByteArrays(chunks), changed } : { bytes: payload, changed: false }
+}
+
+function repairMp4Boxes(
+  bytes: Uint8Array,
+  start: number,
+  end: number
+): { bytes: Uint8Array; changed: boolean } {
+  const chunks: Uint8Array[] = []
+  let offset = start
+  let changed = false
+
+  while (offset + 8 <= end) {
+    const boxStart = offset
+    const size = new DataView(bytes.buffer, bytes.byteOffset + boxStart, 4).getUint32(0, false)
+    const type = readAscii(bytes, boxStart + 4, 4)
+
+    if (size < 8 || boxStart + size > end) break
+
+    const boxEnd = boxStart + size
+    const box = bytes.subarray(boxStart, boxEnd)
+    let nextBox = box
+
+    if (type === 'avcC') {
+      const repaired = repairAvcConfigBoxPayload(bytes.subarray(boxStart + 8, boxEnd))
+      if (repaired.changed) {
+        nextBox = new Uint8Array(8 + repaired.bytes.byteLength)
+        nextBox.set(box.subarray(0, 8), 0)
+        nextBox.set(repaired.bytes, 8)
+        writeUint32(nextBox, 0, nextBox.byteLength)
+        changed = true
+      }
+    } else {
+      let childStart: number | null = null
+      if (MP4_CONTAINER_BOXES.has(type)) childStart = boxStart + 8
+      if (type === 'stsd') childStart = boxStart + 16
+      if (MP4_SAMPLE_ENTRY_BOXES.has(type)) childStart = boxStart + 86
+
+      if (childStart !== null && childStart < boxEnd) {
+        const repairedChildren = repairMp4Boxes(bytes, childStart, boxEnd)
+        if (repairedChildren.changed) {
+          const prefix = bytes.subarray(boxStart, childStart)
+          nextBox = concatByteArrays([prefix, repairedChildren.bytes])
+          writeUint32(nextBox, 0, nextBox.byteLength)
+          changed = true
+        }
+      }
+    }
+
+    chunks.push(nextBox)
+    offset = boxEnd
+  }
+
+  if (offset < end) chunks.push(bytes.subarray(offset, end))
+
+  return changed
+    ? { bytes: concatByteArrays(chunks), changed }
+    : { bytes: bytes.subarray(start, end), changed }
+}
+
+export function repairDuplicateAvcNalHeadersInMp4(bytes: Uint8Array): Uint8Array {
+  const repaired = repairMp4Boxes(bytes, 0, bytes.byteLength)
+  return repaired.changed ? repaired.bytes : bytes
+}
+
+async function repairGeneratedHlsInitSegments(
+  files: Map<string, File>
+): Promise<Map<string, File>> {
+  const repairedFiles = new Map<string, File>()
+
+  for (const [path, file] of files.entries()) {
+    if (!path.endsWith('.mp4')) {
+      repairedFiles.set(path, file)
+      continue
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const repaired = repairDuplicateAvcNalHeadersInMp4(bytes)
+    if (repaired === bytes) {
+      repairedFiles.set(path, file)
+      continue
+    }
+
+    const repairedBuffer = new ArrayBuffer(repaired.byteLength)
+    new Uint8Array(repairedBuffer).set(repaired)
+    repairedFiles.set(
+      path,
+      new File([repairedBuffer], file.name, {
+        type: file.type,
+        lastModified: file.lastModified,
+      })
+    )
+  }
+
+  return repairedFiles
 }
 
 /**

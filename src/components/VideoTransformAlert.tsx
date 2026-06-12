@@ -20,7 +20,7 @@ interface VideoTransformAlertProps {
   videoId: string
   authorPubkey?: string
   videoVariants: VideoVariant[]
-  onTransform: () => void
+  onContribute: () => void
 }
 
 /**
@@ -32,7 +32,7 @@ export function VideoTransformAlert({
   videoId,
   authorPubkey,
   videoVariants,
-  onTransform,
+  onContribute,
 }: VideoTransformAlertProps) {
   const { t } = useTranslation()
   const currentUser = useCurrentUser()
@@ -76,11 +76,11 @@ export function VideoTransformAlert({
   // Determine which message to show based on needs
   const getAlertDescription = () => {
     if (needsLowerRes && needsIOSCompatible) {
-      return t('video.transform.alertDescriptionBoth')
+      return t('video.contribute.alertDescriptionBoth')
     } else if (needsLowerRes) {
-      return t('video.transform.alertDescriptionLowRes')
+      return t('video.contribute.alertDescriptionLowRes')
     } else {
-      return t('video.transform.alertDescriptionIOS')
+      return t('video.contribute.alertDescriptionIOS')
     }
   }
 
@@ -95,11 +95,11 @@ export function VideoTransformAlert({
         <X className="h-4 w-4" />
       </Button>
       <AlertCircle className="h-4 w-4" />
-      <AlertTitle>{t('video.transform.alertTitle')}</AlertTitle>
+      <AlertTitle>{t('video.contribute.alertTitle')}</AlertTitle>
       <AlertDescription className="flex flex-col gap-3 text-muted-foreground">
         <span>{getAlertDescription()}</span>
-        <Button onClick={onTransform} size="sm" className="w-fit">
-          {t('video.transform.contributeButton')}
+        <Button onClick={onContribute} size="sm" className="w-fit">
+          {t('video.contribute.contributeButton')}
         </Button>
       </AlertDescription>
     </Alert>

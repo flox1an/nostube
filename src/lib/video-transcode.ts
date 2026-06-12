@@ -213,6 +213,17 @@ export function availableResolutions(
   }))
 }
 
+/** Conservative MP4 targets used before source dimensions are available. */
+export function defaultContributeResolutions(supportsHevc: boolean): ResolutionOption[] {
+  return assignMp4ResolutionCodecs(
+    [
+      { height: 480, suggestedCodec: supportsHevc ? 'hevc' : 'avc' },
+      { height: 720, suggestedCodec: supportsHevc ? 'hevc' : 'avc' },
+    ],
+    supportsHevc
+  )
+}
+
 /** Apply MP4 codec policy: use HEVC when available, except for the lowest selected resolution. */
 export function assignMp4ResolutionCodecs(
   resolutions: ResolutionOption[],
@@ -298,6 +309,27 @@ export function defaultVariants(
     assignMp4ResolutionCodecs(defaultResolutions(meta, supportedCodecs), supportsHevc),
     'mp4'
   )
+}
+
+/**
+ * Default target heights for the contribute dialog.
+ * Returns the subset of available heights that should be pre-selected.
+ */
+export function defaultSelectedTargetHeights(
+  meta: TranscodeSourceMeta,
+  resolutions: ResolutionOption[]
+): number[] {
+  if (resolutions.length === 0) return []
+  const heights = resolutions.map(r => r.height)
+  const SINGLE_MP4_THRESHOLD_MB = 50
+  if (meta.sizeMB > 0 && meta.sizeMB < SINGLE_MP4_THRESHOLD_MB) {
+    const top = heights[heights.length - 1]
+    return top !== undefined ? [top] : []
+  }
+  const preferred = [720, 480].filter(h => heights.includes(h))
+  if (preferred.length > 0) return preferred
+  const top = heights[heights.length - 1]
+  return top !== undefined ? [top] : []
 }
 
 export function isWebCodecsSupported(): boolean {

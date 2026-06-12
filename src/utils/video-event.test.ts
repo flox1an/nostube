@@ -873,6 +873,9 @@ describe('processEvent', () => {
       const result = processEvent(eventWithoutMime, defaultRelays)
 
       expect(result?.mimeType).toBeUndefined()
+      expect(result?.allVideoVariants).toHaveLength(1)
+      expect(result?.allVideoVariants?.[0]?.url).toBe('https://example.com/video.mp4')
+      expect(result?.urls).toContain('https://example.com/video.mp4')
     })
   })
 })

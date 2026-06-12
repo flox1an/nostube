@@ -44,6 +44,7 @@ import {
   Clock,
   Pencil,
   ExternalLink,
+  Zap,
 } from 'lucide-react'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,7 @@ import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import ShareButton from '@/components/ShareButton'
 import { VideoComments } from '@/components/VideoComments'
 import { VideoDebugInfo } from '@/components/VideoDebugInfo'
+import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVariants'
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
@@ -100,6 +102,8 @@ interface VideoInfoSectionProps {
   }
   onDelete?: () => void
   onMirror?: () => void
+  onContribute?: () => void
+  contributedVariantDebugRecords?: ContributedVariantDebugRecord[]
   userServers?: string[]
   geohash?: string | null
   currentTime?: number // Current video playback position (for timestamped zaps)
@@ -123,6 +127,8 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   shareLinks,
   onDelete,
   onMirror,
+  onContribute,
+  contributedVariantDebugRecords = [],
   userServers,
   geohash,
   currentTime,
@@ -400,8 +406,8 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     {isVideoPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
                     &nbsp;{' '}
                     {isVideoPinned
-                      ? t('video.unpinFromProfile', 'Unpin from profile')
-                      : t('video.pinToProfile', 'Pin to profile')}
+                      ? t('video.unpinFromProfile')
+                      : t('video.pinToProfile')}
                   </DropdownMenuItem>
                 )}
                 {isEditable && videoEvent && (
@@ -422,9 +428,15 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     &nbsp; {t('video.mirrorVideo')}
                   </DropdownMenuItem>
                 )}
+                {userPubkey && onContribute && (
+                  <DropdownMenuItem onSelect={onContribute}>
+                    <Zap className="w-5 h-5" />
+                    &nbsp; {t('video.contribute.menuItem')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => setShowDebugDialog(true)}>
                   <Bug className="w-5 h-5" />
-                  &nbsp; Debug Info
+                  &nbsp; {t('errors.debugInfo')}
                 </DropdownMenuItem>
                 {userPubkey && (
                   <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
@@ -562,6 +574,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           videoEvent={videoEvent}
           video={video}
           blossomServers={configBlossomServers}
+          contributedVariantDebugRecords={contributedVariantDebugRecords}
           userServers={userServers}
         />
       )}

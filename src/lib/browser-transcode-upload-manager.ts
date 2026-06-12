@@ -1,11 +1,12 @@
 import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
+import { DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONCURRENT_CHUNKS, uploadAndProcessFile } from '@/lib/transcode-upload'
 import type { BrowserTranscodeState, BrowserTranscodeVariantState } from '@/types/upload-draft'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
-import { processUploadedVideo, type VideoVariant } from '@/lib/video-processing'
+import type { VideoVariant } from '@/lib/video-processing'
 import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
@@ -22,8 +23,6 @@ import {
 } from '@/lib/browser-transcode-job-storage'
 
 const STORAGE_KEY = 'nostube_upload_drafts'
-const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024
-const DEFAULT_MAX_CONCURRENT_CHUNKS = 2
 
 export interface BrowserTranscodeUploadJobOptions {
   draftId: string
@@ -199,36 +198,6 @@ function throttle<T extends (...args: any[]) => void>(func: T, wait: number): T 
   }) as T
 }
 
-async function uploadAndProcessFile(
-  file: File,
-  initialServers: string[],
-  mirrorServers: string[],
-  signer: Signer,
-  onProgress: (progress: ChunkedUploadProgress) => void,
-  signal?: AbortSignal
-): Promise<VideoVariant> {
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-  const uploadedBlobs = await uploadFileToMultipleServersChunked({
-    file,
-    servers: initialServers,
-    signer,
-    options: { chunkSize: DEFAULT_CHUNK_SIZE, maxConcurrentChunks: DEFAULT_MAX_CONCURRENT_CHUNKS },
-    callbacks: { onProgress },
-    signal,
-  })
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-
-  let mirroredBlobs: BlobDescriptor[] = []
-  if (mirrorServers.length > 0 && uploadedBlobs.length > 0) {
-    const mirrorResults = await Promise.all(
-      uploadedBlobs.map(blob => mirrorBlobsToServers({ mirrorServers, blob, signer }))
-    )
-    mirroredBlobs = mirrorResults.flat()
-  }
-
-  const video = await processUploadedVideo(file, uploadedBlobs)
-  return { ...video, mirroredBlobs }
-}
 
 /**
  * Normalises the MIME type of HLS binary files for Blossom server compatibility.

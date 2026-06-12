@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant, type TextTrack } from '@/utils/video-event'
+import { useProfile } from '@/hooks/useProfile'
+import { UserAvatar } from '@/components/UserAvatar'
 import { getLanguageLabel } from '@/lib/utils'
 
 type MenuView = 'main' | 'quality' | 'speed' | 'subtitles'
@@ -19,6 +21,20 @@ interface QualityOption {
   label: string
   value: number // -1 for auto (HLS), or variant index
   description?: string
+  contributorPubkey?: string
+}
+
+function qualityLabelFromVariant(variant: VideoVariant, fallback: string): string {
+  if (variant.quality) return variant.quality
+  const height = variant.dimensions?.match(/x(\d+)/)?.[1]
+  return height ? `${height}p` : fallback
+}
+
+function contributorDisplayName(
+  profile: { display_name?: string; name?: string; picture?: string } | undefined,
+  pubkey: string
+): string {
+  return profile?.display_name || profile?.name || pubkey.slice(0, 8)
 }
 
 interface SettingsMenuProps {
@@ -99,17 +115,31 @@ export const SettingsMenu = memo(function SettingsMenu({
         ...hlsLevels.map(level => ({ label: level.label, value: level.index })),
       ]
     : videoVariants.map((variant, index) => ({
-        label: variant.quality || `Quality ${index + 1}`,
+        label: qualityLabelFromVariant(variant, `Quality ${index + 1}`),
         value: index,
+        contributorPubkey: variant.contributorPubkey,
       }))
 
   const currentQuality = isHls ? hlsCurrentLevel : selectedVariantIndex
+  const selectedQualityOption = qualityOptions.find(q => q.value === currentQuality)
+  const selectedContributorProfile = useProfile(
+    selectedQualityOption?.contributorPubkey
+      ? { pubkey: selectedQualityOption.contributorPubkey }
+      : undefined
+  )
   const currentQualityLabel =
     currentQuality === -1
       ? activeHlsLevelLabel
         ? `Auto (${activeHlsLevelLabel})`
         : 'Auto'
-      : qualityOptions.find(q => q.value === currentQuality)?.label || 'Unknown'
+      : selectedQualityOption
+        ? selectedQualityOption.contributorPubkey
+          ? `${selectedQualityOption.label} (${contributorDisplayName(
+              selectedContributorProfile,
+              selectedQualityOption.contributorPubkey
+            )})`
+          : selectedQualityOption.label
+        : 'Unknown'
 
   const currentSpeedLabel =
     PLAYBACK_SPEEDS.find(s => s.value === playbackRate)?.label || `${playbackRate}x`
@@ -341,15 +371,57 @@ const QualitySubmenu = memo(function QualitySubmenu({
     <div role="menu">
       <SubmenuHeader title="Quality" onBack={onBack} />
       {options.map(option => (
-        <SelectableItem
+        <QualitySelectableItem
           key={option.value}
-          label={option.label}
-          description={option.description}
+          option={option}
           isSelected={option.value === currentValue}
           onClick={() => onSelect(option.value)}
         />
       ))}
     </div>
+  )
+})
+
+const QualitySelectableItem = memo(function QualitySelectableItem({
+  option,
+  isSelected,
+  onClick,
+}: {
+  option: QualityOption
+  isSelected: boolean
+  onClick: () => void
+}) {
+  const contributorProfile = useProfile(
+    option.contributorPubkey ? { pubkey: option.contributorPubkey } : undefined
+  )
+  const contributorName = option.contributorPubkey
+    ? contributorDisplayName(contributorProfile, option.contributorPubkey)
+    : undefined
+  const label =
+    option.contributorPubkey && contributorName ? (
+      <span className="inline-flex min-w-0 items-center gap-1">
+        <span>{option.label} (</span>
+        <span data-contributor-avatar className="h-4 w-4 shrink-0" aria-hidden="true">
+          <UserAvatar
+            picture={contributorProfile?.picture}
+            pubkey={option.contributorPubkey}
+            name={contributorName}
+            className="h-4 w-4"
+          />
+        </span>
+        <span className="truncate">{contributorName})</span>
+      </span>
+    ) : (
+      option.label
+    )
+
+  return (
+    <SelectableItem
+      label={label}
+      description={option.description}
+      isSelected={isSelected}
+      onClick={onClick}
+    />
   )
 })
 
@@ -463,7 +535,7 @@ const SubmenuHeader = memo(function SubmenuHeader({ title, onBack }: SubmenuHead
 })
 
 interface SelectableItemProps {
-  label: string
+  label: ReactNode
   description?: string
   isSelected: boolean
   onClick: () => void

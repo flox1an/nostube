@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Contribute variant flow — video pages can now re-encode an existing MP4 source in the browser, upload generated MP4 variants to selected Blossom servers, publish kind 1063 announcements, and merge discovered contributed variants into the player quality list
 - HLS audio renditions are now tracked as separate streams throughout the upload pipeline: `HlsVariantStream` gains `type` and `language` fields; `browser-transcode-upload-manager` parses `#EXT-X-MEDIA:TYPE=AUDIO` entries from the master playlist, includes their segments in the upload segment grid, and pushes audio entries into `hlsVariants`; `VideoVariantsTable` renders audio rendition rows (with music icon, language column, "Audio Rendition" badge) separately from video variant rows
 - Upload wizard now runs browser transcode/upload in the background while users fill details: the six-step flow is consolidated into Source, Details, and Review screens with a processing rail, readiness checklist, auto-generated thumbnails, and preserved draft/deep-link behavior
 - Mute user from comment dropdown — "Mute user" option in comment burger menu adds the author's pubkey to a localStorage mute list; muted users' comments are hidden in video comment threads and their videos are excluded from all feeds via the same `useReportedPubkeys` filter used for preset-blocked and illegally-reported pubkeys

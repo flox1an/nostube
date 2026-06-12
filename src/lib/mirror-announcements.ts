@@ -9,8 +9,9 @@
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from 'blossom-client-sdk'
 import { relayPool } from '@/nostr/core'
-import { nowInSecs } from '@/lib/utils'
+import { nowInSecs, buildAdvancedMimeType } from '@/lib/utils'
 import type { BlossomBlob } from '@/lib/blossom-blob-extractor'
+import type { VideoVariant as ProcessingVideoVariant } from '@/lib/video-processing'
 
 /**
  * Information about the source video event for attribution
@@ -267,4 +268,38 @@ export function getMirrorAnnouncementRelays(
   }
 
   return Array.from(relaySet)
+}
+
+
+/**
+ * Build MirrorAnnouncementOptions for a freshly transcoded+uploaded MP4 variant.
+ */
+export function buildContributedVariantAnnouncement(params: {
+  uploadedBlobs: BlobDescriptor[]
+  variant: ProcessingVideoVariant
+  videoEvent: VideoEventInfo
+  relayHint: string
+}): MirrorAnnouncementOptions {
+  const { uploadedBlobs, variant, videoEvent, relayHint } = params
+  if (uploadedBlobs.length === 0) {
+    throw new Error('No uploaded blobs for contributed variant announcement')
+  }
+  const primary = uploadedBlobs[0]
+  const mimeType = buildAdvancedMimeType('video/mp4', variant.videoCodec, variant.audioCodec)
+  const blob: BlossomBlob = {
+    type: 'video',
+    variant: {
+      url: primary.url,
+      hash: primary.sha256 ?? undefined,
+      size: variant.sizeMB ? Math.round(variant.sizeMB * 1024 * 1024) : primary.size,
+      dimensions: variant.dimension,
+      mimeType,
+      quality: variant.qualityLabel,
+      fallbackUrls: uploadedBlobs.slice(1).map(b => b.url),
+    },
+    label: `Variant ${variant.qualityLabel ?? variant.dimension}`,
+    hash: primary.sha256 ?? '',
+    ext: 'mp4',
+  }
+  return { blob, mirrorResults: uploadedBlobs, videoEvent, relayHint }
 }

@@ -1,24 +1,6 @@
 import { type VideoVariant } from '@/utils/video-event'
 import { isCodecSupported } from './codec-compatibility'
 
-/**
- * Specification for a recommended video transformation
- */
-export interface TransformationSpec {
-  targetResolution: string // e.g., "720p"
-  targetCodec: string // e.g., "hvc1" or "avc1"
-  reason: string // e.g., "iOS compatibility" or "Lower bandwidth"
-  priority: 'high' | 'medium' | 'low'
-}
-
-/**
- * Result of transformation needs analysis
- */
-export interface TransformationNeeds {
-  needsLowerRes: boolean
-  needsIOSCompatible: boolean
-  recommendedTransforms: TransformationSpec[]
-}
 
 /**
  * Extract quality/resolution from variant data
@@ -97,6 +79,16 @@ export function extractCodecFromMimeType(mimeType?: string): string | undefined 
   return codecs[0].split('.')[0].toLowerCase()
 }
 
+function isMp4LikeVariant(variant: VideoVariant): boolean {
+  const mimeType = variant.mimeType?.split(';')[0]?.trim().toLowerCase()
+  if (mimeType === 'video/mp4') return true
+  try {
+    return new URL(variant.url).pathname.toLowerCase().endsWith('.mp4')
+  } catch {
+    return variant.url.toLowerCase().split('?')[0].endsWith('.mp4')
+  }
+}
+
 /**
  * Check if video only has high-resolution variants (1080p or higher)
  * and lacks accessible lower resolutions (720p or below)
@@ -110,10 +102,11 @@ export function needsLowerResolutionVariants(videoVariants: VideoVariant[]): boo
     return false
   }
 
-  // Check if at least one variant has resolution data
+  // A lone MP4 without resolution metadata is still a useful contribution target:
+  // the dialog will probe dimensions after download, then filter targets safely.
   const hasResolutionData = videoVariants.some(v => v.quality || v.dimensions)
   if (!hasResolutionData) {
-    return false
+    return videoVariants.length === 1 && isMp4LikeVariant(videoVariants[0])
   }
 
   // Check if any variant is 720p or lower
@@ -169,54 +162,3 @@ export function needsIOSCompatibleVariants(videoVariants: VideoVariant[]): boole
   return !hasIOSCompatibleVariant
 }
 
-/**
- * Determine what transformations are needed for a video
- *
- * @param videoVariants - Array of video variants
- * @returns Object describing needed transformations
- */
-export function getNeededTransformations(videoVariants: VideoVariant[]): TransformationNeeds {
-  const needsLowerRes = needsLowerResolutionVariants(videoVariants)
-  const needsIOSCompatible = needsIOSCompatibleVariants(videoVariants)
-
-  const recommendedTransforms: TransformationSpec[] = []
-
-  // Add iOS-compatible transformations (high priority)
-  if (needsIOSCompatible) {
-    recommendedTransforms.push({
-      targetResolution: '720p',
-      targetCodec: 'hvc1',
-      reason: 'iOS compatibility (HEVC)',
-      priority: 'high',
-    })
-    recommendedTransforms.push({
-      targetResolution: '720p',
-      targetCodec: 'avc1',
-      reason: 'iOS compatibility (H.264)',
-      priority: 'high',
-    })
-  }
-
-  // Add lower resolution transformations (medium priority)
-  if (needsLowerRes && !needsIOSCompatible) {
-    // If we don't already have iOS-compat transforms at 720p, add lower-res versions
-    recommendedTransforms.push({
-      targetResolution: '720p',
-      targetCodec: 'avc1',
-      reason: 'Lower bandwidth (H.264)',
-      priority: 'medium',
-    })
-    recommendedTransforms.push({
-      targetResolution: '480p',
-      targetCodec: 'avc1',
-      reason: 'Lower bandwidth (H.264)',
-      priority: 'medium',
-    })
-  }
-
-  return {
-    needsLowerRes,
-    needsIOSCompatible,
-    recommendedTransforms,
-  }
-}

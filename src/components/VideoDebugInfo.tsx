@@ -8,6 +8,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { extractBlossomHash } from '@/utils/video-event'
+import { useTranslation } from 'react-i18next'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,6 +37,7 @@ import {
 import type { NostrEvent } from 'nostr-tools'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
+import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVariants'
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
 import type { SegmentStatus } from '@/components/hls-segment-grid'
@@ -541,6 +543,120 @@ function HlsNodeDetails({ url, configServers }: { url: string; configServers: Bl
     </div>
   )
 }
+function contributedStatusClass(status: ContributedVariantDebugRecord['status']): string {
+  switch (status) {
+    case 'accepted':
+      return 'text-green-600'
+    case 'checking':
+      return 'text-blue-600'
+    case 'unavailable':
+      return 'text-red-600'
+    case 'invalid':
+      return 'text-orange-600'
+    default:
+      return 'text-muted-foreground'
+  }
+}
+
+export function ContributedVariantDebugSection({
+  records,
+}: {
+  records: ContributedVariantDebugRecord[]
+}) {
+  if (records.length === 0) return null
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="flex items-center gap-2 font-semibold mb-2 hover:text-foreground/80 group">
+        <ChevronRight className="w-4 h-4 transition-transform group-data-[state=open]:rotate-90" />
+        Contributed Video Variants
+        <span className="text-sm font-normal text-muted-foreground">({records.length})</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="bg-muted p-4 rounded-lg space-y-3">
+          {records.map(record => (
+            <div key={record.eventId} className="rounded-md border bg-background/60 p-3 text-sm">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className={`font-medium ${contributedStatusClass(record.status)}`}>
+                  {record.status}
+                </span>
+                <span className="text-muted-foreground">kind {record.eventKind}</span>
+                {record.quality && <span>{record.quality}</span>}
+                {record.dimensions && (
+                  <span className="text-muted-foreground">{record.dimensions}</span>
+                )}
+              </div>
+              <div className="space-y-1">
+                <div>
+                  <span className="font-medium">Event: </span>
+                  <code className="text-xs break-all">{record.eventId}</code>
+                </div>
+                <div>
+                  <span className="font-medium">Pubkey: </span>
+                  <code className="text-xs break-all">{record.pubkey}</code>
+                </div>
+                {record.hash && (
+                  <div>
+                    <span className="font-medium">Hash: </span>
+                    <code className="text-xs break-all">{record.hash}</code>
+                  </div>
+                )}
+                {record.url && (
+                  <div>
+                    <span className="font-medium">URL: </span>
+                    <code className="text-xs break-all">{record.url}</code>
+                  </div>
+                )}
+                {record.reachableUrl && (
+                  <div>
+                    <span className="font-medium">Reachable URL: </span>
+                    <code className="text-xs break-all">{record.reachableUrl}</code>
+                  </div>
+                )}
+                {record.statusCode && (
+                  <div>
+                    <span className="font-medium">HEAD status: </span>
+                    <span className="text-xs">{record.statusCode}</span>
+                  </div>
+                )}
+                {record.fallbackUrls.length > 0 && (
+                  <div>
+                    <span className="font-medium">Fallback URLs: </span>
+                    <ul className="mt-1 space-y-1">
+                      {record.fallbackUrls.map(url => (
+                        <li key={url}>
+                          <code className="text-xs break-all">{url}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {record.mimeType && (
+                  <div>
+                    <span className="font-medium">MIME Type: </span>
+                    <code className="text-xs">{record.mimeType}</code>
+                  </div>
+                )}
+                {record.error && (
+                  <div>
+                    <span className="font-medium">Error: </span>
+                    <code className="text-xs break-all">{record.error}</code>
+                  </div>
+                )}
+                <details>
+                  <summary className="cursor-pointer text-xs text-muted-foreground">Tags</summary>
+                  <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 text-xs">
+                    {JSON.stringify(record.tags, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
 
 interface VideoDebugInfoProps {
   open: boolean
@@ -548,6 +664,7 @@ interface VideoDebugInfoProps {
   videoEvent: NostrEvent | null | undefined
   video: VideoEvent | null
   blossomServers?: BlossomServer[]
+  contributedVariantDebugRecords?: ContributedVariantDebugRecord[]
   userServers?: string[]
 }
 
@@ -609,9 +726,11 @@ export function VideoDebugInfo({
   videoEvent,
   video,
   blossomServers,
+  contributedVariantDebugRecords = [],
   userServers,
 }: VideoDebugInfoProps) {
   const { config } = useAppContext()
+  const { t } = useTranslation()
 
   // Broadcast state
   const [broadcastStatus, setBroadcastStatus] = useState<
@@ -868,10 +987,8 @@ export function VideoDebugInfo({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Debug Info</DialogTitle>
-          <DialogDescription>
-            Technical details about this video event, relays, and blossom servers
-          </DialogDescription>
+          <DialogTitle>{t('errors.debugInfo')}</DialogTitle>
+          <DialogDescription>{t('video.debugInfoDescription')}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[70vh] pr-4">
           <div className="space-y-6">
@@ -989,6 +1106,7 @@ export function VideoDebugInfo({
                 )}
               </div>
             </div>
+            <ContributedVariantDebugSection records={contributedVariantDebugRecords} />
 
             {/* Unified variant + HLS panel */}
             {(nonHlsVariants.length > 0 || hlsMasterUrls.length > 0) && (

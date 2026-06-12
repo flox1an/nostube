@@ -5,6 +5,7 @@ import {
   canUseOriginalHlsVariant,
   computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
+  defaultContributeResolutions,
   defaultVariants,
   repairDuplicateAvcNalHeadersInMp4,
   type TranscodeSourceMeta,
@@ -151,6 +152,15 @@ describe('computeBrowserTranscodeVideoBitrate', () => {
         bitrateMbps: 1.5,
       })
     ).toBe(3_000_000)
+  })
+})
+
+describe('defaultContributeResolutions', () => {
+  it('offers 720p and 480p when source dimensions are unknown', () => {
+    expect(defaultContributeResolutions(false)).toEqual([
+      { height: 480, suggestedCodec: 'avc' },
+      { height: 720, suggestedCodec: 'avc' },
+    ])
   })
 })
 

@@ -9,7 +9,12 @@ import { YouTubePlayer } from '@/components/YouTubePlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import { processEvent, generateEventLink, buildEventRelays } from '@/utils/video-event'
+import {
+  processEvent,
+  generateEventLink,
+  buildEventRelays,
+  sortVideoVariantsByQuality,
+} from '@/utils/video-event'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -31,6 +36,7 @@ import {
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
+import { useContributedVariants } from '@/hooks/useContributedVariants'
 import { useCommentHighlight } from '@/hooks/useCommentHighlight'
 import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -43,8 +49,8 @@ import { VideoPageLayout } from '@/components/VideoPageLayout'
 import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
 import { Button } from '@/components/ui/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
-import { TransformVideoDialog } from '@/components/TransformVideoDialog'
-import { getNeededTransformations } from '@/lib/video-transformation-detection'
+import { ContributeVariantDialog } from '@/components/ContributeVariantDialog'
+import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { useTranslation } from 'react-i18next'
 import type { BlossomServerTag } from '@/contexts/AppContext'
 
@@ -263,12 +269,20 @@ export function VideoPage() {
   }, [nevent, videoEvent, hintRelays, config.blossomServers, presetContent.nsfwPubkeys])
 
   const isLoading = !video && videoEvent === undefined
+  const contributedVariantsResult = useContributedVariants(video ?? null)
+  const contributedVariants = contributedVariantsResult.variants
+  const mergedAllVideoVariants = useMemo(() => {
+    if (!video) return undefined
+    if (contributedVariants.length === 0) return video.allVideoVariants
 
-  // Calculate needed transformations
-  const neededTransformations = useMemo(() => {
-    if (!video?.videoVariants) return []
-    return getNeededTransformations(video.videoVariants).recommendedTransforms
-  }, [video])
+    const existing = new Set((video.allVideoVariants ?? []).map(v => v.hash).filter(Boolean))
+    const novel = contributedVariants.filter(v => v.hash && !existing.has(v.hash))
+    if (novel.length === 0) return video.allVideoVariants
+    return sortVideoVariantsByQuality([
+      ...(video.allVideoVariants ?? []),
+      ...filterCompatibleVariants(novel),
+    ])
+  }, [contributedVariants, video])
 
   // Load NIP-32 labels for this video
   const { hashtags: labelHashtags, languages: labelLanguages } = useVideoLabels(video?.id)
@@ -426,8 +440,8 @@ export function VideoPage() {
   // Mirror dialog state
   const [mirrorDialogOpen, setMirrorDialogOpen] = useState(false)
 
-  // Transform dialog state
-  const [transformDialogOpen, setTransformDialogOpen] = useState(false)
+  // Contribute dialog state
+  const [contributeDialogOpen, setContributeDialogOpen] = useState(false)
 
   // Update document title
   useEffect(() => {
@@ -465,9 +479,9 @@ export function VideoPage() {
     checkAvailability()
   }
 
-  // Handle transform action
-  const handleTransform = useCallback(() => {
-    setTransformDialogOpen(true)
+  // Handle contribute action
+  const handleContribute = useCallback(() => {
+    setContributeDialogOpen(true)
   }, [])
 
   // Build share URL with fresh relay hints (seen relays grow over time)
@@ -597,16 +611,16 @@ export function VideoPage() {
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={initialPlayPos}
         contentWarning={video.contentWarning}
-        sha256={video.x} // Pass SHA256 hash for URL discovery
-        authorPubkey={video.pubkey} // Pass author pubkey for AS query parameter
-        eventId={video.id} // Pass event ID for timeline markers (zaps)
+        sha256={video.x}
+        authorPubkey={video.pubkey}
+        eventId={video.id}
         onAllSourcesFailed={handleAllSourcesFailed}
         cinemaMode={cinemaMode}
         onToggleCinemaMode={toggleCinemaMode}
         onVideoDimensionsLoaded={handleVideoDimensionsLoadedStable}
         onEnded={playlistParam ? handlePlaylistVideoEnd : undefined}
         onVideoElementReady={handleVideoElementReady}
-        videoVariants={video.allVideoVariants || video.videoVariants} // For quality selector
+        videoVariants={mergedAllVideoVariants || video.videoVariants}
         title={video.title}
         authorName={authorName}
         onPreviousTrack={prevPlaylistVideo ? navigateToPrevious : undefined}
@@ -617,6 +631,7 @@ export function VideoPage() {
     isLoading,
     video,
     playlistParam,
+    mergedAllVideoVariants,
     cinemaMode,
     isMobile,
     initialPlayPos,
@@ -688,7 +703,9 @@ export function VideoPage() {
             shareLinks={shareLinks}
             onDelete={() => navigate('/')}
             onMirror={handleMirror}
+            contributedVariantDebugRecords={contributedVariantsResult.debugRecords}
             userServers={userBlossomServers}
+            onContribute={handleContribute}
             geohash={videoGeohash}
             currentTime={currentPlayPos}
           />
@@ -703,12 +720,12 @@ export function VideoPage() {
                 onMirror={handleMirror}
               />
             )}
-            {video?.id && video?.allVideoVariants && blossomServerCount !== 1 && (
+            {video?.id && mergedAllVideoVariants && blossomServerCount !== 1 && (
               <VideoTransformAlert
                 videoId={video.id}
                 authorPubkey={video.pubkey}
-                videoVariants={video.allVideoVariants}
-                onTransform={handleTransform}
+                videoVariants={mergedAllVideoVariants}
+                onContribute={handleContribute}
               />
             )}
             {renderSidebarContent()}
@@ -728,14 +745,14 @@ export function VideoPage() {
         />
       )}
 
-      {/* Transform Dialog */}
+      {/* Contribute Dialog */}
       {video && (
-        <TransformVideoDialog
-          open={transformDialogOpen}
-          onOpenChange={setTransformDialogOpen}
+        <ContributeVariantDialog
+          open={contributeDialogOpen}
+          onOpenChange={setContributeDialogOpen}
+          video={video}
           videoEvent={videoEvent}
-          videoVariants={video.videoVariants}
-          neededTransformations={neededTransformations}
+          blossomServers={config.blossomServers ?? []}
         />
       )}
     </>

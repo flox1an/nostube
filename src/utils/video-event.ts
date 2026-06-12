@@ -42,6 +42,7 @@ export type VideoVariant = {
   quality?: string // e.g., "1080p", "720p", "480p"
   fallbackUrls: string[] // fallback URLs for this variant
   blurhash?: string // for thumbnails
+  contributorPubkey?: string
 }
 
 export interface ProcessEventsOptions {
@@ -124,6 +125,22 @@ function isAudioUrl(url?: string): boolean {
   if (!url) return false
   const pathname = getUrlPathname(url)
   return AUDIO_URL_EXTENSIONS.some(extension => pathname.endsWith(extension))
+}
+
+function isVideoFileUrl(url?: string): boolean {
+  if (!url) return false
+  const pathname = getUrlPathname(url)
+  return (
+    pathname.endsWith('.mp4') ||
+    pathname.endsWith('.m4v') ||
+    pathname.endsWith('.webm') ||
+    pathname.endsWith('.mov')
+  )
+}
+
+export function isMp4VideoVariant(variant: Pick<VideoVariant, 'url' | 'mimeType'>): boolean {
+  const baseMimeType = getBaseMimeType(variant.mimeType)
+  return baseMimeType === 'video/mp4' || getUrlPathname(variant.url).endsWith('.mp4')
 }
 
 export function isYouTubeVideo(video: VideoEvent): boolean {
@@ -237,7 +254,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
 /**
  * Sort video variants by quality (highest first)
  */
-function sortVideoVariantsByQuality(variants: VideoVariant[]): VideoVariant[] {
+export function sortVideoVariantsByQuality(variants: VideoVariant[]): VideoVariant[] {
   return variants.sort((a, b) => {
     // Extract numeric quality (e.g., "1080p" -> 1080)
     const getNumericQuality = (v: VideoVariant): number => {
@@ -415,6 +432,7 @@ export function processEvent(
     const parsedVideoVariants = allVariants.filter(
       v =>
         v.mimeType?.startsWith('video/') ||
+        isVideoFileUrl(v.url) ||
         isAudioMimeType(v.mimeType) ||
         isAudioUrl(v.url) ||
         v.mimeType === 'application/vnd.apple.mpegurl' ||

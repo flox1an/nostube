@@ -15,10 +15,12 @@ import {
   canUseOriginalHlsVariant,
   computeBrowserTranscodeVideoBitrate,
   computeTargetDimensions,
+  defaultSelectedTargetHeights,
   type BrowserTranscodeQualityPreset,
   type ResolutionOption,
 } from '@/lib/video-transcode'
 import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
+import { TranscodeVariantPicker } from '@/components/video-upload/TranscodeVariantPicker'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
 import { Layers, Loader2, Upload, X, Zap } from 'lucide-react'
@@ -78,9 +80,6 @@ function formatEstimatedSize(sizeMB: number): string {
   return `${(sizeMB / 1024).toFixed(2)} GB`
 }
 
-function getCodecLabel(codec: ResolutionOption['suggestedCodec']): string {
-  return codec === 'hevc' ? 'HEVC' : 'H.264'
-}
 
 function getSourceVariantCodec(
   sourceMeta: TranscodeSourceMeta
@@ -105,7 +104,6 @@ export const BrowserTranscodeStep = forwardRef<
   },
   ref
 ) {
-  const SINGLE_MP4_MAX_SIZE_MB = 50
   const { t } = useTranslation()
 
   // Format + resolution state — local to this component
@@ -128,23 +126,9 @@ export const BrowserTranscodeStep = forwardRef<
   } = useVideoTranscode()
 
   const defaultSelectedHeights = useMemo(() => {
-    if (status !== 'waiting' || availableResolutionOptions.length === 0) return []
-
-    const heights = availableResolutionOptions.map(r => r.height)
-    const sourceSizeMB = sourceMeta?.sizeMB ?? 0
-    const useSingleMp4Default = sourceSizeMB > 0 && sourceSizeMB < SINGLE_MP4_MAX_SIZE_MB
-
-    if (useSingleMp4Default) {
-      const top = heights[heights.length - 1]
-      return top ? [top] : []
-    }
-
-    const hlsDefaults = [720, 360].filter(height => heights.includes(height))
-    if (hlsDefaults.length > 0) return hlsDefaults
-
-    const top = heights[heights.length - 1]
-    return top ? [top] : []
-  }, [availableResolutionOptions, sourceMeta?.sizeMB, status])
+    if (status !== 'waiting' || !sourceMeta || availableResolutionOptions.length === 0) return []
+    return defaultSelectedTargetHeights(sourceMeta, availableResolutionOptions)
+  }, [availableResolutionOptions, sourceMeta, status])
 
   const effectiveSelectedHeights = selectedHeights ?? defaultSelectedHeights
   const supportsHevc = availableResolutionOptions.some(option => option.suggestedCodec === 'hevc')
@@ -579,12 +563,23 @@ export const BrowserTranscodeStep = forwardRef<
                         title={t('upload.browserTranscode.sourceOriginal', {
                           defaultValue: 'Source / Original',
                         })}
-                        subtitle={`${sourceShortSide}p · ${getCodecLabel(getSourceVariantCodec(sourceMeta))}`}
+                        subtitle={`${sourceShortSide}p · ${getSourceVariantCodec(sourceMeta) === 'hevc' ? 'HEVC' : 'H.264'}`}
                         checked={includeSourceVariant}
                         onToggle={setIncludeSourceVariant}
                       />
                     )}
-                    {outputFormat !== 'upload-only' &&
+                    {outputFormat === 'mp4' && (
+                      <div className="p-2">
+                        <TranscodeVariantPicker
+                          sourceMeta={sourceMeta}
+                          availableResolutionOptions={availableResolutionOptions}
+                          selectedHeights={effectiveSelectedHeights}
+                          supportsHevc={supportsHevc}
+                          onChange={setSelectedHeights}
+                        />
+                      </div>
+                    )}
+                    {outputFormat === 'hls' &&
                       [...availableResolutionOptions]
                         .reverse()
                         .map(opt => (
@@ -745,7 +740,7 @@ function ResolutionRow({ option, codec, checked, onToggle }: ResolutionRowProps)
         {option.height === 360 && (
           <span className="ml-1 text-xs text-muted-foreground">(standard fallback resolution)</span>
         )}
-        <span className="ml-1.5 text-xs text-muted-foreground">{getCodecLabel(codec)}</span>
+        <span className="ml-1.5 text-xs text-muted-foreground">{codec === 'hevc' ? 'HEVC' : 'H.264'}</span>
       </span>
     </label>
   )

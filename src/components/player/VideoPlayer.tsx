@@ -51,6 +51,7 @@ interface VideoPlayerProps {
 }
 
 const LOOP_STORAGE_KEY = 'nostube:video-loop'
+const STARTUP_FAILOVER_TIMEOUT_MS = 3500
 
 export const VideoPlayer = React.memo(function VideoPlayer({
   urls,
@@ -468,15 +469,22 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [hasMoreVideoUrls, moveToNextVideo, onAllSourcesFailed, urls])
 
-  // Stall detection - move to next URL if loading takes too long
+  // Startup failover - move to next URL if the source cannot become playable quickly.
   // Store moveToNextVideo in a ref so the effect only re-runs when videoUrl changes,
   // not when URL discovery updates the callback reference or hasMore flag.
   const moveToNextVideoRef = useRef(moveToNextVideo)
   const hasMoreVideoUrlsRef = useRef(hasMoreVideoUrls)
+  const pendingUrlFailoverSeekTimeRef = useRef<number | null>(null)
   useEffect(() => {
     moveToNextVideoRef.current = moveToNextVideo
     hasMoreVideoUrlsRef.current = hasMoreVideoUrls
   }, [moveToNextVideo, hasMoreVideoUrls])
+
+  const preserveCurrentPlaybackTimeForFailover = useCallback(() => {
+    const el = videoRef.current
+    if (!el || !Number.isFinite(el.currentTime) || el.currentTime <= 0) return
+    pendingUrlFailoverSeekTimeRef.current = el.currentTime
+  }, [videoRef])
 
   useEffect(() => {
     if (!videoUrl) return
@@ -484,61 +492,145 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     const el = videoRef.current
     if (!el) return
 
-    // If video is already playing successfully, skip stall detection.
+    const restoreFailoverPosition = () => {
+      const pendingTime = pendingUrlFailoverSeekTimeRef.current
+      if (pendingTime === null) return
+
+      if (Number.isFinite(el.duration)) {
+        el.currentTime = Math.min(pendingTime, Math.max(0, el.duration - 0.1))
+      } else {
+        el.currentTime = pendingTime
+      }
+      pendingUrlFailoverSeekTimeRef.current = null
+    }
+
+    if (el.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      restoreFailoverPosition()
+    }
+
+    el.addEventListener('loadedmetadata', restoreFailoverPosition)
+    return () => el.removeEventListener('loadedmetadata', restoreFailoverPosition)
+  }, [videoRef, videoUrl])
+
+  useEffect(() => {
+    if (!videoUrl || isHls) return
+
+    const el = videoRef.current
+    if (!el) return
+
+    // If video is already playable, skip startup failover.
     // This prevents false triggers when the effect re-runs due to videoUrl
     // being set to the same value after URL regeneration.
-    if (el.readyState >= 3 && !el.paused) return
+    if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
 
-    let stallTimeout: ReturnType<typeof setTimeout> | null = null
-    let hasStartedLoading = false
+    let startupTimeout: ReturnType<typeof setTimeout> | null = null
 
-    const clearStallTimeout = () => {
-      if (stallTimeout) {
-        clearTimeout(stallTimeout)
-        stallTimeout = null
+    const clearStartupTimeout = () => {
+      if (startupTimeout) {
+        clearTimeout(startupTimeout)
+        startupTimeout = null
       }
     }
 
-    const handleLoadProgress = () => {
-      hasStartedLoading = true
-      clearStallTimeout()
+    const handlePlayable = () => {
+      clearStartupTimeout()
     }
 
-    const startStallDetection = () => {
-      clearStallTimeout()
-      hasStartedLoading = false
+    startupTimeout = setTimeout(() => {
+      // Re-check: if the browser has a frame to render now, don't switch.
+      if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
 
-      // If no progress within 5 seconds, try next URL
-      stallTimeout = setTimeout(() => {
-        // Re-check: if video started playing in the meantime, don't switch
-        if (el.readyState >= 3 && !el.paused) return
-
-        if (!hasStartedLoading && hasMoreVideoUrlsRef.current) {
-          if (import.meta.env.DEV) {
-            console.log('Video stalled (no progress in 5s), trying next URL...')
-          }
-          moveToNextVideoRef.current()
+      if (hasMoreVideoUrlsRef.current) {
+        if (import.meta.env.DEV) {
+          console.log(
+            `Video startup timed out (${STARTUP_FAILOVER_TIMEOUT_MS}ms), trying next URL...`
+          )
         }
-      }, 5000)
-    }
+        preserveCurrentPlaybackTimeForFailover()
+        moveToNextVideoRef.current()
+      }
+    }, STARTUP_FAILOVER_TIMEOUT_MS)
 
-    // Start stall detection when URL changes
-    startStallDetection()
-
-    // Cancel stall detection when we get progress
-    el.addEventListener('loadedmetadata', handleLoadProgress)
-    el.addEventListener('canplay', handleLoadProgress)
-    el.addEventListener('progress', handleLoadProgress)
-    el.addEventListener('playing', handleLoadProgress)
+    el.addEventListener('loadeddata', handlePlayable)
+    el.addEventListener('canplay', handlePlayable)
+    el.addEventListener('playing', handlePlayable)
 
     return () => {
-      clearStallTimeout()
-      el.removeEventListener('loadedmetadata', handleLoadProgress)
-      el.removeEventListener('canplay', handleLoadProgress)
-      el.removeEventListener('progress', handleLoadProgress)
-      el.removeEventListener('playing', handleLoadProgress)
+      clearStartupTimeout()
+      el.removeEventListener('loadeddata', handlePlayable)
+      el.removeEventListener('canplay', handlePlayable)
+      el.removeEventListener('playing', handlePlayable)
     }
-  }, [videoUrl])
+  }, [isHls, preserveCurrentPlaybackTimeForFailover, videoUrl])
+
+  useEffect(() => {
+    if (!videoUrl || isHls) return
+
+    const el = videoRef.current
+    if (!el) return
+
+    let recoveryTimeout: ReturnType<typeof setTimeout> | null = null
+    let recoveryReason = 'media'
+
+    const clearRecoveryTimeout = () => {
+      if (recoveryTimeout) {
+        clearTimeout(recoveryTimeout)
+        recoveryTimeout = null
+      }
+    }
+
+    const isRecovered = () => {
+      const requiredReadyState = el.paused
+        ? HTMLMediaElement.HAVE_CURRENT_DATA
+        : HTMLMediaElement.HAVE_FUTURE_DATA
+      return !el.seeking && el.readyState >= requiredReadyState
+    }
+
+    const clearIfRecovered = () => {
+      if (isRecovered()) {
+        clearRecoveryTimeout()
+      }
+    }
+
+    const startRecoveryTimer = (reason: string) => {
+      clearRecoveryTimeout()
+      recoveryReason = reason
+
+      recoveryTimeout = setTimeout(() => {
+        if (isRecovered()) return
+
+        if (hasMoreVideoUrlsRef.current) {
+          if (import.meta.env.DEV) {
+            console.log(
+              `Video ${recoveryReason} recovery timed out (${STARTUP_FAILOVER_TIMEOUT_MS}ms), trying next URL...`
+            )
+          }
+          preserveCurrentPlaybackTimeForFailover()
+          moveToNextVideoRef.current()
+        }
+      }, STARTUP_FAILOVER_TIMEOUT_MS)
+    }
+
+    const handleSeeking = () => startRecoveryTimer('seek')
+    const handleWaiting = () => startRecoveryTimer('buffer')
+
+    el.addEventListener('seeking', handleSeeking)
+    el.addEventListener('waiting', handleWaiting)
+    el.addEventListener('seeked', clearIfRecovered)
+    el.addEventListener('loadeddata', clearIfRecovered)
+    el.addEventListener('canplay', clearIfRecovered)
+    el.addEventListener('playing', clearRecoveryTimeout)
+
+    return () => {
+      clearRecoveryTimeout()
+      el.removeEventListener('seeking', handleSeeking)
+      el.removeEventListener('waiting', handleWaiting)
+      el.removeEventListener('seeked', clearIfRecovered)
+      el.removeEventListener('loadeddata', clearIfRecovered)
+      el.removeEventListener('canplay', clearIfRecovered)
+      el.removeEventListener('playing', clearRecoveryTimeout)
+    }
+  }, [isHls, preserveCurrentPlaybackTimeForFailover, videoRef, videoUrl])
 
   // Fullscreen handling
   useEffect(() => {

@@ -192,11 +192,6 @@ export const BrowserTranscodeStep = forwardRef<
   }, [analyze, backgroundState?.status, file, supported])
 
   useEffect(() => {
-    if (status !== 'waiting' || !sourceMeta) return
-    setOutputFormat(sourceMeta.sizeMB < SINGLE_MP4_MAX_SIZE_MB ? 'mp4' : 'hls')
-  }, [sourceMeta, status])
-
-  useEffect(() => {
     if (outputFormat !== 'hls') {
       setIncludeSourceVariant(false)
       return
@@ -284,7 +279,7 @@ export const BrowserTranscodeStep = forwardRef<
       return 'Upload the source file unchanged. Fastest path, no browser transcoding.'
     }
     if (outputFormat === 'hls') {
-      return 'Generate adaptive HLS variants for playback across network conditions.'
+      return 'Experimental: generate adaptive HLS variants for playback across network conditions.'
     }
     return 'Create one or more MP4 files optimised for Nostr video delivery.'
   }, [outputFormat])
@@ -558,7 +553,7 @@ export const BrowserTranscodeStep = forwardRef<
                       className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
                     >
                       <Layers className="h-3.5 w-3.5" />
-                      HLS Adaptive
+                      HLS (experimental)
                     </ToggleGroupItem>
                   </ToggleGroup>
                   <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">

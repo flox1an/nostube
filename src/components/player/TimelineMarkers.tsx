@@ -1,6 +1,5 @@
 import { useMemo, useState, memo, useRef, useEffect, useCallback } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { useEventZaps } from '@/hooks/useEventZaps'
 import { useProfile } from '@/hooks'
 import { getInvoiceAmount } from '@/lib/zap-utils'
 import type { NostrEvent } from 'nostr-tools'
@@ -45,9 +44,7 @@ interface TimelineMarkersProps {
   onSeekToMarker?: (time: number) => void
   onMarkerHoverChange?: (isHovering: boolean) => void
   eventId?: string
-  authorPubkey?: string
-  kind?: number
-  identifier?: string // d-tag for addressable events (kinds 34235, 34236)
+  zaps: NostrEvent[]
 }
 
 // Parse a zap event to extract sender info and amount
@@ -345,9 +342,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   onSeekToMarker,
   onMarkerHoverChange,
   eventId,
-  authorPubkey,
-  kind = 1,
-  identifier,
+  zaps,
 }: TimelineMarkersProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null)
@@ -357,14 +352,6 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   useEffect(() => {
     onMarkerHoverChange?.(hoveredClusterId !== null)
   }, [hoveredClusterId, onMarkerHoverChange])
-
-  // Fetch actual zaps for this video
-  const { zaps } = useEventZaps({
-    eventId: eventId || '',
-    authorPubkey: authorPubkey || '',
-    kind,
-    identifier,
-  })
 
   // Parse zaps into timeline format with random timestamps
   const timelineZaps = useMemo(() => {

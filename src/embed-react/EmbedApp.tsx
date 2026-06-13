@@ -3,6 +3,7 @@ import { VideoPlayer } from '@/components/player/VideoPlayer'
 import type { EmbedParams } from './lib/url-params'
 import type { VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
+import { parseVideoChapters } from '@/lib/video-chapters'
 import { TitleOverlay } from './components/TitleOverlay'
 import { ContentWarning } from './components/ContentWarning'
 import { ErrorMessage } from './components/ErrorMessage'
@@ -79,6 +80,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
   const urls = video.videoVariants.map(v => v.url)
   const poster = video.thumbnailVariants[0]?.url
   const posterHash = video.thumbnailVariants[0]?.hash
+  const chapters = parseVideoChapters(video.description, video.duration)
 
   return (
     <div
@@ -101,6 +103,8 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         onAllSourcesFailed={handleAllSourcesFailed}
         textTracks={video.textTracks}
         className="w-full h-full"
+        chapters={chapters}
+        showTimelineMarkers={params.showZaps}
       />
 
       {/* Title overlay */}

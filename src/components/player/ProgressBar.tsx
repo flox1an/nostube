@@ -1,8 +1,11 @@
-import { useRef, useState, useCallback, useEffect, useMemo, memo } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo, memo, lazy, Suspense } from 'react'
 import { formatTimestamp } from '@/lib/format-utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { TimelineMarkers } from './TimelineMarkers'
 import type { VideoChapter } from '@/lib/video-chapters'
+
+const TimelineMarkersLoader = lazy(() =>
+  import('./TimelineMarkersLoader').then(module => ({ default: module.TimelineMarkersLoader }))
+)
 
 interface ProgressBarProps {
   currentTime: number
@@ -275,14 +278,16 @@ export const ProgressBar = memo(function ProgressBar({
           className="absolute inset-x-0 pointer-events-none"
           style={{ zIndex: 15, bottom: 'calc(50% + 1px)' }}
         >
-          <TimelineMarkers
-            duration={duration}
-            currentTime={currentTime}
-            onSeekToMarker={onSeek}
-            onMarkerHoverChange={setIsMarkerHovered}
-            eventId={eventId}
-            authorPubkey={authorPubkey}
-          />
+          <Suspense fallback={null}>
+            <TimelineMarkersLoader
+              duration={duration}
+              currentTime={currentTime}
+              onSeekToMarker={onSeek}
+              onMarkerHoverChange={setIsMarkerHovered}
+              eventId={eventId}
+              authorPubkey={authorPubkey}
+            />
+          </Suspense>
         </div>
       )}
 

@@ -50,6 +50,7 @@ interface VideoPlayerProps {
   onPreviousTrack?: () => void
   onNextTrack?: () => void
   chapters?: VideoChapter[]
+  showTimelineMarkers?: boolean
 }
 
 const LOOP_STORAGE_KEY = 'nostube:video-loop'
@@ -82,6 +83,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   onPreviousTrack,
   onNextTrack,
   chapters,
+  showTimelineMarkers = true,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLMediaElement | null>(null)
@@ -1143,6 +1145,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         eventId={eventId}
         authorPubkey={authorPubkey}
         chapters={chapters}
+        showTimelineMarkers={showTimelineMarkers}
         loopEnabled={loopEnabled}
         onToggleLoop={toggleLoop}
       />

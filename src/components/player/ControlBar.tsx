@@ -73,6 +73,7 @@ interface ControlBarProps {
   eventId?: string
   authorPubkey?: string
   chapters?: VideoChapter[]
+  showTimelineMarkers?: boolean
 
   // Loop
   loopEnabled?: boolean
@@ -124,6 +125,7 @@ export const ControlBar = memo(function ControlBar({
   eventId,
   authorPubkey,
   chapters,
+  showTimelineMarkers,
   loopEnabled,
   onToggleLoop,
   children,
@@ -156,6 +158,7 @@ export const ControlBar = memo(function ControlBar({
           eventId={eventId}
           authorPubkey={authorPubkey}
           chapters={chapters}
+          showTimelineMarkers={showTimelineMarkers}
         />
       </div>
 

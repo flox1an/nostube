@@ -9,6 +9,7 @@ import { ControlButton } from './ControlButton'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant, type TextTrack } from '@/utils/video-event'
 import { useIsMobile } from '@/hooks'
+import type { VideoChapter } from '@/lib/video-chapters'
 
 interface ControlBarProps {
   // Visibility
@@ -71,6 +72,7 @@ interface ControlBarProps {
   // Timeline markers
   eventId?: string
   authorPubkey?: string
+  chapters?: VideoChapter[]
 
   // Loop
   loopEnabled?: boolean
@@ -121,6 +123,7 @@ export const ControlBar = memo(function ControlBar({
   onToggleFullscreen,
   eventId,
   authorPubkey,
+  chapters,
   loopEnabled,
   onToggleLoop,
   children,
@@ -152,6 +155,7 @@ export const ControlBar = memo(function ControlBar({
           onSeekingChange={onSeekingChange}
           eventId={eventId}
           authorPubkey={authorPubkey}
+          chapters={chapters}
         />
       </div>
 

@@ -48,6 +48,7 @@ import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
 import { VideoTransformAlert } from '@/components/VideoTransformAlert'
 import { VideoPageLayout } from '@/components/VideoPageLayout'
 import { shouldVideoLoop, buildShareUrl, buildShareLinks } from '@/utils/video-utils'
+import { parseVideoChapters } from '@/lib/video-chapters'
 import { Button } from '@/components/ui/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
 import { ContributeVariantDialog } from '@/components/ContributeVariantDialog'
@@ -595,6 +596,7 @@ export function VideoPage() {
     // Use playlist ID as key when in playlist mode to prevent remounting between videos
     // This keeps fullscreen mode active when auto-advancing to the next video
     const playerKey = playlistParam ? `playlist-${playlistParam}` : video.id
+    const chapters = parseVideoChapters(video.description, video.duration)
 
     return (
       <VideoPlayer
@@ -628,6 +630,7 @@ export function VideoPage() {
         authorName={authorName}
         onPreviousTrack={prevPlaylistVideo ? navigateToPrevious : undefined}
         onNextTrack={nextPlaylistVideo ? navigateToNext : undefined}
+        chapters={chapters}
       />
     )
   }, [

@@ -20,6 +20,7 @@ import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
+import type { VideoChapter } from '@/lib/video-chapters'
 // import { BulletComments } from './BulletComments' // disabled for now
 
 interface VideoPlayerProps {
@@ -48,6 +49,7 @@ interface VideoPlayerProps {
   authorName?: string
   onPreviousTrack?: () => void
   onNextTrack?: () => void
+  chapters?: VideoChapter[]
 }
 
 const LOOP_STORAGE_KEY = 'nostube:video-loop'
@@ -79,6 +81,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   authorName,
   onPreviousTrack,
   onNextTrack,
+  chapters,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLMediaElement | null>(null)
@@ -1139,6 +1142,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleFullscreen={toggleFullscreen}
         eventId={eventId}
         authorPubkey={authorPubkey}
+        chapters={chapters}
         loopEnabled={loopEnabled}
         onToggleLoop={toggleLoop}
       />

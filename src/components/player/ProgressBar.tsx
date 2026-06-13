@@ -1,7 +1,8 @@
-import { useRef, useState, useCallback, useEffect, memo } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo, memo } from 'react'
 import { formatTimestamp } from '@/lib/format-utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { TimelineMarkers } from './TimelineMarkers'
+import type { VideoChapter } from '@/lib/video-chapters'
 
 interface ProgressBarProps {
   currentTime: number
@@ -12,6 +13,7 @@ interface ProgressBarProps {
   showTimelineMarkers?: boolean
   eventId?: string
   authorPubkey?: string
+  chapters?: VideoChapter[]
 }
 
 /**
@@ -27,6 +29,7 @@ export const ProgressBar = memo(function ProgressBar({
   showTimelineMarkers = true,
   eventId,
   authorPubkey,
+  chapters = [],
 }: ProgressBarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isHovering, setIsHovering] = useState(false)
@@ -44,6 +47,42 @@ export const ProgressBar = memo(function ProgressBar({
   // Show preview position while touch dragging or waiting for seek to complete
   const displayPercentage =
     previewTime !== null ? (previewTime / duration) * 100 : progressPercentage
+  const visibleChapters = useMemo(
+    () =>
+      duration > 0
+        ? chapters
+            .filter(chapter => chapter.startTime >= 0 && chapter.startTime < duration)
+            .sort((a, b) => a.startTime - b.startTime)
+        : [],
+    [chapters, duration]
+  )
+  const chapterSegments = useMemo(
+    () =>
+      visibleChapters.map((chapter, index) => ({
+        chapter,
+        endTime: visibleChapters[index + 1]?.startTime ?? duration,
+      })),
+    [duration, visibleChapters]
+  )
+
+  const getChapterAtTime = useCallback(
+    (time: number) => {
+      if (visibleChapters.length === 0) return undefined
+
+      let activeChapter: VideoChapter | undefined
+      for (const chapter of visibleChapters) {
+        if (chapter.startTime > time) break
+        activeChapter = chapter
+      }
+      return activeChapter
+    },
+    [visibleChapters]
+  )
+
+  const hoverChapter = getChapterAtTime(hoverTime)
+  const hoverChapterSegment = chapterSegments.find(
+    segment => segment.chapter.startTime === hoverChapter?.startTime
+  )
 
   const getTimeFromPosition = useCallback(
     (clientX: number) => {
@@ -217,14 +256,15 @@ export const ProgressBar = memo(function ProgressBar({
       {/* Hover/drag timestamp tooltip - hide when hovering over markers */}
       {showScrubber && !isMarkerHovered && (
         <div
-          className="absolute bottom-full mb-2 px-2 py-1 bg-black/40 text-white text-xs rounded pointer-events-none z-20"
+          className="absolute bottom-full mb-2 max-w-56 rounded bg-black/60 px-2 py-1 text-center text-xs text-white pointer-events-none z-20"
           style={{
             left: `${hoverPosition}%`,
             transform: 'translateX(-50%)',
             willChange: isSeeking ? 'left' : 'auto',
           }}
         >
-          {formatTimestamp(hoverTime)}
+          <div>{formatTimestamp(hoverTime)}</div>
+          {hoverChapter && <div className="mt-0.5 truncate font-medium">{hoverChapter.title}</div>}
         </div>
       )}
 
@@ -280,10 +320,35 @@ export const ProgressBar = memo(function ProgressBar({
             />
           )}
 
+          {/* Hovered chapter segment */}
+          {showScrubber && hoverChapterSegment && (
+            <div
+              className="absolute inset-y-0 rounded-full bg-white/60 pointer-events-none z-10"
+              style={{
+                left: `${(hoverChapterSegment.chapter.startTime / duration) * 100}%`,
+                width: `${
+                  ((hoverChapterSegment.endTime - hoverChapterSegment.chapter.startTime) /
+                    duration) *
+                  100
+                }%`,
+              }}
+            />
+          )}
+
+          {/* Chapter separators */}
+          {visibleChapters.slice(1).map(chapter => (
+            <div
+              key={`${chapter.startTime}-${chapter.title}`}
+              className="absolute inset-y-0 w-px bg-black/70 z-20"
+              style={{ left: `${(chapter.startTime / duration) * 100}%` }}
+              title={`${formatTimestamp(chapter.startTime)} ${chapter.title}`}
+            />
+          ))}
+
           {/* Scrubber - always visible, grows on hover/touch, larger on mobile */}
           {/* Disable transitions during drag for immediate response */}
           <div
-            className={`absolute bg-primary rounded-full shadow-md ${isSeeking ? '' : 'transition-all'} ${getScrubberSize()}`}
+            className={`absolute bg-primary rounded-full shadow-md z-30 ${isSeeking ? '' : 'transition-all'} ${getScrubberSize()}`}
             style={{
               left: `${displayPercentage}%`,
               top: '50%',

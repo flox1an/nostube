@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useContext } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Loader2, Smartphone, RefreshCw, Copy, Check } from 'lucide-react'
+import { Loader2, Smartphone, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react'
 import { NostrConnectSigner } from 'applesauce-signers'
 import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
@@ -161,6 +161,19 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
       </div>
 
       <div className="flex gap-2">
+        {nostrConnectUri ? (
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+            <a href={nostrConnectUri}>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              {t('auth.login.qrOpen', 'Open')}
+            </a>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" disabled className="text-muted-foreground">
+            <ExternalLink className="w-4 h-4 mr-2" />
+            {t('auth.login.qrOpen', 'Open')}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -173,7 +186,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
         </Button>
         <Button variant="ghost" size="sm" onClick={handleRefresh} className="text-muted-foreground">
           <RefreshCw className="w-4 h-4 mr-2" />
-          {t('auth.login.qrRefresh', 'Generate new code')}
+          {t('auth.login.qrRefresh', 'New Code')}
         </Button>
       </div>
     </div>

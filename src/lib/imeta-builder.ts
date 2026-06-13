@@ -12,6 +12,7 @@ export interface ParsedImeta {
   url: string
   hash?: string
   size?: number // bytes
+  duration?: number // seconds
   dimensions?: string
   quality?: string // derived from dimensions
   mimeType?: string
@@ -54,6 +55,8 @@ export function parseImetaTag(tag: string[]): ParsedImeta | null {
   const dimensions = values.get('dim')?.[0]
   const sizeStr = values.get('size')?.[0]
   const size = sizeStr ? parseInt(sizeStr, 10) : undefined
+  const durationStr = values.get('duration')?.[0]
+  const duration = durationStr ? Math.floor(parseFloat(durationStr)) : undefined
   const hash = values.get('x')?.[0]
   const blurhash = values.get('blurhash')?.[0]
   const bitrateStr = values.get('bitrate')?.[0]
@@ -76,6 +79,7 @@ export function parseImetaTag(tag: string[]): ParsedImeta | null {
     url,
     hash,
     size,
+    duration: Number.isFinite(duration) ? duration : undefined,
     dimensions,
     quality,
     mimeType,
@@ -125,6 +129,11 @@ export function buildImetaTag(params: BuildImetaTagParams): string[] {
   // Add bitrate
   if (variant.bitrate) {
     tag.push(`bitrate ${variant.bitrate}`)
+  }
+
+  // Add duration in seconds. NIP-71 recommends this as an imeta property.
+  if (Number.isFinite(variant.duration)) {
+    tag.push(`duration ${Math.floor(variant.duration)}`)
   }
 
   // Add file size in bytes

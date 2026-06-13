@@ -36,7 +36,7 @@ const VideoNotesPage = lazy(() =>
   import('./pages/VideoNotesPage').then(m => ({ default: m.VideoNotesPage }))
 )
 const UploadPage = lazy(() => import('./pages/UploadPage').then(m => ({ default: m.UploadPage })))
-const PlaylistPage = lazy(() => import('./pages/Playlists'))
+const PlaylistPage = lazy(() => import('./pages/GlobalPlaylistsPage'))
 const SinglePlaylistPage = lazy(() => import('./pages/SinglePlaylistPage'))
 const SettingsLayout = lazy(() =>
   import('./pages/settings/SettingsLayout').then(m => ({ default: m.SettingsLayout }))
@@ -111,7 +111,7 @@ function PageLoader() {
 function VideoPageLoader() {
   return (
     <div className="max-w-560 mx-auto sm:py-4 pb-8 md:px-4">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_384px] gap-0 lg:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_384px] 2xl:grid-cols-[1fr_512px] gap-0 lg:gap-4">
         {/* Left column: video + info */}
         <div className="flex flex-col">
           <Skeleton className="w-full aspect-video" />
@@ -127,7 +127,7 @@ function VideoPageLoader() {
         <div className="w-full p-2 md:p-0 space-y-3 mt-4 lg:mt-0">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex gap-2">
-              <Skeleton className="w-40 aspect-video rounded-lg shrink-0" />
+              <Skeleton className="w-40 2xl:w-56 aspect-video rounded-lg shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-3 w-24" />

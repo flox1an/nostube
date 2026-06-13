@@ -388,8 +388,7 @@ describe('processEvent', () => {
       expect(result?.description).toBe('')
       expect(result?.pubkey).toBe(zapStreamEvent.pubkey)
       expect(result?.created_at).toBe(zapStreamEvent.created_at)
-      // Duration is stored in imeta tag, not as separate tag, so separate duration tag lookup returns 0
-      expect(result?.duration).toBe(0)
+      expect(result?.duration).toBe(281)
       expect(result?.mimeType).toBe('video/mp4; codecs="avc1"')
       expect(result?.x).toBe('f6551d07b3ad65b6137780a68b5492ea541182fc16717d21b18cedfb8d6ef4d0')
       expect(result?.urls).toContain(
@@ -775,6 +774,35 @@ describe('processEvent', () => {
       expect(result?.origin?.metadata).toBeUndefined() // optional metadata not provided
     })
 
+    it('should auto-detect YouTube origin from old format embed url', () => {
+      const result = processEvent(
+        {
+          content: 'Legacy YouTube embed',
+          created_at: 1704345140,
+          id: 'legacy-youtube-embed-id',
+          kind: 34235,
+          pubkey: 'test-pubkey',
+          sig: 'test-signature',
+          tags: [
+            ['d', 'n-TDZL7'],
+            ['url', 'https://www.youtube.com/embed/W-UcgNPgKNo?si=k3cJ0hgU8yYXBWEt'],
+            ['title', 'Toxicity, Memes and Bitcoin Culture #BTC2023 (ENG-TH)'],
+            ['client', 'flare'],
+            ['thumb', 'https://flare-pub.s3.amazonaws.com/thumbnails/mnBsads_cxTkzLDQC3CNs.jpg'],
+          ],
+        },
+        defaultRelays
+      )
+
+      expect(result).toBeDefined()
+      expect(result?.origin).toEqual({
+        platform: 'youtube',
+        externalId: 'W-UcgNPgKNo',
+        originalUrl: 'https://www.youtube.com/embed/W-UcgNPgKNo?si=k3cJ0hgU8yYXBWEt',
+      })
+      expect(result?.origins).toHaveLength(1)
+    })
+
     it('should handle origin tag with minimal fields', () => {
       const minimalOriginEvent = {
         ...eventWithOriginTag,
@@ -832,7 +860,7 @@ describe('processEvent', () => {
       expect(result?.urls[0]).toBe('https://example.com/video.mp4')
     })
 
-    it('should handle missing duration tag', () => {
+    it('should read duration from imeta when top-level duration tag is missing', () => {
       const eventWithoutDuration = {
         ...zapStreamEvent,
         tags: zapStreamEvent.tags.filter(t => t[0] !== 'duration'),
@@ -840,7 +868,7 @@ describe('processEvent', () => {
 
       const result = processEvent(eventWithoutDuration, defaultRelays)
 
-      expect(result?.duration).toBe(0)
+      expect(result?.duration).toBe(281)
     })
 
     it('should handle event with no tags', () => {

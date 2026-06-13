@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoCard } from '@/components/VideoCard'
 import { PlaylistThumbnailCollage } from '@/components/playlists/PlaylistThumbnailCollage'
+import { CreatePlaylistDialog } from '@/components/playlists'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
@@ -26,6 +27,7 @@ import { Camera, Plus, Minus, Loader2, Upload } from 'lucide-react'
 import {
   useProfile,
   useUserPlaylists,
+  usePlaylists,
   type Playlist,
   useAppContext,
   useInfiniteScroll,
@@ -616,6 +618,11 @@ export function AuthorPage() {
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null)
   const loadedPlaylistsRef = useRef<Set<string>>(new Set())
 
+  const { user } = useCurrentUser()
+  const isOwnProfile = user?.pubkey === pubkey
+  const { createPlaylist } = usePlaylists()
+  const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false)
+
   const { config, pool } = useAppContext()
   const eventStoreInstance = useEventStore()
   const { presetContent } = useSelectedPreset()
@@ -1103,7 +1110,7 @@ export function AuthorPage() {
               </Button>
             )}
 
-            {(isLoadingPlaylists || playlists.length > 0) && (
+            {(isLoadingPlaylists || playlists.length > 0 || isOwnProfile) && (
               <Button
                 variant={activeTab === 'playlists' ? 'default' : 'outline'}
                 size="sm"
@@ -1310,6 +1317,19 @@ export function AuthorPage() {
 
         {activeTab === 'playlists' && (
           <div className="mt-6 space-y-6">
+            {isOwnProfile && (
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setCreatePlaylistOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  {t('playlists.create.newPlaylist')}
+                </Button>
+                <CreatePlaylistDialog
+                  open={createPlaylistOpen}
+                  onOpenChange={setCreatePlaylistOpen}
+                  onCreatePlaylist={createPlaylist}
+                />
+              </div>
+            )}
             {isLoadingPlaylists && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />

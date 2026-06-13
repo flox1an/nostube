@@ -825,7 +825,8 @@
       "confirm": "Delete Playlist"
     },
     "emptyState": {
-      "helper": "Create your first playlist to organize videos"
+      "helper": "Create your first playlist to organize videos",
+      "noPublicPlaylists": "No public playlists found."
     },
     "removeVideo": {
       "title": "Remove Video",

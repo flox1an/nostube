@@ -101,7 +101,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   return (
     <Link to={linkTo} className="group">
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
-        <div className="relative w-40 h-24 shrink-0">
+        <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0">
           {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
           {!thumbnailLoaded &&
             (blurhashPlaceholder ? (
@@ -201,7 +201,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   return (
     <Link to={linkTo} className="group">
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
-        <div className="relative w-40 h-24 shrink-0">
+        <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
           {!thumbnailLoaded &&
             (blurhashPlaceholder ? (
               <img
@@ -254,7 +254,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
 function VideoSuggestionItemSkeleton() {
   return (
     <div className="flex p-2">
-      <div className="relative w-40 h-24 shrink-0">
+      <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
         <Skeleton className="w-full h-full rounded-md" />
       </div>
       <div className="pl-3 space-y-2 flex-1">

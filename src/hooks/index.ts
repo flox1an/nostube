@@ -77,6 +77,8 @@ export { useEventStats, useUserReactionStatus } from './useEventStats'
 // ============================================================================
 export { usePlaylists, useUserPlaylists } from './usePlaylist'
 export type { Playlist, Video } from './usePlaylist'
+export { useGlobalPlaylists } from './useGlobalPlaylists'
+export type { GlobalPlaylist } from './useGlobalPlaylists'
 export { usePlaylistDetails } from './usePlaylistDetails'
 export { usePlaylistNavigation } from './usePlaylistNavigation'
 

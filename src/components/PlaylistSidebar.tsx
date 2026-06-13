@@ -63,11 +63,11 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
         <img
           src={thumbnailUrl}
           alt={item.title || 'Playlist video'}
-          className="w-40 h-24 shrink-0 rounded-md object-cover"
+          className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md object-cover"
           onError={handleThumbnailError}
         />
       ) : (
-        <div className="w-40 h-24 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">
+        <div className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">
           No image
         </div>
       )}
@@ -119,7 +119,7 @@ export function PlaylistSidebar({
         <Skeleton className="h-6 w-40" />
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex gap-3">
-            <Skeleton className="h-16 w-28 rounded-md" />
+            <Skeleton className="h-16 w-28 2xl:h-38 2xl:w-64 rounded-md" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-3 w-1/2" />
@@ -178,7 +178,7 @@ export function PlaylistSidebar({
         {(isLoadingVideos || loadingVideoIds.size > 0) &&
           Array.from({ length: Math.max(1, loadingVideoIds.size) }).map((_, idx) => (
             <div key={`playlist-loading-${idx}`} className="flex gap-3">
-              <Skeleton className="h-16 w-28 rounded-md" />
+              <Skeleton className="h-16 w-28 2xl:h-38 2xl:w-64 rounded-md" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />

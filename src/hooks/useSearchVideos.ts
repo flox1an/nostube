@@ -84,12 +84,23 @@ function getAuthorName(pubkey: string, eventStore: IEventStore): string | undefi
   return undefined
 }
 
+function parseDuration(value?: string): number | undefined {
+  if (!value) return undefined
+  const duration = parseFloat(value)
+  return Number.isFinite(duration) ? Math.floor(duration) : undefined
+}
+
 function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): IndexedVideo {
   const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
   const description =
     event.tags.find(t => t[0] === 'summary')?.[1] || event.tags.find(t => t[0] === 'alt')?.[1] || ''
   const publishedAt = event.tags.find(t => t[0] === 'published_at')?.[1]
-  const duration = event.tags.find(t => t[0] === 'duration')?.[1]
+  const topLevelDuration = parseDuration(event.tags.find(t => t[0] === 'duration')?.[1])
+  const imetaDuration = event.tags
+    .filter(t => t[0] === 'imeta')
+    .flatMap(t => t.slice(1))
+    .find(value => value.startsWith('duration '))
+    ?.slice(9)
   const dimensions = event.tags
     .filter(t => t[0] === 'imeta')
     .flatMap(t => t.slice(1))
@@ -110,7 +121,7 @@ function extractSearchableFields(event: NostrEvent, eventStore: IEventStore): In
     type: getTypeForKind(event.kind),
     created_at: event.created_at,
     published_at: publishedAt ? parseInt(publishedAt, 10) : undefined,
-    duration: duration ? parseInt(duration, 10) : 0,
+    duration: parseDuration(imetaDuration) ?? topLevelDuration ?? 0,
     hasCaptions: event.tags.some(t => t[0] === 'text-track'),
     hasContentWarning: event.tags.some(t => t[0] === 'content-warning'),
     dimensions,
@@ -188,7 +199,11 @@ export function useSearchVideos({
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_SEARCH_TIMEOUT_MS)
 
-    fetchExternalSearchResults(query, controller.signal, config.searchServiceUrl || SEARCH_SERVICE_URL).then(results => {
+    fetchExternalSearchResults(
+      query,
+      controller.signal,
+      config.searchServiceUrl || SEARCH_SERVICE_URL
+    ).then(results => {
       clearTimeout(timeoutId)
       if (controller.signal.aborted) return
       if (results !== null) {

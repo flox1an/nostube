@@ -15,6 +15,7 @@ import {
   buildEventRelays,
   sortVideoVariantsByQuality,
 } from '@/utils/video-event'
+import { YOUTUBE_REGEX } from '@/utils/origin-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -572,7 +573,9 @@ export function VideoPage() {
     }
 
     const youtubeOrigin = video?.origins.find(o => o.platform === 'youtube')
-    if (video && youtubeOrigin && video.urls.length === 0) {
+    const hasOnlyYouTubeUrls =
+      (video?.urls.length ?? 0) > 0 && (video?.urls.every(url => YOUTUBE_REGEX.test(url)) ?? false)
+    if (video && youtubeOrigin && (video.urls.length === 0 || hasOnlyYouTubeUrls)) {
       return (
         <YouTubePlayer
           videoId={youtubeOrigin.externalId}

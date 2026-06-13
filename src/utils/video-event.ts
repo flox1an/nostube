@@ -36,6 +36,7 @@ export type VideoVariant = {
   url: string
   hash?: string // SHA256
   size?: number // bytes
+  duration?: number // seconds
   dimensions?: string // e.g., "1920x1080"
   mimeType?: string
   mediaType?: 'video' | 'audio' | 'image'
@@ -138,6 +139,12 @@ function isVideoFileUrl(url?: string): boolean {
   )
 }
 
+function parseDuration(value?: string): number | undefined {
+  if (!value) return undefined
+  const duration = parseFloat(value)
+  return Number.isFinite(duration) ? Math.floor(duration) : undefined
+}
+
 export function isMp4VideoVariant(variant: Pick<VideoVariant, 'url' | 'mimeType'>): boolean {
   const baseMimeType = getBaseMimeType(variant.mimeType)
   return baseMimeType === 'video/mp4' || getUrlPathname(variant.url).endsWith('.mp4')
@@ -145,6 +152,15 @@ export function isMp4VideoVariant(variant: Pick<VideoVariant, 'url' | 'mimeType'
 
 export function isYouTubeVideo(video: VideoEvent): boolean {
   return (video.sourceUrls ?? video.urls).some(url => YOUTUBE_REGEX.test(url))
+}
+
+function extractYouTubeOriginFromUrls(urls: string[]): VideoOrigin | undefined {
+  for (const url of urls) {
+    const match = url.match(YOUTUBE_REGEX)
+    if (match?.[1]) {
+      return { platform: 'youtube', externalId: match[1], originalUrl: url }
+    }
+  }
 }
 
 export function isAudioVideo(video: VideoEvent): boolean {
@@ -220,6 +236,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
   const mimeType = imetaValues.get('m')?.[0]
   const dimensions = imetaValues.get('dim')?.[0]
   const size = imetaValues.get('size')?.[0] ? parseInt(imetaValues.get('size')![0]) : undefined
+  const duration = parseDuration(imetaValues.get('duration')?.[0])
   const hash = imetaValues.get('x')?.[0]
   const blurhash = imetaValues.get('blurhash')?.[0]
   const mediaType = getVariantMediaType(mimeType, url)
@@ -242,6 +259,7 @@ function parseImetaTag(imetaTag: string[]): VideoVariant | null {
     url,
     hash,
     size,
+    duration,
     dimensions,
     mimeType,
     mediaType,
@@ -489,7 +507,7 @@ export function processEvent(
     const x = imetaValues.get('x')?.[0]
 
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1])
-    const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0')
+    const topLevelDuration = parseDuration(event.tags.find(t => t[0] === 'duration')?.[1])
     const identifier = event.tags.find(t => t[0] === 'd')?.[1]
 
     // Extract all origin tags
@@ -515,13 +533,8 @@ export function processEvent(
           .map(t => t[1])
           .filter(Boolean),
       ]
-      for (const u of allUrls) {
-        const match = u.match(YOUTUBE_REGEX)
-        if (match?.[1]) {
-          origins.push({ platform: 'youtube', externalId: match[1], originalUrl: u })
-          break
-        }
-      }
+      const youtubeOrigin = extractYouTubeOriginFromUrls(allUrls)
+      if (youtubeOrigin) origins.push(youtubeOrigin)
     }
 
     const origin = origins[0]
@@ -572,6 +585,11 @@ export function processEvent(
     const primaryMimeType = primaryVariant?.mimeType || mimeType
     const primaryMediaType = primaryVariant?.mediaType === 'audio' ? 'audio' : 'video'
     const primaryDimensions = primaryVariant?.dimensions
+    const duration =
+      primaryVariant?.duration ??
+      allVideoVariants.find(v => v.duration !== undefined)?.duration ??
+      topLevelDuration ??
+      0
 
     const videoEvent: VideoEvent = {
       id: event.id,
@@ -617,7 +635,7 @@ export function processEvent(
     const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
     const description = event.tags.find(t => t[0] === 'description')?.[1] || event.content || ''
     const thumb = event.tags.find(t => t[0] === 'thumb')?.[1]
-    const duration = parseInt(event.tags.find(t => t[0] === 'duration')?.[1] || '0')
+    const duration = parseDuration(event.tags.find(t => t[0] === 'duration')?.[1]) ?? 0
     const identifier = event.tags.find(t => t[0] === 'd')?.[1] || ''
     const tags = event.tags.filter(t => t[0] === 't').map(t => t[1])
     let url = event.tags.find(t => t[0] === 'url')?.[1] || ''
@@ -631,13 +649,25 @@ export function processEvent(
       originalUrl: tag[3],
       metadata: tag[4],
     }))
-    const origin = origins[0]
 
     // There are some events that have the whole imeta data in the first string.
     if (url.includes(' ')) {
       console.warn('URL with space', url, event)
       url = url.split(' ')[0]
     }
+
+    if (origins.length === 0) {
+      const allUrls = [
+        url,
+        ...event.tags
+          .filter(t => t[0] === 'r')
+          .map(t => t[1])
+          .filter(Boolean),
+      ]
+      const youtubeOrigin = extractYouTubeOriginFromUrls(allUrls)
+      if (youtubeOrigin) origins.push(youtubeOrigin)
+    }
+    const origin = origins[0]
 
     // NOTE: URL generation (mirrors, proxies) is now handled by useMediaUrls hook in VideoPlayer
     // We just pass the raw video URL here

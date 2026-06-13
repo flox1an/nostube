@@ -8,10 +8,16 @@ import { Button } from '@/components/ui/button'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
 import { presetRelays } from '@/constants/relays'
 import { subscriptionMethod, publishMethod } from '@/nostr/core'
+import { isIOSDevice } from '@/lib/codec-compatibility'
 import { useTranslation } from 'react-i18next'
 
 // Relays used for nostrconnect communication
 const NOSTRCONNECT_RELAYS = presetRelays.map(r => r.url)
+
+function isAndroidDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent)
+}
 
 // Build a bunker:// URI from signer properties for persistence
 function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string): string {
@@ -35,6 +41,12 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
   const [copied, setCopied] = useState(false)
   const signerRef = useRef<NostrConnectSigner | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const isAndroid = isAndroidDevice()
+  const isIOS = isIOSDevice()
+  const openButtonVariant = isAndroid ? 'default' : 'ghost'
+  const copyButtonVariant = isIOS ? 'default' : 'ghost'
+  const openButtonClassName = isAndroid ? undefined : 'text-muted-foreground'
+  const copyButtonClassName = isIOS ? undefined : 'text-muted-foreground'
 
   if (!accountManager) {
     throw new Error('QRCodeLogin must be used within AccountsProvider')
@@ -162,24 +174,24 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
 
       <div className="flex gap-2">
         {nostrConnectUri ? (
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Button asChild variant={openButtonVariant} size="sm" className={openButtonClassName}>
             <a href={nostrConnectUri}>
               <ExternalLink className="w-4 h-4 mr-2" />
-              {t('auth.login.qrOpen', 'Open')}
+              {t('auth.login.qrOpen', 'Use Signer')}
             </a>
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" disabled className="text-muted-foreground">
+          <Button variant={openButtonVariant} size="sm" disabled className={openButtonClassName}>
             <ExternalLink className="w-4 h-4 mr-2" />
-            {t('auth.login.qrOpen', 'Open')}
+            {t('auth.login.qrOpen', 'Use Signer')}
           </Button>
         )}
         <Button
-          variant="ghost"
+          variant={copyButtonVariant}
           size="sm"
           onClick={handleCopy}
           disabled={!nostrConnectUri}
-          className="text-muted-foreground"
+          className={copyButtonClassName}
         >
           {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
           {copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}

@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Shield, Upload, AlertCircle, QrCode, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
@@ -37,9 +37,28 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     () => localStorage.getItem('nostube:last-bunker') || ''
   )
   const [authUrl, setAuthUrl] = useState<string | null>(null)
+  const [hasNostrExtension, setHasNostrExtension] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
   const isEncryptedKey = isNcryptsec(keyInput)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const detectExtension = () => {
+      setHasNostrExtension(typeof window !== 'undefined' && 'nostr' in window && !!window.nostr)
+    }
+
+    detectExtension()
+    const detectionTimers = [
+      window.setTimeout(detectExtension, 100),
+      window.setTimeout(detectExtension, 500),
+    ]
+
+    return () => {
+      detectionTimers.forEach(window.clearTimeout)
+    }
+  }, [isOpen])
 
   const handleBunkerAuth = useCallback(async (url: string) => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -178,14 +197,20 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           )}
 
           <Tabs defaultValue="qr" className="w-full" onValueChange={() => setError(null)}>
-            <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 mb-6">
+            <TabsList
+              className={`grid h-auto mb-6 ${
+                hasNostrExtension ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
+              }`}
+            >
               <TabsTrigger value="qr">
                 <QrCode className="w-4 h-4 mr-1" />
                 {t('auth.login.qr', 'QR')}
               </TabsTrigger>
-              <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
+              {hasNostrExtension && (
+                <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
+              )}
               <TabsTrigger value="protected">
-                {t('auth.login.protectedKey', 'Protected')}
+                {t('auth.login.protectedKey', 'Secret Key')}
               </TabsTrigger>
               <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
             </TabsList>
@@ -200,19 +225,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               />
             </TabsContent>
 
-            <TabsContent value="extension" className="space-y-4">
-              <div className="text-center p-4 rounded-lg bg-card">
-                <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
-                <p className="text-sm mb-4">{t('auth.login.extensionDescription')}</p>
-                <Button
-                  className="w-full rounded-full py-6"
-                  onClick={handleExtensionLogin}
-                  disabled={isLoading}
-                >
-                  {isLoading ? t('auth.login.loggingIn') : t('auth.login.loginWithExtension')}
-                </Button>
-              </div>
-            </TabsContent>
+            {hasNostrExtension && (
+              <TabsContent value="extension" className="space-y-4">
+                <div className="text-center p-4 rounded-lg bg-card">
+                  <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
+                  <p className="text-sm mb-4">{t('auth.login.extensionDescription')}</p>
+                  <Button
+                    className="w-full rounded-full py-6"
+                    onClick={handleExtensionLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? t('auth.login.loggingIn') : t('auth.login.loginWithExtension')}
+                  </Button>
+                </div>
+              </TabsContent>
+            )}
 
             <TabsContent value="protected" className="space-y-4">
               <div className="space-y-4">

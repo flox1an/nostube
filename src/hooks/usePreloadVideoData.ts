@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useAppContext } from './useAppContext'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import type { Filter } from 'nostr-tools'
 
 interface UsePreloadVideoDataOptions {
-  videoId: string
-  authorPubkey: string
-  kind: number
+  videoId?: string
+  videoAddress?: string
+  authorPubkey?: string
+  kind?: number
   relays: string[]
   enabled: boolean
 }
@@ -18,6 +20,7 @@ interface UsePreloadVideoDataOptions {
  */
 export function usePreloadVideoData({
   videoId,
+  videoAddress,
   authorPubkey,
   kind,
   relays,
@@ -27,25 +30,45 @@ export function usePreloadVideoData({
   const { pool } = useAppContext()
 
   useEffect(() => {
-    if (!enabled || !videoId || relays.length === 0) {
+    if (!enabled || (!videoId && !videoAddress) || relays.length === 0) {
       return
     }
 
-    // Combine reactions and comments filters into one request
-    const filters = [
-      // Reactions (kind 7) and regular comments (kind 1) with #e tag
-      {
-        kinds: [1, 7],
-        '#e': [videoId],
-        limit: 100,
-      },
-      // Video comments (kind 1111) with #E tag
-      {
-        kinds: [1111],
-        '#E': [videoId],
-        limit: 100,
-      },
-    ]
+    // Combine reactions and comments filters into one request.
+    // naddr pages can start comment preloading before the event ID is known by using #a/#A.
+    const filters: Filter[] = []
+
+    if (videoId) {
+      filters.push(
+        // Reactions (kind 7) and regular comments (kind 1) with #e tag
+        {
+          kinds: [1, 7],
+          '#e': [videoId],
+          limit: 100,
+        },
+        // Video comments (kind 1111) with #E tag
+        {
+          kinds: [1111],
+          '#E': [videoId],
+          limit: 100,
+        }
+      )
+    }
+
+    if (videoAddress) {
+      filters.push(
+        {
+          kinds: [1],
+          '#a': [videoAddress],
+          limit: 100,
+        },
+        {
+          kinds: [1111],
+          '#A': [videoAddress],
+          limit: 100,
+        }
+      )
+    }
 
     // Load reactions and comments from relays
     const loader = createTimelineLoader(pool, relays, filters, {
@@ -66,5 +89,5 @@ export function usePreloadVideoData({
     return () => {
       subscription.unsubscribe()
     }
-  }, [videoId, authorPubkey, kind, relays, enabled, eventStore, pool])
+  }, [videoId, videoAddress, authorPubkey, kind, relays, enabled, eventStore, pool])
 }

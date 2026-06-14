@@ -34,6 +34,7 @@ import {
   useUserBlossomServers,
   useVideoHistory,
   useIsMobile,
+  usePreloadVideoData,
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
@@ -114,6 +115,37 @@ export function VideoPage() {
 
   // State for video event loaded from EventStore/relays
   const [videoEvent, setVideoEvent] = useState<NostrEvent | undefined>(undefined)
+
+  const preloadVideoId = useMemo(() => {
+    if (videoEvent) return videoEvent.id
+    if (videoIdentifier?.type === 'event') return videoIdentifier.data.id
+    return undefined
+  }, [videoEvent, videoIdentifier])
+
+  const preloadVideoAddress = useMemo(() => {
+    if (videoIdentifier?.type === 'address' && videoIdentifier.data) {
+      const { kind, pubkey, identifier } = videoIdentifier.data
+      return `${kind}:${pubkey}:${identifier}`
+    }
+
+    const identifier = videoEvent?.tags.find(t => t[0] === 'd')?.[1]
+    if (videoEvent && identifier && (videoEvent.kind === 34235 || videoEvent.kind === 34236)) {
+      return `${videoEvent.kind}:${videoEvent.pubkey}:${identifier}`
+    }
+
+    return undefined
+  }, [videoEvent, videoIdentifier])
+
+  usePreloadVideoData({
+    videoId: preloadVideoId,
+    videoAddress: preloadVideoAddress,
+    authorPubkey: videoEvent?.pubkey ?? identifierAuthorPubkey,
+    kind:
+      videoEvent?.kind ??
+      (videoIdentifier?.type === 'address' ? videoIdentifier.data?.kind : undefined),
+    relays: initialRelays,
+    enabled: true,
+  })
 
   // Load video event with explicit subscription management for proper cleanup
   useEffect(() => {

@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import './index.css'
 import { checkAndClearCache } from './lib/cache-clear'
+import { migrateLocalStoragePlayPositions } from './lib/play-position-storage'
 import './i18n/config' // Initialize i18n
 
 // Auto-reload on stale chunk errors (after deployment, old cached HTML references missing JS files)
@@ -42,6 +43,9 @@ checkAndClearCache().then(wasCleared => {
   if (wasCleared && import.meta.env.DEV) {
     console.log('Cache was cleared, app will now initialize with fresh cache')
   }
+
+  // One-time migration of legacy localStorage play positions to IndexedDB
+  void migrateLocalStoragePlayPositions()
 
   createRoot(document.getElementById('root')!).render(<App />)
 })

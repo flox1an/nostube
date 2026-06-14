@@ -1,10 +1,15 @@
-import { getPlayPosition, setPlayPosition, type PlayPositionData } from './play-position-db'
+import {
+  getPlayPosition,
+  setPlayPosition,
+  type PlayPositionData,
+  type PlayPositionEntry,
+} from './play-position-db'
 
-export type { PlayPositionData }
+export type { PlayPositionData, PlayPositionEntry }
 
 /**
- * Parse stored play position from a raw JSON string (legacy localStorage migration path).
- * Handles both new JSON format and legacy plain-number format.
+ * Parse stored play position from a raw JSON string (legacy localStorage migration).
+ * Handles both JSON format and legacy plain-number format.
  */
 export function parseStoredPosition(saved: string | null): PlayPositionData | null {
   if (!saved) return null
@@ -53,6 +58,45 @@ export function getCacheVersion() {
 }
 
 /**
+ * One-time batch migration of all existing localStorage play positions to IndexedDB.
+ * Scans all keys matching `playpos:*`, migrates each entry, then removes them.
+ * Safe to call multiple times — no-ops once localStorage has no more entries.
+ */
+export async function migrateLocalStoragePlayPositions(): Promise<void> {
+  try {
+    const keysToMigrate: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('playpos:')) keysToMigrate.push(key)
+    }
+
+    if (keysToMigrate.length === 0) return
+
+    await Promise.all(
+      keysToMigrate.map(async key => {
+        // key format: "playpos:{pubkey}:{videoId}"
+        const withoutPrefix = key.slice('playpos:'.length)
+        const colonIdx = withoutPrefix.indexOf(':')
+        if (colonIdx === -1) return
+
+        const pubkey = withoutPrefix.slice(0, colonIdx)
+        const videoId = withoutPrefix.slice(colonIdx + 1)
+        if (!pubkey || !videoId) return
+
+        const raw = localStorage.getItem(key)
+        const parsed = parseStoredPosition(raw)
+        if (parsed) {
+          await setPlayPosition(pubkey, videoId, parsed)
+        }
+        localStorage.removeItem(key)
+      })
+    )
+  } catch {
+    // Migration is best-effort — app works fine without it
+  }
+}
+
+/**
  * Read play position for a video. Checks L1 cache first, then IndexedDB.
  * Populates the cache on miss.
  */
@@ -63,23 +107,6 @@ export async function readPlayPosition(
   const cacheKey = `${pubkey}:${videoId}`
   if (playPosCache.has(cacheKey)) {
     return playPosCache.get(cacheKey) ?? null
-  }
-
-  // Check localStorage for legacy entries and migrate them once
-  try {
-    const legacyKey = `playpos:${pubkey}:${videoId}`
-    const legacyRaw = localStorage.getItem(legacyKey)
-    if (legacyRaw) {
-      const parsed = parseStoredPosition(legacyRaw)
-      if (parsed) {
-        await setPlayPosition(pubkey, videoId, parsed)
-      }
-      localStorage.removeItem(legacyKey)
-      playPosCache.set(cacheKey, parsed)
-      return parsed
-    }
-  } catch {
-    // ignore migration errors
   }
 
   const data = await getPlayPosition(pubkey, videoId)

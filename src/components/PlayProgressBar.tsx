@@ -1,6 +1,6 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useMemo } from 'react'
-import { parseStoredPosition, getPlayPosCache } from '@/lib/play-position-storage'
+import { useState, useEffect } from 'react'
+import { getPlayPosCache, readPlayPosition, type PlayPositionData } from '@/lib/play-position-storage'
 
 interface PlayProgressBarProps {
   videoId: string
@@ -9,28 +9,32 @@ interface PlayProgressBarProps {
 
 export function PlayProgressBar({ videoId, duration }: PlayProgressBarProps) {
   const { user } = useCurrentUser()
+  const [posData, setPosData] = useState<PlayPositionData | null>(null)
 
-  const posData = useMemo(() => {
+  useEffect(() => {
     const pubkey = user?.pubkey
     if (!pubkey || !videoId) {
-      return null
-    }
-    const key = `playpos:${pubkey}:${videoId}`
-
-    // Check cache first
-    const currentPlayPosCache = getPlayPosCache()
-    if (currentPlayPosCache.has(key)) {
-      return currentPlayPosCache.get(key) ?? null
+      setPosData(null)
+      return
     }
 
-    // Read from localStorage and cache the result
-    const val = localStorage.getItem(key)
-    const data = parseStoredPosition(val)
-    getPlayPosCache().set(key, data)
-    return data
+    // Check L1 cache synchronously to avoid flicker on already-loaded entries
+    const cache = getPlayPosCache()
+    const cacheKey = `${pubkey}:${videoId}`
+    if (cache.has(cacheKey)) {
+      setPosData(cache.get(cacheKey) ?? null)
+      return
+    }
+
+    let cancelled = false
+    readPlayPosition(pubkey, videoId).then(data => {
+      if (!cancelled) setPosData(data)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [user?.pubkey, videoId])
 
-  // Use stored duration if available, fall back to prop
   const effectiveDuration = posData?.duration || duration
   const playPos = posData?.time ?? 0
 

@@ -7,6 +7,7 @@ const FALLBACK_INDEXED_DB_CACHE_NAMES = [
   'nostr-events',
   'nostr-idb',
   'nostube-p2p-hls-blob-cache',
+  'nostube-play-positions',
 ]
 
 const CLEAR_ON_LOAD_KEY = 'clearCacheOnLoad'

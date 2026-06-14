@@ -1,30 +1,16 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { invalidatePlayPosCache, parseStoredPosition } from '@/lib/play-position-storage'
+import { useState, useEffect, useRef } from 'react'
+import { invalidatePlayPosCache, readPlayPosition, writePlayPosition } from '@/lib/play-position-storage'
 
-// Utility to parse t= parameter (supports seconds, mm:ss, h:mm:ss)
 function parseTimeParam(t: string | null): number {
   if (!t) return 0
   if (/^\d+$/.test(t)) {
-    // Simple seconds
     return parseInt(t, 10)
   }
-  // mm:ss or h:mm:ss
   const parts = t.split(':').map(Number)
   if (parts.some(isNaN)) return 0
-  if (parts.length === 2) {
-    // mm:ss
-    return parts[0] * 60 + parts[1]
-  }
-  if (parts.length === 3) {
-    // h:mm:ss
-    return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  }
+  if (parts.length === 2) return parts[0] * 60 + parts[1]
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
   return 0
-}
-
-interface PlayPositionData {
-  time: number
-  duration: number
 }
 
 interface UseVideoPlayPositionProps {
@@ -35,9 +21,9 @@ interface UseVideoPlayPositionProps {
 }
 
 /**
- * Hook that manages video play position storage and retrieval
- * - Stores play position and duration in localStorage with debouncing
- * - Retrieves initial position from ?t= param or localStorage
+ * Hook that manages video play position storage and retrieval.
+ * - Stores play position and duration in IndexedDB with debouncing
+ * - Retrieves initial position from ?t= param or IndexedDB
  * - Handles seek events
  */
 export function useVideoPlayPosition({
@@ -47,21 +33,18 @@ export function useVideoPlayPosition({
   locationSearch,
 }: UseVideoPlayPositionProps) {
   const [currentPlayPos, setCurrentPlayPos] = useState(0)
+  const [initialPlayPos, setInitialPlayPos] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastWriteRef = useRef<number>(0)
   const videoElementRef = useRef<HTMLMediaElement | null>(null)
-  // Track actual duration from video element (more reliable than event metadata)
   const actualDurationRef = useRef<number>(0)
-  // Track when video element is set so we can attach listeners
   const [videoElementReady, setVideoElementReady] = useState(false)
 
-  // Wrapper to set videoElementRef and trigger effect
   const setVideoElement = (el: HTMLMediaElement | null) => {
     videoElementRef.current = el
     setVideoElementReady(!!el)
   }
 
-  // Update actual duration when video element reports it
   useEffect(() => {
     const videoEl = videoElementRef.current
     if (!videoEl) return
@@ -72,7 +55,6 @@ export function useVideoPlayPosition({
       }
     }
 
-    // Check immediately and on duration change
     updateDuration()
     videoEl.addEventListener('durationchange', updateDuration)
     videoEl.addEventListener('loadedmetadata', updateDuration)
@@ -83,66 +65,67 @@ export function useVideoPlayPosition({
     }
   }, [videoElementReady])
 
-  // Compute initial play position from ?t=... param or localStorage
-  const initialPlayPos = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(locationSearch)
-      const tRaw = params.get('t')
-      const t = parseTimeParam(tRaw)
-      if (t > 0) return t
+  // Resolve initial play position from ?t= param or IndexedDB
+  useEffect(() => {
+    let cancelled = false
 
-      // If autoplay parameter is present (from playlist auto-advance), start from 0
-      const autoplay = params.get('autoplay')
-      if (autoplay === 'true') return 0
-    }
-    if (user && videoId) {
-      const key = `playpos:${user.pubkey}:${videoId}`
-      const saved = localStorage.getItem(key)
-      const data = parseStoredPosition(saved)
+    async function resolve() {
+      const params = new URLSearchParams(locationSearch)
+      const t = parseTimeParam(params.get('t'))
+      if (t > 0) {
+        if (!cancelled) setInitialPlayPos(t)
+        return
+      }
+
+      if (params.get('autoplay') === 'true') {
+        if (!cancelled) setInitialPlayPos(0)
+        return
+      }
+
+      if (!user || !videoId) {
+        if (!cancelled) setInitialPlayPos(0)
+        return
+      }
+
+      const data = await readPlayPosition(user.pubkey, videoId)
+      if (cancelled) return
 
       if (data && data.time > 0) {
-        // Use stored duration if available, fall back to event metadata
         const duration = data.duration || videoDuration || 0
-
         if (duration > 0) {
-          // Only restore if more than 5 seconds left and not at the end
           if (duration - data.time > 5 && data.time < duration - 1) {
-            return data.time
+            setInitialPlayPos(data.time)
+            return
           }
-          // Near the end, don't restore
-          return 0
-        } else {
-          // No duration info at all - restore the position anyway
-          return data.time
+          setInitialPlayPos(0)
+          return
         }
+        setInitialPlayPos(data.time)
+        return
       }
+      setInitialPlayPos(0)
     }
-    return 0
+
+    resolve()
+    return () => {
+      cancelled = true
+    }
   }, [user, videoId, videoDuration, locationSearch])
 
-  // Debounced play position storage (includes duration)
+  // Debounced play position write
   useEffect(() => {
     if (!user || !videoId) return
     if (currentPlayPos < 5) return
 
-    const key = `playpos:${user.pubkey}:${videoId}`
     const now = Date.now()
-
-    // Get duration from video element, fall back to prop
     const duration = actualDurationRef.current || videoDuration || 0
 
     const savePosition = () => {
-      const data: PlayPositionData = {
-        time: currentPlayPos,
-        duration,
-      }
-      localStorage.setItem(key, JSON.stringify(data))
+      writePlayPosition(user.pubkey, videoId, { time: currentPlayPos, duration })
       lastWriteRef.current = Date.now()
-      // Invalidate cache so PlayProgressBar updates
       invalidatePlayPosCache(videoId, user.pubkey)
     }
 
-    // If last write was more than 3s ago, write immediately
     if (now - lastWriteRef.current > 3000) {
       savePosition()
       if (debounceRef.current) {
@@ -150,14 +133,13 @@ export function useVideoPlayPosition({
         debounceRef.current = null
       }
     } else {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
         savePosition()
         debounceRef.current = null
       }, 2000)
     }
+
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
@@ -166,12 +148,10 @@ export function useVideoPlayPosition({
     }
   }, [currentPlayPos, user, videoId, videoDuration])
 
-  // When ?t= parameter changes while on the same video, seek to the new timestamp
+  // Handle ?t= parameter changes while on the same video
   useEffect(() => {
     if (typeof window !== 'undefined' && videoElementRef.current) {
-      const params = new URLSearchParams(locationSearch)
-      const tRaw = params.get('t')
-      const t = parseTimeParam(tRaw)
+      const t = parseTimeParam(new URLSearchParams(locationSearch).get('t'))
       if (t > 0 && Math.abs(videoElementRef.current.currentTime - t) > 1) {
         videoElementRef.current.currentTime = t
       }
@@ -185,18 +165,13 @@ export function useVideoPlayPosition({
       const customEvent = event as CustomEvent<{ time?: number }>
       const targetTime = customEvent.detail?.time
       const videoEl = videoElementRef.current
-      if (typeof targetTime !== 'number' || !videoEl) {
-        return
-      }
+      if (typeof targetTime !== 'number' || !videoEl) return
       videoEl.currentTime = targetTime
       setCurrentPlayPos(targetTime)
     }
 
     window.addEventListener('nostube:seek-to', handleSeek)
-
-    return () => {
-      window.removeEventListener('nostube:seek-to', handleSeek)
-    }
+    return () => window.removeEventListener('nostube:seek-to', handleSeek)
   }, [])
 
   return {

@@ -154,7 +154,11 @@
       "replyingTo": "En réponse à",
       "showMutedReply": "Afficher la réponse masquée",
       "showMore": "Afficher plus",
-      "showLess": "Afficher moins"
+      "showLess": "Afficher moins",
+      "deleteComment": "Supprimer le commentaire",
+      "deleteCommentConfirmTitle": "Supprimer le commentaire ?",
+      "deleteCommentConfirmMessage": "Une demande de suppression sera publiée sur tous les relais. Le commentaire peut rester visible sur certains relais.",
+      "commentDeleted": "Commentaire supprimé"
     },
     "share": {
       "title": "Partager cette vidéo",

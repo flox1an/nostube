@@ -165,7 +165,11 @@
       "replyingTo": "回复",
       "showMutedReply": "显示隐藏的回复",
       "showMore": "展开",
-      "showLess": "收起"
+      "showLess": "收起",
+      "deleteComment": "删除评论",
+      "deleteCommentConfirmTitle": "删除评论？",
+      "deleteCommentConfirmMessage": "这将向所有中继发布删除请求。该评论可能仍在部分中继上可见。",
+      "commentDeleted": "评论已删除"
     },
     "share": {
       "title": "分享此视频",

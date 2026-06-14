@@ -165,7 +165,11 @@
       "replyingTo": "返信先",
       "showMutedReply": "非表示の返信を表示",
       "showMore": "もっと表示",
-      "showLess": "折りたたむ"
+      "showLess": "折りたたむ",
+      "deleteComment": "コメントを削除",
+      "deleteCommentConfirmTitle": "コメントを削除しますか？",
+      "deleteCommentConfirmMessage": "すべてのリレーに削除リクエストが送信されます。一部のリレーではまだ表示されている場合があります。",
+      "commentDeleted": "コメントを削除しました"
     },
     "share": {
       "title": "この動画をシェア",

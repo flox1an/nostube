@@ -154,7 +154,11 @@
       "replyingTo": "Respondiendo a",
       "showMutedReply": "Mostrar respuesta oculta",
       "showMore": "Mostrar más",
-      "showLess": "Mostrar menos"
+      "showLess": "Mostrar menos",
+      "deleteComment": "Eliminar comentario",
+      "deleteCommentConfirmTitle": "¿Eliminar comentario?",
+      "deleteCommentConfirmMessage": "Esto publicará una solicitud de eliminación en todos los relés. El comentario puede seguir siendo visible en algunos relés.",
+      "commentDeleted": "Comentario eliminado"
     },
     "share": {
       "title": "Compartir este video",

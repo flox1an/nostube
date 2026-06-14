@@ -167,7 +167,11 @@
       "replyingTo": "Replying to",
       "showMutedReply": "Show hidden reply",
       "showMore": "Show more",
-      "showLess": "Show less"
+      "showLess": "Show less",
+      "deleteComment": "Delete comment",
+      "deleteCommentConfirmTitle": "Delete comment?",
+      "deleteCommentConfirmMessage": "This will publish a deletion request to all relays. The comment may still be visible on some relays.",
+      "commentDeleted": "Comment deleted"
     },
     "share": {
       "title": "Share this video",

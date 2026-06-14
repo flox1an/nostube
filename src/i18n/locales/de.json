@@ -161,7 +161,11 @@
       "replyingTo": "Antwort an",
       "showMutedReply": "Ausgeblendete Antwort anzeigen",
       "showMore": "Mehr anzeigen",
-      "showLess": "Weniger anzeigen"
+      "showLess": "Weniger anzeigen",
+      "deleteComment": "Kommentar löschen",
+      "deleteCommentConfirmTitle": "Kommentar löschen?",
+      "deleteCommentConfirmMessage": "Dadurch wird eine Löschanfrage an alle Relays veröffentlicht. Der Kommentar ist möglicherweise noch auf einigen Relays sichtbar.",
+      "commentDeleted": "Kommentar gelöscht"
     },
     "share": {
       "title": "Dieses Video teilen",

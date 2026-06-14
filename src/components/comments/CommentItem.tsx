@@ -7,11 +7,13 @@
 
 import React, { useState } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy, VolumeX } from 'lucide-react'
+import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy, VolumeX, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
-import { useProfile, useMutedPubkeys } from '@/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+import { useProfile, useMutedPubkeys, useNostrPublish, useAppContext } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
+import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
@@ -21,6 +23,16 @@ import { ReportDialog } from '@/components/ReportDialog'
 import { TrustBadge } from '@/components/TrustBadge'
 import { ToastAction } from '@/components/ui/toast'
 import { useToast } from '@/hooks/useToast'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -80,9 +92,14 @@ export const CommentItem = React.memo(function CommentItem({
   const hasReplies = comment.replies && comment.replies.length > 0
   const isHighlighted = highlightedCommentId === comment.id
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleted, setIsDeleted] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
   const eventStore = useEventStore()
   const { mutePubkey, unmutePubkey } = useMutedPubkeys()
+  const { publish } = useNostrPublish()
+  const { config } = useAppContext()
   const { toast } = useToast()
   const showDebug = isBetaUser(currentUserPubkey)
 
@@ -103,6 +120,37 @@ export const CommentItem = React.memo(function CommentItem({
     })
   }
 
+  const handleDeleteComment = async () => {
+    setIsDeleting(true)
+    try {
+      const commentEvent = eventStore.getEvent(comment.id)
+      const seenRelays = commentEvent ? Array.from(getSeenRelays(commentEvent) ?? []) : []
+      const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
+      const targetRelays = Array.from(new Set([...writeRelays, ...seenRelays]))
+
+      const deletionEvent = await publish({
+        event: {
+          kind: 5,
+          content: 'Deleted by author',
+          created_at: nowInSecs(),
+          tags: [
+            ['e', comment.id],
+            ['k', String(comment.kind)],
+          ],
+        },
+        relays: targetRelays,
+      })
+      eventStore.add(deletionEvent)
+      setIsDeleted(true)
+      setShowDeleteDialog(false)
+      toast({ title: t('video.comments.commentDeleted') })
+    } catch (err) {
+      console.error('Failed to delete comment:', err)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   // Root comments (depth=0) have big avatars, nested have small avatars
   const isRootComment = depth === 0
   const avatarSize = isRootComment ? 'h-10 w-10' : 'h-6 w-6'
@@ -110,6 +158,8 @@ export const CommentItem = React.memo(function CommentItem({
   // Count lines in comment content
   const lineCount = comment.content.split('\n').length
   const hasMoreThan3Lines = lineCount > 3
+
+  if (isDeleted) return null
 
   return (
     <div
@@ -146,6 +196,15 @@ export const CommentItem = React.memo(function CommentItem({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {isOwnComment && (
+                    <DropdownMenuItem
+                      onSelect={() => setShowDeleteDialog(true)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('video.comments.deleteComment')}
+                    </DropdownMenuItem>
+                  )}
                   {!isOwnComment && currentUserPubkey && (
                     <DropdownMenuItem onSelect={handleMuteUser} className="text-destructive">
                       <VolumeX className="w-4 h-4 mr-2" />
@@ -299,6 +358,22 @@ export const CommentItem = React.memo(function CommentItem({
         contentId={comment.id}
         contentAuthor={comment.pubkey}
       />
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('video.comments.deleteCommentConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('video.comments.deleteCommentConfirmMessage')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteComment} disabled={isDeleting}>
+              {isDeleting ? t('common.deleting') : t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 })

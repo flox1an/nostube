@@ -45,7 +45,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
 
   // Extract video ID from shareUrl (e.g., /v/nevent1... -> nevent1...)
   const videoId = useMemo(() => {
-    const match = shareUrl.match(/\/video\/([^?]+)/)
+    const match = shareUrl.match(/\/v\/([^?]+)/)
     return match ? match[1] : ''
   }, [shareUrl])
 
@@ -54,7 +54,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
     if (!videoId) return ''
 
     // Get base URL from shareUrl (e.g., https://nostu.be)
-    const baseUrl = shareUrl.split('/video/')[0]
+    const baseUrl = shareUrl.split('/v/')[0]
 
     // Build embed URL with video ID
     let embedUrl = `${baseUrl}/embed.html?v=${videoId}`

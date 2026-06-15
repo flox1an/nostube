@@ -188,8 +188,8 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
     // Extract filename from path
     const filename = pathname.split('/').pop() || ''
 
-    // Check if it looks like a Blossom URL (64 char hex hash + extension)
-    const match = filename.match(/^([a-f0-9]{64})\.([^.]+)$/i)
+    // Check if it looks like a Blossom URL (64 char hex hash, with or without extension)
+    const match = filename.match(/^([a-f0-9]{64})(?:\.([^.]+))?$/i)
     if (match) {
       return {
         sha256: match[1],

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { RichTextContent } from '@/components/RichTextContent'
+import { PeoplePicker, type SelectedPerson } from '@/components/ui/people-picker'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
@@ -39,28 +40,64 @@ function extractHashtags(text: string): string[] {
     .filter(t => !seen.has(t) && seen.add(t))
 }
 
+function buildTags(
+  note: VideoNote,
+  title: string,
+  description: string,
+  hashtags: string[],
+  people: SelectedPerson[],
+  draftId: string
+): string[][] {
+  return [
+    ['d', draftId],
+    ['title', title],
+    ['alt', description],
+    ['published_at', note.created_at.toString()],
+    ...note.imetaTags,
+    ...hashtags.map(t => ['t', t]),
+    ...people.map(({ pubkey, relays }) =>
+      relays && relays.length > 0 ? ['p', pubkey, relays[0]] : ['p', pubkey]
+    ),
+  ]
+}
+
 export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNoteDialogProps) {
   const { publish, isPending } = useNostrPublish()
   const { toast } = useToast()
   const [title, setTitle] = useState('')
+  const [people, setPeople] = useState<SelectedPerson[]>([])
+  const [showJson, setShowJson] = useState(false)
+  // stable d-tag for preview; regenerated on each open via note change
+  const draftId = useMemo(() => crypto.randomUUID(), [note]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const description = useMemo(() => (note ? buildDescription(note) : ''), [note])
   const hashtags = useMemo(() => (note ? extractHashtags(note.content) : []), [note])
 
+  // Initialize people from note.pubkeys whenever the note changes
+  useMemo(() => {
+    if (note) {
+      setPeople(note.pubkeys.map(({ pubkey, relays }) => ({ pubkey, name: '', relays })))
+    } else {
+      setPeople([])
+      setTitle('')
+      setShowJson(false)
+    }
+  }, [note])
+
+  const previewEvent = useMemo(() => {
+    if (!note) return null
+    return {
+      kind: 34235,
+      content: description,
+      created_at: '<generated on publish>',
+      tags: buildTags(note, title || '<title>', description, hashtags, people, draftId),
+    }
+  }, [note, title, description, hashtags, people, draftId])
+
   const handlePublish = async () => {
     if (!note || !title.trim()) return
 
-    const tags: string[][] = [
-      ['d', crypto.randomUUID()],
-      ['title', title.trim()],
-      ['alt', description],
-      ['published_at', note.created_at.toString()],
-      ...note.imetaTags,
-      ...hashtags.map(t => ['t', t]),
-      ...note.pubkeys.map(({ pubkey, relays }) =>
-        relays.length > 0 ? ['p', pubkey, relays[0]] : ['p', pubkey]
-      ),
-    ]
+    const tags = buildTags(note, title.trim(), description, hashtags, people, draftId)
 
     try {
       await publish({
@@ -151,6 +188,33 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
                   if (e.key === 'Enter' && title.trim()) handlePublish()
                 }}
               />
+            </div>
+
+            {/* People tagging */}
+            <div className="space-y-1.5">
+              <Label>People</Label>
+              <PeoplePicker people={people} onPeopleChange={setPeople} />
+            </div>
+
+            {/* JSON preview */}
+            <div className="rounded-md border">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium"
+                onClick={() => setShowJson(v => !v)}
+              >
+                Event JSON preview
+                {showJson ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+              {showJson && (
+                <pre className="overflow-x-auto border-t bg-muted/40 p-3 text-xs leading-relaxed">
+                  {JSON.stringify(previewEvent, null, 2)}
+                </pre>
+              )}
             </div>
           </div>
         )}

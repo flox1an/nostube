@@ -489,12 +489,10 @@ export function VideoPage() {
     }
   }, [video?.title])
 
-  // Scroll to top when video is loaded
+  // Scroll to top when navigating to a different video, not when relay data arrives
   useEffect(() => {
-    if (video) {
-      window.scrollTo({ top: 0, behavior: 'instant' })
-    }
-  }, [video, initialPlayPos])
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [nevent])
 
   // Track video in history when loaded (using ref to avoid dependency on addToHistory)
   const addToHistoryRef = useRef(addToHistory)

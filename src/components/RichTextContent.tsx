@@ -149,25 +149,29 @@ function NostrMention({
 }: {
   profilePointer: { pubkey: string; relays?: string[] }
 }) {
-  const author = useProfile(profilePointer)
+  // Stabilize the pointer by value so useProfile's use$() doesn't restart on
+  // every parent render (RichTextContent creates a new object each render).
+  const relayKey = profilePointer.relays?.join(',') ?? ''
+  const stablePointer = useMemo(
+    () => profilePointer,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profilePointer.pubkey, relayKey]
+  )
+
+  const author = useProfile(stablePointer)
   const eventStore = useEventStore()
-  const displayName = author?.display_name || author?.name || genUserName(profilePointer.pubkey)
+  const displayName = author?.display_name || author?.name || genUserName(stablePointer.pubkey)
 
   // Generate nprofile link with relays if available
   const nprofileLink = useMemo(() => {
-    // Try to get the profile event to extract seen relays
-    const profileEvent = eventStore.getReplaceable(0, profilePointer.pubkey)
+    const profileEvent = eventStore.getReplaceable(0, stablePointer.pubkey)
     const seenRelaysSet = profileEvent ? getSeenRelays(profileEvent) : undefined
     const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
-    const relays = profilePointer.relays || seenRelays
-
-    if (relays && relays.length > 0) {
-      return buildProfileUrlFromPubkey(profilePointer.pubkey, relays)
-    } else {
-      const npub = nip19.npubEncode(profilePointer.pubkey)
-      return buildProfilePath(npub)
-    }
-  }, [eventStore, profilePointer.pubkey, profilePointer.relays])
+    const relays = stablePointer.relays?.length ? stablePointer.relays : seenRelays
+    return relays.length > 0
+      ? buildProfileUrlFromPubkey(stablePointer.pubkey, relays)
+      : buildProfilePath(nip19.npubEncode(stablePointer.pubkey))
+  }, [eventStore, stablePointer])
 
   return (
     <Link to={nprofileLink} className="font-medium hover:underline text-accent-foreground">

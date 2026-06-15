@@ -100,7 +100,6 @@ export function useFirstLineTitle(note: VideoNote | null): string {
         )
       ).pipe(map(pairs => Object.fromEntries(pairs)))
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mentionKey, eventStore]
   )
 

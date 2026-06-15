@@ -121,6 +121,7 @@ export function useVideoNotes() {
   const [notes, setNotes] = useState<VideoNote[]>([])
   const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
     if (!pool || !readRelays || readRelays.length === 0 || !user?.pubkey) return
 
     const videoUrlSet = new Set<string>()

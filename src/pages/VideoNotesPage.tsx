@@ -236,6 +236,7 @@ function VideoNoteCard({
                   </Badge>
                 )}
               </div>
+              <div className="flex gap-2">
                 {note.isReposted || isPublished ? (
                   <Button size="sm" variant="outline" disabled>
                     {t('pages.videoNotes.alreadyImported')}

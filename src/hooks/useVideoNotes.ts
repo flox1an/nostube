@@ -6,8 +6,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@/utils/video-event'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
-// Test npub: npub10uthwp4ddc9w5adfuv69m8la4enkwma07fymuetmt93htcww6wgs55xdlq
-const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
+// const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
 
 /** A pubkey with optional relay hints extracted from p tags or nprofile links */
 export interface PubkeyWithRelays {
@@ -122,8 +121,7 @@ export function useVideoNotes() {
   const [notes, setNotes] = useState<VideoNote[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!pool || !readRelays || readRelays.length === 0) return
+    if (!pool || !readRelays || readRelays.length === 0 || !user?.pubkey) return
 
     const videoUrlSet = new Set<string>()
     let videoSub: { unsubscribe: () => void } | null = null
@@ -141,11 +139,11 @@ export function useVideoNotes() {
         )
       : null
 
-    // Load Kind 1 notes from the source account
+    // Load current user's Kind 1 notes
     const notesLoader = createTimelineLoader(
       pool,
       readRelays,
-      [{ kinds: [1], authors: [TEST_PUBKEY], limit: 100 }],
+      [{ kinds: [1], authors: [user.pubkey], limit: 100 }],
       { eventStore }
     )
 

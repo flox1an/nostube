@@ -1,11 +1,11 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppContext, useReadRelays } from '@/hooks'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { extractBlossomHash } from '@/utils/video-event'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
-
 // Test npub: npub10uthwp4ddc9w5adfuv69m8la4enkwma07fymuetmt93htcww6wgs55xdlq
 const TEST_PUBKEY = '7f177706ad6e0aea75a9e3345d9ffdae67676faff249be657b596375e1ced391'
 
@@ -112,49 +112,36 @@ function extractVideoUrls(content: string, tags: string[][]): string[] {
 }
 
 /**
- * Hook to load and process Kind 1 notes with videos from a test user
+ * Hook to load and process Kind 1 notes with videos, marking ones the current user has already published as a video event.
  */
 export function useVideoNotes() {
-  console.log('VideoNotes: Hook function called')
-
   const { pool } = useAppContext()
   const readRelays = useReadRelays()
   const eventStore = useEventStore()
+  const { user } = useCurrentUser()
   const [notes, setNotes] = useState<VideoNote[]>([])
   const [loading, setLoading] = useState(true)
 
-  console.log('VideoNotes: Dependencies loaded:', {
-    testPubkey: TEST_PUBKEY.slice(0, 8),
-    hasPool: !!pool,
-    readRelaysCount: readRelays?.length,
-    hasEventStore: !!eventStore,
-  })
-
-  // Track which video URLs the user has already reposted
-  const videoUrlSet = useMemo(() => new Set<string>(), [])
-
   useEffect(() => {
-    if (!pool || !readRelays || readRelays.length === 0) {
-      console.log('VideoNotes: Waiting for pool or relays...')
-      return
-    }
+    if (!pool || !readRelays || readRelays.length === 0) return
 
-    console.log('VideoNotes: Starting to load notes for test user:', TEST_PUBKEY.slice(0, 8))
-
+    const videoUrlSet = new Set<string>()
     let videoSub: { unsubscribe: () => void } | null = null
     let notesSub: { unsubscribe: () => void } | null = null
     const notesArray: NostrEvent[] = []
 
-    // Load test user's video events to check for reposts
+    // Load current user's published video events to build the set of already-published URLs
     const videoKinds = [21, 22, 34235, 34236]
-    const videoLoader = createTimelineLoader(
-      pool,
-      readRelays,
-      [{ kinds: videoKinds, authors: [TEST_PUBKEY], limit: 100 }],
-      { eventStore }
-    )
+    const videoLoader = user?.pubkey
+      ? createTimelineLoader(
+          pool,
+          readRelays,
+          [{ kinds: videoKinds, authors: [user.pubkey], limit: 500 }],
+          { eventStore }
+        )
+      : null
 
-    // Load Kind 1 notes in parallel
+    // Load Kind 1 notes from the source account
     const notesLoader = createTimelineLoader(
       pool,
       readRelays,
@@ -162,32 +149,27 @@ export function useVideoNotes() {
       { eventStore }
     )
 
-    console.log('VideoNotes: Created loaders, subscribing...')
 
-    // Subscribe to video events to build URL set
-    videoSub = videoLoader().subscribe({
-      next: (event: NostrEvent) => {
-        // Extract URLs from imeta tags
-        const imetaTags = event.tags.filter(t => t[0] === 'imeta')
-        imetaTags.forEach(imetaTag => {
-          for (let i = 1; i < imetaTag.length; i++) {
-            const [key, value] = imetaTag[i].split(' ', 2)
-            if (key === 'url' && value) {
-              videoUrlSet.add(value)
+    // Subscribe to current user's video events to build the published URL set
+    if (videoLoader) {
+      videoSub = videoLoader().subscribe({
+        next: (event: NostrEvent) => {
+          // Extract URLs from imeta tags
+          const imetaTags = event.tags.filter(t => t[0] === 'imeta')
+          imetaTags.forEach(imetaTag => {
+            for (let i = 1; i < imetaTag.length; i++) {
+              const [key, value] = imetaTag[i].split(' ', 2)
+              if (key === 'url' && value) videoUrlSet.add(value)
             }
-          }
-        })
+          })
+          // Old format
+          const urlTag = event.tags.find(t => t[0] === 'url')
+          if (urlTag?.[1]) videoUrlSet.add(urlTag[1])
+        },
+        error: err => console.error('VideoNotes: Error loading video events:', err),
+      })
+    }
 
-        // Extract from old format
-        const urlTag = event.tags.find(t => t[0] === 'url')
-        if (urlTag?.[1]) {
-          videoUrlSet.add(urlTag[1])
-        }
-      },
-      error: err => {
-        console.error('VideoNotes: Error loading video events:', err)
-      },
-    })
 
     // Subscribe to Kind 1 notes
     notesSub = notesLoader().subscribe({
@@ -271,7 +253,7 @@ export function useVideoNotes() {
         notesSub.unsubscribe()
       }
     }
-  }, [pool, readRelays, eventStore, videoUrlSet])
+  }, [pool, readRelays, eventStore, user?.pubkey])
 
   return {
     notes,

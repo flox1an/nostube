@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
 import { useAppContext } from '@/hooks'
+import { useUploadDrafts } from '@/hooks/useUploadDrafts'
+import type { TaggedPerson } from '@/types/upload-draft'
+import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
 import { getDateLocale } from '@/lib/date-locale'
@@ -10,7 +14,7 @@ import { formatFileSize } from '@/lib/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play, Import, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
+import { Play, Import, Send, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PublishNoteDialog } from '@/components/PublishNoteDialog'
 
@@ -18,11 +22,13 @@ const PAGE_SIZE = 20
 
 function VideoNoteCard({
   note,
-  onImport,
+  onPublish,
+  onFullImport,
   isPublished,
 }: {
   note: VideoNote
-  onImport: (note: VideoNote) => void
+  onPublish: (note: VideoNote) => void
+  onFullImport: (note: VideoNote) => void
   isPublished?: boolean
 }) {
   const { t, i18n } = useTranslation()
@@ -108,15 +114,10 @@ function VideoNoteCard({
     }
 
     return undefined
-  }, [
-    note.thumbnailUrl,
-    note.videoUrls,
-    thumbnailError,
-    proxyThumbnailError,
-    config.thumbResizeServerUrl,
-  ])
+  }, [note.thumbnailUrl, note.videoUrls, thumbnailError, proxyThumbnailError, config.thumbResizeServerUrl])
 
-  const handleImport = () => onImport(note)
+  const handlePublish = () => onPublish(note)
+  const handleFullImport = () => onFullImport(note)
 
   const handleStopPlaying = useCallback(
     (e: React.MouseEvent) => {
@@ -235,21 +236,31 @@ function VideoNoteCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex gap-2">
                 {note.isReposted || isPublished ? (
                   <Button size="sm" variant="outline" disabled>
                     {t('pages.videoNotes.alreadyImported')}
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleImport}
-                    className="cursor-pointer"
-                  >
-                    <Import className="h-4 w-4 mr-1" />
-                    {t('pages.videoNotes.import')}
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={handlePublish}
+                      className="cursor-pointer"
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      Publish
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleFullImport}
+                      className="cursor-pointer"
+                    >
+                      <Import className="h-4 w-4 mr-1" />
+                      {t('pages.videoNotes.import')}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -262,7 +273,10 @@ function VideoNoteCard({
 
 export function VideoNotesPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const { notes, loading } = useVideoNotes()
+  const { createDraft, updateDraft } = useUploadDrafts()
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [selectedNote, setSelectedNote] = useState<VideoNote | null>(null)
   const [publishedIds, setPublishedIds] = useState<Set<string>>(new Set())
@@ -274,13 +288,45 @@ export function VideoNotesPage() {
     }
   }, [t])
 
-  const handleImport = useCallback((note: VideoNote) => {
+  // Quick publish: open the preview/publish dialog
+  const handlePublish = useCallback((note: VideoNote) => {
     setSelectedNote(note)
   }, [])
+
+  // Full import: create upload draft and navigate to the details screen
+  const handleFullImport = useCallback(
+    (note: VideoNote) => {
+      try {
+        const draft = createDraft()
+        let description = note.content
+        note.videoUrls.forEach(url => {
+          description = description.replace(url, '')
+        })
+        description = description.replace(/\s+/g, ' ').trim()
+        const people: TaggedPerson[] = note.pubkeys.map(({ pubkey, relays }) => ({
+          pubkey,
+          name: '',
+          relays: relays.length > 0 ? relays : undefined,
+        }))
+        updateDraft(draft.id, {
+          inputMethod: 'url',
+          videoUrl: note.videoUrls[0],
+          description,
+          publishAt: note.created_at,
+          ...(people.length > 0 && { people }),
+        })
+        navigate(`/upload?draft=${draft.id}&screen=details`)
+      } catch {
+        toast({ title: t('upload.draft.maxDraftsReached'), variant: 'destructive', duration: 5000 })
+      }
+    },
+    [createDraft, updateDraft, navigate, toast, t]
+  )
 
   const handlePublished = useCallback((noteId: string) => {
     setPublishedIds(prev => new Set(prev).add(noteId))
   }, [])
+
 
   const visibleNotes = useMemo(() => notes.slice(0, visibleCount), [notes, visibleCount])
   const hasMore = visibleCount < notes.length
@@ -317,7 +363,8 @@ export function VideoNotesPage() {
               <VideoNoteCard
                 key={note.id}
                 note={note}
-                onImport={handleImport}
+                onPublish={handlePublish}
+                onFullImport={handleFullImport}
                 isPublished={publishedIds.has(note.id)}
               />
             ))}

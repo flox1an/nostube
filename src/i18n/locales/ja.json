@@ -1251,5 +1251,8 @@
     "addCustom": "カスタムリレーを追加",
     "invalidUrl": "無効なリレー URL",
     "noResults": "リレーが見つかりません。"
+  },
+  "player": {
+    "nextChapter": "スキップ: {{title}}"
   }
 }

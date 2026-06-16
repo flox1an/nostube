@@ -1122,5 +1122,8 @@
     "addCustom": "Eigenes Relay hinzufügen",
     "invalidUrl": "Ungültige Relay-URL",
     "noResults": "Kein Relay gefunden."
+  },
+  "player": {
+    "nextChapter": "Weiter zu: {{title}}"
   }
 }

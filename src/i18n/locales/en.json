@@ -1254,5 +1254,8 @@
     "addCustom": "Add custom relay",
     "invalidUrl": "Invalid relay URL",
     "noResults": "No relay found."
+  },
+  "player": {
+    "nextChapter": "Skip to: {{title}}"
   }
 }

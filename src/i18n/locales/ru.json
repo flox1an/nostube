@@ -1131,5 +1131,8 @@
     "addCustom": "Добавить своё реле",
     "invalidUrl": "Недействительный URL реле",
     "noResults": "Реле не найдено."
+  },
+  "player": {
+    "nextChapter": "Перейти к: {{title}}"
   }
 }

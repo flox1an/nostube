@@ -9,6 +9,7 @@ import { ControlButton } from './ControlButton'
 import { type HlsQualityLevel } from './hooks/useHls'
 import { type VideoVariant, type TextTrack } from '@/utils/video-event'
 import { useIsMobile } from '@/hooks'
+import { useTranslation } from 'react-i18next'
 import type { VideoChapter } from '@/lib/video-chapters'
 
 interface ControlBarProps {
@@ -130,6 +131,7 @@ export const ControlBar = memo(function ControlBar({
   onToggleLoop,
   children,
 }: ControlBarProps) {
+  const { t } = useTranslation()
   // Use hook directly for reliable mobile detection
   const isMobile = useIsMobile()
 
@@ -180,7 +182,7 @@ export const ControlBar = memo(function ControlBar({
             <ControlButton
               onClick={handleNextChapter}
               icon={<SkipForward className="w-5 h-5" />}
-              label={`Skip to: ${nextChapter.title}`}
+              label={t('player.nextChapter', { title: nextChapter.title })}
             />
           )}
           <VolumeControl

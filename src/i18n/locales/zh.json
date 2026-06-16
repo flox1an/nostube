@@ -1251,5 +1251,8 @@
     "addCustom": "添加自定义中继",
     "invalidUrl": "无效的中继 URL",
     "noResults": "未找到中继。"
+  },
+  "player": {
+    "nextChapter": "跳到：{{title}}"
   }
 }

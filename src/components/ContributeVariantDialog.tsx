@@ -581,8 +581,8 @@ export function ContributeVariantDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        {body}
+      <DialogContent className="flex max-h-[90dvh] max-w-2xl flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
       </DialogContent>
     </Dialog>
   )

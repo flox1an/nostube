@@ -341,7 +341,6 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
                   alt=""
                   loading="lazy"
                   className="max-w-full rounded-md"
-                  style={{ maxWidth: 400 }}
                 />
               </a>
             )

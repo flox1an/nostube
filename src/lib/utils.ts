@@ -248,13 +248,13 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
 
-/** Resize an inline image for comment/note display — max 600 px wide, height auto, WebP. */
+/** Resize an inline image for comment/note display — fit 400×400, WebP. */
 export const imageProxyInline = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   if (url.startsWith('data:')) return url
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:600:0/plain/${encodeURIComponent(url)}`
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:400:400/plain/${encodeURIComponent(url)}`
 }
 
 /**

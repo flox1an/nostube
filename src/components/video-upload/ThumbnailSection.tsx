@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
@@ -206,8 +205,8 @@ export function ThumbnailSection({
 
   if (hasThumbnail) {
     return (
-      <div className="flex flex-col gap-2">
-        <Label>{t('upload.thumbnail.title')}</Label>
+      <div className="flex flex-col gap-4">
+        <div className="py-4 font-medium border-b">{t('upload.thumbnail.title')}</div>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative inline-block w-fit min-w-48 min-h-28">
             {!isImageLoaded && (
@@ -264,10 +263,9 @@ export function ThumbnailSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <Label htmlFor="thumbnail">
+      <div className="py-4 font-medium border-b">
         {t('upload.thumbnail.title')} <span className="text-destructive">*</span>
-      </Label>
-
+      </div>
       <Tabs defaultValue="generated" onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="generated" className="flex gap-2" disabled={!videoUrl}>

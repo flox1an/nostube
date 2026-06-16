@@ -883,16 +883,20 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           e.preventDefault()
           togglePip()
           break
-        case 'c':
-        case 'C':
-          e.preventDefault()
-          toggleCaptions()
-          break
         case 't':
         case 'T':
           e.preventDefault()
           onToggleCinemaMode?.()
           break
+        default: {
+          const digit = parseInt(e.key, 10)
+          if (!isNaN(digit) && e.key >= '0' && e.key <= '9' && playerState.duration > 0) {
+            e.preventDefault()
+            showControls()
+            playerState.seek((digit / 10) * playerState.duration)
+          }
+          break
+        }
       }
     }
 

@@ -178,7 +178,7 @@ export function UploadDetailsScreen({
       </div>
 
       {/* Form fields: title / description / tags / language */}
-      <div>
+      <div className="space-y-4">
         <FormFields
           title={title}
           onTitleChange={setTitle}

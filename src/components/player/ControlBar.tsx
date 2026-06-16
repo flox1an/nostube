@@ -1,5 +1,5 @@
-import { type ReactNode, memo, useCallback } from 'react'
-import { PictureInPicture2, Subtitles, Maximize, Minimize, MoveHorizontal } from 'lucide-react'
+import { type ReactNode, memo, useCallback, useMemo } from 'react'
+import { PictureInPicture2, Subtitles, Maximize, Minimize, MoveHorizontal, SkipForward } from 'lucide-react'
 import { PlayButton } from './PlayButton'
 import { VolumeControl } from './VolumeControl'
 import { TimeDisplay } from './TimeDisplay'
@@ -141,6 +141,15 @@ export const ControlBar = memo(function ControlBar({
     }
   }, [isPlaying, onPlay, onPause])
 
+  const nextChapter = useMemo(() => {
+    if (!chapters?.length) return null
+    return chapters.find((c) => c.startTime > currentTime) ?? null
+  }, [chapters, currentTime])
+
+  const handleNextChapter = useCallback(() => {
+    if (nextChapter) onSeek(nextChapter.startTime)
+  }, [nextChapter, onSeek])
+
   return (
     <div
       className={`absolute inset-x-0 bottom-0 z-20 bg-linear-to-t from-black/80 via-black/40 to-transparent pt-16 pb-2 px-2 transition-opacity duration-500 pointer-events-none ${
@@ -167,6 +176,13 @@ export const ControlBar = memo(function ControlBar({
         {/* Left controls */}
         <div className="flex items-center">
           <PlayButton isPlaying={isPlaying} onClick={handlePlayPause} />
+          {nextChapter && (
+            <ControlButton
+              onClick={handleNextChapter}
+              icon={<SkipForward className="w-5 h-5" />}
+              label={`Skip to: ${nextChapter.title}`}
+            />
+          )}
           <VolumeControl
             volume={volume}
             isMuted={isMuted}

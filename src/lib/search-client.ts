@@ -89,3 +89,34 @@ export async function fetchTagResults(
     return null
   }
 }
+
+export interface PeopleHit {
+  pubkey: string
+  npub: string
+  name: string | null
+  display_name: string | null
+  username: string | null
+  about: string | null
+  picture: string | null
+  nip05: string | null
+  lud16: string | null
+  videoCount: number
+  globalTrustScore: number
+}
+
+export async function fetchPeopleResults(
+  query: string,
+  signal: AbortSignal,
+  serviceUrl: string = SEARCH_SERVICE_URL,
+  limit = 10,
+): Promise<PeopleHit[] | null> {
+  try {
+    const url = `${serviceUrl}/api/people?q=${encodeURIComponent(query)}&limit=${limit}`
+    const res = await fetch(url, { signal })
+    if (!res.ok) return null
+    const data = (await res.json()) as { hits: PeopleHit[] }
+    return data.hits ?? []
+  } catch {
+    return null
+  }
+}

@@ -1,13 +1,14 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useEventStore } from 'applesauce-react/hooks'
-import { getProfileContent, type ProfileContent } from 'applesauce-core/helpers'
-import { PrimalCache } from 'applesauce-extra'
-import { type NostrEvent } from 'nostr-tools'
+import { useState, useEffect, useRef } from 'react'
+import type { ProfileContent } from 'applesauce-core/helpers'
+import type { NostrEvent } from 'nostr-tools'
+import { fetchPeopleResults, type PeopleHit } from '@/lib/search-client'
+import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 
 export interface ProfileResult {
   pubkey: string
   profile: ProfileContent
-  event: NostrEvent
+  /** Present only when the result originated from a Nostr relay fetch. */
+  event?: NostrEvent
 }
 
 interface UseSearchProfilesOptions {
@@ -19,8 +20,23 @@ interface UseSearchProfilesOptions {
   limit?: number
 }
 
+function peopleHitToProfileResult(hit: PeopleHit): ProfileResult {
+  return {
+    pubkey: hit.pubkey,
+    profile: {
+      name: hit.name ?? undefined,
+      display_name: hit.display_name ?? undefined,
+      username: hit.username ?? undefined,
+      about: hit.about ?? undefined,
+      picture: hit.picture ?? undefined,
+      nip05: hit.nip05 ?? undefined,
+      lud16: hit.lud16 ?? undefined,
+    },
+  }
+}
+
 /**
- * Hook for searching user profiles using Primal's user search API.
+ * Hook for searching user profiles using the nostube-search people index.
  *
  * @example
  * const { profiles, loading } = useSearchProfiles({ query: 'fiatjaf' })
@@ -33,97 +49,47 @@ export function useSearchProfiles({
   profiles: ProfileResult[]
   loading: boolean
 } {
-  const eventStore = useEventStore()
   const [loading, setLoading] = useState(false)
   const [profiles, setProfiles] = useState<ProfileResult[]>([])
-  const abortRef = useRef(false)
-
-  // Create PrimalCache instance - memoized to avoid reconnections
-  const primal = useMemo(() => new PrimalCache(), [])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      primal.close()
-    }
-  }, [primal])
+  const abortRef = useRef<AbortController | null>(null)
 
   // Debounced query
   const [debouncedQuery, setDebouncedQuery] = useState(query)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query)
-    }, debounceMs)
-
+    const timer = setTimeout(() => setDebouncedQuery(query), debounceMs)
     return () => clearTimeout(timer)
   }, [query, debounceMs])
 
-  // Perform search
   useEffect(() => {
     const trimmed = debouncedQuery.trim()
 
     if (!trimmed || trimmed.length < 2) {
-      queueMicrotask(() => {
-        setProfiles([])
-        setLoading(false)
-      })
+      setProfiles([])
+      setLoading(false)
       return
     }
 
-    abortRef.current = false
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    queueMicrotask(() => {
-      setLoading(true)
-    })
+    setLoading(true)
 
-    const doSearch = async () => {
-      try {
-        if (import.meta.env.DEV) {
-          console.log('🔍 Searching profiles on Primal:', trimmed)
-        }
+    fetchPeopleResults(trimmed, controller.signal, SEARCH_SERVICE_URL, limit)
+      .then(hits => {
+        if (controller.signal.aborted) return
+        setProfiles((hits ?? []).map(peopleHitToProfileResult))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setProfiles([])
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
 
-        // PrimalCache.userSearch returns kind 0 profile events
-        const events = await primal.userSearch(trimmed)
+    return () => controller.abort()
+  }, [debouncedQuery, limit])
 
-        if (abortRef.current) return
-
-        // Process results
-        const results: ProfileResult[] = []
-        for (const event of events.slice(0, limit)) {
-          eventStore.add(event)
-          const profile = getProfileContent(event)
-          if (profile) {
-            results.push({
-              pubkey: event.pubkey,
-              profile,
-              event,
-            })
-          }
-        }
-
-        setProfiles(results)
-      } catch (err) {
-        console.error('Error searching profiles:', err)
-        if (!abortRef.current) {
-          setProfiles([])
-        }
-      } finally {
-        if (!abortRef.current) {
-          setLoading(false)
-        }
-      }
-    }
-
-    doSearch()
-
-    return () => {
-      abortRef.current = true
-    }
-  }, [debouncedQuery, eventStore, primal, limit])
-
-  return {
-    profiles,
-    loading,
-  }
+  return { profiles, loading }
 }

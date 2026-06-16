@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ProfileContent } from 'applesauce-core/helpers'
+import { getProfileContent } from 'applesauce-core/helpers'
 import type { NostrEvent } from 'nostr-tools'
+import { PrimalCache } from 'applesauce-extra'
+import { useEventStore } from 'applesauce-react/hooks'
 import { fetchPeopleResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
 import type { PeopleHit } from '@/lib/search-client'
 
@@ -36,10 +39,11 @@ function peopleHitToProfileResult(hit: PeopleHit): ProfileResult {
 }
 
 /**
- * Hook for searching authors who have uploaded videos.
+ * Hook for searching video authors.
  *
- * Queries the nostube-search people index, which only contains authors with
- * at least one indexed video, already ranked by video count.
+ * Fires the nostube-search people index (video authors, ranked by videoCount)
+ * and Primal API in parallel. Meili results appear first; Primal fills in
+ * pubkeys not already present. Deduplicated by pubkey.
  *
  * @example
  * const { profiles, loading } = useSearchVideoAuthors({ query: 'bitcoin' })
@@ -52,13 +56,18 @@ export function useSearchVideoAuthors({
   profiles: ProfileResult[]
   loading: boolean
 } {
+  const eventStore = useEventStore()
+  const primal = useMemo(() => new PrimalCache(), [])
+
   const [loading, setLoading] = useState(false)
-  const [profiles, setProfiles] = useState<ProfileResult[]>([])
+  const [meiliResults, setMeiliResults] = useState<ProfileResult[]>([])
+  const [primalResults, setPrimalResults] = useState<ProfileResult[]>([])
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => primal.close(), [primal])
 
   // Debounced query
   const [debouncedQuery, setDebouncedQuery] = useState(query)
-
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), debounceMs)
     return () => clearTimeout(timer)
@@ -68,7 +77,8 @@ export function useSearchVideoAuthors({
     const trimmed = debouncedQuery.trim()
 
     if (!trimmed || trimmed.length < 2) {
-      setProfiles([])
+      setMeiliResults([])
+      setPrimalResults([])
       setLoading(false)
       return
     }
@@ -79,20 +89,53 @@ export function useSearchVideoAuthors({
 
     setLoading(true)
 
+    let settled = 0
+    const onSettled = () => {
+      settled++
+      if (settled === 2 && !controller.signal.aborted) setLoading(false)
+    }
+
+    // Meili people index — video authors ranked by videoCount
     fetchPeopleResults(trimmed, controller.signal, SEARCH_SERVICE_URL, limit)
       .then(hits => {
         if (controller.signal.aborted) return
-        setProfiles((hits ?? []).map(peopleHitToProfileResult))
+        setMeiliResults((hits ?? []).map(peopleHitToProfileResult))
       })
-      .catch(() => {
-        if (!controller.signal.aborted) setProfiles([])
+      .catch(() => { if (!controller.signal.aborted) setMeiliResults([]) })
+      .finally(onSettled)
+
+    // Primal API — broader coverage for authors not yet in video index
+    primal.userSearch(trimmed)
+      .then(events => {
+        if (controller.signal.aborted) return
+        const results: ProfileResult[] = []
+        for (const event of events.slice(0, limit * 2)) {
+          eventStore.add(event)
+          const profile = getProfileContent(event)
+          if (profile) results.push({ pubkey: event.pubkey, profile, event })
+        }
+        setPrimalResults(results)
       })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
+      .catch(() => { if (!controller.signal.aborted) setPrimalResults([]) })
+      .finally(onSettled)
 
     return () => controller.abort()
-  }, [debouncedQuery, limit])
+  }, [debouncedQuery, eventStore, primal, limit])
+
+  // Merge: meili first (video authors), then Primal for pubkeys not present
+  const profiles = useMemo(() => {
+    const seen = new Set<string>()
+    const merged: ProfileResult[] = []
+
+    for (const r of meiliResults) {
+      if (!seen.has(r.pubkey)) { seen.add(r.pubkey); merged.push(r) }
+    }
+    for (const r of primalResults) {
+      if (!seen.has(r.pubkey)) { seen.add(r.pubkey); merged.push(r) }
+    }
+
+    return merged.slice(0, limit)
+  }, [meiliResults, primalResults, limit])
 
   return { profiles, loading }
 }

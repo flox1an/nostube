@@ -248,6 +248,15 @@ export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
 
+/** Resize an inline image for comment/note display — max 600 px wide, height auto, WebP. */
+export const imageProxyInline = (url?: string, proxyBaseUrl?: string) => {
+  if (!url) return ''
+  if (url.startsWith('data:')) return url
+  const baseUrl = proxyBaseUrl || defaultResizeServer
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:600:0/plain/${encodeURIComponent(url)}`
+}
+
 /**
  * Generate thumbnail from video URL using imgproxy's video thumbnail feature
  * This is used as a fallback when the image thumbnail fails to load

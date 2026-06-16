@@ -110,7 +110,7 @@ export { useSelectedPreset } from './useSelectedPreset'
 // ============================================================================
 // RELAY & NOSTR
 // ============================================================================
-export { useAppContext } from './useAppContext'
+export { useAppContext, useAppContextSafe } from './useAppContext'
 export { useNostrPublish } from './useNostrPublish'
 export { useContextRelays, useVideoPageRelays, useAuthorPageRelays } from './useContextRelays'
 export { useReadRelays } from './useReadRelays'

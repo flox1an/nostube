@@ -21,7 +21,7 @@ export interface ImportProgress {
   withVideos: number
 }
 
-interface UseFollowSetReturn {
+export interface UseFollowSetReturn {
   followedPubkeys: string[]
   isLoading: boolean
   addFollow: (pubkey: string, relayHint?: string) => Promise<void>

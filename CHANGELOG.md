@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SmartHomePage no longer flashes `HomePage` before swapping to `SubscriptionsPage` on every hard reload for logged-in users — the route now waits for the kind-10020 follow set load (`followSetLoaded` from `useFollowSet`) before choosing a child page, eliminating the double thumbnail-grid fade-in (grid mounts once with the chosen page instead of mounting twice with two different timelines)
+- Extracted `PageLoader` to `@/components/PageLoader` so `SmartHomePage` can reuse the same skeleton as the Suspense fallback; transition between Suspense fallback and the gate's own loader is visually seamless
+
 - Video page blank (left side dark / not rendered) for events whose only video source is an HLS master playlist — `application/vnd.apple.mpegurl` was excluded by a `startsWith('video/')` filter in `processEvent`, so `video.urls` came out empty and the player returned `null`; HLS MIME types and `.m3u8` URLs are now accepted as valid video variants
 - HLS variants no longer filtered out by the codec-compatibility layer on Chrome/Firefox — `canPlayType('application/vnd.apple.mpegurl')` returns empty string on non-Safari browsers (hls.js handles them), so the check now short-circuits to `true` for both `application/vnd.apple.mpegurl` and `application/x-mpegurl`
 

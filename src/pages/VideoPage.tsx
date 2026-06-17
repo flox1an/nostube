@@ -788,7 +788,6 @@ export function VideoPage() {
           onOpenChange={setContributeDialogOpen}
           video={video}
           videoEvent={videoEvent}
-          blossomServers={config.blossomServers ?? []}
         />
       )}
     </>

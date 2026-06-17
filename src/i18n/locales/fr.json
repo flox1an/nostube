@@ -268,7 +268,12 @@
       "errorNoServers": "Sélectionnez au moins un serveur de téléversement initial",
       "errorNoVariants": "Sélectionnez au moins une variante de sortie",
       "errorBadOutput": "Sortie de transcodage MP4 attendue",
-      "errorGeneric": "Échec de la contribution de la variante"
+      "errorGeneric": "Échec de la contribution de la variante",
+      "addServerPlaceholder": "Ajouter l'URL du serveur (ex. https://blossom.primal.net)",
+      "addServerButton": "Ajouter",
+      "addServerBlocked": "Serveur bloqué",
+      "addServerExists": "Serveur déjà dans la liste",
+      "manageInSettings": "Gérer dans les paramètres"
     },
     "pinToProfile": "Épingler au profil",
     "unpinFromProfile": "Désépingler du profil",

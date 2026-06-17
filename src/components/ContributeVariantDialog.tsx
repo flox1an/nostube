@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { NostrEvent } from 'nostr-tools'
-import { Check, Lock, X, AlertTriangle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Check, Lock, X, AlertTriangle, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,12 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { TranscodeVariantPicker } from '@/components/video-upload/TranscodeVariantPicker'
 import type { BlossomServer } from '@/contexts/AppContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useAppContext } from '@/hooks'
 import { useContributeVariant } from '@/hooks/useContributeVariant'
+import { isBlossomServerBlocked } from '@/lib/blossom-url'
+import { deriveServerName } from '@/lib/blossom-servers'
 import {
   availableResolutions,
   defaultContributeResolutions,
@@ -28,12 +33,20 @@ import {
 } from '@/lib/video-transcode'
 import { isMp4VideoVariant, type VideoEvent, type VideoVariant } from '@/utils/video-event'
 
+function normalizeServerUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed
+  }
+  return `https://${trimmed}`
+}
+
 interface ContributeVariantDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   video: VideoEvent | null
   videoEvent: NostrEvent | undefined
-  blossomServers: BlossomServer[]
 }
 
 function formatBytes(bytes: number | undefined): string {
@@ -48,7 +61,11 @@ function parseDimensions(dimensions: string | undefined): { width: number; heigh
   return { width: Number(match[1]), height: Number(match[2]) }
 }
 
-function sourceMetaFromVariant(video: VideoEvent, variant: VideoVariant, resolvedSize?: number): TranscodeSourceMeta | null {
+function sourceMetaFromVariant(
+  video: VideoEvent,
+  variant: VideoVariant,
+  resolvedSize?: number
+): TranscodeSourceMeta | null {
   const dimensions = parseDimensions(variant.dimensions ?? video.dimensions)
   if (!dimensions) return null
   const sizeBytes = variant.size ?? resolvedSize ?? video.size ?? 0
@@ -132,7 +149,9 @@ function StepRow({
         <div className="flex justify-between gap-3">
           <p className="text-sm font-medium">{title}</p>
           {progress !== undefined && state === 'active' && (
-            <p className="text-xs tabular-nums text-muted-foreground">{Math.round(progress * 100)}%</p>
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {Math.round(progress * 100)}%
+            </p>
           )}
         </div>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
@@ -149,10 +168,14 @@ export function ContributeVariantDialog({
   onOpenChange,
   video,
   videoEvent,
-  blossomServers,
 }: ContributeVariantDialogProps) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const { config, updateConfig } = useAppContext()
+  const blossomServers = useMemo(
+    () => (Array.isArray(config.blossomServers) ? config.blossomServers : []) as BlossomServer[],
+    [config.blossomServers]
+  )
   const contribution = useContributeVariant()
   const { reset: resetContribution } = contribution
   const mp4Variants = useMemo(
@@ -166,7 +189,40 @@ export function ContributeVariantDialog({
   const [supportsHevc, setSupportsHevc] = useState(false)
   const [hasDecodableMp4, setHasDecodableMp4] = useState<boolean | null>(null)
   const [resolvedSourceSize, setResolvedSourceSize] = useState<number | undefined>()
+  const [newServerUrl, setNewServerUrl] = useState('')
+  const [addServerError, setAddServerError] = useState<string | null>(null)
 
+  const handleAddServer = () => {
+    const raw = newServerUrl.trim()
+    if (!raw) return
+    const normalized = normalizeServerUrl(raw)
+    if (isBlossomServerBlocked(normalized)) {
+      setAddServerError(t('video.contribute.addServerBlocked'))
+      return
+    }
+    const exists = blossomServers.some(s => s.url === normalized)
+    if (exists) {
+      setAddServerError(t('video.contribute.addServerExists'))
+      return
+    }
+    updateConfig(currentConfig => {
+      const servers = Array.isArray(currentConfig.blossomServers)
+        ? currentConfig.blossomServers
+        : []
+      if (servers.some(s => s.url === normalized)) return currentConfig
+      return {
+        ...currentConfig,
+        blossomServers: [
+          ...servers,
+          { url: normalized, name: deriveServerName(normalized), tags: [] },
+        ],
+      }
+    })
+    // Auto-select the freshly-added server so it's included in this contribution
+    setSelectedServerUrls(current => new Set(current).add(normalized))
+    setNewServerUrl('')
+    setAddServerError(null)
+  }
   useEffect(() => {
     if (!open) return
     setSourceVariant(mp4Variants[0] ?? null)
@@ -187,7 +243,6 @@ export function ContributeVariantDialog({
       .catch(() => setSupportsHevc(false))
   }, [])
 
-
   const sourceMeta = useMemo(() => {
     if (!video || !sourceVariant) return null
     return sourceMetaFromVariant(video, sourceVariant, resolvedSourceSize)
@@ -202,7 +257,11 @@ export function ContributeVariantDialog({
       setHasDecodableMp4(null)
       return
     }
-    if (!isWebCodecsSupported() || typeof VideoDecoder === 'undefined' || typeof VideoDecoder.isConfigSupported !== 'function') {
+    if (
+      !isWebCodecsSupported() ||
+      typeof VideoDecoder === 'undefined' ||
+      typeof VideoDecoder.isConfigSupported !== 'function'
+    ) {
       setHasDecodableMp4(true)
       return
     }
@@ -270,7 +329,6 @@ export function ContributeVariantDialog({
     }
   }, [resolvedSourceSize, sourceMeta, sourceVariant, video])
 
-
   const sourcePreviewUrl = video?.thumbnailVariants[0]?.url ?? video?.images[0]
   const sourceSizeBytes = sourceVariant?.size ?? resolvedSourceSize ?? video?.size
   const sourceResolution = sourceVariant?.dimensions ?? video?.dimensions
@@ -298,9 +356,14 @@ export function ContributeVariantDialog({
 
   const isBlocked = blockers.length > 0
   const selectedServers = blossomServers.filter(server => selectedServerUrls.has(server.url))
-  const initialServers = selectedServers.filter(server => server.tags.includes('initial upload')).map(s => s.url)
-  const mirrorServers = selectedServers.filter(server => server.tags.includes('mirror')).map(s => s.url)
-  const resolvedInitialServers = initialServers.length > 0 ? initialServers : selectedServers.map(s => s.url)
+  const initialServers = selectedServers
+    .filter(server => server.tags.includes('initial upload'))
+    .map(s => s.url)
+  const mirrorServers = selectedServers
+    .filter(server => server.tags.includes('mirror'))
+    .map(s => s.url)
+  const resolvedInitialServers =
+    initialServers.length > 0 ? initialServers : selectedServers.map(s => s.url)
   const resolvedMirrorServers = initialServers.length > 0 ? mirrorServers : []
 
   const startContribution = () => {
@@ -341,7 +404,9 @@ export function ContributeVariantDialog({
             <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="font-medium">{t('video.contribute.blockedSignIn')}</p>
-              <p className="text-xs text-muted-foreground">{t('video.contribute.blockedSignInDescription')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('video.contribute.blockedSignInDescription')}
+              </p>
             </div>
           </div>
         )}
@@ -350,7 +415,9 @@ export function ContributeVariantDialog({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
             <div>
               <p className="font-medium">{t('video.contribute.blockedNoMp4')}</p>
-              <p className="text-xs text-muted-foreground">{t('video.contribute.blockedNoMp4Description')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('video.contribute.blockedNoMp4Description')}
+              </p>
             </div>
           </div>
         )}
@@ -359,13 +426,17 @@ export function ContributeVariantDialog({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="font-medium">{t('video.contribute.blockedWebCodecs')}</p>
-              <p className="text-xs text-muted-foreground">{t('video.contribute.blockedWebCodecsDescription')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('video.contribute.blockedWebCodecsDescription')}
+              </p>
             </div>
           </div>
         )}
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={close}>{t('video.contribute.close')}</Button>
+        <Button variant="outline" onClick={close}>
+          {t('video.contribute.close')}
+        </Button>
       </DialogFooter>
     </>
   )
@@ -379,9 +450,16 @@ export function ContributeVariantDialog({
       <div className="space-y-5">
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('video.contribute.source')}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('video.contribute.source')}
+            </h3>
             {mp4Variants.length > 1 && (
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setShowSources(v => !v)}>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs"
+                onClick={() => setShowSources(v => !v)}
+              >
                 {t('video.contribute.changeSource')}
               </Button>
             )}
@@ -389,7 +467,10 @@ export function ContributeVariantDialog({
           {showSources && (
             <div className="space-y-1 rounded-md border bg-muted/30 p-2 text-sm">
               {mp4Variants.map(variant => (
-                <label key={variant.url} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted">
+                <label
+                  key={variant.url}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted"
+                >
                   <input
                     type="radio"
                     checked={sourceVariant?.url === variant.url}
@@ -417,7 +498,9 @@ export function ContributeVariantDialog({
               <div className="min-w-0 text-sm">
                 <p className="font-medium">{variantLabel(sourceVariant)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatBytes(sourceSizeBytes)} · {sourceResolution ?? t('video.contribute.unknownResolution')} · {sourceCodec ?? t('video.contribute.unknownCodec')} · {sourceMimeType}
+                  {formatBytes(sourceSizeBytes)} ·{' '}
+                  {sourceResolution ?? t('video.contribute.unknownResolution')} ·{' '}
+                  {sourceCodec ?? t('video.contribute.unknownCodec')} · {sourceMimeType}
                 </p>
               </div>
             </div>
@@ -425,7 +508,9 @@ export function ContributeVariantDialog({
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('video.contribute.outputVariants')}</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('video.contribute.outputVariants')}
+          </h3>
           {pickerSourceMeta && (
             <>
               <TranscodeVariantPicker
@@ -445,13 +530,30 @@ export function ContributeVariantDialog({
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('video.contribute.uploadToServers')}</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('video.contribute.uploadToServers')}
+            </h3>
+            <Link
+              to="/settings/network#blossom"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              {t('video.contribute.manageInSettings')}
+            </Link>
+          </div>
           {blossomServers.length === 0 ? (
-            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">{t('video.mirror.noServers')}</p>
+            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+              {t('video.mirror.noServers')}
+            </p>
           ) : (
             <div className="space-y-1.5">
               {blossomServers.map(server => (
-                <Label key={server.url} className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 hover:bg-muted/50">
+                <Label
+                  key={server.url}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 hover:bg-muted/50"
+                >
                   <Checkbox
                     checked={selectedServerUrls.has(server.url)}
                     onCheckedChange={checked => {
@@ -466,8 +568,11 @@ export function ContributeVariantDialog({
                   <div className="min-w-0 flex-1 text-sm">
                     <p className="font-medium">{domainFromUrl(server.url)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {server.tags.includes('initial upload') && t('video.contribute.serverInitial')}
-                      {server.tags.includes('initial upload') && server.tags.includes('mirror') ? ' · ' : ''}
+                      {server.tags.includes('initial upload') &&
+                        t('video.contribute.serverInitial')}
+                      {server.tags.includes('initial upload') && server.tags.includes('mirror')
+                        ? ' · '
+                        : ''}
                       {server.tags.includes('mirror') && t('video.contribute.serverMirror')}
                     </p>
                   </div>
@@ -475,6 +580,30 @@ export function ContributeVariantDialog({
               ))}
             </div>
           )}
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <Input
+                placeholder={t('video.contribute.addServerPlaceholder')}
+                value={newServerUrl}
+                onChange={e => {
+                  setNewServerUrl(e.target.value)
+                  if (addServerError) setAddServerError(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddServer()
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button variant="outline" size="sm" onClick={handleAddServer} className="shrink-0">
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                {t('video.contribute.addServerButton')}
+              </Button>
+            </div>
+            {addServerError && <p className="text-xs text-destructive">{addServerError}</p>}
+          </div>
         </section>
 
         <section className="rounded-md border border-dashed bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground">
@@ -487,9 +616,16 @@ export function ContributeVariantDialog({
         </section>
       </div>
       <DialogFooter className="items-center justify-between gap-3 sm:justify-between">
-        <p className="mr-auto text-xs text-muted-foreground">{t('video.contribute.variantCount', { count: selectedHeights.length })}</p>
-        <Button variant="outline" onClick={close}>{t('video.contribute.cancel')}</Button>
-        <Button disabled={selectedHeights.length === 0 || selectedServerUrls.size === 0 || !videoEvent} onClick={startContribution}>
+        <p className="mr-auto text-xs text-muted-foreground">
+          {t('video.contribute.variantCount', { count: selectedHeights.length })}
+        </p>
+        <Button variant="outline" onClick={close}>
+          {t('video.contribute.cancel')}
+        </Button>
+        <Button
+          disabled={selectedHeights.length === 0 || selectedServerUrls.size === 0 || !videoEvent}
+          onClick={startContribution}
+        >
           {t('video.contribute.contributeButton_action')}
         </Button>
       </DialogFooter>
@@ -506,28 +642,50 @@ export function ContributeVariantDialog({
       <>
         <DialogHeader>
           <DialogTitle>
-            {isUploading ? t('video.contribute.uploading') : isPublishing ? t('video.contribute.publishing') : t('video.contribute.transcoding')}
+            {isUploading
+              ? t('video.contribute.uploading')
+              : isPublishing
+                ? t('video.contribute.publishing')
+                : t('video.contribute.transcoding')}
           </DialogTitle>
           <DialogDescription>{t('video.contribute.keepTabOpen')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <StepRow
             title={t('video.contribute.downloadedSource')}
-            subtitle={downloadTotal ? `${formatBytes(downloadLoaded)} / ${formatBytes(downloadTotal)}` : undefined}
+            subtitle={
+              downloadTotal
+                ? `${formatBytes(downloadLoaded)} / ${formatBytes(downloadTotal)}`
+                : undefined
+            }
             progress={contribution.status === 'downloading' ? downloadRatio : undefined}
             state={contribution.status === 'downloading' ? 'active' : 'done'}
           />
           {contribution.variantProgress.map(row => (
             <StepRow
-              title={isUploading ? t('video.contribute.uploadingVariant', { label: row.variantLabel }) : t('video.contribute.transcodingVariant', { label: row.variantLabel })}
+              title={
+                isUploading
+                  ? t('video.contribute.uploadingVariant', { label: row.variantLabel })
+                  : t('video.contribute.transcodingVariant', { label: row.variantLabel })
+              }
               progress={row.progress}
               state={row.status}
             />
           ))}
           <StepRow
             title={t('video.contribute.uploadToCount', { count: selectedServers.length })}
-            subtitle={contribution.status === 'transcoding' ? t('video.contribute.startsAfterTranscode') : undefined}
-            state={isUploading ? 'active' : isPublishing || contribution.status === 'done' ? 'done' : 'pending'}
+            subtitle={
+              contribution.status === 'transcoding'
+                ? t('video.contribute.startsAfterTranscode')
+                : undefined
+            }
+            state={
+              isUploading
+                ? 'active'
+                : isPublishing || contribution.status === 'done'
+                  ? 'done'
+                  : 'pending'
+            }
           />
           <StepRow
             title={t('video.contribute.publishEvents', { count: selectedHeights.length })}
@@ -537,7 +695,9 @@ export function ContributeVariantDialog({
           {contribution.error && <p className="text-sm text-destructive">{contribution.error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" className="text-destructive" onClick={cancel}>{t('video.contribute.cancel')}</Button>
+          <Button variant="outline" className="text-destructive" onClick={cancel}>
+            {t('video.contribute.cancel')}
+          </Button>
         </DialogFooter>
       </>
     )
@@ -551,15 +711,23 @@ export function ContributeVariantDialog({
         </div>
         <div>
           <DialogTitle>{t('video.contribute.done')}</DialogTitle>
-          <DialogDescription>{t('video.contribute.doneDescription', { count: contribution.results.length })}</DialogDescription>
+          <DialogDescription>
+            {t('video.contribute.doneDescription', { count: contribution.results.length })}
+          </DialogDescription>
         </div>
       </div>
       <div className="space-y-3">
         {contribution.results.map(result => (
           <div key={result.sha256 || result.variantLabel} className="rounded-md border p-3">
-            <p className="text-sm font-medium">{result.variantLabel} · {result.dimension} · {result.sizeMB.toFixed(1)} MB</p>
-            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">sha256: {result.sha256.slice(0, 12)}…</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{result.serverUrls.map(domainFromUrl).join(' · ')}</p>
+            <p className="text-sm font-medium">
+              {result.variantLabel} · {result.dimension} · {result.sizeMB.toFixed(1)} MB
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+              sha256: {result.sha256.slice(0, 12)}…
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {result.serverUrls.map(domainFromUrl).join(' · ')}
+            </p>
           </div>
         ))}
         <p className="rounded-md border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -574,7 +742,11 @@ export function ContributeVariantDialog({
 
   let body = renderReview()
   if (isBlocked) body = renderBlocked()
-  if (['downloading', 'analyzing', 'transcoding', 'uploading', 'publishing', 'error'].includes(contribution.status)) {
+  if (
+    ['downloading', 'analyzing', 'transcoding', 'uploading', 'publishing', 'error'].includes(
+      contribution.status
+    )
+  ) {
     body = renderProgress()
   }
   if (contribution.status === 'done') body = renderDone()

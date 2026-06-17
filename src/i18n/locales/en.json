@@ -283,7 +283,12 @@
       "errorNoServers": "Select at least one initial upload server",
       "errorNoVariants": "Select at least one output variant",
       "errorBadOutput": "Expected MP4 transcode output",
-      "errorGeneric": "Failed to contribute variant"
+      "errorGeneric": "Failed to contribute variant",
+      "addServerPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
+      "addServerButton": "Add",
+      "addServerBlocked": "Server blocked",
+      "addServerExists": "Server already in list",
+      "manageInSettings": "Manage in settings"
     },
     "pinToProfile": "Pin to profile",
     "unpinFromProfile": "Unpin from profile",

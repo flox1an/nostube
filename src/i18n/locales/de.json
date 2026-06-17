@@ -275,7 +275,12 @@
       "errorNoServers": "Wähle mindestens einen Erst-Upload-Server aus",
       "errorNoVariants": "Wähle mindestens eine Ausgabevariante aus",
       "errorBadOutput": "MP4-Transcode-Ausgabe erwartet",
-      "errorGeneric": "Beitrag der Variante fehlgeschlagen"
+      "errorGeneric": "Beitrag der Variante fehlgeschlagen",
+      "addServerPlaceholder": "Server-URL hinzufügen (z.B. https://blossom.primal.net)",
+      "addServerButton": "Hinzufügen",
+      "addServerBlocked": "Server blockiert",
+      "addServerExists": "Server bereits in Liste",
+      "manageInSettings": "In Einstellungen verwalten"
     },
     "pinToProfile": "An Profil anheften",
     "unpinFromProfile": "Vom Profil lösen",

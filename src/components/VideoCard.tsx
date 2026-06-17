@@ -147,7 +147,7 @@ export const VideoCard = React.memo(function VideoCard({
       <div>
         <Link to={to} onClick={handleShortsClick}>
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
-          <div className={cn('w-full overflow-hidden sm:rounded-lg relative', aspectRatio)}>
+          <div className={cn('w-full overflow-hidden sm:rounded-lg relative bg-muted', aspectRatio)}>
             {/* Show error state if both thumbnail and fallback failed */}
             {fallbackFailed ? (
               video.mediaType === 'audio' ? (

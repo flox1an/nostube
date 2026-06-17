@@ -4,7 +4,7 @@ import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getPublishDate } from '@/utils/video-event'
 import type { VideoEvent } from '@/utils/video-event'
@@ -28,10 +28,24 @@ export function HomePage() {
     [relayOverride, relays]
   )
 
+  // Keep current effectiveRelays in a ref so the loader useMemo doesn't need
+  // it as a dep. This prevents a timeline reset when the user's NIP-65 relay
+  // list loads asynchronously after mount (UserRelaySync) — which would
+  // otherwise cause a visible double-load on every hard page refresh.
+  const effectiveRelaysRef = useRef(effectiveRelays)
+  effectiveRelaysRef.current = effectiveRelays
+
   const loader = useMemo(
     () =>
-      videoTypeLoader('videos', effectiveRelays, relayOverride ? { skipCache: true } : undefined),
-    [effectiveRelays, relayOverride]
+      videoTypeLoader(
+        'videos',
+        relayOverride ? [relayOverride] : effectiveRelaysRef.current,
+        relayOverride ? { skipCache: true } : undefined
+      ),
+    // effectiveRelaysRef.current intentionally excluded: relay additions from
+    // NIP-65 sync after mount must not reset an in-progress timeline load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [relayOverride]
   )
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('videos') }), [])

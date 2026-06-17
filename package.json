@@ -13,7 +13,8 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "format:staged": "npx prettier --write --ignore-unknown",
-    "server:dev": "npx tsx --watch server/standalone.ts"
+    "server:dev": "npx tsx --watch server/standalone.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@cashu/cashu-ts": "^2.9.0",
@@ -117,7 +118,9 @@
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.0.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.2",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.6.2",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^4.1.15",

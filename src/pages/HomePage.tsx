@@ -44,7 +44,6 @@ export function HomePage() {
       ),
     // effectiveRelaysRef.current intentionally excluded: relay additions from
     // NIP-65 sync after mount must not reset an in-progress timeline load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [relayOverride]
   )
 

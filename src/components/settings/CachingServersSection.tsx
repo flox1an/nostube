@@ -49,6 +49,7 @@ function useServerStatus(urls: string[]) {
       controllers.forEach(c => c.abort())
       controllers.clear()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlsKey is useMemo-derived from urls; adding urls directly would cause spurious re-runs on array identity changes
   }, [urlsKey, checkServer])
 
   return statuses

@@ -56,7 +56,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
       if (global === null || global === undefined) return true
       return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
     })
-  }, [videos, enabled, personalScores, globalScores, followedSet])
+  }, [videos, enabled, personalScores, globalScores, followedSet, user])
 
   const filterButton = (
     <Tooltip>

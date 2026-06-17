@@ -2,6 +2,7 @@
  * MP4Box iTunes-style metadata atom parsing utilities
  * Handles low-level box navigation and data atom decoding
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- low-level mp4box binary parsing; no useful types exist for internal structures */
 
 import type { ISOFile } from 'mp4box'
 

@@ -258,7 +258,7 @@ export function useHashtagVideos({
     }, 500)
 
     return () => clearTimeout(debounceTimer)
-  }, [tag, pool, eventStore, hasLoaded])
+  }, [tag, pool, eventStore, hasLoaded, tagVariants])
 
   // Phase 3: Fetch labeled videos by ID
   useEffect(() => {

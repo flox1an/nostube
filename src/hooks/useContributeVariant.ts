@@ -168,7 +168,9 @@ export function useContributeVariant(): UseContributeVariantReturn {
           },
           variantIndex => {
             setVariantProgress(current =>
-              current.map((row, index) => (index === variantIndex ? { ...row, status: 'error' } : row))
+              current.map((row, index) =>
+                index === variantIndex ? { ...row, status: 'error' } : row
+              )
             )
           },
           controller.signal
@@ -179,7 +181,8 @@ export function useContributeVariant(): UseContributeVariantReturn {
         setVariantProgress(current => current.map(row => ({ ...row, progress: 1, status: 'done' })))
 
         setStatus('uploading')
-        const signer = (async (draft: EventTemplate) => await user.signer.signEvent(draft)) as Signer
+        const signer = (async (draft: EventTemplate) =>
+          await user.signer.signEvent(draft)) as Signer
         const uploadedVariants: UploadedVideoVariant[] = []
         for (let index = 0; index < transcoded.length; index += 1) {
           const uploaded = await uploadAndProcessFile(
@@ -207,7 +210,10 @@ export function useContributeVariant(): UseContributeVariantReturn {
         setStatus('publishing')
         const userWriteRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
         const relayHint = params.relayHint || userWriteRelays[0] || ''
-        const publishRelays = getMirrorAnnouncementRelays(userWriteRelays, relayHint ? [relayHint] : [])
+        const publishRelays = getMirrorAnnouncementRelays(
+          userWriteRelays,
+          relayHint ? [relayHint] : []
+        )
         const announcements = uploadedVariants.map(variant =>
           buildContributedVariantAnnouncement({
             uploadedBlobs: [...variant.uploadedBlobs, ...variant.mirroredBlobs],
@@ -246,6 +252,7 @@ export function useContributeVariant(): UseContributeVariantReturn {
         if (controllerRef.current === controller) controllerRef.current = null
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t from useTranslation is a stable reference
     [config.relays, user]
   )
 

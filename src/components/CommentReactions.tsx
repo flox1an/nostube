@@ -3,11 +3,11 @@ import {
   useCurrentUser,
   useNostrPublish,
   useAppContext,
-  useZap,
   useEventStats,
   useUserReactionStatus,
   useProfile,
 } from '@/hooks'
+import { useZap } from '@/hooks/useZap'
 import { useWallet } from '@/hooks/useWallet'
 import { isUpvoteReaction } from '@/hooks/useEventStats'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'

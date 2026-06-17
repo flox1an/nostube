@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { LANGUAGES } from '@/components/ui/language-select'
+import { LANGUAGES } from '@/lib/languages'
 
 interface SubtitlesTableProps {
   subtitles: SubtitleVariant[]

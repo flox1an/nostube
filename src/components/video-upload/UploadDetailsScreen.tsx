@@ -155,7 +155,8 @@ export function UploadDetailsScreen({
     if (publishAt || contentWarningEnabled || expiration !== 'none') open.push('schedule')
     if (people.length > 0 || origins.length > 0) open.push('attribution')
     return open
-  }, []) // intentional: only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: accordion defaults computed once on mount
+  }, [])
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

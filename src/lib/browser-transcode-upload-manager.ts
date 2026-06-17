@@ -1,5 +1,9 @@
 import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
-import { DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONCURRENT_CHUNKS, uploadAndProcessFile } from '@/lib/transcode-upload'
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_MAX_CONCURRENT_CHUNKS,
+  uploadAndProcessFile,
+} from '@/lib/transcode-upload'
 import type { BrowserTranscodeState, BrowserTranscodeVariantState } from '@/types/upload-draft'
 import {
   mirrorBlobsToServers,
@@ -166,6 +170,7 @@ function computeVariantStreamBytes(
  * Creates a throttled function that only invokes func at most once per every wait milliseconds.
  * Ensures the last call always goes through.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- generic higher-order function; T extends (...args: any[]) is the standard TS pattern */
 function throttle<T extends (...args: any[]) => void>(func: T, wait: number): T {
   let lastTime = 0
   let timeout: ReturnType<typeof setTimeout> | null = null
@@ -197,7 +202,7 @@ function throttle<T extends (...args: any[]) => void>(func: T, wait: number): T 
     }
   }) as T
 }
-
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Normalises the MIME type of HLS binary files for Blossom server compatibility.

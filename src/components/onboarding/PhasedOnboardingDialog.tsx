@@ -1,14 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Progress } from '@/components/ui/progress'
+import { useHasProfile } from '@/hooks'
+import { OnboardingShell } from './OnboardingShell'
 import { PhaseIdentityStep } from './PhaseIdentityStep'
+import { PhaseProfileStep } from './PhaseProfileStep'
 import { PhaseFeedStep } from './PhaseFeedStep'
 import { PhaseReadyStep } from './PhaseReadyStep'
 
@@ -18,7 +13,14 @@ interface PhasedOnboardingDialogProps {
   onComplete?: () => void
 }
 
-type Step = 1 | 2 | 3
+type StepId = 'account' | 'profile' | 'follows' | 'ready'
+
+interface StepConfig {
+  id: StepId
+  label: string
+  title: string
+  description: string
+}
 
 export function PhasedOnboardingDialog({
   open,
@@ -26,13 +28,55 @@ export function PhasedOnboardingDialog({
   onComplete,
 }: PhasedOnboardingDialogProps) {
   const { t } = useTranslation()
-  const [step, setStep] = useState<Step>(1)
+  const { hasProfile } = useHasProfile()
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
-  const progress = useMemo(() => {
-    if (step === 1) return 33
-    if (step === 2) return 66
-    return 100
-  }, [step])
+  const steps = useMemo<StepConfig[]>(() => {
+    const flow: StepConfig[] = [
+      {
+        id: 'account',
+        label: t('onboarding.phasedOnboarding.step1'),
+        title: t('onboarding.phasedOnboarding.welcome'),
+        description: t('onboarding.phasedOnboarding.welcomeDescription'),
+      },
+    ]
+
+    if (!hasProfile) {
+      flow.push({
+        id: 'profile',
+        label: t('onboarding.phasedOnboarding.stepProfile'),
+        title: t('onboarding.profileStep.title'),
+        description: t('onboarding.profileStep.description'),
+      })
+    }
+
+    flow.push(
+      {
+        id: 'follows',
+        label: t('onboarding.phasedOnboarding.step2'),
+        title: t('onboarding.feedStep.title'),
+        description: t('onboarding.feedStep.description'),
+      },
+      {
+        id: 'ready',
+        label: t('onboarding.phasedOnboarding.step3'),
+        title: t('onboarding.readyStep.title'),
+        description: t('onboarding.readyStep.description'),
+      }
+    )
+
+    return flow
+  }, [hasProfile, t])
+
+  useEffect(() => {
+    setCurrentStepIndex(index => Math.min(index, steps.length - 1))
+  }, [steps.length])
+
+  const currentStep = steps[currentStepIndex] ?? steps[steps.length - 1]
+
+  const advance = useCallback(() => {
+    setCurrentStepIndex(index => Math.min(index + 1, steps.length - 1))
+  }, [steps.length])
 
   const closeDone = useCallback(() => {
     onComplete?.()
@@ -47,37 +91,35 @@ export function PhasedOnboardingDialog({
     window.location.href = '/upload'
   }, [])
 
+  const hero =
+    currentStep?.id === 'account' ? (
+      <img
+        src="/onboarding/welcome-hero.webp"
+        alt=""
+        className="h-full w-full object-cover object-center"
+        loading="eager"
+        decoding="async"
+      />
+    ) : undefined
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" hideCloseButton>
-        <DialogHeader>
-          <DialogTitle>{t('onboarding.phasedOnboarding.welcome')}</DialogTitle>
-          <DialogDescription>
-            {t('onboarding.phasedOnboarding.welcomeDescription')}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{t('onboarding.phasedOnboarding.step1')}</span>
-              <span>{t('onboarding.phasedOnboarding.step2')}</span>
-              <span>{t('onboarding.phasedOnboarding.step3')}</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {step === 1 && <PhaseIdentityStep onComplete={() => setStep(2)} />}
-          {step === 2 && <PhaseFeedStep onComplete={() => setStep(3)} onExplore={handleExplore} />}
-          {step === 3 && (
-            <PhaseReadyStep
-              onComplete={closeDone}
-              onExplore={handleExplore}
-              onUpload={handleUpload}
-            />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <OnboardingShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={currentStep.title}
+      description={currentStep.description}
+      steps={steps}
+      currentStepIndex={currentStepIndex}
+      hero={hero}
+    >
+      {currentStep.id === 'account' && <PhaseIdentityStep onComplete={advance} />}
+      {currentStep.id === 'profile' && <PhaseProfileStep onComplete={advance} onSkip={advance} />}
+      {currentStep.id === 'follows' && (
+        <PhaseFeedStep onComplete={advance} onExplore={handleExplore} />
+      )}
+      {currentStep.id === 'ready' && (
+        <PhaseReadyStep onComplete={closeDone} onExplore={handleExplore} onUpload={handleUpload} />
+      )}
+    </OnboardingShell>
   )
 }

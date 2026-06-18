@@ -32,6 +32,8 @@ export type { Account } from './useLoggedInAccounts'
 // PROFILE & SOCIAL
 // ============================================================================
 export { useProfile } from './useProfile'
+export { useHasProfile } from './useHasProfile'
+export { useProfilePublish } from './useProfilePublish'
 export { useMutedPubkeys } from './useMutedPubkeys'
 export { useFollowedAuthors } from './useFollowedAuthors'
 export { useFollowSet } from './useFollowSet'

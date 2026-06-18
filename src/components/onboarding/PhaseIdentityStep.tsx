@@ -11,8 +11,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useLoginActions } from '@/hooks/useLoginActions'
 import { isNip05 } from '@/lib/nip05-bunker'
 import { generateSecretKey, nip19 } from 'nostr-tools'
-import { AlertCircle, KeyRound, Sparkles, Shield } from 'lucide-react'
+import { AlertCircle, CheckCircle2, KeyRound, Sparkles, Shield } from 'lucide-react'
 import { isNcryptsec } from '@/lib/nip49'
+import { markNewUser } from '@/lib/onboarding-progress'
 
 interface PhaseIdentityStepProps {
   onComplete: () => void
@@ -33,17 +34,34 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
   const [generatedNsec, setGeneratedNsec] = useState('')
   const isEncryptedKey = isNcryptsec(keyInput)
 
+  const npub = user?.pubkey ? nip19.npubEncode(user.pubkey) : ''
+  const shortNpub = npub ? `${npub.slice(0, 12)}…${npub.slice(-8)}` : ''
   if (user?.pubkey) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">{t('onboarding.identityStep.title')}</h3>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('onboarding.identityStep.loggedInAs')}</CardTitle>
-            <CardDescription className="font-mono text-xs break-all">{user.pubkey}</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              {t('onboarding.identityStep.accountConnected', 'Account connected')}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                'onboarding.identityStep.accountConnectedDescription',
+                'You are signed in and ready to continue.'
+              )}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={onComplete}>{t('onboarding.identityStep.continue')}</Button>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                {t('onboarding.identityStep.accountId', 'Account ID')}
+              </p>
+              <p className="font-mono text-sm">{shortNpub}</p>
+            </div>
+            <Button onClick={onComplete} className="w-full">
+              {t('onboarding.identityStep.continue')}
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +134,7 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
     setError(null)
     try {
       await login.nsec(generatedNsec)
-      localStorage.setItem('nostube_onboarding_new_user', '1')
+      markNewUser()
       onComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed')

@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PhasedOnboardingDialog } from './onboarding/PhasedOnboardingDialog'
-
-const FOLLOW_IMPORT_STORAGE_KEY = 'nostube_onboarding_follow_import'
-const NEW_USER_STORAGE_KEY = 'nostube_onboarding_new_user'
+import {
+  clearNewUser,
+  isFollowImportResolved,
+  isNewUser,
+  markFollowDone,
+} from '@/lib/onboarding-progress'
 
 export function OnboardingDialog() {
   const { user } = useCurrentUser()
@@ -15,15 +18,12 @@ export function OnboardingDialog() {
     if (!user?.pubkey || isCompleted) return false
     if (!followSetLoaded) return false
 
-    const followImportCompleted = localStorage.getItem(FOLLOW_IMPORT_STORAGE_KEY)
-    const isNewUser = localStorage.getItem(NEW_USER_STORAGE_KEY) === '1'
-
-    return isNewUser || (!followImportCompleted && !hasFollowSet && hasKind3Contacts)
+    return isNewUser() || (!isFollowImportResolved() && !hasFollowSet && hasKind3Contacts)
   }, [user?.pubkey, hasFollowSet, followSetLoaded, hasKind3Contacts, isCompleted])
 
   const handleComplete = () => {
-    localStorage.setItem(FOLLOW_IMPORT_STORAGE_KEY, 'done')
-    localStorage.removeItem(NEW_USER_STORAGE_KEY)
+    markFollowDone()
+    clearNewUser()
     setIsCompleted(true)
   }
 

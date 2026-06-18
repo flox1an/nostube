@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, Loader2 } from 'lucide-react'
+import { markFollowImported, markFollowSkipped } from '@/lib/onboarding-progress'
 
 interface FollowImportStepProps {
   onComplete: () => void
@@ -21,7 +22,7 @@ export function FollowImportStep({ onComplete, onSkip }: FollowImportStepProps) 
       const success = await importFromKind3()
       if (success) {
         setImportSuccess(true)
-        localStorage.setItem('nostube_onboarding_follow_import', 'imported')
+        markFollowImported()
         // Show success state briefly before advancing
         setTimeout(() => {
           onComplete()
@@ -35,7 +36,7 @@ export function FollowImportStep({ onComplete, onSkip }: FollowImportStepProps) 
   }
 
   const handleSkip = () => {
-    localStorage.setItem('nostube_onboarding_follow_import', 'skipped')
+    markFollowSkipped()
     onSkip()
   }
 

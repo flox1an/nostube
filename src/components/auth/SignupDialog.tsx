@@ -15,6 +15,7 @@ import { toast, useLoginActions } from '@/hooks'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { useTranslation } from 'react-i18next'
 import { SeedBackupStep } from '@/components/onboarding/SeedBackupStep'
+import { markNewUser } from '@/lib/onboarding-progress'
 
 interface SignupDialogProps {
   isOpen: boolean
@@ -51,7 +52,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true)
     try {
       await login.nsec(nsec)
-      localStorage.setItem('nostube_onboarding_new_user', '1')
+      markNewUser()
       setStep('done')
       onClose()
 

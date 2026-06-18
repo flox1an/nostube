@@ -38,7 +38,7 @@ import {
   useAuthorLikedVideos,
   useReportedPubkeys,
   useAuthorFollowing,
-  useNostrPublish,
+  useProfilePublish,
   useUserBlossomServers,
 } from '@/hooks'
 import { hasLightningAddress } from '@/lib/zap-utils'
@@ -271,8 +271,7 @@ function EditProfileDialog({
   const { t } = useTranslation()
   const { user } = useCurrentUser()
   const { config } = useAppContext()
-  const eventStore = useEventStore()
-  const { publish, isPending } = useNostrPublish()
+  const { publishProfile, isPending } = useProfilePublish()
   const { data: userBlossomServers } = useUserBlossomServers()
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -402,15 +401,7 @@ function EditProfileDialog({
     }
 
     try {
-      const event = await publish({
-        event: {
-          kind: 0,
-          content: JSON.stringify(nextProfile),
-          tags: [],
-          created_at: Math.floor(Date.now() / 1000),
-        },
-      })
-      eventStore.add(event)
+      await publishProfile(nextProfile)
       toast.success(t('pages.author.profileSaved', 'Profile saved'))
       onOpenChange(false)
     } catch (error) {
@@ -1131,7 +1122,9 @@ export function AuthorPage() {
                 className="shrink-0 rounded-full px-4"
                 asChild
               >
-                <Link to={getTabPath('liked')}>{t('pages.author.liked', { count: likedCount })}</Link>
+                <Link to={getTabPath('liked')}>
+                  {t('pages.author.liked', { count: likedCount })}
+                </Link>
               </Button>
             )}
             {authorFollowing.length > 0 && (

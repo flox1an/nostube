@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { CheckCircle2, Compass, Upload, Settings } from 'lucide-react'
+import { Compass, Upload, Settings } from 'lucide-react'
 
 interface PhaseReadyStepProps {
   onComplete: () => void
@@ -15,7 +15,13 @@ export function PhaseReadyStep({ onComplete, onExplore, onUpload }: PhaseReadySt
   return (
     <div className="space-y-4">
       <div className="text-center space-y-2">
-        <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+        <img
+          src="/onboarding/ready-spot.webp"
+          alt=""
+          className="mx-auto h-24 w-24"
+          loading="eager"
+          decoding="async"
+        />
         <h3 className="text-xl font-semibold">{t('onboarding.readyStep.title')}</h3>
         <p className="text-sm text-muted-foreground">{t('onboarding.readyStep.description')}</p>
       </div>

@@ -1114,6 +1114,7 @@
       "step1": "Account",
       "step2": "Follows",
       "step3": "Ready",
+      "stepProfile": "Profile",
       "welcome": "Welcome to nostube",
       "welcomeDescription": "Let's get you set up in just a few steps",
       "getStarted": "Get Started"
@@ -1124,7 +1125,9 @@
       "hasKeyDescription": "Sign in with your existing account",
       "newUser": "I'm new to Nostr",
       "newUserDescription": "Create a new account",
-      "loggedInAs": "Logged in as",
+      "accountConnected": "Account connected",
+      "accountConnectedDescription": "You are signed in and ready to continue.",
+      "accountId": "Account ID",
       "continue": "Continue"
     },
     "feedStep": {
@@ -1143,6 +1146,26 @@
       "upload": "Upload a Video",
       "settings": "Customize Settings",
       "startWatching": "Start Watching"
+    },
+    "profileStep": {
+      "title": "Set up your profile",
+      "description": "Add a name and photo so people recognize your videos.",
+      "nameLabel": "Display name",
+      "namePlaceholder": "Your name",
+      "aboutLabel": "Bio",
+      "aboutPlaceholder": "Tell people about yourself",
+      "avatarLabel": "Add photo",
+      "nameRequired": "Please enter a display name",
+      "continue": "Continue",
+      "skip": "Skip for now",
+      "saving": "Saving…",
+      "imageOnly": "Please choose an image file.",
+      "noBlossomServers": "Add a Blossom upload server before uploading images.",
+      "imageUploaded": "Image uploaded",
+      "imageUploadFailed": "Image upload failed",
+      "uploadingImage": "Uploading image",
+      "profileSaved": "Profile saved",
+      "profileSaveFailed": "Profile save failed"
     }
   },
   "uploadOnboarding": {

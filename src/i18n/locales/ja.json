@@ -62,6 +62,8 @@
       "extension": "拡張機能",
       "nsec": "秘密鍵",
       "protectedKey": "保護キー",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
       "advanced": "詳細",
       "bunker": "バンカー",
       "extensionDescription": "ブラウザ拡張機能でワンクリックログイン",
@@ -281,7 +283,12 @@
       "errorNoServers": "初回アップロード先のサーバーを1台以上選択してください",
       "errorNoVariants": "出力バリアントを1つ以上選択してください",
       "errorBadOutput": "MP4トランスコード出力が必要です",
-      "errorGeneric": "バリアントの投稿に失敗しました"
+      "errorGeneric": "バリアントの投稿に失敗しました",
+      "addServerPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
+      "addServerButton": "Add",
+      "addServerBlocked": "Server blocked",
+      "addServerExists": "Server already in list",
+      "manageInSettings": "Manage in settings"
     },
     "pinToProfile": "プロフィールにピン留め",
     "unpinFromProfile": "プロフィールのピン留めを解除",
@@ -499,11 +506,11 @@
       "recommendNone": "動画は既に最適化されています — 480p フォールバックのみ作成します。",
       "optimiseUpload": "最適化してアップロード",
       "uploadOriginal": "オリジナルをアップロード",
-      "uploadOriginalOnly": "アップロードのみ",
-      "generateHls": "HLS を生成してアップロード",
       "transcoding": "動画を最適化中...",
       "cancel": "キャンセル — オリジナルをアップロード",
       "errorTitle": "トランスコードに失敗しました",
+      "uploadOriginalOnly": "アップロードのみ",
+      "generateHls": "HLS を生成してアップロード",
       "backgroundUploading": "最適化した動画をアップロード中...",
       "backgroundTranscoding": "バックグラウンドで動画を最適化中...",
       "notSupported": "ブラウザ最適化は利用できません",
@@ -829,7 +836,8 @@
       "confirm": "プレイリストを削除"
     },
     "emptyState": {
-      "helper": "最初のプレイリストを作成して動画を整理"
+      "helper": "最初のプレイリストを作成して動画を整理",
+      "noPublicPlaylists": "No public playlists found."
     },
     "removeVideo": {
       "title": "動画を削除",
@@ -1106,6 +1114,7 @@
       "step1": "アカウント",
       "step2": "フォロー",
       "step3": "完了",
+      "stepProfile": "Profile",
       "welcome": "nostube へようこそ",
       "welcomeDescription": "数ステップでセットアップを完了しましょう",
       "getStarted": "始める"
@@ -1116,7 +1125,9 @@
       "hasKeyDescription": "既存のアカウントでログイン",
       "newUser": "Nostr は初めて",
       "newUserDescription": "新しいアカウントを作成",
-      "loggedInAs": "ログイン中",
+      "accountConnected": "Account connected",
+      "accountConnectedDescription": "You are signed in and ready to continue.",
+      "accountId": "Account ID",
       "continue": "続行"
     },
     "feedStep": {
@@ -1135,6 +1146,26 @@
       "upload": "動画をアップロード",
       "settings": "設定をカスタマイズ",
       "startWatching": "視聴を開始"
+    },
+    "profileStep": {
+      "title": "Set up your profile",
+      "description": "Add a name and photo so people recognize your videos.",
+      "nameLabel": "Display name",
+      "namePlaceholder": "Your name",
+      "aboutLabel": "Bio",
+      "aboutPlaceholder": "Tell people about yourself",
+      "avatarLabel": "Add photo",
+      "nameRequired": "Please enter a display name",
+      "continue": "Continue",
+      "skip": "Skip for now",
+      "saving": "Saving…",
+      "imageOnly": "Please choose an image file.",
+      "noBlossomServers": "Add a Blossom upload server before uploading images.",
+      "imageUploaded": "Image uploaded",
+      "imageUploadFailed": "Image upload failed",
+      "uploadingImage": "Uploading image",
+      "profileSaved": "Profile saved",
+      "profileSaveFailed": "Profile save failed"
     }
   },
   "uploadOnboarding": {

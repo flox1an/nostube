@@ -4,6 +4,7 @@
     "submit": "Enviar",
     "cancel": "Cancelar",
     "save": "Guardar",
+    "back": "Back",
     "delete": "Eliminar",
     "deleting": "Eliminando...",
     "edit": "Editar",
@@ -25,6 +26,8 @@
     "required": "Requerido",
     "available": "Disponible",
     "close": "Cerrar",
+    "selectAll": "Select All",
+    "selectNone": "Select None",
     "notSet": "No establecido",
     "done": "Listo",
     "follow": "Seguir",
@@ -58,10 +61,20 @@
       "subtitle": "Acceda a su cuenta de forma segura con su método preferido",
       "extension": "Extensión",
       "nsec": "Nsec",
+      "protectedKey": "Secret Key",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "Advanced",
       "bunker": "Bunker",
       "extensionDescription": "Inicie sesión con un clic usando la extensión del navegador",
       "loggingIn": "Iniciando sesión...",
       "loginWithExtension": "Iniciar sesión con Extensión",
+      "enterProtectedKey": "Password-protected key",
+      "protectedKeyPassword": "Backup password",
+      "loginWithProtectedKey": "Unlock and log in",
+      "uploadProtectedKeyFile": "Upload encrypted key file",
+      "rawKeyWarning": "Raw private keys give full control of your account. Use this only if you know where the key came from.",
+      "rawKeyConfirmation": "Confirmation",
       "enterNsec": "Ingrese su nsec",
       "nsecPlaceholder": "nsec1...",
       "uploadKeyFile": "O suba un archivo de clave",
@@ -185,6 +198,8 @@
     "mirror": {
       "title": "Replicar Video",
       "description": "Copie este vídeo a servidores adicionales para mejor redundancia y disponibilidad.",
+      "filesTo": "Files to Mirror",
+      "selectBlobs": "Please select at least one file to mirror.",
       "currentlyHosted": "Actualmente Alojado En",
       "availableServers": "Servidores Disponibles",
       "noServers": "No hay servidores de alojamiento configurados. Agregue servidores en sus ajustes o publique un evento kind 10063 con sus servidores preferidos.",
@@ -268,7 +283,12 @@
       "errorNoServers": "Selecciona al menos un servidor de subida inicial",
       "errorNoVariants": "Selecciona al menos una variante de salida",
       "errorBadOutput": "Se esperaba salida de transcodificación MP4",
-      "errorGeneric": "Error al contribuir variante"
+      "errorGeneric": "Error al contribuir variante",
+      "addServerPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
+      "addServerButton": "Add",
+      "addServerBlocked": "Server blocked",
+      "addServerExists": "Server already in list",
+      "manageInSettings": "Manage in settings"
     },
     "pinToProfile": "Fijar al perfil",
     "unpinFromProfile": "Desfijar del perfil",
@@ -298,6 +318,21 @@
     "step5": {
       "title": "Configuración Adicional",
       "description": "Configure ajustes opcionales para su video"
+    },
+    "expiration": {
+      "title": "Expiración del Video",
+      "selectDuration": "Seleccionar tiempo de expiración",
+      "none": "Nunca expira",
+      "1day": "1 día",
+      "7days": "7 días",
+      "1month": "1 mes",
+      "1year": "1 año",
+      "description": "Establezca cuándo este video debe expirar y ser eliminado por los relays. Esta no es una función de seguridad."
+    },
+    "people": {
+      "label": "Etiquetar personas",
+      "description": "Agregue colaboradores o personas que aparecen en este video",
+      "placeholder": "Buscar personas..."
     },
     "loginRequired": "Por favor, inicie sesión para subir videos",
     "onboarding": {
@@ -356,21 +391,8 @@
       "descriptionNow": "Su video se publicará tan pronto como haga clic en Publicar.",
       "descriptionScheduled": "Su video se publicará con la fecha/hora seleccionada. Nota: El video será visible inmediatamente pero fechado para la hora programada."
     },
-    "expiration": {
-      "title": "Expiración del Video",
-      "selectDuration": "Seleccionar tiempo de expiración",
-      "none": "Nunca expira",
-      "1day": "1 día",
-      "7days": "7 días",
-      "1month": "1 mes",
-      "1year": "1 año",
-      "description": "Establezca cuándo este video debe expirar y ser eliminado por los relays. Esta no es una función de seguridad."
-    },
-    "people": {
-      "label": "Etiquetar personas",
-      "description": "Agregue colaboradores o personas que aparecen en este video",
-      "placeholder": "Buscar personas..."
-    },
+    "metadata_detected": "Metadatos de video detectados",
+    "metadata_auto_populated": "El título, la descripción y la fecha de publicación se han rellenado automáticamente desde el archivo de video. Puede editarlos según sea necesario.",
     "form": {
       "title": "Título",
       "description": "Descripción",
@@ -439,14 +461,12 @@
       "deletedPartial": "Eliminado de {{successful}} servidor(es), falló en {{failed}} servidor(es)",
       "deletedFailed": "Error al eliminar de los servidores"
     },
+    "showDetails": "Mostrar detalles",
+    "codecWarning": "Advertencia de compatibilidad de códec",
     "addAnotherQuality": "Añadir otra calidad/resolución",
     "addAnotherQualityHint": "Suba el mismo vídeo en una resolución diferente (ej. 1080p, 720p, 480p)",
     "uploadingVideo": "Subiendo vídeo...",
     "processingVideo": "Procesando vídeo...",
-    "metadata_detected": "Metadatos de video detectados",
-    "metadata_auto_populated": "El título, la descripción y la fecha de publicación se han rellenado automáticamente desde el archivo de video. Puede editarlos según sea necesario.",
-    "showDetails": "Mostrar detalles",
-    "codecWarning": "Advertencia de compatibilidad de códec",
     "transcode": {
       "title": "¿Crear versiones adicionales?",
       "suggestion": "La creación de versiones más pequeñas mejora la compatibilidad de reproducción en todos los dispositivos.",
@@ -495,6 +515,60 @@
       "backgroundTranscoding": "Optimizando video en segundo plano...",
       "notSupported": "La optimización del navegador no está disponible",
       "keepOriginal": "Mantener original"
+    },
+    "screen": {
+      "source": {
+        "title": "Subir video",
+        "description": "Elija carga de archivo o URL para comenzar"
+      },
+      "details": {
+        "title": "Detalles",
+        "description": "Agregue detalles mientras se procesa su video"
+      },
+      "review": {
+        "title": "Revisar y publicar",
+        "description": "Revise y publique su video"
+      }
+    },
+    "source": {
+      "servers": "Servidores: {{upload}} carga · {{mirror}} réplica",
+      "configure": "Configurar",
+      "jobRunning": "El procesamiento continúa en segundo plano — adminístrelo en la pantalla de Detalles"
+    },
+    "rail": {
+      "queued": "En cola...",
+      "transcoding": "Procesando...",
+      "uploading": "Subiendo...",
+      "complete": "Completado",
+      "error": "Procesamiento fallido",
+      "cancelled": "Procesamiento cancelado",
+      "cancelConfirmTitle": "¿Cancelar carga?",
+      "cancelConfirmBody": "La carga está en progreso. ¿Cancelar de todos modos?",
+      "retry": "Reintentar",
+      "changeSettings": "Cambiar ajustes",
+      "filesUploaded": "{{count}} archivo subido",
+      "filesUploaded_other": "{{count}} archivos subidos",
+      "eta": "Tiempo restante {{eta}}"
+    },
+    "review": {
+      "checklist": {
+        "video": "Archivos de video",
+        "videoProcessing": "Procesando...",
+        "title": "Título",
+        "thumbnail": "Miniatura",
+        "subtitles": "Subtítulos",
+        "scheduled": "Programado",
+        "contentWarning": "Advertencia de contenido",
+        "expiration": "Expiración"
+      },
+      "rawEvent": "Ver evento sin procesar"
+    },
+    "details": {
+      "sections": {
+        "subtitles": "Subtítulos",
+        "schedule": "Horario y visibilidad",
+        "attribution": "Atribución"
+      }
     },
     "origins": {
       "label": "Referencias externas",
@@ -551,60 +625,6 @@
       "syncFailed": "Falló la sincronización del borrador. Tu trabajo está seguro localmente.",
       "notFound": "Borrador no encontrado",
       "notFoundDescription": "Este borrador puede haber sido eliminado o ha expirado."
-    },
-    "screen": {
-      "source": {
-        "title": "Subir video",
-        "description": "Elija carga de archivo o URL para comenzar"
-      },
-      "details": {
-        "title": "Detalles",
-        "description": "Agregue detalles mientras se procesa su video"
-      },
-      "review": {
-        "title": "Revisar y publicar",
-        "description": "Revise y publique su video"
-      }
-    },
-    "source": {
-      "servers": "Servidores: {{upload}} carga · {{mirror}} réplica",
-      "configure": "Configurar",
-      "jobRunning": "El procesamiento continúa en segundo plano — adminístrelo en la pantalla de Detalles"
-    },
-    "rail": {
-      "queued": "En cola...",
-      "transcoding": "Procesando...",
-      "uploading": "Subiendo...",
-      "complete": "Completado",
-      "error": "Procesamiento fallido",
-      "cancelled": "Procesamiento cancelado",
-      "cancelConfirmTitle": "¿Cancelar carga?",
-      "cancelConfirmBody": "La carga está en progreso. ¿Cancelar de todos modos?",
-      "retry": "Reintentar",
-      "changeSettings": "Cambiar ajustes",
-      "filesUploaded": "{{count}} archivo subido",
-      "filesUploaded_other": "{{count}} archivos subidos",
-      "eta": "Tiempo restante {{eta}}"
-    },
-    "review": {
-      "checklist": {
-        "video": "Archivos de video",
-        "videoProcessing": "Procesando...",
-        "title": "Título",
-        "thumbnail": "Miniatura",
-        "subtitles": "Subtítulos",
-        "scheduled": "Programado",
-        "contentWarning": "Advertencia de contenido",
-        "expiration": "Expiración"
-      },
-      "rawEvent": "Ver evento sin procesar"
-    },
-    "details": {
-      "sections": {
-        "subtitles": "Subtítulos",
-        "schedule": "Horario y visibilidad",
-        "attribution": "Atribución"
-      }
     },
     "eventPreview": {
       "title": "Vista previa del evento",
@@ -785,6 +805,9 @@
   },
   "playlists": {
     "myPlaylists": "Mis Listas de Reproducción",
+    "loginRequired": "Please log in to manage your playlists",
+    "edit": "Edit playlist",
+    "delete": "Delete playlist",
     "sortOrder": {
       "label": "Ordenar por",
       "playlistOrder": "Orden de la lista",
@@ -796,9 +819,30 @@
       "title": "Crear Nueva Lista de Reproducción",
       "description": "Ingrese un nombre y una descripción opcional para su nueva lista de reproducción.",
       "name": "Nombre",
+      "namePlaceholder": "My Playlist",
       "descriptionLabel": "Descripción (opcional)",
+      "descriptionPlaceholder": "A collection of my favorite videos",
       "emptyNameError": "El nombre de la lista de reproducción no puede estar vacío.",
-      "successMessage": "Su nueva lista de reproducción ha sido creada exitosamente."
+      "successMessage": "Su nueva lista de reproducción ha sido creada exitosamente.",
+      "newPlaylist": "New Playlist"
+    },
+    "editDialog": {
+      "title": "Edit Playlist",
+      "description": "Change the name or description of your playlist."
+    },
+    "deleteConfirm": {
+      "title": "Delete Playlist",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete Playlist"
+    },
+    "emptyState": {
+      "helper": "Create your first playlist to organize videos",
+      "noPublicPlaylists": "No public playlists found."
+    },
+    "removeVideo": {
+      "title": "Remove Video",
+      "description": "Are you sure you want to remove this video from the playlist?",
+      "confirm": "Remove"
     },
     "failedVideos_one": "{{count}} video no se pudo cargar desde ningún relay. Puede haber sido eliminado o ya no está disponible.",
     "failedVideos_other": "{{count}} videos no se pudieron cargar desde ningún relay. Pueden haber sido eliminados o ya no están disponibles.",
@@ -827,12 +871,16 @@
       "clearButton": "Borrar Historial",
       "confirmTitle": "¿Borrar historial de reproducción?",
       "confirmMessage": "Esto eliminará permanentemente todo su historial de reproducción. Esta acción no se puede deshacer.",
-      "emptyState": "Su historial de reproducción está vacío. Comience a ver videos para verlos aquí."
+      "emptyState": "Su historial de reproducción está vacío. Comience a ver videos para verlos aquí.",
+      "browseButton": "Browse Videos"
     },
     "likedVideos": {
       "title": "Videos que le Gustaron",
       "noVideos": "No se encontraron videos que le gustaron.",
-      "emptyState": "¡Dele me gusta a algunos videos para verlos aquí!"
+      "emptyState": "¡Dele me gusta a algunos videos para verlos aquí!",
+      "exploreTitle": "No liked videos yet",
+      "exploreDescription": "Start exploring and like videos you enjoy",
+      "exploreButton": "Browse Videos"
     },
     "search": {
       "emptyState": "Ingrese una consulta de búsqueda para encontrar videos",
@@ -868,7 +916,11 @@
     "subscriptions": {
       "emptyState": "Siga algunos autores para ver sus videos aquí.",
       "noVideos": "No se encontraron videos de sus suscripciones.",
-      "noMore": "Has visto todos los videos de tus suscripciones."
+      "noMore": "Has visto todos los videos de tus suscripciones.",
+      "welcomeTitle": "Welcome to nostube!",
+      "welcomeDescription": "Follow some creators to see their videos here",
+      "exploreButton": "Explore Videos",
+      "findCreators": "Find Creators"
     },
     "videoNotes": {
       "title": "Notas de video",
@@ -1031,6 +1083,89 @@
       },
       "continue": "Continuar",
       "stepIndicator": "Paso {{current}} de {{total}}"
+    },
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "protectedTitle": "Create a password-protected backup",
+      "protectedDescription": "This backup uses the Nostr ncryptsec format. Save the file and remember the password to recover your account later.",
+      "important": "This is your recovery backup",
+      "warning1": "If you lose this backup or its password, NosTube cannot recover your account",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or offline backup",
+      "warning3": "Never publish this backup online or share it with anyone",
+      "downloadProtectedKey": "Download password-protected backup",
+      "encrypting": "Creating encrypted backup...",
+      "downloadAgain": "Download Again",
+      "downloaded": "Backup file downloaded!",
+      "confirmBackup": "I have saved my encrypted backup and understand NosTube cannot recover its password",
+      "passwordLabel": "Backup password",
+      "confirmPasswordLabel": "Confirm backup password",
+      "passwordPlaceholder": "Enter a backup password",
+      "confirmPasswordPlaceholder": "Enter the same password again",
+      "passwordHint": "Use at least 8 characters. You will need this password and the backup file to recover your account.",
+      "rawKeyAdvanced": "Advanced: reveal raw private key",
+      "rawKeyWarning": "Your raw private key gives full control of your account. Anyone with this string can publish as you.",
+      "rawKeyConfirmationPlaceholder": "Type \"{{phrase}}\"",
+      "showRawKey": "Show raw key",
+      "hideRawKey": "Hide raw key",
+      "downloadRawKey": "Download raw key",
+      "continue": "Continue to nostube"
+    },
+    "phasedOnboarding": {
+      "step1": "Account",
+      "step2": "Follows",
+      "step3": "Ready",
+      "stepProfile": "Profile",
+      "welcome": "Welcome to nostube",
+      "welcomeDescription": "Let's get you set up in just a few steps",
+      "getStarted": "Get Started"
+    },
+    "identityStep": {
+      "title": "Your Account",
+      "hasKey": "I have a Nostr key",
+      "hasKeyDescription": "Sign in with your existing account",
+      "newUser": "I'm new to Nostr",
+      "newUserDescription": "Create a new account",
+      "accountConnected": "Account connected",
+      "accountConnectedDescription": "You are signed in and ready to continue.",
+      "accountId": "Account ID",
+      "continue": "Continue"
+    },
+    "feedStep": {
+      "title": "Your Feed",
+      "description": "Follow creators to see their videos in your feed",
+      "importFollows": "Import from existing follows",
+      "importDescription": "Import your Nostr follow list to find video creators",
+      "discover": "Discover creators",
+      "discoverDescription": "Browse recommended video creators",
+      "skip": "Skip for now"
+    },
+    "readyStep": {
+      "title": "You're all set!",
+      "description": "Your account is ready. Here's what you can do next:",
+      "explore": "Explore Videos",
+      "upload": "Upload a Video",
+      "settings": "Customize Settings",
+      "startWatching": "Start Watching"
+    },
+    "profileStep": {
+      "title": "Set up your profile",
+      "description": "Add a name and photo so people recognize your videos.",
+      "nameLabel": "Display name",
+      "namePlaceholder": "Your name",
+      "aboutLabel": "Bio",
+      "aboutPlaceholder": "Tell people about yourself",
+      "avatarLabel": "Add photo",
+      "nameRequired": "Please enter a display name",
+      "continue": "Continue",
+      "skip": "Skip for now",
+      "saving": "Saving…",
+      "imageOnly": "Please choose an image file.",
+      "noBlossomServers": "Add a Blossom upload server before uploading images.",
+      "imageUploaded": "Image uploaded",
+      "imageUploadFailed": "Image upload failed",
+      "uploadingImage": "Uploading image",
+      "profileSaved": "Profile saved",
+      "profileSaveFailed": "Profile save failed"
     }
   },
   "uploadOnboarding": {
@@ -1079,6 +1214,32 @@
     "it": "Italiano",
     "tr": "Turco",
     "nl": "Holandés"
+  },
+  "wallet": {
+    "title": "Lightning Wallet",
+    "description": "Connect your lightning wallet to send zaps",
+    "connect": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "balance": "Balance",
+    "refresh": "Refresh",
+    "nwcPlaceholder": "nostr+walletconnect://...",
+    "getAlby": "Get NWC from Alby",
+    "invalidUri": "Invalid NWC URI format",
+    "connectionFailed": "Failed to connect wallet"
+  },
+  "zap": {
+    "send": "Send Zap",
+    "zapping": "Zapping...",
+    "amount": "Amount (sats)",
+    "customAmount": "Custom amount",
+    "comment": "Comment (optional)",
+    "commentPlaceholder": "Add a message...",
+    "success": "Zapped {{amount}} sats!",
+    "noLightningAddress": "Author cannot receive zaps",
+    "loginRequired": "Please log in to zap",
+    "failed": "Zap failed"
   },
   "trust": {
     "badge": {

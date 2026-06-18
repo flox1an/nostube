@@ -4,6 +4,7 @@
     "submit": "Отправить",
     "cancel": "Отмена",
     "save": "Сохранить",
+    "back": "Back",
     "delete": "Удалить",
     "deleting": "Удаление...",
     "edit": "Редактировать",
@@ -31,6 +32,7 @@
     "done": "Готово",
     "follow": "Подписаться",
     "following": "Подписка",
+    "pleaseWait": "Please wait...",
     "undo": "Отменить"
   },
   "navigation": {
@@ -59,10 +61,20 @@
       "subtitle": "Войдите в свой аккаунт безопасно удобным способом",
       "extension": "Расширение",
       "nsec": "Nsec",
+      "protectedKey": "Secret Key",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "Advanced",
       "bunker": "Bunker",
       "extensionDescription": "Войдите одним кликом через расширение браузера",
       "loggingIn": "Вход...",
       "loginWithExtension": "Войти через расширение",
+      "enterProtectedKey": "Password-protected key",
+      "protectedKeyPassword": "Backup password",
+      "loginWithProtectedKey": "Unlock and log in",
+      "uploadProtectedKeyFile": "Upload encrypted key file",
+      "rawKeyWarning": "Raw private keys give full control of your account. Use this only if you know where the key came from.",
+      "rawKeyConfirmation": "Confirmation",
       "enterNsec": "Введите ваш nsec",
       "nsecPlaceholder": "nsec1...",
       "uploadKeyFile": "Или загрузите файл ключа",
@@ -70,8 +82,11 @@
       "verifying": "Проверка...",
       "loginWithNsec": "Войти через Nsec",
       "bunkerUri": "Bunker URI",
+      "bunkerInputLabel": "Bunker URI or NIP-05 address",
       "bunkerPlaceholder": "bunker://",
       "bunkerUriError": "URI должен начинаться с bunker://",
+      "bunkerInputError": "Enter a bunker:// URI or NIP-05 address (user@domain)",
+      "resolvingNip05": "Resolving address...",
       "connecting": "Подключение...",
       "loginWithBunker": "Войти через Bunker",
       "authRequired": "Требуется авторизация. Нажмите ниже, чтобы подтвердить подключение:",
@@ -268,7 +283,12 @@
       "errorNoServers": "Выберите хотя бы один сервер для первичной загрузки",
       "errorNoVariants": "Выберите хотя бы один вариант на выходе",
       "errorBadOutput": "Ожидался результат транскодирования MP4",
-      "errorGeneric": "Не удалось добавить вариант"
+      "errorGeneric": "Не удалось добавить вариант",
+      "addServerPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
+      "addServerButton": "Add",
+      "addServerBlocked": "Server blocked",
+      "addServerExists": "Server already in list",
+      "manageInSettings": "Manage in settings"
     },
     "pinToProfile": "Закрепить в профиле",
     "unpinFromProfile": "Открепить из профиля",
@@ -315,7 +335,6 @@
       "placeholder": "Поиск людей..."
     },
     "loginRequired": "Пожалуйста, войдите для загрузки видео",
-    "uploadInfo": "Загрузка напрямую на {{upload}} сервер(ов). Зеркалирование на {{mirror}} сервер(ов).",
     "onboarding": {
       "yourDevice": "Ваше устройство",
       "primaryServer": "Основной сервер",
@@ -332,6 +351,7 @@
       "orConfigure": "или",
       "manualSetup": "Настроить вручную"
     },
+    "uploadInfo": "Загрузка напрямую на {{upload}} сервер(ов). Зеркалирование на {{mirror}} сервер(ов).",
     "advanced": "Хостинг видео",
     "uploadFile": "Загрузить файл",
     "fromUrl": "Из URL",
@@ -486,11 +506,11 @@
       "recommendNone": "Ваше видео уже оптимизировано — создаётся только версия 480p.",
       "optimiseUpload": "Оптимизировать и загрузить",
       "uploadOriginal": "Загрузить оригинал",
-      "uploadOriginalOnly": "Только загрузить",
-      "generateHls": "Создать HLS и загрузить",
       "transcoding": "Оптимизация видео...",
       "cancel": "Отмена — загрузить оригинал",
       "errorTitle": "Транскодирование не удалось",
+      "uploadOriginalOnly": "Только загрузить",
+      "generateHls": "Создать HLS и загрузить",
       "backgroundUploading": "Загрузка оптимизированного видео...",
       "backgroundTranscoding": "Оптимизация видео в фоне...",
       "notSupported": "Оптимизация в браузере недоступна",
@@ -550,18 +570,6 @@
         "attribution": "Атрибуция"
       }
     },
-    "eventPreview": {
-      "title": "Предпросмотр события",
-      "copied": "Скопировано",
-      "copy": "Копировать",
-      "noVideo": "Загрузите видео чтобы увидеть предпросмотр события",
-      "description": "Это предпросмотр события Nostr, которое будет опубликовано. Некоторые значения, такие как временные метки и URL миниатюр, будут сгенерированы при публикации."
-    },
-    "publishVideoToRelays": "Опубликовать на {{count}} релеях",
-    "selectRelays": "Выбрать релеи",
-    "publishToRelays": "Опубликовать на релеях",
-    "selectAllRelays": "Выбрать все",
-    "upload": "Загрузить",
     "origins": {
       "label": "Внешние ссылки",
       "description": "Ссылка на YouTube, TikTok или другие события Nostr.",
@@ -591,7 +599,9 @@
         "descriptionWithMedia": "Этот черновик содержит загруженные видео и миниатюры. Что вы хотите сделать?",
         "descriptionNoMedia": "Вы уверены, что хотите удалить этот черновик?",
         "deleteDraftOnly": "Только удалить черновик",
-        "deleteVideoAndThumbnails": "Удалить черновик + медиа"
+        "deleteVideoAndThumbnails": "Удалить черновик + медиа",
+        "mediaFileCount": "{{count}} media files will be deleted",
+        "deleteProgress": "Deleting {{completed}} of {{total}} media files..."
       },
       "deletedWithMedia": "Черновик и медиа удалены",
       "deletedWithMediaDescription": "Успешно удалено {{count}} файлов с серверов",
@@ -615,7 +625,19 @@
       "syncFailed": "Синхронизация черновика не удалась. Ваша работа в безопасности локально.",
       "notFound": "Черновик не найден",
       "notFoundDescription": "Этот черновик мог быть удален или истек."
-    }
+    },
+    "eventPreview": {
+      "title": "Предпросмотр события",
+      "copied": "Скопировано",
+      "copy": "Копировать",
+      "noVideo": "Загрузите видео чтобы увидеть предпросмотр события",
+      "description": "Это предпросмотр события Nostr, которое будет опубликовано. Некоторые значения, такие как временные метки и URL миниатюр, будут сгенерированы при публикации."
+    },
+    "publishVideoToRelays": "Опубликовать на {{count}} релеях",
+    "selectRelays": "Выбрать релеи",
+    "publishToRelays": "Опубликовать на релеях",
+    "selectAllRelays": "Выбрать все",
+    "upload": "Загрузить"
   },
   "settings": {
     "title": "Настройки",
@@ -814,7 +836,8 @@
       "confirm": "Удалить плейлист"
     },
     "emptyState": {
-      "helper": "Создайте ваш первый плейлист для организации видео"
+      "helper": "Создайте ваш первый плейлист для организации видео",
+      "noPublicPlaylists": "No public playlists found."
     },
     "removeVideo": {
       "title": "Удалить видео",
@@ -834,7 +857,9 @@
   "pages": {
     "home": {
       "noVideos": "Видео не найдены.",
-      "noMore": "Больше нет видео для загрузки."
+      "noMore": "Больше нет видео для загрузки.",
+      "trustFilterOn": "Trust filter on — hiding low-score authors",
+      "trustFilterOff": "Trust filter off — showing all videos"
     },
     "shorts": {
       "noShorts": "Shorts не найдены.",
@@ -846,12 +871,16 @@
       "clearButton": "Очистить историю",
       "confirmTitle": "Очистить историю просмотров?",
       "confirmMessage": "Это навсегда удалит всю вашу историю просмотров. Это действие нельзя отменить.",
-      "emptyState": "Ваша история просмотров пуста. Начните смотреть видео, чтобы увидеть их здесь."
+      "emptyState": "Ваша история просмотров пуста. Начните смотреть видео, чтобы увидеть их здесь.",
+      "browseButton": "Browse Videos"
     },
     "likedVideos": {
       "title": "Понравившиеся видео",
       "noVideos": "Понравившиеся видео не найдены.",
-      "emptyState": "Поставьте лайки некоторым видео, чтобы увидеть их здесь!"
+      "emptyState": "Поставьте лайки некоторым видео, чтобы увидеть их здесь!",
+      "exploreTitle": "No liked videos yet",
+      "exploreDescription": "Start exploring and like videos you enjoy",
+      "exploreButton": "Browse Videos"
     },
     "search": {
       "emptyState": "Введите поисковый запрос для поиска видео",
@@ -886,7 +915,12 @@
     },
     "subscriptions": {
       "emptyState": "Подпишитесь на некоторых авторов, чтобы увидеть их видео здесь.",
-      "noVideos": "Видео от ваших подписок не найдены."
+      "noVideos": "Видео от ваших подписок не найдены.",
+      "noMore": "You've seen all videos from your subscriptions.",
+      "welcomeTitle": "Welcome to nostube!",
+      "welcomeDescription": "Follow some creators to see their videos here",
+      "exploreButton": "Explore Videos",
+      "findCreators": "Find Creators"
     },
     "videoNotes": {
       "title": "Видеозаметки",
@@ -1049,6 +1083,89 @@
       },
       "continue": "Продолжить",
       "stepIndicator": "Шаг {{current}} из {{total}}"
+    },
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "protectedTitle": "Create a password-protected backup",
+      "protectedDescription": "This backup uses the Nostr ncryptsec format. Save the file and remember the password to recover your account later.",
+      "important": "This is your recovery backup",
+      "warning1": "If you lose this backup or its password, NosTube cannot recover your account",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or offline backup",
+      "warning3": "Never publish this backup online or share it with anyone",
+      "downloadProtectedKey": "Download password-protected backup",
+      "encrypting": "Creating encrypted backup...",
+      "downloadAgain": "Download Again",
+      "downloaded": "Backup file downloaded!",
+      "confirmBackup": "I have saved my encrypted backup and understand NosTube cannot recover its password",
+      "passwordLabel": "Backup password",
+      "confirmPasswordLabel": "Confirm backup password",
+      "passwordPlaceholder": "Enter a backup password",
+      "confirmPasswordPlaceholder": "Enter the same password again",
+      "passwordHint": "Use at least 8 characters. You will need this password and the backup file to recover your account.",
+      "rawKeyAdvanced": "Advanced: reveal raw private key",
+      "rawKeyWarning": "Your raw private key gives full control of your account. Anyone with this string can publish as you.",
+      "rawKeyConfirmationPlaceholder": "Type \"{{phrase}}\"",
+      "showRawKey": "Show raw key",
+      "hideRawKey": "Hide raw key",
+      "downloadRawKey": "Download raw key",
+      "continue": "Continue to nostube"
+    },
+    "phasedOnboarding": {
+      "step1": "Account",
+      "step2": "Follows",
+      "step3": "Ready",
+      "stepProfile": "Profile",
+      "welcome": "Welcome to nostube",
+      "welcomeDescription": "Let's get you set up in just a few steps",
+      "getStarted": "Get Started"
+    },
+    "identityStep": {
+      "title": "Your Account",
+      "hasKey": "I have a Nostr key",
+      "hasKeyDescription": "Sign in with your existing account",
+      "newUser": "I'm new to Nostr",
+      "newUserDescription": "Create a new account",
+      "accountConnected": "Account connected",
+      "accountConnectedDescription": "You are signed in and ready to continue.",
+      "accountId": "Account ID",
+      "continue": "Continue"
+    },
+    "feedStep": {
+      "title": "Your Feed",
+      "description": "Follow creators to see their videos in your feed",
+      "importFollows": "Import from existing follows",
+      "importDescription": "Import your Nostr follow list to find video creators",
+      "discover": "Discover creators",
+      "discoverDescription": "Browse recommended video creators",
+      "skip": "Skip for now"
+    },
+    "readyStep": {
+      "title": "You're all set!",
+      "description": "Your account is ready. Here's what you can do next:",
+      "explore": "Explore Videos",
+      "upload": "Upload a Video",
+      "settings": "Customize Settings",
+      "startWatching": "Start Watching"
+    },
+    "profileStep": {
+      "title": "Set up your profile",
+      "description": "Add a name and photo so people recognize your videos.",
+      "nameLabel": "Display name",
+      "namePlaceholder": "Your name",
+      "aboutLabel": "Bio",
+      "aboutPlaceholder": "Tell people about yourself",
+      "avatarLabel": "Add photo",
+      "nameRequired": "Please enter a display name",
+      "continue": "Continue",
+      "skip": "Skip for now",
+      "saving": "Saving…",
+      "imageOnly": "Please choose an image file.",
+      "noBlossomServers": "Add a Blossom upload server before uploading images.",
+      "imageUploaded": "Image uploaded",
+      "imageUploadFailed": "Image upload failed",
+      "uploadingImage": "Uploading image",
+      "profileSaved": "Profile saved",
+      "profileSaveFailed": "Profile save failed"
     }
   },
   "uploadOnboarding": {
@@ -1123,6 +1240,40 @@
     "noLightningAddress": "Автор не может получать заппы",
     "loginRequired": "Пожалуйста, войдите для заппинга",
     "failed": "Зап не удался"
+  },
+  "trust": {
+    "badge": {
+      "tooltip": "{{label}} trust ({{percentage}}%) — click for details"
+    },
+    "dialog": {
+      "title": "Trust Score Details",
+      "description": "Personalized trust score from relatr via ContextVM",
+      "loading": "Loading trust score...",
+      "noScore": "No trust score available for this user."
+    },
+    "labels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "levels": {
+      "novice": "Novice",
+      "apprentice": "Apprentice",
+      "adept": "Adept",
+      "master": "Master",
+      "grandmaster": "Grandmaster",
+      "gm": "GM"
+    },
+    "details": {
+      "toggle": "Details…",
+      "socialDistance": "Social Distance",
+      "distanceWeight": "Distance Weight",
+      "normalizedDistance": "Normalized Distance",
+      "computedAt": "Computed At",
+      "validators": "Validators",
+      "reportPenalty": "Report penalty active: ×{{score}}",
+      "trustLabel": "{{label}} Trust"
+    }
   },
   "relaySource": {
     "global": "Глобально",

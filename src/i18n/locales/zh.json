@@ -62,6 +62,8 @@
       "extension": "扩展",
       "nsec": "私钥",
       "protectedKey": "受保护密钥",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
       "advanced": "高级",
       "bunker": "远程签名",
       "extensionDescription": "使用浏览器扩展一键登录",
@@ -281,7 +283,12 @@
       "errorNoServers": "请至少选择一个初始上传服务器",
       "errorNoVariants": "请至少选择一个输出变体",
       "errorBadOutput": "期望 MP4 转码输出",
-      "errorGeneric": "贡献变体失败"
+      "errorGeneric": "贡献变体失败",
+      "addServerPlaceholder": "Add server URL (e.g., https://blossom.primal.net)",
+      "addServerButton": "Add",
+      "addServerBlocked": "Server blocked",
+      "addServerExists": "Server already in list",
+      "manageInSettings": "Manage in settings"
     },
     "pinToProfile": "固定到资料页",
     "unpinFromProfile": "从资料页取消固定",
@@ -499,11 +506,11 @@
       "recommendNone": "您的视频已优化 — 仅创建 480p 备用版本。",
       "optimiseUpload": "优化并上传",
       "uploadOriginal": "上传原始文件",
-      "uploadOriginalOnly": "仅上传",
-      "generateHls": "生成 HLS 并上传",
       "transcoding": "正在优化视频...",
       "cancel": "取消 — 上传原始文件",
       "errorTitle": "转码失败",
+      "uploadOriginalOnly": "仅上传",
+      "generateHls": "生成 HLS 并上传",
       "backgroundUploading": "正在上传优化后的视频...",
       "backgroundTranscoding": "正在后台优化视频...",
       "notSupported": "浏览器优化不可用",
@@ -829,7 +836,8 @@
       "confirm": "删除播放列表"
     },
     "emptyState": {
-      "helper": "创建您的第一个播放列表来组织视频"
+      "helper": "创建您的第一个播放列表来组织视频",
+      "noPublicPlaylists": "No public playlists found."
     },
     "removeVideo": {
       "title": "移除视频",
@@ -1106,6 +1114,7 @@
       "step1": "账户",
       "step2": "关注",
       "step3": "就绪",
+      "stepProfile": "Profile",
       "welcome": "欢迎来到 nostube",
       "welcomeDescription": "只需几步即可完成设置",
       "getStarted": "开始使用"
@@ -1116,7 +1125,9 @@
       "hasKeyDescription": "使用现有账户登录",
       "newUser": "我是 Nostr 新手",
       "newUserDescription": "创建新账户",
-      "loggedInAs": "已登录为",
+      "accountConnected": "Account connected",
+      "accountConnectedDescription": "You are signed in and ready to continue.",
+      "accountId": "Account ID",
       "continue": "继续"
     },
     "feedStep": {
@@ -1135,6 +1146,26 @@
       "upload": "上传视频",
       "settings": "自定义设置",
       "startWatching": "开始观看"
+    },
+    "profileStep": {
+      "title": "Set up your profile",
+      "description": "Add a name and photo so people recognize your videos.",
+      "nameLabel": "Display name",
+      "namePlaceholder": "Your name",
+      "aboutLabel": "Bio",
+      "aboutPlaceholder": "Tell people about yourself",
+      "avatarLabel": "Add photo",
+      "nameRequired": "Please enter a display name",
+      "continue": "Continue",
+      "skip": "Skip for now",
+      "saving": "Saving…",
+      "imageOnly": "Please choose an image file.",
+      "noBlossomServers": "Add a Blossom upload server before uploading images.",
+      "imageUploaded": "Image uploaded",
+      "imageUploadFailed": "Image upload failed",
+      "uploadingImage": "Uploading image",
+      "profileSaved": "Profile saved",
+      "profileSaveFailed": "Profile save failed"
     }
   },
   "uploadOnboarding": {

@@ -1,25 +1,70 @@
 import type { IAccount } from 'applesauce-accounts'
 import { type AccountManager } from 'applesauce-accounts'
-import { ExtensionAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
-import { ExtensionSigner, NostrConnectSigner, PrivateKeySigner } from 'applesauce-signers'
+import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
+import {
+  ExtensionSigner,
+  NostrConnectSigner,
+  PrivateKeySigner,
+  SimpleSigner,
+} from 'applesauce-signers'
+import { nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'
+const STORAGE_KEY_SESSION_NSEC_KEYS = 'nostr:session-nsec-keys'
 
 export type AccountMethod = 'extension' | 'nsec' | 'bunker'
 
 export interface PersistedAccount {
   pubkey: string
   method: AccountMethod
-  data?: string // nsec (for nsec accounts) or bunker URI (for bunker accounts)
+  data?: string // bunker URI (for bunker accounts)
   clientKey?: string // hex encoded client private key for bunker
   createdAt: number
 }
 
+function loadSessionNsecKeys(): Record<string, string> {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY_SESSION_NSEC_KEYS)
+    if (!stored) return {}
+
+    const keys = JSON.parse(stored) as Record<string, string>
+    return keys && typeof keys === 'object' && !Array.isArray(keys) ? keys : {}
+  } catch {
+    sessionStorage.removeItem(STORAGE_KEY_SESSION_NSEC_KEYS)
+    return {}
+  }
+}
+
+function saveSessionNsecKey(pubkey: string, nsec: string): void {
+  try {
+    const keys = loadSessionNsecKeys()
+    keys[pubkey] = nsec.trim()
+    sessionStorage.setItem(STORAGE_KEY_SESSION_NSEC_KEYS, JSON.stringify(keys))
+  } catch (error) {
+    console.error('Failed to save session nsec:', error)
+  }
+}
+
+function loadSessionNsecKey(pubkey: string): string | undefined {
+  return loadSessionNsecKeys()[pubkey]
+}
+
+function removeSessionNsecKey(pubkey: string): void {
+  try {
+    const keys = loadSessionNsecKeys()
+    delete keys[pubkey]
+    sessionStorage.setItem(STORAGE_KEY_SESSION_NSEC_KEYS, JSON.stringify(keys))
+  } catch (error) {
+    console.error('Failed to remove session nsec:', error)
+  }
+}
+
 /**
- * Save account data to localStorage
- * For security: nsec keys are NOT stored by default (only pubkey)
+ * Save account data to localStorage.
+ * Raw nsec keys are only kept in sessionStorage so SPA remounts can restore
+ * the signer without persisting the private key across browser restarts.
  */
 export function saveAccountToStorage(
   account: IAccount,
@@ -35,13 +80,17 @@ export function saveAccountToStorage(
     const accountData: PersistedAccount = {
       pubkey: account.pubkey,
       method,
-      data: method === 'nsec' ? undefined : data, // Don't store nsec for security
+      data: method === 'nsec' ? undefined : data,
       createdAt: existingIndex >= 0 ? accounts[existingIndex].createdAt : Date.now(),
     }
 
     // Store client key for bunker accounts so the session can be restored
     if (method === 'bunker' && account.signer instanceof NostrConnectSigner) {
       accountData.clientKey = bytesToHex(account.signer.signer.key)
+    }
+
+    if (method === 'nsec' && data) {
+      saveSessionNsecKey(account.pubkey, data)
     }
 
     if (existingIndex >= 0) {
@@ -113,6 +162,7 @@ export function removeAccountFromStorage(pubkey: string): void {
     const accounts = loadAccountsFromStorage()
     const filtered = accounts.filter(acc => acc.pubkey !== pubkey)
     localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(filtered))
+    removeSessionNsecKey(pubkey)
 
     // If removing active account, clear active
     const active = loadActiveAccount()
@@ -197,10 +247,28 @@ export async function restoreAccount(
       }
 
       case 'nsec': {
-        // Note: nsec is not stored for security reasons
-        // User must re-enter nsec on reload
-        console.warn('Nsec accounts require re-authentication for security')
-        return null
+        const nsec = loadSessionNsecKey(accountData.pubkey)
+        if (!nsec) {
+          console.warn('Nsec account session key missing; re-authentication is required')
+          return null
+        }
+
+        const decoded = nip19.decode(nsec)
+        if (decoded.type !== 'nsec') {
+          console.warn('Stored session key is not an nsec')
+          removeSessionNsecKey(accountData.pubkey)
+          return null
+        }
+
+        const signer = new SimpleSigner(decoded.data)
+        const pubkey = await signer.getPublicKey()
+        if (pubkey !== accountData.pubkey) {
+          console.warn('Nsec pubkey does not match stored pubkey')
+          removeSessionNsecKey(accountData.pubkey)
+          return null
+        }
+
+        return new SimpleAccount(pubkey, signer)
       }
 
       case 'bunker': {
@@ -293,6 +361,7 @@ export function clearAllAccounts(): void {
   try {
     localStorage.removeItem(STORAGE_KEY_ACCOUNTS)
     localStorage.removeItem(STORAGE_KEY_ACTIVE)
+    sessionStorage.removeItem(STORAGE_KEY_SESSION_NSEC_KEYS)
   } catch (error) {
     console.error('Failed to clear accounts:', error)
   }

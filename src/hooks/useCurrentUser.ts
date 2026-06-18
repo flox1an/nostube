@@ -48,7 +48,7 @@ export function useCurrentUser() {
     await accountManager.addAccount(account)
     accountManager.setActive(account)
 
-    saveAccountToStorage(account, 'nsec')
+    saveAccountToStorage(account, 'nsec', nsec)
     saveActiveAccount(pubkey)
   }
 

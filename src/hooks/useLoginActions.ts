@@ -43,8 +43,8 @@ export function useLoginActions() {
         await accountManager.addAccount(account)
         accountManager.setActive(account)
 
-        // Persist account (without nsec for security)
-        saveAccountToStorage(account, 'nsec')
+        // Persist account metadata in localStorage and key only for this tab session
+        saveAccountToStorage(account, 'nsec', _nsec)
         saveActiveAccount(pubkey)
       } catch (error) {
         console.error('Nsec login failed:', error)
@@ -58,7 +58,7 @@ export function useLoginActions() {
           throw new Error('Encrypted key cannot be empty')
         }
 
-        const { privateKey } = await decryptNcryptsec(_ncryptsec, password)
+        const { privateKey, nsec } = await decryptNcryptsec(_ncryptsec, password)
         const signer = new SimpleSigner(privateKey)
         const pubkey = await signer.getPublicKey()
         const account = new SimpleAccount(pubkey, signer)
@@ -66,7 +66,7 @@ export function useLoginActions() {
         await accountManager.addAccount(account)
         accountManager.setActive(account)
 
-        saveAccountToStorage(account, 'nsec')
+        saveAccountToStorage(account, 'nsec', nsec)
         saveActiveAccount(pubkey)
       } catch (error) {
         console.error('Encrypted key login failed:', error)

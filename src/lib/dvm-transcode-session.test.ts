@@ -283,6 +283,231 @@ describe('DVMTranscodeSession.queryForExistingResult', () => {
   })
 })
 
+// ── subscribeToDvmResponses ────────────────────────────────────────────────────
+
+describe('DVMTranscodeSession.subscribeToDvmResponses', () => {
+  const RESULT_CONTENT = {
+    type: 'video',
+    urls: ['https://cdn.example/out.mp4'],
+    resolution: '720p',
+    size_bytes: 4096,
+    mimetype: 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"',
+  }
+
+  it('resolves with a parsed video variant when a result event arrives', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
+
+    const onFeedback = vi.fn()
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      originalDuration: 30,
+      requestedResolution: '720p',
+      onFeedback,
+    })
+
+    subject.next(makeEvent({ kind: DVM_RESULT_KIND, content: JSON.stringify(RESULT_CONTENT) }))
+
+    const video = await promise
+    expect(video.url).toBe('https://cdn.example/out.mp4')
+    expect(video.qualityLabel).toBe('720p')
+    expect(video.duration).toBe(30)
+    expect(video.videoCodec).toBe('avc1.42E01E')
+    // Pool subscribes to both feedback and result kinds for the job
+    expect(pool.subscription).toHaveBeenCalledWith(
+      ['wss://relay.test'],
+      [
+        {
+          kinds: [DVM_FEEDBACK_KIND, DVM_RESULT_KIND],
+          authors: ['dvm-pubkey'],
+          '#e': ['request-id'],
+        },
+      ]
+    )
+  })
+
+  it('forwards processing feedback with structured progress, phase, speed and queue tags', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
+
+    const onFeedback = vi.fn()
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      onFeedback,
+    })
+
+    subject.next(
+      makeEvent({
+        kind: DVM_FEEDBACK_KIND,
+        tags: [
+          ['status', 'processing'],
+          ['content', 'Transcoding video'],
+          ['progress', '42'],
+          ['phase', 'uploading'],
+          ['speed', '3.5'],
+          ['queue_position', '2'],
+          ['eta', '30'],
+        ],
+      })
+    )
+
+    expect(onFeedback).toHaveBeenCalledWith({
+      status: 'processing',
+      message: 'Transcoding video',
+      percentage: 42,
+      phase: 'uploading',
+      eta: 30,
+      speed: 3.5,
+      queuePosition: 2,
+    })
+
+    // Terminate the job so the internal timers are cleared
+    subject.next(makeEvent({ kind: DVM_RESULT_KIND, content: JSON.stringify(RESULT_CONTENT) }))
+    await promise
+  })
+
+  it('falls back to a percentage parsed from the message when no progress tag is present', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
+
+    const onFeedback = vi.fn()
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      onFeedback,
+    })
+
+    subject.next(
+      makeEvent({
+        kind: DVM_FEEDBACK_KIND,
+        tags: [
+          ['status', 'processing'],
+          ['content', 'Processing 75% done'],
+        ],
+      })
+    )
+
+    expect(onFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        percentage: 75,
+        phase: 'transcoding',
+        message: 'Processing 75% done',
+      })
+    )
+
+    subject.next(makeEvent({ kind: DVM_RESULT_KIND, content: JSON.stringify(RESULT_CONTENT) }))
+    await promise
+  })
+
+  it('rejects when the DVM reports an error status', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
+
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      onFeedback: vi.fn(),
+    })
+
+    subject.next(
+      makeEvent({
+        kind: DVM_FEEDBACK_KIND,
+        tags: [['status', 'error', 'Out of disk space']],
+      })
+    )
+
+    await expect(promise).rejects.toThrow('Out of disk space')
+  })
+
+  it('rejects when the result event has no URLs', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const session = new DVMTranscodeSession(['wss://relay.test'], makeMockUser(), pool as never)
+
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      onFeedback: vi.fn(),
+    })
+
+    subject.next(
+      makeEvent({
+        kind: DVM_RESULT_KIND,
+        content: JSON.stringify({ type: 'video', urls: [], resolution: '720p', size_bytes: 0 }),
+      })
+    )
+
+    await expect(promise).rejects.toThrow('no URLs returned')
+  })
+
+  it('decrypts encrypted feedback and result events when the request was encrypted', async () => {
+    const subject = new Subject<NostrEvent | string>()
+    const pool = makeMockPool(subject)
+    const user = makeMockUser({ nip04: true })
+    user.signer.nip04!.decrypt = vi.fn().mockImplementation((_pubkey: string, content: string) => {
+      if (content === 'fb-cipher') {
+        return Promise.resolve('{"status":"processing","message":"Encrypting 50%","eta":20}')
+      }
+      return Promise.resolve(JSON.stringify(RESULT_CONTENT))
+    })
+    const session = new DVMTranscodeSession(['wss://relay.test'], user, pool as never)
+
+    const onFeedback = vi.fn()
+    const promise = session.subscribeToDvmResponses({
+      requestEventId: 'request-id',
+      dvmPubkey: 'dvm-pubkey',
+      wasEncrypted: true,
+      onFeedback,
+    })
+
+    subject.next(
+      makeEvent({ kind: DVM_FEEDBACK_KIND, content: 'fb-cipher', tags: [['encrypted']] })
+    )
+    subject.next(makeEvent({ kind: DVM_RESULT_KIND, content: 'res-cipher', tags: [['encrypted']] }))
+
+    const video = await promise
+    expect(video.url).toBe('https://cdn.example/out.mp4')
+    expect(onFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'processing',
+        message: 'Encrypting 50%',
+        percentage: 50,
+        eta: 20,
+      })
+    )
+  })
+})
+
+// ── approveBid ──────────────────────────────────────────────────────────────────
+
+describe('DVMTranscodeSession.approveBid', () => {
+  it('signs and publishes a kind-7000 approval event to the write relays', async () => {
+    const pool = makeMockPool()
+    const user = makeMockUser()
+    const session = new DVMTranscodeSession(['wss://relay.test'], user, pool as never)
+
+    const signed = await session.approveBid('request-id', 'dvm-pubkey', ['wss://write.relay'])
+
+    expect(user.signer.signEvent).toHaveBeenCalledTimes(1)
+    const template = (user.signer.signEvent as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(template.kind).toBe(DVM_FEEDBACK_KIND)
+    expect(template.tags).toEqual(
+      expect.arrayContaining([
+        ['e', 'request-id'],
+        ['p', 'dvm-pubkey'],
+        ['status', 'approved'],
+      ])
+    )
+    expect(pool.publish).toHaveBeenCalledWith(['wss://write.relay'], signed)
+  })
+})
+
 // ── cancel ────────────────────────────────────────────────────────────────────
 
 describe('DVMTranscodeSession.cancel', () => {

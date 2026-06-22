@@ -22,6 +22,8 @@ import { ExpirationSection } from './ExpirationSection'
 import { PeoplePickerSection } from './PeoplePickerSection'
 import { OriginManager } from './OriginManager'
 import { ProcessingRail } from './ProcessingRail'
+import { BrowserTranscodeStep } from './BrowserTranscodeStep'
+import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 
 export interface UploadDetailsScreenProps {
   // Form fields
@@ -78,6 +80,14 @@ export interface UploadDetailsScreenProps {
   onStatusChange: (status: TranscodeStatus) => void
   onChangeSettings: () => void
   onCancelProcessing: () => void
+  // Variant picker shown when an additional file is being analysed on Details
+  onStartBackground: (
+    variants: BrowserTranscodeVariant[],
+    sourceMeta: TranscodeSourceMeta,
+    keepOriginal: boolean
+  ) => Promise<void>
+  onBrowserTranscodeComplete: (files: File[] | Map<string, File>) => void
+  onBrowserTranscodeSkip: () => void
 }
 
 export function UploadDetailsScreen({
@@ -129,6 +139,9 @@ export function UploadDetailsScreen({
   onStatusChange,
   onChangeSettings,
   onCancelProcessing,
+  onStartBackground,
+  onBrowserTranscodeComplete,
+  onBrowserTranscodeSkip,
 }: UploadDetailsScreenProps) {
   const { t } = useTranslation()
 
@@ -160,23 +173,34 @@ export function UploadDetailsScreen({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div data-slot="processing-rail">
-        <ProcessingRail
-          draftId={draftId}
-          browserTranscodeState={browserTranscodeState}
-          uploadState={uploadState}
-          uploadProgress={uploadProgress}
-          videos={videos}
-          deletingIndex={deletingIndex}
-          hasHlsVideo={hasHlsVideo}
-          onCancel={onCancelProcessing}
-          onChangeSettings={onChangeSettings}
-          onRemoveVideo={onRemoveVideo}
-          onAddAdditional={onAddAdditional}
-          onAddTranscodedVideo={onAddTranscodedVideo}
-          onStatusChange={onStatusChange}
+      {file && uploadState === 'transcoding' && !browserTranscodeState ? (
+        <BrowserTranscodeStep
+          file={file}
+          backgroundState={undefined}
+          onStartBackground={onStartBackground}
+          onCancelBackground={onCancelProcessing}
+          onComplete={onBrowserTranscodeComplete}
+          onSkip={onBrowserTranscodeSkip}
         />
-      </div>
+      ) : (
+        <div data-slot="processing-rail">
+          <ProcessingRail
+            draftId={draftId}
+            browserTranscodeState={browserTranscodeState}
+            uploadState={uploadState}
+            uploadProgress={uploadProgress}
+            videos={videos}
+            deletingIndex={deletingIndex}
+            hasHlsVideo={hasHlsVideo}
+            onCancel={onCancelProcessing}
+            onChangeSettings={onChangeSettings}
+            onRemoveVideo={onRemoveVideo}
+            onAddAdditional={onAddAdditional}
+            onAddTranscodedVideo={onAddTranscodedVideo}
+            onStatusChange={onStatusChange}
+          />
+        </div>
+      )}
 
       {/* Form fields: title / description / tags / language */}
       <div className="space-y-4">

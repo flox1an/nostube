@@ -594,6 +594,9 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
               }}
               onChangeSettings={() => setScreen('source')}
               onCancelProcessing={handleCancelBrowserTranscodeUpload}
+              onStartBackground={wrappedOnStartBackground}
+              onBrowserTranscodeComplete={handleBrowserTranscodeComplete}
+              onBrowserTranscodeSkip={handleBrowserTranscodeSkip}
             />
           )}
 

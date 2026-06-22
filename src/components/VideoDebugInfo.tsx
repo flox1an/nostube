@@ -581,6 +581,7 @@ export function ContributedVariantDebugSection({
                   {record.status}
                 </span>
                 <span className="text-muted-foreground">kind {record.eventKind}</span>
+                <span className="text-muted-foreground">{record.mediaType}</span>
                 {record.quality && <span>{record.quality}</span>}
                 {record.dimensions && (
                   <span className="text-muted-foreground">{record.dimensions}</span>

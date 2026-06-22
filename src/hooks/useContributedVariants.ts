@@ -4,14 +4,15 @@ import { filter as rxFilter } from 'rxjs/operators'
 import { INDEXER_RELAYS } from '@/constants/relays'
 import { useAppContext } from '@/hooks/useAppContext'
 import { relayPool } from '@/nostr/core'
-import type { VideoEvent, VideoVariant } from '@/utils/video-event'
+import { extractBlossomHash, type VideoEvent, type VideoVariant } from '@/utils/video-event'
+
+export type ContributedMediaType = 'video' | 'image' | 'subtitle' | 'audio' | 'other'
 
 export type ContributedVariantDebugStatus =
   | 'accepted'
   | 'checking'
   | 'duplicate'
   | 'invalid'
-  | 'mirror'
   | 'unavailable'
 
 export interface ContributedVariantDebugRecord {
@@ -27,6 +28,7 @@ export interface ContributedVariantDebugRecord {
   quality?: string
   size?: number
   tags: string[][]
+  mediaType: ContributedMediaType
   status: ContributedVariantDebugStatus
   reachableUrl?: string
   statusCode?: number
@@ -48,43 +50,102 @@ function firstTagValue(event: NostrEvent, name: string): string | undefined {
   return event.tags.find(tag => tag[0] === name)?.[1]
 }
 
-function contributedVariantFromEvent(event: NostrEvent): VideoVariant | null {
-  const url = firstTagValue(event, 'url')
-  const hash = firstTagValue(event, 'x')
-  const mimeType = firstTagValue(event, 'm')
-  if (!url || !hash) return null
-
-  // Only accept actual video content — skip subtitles (text/vtt), thumbnails (image/*), audio
+function classifyMediaType(mimeType: string | undefined, url: string): ContributedMediaType {
   const baseMime = mimeType?.split(';')[0]?.trim().toLowerCase() ?? ''
-  if (!baseMime.startsWith('video/')) return null
+  if (baseMime.startsWith('video/')) return 'video'
+  if (baseMime.startsWith('image/')) return 'image'
+  if (
+    baseMime === 'text/vtt' ||
+    baseMime === 'application/x-subrip' ||
+    baseMime === 'text/srt' ||
+    /\.(vtt|srt)(?:$|\?)/i.test(url)
+  ) {
+    return 'subtitle'
+  }
+  if (baseMime.startsWith('audio/')) return 'audio'
+  return 'other'
+}
 
+interface ParsedContribution {
+  variant: VideoVariant
+  mediaType: ContributedMediaType
+}
+
+function contributedVariantFromEvent(event: NostrEvent): ParsedContribution | null {
+  const url = firstTagValue(event, 'url')
+  if (!url) return null
+  const hash = (firstTagValue(event, 'x') ?? extractBlossomHash(url).sha256)?.toLowerCase()
+  if (!hash) return null
+
+  const mimeType = firstTagValue(event, 'm')
+  const mediaType = classifyMediaType(mimeType, url)
   const size = firstTagValue(event, 'size')
   const dimensions = firstTagValue(event, 'dim')
   const height = dimensions?.match(/x(\d+)/)?.[1]
+
   return {
-    url,
-    hash,
-    dimensions,
-    quality: height ? `${height}p` : undefined,
-    mimeType,
-    size: size ? Number.parseInt(size, 10) : undefined,
-    fallbackUrls: event.tags.filter(tag => tag[0] === 'fallback' && tag[1]).map(tag => tag[1]),
-    mediaType: 'video',
-    contributorPubkey: event.pubkey,
+    variant: {
+      url,
+      hash,
+      dimensions,
+      quality: height ? `${height}p` : undefined,
+      mimeType,
+      size: size ? Number.parseInt(size, 10) : undefined,
+      fallbackUrls: event.tags.filter(tag => tag[0] === 'fallback' && tag[1]).map(tag => tag[1]),
+      mediaType:
+        mediaType === 'video' || mediaType === 'audio' || mediaType === 'image'
+          ? mediaType
+          : undefined,
+      contributorPubkey: event.pubkey,
+    },
+    mediaType,
   }
+}
+
+function collectExistingHashes(video: VideoEvent): Set<string> {
+  const hashes = new Set<string>()
+  const add = (hash?: string | null) => {
+    if (hash) hashes.add(hash.toLowerCase())
+  }
+  const addFromUrl = (url?: string | null) => {
+    if (url) add(extractBlossomHash(url).sha256)
+  }
+
+  add(video.x)
+  for (const v of video.videoVariants ?? []) {
+    add(v.hash)
+    addFromUrl(v.url)
+    for (const fb of v.fallbackUrls ?? []) addFromUrl(fb)
+  }
+  for (const v of video.allVideoVariants ?? []) {
+    add(v.hash)
+    addFromUrl(v.url)
+    for (const fb of v.fallbackUrls ?? []) addFromUrl(fb)
+  }
+  for (const v of video.thumbnailVariants ?? []) {
+    add(v.hash)
+    addFromUrl(v.url)
+    for (const fb of v.fallbackUrls ?? []) addFromUrl(fb)
+  }
+  for (const img of video.images ?? []) addFromUrl(img)
+  for (const track of video.textTracks ?? []) addFromUrl(track.url)
+
+  return hashes
 }
 
 function debugRecordFromEvent(
   event: NostrEvent,
-  variant: VideoVariant | null,
+  parsed: ParsedContribution | null,
+  mediaType: ContributedMediaType,
   status: ContributedVariantDebugStatus
 ): ContributedVariantDebugRecord {
+  const variant = parsed?.variant ?? null
   return {
     eventId: event.id,
     eventKind: event.kind,
     pubkey: event.pubkey,
     createdAt: event.created_at,
-    hash: variant?.hash ?? firstTagValue(event, 'x'),
+    hash: variant?.hash ?? firstTagValue(event, 'x')?.toLowerCase(),
     url: variant?.url ?? firstTagValue(event, 'url'),
     fallbackUrls:
       variant?.fallbackUrls ??
@@ -94,6 +155,7 @@ function debugRecordFromEvent(
     quality: variant?.quality,
     size: variant?.size,
     tags: event.tags,
+    mediaType,
     status,
   }
 }
@@ -137,13 +199,7 @@ export function useContributedVariants(video: VideoEvent | null): ContributedVar
     setDebugRecords([])
     if (!video || relays.length === 0) return
 
-    const existingHashes = new Set(
-      [
-        video.x,
-        ...(video.videoVariants ?? []).map(variant => variant.hash),
-        ...(video.allVideoVariants ?? []).map(variant => variant.hash),
-      ].filter((hash): hash is string => Boolean(hash))
-    )
+    const existingHashes = collectExistingHashes(video)
     const acceptedHashes = new Set<string>()
     const probingUrls = new Set<string>()
     const filters: Filter[] = []
@@ -161,26 +217,30 @@ export function useContributedVariants(video: VideoEvent | null): ContributedVar
       .pipe(rxFilter((msg): msg is NostrEvent => typeof msg !== 'string' && 'kind' in msg))
       .subscribe({
         next: event => {
-          const variant = contributedVariantFromEvent(event)
-          if (!variant?.hash) {
-            upsertDebugRecord(debugRecordFromEvent(event, variant, 'invalid'))
+          const parsed = contributedVariantFromEvent(event)
+          if (!parsed) {
+            // Malformed kind 1063: surface as 'invalid' so debuggers can see what arrived.
+            upsertDebugRecord(debugRecordFromEvent(event, null, 'other', 'invalid'))
             return
           }
 
-          if (existingHashes.has(variant.hash)) {
-            upsertDebugRecord(debugRecordFromEvent(event, variant, 'mirror'))
+          const { variant, mediaType } = parsed
+          const hash = variant.hash!
+
+          // Drop kind 1063 events that just announce media already referenced by the
+          // original video event (video variants, thumbnails, subtitles). They are
+          // not contributions — they're the source publication echoing itself.
+          if (existingHashes.has(hash)) return
+
+          if (acceptedHashes.has(hash)) {
+            upsertDebugRecord(debugRecordFromEvent(event, parsed, mediaType, 'duplicate'))
             return
           }
 
-          if (acceptedHashes.has(variant.hash)) {
-            upsertDebugRecord(debugRecordFromEvent(event, variant, 'duplicate'))
-            return
-          }
-
-          const probeKey = `${variant.hash}\u0000${variant.url}`
+          const probeKey = `${hash}\u0000${variant.url}`
           if (probingUrls.has(probeKey)) return
           probingUrls.add(probeKey)
-          upsertDebugRecord(debugRecordFromEvent(event, variant, 'checking'))
+          upsertDebugRecord(debugRecordFromEvent(event, parsed, mediaType, 'checking'))
 
           void variantAvailability(variant, abortController.signal)
             .then(availability => {
@@ -188,29 +248,35 @@ export function useContributedVariants(video: VideoEvent | null): ContributedVar
 
               if (!availability.reachable) {
                 upsertDebugRecord({
-                  ...debugRecordFromEvent(event, variant, 'unavailable'),
+                  ...debugRecordFromEvent(event, parsed, mediaType, 'unavailable'),
                   statusCode: availability.statusCode,
                 })
                 return
               }
 
-              if (existingHashes.has(variant.hash!) || acceptedHashes.has(variant.hash!)) {
-                upsertDebugRecord(debugRecordFromEvent(event, variant, 'duplicate'))
+              if (existingHashes.has(hash) || acceptedHashes.has(hash)) {
+                upsertDebugRecord(debugRecordFromEvent(event, parsed, mediaType, 'duplicate'))
                 return
               }
 
-              acceptedHashes.add(variant.hash!)
+              acceptedHashes.add(hash)
               upsertDebugRecord({
-                ...debugRecordFromEvent(event, variant, 'accepted'),
+                ...debugRecordFromEvent(event, parsed, mediaType, 'accepted'),
                 reachableUrl: availability.reachableUrl,
                 statusCode: availability.statusCode,
               })
-              setVariants(current => [...current, variant])
+
+              // Only video contributions feed the playable variant list.
+              // Thumbnails and subtitles are surfaced for the debug section only;
+              // their integration paths live elsewhere.
+              if (mediaType === 'video') {
+                setVariants(current => [...current, variant])
+              }
             })
             .catch(error => {
               if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 upsertDebugRecord({
-                  ...debugRecordFromEvent(event, variant, 'unavailable'),
+                  ...debugRecordFromEvent(event, parsed, mediaType, 'unavailable'),
                   error: error instanceof Error ? error.message : String(error),
                 })
                 console.error('Contributed variant availability check failed', error)

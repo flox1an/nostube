@@ -18,6 +18,7 @@ const contributedRecord: ContributedVariantDebugRecord = {
     ['url', 'https://cdn.example.com/variant.mp4'],
     ['x', 'variant-hash'],
   ],
+  mediaType: 'video',
   status: 'accepted',
   reachableUrl: 'https://cdn.example.com/variant.mp4',
   statusCode: 200,
@@ -44,5 +45,6 @@ describe('ContributedVariantDebugSection', () => {
     expect(screen.getAllByText('https://cdn.example.com/variant.mp4')).toHaveLength(2)
     expect(screen.getByText('https://fallback.example.com/variant.mp4')).toBeInTheDocument()
     expect(screen.getByText('accepted')).toBeInTheDocument()
+    expect(screen.getByText('video')).toBeInTheDocument()
   })
 })

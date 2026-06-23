@@ -43,7 +43,7 @@ import {
 } from '@/lib/blossom-blob-extractor'
 import type { BlobDescriptor } from 'blossom-client-sdk'
 import type { BlossomServer } from '@/contexts/AppContext'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { useTranslation } from 'react-i18next'
 
 interface MirrorVideoDialogProps {
@@ -108,6 +108,49 @@ function hostnameOrUrl(url: string): string {
   }
 }
 
+// Map a codec atom (`avc1.64001f`, `mp4a.40.2`, `opus`, …) to a human label.
+function mapCodec(codec: string): string {
+  const c = codec.toLowerCase().trim()
+  if (c.startsWith('avc1') || c.startsWith('avc3')) return 'H.264'
+  if (c.startsWith('hev1') || c.startsWith('hvc1') || c.startsWith('hevc')) return 'H.265'
+  if (c.startsWith('av01')) return 'AV1'
+  if (c.startsWith('vp09')) return 'VP9'
+  if (c.startsWith('vp08') || c === 'vp8') return 'VP8'
+  if (c.startsWith('mp4a')) return 'AAC'
+  if (c === 'opus') return 'Opus'
+  if (c === 'vorbis') return 'Vorbis'
+  if (c === 'flac') return 'FLAC'
+  return codec.toUpperCase()
+}
+
+/** Pull codec atoms out of a MIME type like `video/mp4; codecs="avc1.64001f,mp4a.40.2"`. */
+function parseCodecLabel(mimeType: string | undefined): string | null {
+  if (!mimeType) return null
+  const match =
+    mimeType.match(/codecs\s*=\s*"([^"]+)"/i) ?? mimeType.match(/codecs\s*=\s*([^;\s]+)/i)
+  if (!match) return null
+  const labels = match[1]
+    .split(',')
+    .map(c => mapCodec(c))
+    .filter(Boolean)
+  return labels.length > 0 ? Array.from(new Set(labels)).join(' / ') : null
+}
+
+/** Bullet-joined metadata line: `1920×1080 · video/mp4 · H.264 / AAC · 596 MB`. */
+function formatBlobMeta(variant: VideoVariant): string {
+  const bits: string[] = []
+  if (variant.dimensions) {
+    // Normalize `1920x1080` → `1920×1080` for readability.
+    bits.push(variant.dimensions.replace(/x/i, '×'))
+  }
+  const baseMime = variant.mimeType?.split(';')[0]?.trim()
+  if (baseMime) bits.push(baseMime)
+  const codec = parseCodecLabel(variant.mimeType)
+  if (codec) bits.push(codec)
+  if (variant.size) bits.push(formatFileSize(variant.size))
+  return bits.join(' · ')
+}
+
 export function MirrorVideoDialog({
   open,
   onOpenChange,
@@ -146,6 +189,15 @@ export function MirrorVideoDialog({
   const [isMirroring, setIsMirroring] = useState(false)
   const [mirrorState, setMirrorState] = useState<Map<string, MirrorCell>>(() => new Map())
   const mirrorStarted = isMirroring || mirrorState.size > 0
+
+  const selectedSize = useMemo(() => {
+    let n = 0
+    for (const i of selectedBlobs) {
+      const b = allBlobs[i]
+      if (b?.variant.size) n += b.variant.size
+    }
+    return n
+  }, [selectedBlobs, allBlobs])
 
   // Check availability when dialog opens
   useMemo(() => {
@@ -481,6 +533,38 @@ export function MirrorVideoDialog({
     return { pending, mirroring, done, skipped, failed, total: mirrorState.size }
   }, [mirrorState])
 
+  // Bytes worth of work the matrix represents. We sum *per blob*, not per
+  // cell, because mirroring the same blob to N servers still uploads N copies
+  // of the same byte payload — except when the server already had it, in
+  // which case we skip. The summary line shows two numbers: total selected
+  // payload and (during/after the run) how many bytes actually transferred.
+  const matrixTotalSize = useMemo(() => {
+    let n = 0
+    for (const b of matrixBlobs) {
+      if (b.variant.size) n += b.variant.size * matrixServerUrls.length
+    }
+    return n
+  }, [matrixBlobs, matrixServerUrls.length])
+
+  const matrixSizeByStatus = useMemo(() => {
+    const sizeByHash = new Map<string, number>()
+    for (const b of matrixBlobs) {
+      if (b.hash) sizeByHash.set(b.hash, b.variant.size || 0)
+    }
+    let done = 0,
+      skipped = 0,
+      failed = 0
+    for (const [key, cell] of mirrorState.entries()) {
+      const sep = key.indexOf('|')
+      const hash = sep > 0 ? key.slice(0, sep) : ''
+      const size = sizeByHash.get(hash) ?? 0
+      if (cell.status === 'done') done += size
+      else if (cell.status === 'skipped') skipped += size
+      else if (cell.status === 'failed') failed += size
+    }
+    return { done, skipped, failed }
+  }, [matrixBlobs, mirrorState])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
@@ -490,7 +574,7 @@ export function MirrorVideoDialog({
           </DialogTitle>
           <DialogDescription>
             {t('video.mirror.description')}
-            {totalSize > 0 && ` • ${formatFileSize(totalSize)} total`}
+            {totalSize > 0 && ` • ${formatFileSize(totalSize)} ${t('video.mirror.totalSuffix')}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -522,6 +606,16 @@ export function MirrorVideoDialog({
                       total: matrixCounts.total,
                     })}
                   </span>
+                  {matrixTotalSize > 0 && (
+                    <span className="text-muted-foreground">
+                      {t('video.mirror.progress.bytes', {
+                        transferred: formatFileSize(
+                          matrixSizeByStatus.done + matrixSizeByStatus.skipped
+                        ),
+                        total: formatFileSize(matrixTotalSize),
+                      })}
+                    </span>
+                  )}
                 </div>
 
                 {/* Per-blob × per-server matrix */}
@@ -537,11 +631,12 @@ export function MirrorVideoDialog({
                           <Icon className="h-4 w-4 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">{blob.label}</div>
-                            {blob.variant.size && (
-                              <div className="text-xs text-muted-foreground">
-                                {formatFileSize(blob.variant.size)}
-                              </div>
-                            )}
+                            {(() => {
+                              const meta = formatBlobMeta(blob.variant)
+                              return meta ? (
+                                <div className="text-xs text-muted-foreground truncate">{meta}</div>
+                              ) : null
+                            })()}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -610,7 +705,7 @@ export function MirrorVideoDialog({
               <>
                 {/* Blobs to mirror */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-1">
                     <h3 className="text-sm font-medium">{t('video.mirror.filesTo')}</h3>
                     <div className="flex gap-2">
                       <Button
@@ -631,6 +726,14 @@ export function MirrorVideoDialog({
                       </Button>
                     </div>
                   </div>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    {t('video.mirror.selectedSummary', {
+                      selected: selectedBlobs.size,
+                      total: allBlobs.length,
+                      selectedSize: formatFileSize(selectedSize),
+                      totalSize: formatFileSize(totalSize),
+                    })}
+                  </p>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
                     {allBlobs.map((blob, index) => {
                       const Icon = getBlobIcon(blob.variant.mimeType)
@@ -651,11 +754,14 @@ export function MirrorVideoDialog({
                             <Icon className="h-4 w-4 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium truncate">{blob.label}</div>
-                              {blob.variant.size && (
-                                <div className="text-xs text-muted-foreground">
-                                  {formatFileSize(blob.variant.size)}
-                                </div>
-                              )}
+                              {(() => {
+                                const meta = formatBlobMeta(blob.variant)
+                                return meta ? (
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {meta}
+                                  </div>
+                                ) : null
+                              })()}
                             </div>
                           </Label>
                         </div>

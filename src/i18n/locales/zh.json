@@ -226,8 +226,11 @@
         "finished": "Mirror finished",
         "counts": "{{done}} uploaded • {{skipped}} already on server • {{failed}} failed • of {{total}}",
         "alreadyOnServer": "— already there",
-        "errorLabel": "Error"
-      }
+        "errorLabel": "Error",
+        "bytes": "{{transferred}} of {{total}} transferred"
+      },
+      "totalSuffix": "total",
+      "selectedSummary": "{{selected}} of {{total}} selected · {{selectedSize}} of {{totalSize}}"
     },
     "contribute": {
       "alertTitle": "需要转码视频",

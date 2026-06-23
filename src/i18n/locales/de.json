@@ -226,8 +226,11 @@
         "finished": "Spiegelung abgeschlossen",
         "counts": "{{done}} hochgeladen • {{skipped}} bereits vorhanden • {{failed}} fehlgeschlagen • von {{total}}",
         "alreadyOnServer": "— bereits dort",
-        "errorLabel": "Fehler"
-      }
+        "errorLabel": "Fehler",
+        "bytes": "{{transferred}} von {{total}} übertragen"
+      },
+      "totalSuffix": "gesamt",
+      "selectedSummary": "{{selected}} von {{total}} ausgewählt · {{selectedSize}} von {{totalSize}}"
     },
     "contribute": {
       "alertTitle": "Video-Transformation erforderlich",

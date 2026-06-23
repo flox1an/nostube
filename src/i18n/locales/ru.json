@@ -220,7 +220,14 @@
       "errorMessage": "Не удалось зеркалировать видео.",
       "mirroring": "Зеркалирование...",
       "mirrorButton_one": "Зеркалировать на {{count}} сервер",
-      "mirrorButton_other": "Зеркалировать на {{count}} серверов"
+      "mirrorButton_other": "Зеркалировать на {{count}} серверов",
+      "progress": {
+        "mirroring": "Mirroring in progress",
+        "finished": "Mirror finished",
+        "counts": "{{done}} uploaded • {{skipped}} already on server • {{failed}} failed • of {{total}}",
+        "alreadyOnServer": "— already there",
+        "errorLabel": "Error"
+      }
     },
     "contribute": {
       "alertTitle": "Требуется преобразование видео",

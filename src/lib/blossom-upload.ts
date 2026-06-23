@@ -67,15 +67,33 @@ async function customMirrorBlob(
   return blobData as BlobDescriptor
 }
 
+/**
+ * Outcome of a single server in a `mirrorBlobsToServers` batch. Reported via the
+ * optional `onServerSettle` callback so callers (e.g. the mirror dialog) can show
+ * live per-server progress and per-cell error messages without re-implementing
+ * the upload logic.
+ */
+export type MirrorServerOutcome =
+  | { ok: true; server: string; blob: BlobDescriptor; alreadyExisted: boolean }
+  | { ok: false; server: string; error: Error }
+
+export interface MirrorBlobsToServersOptions {
+  mirrorServers: string[]
+  blob: BlobDescriptor
+  signer: Signer
+  /** Fires the moment work begins on a given server (after `mirrorServers.map` schedules it). */
+  onServerStart?: (server: string) => void
+  /** Fires exactly once per server with the resolved outcome (success or failure). */
+  onServerSettle?: (outcome: MirrorServerOutcome) => void
+}
+
 export async function mirrorBlobsToServers({
   mirrorServers,
   blob,
   signer,
-}: {
-  mirrorServers: string[]
-  blob: BlobDescriptor
-  signer: Signer
-}): Promise<BlobDescriptor[]> {
+  onServerStart,
+  onServerSettle,
+}: MirrorBlobsToServersOptions): Promise<BlobDescriptor[]> {
   if (import.meta.env.DEV) console.log('Mirroring blobs to servers', mirrorServers, blob)
 
   // Create per-server auth tokens with server tags for BUD-11 scoping
@@ -84,26 +102,37 @@ export async function mirrorBlobsToServers({
   const results = await Promise.allSettled(
     mirrorServers.map(async (server, index) => {
       console.log(`[MIRROR ${index + 1}/${mirrorServers.length}] Processing server: ${server}`)
+      onServerStart?.(server)
 
-      // Check if file already exists on this server
-      const fileExists = await checkFileExists(server, blob.sha256)
-      if (fileExists) {
-        console.debug(`File already exists on ${server}, skipping mirror`)
-        return createMockBlobDescriptor(
-          server,
-          blob.sha256,
-          blob.size,
-          blob.type || 'application/octet-stream'
-        )
+      try {
+        // Check if file already exists on this server
+        const fileExists = await checkFileExists(server, blob.sha256)
+        if (fileExists) {
+          console.debug(`File already exists on ${server}, skipping mirror`)
+          const existing = createMockBlobDescriptor(
+            server,
+            blob.sha256,
+            blob.size,
+            blob.type || 'application/octet-stream'
+          )
+          onServerSettle?.({ ok: true, server, blob: existing, alreadyExisted: true })
+          return existing
+        }
+
+        console.debug(`File does not exist on ${server}, proceeding with mirror`)
+        // Create server-scoped auth token per BUD-11
+        const auth = await createUploadAuth(signer, blob.sha256, {
+          servers: [extractServerDomain(server)],
+        })
+        const authToken = encodeAuthToken(auth)
+        const uploaded = await customMirrorBlob(server, blob, authToken)
+        onServerSettle?.({ ok: true, server, blob: uploaded, alreadyExisted: false })
+        return uploaded
+      } catch (error) {
+        const wrapped = error instanceof Error ? error : new Error(String(error))
+        onServerSettle?.({ ok: false, server, error: wrapped })
+        throw wrapped
       }
-
-      console.debug(`File does not exist on ${server}, proceeding with mirror`)
-      // Create server-scoped auth token per BUD-11
-      const auth = await createUploadAuth(signer, blob.sha256, {
-        servers: [extractServerDomain(server)],
-      })
-      const authToken = encodeAuthToken(auth)
-      return await customMirrorBlob(server, blob, authToken)
     })
   )
 

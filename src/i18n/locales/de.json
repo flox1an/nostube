@@ -220,7 +220,14 @@
       "errorMessage": "Video konnte nicht gespiegelt werden.",
       "mirroring": "Wird gespiegelt...",
       "mirrorButton_one": "Auf {{count}} Server spiegeln",
-      "mirrorButton_other": "Auf {{count}} Server spiegeln"
+      "mirrorButton_other": "Auf {{count}} Server spiegeln",
+      "progress": {
+        "mirroring": "Spiegelung läuft",
+        "finished": "Spiegelung abgeschlossen",
+        "counts": "{{done}} hochgeladen • {{skipped}} bereits vorhanden • {{failed}} fehlgeschlagen • von {{total}}",
+        "alreadyOnServer": "— bereits dort",
+        "errorLabel": "Fehler"
+      }
     },
     "contribute": {
       "alertTitle": "Video-Transformation erforderlich",

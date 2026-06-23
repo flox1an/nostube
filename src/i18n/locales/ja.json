@@ -220,7 +220,14 @@
       "errorMessage": "動画のミラーに失敗しました。",
       "mirroring": "ミラー中...",
       "mirrorButton_one": "{{count}} 台のサーバーにミラー",
-      "mirrorButton_other": "{{count}} 台のサーバーにミラー"
+      "mirrorButton_other": "{{count}} 台のサーバーにミラー",
+      "progress": {
+        "mirroring": "Mirroring in progress",
+        "finished": "Mirror finished",
+        "counts": "{{done}} uploaded • {{skipped}} already on server • {{failed}} failed • of {{total}}",
+        "alreadyOnServer": "— already there",
+        "errorLabel": "Error"
+      }
     },
     "contribute": {
       "alertTitle": "動画の変換が必要です",

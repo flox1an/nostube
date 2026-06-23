@@ -33,7 +33,8 @@
     "follow": "关注",
     "following": "已关注",
     "pleaseWait": "请稍候...",
-    "undo": "撤销"
+    "undo": "撤销",
+    "next": "Next"
   },
   "navigation": {
     "home": "首页",
@@ -230,7 +231,18 @@
         "bytes": "{{transferred}} of {{total}} transferred"
       },
       "totalSuffix": "total",
-      "selectedSummary": "{{selected}} of {{total}} selected · {{selectedSize}} of {{totalSize}}"
+      "selectedSummary": "{{selected}} of {{total}} selected · {{selectedSize}} of {{totalSize}}",
+      "steps": {
+        "files": "Files",
+        "servers": "Servers",
+        "review": "Review"
+      },
+      "review": {
+        "summary": "Mirror {{files}} file(s) to {{servers}} server(s)",
+        "totals": "Payload {{payload}} · estimated {{transfer}} of network",
+        "filesHeading": "Files ({{count}})",
+        "serversHeading": "Target servers ({{count}})"
+      }
     },
     "contribute": {
       "alertTitle": "需要转码视频",

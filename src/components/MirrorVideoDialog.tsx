@@ -151,6 +151,76 @@ function formatBlobMeta(variant: VideoVariant): string {
   return bits.join(' · ')
 }
 
+type WizardStep = 1 | 2 | 3
+
+function WizardStepIndicator({
+  current,
+  steps,
+  canJumpTo,
+  onJump,
+}: {
+  current: WizardStep
+  steps: ReadonlyArray<{ id: WizardStep; label: string }>
+  /** Returns true when the step's circle is clickable (back-jump only). */
+  canJumpTo: (step: WizardStep) => boolean
+  onJump: (step: WizardStep) => void
+}) {
+  return (
+    <ol className="flex items-center justify-center gap-2 sm:gap-4">
+      {steps.map((step, idx) => {
+        const isCurrent = step.id === current
+        const isDone = step.id < current
+        const interactive = canJumpTo(step.id)
+        const circleClass = isCurrent
+          ? 'bg-primary text-primary-foreground border-primary'
+          : isDone
+            ? 'bg-primary/10 text-primary border-primary/40'
+            : 'bg-background text-muted-foreground border-muted'
+        const labelClass = isCurrent
+          ? 'text-foreground font-medium'
+          : isDone
+            ? 'text-foreground/80'
+            : 'text-muted-foreground'
+        const circle = (
+          <span
+            className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium ${circleClass}`}
+          >
+            {isDone ? <Check className="h-3.5 w-3.5" /> : step.id}
+          </span>
+        )
+        return (
+          <li key={step.id} className="flex items-center gap-2 sm:gap-4">
+            {interactive ? (
+              <button
+                type="button"
+                onClick={() => onJump(step.id)}
+                className="flex items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {circle}
+                <span className={`text-sm ${labelClass}`}>{step.label}</span>
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-1.5 px-1 py-0.5"
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {circle}
+                <span className={`text-sm ${labelClass}`}>{step.label}</span>
+              </div>
+            )}
+            {idx < steps.length - 1 && (
+              <span
+                aria-hidden
+                className={`h-px w-6 sm:w-10 ${isDone ? 'bg-primary/40' : 'bg-muted'}`}
+              />
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function MirrorVideoDialog({
   open,
   onOpenChange,
@@ -189,6 +259,8 @@ export function MirrorVideoDialog({
   const [isMirroring, setIsMirroring] = useState(false)
   const [mirrorState, setMirrorState] = useState<Map<string, MirrorCell>>(() => new Map())
   const mirrorStarted = isMirroring || mirrorState.size > 0
+  // 1 = pick files · 2 = pick servers · 3 = review + mirror
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1)
 
   const selectedSize = useMemo(() => {
     let n = 0
@@ -211,6 +283,7 @@ export function MirrorVideoDialog({
       setSelectedServers(new Set())
       setMirrorState(new Map())
       setIsMirroring(false)
+      setWizardStep(1)
     }
   }, [open, allVariants.length, allBlobs, checkAllAvailability])
 
@@ -579,10 +652,236 @@ export function MirrorVideoDialog({
         </DialogHeader>
 
         <TooltipProvider delayDuration={150}>
+          <div className="border-b pb-3 pt-1">
+            <WizardStepIndicator
+              current={wizardStep}
+              steps={[
+                { id: 1, label: t('video.mirror.steps.files') },
+                { id: 2, label: t('video.mirror.steps.servers') },
+                { id: 3, label: t('video.mirror.steps.review') },
+              ]}
+              canJumpTo={step => !mirrorStarted && step < wizardStep}
+              onJump={step => setWizardStep(step)}
+            />
+          </div>
+
           <div className="flex-1 overflow-y-auto space-y-6 py-4">
-            {mirrorStarted ? (
+            {wizardStep === 1 && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-medium">{t('video.mirror.filesTo')}</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedBlobs(new Set(allBlobs.map((_, i) => i)))}
+                      disabled={selectedBlobs.size === allBlobs.length}
+                    >
+                      {t('common.selectAll')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedBlobs(new Set())}
+                      disabled={selectedBlobs.size === 0}
+                    >
+                      {t('common.selectNone')}
+                    </Button>
+                  </div>
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t('video.mirror.selectedSummary', {
+                    selected: selectedBlobs.size,
+                    total: allBlobs.length,
+                    selectedSize: formatFileSize(selectedSize),
+                    totalSize: formatFileSize(totalSize),
+                  })}
+                </p>
+                <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                  {allBlobs.map((blob, index) => {
+                    const Icon = getBlobIcon(blob.variant.mimeType)
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/50"
+                      >
+                        <Checkbox
+                          id={`blob-${index}`}
+                          checked={selectedBlobs.has(index)}
+                          onCheckedChange={() => handleToggleBlob(index)}
+                        />
+                        <Label
+                          htmlFor={`blob-${index}`}
+                          className="flex-1 cursor-pointer flex items-center gap-2"
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{blob.label}</div>
+                            {(() => {
+                              const meta = formatBlobMeta(blob.variant)
+                              return meta ? (
+                                <div className="text-xs text-muted-foreground truncate">{meta}</div>
+                              ) : null
+                            })()}
+                          </div>
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div>
+                <h3 className="text-sm font-medium mb-3">
+                  {t('video.mirror.availableServers')} ({availableServers.length})
+                </h3>
+                {availableServers.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
+                    {t('video.mirror.noServers')}
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                    {availableServers.map(server => {
+                      const counts = serverBlobCounts.get(server.url)
+                      const hasAllBlobs = counts && counts.available === counts.total
+
+                      return (
+                        <div
+                          key={server.url}
+                          className="flex items-center gap-3 p-3 rounded-md border hover:bg-muted/50"
+                        >
+                          <Checkbox
+                            id={server.url}
+                            checked={selectedServers.has(server.url)}
+                            onCheckedChange={() => handleToggleServer(server.url)}
+                          />
+                          <Label
+                            htmlFor={server.url}
+                            className="flex-1 cursor-pointer flex items-center gap-2"
+                          >
+                            <Server className="h-4 w-4 shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">{server.name}</div>
+                              <div className="text-xs text-muted-foreground">{server.url}</div>
+                            </div>
+                            {counts && (
+                              <div className="flex items-center gap-1 text-xs">
+                                {isAnyChecking ? (
+                                  <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                                ) : hasAllBlobs ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-green-500" />
+                                    <span className="text-green-600">All files</span>
+                                  </>
+                                ) : counts.available > 0 ? (
+                                  <>
+                                    {renderStatusIcon('available')}
+                                    <span className="text-muted-foreground">
+                                      {counts.available}/{counts.total}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">0/{counts.total}</span>
+                                )}
+                              </div>
+                            )}
+                            <span className="text-xs text-muted-foreground capitalize">
+                              ({server.source})
+                            </span>
+                          </Label>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {wizardStep === 3 && !mirrorStarted && (
               <div className="space-y-4">
-                {/* Progress summary */}
+                {/* Totals card */}
+                <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                  <div className="font-medium">
+                    {t('video.mirror.review.summary', {
+                      files: selectedBlobs.size,
+                      servers: selectedServers.size,
+                    })}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {t('video.mirror.review.totals', {
+                      payload: formatFileSize(selectedSize),
+                      transfer: formatFileSize(selectedSize * selectedServers.size),
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected files (read-only) */}
+                <div>
+                  <h3 className="text-sm font-medium mb-2">
+                    {t('video.mirror.review.filesHeading', { count: selectedBlobs.size })}
+                  </h3>
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                    {Array.from(selectedBlobs)
+                      .map(i => allBlobs[i])
+                      .filter((b): b is (typeof allBlobs)[number] => Boolean(b))
+                      .map((blob, idx) => {
+                        const Icon = getBlobIcon(blob.variant.mimeType)
+                        const meta = formatBlobMeta(blob.variant)
+                        return (
+                          <div
+                            key={`${blob.hash ?? blob.label}-${idx}`}
+                            className="flex items-center gap-2 p-2 rounded-md border bg-background/60"
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{blob.label}</div>
+                              {meta && (
+                                <div className="text-xs text-muted-foreground truncate">{meta}</div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* Selected servers (read-only) */}
+                <div>
+                  <h3 className="text-sm font-medium mb-2">
+                    {t('video.mirror.review.serversHeading', { count: selectedServers.size })}
+                  </h3>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {Array.from(selectedServers).map(url => {
+                      const info = serverInfoByUrl.get(url)
+                      return (
+                        <div
+                          key={url}
+                          className="flex items-center gap-2 p-2 rounded-md border bg-background/60"
+                        >
+                          <Server className="h-4 w-4 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {info?.name || hostnameOrUrl(url)}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{url}</div>
+                          </div>
+                          {info?.source && (
+                            <span className="text-xs text-muted-foreground capitalize">
+                              ({info.source})
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 3 && mirrorStarted && (
+              <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   <div className="flex items-center gap-1.5">
                     {isMirroring ? (
@@ -618,7 +917,6 @@ export function MirrorVideoDialog({
                   )}
                 </div>
 
-                {/* Per-blob × per-server matrix */}
                 <div className="space-y-3">
                   {matrixBlobs.map(blob => {
                     const Icon = getBlobIcon(blob.variant.mimeType)
@@ -675,12 +973,7 @@ export function MirrorVideoDialog({
                               return (
                                 <Tooltip key={serverUrl}>
                                   <TooltipTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="cursor-help text-left"
-                                      // Keyboard users get focus styling from the base classes;
-                                      // we wrap with <button> only so the tooltip is reachable.
-                                    >
+                                    <button type="button" className="cursor-help text-left">
                                       {content}
                                     </button>
                                   </TooltipTrigger>
@@ -701,148 +994,12 @@ export function MirrorVideoDialog({
                   })}
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Blobs to mirror */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium">{t('video.mirror.filesTo')}</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedBlobs(new Set(allBlobs.map((_, i) => i)))}
-                        disabled={selectedBlobs.size === allBlobs.length}
-                      >
-                        {t('common.selectAll')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedBlobs(new Set())}
-                        disabled={selectedBlobs.size === 0}
-                      >
-                        {t('common.selectNone')}
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    {t('video.mirror.selectedSummary', {
-                      selected: selectedBlobs.size,
-                      total: allBlobs.length,
-                      selectedSize: formatFileSize(selectedSize),
-                      totalSize: formatFileSize(totalSize),
-                    })}
-                  </p>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {allBlobs.map((blob, index) => {
-                      const Icon = getBlobIcon(blob.variant.mimeType)
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted/50"
-                        >
-                          <Checkbox
-                            id={`blob-${index}`}
-                            checked={selectedBlobs.has(index)}
-                            onCheckedChange={() => handleToggleBlob(index)}
-                          />
-                          <Label
-                            htmlFor={`blob-${index}`}
-                            className="flex-1 cursor-pointer flex items-center gap-2"
-                          >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{blob.label}</div>
-                              {(() => {
-                                const meta = formatBlobMeta(blob.variant)
-                                return meta ? (
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    {meta}
-                                  </div>
-                                ) : null
-                              })()}
-                            </div>
-                          </Label>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Target servers */}
-                <div>
-                  <h3 className="text-sm font-medium mb-3">
-                    {t('video.mirror.availableServers')} ({availableServers.length})
-                  </h3>
-                  {availableServers.length === 0 ? (
-                    <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
-                      {t('video.mirror.noServers')}
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                      {availableServers.map(server => {
-                        const counts = serverBlobCounts.get(server.url)
-                        const hasAllBlobs = counts && counts.available === counts.total
-
-                        return (
-                          <div
-                            key={server.url}
-                            className="flex items-center gap-3 p-3 rounded-md border hover:bg-muted/50"
-                          >
-                            <Checkbox
-                              id={server.url}
-                              checked={selectedServers.has(server.url)}
-                              onCheckedChange={() => handleToggleServer(server.url)}
-                            />
-                            <Label
-                              htmlFor={server.url}
-                              className="flex-1 cursor-pointer flex items-center gap-2"
-                            >
-                              <Server className="h-4 w-4 shrink-0" />
-                              <div className="flex-1">
-                                <div className="text-sm font-medium">{server.name}</div>
-                                <div className="text-xs text-muted-foreground">{server.url}</div>
-                              </div>
-                              {/* Show blob availability count */}
-                              {counts && (
-                                <div className="flex items-center gap-1 text-xs">
-                                  {isAnyChecking ? (
-                                    <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
-                                  ) : hasAllBlobs ? (
-                                    <>
-                                      <Check className="w-3 h-3 text-green-500" />
-                                      <span className="text-green-600">All files</span>
-                                    </>
-                                  ) : counts.available > 0 ? (
-                                    <>
-                                      {renderStatusIcon('available')}
-                                      <span className="text-muted-foreground">
-                                        {counts.available}/{counts.total}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-muted-foreground">0/{counts.total}</span>
-                                  )}
-                                </div>
-                              )}
-                              <span className="text-xs text-muted-foreground capitalize">
-                                ({server.source})
-                              </span>
-                            </Label>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
             )}
           </div>
         </TooltipProvider>
 
         <DialogFooter>
-          {mirrorStarted ? (
+          {wizardStep === 3 && mirrorStarted ? (
             <Button onClick={() => onOpenChange(false)} disabled={isMirroring}>
               {isMirroring ? (
                 <>
@@ -853,10 +1010,28 @@ export function MirrorVideoDialog({
                 t('common.close')
               )}
             </Button>
-          ) : (
+          ) : wizardStep === 1 ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('common.cancel')}
+              </Button>
+              <Button onClick={() => setWizardStep(2)} disabled={selectedBlobs.size === 0}>
+                {t('common.next')}
+              </Button>
+            </>
+          ) : wizardStep === 2 ? (
+            <>
+              <Button variant="outline" onClick={() => setWizardStep(1)}>
+                {t('common.back')}
+              </Button>
+              <Button onClick={() => setWizardStep(3)} disabled={selectedServers.size === 0}>
+                {t('common.next')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setWizardStep(2)}>
+                {t('common.back')}
               </Button>
               <Button
                 onClick={handleMirror}

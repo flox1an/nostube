@@ -4,7 +4,7 @@
     "submit": "Absenden",
     "cancel": "Abbrechen",
     "save": "Speichern",
-    "back": "Back",
+    "back": "Zurück",
     "delete": "Löschen",
     "deleting": "Wird gelöscht...",
     "edit": "Bearbeiten",
@@ -33,7 +33,8 @@
     "follow": "Folgen",
     "following": "Gefolgt",
     "pleaseWait": "Bitte warten...",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "next": "Weiter"
   },
   "navigation": {
     "home": "Startseite",
@@ -230,7 +231,18 @@
         "bytes": "{{transferred}} von {{total}} übertragen"
       },
       "totalSuffix": "gesamt",
-      "selectedSummary": "{{selected}} von {{total}} ausgewählt · {{selectedSize}} von {{totalSize}}"
+      "selectedSummary": "{{selected}} von {{total}} ausgewählt · {{selectedSize}} von {{totalSize}}",
+      "steps": {
+        "files": "Dateien",
+        "servers": "Server",
+        "review": "Überprüfen"
+      },
+      "review": {
+        "summary": "{{files}} Datei(en) auf {{servers}} Server spiegeln",
+        "totals": "Datenmenge {{payload}} · geschätzt {{transfer}} Netzwerk",
+        "filesHeading": "Dateien ({{count}})",
+        "serversHeading": "Zielserver ({{count}})"
+      }
     },
     "contribute": {
       "alertTitle": "Video-Transformation erforderlich",

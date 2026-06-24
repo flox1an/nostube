@@ -33,6 +33,7 @@ import {
   useVideoServerAvailability,
   useUserBlossomServers,
   useVideoHistory,
+  useVideoViewTracking,
   useIsMobile,
   usePreloadVideoData,
 } from '@/hooks'
@@ -457,6 +458,15 @@ export function VideoPage() {
 
   // State for active video element
   const [activeVideoElement, setActiveVideoElement] = useState<HTMLMediaElement | null>(null)
+
+  useVideoViewTracking({
+    video: videoEvent,
+    mediaElement: activeVideoElement,
+    active: !!videoEvent && !!activeVideoElement,
+    source: playlistParam ? 'playlist' : 'video',
+    sourceDetail: playlistParam ?? undefined,
+    relayHint: hintRelays[0],
+  })
 
   // Use keyboard shortcuts hook
   useVideoKeyboardShortcuts({

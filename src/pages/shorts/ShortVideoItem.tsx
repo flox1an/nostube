@@ -29,6 +29,7 @@ import {
   useReadRelays,
   useCommentCount,
   usePreloadVideoData,
+  useVideoViewTracking,
 } from '@/hooks'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -70,6 +71,7 @@ export const ShortVideoItem = memo(
     const authorPicture = metadata?.picture
     const videoRef = useRef<HTMLDivElement>(null)
     const videoElementRef = useRef<HTMLVideoElement>(null)
+    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
     const userInitiatedPlayPauseRef = useRef<boolean>(false)
     const eventStore = useEventStore()
     const userReadRelays = useReadRelays()
@@ -188,6 +190,14 @@ export const ShortVideoItem = memo(
       () => combineRelays([eventRelays, pointerRelays, userReadRelays, PRESET_RELAY_URLS]),
       [eventRelays, pointerRelays, userReadRelays]
     )
+
+    useVideoViewTracking({
+      video,
+      mediaElement: videoElement,
+      active: isActive,
+      source: 'shorts',
+      relayHint: eventRelays[0],
+    })
 
     // Preload reactions and comments for this video
     usePreloadVideoData({
@@ -352,6 +362,11 @@ export const ShortVideoItem = memo(
       [registerIntersectionRef]
     )
 
+    const handleVideoElementRef = useCallback((node: HTMLVideoElement | null) => {
+      videoElementRef.current = node
+      setVideoElement(node)
+    }, [])
+
     return (
       <div
         ref={handleRootRef}
@@ -383,7 +398,7 @@ export const ShortVideoItem = memo(
               <div className="relative w-full h-full">
                 <div className="relative w-full h-full" onClick={handleVideoClick}>
                   <video
-                    ref={videoElementRef}
+                    ref={handleVideoElementRef}
                     src={videoUrl || undefined}
                     className="w-full h-full object-contain cursor-pointer"
                     loop

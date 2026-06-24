@@ -4,9 +4,8 @@ import { YoutubeIcon, InstagramIcon, TwitterIcon, FacebookIcon } from '@/compone
 import { Badge } from '@/components/ui/badge'
 import { nip19 } from 'nostr-tools'
 import { useProfile } from '@/hooks/useProfile'
-import { useAppContextSafe } from '@/hooks'
 import { genUserName } from '@/lib/genUserName'
-import { imageProxyInline } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { buildVideoUrl } from '@/utils/video-utils'
@@ -186,6 +185,21 @@ const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|avif|svg)(\?[^#]*)?$/i
 
 const isImageUrl = (url: string): boolean => IMAGE_EXTENSIONS.test(url)
 
+function InlineImage({ url }: { url: string }) {
+  const cascade = useImageCascade({ src: url, variant: 'inline' })
+  if (!cascade.src) return null
+  return (
+    <img
+      src={cascade.src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      className="max-w-full rounded-md"
+      onError={cascade.onError}
+      onLoad={cascade.onLoad}
+    />
+  )
+}
 interface RichTextContentProps {
   /**
    * The text content to render with rich formatting
@@ -211,7 +225,6 @@ interface RichTextContentProps {
  * - Preserves line breaks (newlines are rendered as <br> tags)
  */
 export function RichTextContent({ content, className, videoLink }: RichTextContentProps) {
-  const thumbResizeServerUrl = useAppContextSafe()?.config.thumbResizeServerUrl
   const renderContent = () => {
     const parts: React.ReactNode[] = []
 
@@ -336,12 +349,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
                 rel="noopener noreferrer"
                 className="block mt-1"
               >
-                <img
-                  src={imageProxyInline(url, thumbResizeServerUrl)}
-                  alt=""
-                  loading="lazy"
-                  className="max-w-full rounded-md"
-                />
+                <InlineImage url={url} />
               </a>
             )
           } else {

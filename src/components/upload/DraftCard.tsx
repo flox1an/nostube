@@ -4,8 +4,8 @@ import { ImageOff, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { UploadDraft } from '@/types/upload-draft'
 import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from '@/lib/upload-draft-utils'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail, ensureFileExtension } from '@/lib/utils'
-import { useAppContext } from '@/hooks/useAppContext'
+import { ensureFileExtension } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 
 interface DraftCardProps {
   draft: UploadDraft
@@ -15,7 +15,6 @@ interface DraftCardProps {
 
 export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const { t } = useTranslation()
-  const { config } = useAppContext()
   const uploadedThumbnailBlob = draft.thumbnailUploadInfo.uploadedBlobs[0]
   const uploadedThumbnailUrl = uploadedThumbnailBlob?.url
   const uploadedThumbnailType = uploadedThumbnailBlob?.type
@@ -28,19 +27,21 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const timeText =
     typeof relativeTime === 'string' ? t(relativeTime) : t(relativeTime[0], relativeTime[1])
 
-  // Generate thumbnail URL using image proxy
-  // Ensure URLs have file extensions for the image proxy to detect file types
-  const thumbnailUrl = uploadedThumbnailUrl
-    ? imageProxyVideoPreview(
-        ensureFileExtension(uploadedThumbnailUrl, uploadedThumbnailType),
-        config.thumbResizeServerUrl
-      )
-    : draft.thumbnailSource === 'generated' && videoUrl
-      ? imageProxyVideoThumbnail(
-          ensureFileExtension(videoUrl, videoType),
-          config.thumbResizeServerUrl
-        )
-      : ''
+  // The proxy detects MIME types from the URL extension; some Blossom URLs lack one.
+  const primaryImage = uploadedThumbnailUrl
+    ? ensureFileExtension(uploadedThumbnailUrl, uploadedThumbnailType)
+    : undefined
+  const generatedVideoUrl =
+    !primaryImage && draft.thumbnailSource === 'generated' && videoUrl
+      ? ensureFileExtension(videoUrl, videoType)
+      : undefined
+
+  const cascade = useImageCascade({
+    src: primaryImage,
+    videoUrl: generatedVideoUrl,
+    variant: 'preview',
+    mimeType: uploadedThumbnailType,
+  })
 
   return (
     <Card
@@ -50,11 +51,14 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
       <div className="flex gap-4">
         {/* Thumbnail */}
         <div className="shrink-0">
-          {thumbnailUrl ? (
+          {cascade.src ? (
             <img
-              src={thumbnailUrl}
+              src={cascade.src}
               alt={draft.title || t('upload.draft.untitled')}
               className="w-32 h-20 object-cover rounded"
+              referrerPolicy="no-referrer"
+              onError={cascade.onError}
+              onLoad={cascade.onLoad}
             />
           ) : (
             <div className="w-32 h-20 bg-muted rounded flex items-center justify-center">

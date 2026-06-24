@@ -20,6 +20,7 @@ import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
+import { useProxyHealthMonitor } from '@/hooks/useProxyHealthMonitor'
 import { usePlaylists } from '@/hooks/usePlaylist'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
@@ -118,6 +119,11 @@ function LoginTimeTrackingInit() {
   return null
 }
 
+function ProxyHealthMonitorInit() {
+  useProxyHealthMonitor()
+  return null
+}
+
 // Keeps the `usePlaylists` hook resident for the logged-in user so its
 // background prefetch + auto-flag effects run regardless of which page is
 // open. Without this, NSFW auto-flagging would only trigger on pages that
@@ -210,6 +216,7 @@ export function App() {
                         <BatchedProfileLoaderInit />
                         <TrustScoreProviderInit />
                         <LoginTimeTrackingInit />
+                        <ProxyHealthMonitorInit />
                         <PlaylistAutoFlagInit />
                         <BlossomServerSync />
                         <OnboardingDialog />

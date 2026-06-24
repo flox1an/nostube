@@ -12,7 +12,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks/useProfile'
-import { useAppContext } from '@/hooks/useAppContext'
 import { formatDateTime } from '@/lib/format-utils'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { isDownvoteReaction } from '@/hooks/useEventStats'
@@ -29,7 +28,6 @@ interface ReactionItemProps {
 
 const ReactionItem = React.memo(function ReactionItem({ reaction }: ReactionItemProps) {
   const metadata = useProfile({ pubkey: reaction.pubkey })
-  const { config } = useAppContext()
   const displayName =
     metadata?.display_name || metadata?.name || reaction.pubkey.slice(0, 12) + '...'
   const profileUrl = buildProfileUrlFromPubkey(reaction.pubkey)
@@ -46,7 +44,6 @@ const ReactionItem = React.memo(function ReactionItem({ reaction }: ReactionItem
           pubkey={reaction.pubkey}
           name={displayName}
           className="h-10 w-10"
-          thumbResizeServerUrl={config.thumbResizeServerUrl}
         />
       </Link>
       <div className="min-w-0 flex-1">

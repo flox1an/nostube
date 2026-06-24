@@ -4,7 +4,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { processEvent } from '@/utils/video-event'
 import { buildVideoUrl } from '@/utils/video-utils'
-import { imageProxyVideoPreview } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -67,6 +67,8 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
   const thumbnailUrl = processedVideo?.images?.[0]
   const title = processedVideo?.title || video.title || 'Untitled Video'
 
+  const cascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
+
   const handleClick = () => {
     const event = eventStore.getEvent(video.id)
     const nevent = event
@@ -90,12 +92,15 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
         onClick={handleClick}
         className="shrink-0 w-24 h-14 bg-muted rounded overflow-hidden hover:opacity-80 transition-opacity"
       >
-        {thumbnailUrl ? (
+        {cascade.src ? (
           <img
-            src={imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)}
+            src={cascade.src}
             alt={title}
             className="w-full h-full object-cover"
             loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={cascade.onError}
+            onLoad={cascade.onLoad}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">

@@ -13,6 +13,7 @@ import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
@@ -21,7 +22,7 @@ import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { MIN_PERSONAL_SCORE, MIN_GLOBAL_SCORE } from '@/hooks/useTrustFilter'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail, combineRelays } from '@/lib/utils'
+import { combineRelays } from '@/lib/utils'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -46,53 +47,38 @@ function formatDuration(seconds: number): string {
 
 const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   video,
-  thumbResizeServerUrl,
 }: {
   video: VideoEvent
-  thumbResizeServerUrl?: string
 }) {
   const { i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
-  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
-  const [thumbnailError, setThumbnailError] = useState(false)
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
+  const isAudio = video.mediaType === 'audio'
 
-  const thumbnailUrl = useMemo(() => {
-    if (hasNoThumbnail) return video.mediaType === 'audio' ? audioFallback : ''
-    // If thumbnail failed and we have video URLs, try generating thumbnail from video
-    if (thumbnailError && video.urls && video.urls.length > 0) {
-      return imageProxyVideoThumbnail(video.urls[0], thumbResizeServerUrl)
-    }
-    // Otherwise use the original image thumbnail
-    return imageProxyVideoPreview(video.images[0], thumbResizeServerUrl)
-  }, [
-    hasNoThumbnail,
-    thumbnailError,
-    video.images,
-    video.urls,
-    video.mediaType,
-    thumbResizeServerUrl,
-  ])
+  const cascade = useImageCascade({
+    src: video.images?.[0],
+    videoUrl: video.urls?.[0],
+    variant: 'preview',
+  })
 
-  // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
+  useEffect(() => {
+    setThumbnailLoaded(false)
+  }, [cascade.src])
+
+  // Audio fallback fills in when the cascade has no candidate left and we're playing audio.
+  const displaySrc = cascade.src ?? (isAudio ? audioFallback : null)
+
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash
     return blurHashToDataURL(blurhash)
   }, [video.thumbnailVariants])
 
-  const handleThumbnailError = () => {
-    console.warn('Thumbnail failed to load:', video.images[0])
-    if (!thumbnailError) {
-      setThumbnailError(true)
-      setThumbnailLoaded(false)
-    }
-  }
-
   const handleThumbnailLoad = () => {
     setThumbnailLoaded(true)
+    cascade.onLoad()
   }
 
   // Link to shorts page for short videos, video page for regular videos
@@ -114,14 +100,17 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             ) : (
               <Skeleton className="w-full h-full rounded-md absolute" />
             ))}
-          <img
-            src={thumbnailUrl}
-            loading="lazy"
-            alt={video.title}
-            className="w-full h-full object-cover rounded-md"
-            onError={handleThumbnailError}
-            onLoad={handleThumbnailLoad}
-          />
+          {displaySrc && (
+            <img
+              src={displaySrc}
+              loading="lazy"
+              alt={video.title}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover rounded-md"
+              onError={cascade.onError}
+              onLoad={handleThumbnailLoad}
+            />
+          )}
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
             <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1 rounded text-xs">
@@ -154,10 +143,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
 const RecommendationVideoSuggestionItem = React.memo(function RecommendationVideoSuggestionItem({
   video,
-  thumbResizeServerUrl,
 }: {
   video: RecommendationVideo
-  thumbResizeServerUrl?: string
 }) {
   const { i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
@@ -167,32 +154,29 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   // thumbnailVariants[0].url is the primary source from the search API; images[0] is the fallback
   const primaryImage = video.thumbnailVariants?.[0]?.url ?? video.images?.[0]
   const videoUrl = video.urls?.[0]
-  const hasNoThumbnail = !primaryImage && !videoUrl && video.mediaType !== 'audio'
-  const [thumbnailError, setThumbnailError] = useState(false)
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(hasNoThumbnail)
+  const isAudio = video.mediaType === 'audio'
 
-  const thumbnailUrl = useMemo(() => {
-    // Has a good image thumbnail and no error — use it through the proxy
-    if (primaryImage && !thumbnailError) {
-      return imageProxyVideoPreview(primaryImage, thumbResizeServerUrl)
-    }
-    // No image (or image errored) — generate from video URL via imgproxy
-    if (videoUrl) {
-      return imageProxyVideoThumbnail(videoUrl, thumbResizeServerUrl)
-    }
-    return video.mediaType === 'audio' ? audioFallback : ''
-  }, [primaryImage, videoUrl, thumbnailError, video.mediaType, thumbResizeServerUrl])
+  const cascade = useImageCascade({
+    src: primaryImage,
+    videoUrl,
+    variant: 'preview',
+  })
+
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
+  useEffect(() => {
+    setThumbnailLoaded(false)
+  }, [cascade.src])
+
+  const displaySrc = cascade.src ?? (isAudio ? audioFallback : null)
 
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash
     return blurHashToDataURL(blurhash)
   }, [video.thumbnailVariants])
 
-  const handleThumbnailError = () => {
-    if (!thumbnailError) {
-      setThumbnailError(true)
-      setThumbnailLoaded(false)
-    }
+  const handleThumbnailLoad = () => {
+    setThumbnailLoaded(true)
+    cascade.onLoad()
   }
 
   const publishDate = video.published_at ?? video.created_at
@@ -213,14 +197,17 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
             ) : (
               <Skeleton className="w-full h-full rounded-md absolute" />
             ))}
-          <img
-            src={thumbnailUrl}
-            loading="lazy"
-            alt={video.title}
-            className="w-full h-full object-cover rounded-md"
-            onError={handleThumbnailError}
-            onLoad={() => setThumbnailLoaded(true)}
-          />
+          {displaySrc && (
+            <img
+              src={displaySrc}
+              loading="lazy"
+              alt={video.title}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover rounded-md"
+              onError={cascade.onError}
+              onLoad={handleThumbnailLoad}
+            />
+          )}
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
             <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1 rounded text-xs">
@@ -532,11 +519,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
       ) : useServiceResults ? (
         filteredServiceVideos!.length > 0 ? (
           filteredServiceVideos!.map(video => (
-            <RecommendationVideoSuggestionItem
-              key={video.id}
-              video={video}
-              thumbResizeServerUrl={config.thumbResizeServerUrl}
-            />
+            <RecommendationVideoSuggestionItem key={video.id} video={video} />
           ))
         ) : (
           <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
@@ -544,13 +527,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
           </div>
         )
       ) : filteredSuggestions.length > 0 ? (
-        filteredSuggestions.map(video => (
-          <VideoSuggestionItem
-            key={video.id}
-            video={video}
-            thumbResizeServerUrl={config.thumbResizeServerUrl}
-          />
-        ))
+        filteredSuggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)
       ) : (
         <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
           {t('video.noSuggestions', 'No suggestions yet.')}

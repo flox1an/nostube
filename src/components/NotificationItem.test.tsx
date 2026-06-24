@@ -23,14 +23,6 @@ vi.mock('react-i18next', () => ({
   })),
 }))
 
-vi.mock('@/lib/utils', async () => {
-  const actual = await vi.importActual('@/lib/utils')
-  return {
-    ...(actual as object),
-    imageProxy: (url?: string) => url || '',
-  }
-})
-
 describe('NotificationItem', () => {
   const mockNotification: VideoNotification = {
     notificationType: 'video',

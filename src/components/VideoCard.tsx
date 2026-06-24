@@ -4,15 +4,16 @@ import { type VideoEvent, getPublishDate } from '@/utils/video-event'
 import { buildVideoPath, buildVideoUrlObject } from '@/utils/video-utils'
 import { formatDuration } from '../lib/formatDuration'
 import { UserAvatar } from '@/components/UserAvatar'
-import { cn, imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useEventStore } from 'applesauce-react/hooks'
 import { buildProfileUrl } from '@/lib/nprofile'
 import { useAppContext } from '@/hooks'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ImageOff } from 'lucide-react'
 import audioFallback from '@/assets/audio-fallback.webp'
@@ -61,25 +62,20 @@ export const VideoCard = React.memo(function VideoCard({
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
 
-  const [thumbnailError, setThumbnailError] = useState(false)
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
-  // Check if we have no thumbnail at all - immediately mark as failed
-  const hasNoThumbnail = !video.images || video.images.length === 0 || !video.images[0]
-  const [fallbackFailed, setFallbackFailed] = useState(hasNoThumbnail)
 
-  // Generate thumbnail URL with fallback to video URL if image fails
-  const thumbnailUrl = useMemo(() => {
-    // If no thumbnail exists, return empty string
-    if (hasNoThumbnail) {
-      return ''
-    }
-    // If thumbnail failed and we have video URLs, try generating thumbnail from video
-    if (thumbnailError && video.urls && video.urls.length > 0) {
-      return imageProxyVideoThumbnail(video.urls[0], config.thumbResizeServerUrl)
-    }
-    // Otherwise use the original image thumbnail
-    return imageProxyVideoPreview(video.images[0], config.thumbResizeServerUrl)
-  }, [hasNoThumbnail, thumbnailError, video.images, video.urls, config.thumbResizeServerUrl])
+  const cascade = useImageCascade({
+    src: video.images?.[0],
+    videoUrl: video.urls?.[0],
+    variant: 'preview',
+  })
+
+  // Reset the loading-state placeholder whenever the cascade advances to a new candidate
+  // (e.g. proxy → raw → video-frame). Without this we'd keep showing the previously-loaded
+  // image briefly even after its src changed.
+  useEffect(() => {
+    setThumbnailLoaded(false)
+  }, [cascade.src])
 
   // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
   const blurhashPlaceholder = useMemo(() => {
@@ -116,19 +112,9 @@ export const VideoCard = React.memo(function VideoCard({
     videoIndex,
   ])
 
-  const handleThumbnailError = () => {
-    // Only try video fallback once to avoid infinite loops
-    if (!thumbnailError) {
-      setThumbnailError(true)
-      setThumbnailLoaded(false) // Reset loaded state for fallback
-    } else {
-      // Fallback also failed, mark as completely failed
-      setFallbackFailed(true)
-    }
-  }
-
   const handleThumbnailLoad = () => {
     setThumbnailLoaded(true)
+    cascade.onLoad()
   }
 
   // Handle shorts click - populate store with video list
@@ -147,9 +133,11 @@ export const VideoCard = React.memo(function VideoCard({
       <div>
         <Link to={to} onClick={handleShortsClick}>
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
-          <div className={cn('w-full overflow-hidden sm:rounded-lg relative bg-muted', aspectRatio)}>
+          <div
+            className={cn('w-full overflow-hidden sm:rounded-lg relative bg-muted', aspectRatio)}
+          >
             {/* Show error state if both thumbnail and fallback failed */}
-            {fallbackFailed ? (
+            {cascade.exhausted ? (
               video.mediaType === 'audio' ? (
                 <img
                   src={audioFallback}
@@ -180,7 +168,7 @@ export const VideoCard = React.memo(function VideoCard({
                     <Skeleton className="absolute inset-0 w-full h-full" />
                   ))}
                 <img
-                  src={thumbnailUrl}
+                  src={cascade.src ?? ''}
                   loading="lazy"
                   alt={video.title}
                   referrerPolicy="no-referrer"
@@ -189,7 +177,7 @@ export const VideoCard = React.memo(function VideoCard({
                     'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
                     !thumbnailLoaded && 'opacity-0'
                   )}
-                  onError={handleThumbnailError}
+                  onError={cascade.onError}
                   onLoad={handleThumbnailLoad}
                 />
               </>
@@ -219,7 +207,6 @@ export const VideoCard = React.memo(function VideoCard({
                   picture={metadata?.picture}
                   pubkey={video.pubkey}
                   name={name}
-                  thumbResizeServerUrl={config.thumbResizeServerUrl}
                   className="h-10 w-10"
                 />
               </Link>

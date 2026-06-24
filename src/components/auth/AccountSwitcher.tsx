@@ -12,7 +12,7 @@ import {
 import { UserAvatar } from '@/components/UserAvatar'
 import { useNavigate } from 'react-router-dom'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
-import { useProfile, removeAccountFromStorage, saveActiveAccount, useAppContext } from '@/hooks'
+import { useProfile, removeAccountFromStorage, saveActiveAccount } from '@/hooks'
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 import { WalletMenuItem } from './WalletMenuItem'
@@ -20,15 +20,7 @@ import { Button } from '../ui/button'
 import { useTranslation } from 'react-i18next'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
-function AccountSwitchItem({
-  account,
-  onClick,
-  thumbResizeServerUrl,
-}: {
-  account: IAccount
-  onClick: () => void
-  thumbResizeServerUrl?: string
-}) {
+function AccountSwitchItem({ account, onClick }: { account: IAccount; onClick: () => void }) {
   const accountProfile = useProfile({ pubkey: account.pubkey })
   const displayName = getDisplayName(accountProfile)
 
@@ -41,7 +33,6 @@ function AccountSwitchItem({
         picture={accountProfile?.picture as string}
         pubkey={account.pubkey}
         name={displayName || undefined}
-        thumbResizeServerUrl={thumbResizeServerUrl}
         className="w-8 h-8"
       />
       <div className="flex-1 truncate">
@@ -57,7 +48,6 @@ export function AccountSwitcher({ onAddAccount }: { onAddAccount?: () => void })
   const accountManager = useAccountManager()
   const profile = useProfile(activeAccount ? { pubkey: activeAccount?.pubkey } : undefined)
   const navigate = useNavigate()
-  const { config } = useAppContext()
 
   if (!activeAccount || !accountManager) return null
 
@@ -87,7 +77,6 @@ export function AccountSwitcher({ onAddAccount }: { onAddAccount?: () => void })
             picture={profile?.picture as string}
             pubkey={activeAccount?.pubkey}
             name={getDisplayName(profile) || undefined}
-            thumbResizeServerUrl={config.thumbResizeServerUrl}
             className="w-8 h-8"
           />
           <div className="flex-1 text-left hidden md:block truncate">
@@ -144,7 +133,6 @@ export function AccountSwitcher({ onAddAccount }: { onAddAccount?: () => void })
                 key={account.pubkey}
                 account={account}
                 onClick={() => handleSwitchAccount(account)}
-                thumbResizeServerUrl={config.thumbResizeServerUrl}
               />
             ))}
           </>

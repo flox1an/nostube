@@ -1,20 +1,29 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVideoNotes, type VideoNote } from '@/hooks/useVideoNotes'
-import { useAppContext } from '@/hooks'
 import { useUploadDrafts } from '@/hooks/useUploadDrafts'
 import type { TaggedPerson } from '@/types/upload-draft'
 import { useToast } from '@/hooks/useToast'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
 import { getDateLocale } from '@/lib/date-locale'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { formatDuration } from '@/lib/formatDuration'
 import { formatFileSize } from '@/lib/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play, Import, Send, CheckCircle2, Loader2, X, ImageOff, Clock, HardDrive } from 'lucide-react'
+import {
+  Play,
+  Import,
+  Send,
+  CheckCircle2,
+  Loader2,
+  X,
+  ImageOff,
+  Clock,
+  HardDrive,
+} from 'lucide-react'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PublishNoteDialog } from '@/components/PublishNoteDialog'
 
@@ -32,10 +41,7 @@ function VideoNoteCard({
   isPublished?: boolean
 }) {
   const { t, i18n } = useTranslation()
-  const { config } = useAppContext()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [thumbnailError, setThumbnailError] = useState(false)
-  const [proxyThumbnailError, setProxyThumbnailError] = useState(false)
   const [duration, setDuration] = useState<number | undefined>(undefined)
   const [sizeBytes, setSizeBytes] = useState<number | undefined>(note.sizeBytes)
   const metadataProbed = useRef(false)
@@ -89,32 +95,16 @@ function VideoNoteCard({
     return () => cleanup()
   }, [note.videoUrls, note.sizeBytes])
 
-  // Build optimized thumbnail URL with fallback chain
-  const thumbnailSrc = useMemo(() => {
-    if (thumbnailError && proxyThumbnailError) return undefined
-
-    // If the proxy thumbnail (image) failed, try proxy from video URL
-    if (thumbnailError && note.videoUrls[0]) {
-      return imageProxyVideoThumbnail(note.videoUrls[0], config.thumbResizeServerUrl)
-    }
-
-    // Primary: proxy the thumbnail URL through imgproxy for optimized WebP
-    if (note.thumbnailUrl) {
-      // If thumbnailUrl is a video URL (same as first video), use video thumbnail proxy
-      const isVideoUrl = note.videoUrls.includes(note.thumbnailUrl)
-      if (isVideoUrl) {
-        return imageProxyVideoThumbnail(note.thumbnailUrl, config.thumbResizeServerUrl)
-      }
-      return imageProxyVideoPreview(note.thumbnailUrl, config.thumbResizeServerUrl)
-    }
-
-    // Fallback: generate thumbnail from first video URL
-    if (note.videoUrls[0]) {
-      return imageProxyVideoThumbnail(note.videoUrls[0], config.thumbResizeServerUrl)
-    }
-
-    return undefined
-  }, [note.thumbnailUrl, note.videoUrls, thumbnailError, proxyThumbnailError, config.thumbResizeServerUrl])
+  // If `thumbnailUrl` is the video URL itself (a generated frame), there's no separate
+  // raw image to fall back to — pass undefined as src and the video URL as the cascade's
+  // video-frame source. Otherwise prefer the thumbnail image with the video URL as last
+  // resort.
+  const thumbnailIsSameAsVideo = note.thumbnailUrl && note.videoUrls.includes(note.thumbnailUrl)
+  const cascade = useImageCascade({
+    src: thumbnailIsSameAsVideo ? undefined : note.thumbnailUrl,
+    videoUrl: note.videoUrls[0],
+    variant: 'preview',
+  })
 
   const handlePublish = () => onPublish(note)
   const handleFullImport = () => onFullImport(note)
@@ -156,19 +146,15 @@ function VideoNoteCard({
               </>
             ) : (
               <>
-                {thumbnailSrc && !proxyThumbnailError ? (
+                {cascade.src ? (
                   <img
-                    src={thumbnailSrc}
+                    src={cascade.src}
                     alt="Video thumbnail"
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
-                    onError={() => {
-                      if (!thumbnailError) {
-                        setThumbnailError(true)
-                      } else {
-                        setProxyThumbnailError(true)
-                      }
-                    }}
+                    onError={cascade.onError}
+                    onLoad={cascade.onLoad}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -205,7 +191,10 @@ function VideoNoteCard({
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="space-y-2">
-              <RichTextContent content={note.content} className="text-sm text-muted-foreground line-clamp-3" />
+              <RichTextContent
+                content={note.content}
+                className="text-sm text-muted-foreground line-clamp-3"
+              />
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(note.created_at * 1000), {
@@ -327,7 +316,6 @@ export function VideoNotesPage() {
   const handlePublished = useCallback((noteId: string) => {
     setPublishedIds(prev => new Set(prev).add(noteId))
   }, [])
-
 
   const visibleNotes = useMemo(() => notes.slice(0, visibleCount), [notes, visibleCount])
   const hasMore = visibleCount < notes.length

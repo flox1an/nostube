@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { imageProxyVideoPreview, imageProxyVideoThumbnail, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { buildVideoUrl } from '@/utils/video-utils'
-import { useProfile, useAppContext } from '@/hooks'
-import { useMemo, useState } from 'react'
+import { useProfile } from '@/hooks'
 
 interface PlaylistVideoItem {
   id: string
@@ -26,30 +26,15 @@ interface PlaylistVideoItemProps {
 
 // Component for rendering individual playlist video item with author info
 const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => {
-  const { config } = useAppContext()
   const metadata = useProfile(item.pubkey ? { pubkey: item.pubkey } : undefined)
   const authorName = metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
   const authorPicture = metadata?.picture
-  const [thumbnailError, setThumbnailError] = useState(false)
 
-  const thumbnail = item.images?.[0]
-
-  const thumbnailUrl = useMemo(() => {
-    if (!thumbnail) return null
-    // If thumbnail failed and we have video URLs, try generating thumbnail from video
-    if (thumbnailError && item.urls && item.urls.length > 0) {
-      return imageProxyVideoThumbnail(item.urls[0], config.thumbResizeServerUrl)
-    }
-    // Otherwise use the original image thumbnail
-    return imageProxyVideoPreview(thumbnail, config.thumbResizeServerUrl)
-  }, [thumbnailError, thumbnail, item.urls, config.thumbResizeServerUrl])
-
-  const handleThumbnailError = () => {
-    console.warn('Thumbnail failed to load:', thumbnail)
-    if (!thumbnailError) {
-      setThumbnailError(true)
-    }
-  }
+  const cascade = useImageCascade({
+    src: item.images?.[0],
+    videoUrl: item.urls?.[0],
+    variant: 'preview',
+  })
 
   return (
     <Link
@@ -59,12 +44,14 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
         isActive && 'border-primary'
       )}
     >
-      {thumbnailUrl ? (
+      {cascade.src ? (
         <img
-          src={thumbnailUrl}
+          src={cascade.src ?? ''}
           alt={item.title || 'Playlist video'}
           className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md object-cover"
-          onError={handleThumbnailError}
+          referrerPolicy="no-referrer"
+          onError={cascade.onError}
+          onLoad={cascade.onLoad}
         />
       ) : (
         <div className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">

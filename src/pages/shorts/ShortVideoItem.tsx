@@ -35,7 +35,8 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2, ExternalLink, Flag } from 'lucide-react'
 import { ReportDialog } from '@/components/ReportDialog'
-import { imageProxyVideoPreview, combineRelays } from '@/lib/utils'
+import { combineRelays } from '@/lib/utils'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { buildProfileUrl } from '@/lib/nprofile'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-common/models'
@@ -154,6 +155,11 @@ export const ShortVideoItem = memo(
       resourceType: 'image',
       enabled: true,
     })
+
+    // Cascade falls back from proxy → raw → ImageOff. The shorts poster comes from a single
+    // image source; there is no separate video-frame fallback because the <video> tag itself
+    // shows a frame once it loads.
+    const thumbnailCascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
 
     // Get the event from store to access seenRelays
     const event = useMemo(() => eventStore.getEvent(video.id), [eventStore, video.id])
@@ -404,11 +410,7 @@ export const ShortVideoItem = memo(
                     loop
                     muted={true}
                     playsInline
-                    poster={
-                      thumbnailUrl
-                        ? imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)
-                        : undefined
-                    }
+                    poster={thumbnailCascade.src ?? undefined}
                     preload={shouldPreload || isActive ? 'auto' : 'metadata'}
                     onCanPlay={handleCanPlay}
                     onLoadedData={handleLoadedData}
@@ -424,16 +426,19 @@ export const ShortVideoItem = memo(
                   )}
                 </div>
                 {/* Show thumbnail overlay when not active for better visibility */}
-                {!isActive && thumbnailUrl && (
+                {!isActive && thumbnailCascade.src && (
                   <div
                     className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center"
                     onClick={handleVideoClick}
                   >
                     <img
-                      src={imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)}
+                      src={thumbnailCascade.src}
                       alt={video.title}
                       className="w-full h-full object-contain"
                       loading="lazy"
+                      referrerPolicy="no-referrer"
+                      onError={thumbnailCascade.onError}
+                      onLoad={thumbnailCascade.onLoad}
                     />
                   </div>
                 )}
@@ -510,7 +515,6 @@ export const ShortVideoItem = memo(
                       picture={authorPicture}
                       pubkey={video.pubkey}
                       name={authorName}
-                      thumbResizeServerUrl={config.thumbResizeServerUrl}
                       className="h-10 w-10 border-2 border-white"
                     />
                   </Link>

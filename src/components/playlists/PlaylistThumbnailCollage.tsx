@@ -1,8 +1,9 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { List } from 'lucide-react'
-import { cn, imageProxyVideoPreview } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { useAppContext, useStableRelays } from '@/hooks'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { processEvent } from '@/utils/video-event'
 import { createEventLoader } from 'applesauce-loaders/loaders'
 
@@ -15,7 +16,6 @@ function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
   const eventStore = useEventStore()
   const { config, pool } = useAppContext()
   const relays = useStableRelays()
-  const [error, setError] = useState(false)
 
   // Subscribe to event changes reactively
   const event = use$(() => eventStore.event(videoId), [eventStore, videoId])
@@ -39,7 +39,9 @@ function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
     return processed?.images?.[0] || null
   }, [event, config.blossomServers])
 
-  if (!thumbnailUrl || error) {
+  const cascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
+
+  if (!cascade.src) {
     return (
       <div className={cn('bg-muted flex items-center justify-center', className)}>
         <List className="h-6 w-6 text-muted-foreground/50" />
@@ -49,11 +51,13 @@ function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
 
   return (
     <img
-      src={imageProxyVideoPreview(thumbnailUrl, config.thumbResizeServerUrl)}
+      src={cascade.src}
       alt=""
       className={cn('object-cover', className)}
       loading="lazy"
-      onError={() => setError(true)}
+      referrerPolicy="no-referrer"
+      onError={cascade.onError}
+      onLoad={cascade.onLoad}
     />
   )
 }

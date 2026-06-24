@@ -2,6 +2,8 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useAppContext } from './useAppContext'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
+import { useSelectedPreset } from './useSelectedPreset'
 import type { Video } from './usePlaylist'
 
 export interface GlobalPlaylist {
@@ -19,11 +21,20 @@ const PLAYLIST_KIND = 30005
 
 const GLOBAL_PLAYLIST_FILTER = { kinds: [PLAYLIST_KIND] }
 
+const HEX64 = /^[0-9a-f]{64}$/i
+
 function parseVideoIds(tags: string[][]): Video[] {
   const videos: Video[] = []
   for (const t of tags) {
     if (t[0] === 'e') {
-      videos.push({ id: t[1], kind: 0, added_at: 0, relayHint: t[2] })
+      let pubkey: string | undefined
+      for (let i = 3; i < t.length; i++) {
+        if (typeof t[i] === 'string' && HEX64.test(t[i])) {
+          pubkey = t[i]
+          break
+        }
+      }
+      videos.push({ id: t[1], kind: 0, added_at: 0, relayHint: t[2], pubkey })
     } else if (t[0] === 'a') {
       const parts = t[1]?.split(':')
       if (parts && parts.length >= 3) {
@@ -35,6 +46,7 @@ function parseVideoIds(tags: string[][]): Video[] {
           kind,
           added_at: 0,
           relayHint: t[2],
+          pubkey,
           address: t[1],
         })
       }
@@ -97,18 +109,31 @@ export function useGlobalPlaylists() {
     }
   }, [loader, eventStore])
 
-  // Only public playlists (content === '' means not encrypted). Playlists
-  // tagged `content-warning` are filtered out when the user's NSFW setting is
-  // `hide`, mirroring how individual NSFW videos are hidden by VideoGrid.
+  // Hide playlists whose owner already marked them `content-warning`, OR that
+  // reference any video known to be NSFW/blocked (from the active preset's
+  // NSFW author list, blocked authors/events, or the user's own reported
+  // events). The unsafe-video check matches `usePlaylists`' auto-flag so the
+  // global view behaves identically whether or not the owner has caught up
+  // and re-published with the tag.
   const nsfwFilter = config.nsfwFilter ?? 'hide'
+  const { presetContent } = useSelectedPreset()
+  const reportedEventIds = config.reportedEventIds
   const playlists = useMemo((): GlobalPlaylist[] => {
     const hideNsfw = nsfwFilter === 'hide'
+    const sources = {
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      blockedPubkeys: presetContent.blockedPubkeys,
+      blockedEvents: presetContent.blockedEvents,
+      reportedEventIds: reportedEventIds ?? [],
+    }
     const results: GlobalPlaylist[] = []
     for (const event of allEvents) {
       if (event.content) continue
       const cwTag = event.tags.find(t => t[0] === 'content-warning')
       const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
       if (hideNsfw && contentWarning) continue
+      const videos = parseVideoIds(event.tags)
+      if (hideNsfw && playlistHasUnsafeVideo(videos, eventStore, sources)) continue
       const titleTag = event.tags.find(t => t[0] === 'title')
       const descTag = event.tags.find(t => t[0] === 'description')
       const identifier = event.tags.find(t => t[0] === 'd')?.[1] || ''
@@ -119,11 +144,19 @@ export function useGlobalPlaylists() {
         name: titleTag?.[1] || 'Untitled Playlist',
         description: descTag?.[1],
         contentWarning,
-        videos: parseVideoIds(event.tags),
+        videos,
       })
     }
     return results
-  }, [allEvents, nsfwFilter])
+  }, [
+    allEvents,
+    nsfwFilter,
+    eventStore,
+    presetContent.nsfwPubkeys,
+    presetContent.blockedPubkeys,
+    presetContent.blockedEvents,
+    reportedEventIds,
+  ])
 
   return { playlists, isLoading }
 }

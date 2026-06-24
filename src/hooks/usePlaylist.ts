@@ -17,6 +17,13 @@ export interface Video {
   title?: string
   added_at: number
   relayHint?: string
+  /**
+   * Author pubkey if known. Filled from `a`-tag addresses (`kind:pubkey:d`)
+   * or from the 4th element of `e` tags when clients like Nostria carry an
+   * author hint there. Lets us run NSFW/blocked-author checks without first
+   * resolving the video event.
+   */
+  pubkey?: string
   address?: string // "kind:pubkey:d-tag" for addressable events (34235/34236)
 }
 
@@ -46,17 +53,29 @@ function parseVideoTags(
 ): Video[] {
   const videos: Video[] = []
 
+  const HEX64 = /^[0-9a-f]{64}$/i
   for (const t of tags) {
     if (t[0] === 'e') {
       const referencedEvent = eventStore.getEvent(t[1])
       const seenRelays = referencedEvent ? getSeenRelays(referencedEvent) : undefined
       const relayHint = t[2] || (seenRelays ? Array.from(seenRelays)[0] : undefined)
+      // Honor author pubkey hints clients (Nostria) put past the relay slot.
+      let pubkey: string | undefined = referencedEvent?.pubkey
+      if (!pubkey) {
+        for (let i = 3; i < t.length; i++) {
+          if (typeof t[i] === 'string' && HEX64.test(t[i])) {
+            pubkey = t[i]
+            break
+          }
+        }
+      }
       videos.push({
         id: t[1],
         kind: 0,
         title: undefined,
         added_at: created_at,
         relayHint,
+        pubkey,
       })
     } else if (t[0] === 'a') {
       // Addressable event reference: "kind:pubkey:d-tag"
@@ -72,6 +91,7 @@ function parseVideoTags(
           title: undefined,
           added_at: created_at,
           relayHint,
+          pubkey,
           address: t[1],
         })
       }

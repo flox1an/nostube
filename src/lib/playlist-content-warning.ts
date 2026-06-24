@@ -62,11 +62,14 @@ export function playlistHasUnsafeVideo(
   for (const video of videos) {
     if (reportedEvents.has(video.id) || blockedEvents.has(video.id)) return true
 
+    // Free check: any pubkey we already know (a-tag address or e-tag author
+    // hint) lets us decide without resolving the event.
+    if (video.pubkey && (nsfwPubkeys.has(video.pubkey) || blockedPubkeys.has(video.pubkey))) {
+      return true
+    }
+
     if (video.address) {
       const [kindStr, addrPubkey, ...idParts] = video.address.split(':')
-      if (addrPubkey && (nsfwPubkeys.has(addrPubkey) || blockedPubkeys.has(addrPubkey))) {
-        return true
-      }
       const kind = Number.parseInt(kindStr ?? '', 10)
       if (!Number.isNaN(kind) && addrPubkey) {
         const event = store.getReplaceable(kind, addrPubkey, idParts.join(':'))

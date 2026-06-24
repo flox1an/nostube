@@ -26,7 +26,7 @@ function eventTag(id: string): Video {
 
 function addressTag(kind: number, pubkey: string, identifier: string): Video {
   const address = `${kind}:${pubkey}:${identifier}`
-  return { id: address, kind, added_at: 0, address }
+  return { id: address, kind, added_at: 0, pubkey, address }
 }
 
 function makeStore(events: NostrEvent[]): VideoEventResolver {
@@ -52,6 +52,18 @@ describe('playlistHasUnsafeVideo', () => {
     expect(playlistHasUnsafeVideo(videos, makeStore([]), { reportedEventIds: ['event-1'] })).toBe(
       true
     )
+  })
+
+  it('flags e-tag videos by NSFW author when only the pubkey hint is known', () => {
+    const videos: Video[] = [{ id: 'event-1', kind: 0, added_at: 0, pubkey: NSFW_AUTHOR }]
+    expect(playlistHasUnsafeVideo(videos, makeStore([]), { nsfwPubkeys: [NSFW_AUTHOR] })).toBe(true)
+  })
+
+  it('flags e-tag videos by blocked author when only the pubkey hint is known', () => {
+    const videos: Video[] = [{ id: 'event-1', kind: 0, added_at: 0, pubkey: BLOCKED_AUTHOR }]
+    expect(
+      playlistHasUnsafeVideo(videos, makeStore([]), { blockedPubkeys: [BLOCKED_AUTHOR] })
+    ).toBe(true)
   })
 
   it('flags videos whose id appears in preset blockedEvents', () => {

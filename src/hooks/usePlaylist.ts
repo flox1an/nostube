@@ -624,6 +624,7 @@ const playlistFilter = (pubkey?: string) => ({
 export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   const eventStore = useEventStore()
   const { pool, config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
 
   const defaultReadRelays = useMemo(
     () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
@@ -716,21 +717,50 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     [playlistEvents]
   )
 
-  const playlists = publicPlaylistEvents.map(event => {
-    const titleTag = event.tags.find(t => t[0] === 'title')
-    const descTag = event.tags.find(t => t[0] === 'description')
-    const name = titleTag ? titleTag[1] : 'Untitled Playlist'
-    const description = descTag ? descTag[1] : undefined
-    const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
-    return {
-      identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
-      name,
-      description,
-      videos,
-      eventId: event.id,
-      isPrivate: false,
+  // Same NSFW gate as `useGlobalPlaylists`: when the viewer's setting is
+  // `hide`, drop playlists carrying a `content-warning` tag OR referencing any
+  // video known unsafe (preset NSFW/blocked author, blocked event, or one of
+  // the viewer's reported events). Applies regardless of profile owner — the
+  // owner can still open their own playlists via direct naddr link.
+  const nsfwFilter = config.nsfwFilter ?? 'hide'
+  const reportedEventIds = config.reportedEventIds
+  const playlists = useMemo<Playlist[]>(() => {
+    const hideNsfw = nsfwFilter === 'hide'
+    const sources = {
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      blockedPubkeys: presetContent.blockedPubkeys,
+      blockedEvents: presetContent.blockedEvents,
+      reportedEventIds: reportedEventIds ?? [],
     }
-  })
+    const results: Playlist[] = []
+    for (const event of publicPlaylistEvents) {
+      const titleTag = event.tags.find(t => t[0] === 'title')
+      const descTag = event.tags.find(t => t[0] === 'description')
+      const cwTag = event.tags.find(t => t[0] === 'content-warning')
+      const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
+      if (hideNsfw && contentWarning) continue
+      const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
+      if (hideNsfw && playlistHasUnsafeVideo(videos, eventStore, sources)) continue
+      results.push({
+        identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
+        name: titleTag ? titleTag[1] : 'Untitled Playlist',
+        description: descTag ? descTag[1] : undefined,
+        videos,
+        eventId: event.id,
+        isPrivate: false,
+        contentWarning,
+      })
+    }
+    return results
+  }, [
+    publicPlaylistEvents,
+    eventStore,
+    nsfwFilter,
+    presetContent.nsfwPubkeys,
+    presetContent.blockedPubkeys,
+    presetContent.blockedEvents,
+    reportedEventIds,
+  ])
 
   return {
     data: playlists,

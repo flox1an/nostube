@@ -5,7 +5,7 @@ import { useSelectedPreset } from './useSelectedPreset'
 import { nowInSecs } from '@/lib/utils'
 import { useAppContext } from './useAppContext'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
+import { createAddressLoader, createTimelineLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
@@ -438,6 +438,75 @@ export function usePlaylists() {
     },
     [user?.pubkey, publish, config.relays, eventStore]
   )
+
+  // Prefetch every video event referenced by my own public unflagged
+  // playlists. Without this, the auto-flag effect can only resolve pubkeys
+  // for events the user happened to load elsewhere (and `e`-tag videos by
+  // NSFW authors would never trip the check).
+  useEffect(() => {
+    if (!user?.pubkey) return
+
+    const missingIds = new Set<string>()
+    const missingAddresses = new Map<string, { kind: number; pubkey: string; identifier: string }>()
+    for (const playlist of playlists) {
+      if (playlist.isPrivate) continue
+      if (playlist.contentWarning) continue
+      for (const video of playlist.videos) {
+        if (video.address) {
+          if (missingAddresses.has(video.address)) continue
+          const [kindStr, addrPubkey, ...idParts] = video.address.split(':')
+          const kind = Number.parseInt(kindStr ?? '', 10)
+          if (Number.isNaN(kind) || !addrPubkey) continue
+          const identifier = idParts.join(':')
+          if (eventStore.getReplaceable(kind, addrPubkey, identifier)) continue
+          missingAddresses.set(video.address, { kind, pubkey: addrPubkey, identifier })
+        } else {
+          if (eventStore.hasEvent(video.id)) continue
+          missingIds.add(video.id)
+        }
+      }
+    }
+
+    if (missingIds.size === 0 && missingAddresses.size === 0) return
+
+    const subscriptions: { unsubscribe: () => void }[] = []
+
+    if (missingIds.size > 0) {
+      const idLoader = createTimelineLoader(
+        pool,
+        readRelays,
+        { ids: Array.from(missingIds) },
+        { eventStore }
+      )
+      subscriptions.push(
+        idLoader().subscribe({
+          next: event => {
+            if (event) eventStore.add(event)
+          },
+          error: err =>
+            console.warn('[usePlaylist] Failed to prefetch playlist video events:', err),
+        })
+      )
+    }
+
+    if (missingAddresses.size > 0) {
+      const addressLoader = createAddressLoader(pool, { eventStore, extraRelays: readRelays })
+      for (const pointer of missingAddresses.values()) {
+        subscriptions.push(
+          addressLoader(pointer).subscribe({
+            next: event => {
+              if (event) eventStore.add(event)
+            },
+            error: err => console.warn('[usePlaylist] Failed to prefetch addressable video:', err),
+          })
+        )
+      }
+    }
+
+    return () => {
+      for (const sub of subscriptions) sub.unsubscribe()
+    }
+  }, [playlists, eventStore, pool, readRelays, user?.pubkey])
 
   // Auto-flag the user's own playlists with `content-warning: NSFW` the moment
   // they reference any unsafe video (NSFW author, blocked author/event, or an

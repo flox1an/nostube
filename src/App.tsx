@@ -20,6 +20,7 @@ import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
+import { usePlaylists } from '@/hooks/usePlaylist'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
@@ -117,6 +118,17 @@ function LoginTimeTrackingInit() {
   return null
 }
 
+// Keeps the `usePlaylists` hook resident for the logged-in user so its
+// background prefetch + auto-flag effects run regardless of which page is
+// open. Without this, NSFW auto-flagging would only trigger on pages that
+// already mount usePlaylists (author page, single-playlist page, the add-to-
+// playlist dialog), so a user visiting /playlists first would still see
+// their own unsafe playlist in the global overview.
+function PlaylistAutoFlagInit() {
+  usePlaylists()
+  return null
+}
+
 function RelayPoolSync() {
   const { config, pool } = useAppContext()
   const { readRelays, writeRelays } = useUserRelaysContext()
@@ -198,6 +210,7 @@ export function App() {
                         <BatchedProfileLoaderInit />
                         <TrustScoreProviderInit />
                         <LoginTimeTrackingInit />
+                        <PlaylistAutoFlagInit />
                         <BlossomServerSync />
                         <OnboardingDialog />
                         <Suspense>

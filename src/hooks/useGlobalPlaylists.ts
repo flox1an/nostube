@@ -10,6 +10,8 @@ export interface GlobalPlaylist {
   identifier: string
   name: string
   description?: string
+  /** Reason from the playlist event's `content-warning` tag, if present. */
+  contentWarning?: string
   videos: Video[]
 }
 
@@ -95,24 +97,33 @@ export function useGlobalPlaylists() {
     }
   }, [loader, eventStore])
 
-  // Only public playlists (content === '' means not encrypted)
+  // Only public playlists (content === '' means not encrypted). Playlists
+  // tagged `content-warning` are filtered out when the user's NSFW setting is
+  // `hide`, mirroring how individual NSFW videos are hidden by VideoGrid.
+  const nsfwFilter = config.nsfwFilter ?? 'hide'
   const playlists = useMemo((): GlobalPlaylist[] => {
-    return allEvents
-      .filter(event => !event.content)
-      .map(event => {
-        const titleTag = event.tags.find(t => t[0] === 'title')
-        const descTag = event.tags.find(t => t[0] === 'description')
-        const identifier = event.tags.find(t => t[0] === 'd')?.[1] || ''
-        return {
-          eventId: event.id,
-          pubkey: event.pubkey,
-          identifier,
-          name: titleTag?.[1] || 'Untitled Playlist',
-          description: descTag?.[1],
-          videos: parseVideoIds(event.tags),
-        }
+    const hideNsfw = nsfwFilter === 'hide'
+    const results: GlobalPlaylist[] = []
+    for (const event of allEvents) {
+      if (event.content) continue
+      const cwTag = event.tags.find(t => t[0] === 'content-warning')
+      const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
+      if (hideNsfw && contentWarning) continue
+      const titleTag = event.tags.find(t => t[0] === 'title')
+      const descTag = event.tags.find(t => t[0] === 'description')
+      const identifier = event.tags.find(t => t[0] === 'd')?.[1] || ''
+      results.push({
+        eventId: event.id,
+        pubkey: event.pubkey,
+        identifier,
+        name: titleTag?.[1] || 'Untitled Playlist',
+        description: descTag?.[1],
+        contentWarning,
+        videos: parseVideoIds(event.tags),
       })
-  }, [allEvents])
+    }
+    return results
+  }, [allEvents, nsfwFilter])
 
   return { playlists, isLoading }
 }

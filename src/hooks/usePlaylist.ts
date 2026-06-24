@@ -1,6 +1,7 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useCurrentUser } from './useCurrentUser'
 import { useNostrPublish } from './useNostrPublish'
+import { useSelectedPreset } from './useSelectedPreset'
 import { nowInSecs } from '@/lib/utils'
 import { useAppContext } from './useAppContext'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
@@ -8,6 +9,7 @@ import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
+import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
 
 export interface Video {
   id: string
@@ -25,6 +27,12 @@ export interface Playlist {
   description?: string
   videos: Video[]
   isPrivate?: boolean
+  /**
+   * Content warning reason carried in the playlist event's `content-warning` tag.
+   * Set automatically (`'NSFW'`) when the playlist references an unsafe video so
+   * the global overview can hide it like any other NSFW content.
+   */
+  contentWarning?: string
 }
 
 // NIP-51 kind 30005 is for mutable lists including playlists
@@ -78,6 +86,7 @@ export function usePlaylists() {
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
   const { config, pool } = useAppContext()
+  const { presetContent } = useSelectedPreset()
   const [isLoading, setIsLoading] = useState(false)
   const hasLoadedOnceRef = useRef(false)
 
@@ -183,6 +192,9 @@ export function usePlaylists() {
 
       const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
 
+      const cwTag = event.tags.find(t => t[0] === 'content-warning')
+      const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
+
       return {
         identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
         name: isPrivate ? name || 'Private Playlist' : name,
@@ -190,6 +202,7 @@ export function usePlaylists() {
         videos,
         eventId: event.id,
         isPrivate,
+        contentWarning,
       }
     }
 
@@ -262,15 +275,23 @@ export function usePlaylists() {
         let tags: string[][]
         let content = ''
 
+        // Outer public tags carry NIP-36 `content-warning` so global indexers
+        // and the global playlist overview can hide unsafe playlists even when
+        // the rest of the metadata is encrypted.
+        const contentWarningTag: string[][] = playlist.contentWarning
+          ? [['content-warning', playlist.contentWarning]]
+          : []
+
         if (playlist.isPrivate) {
           if (!user.signer?.nip44) {
             throw new Error('Signer does not support NIP-44 encryption')
           }
 
-          // Private: only d + encrypted + client in public tags
+          // Private: only d + encrypted + content-warning + client in public tags
           tags = [
             ['d', playlist.identifier],
             ['encrypted', ''],
+            ...contentWarningTag,
             ['client', 'nostube'],
           ]
 
@@ -287,6 +308,7 @@ export function usePlaylists() {
             ['d', playlist.identifier],
             ['title', playlist.name],
             ['description', playlist.description || ''],
+            ...contentWarningTag,
             ...videoTags,
             ['client', 'nostube'],
           ]
@@ -416,6 +438,82 @@ export function usePlaylists() {
     },
     [user?.pubkey, publish, config.relays, eventStore]
   )
+
+  // Auto-flag the user's own playlists with `content-warning: NSFW` the moment
+  // they reference any unsafe video (NSFW author, blocked author/event, or an
+  // event that already carries a content-warning). This lets the global
+  // overview hide them just like individual NSFW videos. We never auto-clear
+  // the marker — a user can remove it manually by editing the playlist.
+  const autoFlaggedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!user?.pubkey) return
+
+    const sources = {
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      blockedPubkeys: presetContent.blockedPubkeys,
+      blockedEvents: presetContent.blockedEvents,
+      reportedEventIds: config.reportedEventIds ?? [],
+    }
+
+    const flagIfUnsafe = (playlist: Playlist) => {
+      if (playlist.isPrivate) return
+      if (playlist.contentWarning) return
+      if (!playlist.eventId) return
+      if (autoFlaggedRef.current.has(playlist.eventId)) return
+      if (!playlistHasUnsafeVideo(playlist.videos, eventStore, sources)) return
+
+      const eventId = playlist.eventId
+      autoFlaggedRef.current.add(eventId)
+      void updatePlaylist({ ...playlist, contentWarning: 'NSFW' }).catch(err => {
+        autoFlaggedRef.current.delete(eventId)
+        console.warn('[usePlaylist] Failed to auto-flag playlist as NSFW:', err)
+      })
+    }
+
+    for (const playlist of playlists) flagIfUnsafe(playlist)
+
+    // Re-evaluate when a referenced video event lands or updates. We only
+    // listen while at least one of our playlists has unresolved e-tag videos,
+    // since address-tag refs are decidable from static preset data alone.
+    const watchedIds = new Set<string>()
+    const watchedAddresses = new Set<string>()
+    for (const playlist of playlists) {
+      if (playlist.isPrivate) continue
+      if (playlist.contentWarning) continue
+      for (const video of playlist.videos) {
+        if (video.address) watchedAddresses.add(video.address)
+        else watchedIds.add(video.id)
+      }
+    }
+    if (watchedIds.size === 0 && watchedAddresses.size === 0) return
+
+    const handleEvent = (event: Event) => {
+      let touched = false
+      if (watchedIds.has(event.id)) touched = true
+      else {
+        const d = event.tags.find(t => t[0] === 'd')?.[1]
+        if (d && watchedAddresses.has(`${event.kind}:${event.pubkey}:${d}`)) touched = true
+      }
+      if (!touched) return
+      for (const playlist of playlists) flagIfUnsafe(playlist)
+    }
+
+    const insertSub = eventStore.insert$.subscribe(handleEvent)
+    const updateSub = eventStore.update$.subscribe(handleEvent)
+    return () => {
+      insertSub.unsubscribe()
+      updateSub.unsubscribe()
+    }
+  }, [
+    playlists,
+    eventStore,
+    user?.pubkey,
+    presetContent.nsfwPubkeys,
+    presetContent.blockedPubkeys,
+    presetContent.blockedEvents,
+    config.reportedEventIds,
+    updatePlaylist,
+  ])
 
   return {
     playlists,

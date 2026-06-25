@@ -48,6 +48,12 @@ export const ZAP_RELAYS: string[] = [
   'wss://nos.lol',
 ]
 
+/**
+ * Default relays for publishing kind 22236 view-tracking events.
+ * Users can override this in Settings → Network → View Tracking.
+ */
+export const DEFAULT_VIEW_TRACKING_RELAYS: string[] = ['wss://relay.divine.video']
+
 export const presetBlossomServers: BlossomServer[] = [
   ...DEFAULT_UPLOAD_SERVERS.map(url => ({
     url,

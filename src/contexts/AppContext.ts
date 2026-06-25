@@ -82,6 +82,10 @@ export interface AppConfig {
   reportedEventIds?: string[]
   /** External search service base URL (overrides built-in default) */
   searchServiceUrl?: string
+  /** Publish view-tracking events (kind 22236) to these relays. */
+  viewTrackingRelays?: string[]
+  /** When false, no view events are enqueued or published. Default true. */
+  viewTrackingEnabled?: boolean
 }
 
 export interface AppContextType {

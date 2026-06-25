@@ -76,9 +76,7 @@ export function buildVideoViewEvent({
   const relay = relayHint ?? ''
   const tags: string[][] = []
 
-  if (videoIdentifier) {
-    tags.push(['a', `${videoKind}:${videoPubkey}:${videoIdentifier}`, relay])
-  }
+  tags.push(['a', `${videoKind}:${videoPubkey}:${videoIdentifier ?? videoId}`, relay])
 
   tags.push(['e', videoId, relay])
 

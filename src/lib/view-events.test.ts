@@ -53,4 +53,21 @@ describe('view events', () => {
       })
     ).toBeNull()
   })
+
+  it('falls back to videoId as d-tag in a-tag when no identifier is given', () => {
+    const built = buildVideoViewEvent({
+      videoId: 'event-id-hex',
+      videoKind: 34236,
+      videoPubkey: 'creator-pubkey',
+      // videoIdentifier intentionally omitted
+      viewerPubkey: 'viewer-pubkey',
+      segments: [{ start: 0, end: 10 }],
+      createdAt: 456,
+    })
+
+    expect(built).not.toBeNull()
+    const aTags = built!.event.tags.filter(t => t[0] === 'a')
+    expect(aTags).toHaveLength(1)
+    expect(aTags[0]).toEqual(['a', '34236:creator-pubkey:event-id-hex', ''])
+  })
 })

@@ -25,6 +25,7 @@ import {
   type CachingServer,
 } from '@/contexts/AppContext'
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
+import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -717,6 +718,15 @@ export function NetworkSettingsSection() {
         defaultOpen={activeSection === 'caching'}
       >
         <CachingSubSection />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="view-tracking"
+        title="View Tracking"
+        description="Control how your viewing activity is reported to video creators."
+        defaultOpen={activeSection === 'view-tracking'}
+      >
+        <ViewTrackingSettingsSection />
       </CollapsibleSection>
     </div>
   )

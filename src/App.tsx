@@ -26,7 +26,7 @@ import { presetRelays, presetBlossomServers, presetCachingServers } from '@/cons
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
 import { PresetProvider } from '@/contexts/PresetContext'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useViewEventSweeper } from '@/hooks'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
@@ -34,6 +34,7 @@ import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
 import { defaultResizeServer } from '@/constants/servers'
 import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
+import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
 
 const defaultConfig: AppConfig = {
   theme: 'dark',
@@ -72,6 +73,8 @@ const defaultConfig: AppConfig = {
       ],
     },
   },
+  viewTrackingEnabled: false,
+  viewTrackingRelays: DEFAULT_VIEW_TRACKING_RELAYS,
 }
 
 // Create account manager for applesauce
@@ -121,6 +124,11 @@ function LoginTimeTrackingInit() {
 
 function ProxyHealthMonitorInit() {
   useProxyHealthMonitor()
+  return null
+}
+
+function ViewEventSweeperInit() {
+  useViewEventSweeper()
   return null
 }
 
@@ -217,6 +225,7 @@ export function App() {
                         <TrustScoreProviderInit />
                         <LoginTimeTrackingInit />
                         <ProxyHealthMonitorInit />
+                        <ViewEventSweeperInit />
                         <PlaylistAutoFlagInit />
                         <BlossomServerSync />
                         <OnboardingDialog />

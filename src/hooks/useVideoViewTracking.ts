@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { Event as NostrEvent } from 'nostr-tools'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useCurrentUser } from './useCurrentUser'
+import { useAppContext } from './useAppContext'
 import { buildVideoViewEvent, type ViewEventSource, type ViewSegment } from '@/lib/view-events'
 import { enqueueViewEvent } from '@/lib/view-event-outbox'
 import type { VideoEvent } from '@/utils/video-event'
@@ -42,6 +43,7 @@ export function useVideoViewTracking({
   relayHint,
 }: UseVideoViewTrackingOptions) {
   const { user } = useCurrentUser()
+  const { config } = useAppContext()
   const segmentsRef = useRef<ViewSegment[]>([])
   const segmentStartRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number | null>(null)
@@ -74,7 +76,7 @@ export function useVideoViewTracking({
   }, [])
 
   const finalize = useCallback(() => {
-    if (!video || !user) {
+    if (!video || !user || config.viewTrackingEnabled !== true) {
       resetSession()
       return
     }
@@ -134,7 +136,17 @@ export function useVideoViewTracking({
       })
 
     resetSession()
-  }, [commitOpenSegment, mediaElement, relayHint, resetSession, source, sourceDetail, user, video])
+  }, [
+    commitOpenSegment,
+    config,
+    mediaElement,
+    relayHint,
+    resetSession,
+    source,
+    sourceDetail,
+    user,
+    video,
+  ])
 
   useEffect(() => {
     resetSession()

@@ -172,7 +172,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         {nostrConnectUri ? (
           <Button asChild variant={openButtonVariant} size="sm" className={openButtonClassName}>
             <a href={nostrConnectUri}>
@@ -192,13 +192,20 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
           onClick={handleCopy}
           disabled={!nostrConnectUri}
           className={copyButtonClassName}
+          aria-label={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
+          title={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
         >
-          {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-          {copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleRefresh} className="text-muted-foreground">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          {t('auth.login.qrRefresh', 'New Code')}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          className="text-muted-foreground"
+          aria-label={t('auth.login.qrRefresh', 'New Code')}
+          title={t('auth.login.qrRefresh', 'New Code')}
+        >
+          <RefreshCw className="w-4 h-4" />
         </Button>
       </div>
     </div>

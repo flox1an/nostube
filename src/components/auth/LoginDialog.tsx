@@ -27,6 +27,21 @@ interface LoginDialogProps {
   onSignup?: () => void
 }
 
+// Minimal NIP-07 shape we probe for. A real browser-extension provider must
+// implement at least getPublicKey + signEvent.
+interface NostrWindowExtension {
+  getPublicKey: unknown
+  signEvent: unknown
+}
+
+// NIP-07 browser extensions don't exist on mobile browsers (iOS/Android Chrome,
+// Safari), so the "Extension" login tab must never be offered there. A coarse
+// pointer or a mobile UA is enough to rule it out.
+const isMobileBrowser =
+  typeof navigator !== 'undefined' &&
+  typeof window !== 'undefined' &&
+  (Boolean(window.matchMedia?.('(pointer: coarse)')?.matches) ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
 const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onSignup }) => {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
@@ -41,12 +56,23 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
   const isEncryptedKey = isNcryptsec(keyInput)
+  // Only offer the Extension tab when a real NIP-07 provider is present AND we
+  // are not on a mobile browser (extensions don't run there).
+  const showExtensionTab = hasNostrExtension && !isMobileBrowser
 
   useEffect(() => {
     if (!isOpen) return
 
     const detectExtension = () => {
-      setHasNostrExtension(typeof window !== 'undefined' && 'nostr' in window && !!window.nostr)
+      // Probe for the NIP-07 minimum contract (getPublicKey + signEvent). A bare
+      // truthy `window.nostr` false-positives on some mobile browsers (e.g. iOS Chrome).
+      const nostr =
+        typeof window !== 'undefined'
+          ? (window as unknown as { nostr?: NostrWindowExtension }).nostr
+          : undefined
+      setHasNostrExtension(
+        !!nostr && typeof nostr.getPublicKey === 'function' && typeof nostr.signEvent === 'function'
+      )
     }
 
     detectExtension()
@@ -199,20 +225,24 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           <Tabs defaultValue="qr" className="w-full" onValueChange={() => setError(null)}>
             <TabsList
               className={`grid h-auto mb-6 ${
-                hasNostrExtension ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
+                showExtensionTab ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
               }`}
             >
-              <TabsTrigger value="qr">
-                <QrCode className="w-4 h-4 mr-1" />
-                {t('auth.login.qr', 'QR')}
+              <TabsTrigger value="qr" className="min-w-0 gap-1 text-xs sm:text-sm">
+                <QrCode className="w-4 h-4 shrink-0" />
+                <span className="truncate">{t('auth.login.qr', 'QR')}</span>
               </TabsTrigger>
-              {hasNostrExtension && (
-                <TabsTrigger value="extension">{t('auth.login.extension')}</TabsTrigger>
+              {showExtensionTab && (
+                <TabsTrigger value="extension" className="min-w-0 text-xs sm:text-sm">
+                  <span className="truncate">{t('auth.login.extension')}</span>
+                </TabsTrigger>
               )}
-              <TabsTrigger value="protected">
-                {t('auth.login.protectedKey', 'Secret Key')}
+              <TabsTrigger value="protected" className="min-w-0 text-xs sm:text-sm">
+                <span className="truncate">{t('auth.login.protectedKey', 'Secret Key')}</span>
               </TabsTrigger>
-              <TabsTrigger value="bunker">{t('auth.login.bunker')}</TabsTrigger>
+              <TabsTrigger value="bunker" className="min-w-0 text-xs sm:text-sm">
+                <span className="truncate">{t('auth.login.bunker')}</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="qr" className="space-y-4">
@@ -225,7 +255,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               />
             </TabsContent>
 
-            {hasNostrExtension && (
+            {showExtensionTab && (
               <TabsContent value="extension" className="space-y-4">
                 <div className="text-center p-4 rounded-lg bg-card">
                   <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />

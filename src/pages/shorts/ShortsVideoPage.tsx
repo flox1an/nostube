@@ -1,20 +1,27 @@
 /**
  * Shorts Video Page
  *
- * Main page for viewing short-form videos with scroll-based navigation.
- * Uses intersection observer for active video detection and keyboard navigation.
+ * Main page for viewing short-form videos with controlled vertical navigation.
+ * Playback is handled by one persistent <video> element whose src changes as the
+ * active short changes, preserving browser media state across videos.
  */
 
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
-import { useEffect, useMemo, useRef, useCallback, startTransition } from 'react'
+import { useEffect, useMemo, useRef, useCallback, startTransition, useState } from 'react'
 import { processEvent, processEvents } from '@/utils/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAppContext, useReportedPubkeys, useReadRelays, useVideoHistory } from '@/hooks'
+import {
+  useAppContext,
+  useReportedPubkeys,
+  useReadRelays,
+  useVideoHistory,
+  useVideoViewTracking,
+} from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import {
   createEventLoader,
@@ -23,8 +30,24 @@ import {
 } from 'applesauce-loaders/loaders'
 import { getKindsForType } from '@/lib/video-types'
 import { Header } from '@/components/Header'
+import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
+import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ShortVideoItem } from './ShortVideoItem'
+
+type DeckPhase = 'idle' | 'settling'
+
+interface DragState {
+  pointerId: number
+  startY: number
+  currentY: number
+  startedAt: number
+}
+
+const SWIPE_DISTANCE_THRESHOLD_PX = 80
+const SWIPE_VELOCITY_THRESHOLD_PX_PER_MS = 0.45
+const SETTLE_TRANSITION_MS = 260
+const WHEEL_NAVIGATION_COOLDOWN_MS = 420
 
 export function ShortsVideoPage() {
   const { config } = useAppContext()
@@ -34,7 +57,6 @@ export function ShortsVideoPage() {
   const [searchParams] = useSearchParams()
   const eventStore = useEventStore()
   const { pool } = useAppContext()
-  const containerRef = useRef<HTMLDivElement>(null)
   const blockedPubkeys = useReportedPubkeys()
   const { addToHistory } = useVideoHistory()
 
@@ -48,145 +70,20 @@ export function ShortsVideoPage() {
     setLoading,
   } = useShortsFeedStore()
 
-  const currentVideoIndexRef = useRef(0)
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const observerCallbackThrottleRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const videoElementsRef = useRef(new Map<string, HTMLDivElement>())
-  const videoIdsKey = useMemo(() => allVideos.map(video => video.id).join('|'), [allVideos])
-  const lastTouchEndTimeRef = useRef(0)
-
-  const registerVideoElement = useCallback(
-    (videoId: string, index: number) => (element: HTMLDivElement | null) => {
-      if (element) {
-        element.dataset.index = index.toString()
-        element.dataset.videoId = videoId
-        videoElementsRef.current.set(videoId, element)
-        observerRef.current?.observe(element)
-      } else {
-        const existing = videoElementsRef.current.get(videoId)
-        if (existing) {
-          observerRef.current?.unobserve(existing)
-        }
-        videoElementsRef.current.delete(videoId)
-      }
-    },
-    []
-  )
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      entries => {
-        // Throttle callback to reduce computation frequency during scroll
-        // Increased from 16ms to 100ms since video changes don't need 60fps updates
-        if (observerCallbackThrottleRef.current) return
-
-        observerCallbackThrottleRef.current = setTimeout(() => {
-          observerCallbackThrottleRef.current = undefined
-
-          // Find the best visible entry (highest intersection ratio)
-          let bestEntry: IntersectionObserverEntry | null = null
-          let bestRatio = 0
-
-          for (const entry of entries) {
-            if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-              bestEntry = entry
-              bestRatio = entry.intersectionRatio
-            }
-          }
-
-          if (!bestEntry) return
-
-          const target = bestEntry.target as HTMLElement
-          const indexAttr = target.dataset.index
-          if (!indexAttr) return
-          const nextIndex = Number(indexAttr)
-          if (Number.isNaN(nextIndex)) return
-
-          if (nextIndex !== currentVideoIndexRef.current) {
-            currentVideoIndexRef.current = nextIndex
-            setCurrentIndex(nextIndex)
-          }
-        }, 100) // 100ms throttle for smoother scroll performance
-      },
-      {
-        // Single threshold at 50% visibility for cleaner transitions
-        threshold: 0.5,
-        // Reduced rootMargin for less aggressive observation
-        rootMargin: '100px',
-      }
-    )
-
-    observerRef.current = observer
-    videoElementsRef.current.forEach(element => observer.observe(element))
-
-    return () => {
-      if (observerCallbackThrottleRef.current) {
-        clearTimeout(observerCallbackThrottleRef.current)
-      }
-      observer.disconnect()
-      observerRef.current = null
-    }
-  }, [setCurrentIndex, videoIdsKey])
-
-  // iOS autoplay fix: trigger play during user gesture (touchend/scroll)
-  // This ensures play() is called within the user gesture context, which iOS requires
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    const playActiveVideoOnGesture = () => {
-      // Throttle to avoid too many play attempts
-      const now = Date.now()
-      if (now - lastTouchEndTimeRef.current < 100) return
-      lastTouchEndTimeRef.current = now
-
-      // Find the video element at the current index
-      const currentVideo = allVideos[currentVideoIndexRef.current]
-      if (!currentVideo) return
-
-      const videoContainer = videoElementsRef.current.get(currentVideo.id)
-      if (!videoContainer) return
-
-      const videoElement = videoContainer.querySelector('video')
-      if (!videoElement) return
-
-      // Play within gesture context - iOS will allow this
-      if (videoElement.paused) {
-        // Start muted for iOS autoplay compliance
-        videoElement.muted = true
-        const playPromise = videoElement.play()
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              // Unmute after playback starts
-              videoElement.muted = false
-            })
-            .catch(error => {
-              console.error('Error playing video during gesture:', error)
-            })
-        }
-      }
-    }
-
-    // Listen for touchend (swipe gesture completion on mobile)
-    container.addEventListener('touchend', playActiveVideoOnGesture)
-    // Also listen for scroll events (for mouse wheel or programmatic scrolls)
-    container.addEventListener('scrollend', playActiveVideoOnGesture)
-
-    return () => {
-      container.removeEventListener('touchend', playActiveVideoOnGesture)
-      container.removeEventListener('scrollend', playActiveVideoOnGesture)
-    }
-  }, [allVideos, videoIdsKey])
-
-  // Sync ref with store's currentIndex
-  useEffect(() => {
-    currentVideoIndexRef.current = currentVideoIndex
-  }, [currentVideoIndex])
+  const singletonVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [activeVideoElement, setActiveVideoElement] = useState<HTMLVideoElement | null>(null)
+  const userInitiatedPlayPauseRef = useRef(false)
+  const userMutedPreferenceRef = useRef<boolean | null>(null)
+  const userPausedRef = useRef(false)
+  const initializedVideoElementRef = useRef(false)
+  const sourceSwitchIdRef = useRef(0)
+  const dragStateRef = useRef<DragState | null>(null)
+  const wheelCooldownTimeoutRef = useRef<number | undefined>(undefined)
+  const [deckOffsetY, setDeckOffsetY] = useState(0)
+  const [deckPhase, setDeckPhase] = useState<DeckPhase>('idle')
+  const [settlingTargetIndex, setSettlingTargetIndex] = useState<number | null>(null)
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(null)
+  const [isVideoReady, setIsVideoReady] = useState(false)
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -358,42 +255,31 @@ export function ShortsVideoPage() {
     config.showAudioContent,
   ])
 
-  // Track if we've done the initial scroll
-  const hasScrolledRef = useRef(false)
+  // Track if we've selected the direct-link video from an existing feed
+  const hasSelectedInitialVideoRef = useRef(false)
   const pendingUrlUpdateRef = useRef<string | null>(null)
 
-  // Find initial video index and scroll to it
   useEffect(() => {
-    if (!containerRef.current || allVideos.length === 0 || hasScrolledRef.current) return
-
-    // Use currentIndex from store if available (set by VideoCard click)
-    if (currentVideoIndex > 0) {
-      containerRef.current.scrollTo({
-        top: currentVideoIndex * window.innerHeight,
-        behavior: 'instant',
-      })
-      hasScrolledRef.current = true
+    if (allVideos.length === 0 || hasSelectedInitialVideoRef.current || currentVideoIndex > 0)
       return
-    }
 
-    // Fallback: find video by ID (for direct URL access)
     if (initialVideo) {
       const index = allVideos.findIndex(v => v.id === initialVideo.id)
-      if (index !== -1 && index !== 0) {
-        containerRef.current.scrollTo({
-          top: index * window.innerHeight,
-          behavior: 'instant',
-        })
-        hasScrolledRef.current = true
+      if (index > 0) {
+        setCurrentIndex(index)
       }
     }
-  }, [allVideos, currentVideoIndex, initialVideo])
+    hasSelectedInitialVideoRef.current = true
+  }, [allVideos, currentVideoIndex, initialVideo, setCurrentIndex])
 
   // Reset flags when the component unmounts
   useEffect(() => {
     return () => {
-      hasScrolledRef.current = false
+      hasSelectedInitialVideoRef.current = false
       loadSourceRef.current = null
+      if (wheelCooldownTimeoutRef.current !== undefined) {
+        window.clearTimeout(wheelCooldownTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -408,55 +294,357 @@ export function ShortsVideoPage() {
     }
   }, [initialVideoEvent])
 
-  // Only reset scroll flags when navigation comes from outside this page
+  // Only reset data-load flags when navigation comes from outside this page
   useEffect(() => {
     if (!nevent) return
     if (pendingUrlUpdateRef.current === nevent) {
       pendingUrlUpdateRef.current = null
       return
     }
-    hasScrolledRef.current = false
+    hasSelectedInitialVideoRef.current = false
     loadSourceRef.current = null
   }, [nevent])
 
-  const scrollToVideo = useCallback(
-    (index: number) => {
-      if (index < 0) {
-        navigate('/shorts')
-        return
-      }
-      if (index >= allVideos.length) return
+  const currentVideo = allVideos[currentVideoIndex]
+  const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
-      currentVideoIndexRef.current = index
-      setCurrentIndex(index)
+  const handleVideoUrlError = useCallback((error: Error) => {
+    console.error('Video URL failover error:', error)
+  }, [])
 
-      if (containerRef.current) {
-        containerRef.current.scrollTo({
-          top: index * window.innerHeight,
-          behavior: 'smooth',
+  // Memoize proxyConfig to prevent infinite loops
+  const proxyConfig = useMemo(
+    () => ({
+      enabled: true,
+    }),
+    []
+  )
+
+  const {
+    currentUrl: videoUrl,
+    moveToNext: moveToNextVideo,
+    hasMore: hasMoreVideoUrls,
+  } = useMediaUrls({
+    urls: currentVideo?.urls ?? [],
+    mediaType: 'video',
+    sha256: currentVideo?.x,
+    kind: currentVideo?.kind,
+    authorPubkey: currentVideo?.pubkey,
+    proxyConfig,
+    enabled: !!currentVideo,
+    onError: handleVideoUrlError,
+  })
+
+  useVideoViewTracking({
+    video: currentVideo,
+    mediaElement: activeVideoElement,
+    active: !!currentVideo && !!activeVideoElement,
+    source: 'shorts',
+  })
+
+  const currentAspectRatio = useMemo(() => {
+    if (!currentVideo?.dimensions) return naturalAspectRatio
+
+    const match = /^(\d+)x(\d+)$/i.exec(currentVideo.dimensions.trim())
+    if (!match) return naturalAspectRatio
+
+    const width = Number(match[1])
+    const height = Number(match[2])
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return naturalAspectRatio
+    }
+
+    return width / height
+  }, [currentVideo?.dimensions, naturalAspectRatio])
+
+  const videoMaxWidth = useMemo(() => {
+    if (!currentAspectRatio) return 'calc(100vh * 9 / 16)'
+
+    if (currentAspectRatio >= 0.9 && currentAspectRatio <= 1.1) {
+      return '85vh'
+    }
+
+    if (currentAspectRatio > 1.1) {
+      return '95vh'
+    }
+
+    return 'calc(100vh * 9 / 16)'
+  }, [currentAspectRatio])
+
+  const handleVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    singletonVideoRef.current = node
+    setActiveVideoElement(node)
+
+    if (!node || initializedVideoElementRef.current) return
+
+    node.muted = true
+    userMutedPreferenceRef.current = true
+    initializedVideoElementRef.current = true
+  }, [])
+
+  useEffect(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement || !currentVideo || !videoUrl) return
+
+    const playCurrentSource = () => {
+      if (userPausedRef.current) return
+
+      const playPromise = videoElement.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error(
+            'Error playing singleton short video:',
+            currentVideo.id.substring(0, 8),
+            error
+          )
         })
       }
+    }
+
+    const sourceChanged =
+      videoElement.dataset.videoId !== currentVideo.id || videoElement.src !== videoUrl
+    if (!sourceChanged) {
+      playCurrentSource()
+      return
+    }
+
+    const switchId = sourceSwitchIdRef.current + 1
+    sourceSwitchIdRef.current = switchId
+    setIsVideoReady(false)
+
+    const mutedPreference = userMutedPreferenceRef.current ?? videoElement.muted
+    videoElement.pause()
+    videoElement.removeAttribute('src')
+    videoElement.dataset.videoId = ''
+    videoElement.load()
+
+    window.requestAnimationFrame(() => {
+      if (sourceSwitchIdRef.current !== switchId) return
+
+      videoElement.dataset.videoId = currentVideo.id
+      videoElement.src = videoUrl
+      videoElement.currentTime = 0
+      videoElement.muted = mutedPreference
+      videoElement.load()
+      userPausedRef.current = false
+      playCurrentSource()
+    })
+  }, [currentVideo, videoUrl])
+
+  const handleVideoError = useCallback(() => {
+    if (hasMoreVideoUrls) {
+      moveToNextVideo()
+    } else if (currentVideo) {
+      console.error('All video URLs failed for:', currentVideo.id)
+    }
+  }, [currentVideo, hasMoreVideoUrls, moveToNextVideo])
+
+  const handleVideoLoadedMetadata = useCallback(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) return
+
+    setNaturalAspectRatio(videoElement.videoWidth / videoElement.videoHeight)
+  }, [])
+
+  const handleVideoLoadedData = useCallback(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement || !currentVideo || videoElement.dataset.videoId !== currentVideo.id) return
+
+    const switchId = sourceSwitchIdRef.current
+    const revealVideo = () => {
+      if (sourceSwitchIdRef.current !== switchId) return
+      if (videoElement.dataset.videoId !== currentVideo.id) return
+      setIsVideoReady(true)
+    }
+
+    if (typeof videoElement.requestVideoFrameCallback === 'function') {
+      const fallbackTimeout = window.setTimeout(revealVideo, 120)
+      videoElement.requestVideoFrameCallback(() => {
+        window.clearTimeout(fallbackTimeout)
+        revealVideo()
+      })
+    } else {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(revealVideo)
+      })
+    }
+  }, [currentVideo])
+
+  const handleVideoClick = useCallback(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement) return
+
+    userInitiatedPlayPauseRef.current = true
+
+    if (videoElement.muted) {
+      videoElement.muted = false
+      userMutedPreferenceRef.current = false
+      userPausedRef.current = false
+      const playPromise = videoElement.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error unmuting singleton short video:', error)
+        })
+      }
+      return
+    }
+
+    if (videoElement.paused) {
+      userPausedRef.current = false
+      const playPromise = videoElement.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error playing singleton short video:', error)
+        })
+      }
+    } else {
+      userPausedRef.current = true
+      videoElement.pause()
+    }
+  }, [])
+
+  const finishSettling = useCallback(() => {
+    if (settlingTargetIndex !== null) {
+      setIsVideoReady(false)
+      setCurrentIndex(settlingTargetIndex)
+    }
+
+    setSettlingTargetIndex(null)
+    setDeckPhase('idle')
+    setDeckOffsetY(0)
+  }, [setCurrentIndex, settlingTargetIndex])
+
+  const startSettlingToIndex = useCallback(
+    (nextIndex: number) => {
+      if (deckPhase !== 'idle' || nextIndex < 0 || nextIndex >= allVideos.length) return
+
+      const direction = nextIndex > currentVideoIndex ? 1 : -1
+      setSettlingTargetIndex(nextIndex)
+      setDeckPhase('settling')
+      setDeckOffsetY(direction > 0 ? -window.innerHeight : window.innerHeight)
     },
-    [allVideos.length, navigate, setCurrentIndex]
+    [allVideos.length, currentVideoIndex, deckPhase]
+  )
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (deckPhase !== 'idle') return
+
+      const target = event.target as HTMLElement
+      if (target.closest('button,a,[role="button"],input,textarea,[data-no-drag]')) return
+
+      dragStateRef.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        currentY: event.clientY,
+        startedAt: performance.now(),
+      }
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [deckPhase]
+  )
+
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = dragStateRef.current
+      if (!dragState || dragState.pointerId !== event.pointerId || deckPhase !== 'idle') return
+
+      dragState.currentY = event.clientY
+      const rawOffset = event.clientY - dragState.startY
+      const isDraggingPastFirstVideo = currentVideoIndex === 0 && rawOffset > 0
+      const isDraggingPastLastVideo = currentVideoIndex === allVideos.length - 1 && rawOffset < 0
+      const resistance = isDraggingPastFirstVideo || isDraggingPastLastVideo ? 0.25 : 1
+      setDeckOffsetY(rawOffset * resistance)
+    },
+    [allVideos.length, currentVideoIndex, deckPhase]
+  )
+
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = dragStateRef.current
+      if (!dragState || dragState.pointerId !== event.pointerId) return
+
+      dragStateRef.current = null
+      const offset = dragState.currentY - dragState.startY
+
+      const elapsed = Math.max(performance.now() - dragState.startedAt, 1)
+      const velocity = Math.abs(offset) / elapsed
+      const shouldCommit =
+        Math.abs(offset) > SWIPE_DISTANCE_THRESHOLD_PX ||
+        velocity > SWIPE_VELOCITY_THRESHOLD_PX_PER_MS
+
+      if (shouldCommit && offset < 0 && currentVideoIndex < allVideos.length - 1) {
+        setSettlingTargetIndex(currentVideoIndex + 1)
+        setDeckPhase('settling')
+        setDeckOffsetY(-window.innerHeight)
+      } else if (shouldCommit && offset > 0 && currentVideoIndex > 0) {
+        setSettlingTargetIndex(currentVideoIndex - 1)
+        setDeckPhase('settling')
+        setDeckOffsetY(window.innerHeight)
+      } else if (Math.abs(offset) > 1) {
+        setSettlingTargetIndex(null)
+        setDeckPhase('settling')
+        setDeckOffsetY(0)
+      } else {
+        setSettlingTargetIndex(null)
+        setDeckPhase('idle')
+        setDeckOffsetY(0)
+        handleVideoClick()
+      }
+    },
+    [allVideos.length, currentVideoIndex, handleVideoClick]
+  )
+
+  const handlePointerCancel = useCallback(() => {
+    dragStateRef.current = null
+    setSettlingTargetIndex(null)
+    setDeckPhase('idle')
+    setDeckOffsetY(0)
+  }, [])
+
+  const handleWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (deckPhase !== 'idle' || wheelCooldownTimeoutRef.current !== undefined) return
+      if (Math.abs(event.deltaY) < 20) return
+
+      if (event.deltaY > 0 && currentVideoIndex < allVideos.length - 1) {
+        startSettlingToIndex(currentVideoIndex + 1)
+      } else if (event.deltaY < 0 && currentVideoIndex > 0) {
+        startSettlingToIndex(currentVideoIndex - 1)
+      }
+
+      wheelCooldownTimeoutRef.current = window.setTimeout(() => {
+        wheelCooldownTimeoutRef.current = undefined
+      }, WHEEL_NAVIGATION_COOLDOWN_MS)
+    },
+    [allVideos.length, currentVideoIndex, deckPhase, startSettlingToIndex]
   )
 
   // Handle keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
-        e.preventDefault()
-        scrollToVideo(currentVideoIndex + 1)
-      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
-        e.preventDefault()
-        scrollToVideo(currentVideoIndex - 1)
-      } else if (e.key === 'Escape') {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      if (event.code === 'Space' || event.key === ' ') {
+        event.preventDefault()
+        handleVideoClick()
+      } else if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+        event.preventDefault()
+        startSettlingToIndex(currentVideoIndex + 1)
+      } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+        event.preventDefault()
+        startSettlingToIndex(currentVideoIndex - 1)
+      } else if (event.key === 'Escape') {
         navigate('/shorts')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentVideoIndex, navigate, scrollToVideo])
+  }, [currentVideoIndex, handleVideoClick, navigate, startSettlingToIndex])
 
   // Fullscreen mode - hide main layout elements
   useEffect(() => {
@@ -464,15 +652,6 @@ export function ShortsVideoPage() {
     return () => {
       document.body.style.overflow = ''
     }
-  }, [])
-
-  const currentVideo = allVideos[currentVideoIndex]
-  const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
-
-  // Determine render window size based on viewport width (smaller on mobile)
-  const renderWindow = useMemo(() => {
-    if (typeof window === 'undefined') return 3
-    return window.innerWidth < 768 ? 2 : 3
   }, [])
 
   useEffect(() => {
@@ -487,32 +666,43 @@ export function ShortsVideoPage() {
   }, [currentVideo?.title])
 
   // Update URL when video changes (debounced and non-blocking)
-  // Uses startTransition to avoid blocking scroll interactions
-  const urlUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Uses startTransition to avoid blocking interactions
+  const urlUpdateTimeoutRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (currentVideo && currentVideo.link !== nevent) {
       // Clear any pending URL update
-      if (urlUpdateTimeoutRef.current) {
-        clearTimeout(urlUpdateTimeoutRef.current)
+      if (urlUpdateTimeoutRef.current !== undefined) {
+        window.clearTimeout(urlUpdateTimeoutRef.current)
       }
 
-      // Debounce URL updates to avoid excessive history API calls during fast scrolling
-      urlUpdateTimeoutRef.current = setTimeout(() => {
+      // Debounce URL updates to avoid excessive history API calls during fast navigation
+      urlUpdateTimeoutRef.current = window.setTimeout(() => {
         const newPath = buildVideoPath(currentVideo.link, 'shorts')
         pendingUrlUpdateRef.current = currentVideo.link
-        // Use startTransition to make this non-blocking for scroll
+        // Use startTransition to make this non-blocking for interactions
         startTransition(() => {
           navigate(newPath, { replace: true })
         })
-      }, 150) // 150ms debounce
+      }, 150)
     }
 
     return () => {
-      if (urlUpdateTimeoutRef.current) {
-        clearTimeout(urlUpdateTimeoutRef.current)
+      if (urlUpdateTimeoutRef.current !== undefined) {
+        window.clearTimeout(urlUpdateTimeoutRef.current)
       }
     }
   }, [currentVideo, nevent, navigate, currentVideoIndex])
+
+  const visibleSlideIndexes = useMemo(() => {
+    const indexes = [currentVideoIndex - 1, currentVideoIndex, currentVideoIndex + 1]
+    return indexes.filter(index => index >= 0 && index < allVideos.length)
+  }, [allVideos.length, currentVideoIndex])
+
+  const videoPoster = currentVideo?.images[0]
+  const videoTransition =
+    deckPhase === 'settling'
+      ? `transform ${SETTLE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+      : 'none'
 
   // Show loading state while fetching initial event OR while loading videos from relays
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
@@ -544,63 +734,70 @@ export function ShortsVideoPage() {
         <Header transparent />
       </div>
       <div
-        ref={containerRef}
-        className="fixed top-0 left-0 right-0 bottom-0 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-        style={{
-          scrollSnapType: 'y mandatory',
-          WebkitOverflowScrolling: 'touch',
-          paddingTop: 'calc(56px + env(safe-area-inset-top, 0))',
-          // GPU acceleration hints for smoother scrolling
-          willChange: 'scroll-position',
-          transform: 'translateZ(0)',
-        }}
+        className="fixed top-0 left-0 right-0 bottom-0 bg-black overflow-hidden touch-none select-none"
+        style={{ paddingTop: 'calc(56px + env(safe-area-inset-top, 0))' }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onWheel={handleWheel}
       >
-        {allVideos.map((video, index) => {
-          // Only render videos within a window around the current video to keep DOM tidy
-          // Render window: current +/- renderWindow videos
-          // Mobile (< 768px): ±2 videos (5 total), Desktop: ±3 videos (7 total)
-          const distanceFromCurrent = Math.abs(index - currentVideoIndex)
-          const shouldRender = distanceFromCurrent <= renderWindow
-
-          if (!shouldRender) {
-            // Render placeholder to maintain scroll positioning for far videos
-            return (
-              <div
-                key={video.id}
-                data-video-id={video.id}
-                data-index={index.toString()}
-                className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
-                style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
-                ref={registerVideoElement(video.id, index)}
-              />
-            )
-          }
-
-          // Preload current video, previous video, and next 2 videos for smoother scrolling
-          const shouldPreload =
-            index === currentVideoIndex || // Current
-            index === currentVideoIndex - 1 || // Previous
-            index === currentVideoIndex + 1 || // Next
-            index === currentVideoIndex + 2 // Next + 1
+        {visibleSlideIndexes.map(index => {
+          const video = allVideos[index]
+          const relativeIndex = index - currentVideoIndex
+          const isCurrentSlide = index === currentVideoIndex
 
           return (
-            <ShortVideoItem
+            <div
               key={video.id}
-              video={video}
-              isActive={index === currentVideoIndex}
-              shouldPreload={shouldPreload}
-              registerIntersectionRef={registerVideoElement(video.id, index)}
-            />
+              className="absolute inset-0"
+              style={{
+                transform: `translate3d(0, calc(${relativeIndex * 100}vh + ${deckOffsetY}px), 0)`,
+                transition: videoTransition,
+                willChange: deckPhase === 'idle' ? undefined : 'transform',
+              }}
+              onTransitionEnd={isCurrentSlide ? finishSettling : undefined}
+            >
+              <ShortVideoItem video={video} isActive={isCurrentSlide} />
+            </div>
           )
         })}
-        {allVideos.length === 0 && initialVideo && (
-          <ShortVideoItem
-            key={initialVideo.id}
-            video={initialVideo}
-            isActive={true}
-            shouldPreload={true}
-            registerIntersectionRef={registerVideoElement(initialVideo.id, 0)}
-          />
+
+        {currentVideo && (
+          <div
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              transform: `translate3d(0, ${deckOffsetY}px, 0)`,
+              transition: videoTransition,
+              willChange: deckPhase === 'idle' ? undefined : 'transform',
+            }}
+          >
+            <div className="relative w-full h-full flex items-center justify-center bg-transparent">
+              <div
+                className="relative w-full h-full pointer-events-auto"
+                style={{ maxWidth: videoMaxWidth }}
+              >
+                <video
+                  ref={handleVideoRef}
+                  className={`w-full h-full object-contain cursor-pointer ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
+                  loop
+                  playsInline
+                  poster={videoPoster}
+                  preload="auto"
+                  style={{ transition: isVideoReady ? 'opacity 100ms ease-out' : 'none' }}
+                  onError={handleVideoError}
+                  onLoadedMetadata={handleVideoLoadedMetadata}
+                  onLoadedData={handleVideoLoadedData}
+                  onCanPlay={handleVideoLoadedData}
+                  onPlaying={handleVideoLoadedData}
+                />
+                <PlayPauseOverlay
+                  videoRef={singletonVideoRef}
+                  userInitiatedRef={userInitiatedPlayPauseRef}
+                />
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </>

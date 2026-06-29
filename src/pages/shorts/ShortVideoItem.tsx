@@ -1,8 +1,9 @@
 /**
  * Short Video Item Component
  *
- * Individual short video item with video playback, reactions, and comments sheet.
- * Extracted from ShortsVideoPage for better maintainability.
+ * Renders the non-media chrome for a short: poster fallback, reactions, author info,
+ * comments, sharing, reporting, and metadata. Playback is owned by the singleton
+ * video element in ShortsVideoPage.
  */
 
 import { Link } from 'react-router-dom'
@@ -13,7 +14,7 @@ import { FollowButton } from '@/components/FollowButton'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
-import { memo, useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { memo, useState, useMemo, useCallback } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   type VideoEvent,
@@ -29,9 +30,7 @@ import {
   useReadRelays,
   useCommentCount,
   usePreloadVideoData,
-  useVideoViewTracking,
 } from '@/hooks'
-import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2, ExternalLink, Flag } from 'lucide-react'
 import { ReportDialog } from '@/components/ReportDialog'
@@ -44,7 +43,6 @@ import { useEventModel } from 'applesauce-react/hooks'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { VideoComments } from '@/components/VideoComments'
 import { presetRelays } from '@/constants/relays'
-import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
 import { getDateLocale } from '@/lib/date-locale'
 
 // Extract preset relay URLs at module level to avoid recreation on every render
@@ -53,55 +51,56 @@ const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)
 export interface ShortVideoItemProps {
   video: VideoEvent
   isActive: boolean
-  shouldPreload: boolean
   registerIntersectionRef?: (element: HTMLDivElement | null) => void
+}
+
+function dimensionsToAspectRatio(dimensions?: string): number | null {
+  if (!dimensions) return null
+
+  const match = /^(\d+)x(\d+)$/i.exec(dimensions.trim())
+  if (!match) return null
+
+  const width = Number(match[1])
+  const height = Number(match[2])
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null
+
+  return width / height
+}
+
+function maxWidthForAspectRatio(aspectRatio: number | null): string {
+  if (!aspectRatio) return 'calc(100vh * 9 / 16)' // Default for vertical
+
+  if (aspectRatio >= 0.9 && aspectRatio <= 1.1) {
+    // Square video (1:1 ratio, with some tolerance)
+    return '85vh'
+  }
+
+  if (aspectRatio > 1.1) {
+    // Wider than square (landscape)
+    return '95vh'
+  }
+
+  // Vertical video
+  return 'calc(100vh * 9 / 16)'
 }
 
 // Memoized component to prevent re-renders when props haven't changed
 export const ShortVideoItem = memo(
-  function ShortVideoItem({
-    video,
-    isActive,
-    shouldPreload,
-    registerIntersectionRef,
-  }: ShortVideoItemProps) {
+  function ShortVideoItem({ video, isActive, registerIntersectionRef }: ShortVideoItemProps) {
     const { i18n } = useTranslation()
     const dateLocale = getDateLocale(i18n.language)
     const metadata = useProfile({ pubkey: video.pubkey })
     const authorName = metadata?.display_name || metadata?.name || video?.pubkey?.slice(0, 8) || ''
     const authorPicture = metadata?.picture
-    const videoRef = useRef<HTMLDivElement>(null)
-    const videoElementRef = useRef<HTMLVideoElement>(null)
-    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
-    const userInitiatedPlayPauseRef = useRef<boolean>(false)
     const eventStore = useEventStore()
     const userReadRelays = useReadRelays()
     const { config } = useAppContext()
-    const [aspectRatio, setAspectRatio] = useState<number | null>(null)
     const [commentsOpen, setCommentsOpen] = useState(false)
     const [showReportDialog, setShowReportDialog] = useState(false)
     const { user } = useCurrentUser()
 
     // Get comment count
     const commentCount = useCommentCount({ videoId: video.id })
-
-    const playActiveVideo = useCallback(() => {
-      const videoEl = videoElementRef.current
-      if (!videoEl || !videoEl.paused) return
-
-      const playPromise = videoEl.play()
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            // Successfully started playing - now unmute for audio
-            // This ensures iOS autoplay restrictions are satisfied (start muted, unmute after playback begins)
-            videoEl.muted = false
-          })
-          .catch(error => {
-            console.error('Error playing video:', video.id.substring(0, 8), error)
-          })
-      }
-    }, [video.id])
 
     // Get video owner's Blossom servers
     const rawOwnerServersResult = useEventModel(
@@ -112,41 +111,11 @@ export const ShortVideoItem = memo(
 
     // Combine config Blossom servers with video owner's servers
     const allBlossomServers = useMemo(() => {
-      // Move conversion inside useMemo to avoid dependency warning
       const ownerServers = (rawOwnerServers || []).map(url => url.toString())
       const configServers = config.blossomServers?.map(s => s.url) || []
       // Owner servers first (more likely to have the file), then config servers
       return [...ownerServers, ...configServers]
     }, [rawOwnerServers, config.blossomServers])
-
-    // Memoize proxyConfig to prevent infinite loops
-    const proxyConfig = useMemo(
-      () => ({
-        enabled: true, // Enable proxy for videos
-      }),
-      []
-    )
-
-    // Handle video URL error
-    const handleVideoUrlError = useCallback((error: Error) => {
-      console.error('Video URL failover error:', error)
-    }, [])
-
-    // Use media URL failover system for video with Blossom proxy
-    const {
-      currentUrl: videoUrl,
-      moveToNext: moveToNextVideo,
-      hasMore: hasMoreVideoUrls,
-    } = useMediaUrls({
-      urls: video.urls,
-      mediaType: 'video',
-      sha256: video.x,
-      kind: video.kind,
-      authorPubkey: video.pubkey,
-      proxyConfig,
-      enabled: shouldPreload || isActive,
-      onError: handleVideoUrlError,
-    })
 
     // Validate thumbnail URLs with Blossom server fallbacks
     const { validUrl: thumbnailUrl } = useValidUrl({
@@ -157,7 +126,7 @@ export const ShortVideoItem = memo(
     })
 
     // Cascade falls back from proxy → raw → ImageOff. The shorts poster comes from a single
-    // image source; there is no separate video-frame fallback because the <video> tag itself
+    // image source; there is no separate video-frame fallback because the singleton <video>
     // shows a frame once it loads.
     const thumbnailCascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
 
@@ -197,124 +166,14 @@ export const ShortVideoItem = memo(
       [eventRelays, pointerRelays, userReadRelays]
     )
 
-    useVideoViewTracking({
-      video,
-      mediaElement: videoElement,
-      active: isActive,
-      source: 'shorts',
-      relayHint: eventRelays[0],
-    })
-
-    // Preload reactions and comments for this video
+    // Preload reactions and comments for this video when it is close enough to be rendered
     usePreloadVideoData({
       videoId: video.id,
       authorPubkey: video.pubkey,
       kind: video.kind,
       relays: reactionRelays,
-      enabled: shouldPreload || isActive,
+      enabled: isActive,
     })
-
-    // Auto-play/pause based on isActive
-    useEffect(() => {
-      const videoEl = videoElementRef.current
-      if (!videoEl) return
-
-      if (isActive) {
-        // Only reset to beginning if video has ended or is at the very start
-        // This prevents jarring resets when scrolling back to a partially watched video
-        if (videoEl.ended || videoEl.currentTime === 0) {
-          videoEl.currentTime = 0
-        }
-        // Start muted to comply with iOS autoplay restrictions
-        // Will be unmuted after playback starts (see playActiveVideo)
-        videoEl.muted = true
-
-        if (videoUrl) {
-          playActiveVideo()
-        }
-      } else {
-        // Pause inactive videos at current position (don't reset)
-        videoEl.pause()
-        videoEl.muted = true
-      }
-    }, [isActive, playActiveVideo, video.id, videoUrl])
-
-    // Handle click/touch to pause/play
-    const handleVideoClick = useCallback(() => {
-      const videoEl = videoElementRef.current
-      if (!videoEl || !isActive) return
-
-      // Mark this as a user-initiated action to show the play/pause overlay
-      userInitiatedPlayPauseRef.current = true
-
-      if (videoEl.paused) {
-        const playPromise = videoEl.play()
-        // User-initiated play can unmute immediately
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            videoEl.muted = false
-          })
-        }
-      } else {
-        videoEl.pause()
-      }
-    }, [isActive])
-
-    // Allow toggling playback with spacebar while active
-    useEffect(() => {
-      if (!isActive) return
-
-      const handleKeyDown = (event: KeyboardEvent) => {
-        // Don't intercept space key when user is typing in an input or textarea
-        const target = event.target as HTMLElement
-        if (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable
-        ) {
-          return
-        }
-
-        if (event.code === 'Space' || event.key === ' ') {
-          event.preventDefault()
-          handleVideoClick()
-        }
-      }
-
-      window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [handleVideoClick, isActive])
-
-    // Handle video ready to play
-    const handleCanPlay = useCallback(() => {
-      // Video is ready, can start playing
-      const videoEl = videoElementRef.current
-      if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
-        setAspectRatio(videoEl.videoWidth / videoEl.videoHeight)
-      }
-      // Always try to play when video becomes ready and is active
-      // This ensures videos that loaded slowly will still autoplay
-      if (isActive) {
-        playActiveVideo()
-      }
-    }, [isActive, playActiveVideo])
-
-    // Handle when video has loaded enough data to start playing
-    // This is an additional safeguard for slow-loading videos
-    const handleLoadedData = useCallback(() => {
-      if (isActive) {
-        playActiveVideo()
-      }
-    }, [isActive, playActiveVideo])
-
-    // Handle video error: try next URL in failover chain
-    const handleVideoError = useCallback(() => {
-      if (hasMoreVideoUrls) {
-        moveToNextVideo()
-      } else {
-        console.error('All video URLs failed for:', video.id)
-      }
-    }, [hasMoreVideoUrls, moveToNextVideo, video.id])
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
     // Compute fresh link with up-to-date seen relays (not stale from processEvent)
@@ -326,41 +185,11 @@ export const ShortVideoItem = memo(
     })()
     const shareUrl = `${baseUrl}${buildVideoPath(freshLink, 'shorts')}`
 
-    // Calculate max-width based on aspect ratio (memoized to avoid recalculation)
-    // For vertical videos (9:16), use standard width
-    // For square videos (1:1), use larger width (85vh)
-    // For wider videos, use even larger width
-    const maxWidth = useMemo(() => {
-      if (!aspectRatio) return 'calc(100vh * 9 / 16)' // Default for vertical
-
-      if (aspectRatio >= 0.9 && aspectRatio <= 1.1) {
-        // Square video (1:1 ratio, with some tolerance)
-        return '85vh'
-      } else if (aspectRatio > 1.1) {
-        // Wider than square (landscape)
-        return '95vh'
-      } else {
-        // Vertical video
-        return 'calc(100vh * 9 / 16)'
-      }
-    }, [aspectRatio])
-
-    // Preload video in background when shouldPreload is true
-    useEffect(() => {
-      if (!shouldPreload || isActive || !videoUrl) {
-        return
-      }
-
-      const videoEl = videoElementRef.current
-      if (!videoEl) return
-
-      // Start loading the video in the background
-      videoEl.load()
-    }, [shouldPreload, isActive, videoUrl])
+    const aspectRatio = useMemo(() => dimensionsToAspectRatio(video.dimensions), [video.dimensions])
+    const maxWidth = useMemo(() => maxWidthForAspectRatio(aspectRatio), [aspectRatio])
 
     const handleRootRef = useCallback(
       (node: HTMLDivElement | null) => {
-        videoRef.current = node
         if (registerIntersectionRef) {
           registerIntersectionRef(node)
         }
@@ -368,27 +197,17 @@ export const ShortVideoItem = memo(
       [registerIntersectionRef]
     )
 
-    const handleVideoElementRef = useCallback((node: HTMLVideoElement | null) => {
-      videoElementRef.current = node
-      setVideoElement(node)
-    }, [])
-
     return (
       <div
         ref={handleRootRef}
         data-video-id={video.id}
-        className="snap-center min-h-screen h-screen w-full flex items-center justify-center bg-black"
-        style={{
-          scrollSnapAlign: 'center',
-          scrollSnapStop: 'always',
-          contain: 'layout style paint', // Isolate layout calculations
-          contentVisibility: isActive ? 'visible' : 'auto', // Only render visible content
-        }}
+        className="min-h-screen h-screen w-full flex items-center justify-center bg-black"
+        style={{ contain: 'layout style paint' }}
       >
         <div className="relative w-full h-screen flex flex-col md:flex-row items-center justify-center">
-          {/* Video player - fullscreen vertical */}
+          {/* Poster / video backdrop. The real <video> is rendered once by ShortsVideoPage. */}
           <div className="relative w-full md:flex-1 h-full flex items-center justify-center bg-black">
-            <div className="relative w-full h-full" style={{ maxWidth: maxWidth }}>
+            <div className="relative w-full h-full" style={{ maxWidth }}>
               {video.contentWarning && !isActive && (
                 <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-lg">
                   <div className="text-center">
@@ -402,40 +221,13 @@ export const ShortVideoItem = memo(
                 </div>
               )}
               <div className="relative w-full h-full">
-                <div className="relative w-full h-full" onClick={handleVideoClick}>
-                  <video
-                    ref={handleVideoElementRef}
-                    src={videoUrl || undefined}
-                    className="w-full h-full object-contain cursor-pointer"
-                    loop
-                    muted={true}
-                    playsInline
-                    poster={thumbnailCascade.src ?? undefined}
-                    preload={shouldPreload || isActive ? 'auto' : 'metadata'}
-                    onCanPlay={handleCanPlay}
-                    onLoadedData={handleLoadedData}
-                    onError={handleVideoError}
-                    style={{ opacity: isActive ? 1 : 0.5 }}
-                  />
-                  {/* Play/Pause icon overlay with animation */}
-                  {isActive && (
-                    <PlayPauseOverlay
-                      videoRef={videoElementRef}
-                      userInitiatedRef={userInitiatedPlayPauseRef}
-                    />
-                  )}
-                </div>
-                {/* Show thumbnail overlay when not active for better visibility */}
-                {!isActive && thumbnailCascade.src && (
-                  <div
-                    className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center"
-                    onClick={handleVideoClick}
-                  >
+                {thumbnailCascade.src && (
+                  <div className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center">
                     <img
                       src={thumbnailCascade.src}
                       alt={video.title}
                       className="w-full h-full object-contain"
-                      loading="lazy"
+                      loading={isActive ? 'eager' : 'lazy'}
                       referrerPolicy="no-referrer"
                       onError={thumbnailCascade.onError}
                       onLoad={thumbnailCascade.onLoad}
@@ -447,7 +239,7 @@ export const ShortVideoItem = memo(
           </div>
 
           {/* Right sidebar with interactions - mobile: absolute overlay, desktop: relative right side */}
-          <div className="absolute bottom-24 right-4 md:right-0 flex flex-col items-center gap-4 z-10 md:pr-8 pb-8">
+          <div className="absolute bottom-24 right-4 md:right-0 flex flex-col items-center gap-4 z-20 md:pr-8 pb-8">
             {/* Upvote and Downvote buttons */}
             <VideoReactionButtons
               eventId={video.id}
@@ -478,7 +270,7 @@ export const ShortVideoItem = memo(
                 size="icon"
                 className="rounded-full"
                 onClick={() => {
-                  navigator.clipboard.writeText(shareUrl)
+                  void navigator.clipboard.writeText(shareUrl)
                 }}
                 aria-label="Share"
               >
@@ -504,8 +296,8 @@ export const ShortVideoItem = memo(
           </div>
 
           {/* Bottom info overlay */}
-          <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 md:px-8 md:pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
-            <div className="w-full" style={{ maxWidth: maxWidth }}>
+          <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-4 md:px-8 md:pb-8 bg-linear-to-t from-black/80 via-black/40 to-transparent">
+            <div className="w-full" style={{ maxWidth }}>
               {/* Follow button and Author info */}
               <div className="flex flex-col gap-4">
                 <FollowButton pubkey={video.pubkey} className="text-white self-start" />
@@ -599,10 +391,6 @@ export const ShortVideoItem = memo(
   },
   (prevProps, nextProps) => {
     // Custom comparison: only re-render if essential props changed
-    return (
-      prevProps.video.id === nextProps.video.id &&
-      prevProps.isActive === nextProps.isActive &&
-      prevProps.shouldPreload === nextProps.shouldPreload
-    )
+    return prevProps.video.id === nextProps.video.id && prevProps.isActive === nextProps.isActive
   }
 )

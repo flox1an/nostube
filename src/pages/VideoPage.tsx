@@ -643,12 +643,15 @@ export function VideoPage() {
     const playerKey = playlistParam ? `playlist-${playlistParam}` : video.id
     const chapters = parseVideoChapters(video.description, video.duration)
 
-    // Portrait videos (e.g. 9:16) should fill the viewport height rather than width.
-    // Landscape videos keep the existing width-first layout.
+    // Portrait/narrow videos on mobile get a height-driven container sized to the video's
+    // actual aspect ratio. On desktop the video stays letterboxed in a 16:9 container.
+    const portraitOnMobile = isPortrait && isMobile
     const portraitStyle: React.CSSProperties | undefined =
-      isPortrait && effectiveAspectRatio ? { aspectRatio: String(effectiveAspectRatio) } : undefined
-    const playerClassName = isPortrait
-      ? `max-h-[90dvh] w-auto mx-auto ${isMobile ? '' : 'rounded-lg'}`
+      portraitOnMobile && effectiveAspectRatio
+        ? { aspectRatio: String(effectiveAspectRatio) }
+        : undefined
+    const playerClassName = portraitOnMobile
+      ? 'max-h-[90dvh] w-auto mx-auto'
       : cinemaMode
         ? 'w-full max-h-[80dvh]'
         : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`

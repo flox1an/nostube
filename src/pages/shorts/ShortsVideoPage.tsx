@@ -21,6 +21,7 @@ import {
   useReadRelays,
   useVideoHistory,
   useVideoViewTracking,
+  useIsPortrait,
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import {
@@ -382,9 +383,11 @@ export function ShortsVideoPage() {
     return 'calc(100vh * 9 / 16)'
   }, [currentAspectRatio])
 
-  // Portrait videos (ratio < 1) fill the screen with overscan (object-cover, no maxWidth cap).
-  // Landscape videos keep the constrained object-contain layout.
+  // Overscan (object-cover, no maxWidth) only when the video is portrait AND the device
+  // viewport is also portrait — phones held upright. Desktop and landscape phones letterbox.
+  const isPortraitViewport = useIsPortrait()
   const isPortraitVideo = currentAspectRatio !== null && currentAspectRatio < 1.0
+  const useOverscan = isPortraitVideo && isPortraitViewport
 
   const handleVideoRef = useCallback((node: HTMLVideoElement | null) => {
     singletonVideoRef.current = node
@@ -790,11 +793,11 @@ export function ShortsVideoPage() {
             <div className="relative w-full h-full flex items-center justify-center bg-transparent">
               <div
                 className="relative w-full h-full pointer-events-auto"
-                style={isPortraitVideo ? undefined : { maxWidth: videoMaxWidth }}
+                style={useOverscan ? undefined : { maxWidth: videoMaxWidth }}
               >
                 <video
                   ref={handleVideoRef}
-                  className={`w-full h-full cursor-pointer ${isPortraitVideo ? 'object-cover' : 'object-contain'} ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
+                  className={`w-full h-full cursor-pointer ${useOverscan ? 'object-cover' : 'object-contain'} ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                   loop
                   playsInline
                   poster={videoPoster}

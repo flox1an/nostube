@@ -9,7 +9,7 @@
  */
 import { memo, useMemo, useCallback } from 'react'
 import { type VideoEvent } from '@/utils/video-event'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useIsPortrait } from '@/hooks'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-common/models'
@@ -66,6 +66,8 @@ export const ShortVideoItem = memo(
 
     const aspectRatio = useMemo(() => dimensionsToAspectRatio(video.dimensions), [video.dimensions])
     const maxWidth = useMemo(() => maxWidthForAspectRatio(aspectRatio), [aspectRatio])
+    const isPortraitViewport = useIsPortrait()
+    const useOverscan = aspectRatio !== null && aspectRatio < 1.0 && isPortraitViewport
 
     const handleRootRef = useCallback(
       (node: HTMLDivElement | null) => {
@@ -87,10 +89,7 @@ export const ShortVideoItem = memo(
       >
         <div className="relative w-full h-full flex flex-col md:flex-row items-center justify-center">
           <div className="relative w-full md:flex-1 h-full flex items-center justify-center bg-black">
-            <div
-              className="relative w-full h-full"
-              style={aspectRatio !== null && aspectRatio < 1.0 ? undefined : { maxWidth }}
-            >
+            <div className="relative w-full h-full" style={useOverscan ? undefined : { maxWidth }}>
               {video.contentWarning && !isActive && (
                 <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-lg">
                   <div className="text-center">
@@ -109,7 +108,7 @@ export const ShortVideoItem = memo(
                     <img
                       src={thumbnailCascade.src}
                       alt={video.title}
-                      className={`w-full h-full ${aspectRatio !== null && aspectRatio < 1.0 ? 'object-cover' : 'object-contain'}`}
+                      className={`w-full h-full ${useOverscan ? 'object-cover' : 'object-contain'}`}
                       loading={isActive ? 'eager' : 'lazy'}
                       referrerPolicy="no-referrer"
                       onError={thumbnailCascade.onError}

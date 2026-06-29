@@ -5,8 +5,6 @@ import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
 import {
-  useHls,
-  useDash,
   usePlayerState,
   useControlsVisibility,
   useSeekAccumulator,
@@ -15,6 +13,7 @@ import {
   useVideoVariantSelector,
   useMediaSession,
 } from './hooks'
+import { usePlaybackEngine } from './engines'
 import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
@@ -249,38 +248,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [hasMoreVideoUrls, isLoadingVideoUrls, videoUrl])
 
-  // Determine if HLS / DASH
-  const isHls = useMemo(
-    () => hasHlsSource || (videoUrl?.endsWith('.m3u8') ?? false),
-    [hasHlsSource, videoUrl]
-  )
-  const isDash = useMemo(
-    () => hasDashSource || (videoUrl?.endsWith('.mpd') ?? false),
-    [hasDashSource, videoUrl]
-  )
-
-  useEffect(() => {
-    if (!import.meta.env.DEV || (!isHls && !isDash)) return
-    console.info('[Streaming:VideoPlayer]', 'streaming mode resolved', {
-      isHls,
-      isDash,
-      mime,
-      videoUrl,
-      byHlsMime: baseMime === 'application/vnd.apple.mpegurl',
-      byDashMime: baseMime === 'application/dash+xml',
-      byHlsUrl: videoUrl?.endsWith('.m3u8') ?? false,
-      byDashUrl: videoUrl?.endsWith('.mpd') ?? false,
-    })
-  }, [baseMime, isDash, isHls, mime, videoUrl])
-
-  // Initialize HLS
-  const {
-    levels: hlsLevels,
-    currentLevel: hlsCurrentLevel,
-    activeLevel: hlsActiveLevel,
-    setLevel: setHlsLevel,
-  } = useHls(videoRef, videoUrl, isHls, authorPubkey, eventId, 'never')
-
   const handleDashError = useCallback(
     (message: string) => {
       console.error('DASH playback failed:', message)
@@ -293,7 +260,38 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     [hasMoreVideoUrls, moveToNextVideo]
   )
 
-  useDash(videoRef, videoUrl, isDash, !contentWarning, handleDashError)
+  // Protocol-neutral playback engine: native / HLS / DASH behind one interface.
+  const engine = usePlaybackEngine({
+    videoRef,
+    videoUrl,
+    mime,
+    effectiveUrls,
+    videoVariants,
+    selectedVariantIndex,
+    handleVariantChange,
+    authorPubkey,
+    eventId,
+    autoPlay: !contentWarning,
+    onError: handleDashError,
+  })
+
+  const isHls = engine.mode === 'hls'
+  const isDash = engine.mode === 'dash'
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || (!isHls && !isDash)) return
+    console.info('[Streaming:VideoPlayer]', 'streaming mode resolved', {
+      mode: engine.mode,
+      isHls,
+      isDash,
+      mime,
+      videoUrl,
+      byHlsMime: baseMime === 'application/vnd.apple.mpegurl',
+      byDashMime: baseMime === 'application/dash+xml',
+      byHlsUrl: videoUrl?.endsWith('.m3u8') ?? false,
+      byDashUrl: videoUrl?.endsWith('.mpd') ?? false,
+    })
+  }, [baseMime, engine.mode, isDash, isHls, mime, videoUrl])
 
   // Validate text tracks (check availability, use blossom fallback)
   const { validatedTracks } = useValidatedTextTracks(textTracks)
@@ -1076,7 +1074,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           )}
           <audio
             ref={setMediaElementRef}
-            src={isHls || isDash ? undefined : (videoUrl ?? undefined)}
+            src={engine.managedSource ? undefined : engine.elementSrc}
             loop={loopEnabled}
             autoPlay={!contentWarning}
             playsInline
@@ -1097,7 +1095,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       ) : (
         <video
           ref={setMediaElementRef}
-          src={isHls || isDash ? undefined : (videoUrl ?? undefined)}
+          src={engine.managedSource ? undefined : engine.elementSrc}
           poster={posterUrl ?? undefined}
           loop={loopEnabled}
           autoPlay={!contentWarning}
@@ -1161,14 +1159,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onToggleMute={playerState.toggleMute}
         playbackRate={playerState.playbackRate}
         onPlaybackRateChange={playerState.setPlaybackRate}
-        isHls={isHls}
-        hlsLevels={hlsLevels}
-        hlsCurrentLevel={hlsCurrentLevel}
-        hlsActiveLevel={hlsActiveLevel}
-        onHlsLevelChange={setHlsLevel}
-        videoVariants={videoVariants}
-        selectedVariantIndex={selectedVariantIndex}
-        onVariantChange={handleVariantChange}
+        qualityOptions={engine.qualityOptions}
+        selectedQuality={engine.selectedQuality}
+        activeQualityLabel={engine.activeQualityLabel}
+        onSelectQuality={engine.selectQuality}
         hasCaptions={hasCaptions}
         captionsEnabled={captionsEnabled}
         onToggleCaptions={toggleCaptions}

@@ -1,13 +1,20 @@
 import { type ReactNode, memo, useCallback, useMemo } from 'react'
-import { PictureInPicture2, Subtitles, Maximize, Minimize, MoveHorizontal, SkipForward } from 'lucide-react'
+import {
+  PictureInPicture2,
+  Subtitles,
+  Maximize,
+  Minimize,
+  MoveHorizontal,
+  SkipForward,
+} from 'lucide-react'
 import { PlayButton } from './PlayButton'
 import { VolumeControl } from './VolumeControl'
 import { TimeDisplay } from './TimeDisplay'
 import { ProgressBar } from './ProgressBar'
 import { SettingsMenu } from './SettingsMenu'
 import { ControlButton } from './ControlButton'
-import { type HlsQualityLevel } from './hooks/useHls'
-import { type VideoVariant, type TextTrack } from '@/utils/video-event'
+import { type QualityOption } from './engines'
+import { type TextTrack } from '@/utils/video-event'
 import { useIsMobile } from '@/hooks'
 import { useTranslation } from 'react-i18next'
 import type { VideoChapter } from '@/lib/video-chapters'
@@ -38,17 +45,11 @@ interface ControlBarProps {
   playbackRate: number
   onPlaybackRateChange: (rate: number) => void
 
-  // Quality - HLS
-  isHls: boolean
-  hlsLevels?: HlsQualityLevel[]
-  hlsCurrentLevel?: number
-  hlsActiveLevel?: number | null
-  onHlsLevelChange?: (level: number) => void
-
-  // Quality - Native
-  videoVariants?: VideoVariant[]
-  selectedVariantIndex?: number
-  onVariantChange?: (index: number) => void
+  // Quality (protocol-neutral)
+  qualityOptions?: QualityOption[]
+  selectedQuality?: number
+  activeQualityLabel?: string | null
+  onSelectQuality?: (id: number) => void
 
   // Captions/Subtitles
   hasCaptions: boolean
@@ -103,14 +104,10 @@ export const ControlBar = memo(function ControlBar({
   onToggleMute,
   playbackRate,
   onPlaybackRateChange,
-  isHls,
-  hlsLevels,
-  hlsCurrentLevel,
-  hlsActiveLevel,
-  onHlsLevelChange,
-  videoVariants,
-  selectedVariantIndex,
-  onVariantChange,
+  qualityOptions,
+  selectedQuality,
+  activeQualityLabel,
+  onSelectQuality,
   hasCaptions,
   captionsEnabled,
   onToggleCaptions,
@@ -145,7 +142,7 @@ export const ControlBar = memo(function ControlBar({
 
   const nextChapter = useMemo(() => {
     if (!chapters?.length) return null
-    return chapters.find((c) => c.startTime > currentTime) ?? null
+    return chapters.find(c => c.startTime > currentTime) ?? null
   }, [chapters, currentTime])
 
   const handleNextChapter = useCallback(() => {
@@ -221,14 +218,10 @@ export const ControlBar = memo(function ControlBar({
 
           {/* Settings menu */}
           <SettingsMenu
-            isHls={isHls}
-            hlsLevels={hlsLevels}
-            hlsCurrentLevel={hlsCurrentLevel}
-            hlsActiveLevel={hlsActiveLevel}
-            onHlsLevelChange={onHlsLevelChange}
-            videoVariants={videoVariants}
-            selectedVariantIndex={selectedVariantIndex}
-            onVariantChange={onVariantChange}
+            qualityOptions={qualityOptions}
+            selectedQuality={selectedQuality}
+            activeQualityLabel={activeQualityLabel}
+            onSelectQuality={onSelectQuality}
             playbackRate={playbackRate}
             onPlaybackRateChange={onPlaybackRateChange}
             textTracks={textTracks}

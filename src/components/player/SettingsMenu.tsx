@@ -9,26 +9,13 @@ import {
   SlidersHorizontal,
   Captions,
 } from 'lucide-react'
-import { type HlsQualityLevel } from './hooks/useHls'
-import { type VideoVariant, type TextTrack } from '@/utils/video-event'
+import { type QualityOption } from './engines'
+import { type TextTrack } from '@/utils/video-event'
 import { useProfile } from '@/hooks/useProfile'
 import { UserAvatar } from '@/components/UserAvatar'
 import { getLanguageLabel } from '@/lib/utils'
 
 type MenuView = 'main' | 'quality' | 'speed' | 'subtitles'
-
-interface QualityOption {
-  label: string
-  value: number // -1 for auto (HLS), or variant index
-  description?: string
-  contributorPubkey?: string
-}
-
-function qualityLabelFromVariant(variant: VideoVariant, fallback: string): string {
-  if (variant.quality) return variant.quality
-  const height = variant.dimensions?.match(/x(\d+)/)?.[1]
-  return height ? `${height}p` : fallback
-}
 
 function contributorDisplayName(
   profile: { display_name?: string; name?: string; picture?: string } | undefined,
@@ -38,16 +25,11 @@ function contributorDisplayName(
 }
 
 interface SettingsMenuProps {
-  // HLS quality (for HLS streams)
-  hlsLevels?: HlsQualityLevel[]
-  hlsCurrentLevel?: number
-  hlsActiveLevel?: number | null
-  onHlsLevelChange?: (level: number) => void
-
-  // Native video quality (for non-HLS)
-  videoVariants?: VideoVariant[]
-  selectedVariantIndex?: number
-  onVariantChange?: (index: number) => void
+  // Quality (protocol-neutral; options are built by the playback engine)
+  qualityOptions?: QualityOption[]
+  selectedQuality?: number
+  activeQualityLabel?: string | null
+  onSelectQuality?: (id: number) => void
 
   // Playback speed
   playbackRate: number
@@ -61,9 +43,6 @@ interface SettingsMenuProps {
   // Loop
   loopEnabled?: boolean
   onToggleLoop?: () => void
-
-  // Is HLS mode
-  isHls: boolean
 }
 
 const PLAYBACK_SPEEDS = [
@@ -81,13 +60,10 @@ const PLAYBACK_SPEEDS = [
  * Settings menu with nested submenus for quality and playback speed
  */
 export const SettingsMenu = memo(function SettingsMenu({
-  hlsLevels = [],
-  hlsCurrentLevel = -1,
-  hlsActiveLevel = null,
-  onHlsLevelChange,
-  videoVariants = [],
-  selectedVariantIndex = 0,
-  onVariantChange,
+  qualityOptions = [],
+  selectedQuality,
+  activeQualityLabel = null,
+  onSelectQuality,
   playbackRate,
   onPlaybackRateChange,
   textTracks = [],
@@ -95,42 +71,21 @@ export const SettingsMenu = memo(function SettingsMenu({
   onSubtitleChange,
   loopEnabled = false,
   onToggleLoop,
-  isHls,
 }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentView, setCurrentView] = useState<MenuView>('main')
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const activeHlsLevelLabel =
-    hlsActiveLevel === null ? null : hlsLevels.find(level => level.index === hlsActiveLevel)?.label
-
-  // Build quality options based on mode
-  const qualityOptions: QualityOption[] = isHls
-    ? [
-        {
-          label: 'Auto',
-          value: -1,
-          description: activeHlsLevelLabel ? `Currently ${activeHlsLevelLabel}` : undefined,
-        },
-        ...hlsLevels.map(level => ({ label: level.label, value: level.index })),
-      ]
-    : videoVariants.map((variant, index) => ({
-        label: qualityLabelFromVariant(variant, `Quality ${index + 1}`),
-        value: index,
-        contributorPubkey: variant.contributorPubkey,
-      }))
-
-  const currentQuality = isHls ? hlsCurrentLevel : selectedVariantIndex
-  const selectedQualityOption = qualityOptions.find(q => q.value === currentQuality)
+  const selectedQualityOption = qualityOptions.find(q => q.id === selectedQuality)
   const selectedContributorProfile = useProfile(
     selectedQualityOption?.contributorPubkey
       ? { pubkey: selectedQualityOption.contributorPubkey }
       : undefined
   )
   const currentQualityLabel =
-    currentQuality === -1
-      ? activeHlsLevelLabel
-        ? `Auto (${activeHlsLevelLabel})`
+    selectedQuality === -1
+      ? activeQualityLabel
+        ? `Auto (${activeQualityLabel})`
         : 'Auto'
       : selectedQualityOption
         ? selectedQualityOption.contributorPubkey
@@ -192,12 +147,8 @@ export const SettingsMenu = memo(function SettingsMenu({
     })
   }
 
-  const handleQualitySelect = (value: number) => {
-    if (isHls) {
-      onHlsLevelChange?.(value)
-    } else {
-      onVariantChange?.(value)
-    }
+  const handleQualitySelect = (id: number) => {
+    onSelectQuality?.(id)
     setIsOpen(false)
     setCurrentView('main')
   }
@@ -220,8 +171,8 @@ export const SettingsMenu = memo(function SettingsMenu({
     setCurrentView('main')
   }
 
-  // Don't show menu if no quality options (single quality, no HLS)
-  const hasQualityOptions = qualityOptions.length > 1 || isHls
+  // Don't show the quality menu for single-quality sources
+  const hasQualityOptions = qualityOptions.length > 1
   const hasSubtitles = textTracks.length > 0
 
   // Build subtitle label
@@ -264,7 +215,7 @@ export const SettingsMenu = memo(function SettingsMenu({
           {currentView === 'quality' && (
             <QualitySubmenu
               options={qualityOptions}
-              currentValue={currentQuality}
+              currentValue={selectedQuality}
               onSelect={handleQualitySelect}
               onBack={() => setCurrentView('main')}
             />
@@ -356,8 +307,8 @@ const MainMenu = memo(function MainMenu({
 
 interface QualitySubmenuProps {
   options: QualityOption[]
-  currentValue: number
-  onSelect: (value: number) => void
+  currentValue: number | undefined
+  onSelect: (id: number) => void
   onBack: () => void
 }
 
@@ -372,10 +323,10 @@ const QualitySubmenu = memo(function QualitySubmenu({
       <SubmenuHeader title="Quality" onBack={onBack} />
       {options.map(option => (
         <QualitySelectableItem
-          key={option.value}
+          key={option.id}
           option={option}
-          isSelected={option.value === currentValue}
-          onClick={() => onSelect(option.value)}
+          isSelected={option.id === currentValue}
+          onClick={() => onSelect(option.id)}
         />
       ))}
     </div>

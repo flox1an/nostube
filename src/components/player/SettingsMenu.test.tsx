@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SettingsMenu } from './SettingsMenu'
-import type { VideoVariant } from '@/utils/video-event'
+import type { QualityOption } from './engines'
 
 vi.mock('@/hooks/useProfile', () => ({
   useProfile: (user?: { pubkey: string }) => {
@@ -13,13 +13,12 @@ vi.mock('@/hooks/useProfile', () => ({
   },
 }))
 
-const renderSettingsMenu = (videoVariants: VideoVariant[]) => {
+const openQualityMenu = (qualityOptions: QualityOption[]) => {
   render(
     <SettingsMenu
-      isHls={false}
-      videoVariants={videoVariants}
-      selectedVariantIndex={0}
-      onVariantChange={vi.fn()}
+      qualityOptions={qualityOptions}
+      selectedQuality={0}
+      onSelectQuality={vi.fn()}
       playbackRate={1}
       onPlaybackRateChange={vi.fn()}
     />
@@ -31,24 +30,10 @@ const renderSettingsMenu = (videoVariants: VideoVariant[]) => {
 
 describe('SettingsMenu quality labels', () => {
   it('labels duplicate contributed variant heights with contributor names', () => {
-    renderSettingsMenu([
-      {
-        url: 'https://cdn.example.com/original.mp4',
-        dimensions: '1280x720',
-        fallbackUrls: [],
-      },
-      {
-        url: 'https://cdn.example.com/alice-480.mp4',
-        dimensions: '854x480',
-        fallbackUrls: [],
-        contributorPubkey: 'alice-pubkey',
-      },
-      {
-        url: 'https://cdn.example.com/bob-480.mp4',
-        dimensions: '854x480',
-        fallbackUrls: [],
-        contributorPubkey: 'bob-pubkey',
-      },
+    openQualityMenu([
+      { id: 0, label: '720p' },
+      { id: 1, label: '480p', contributorPubkey: 'alice-pubkey' },
+      { id: 2, label: '480p', contributorPubkey: 'bob-pubkey' },
     ])
 
     expect(screen.getByRole('menuitemradio', { name: '720p' })).toBeInTheDocument()
@@ -57,18 +42,9 @@ describe('SettingsMenu quality labels', () => {
   })
 
   it('shows a compact contributor avatar before contributed variant names', () => {
-    renderSettingsMenu([
-      {
-        url: 'https://cdn.example.com/original.mp4',
-        dimensions: '1280x720',
-        fallbackUrls: [],
-      },
-      {
-        url: 'https://cdn.example.com/alice-480.mp4',
-        dimensions: '854x480',
-        fallbackUrls: [],
-        contributorPubkey: 'alice-pubkey',
-      },
+    openQualityMenu([
+      { id: 0, label: '720p' },
+      { id: 1, label: '480p', contributorPubkey: 'alice-pubkey' },
     ])
 
     const contributedOption = screen.getByRole('menuitemradio', { name: '480p (Alice)' })

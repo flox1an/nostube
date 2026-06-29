@@ -44,17 +44,20 @@ vi.mock('./SeekIndicator', () => ({
   SeekIndicator: () => null,
 }))
 
-vi.mock('./hooks', () => ({
-  useHls: () => ({
-    levels: [],
-    currentLevel: -1,
-    activeLevel: -1,
-    setLevel: vi.fn(),
-  }),
-  useDash: () => ({
-    isLoading: false,
+vi.mock('./engines', () => ({
+  usePlaybackEngine: () => ({
+    mode: 'native',
+    elementSrc: undefined,
+    managedSource: false,
+    loading: false,
     error: null,
+    qualityOptions: [],
+    selectedQuality: 0,
+    activeQualityLabel: null,
+    selectQuality: () => {},
   }),
+}))
+vi.mock('./hooks', () => ({
   usePlayerState: () => ({
     isPlaying: false,
     currentTime: 0,

@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 
-// Constants for ultra-wide video detection
+// Constants for ultra-wide / narrow video detection
 const SIXTEEN_NINE_RATIO = 16 / 9
 const ULTRA_WIDE_THRESHOLD = SIXTEEN_NINE_RATIO * 1.1
+// Any video narrower than 16:9 (with a small tolerance) should fill height rather than width.
+// This covers portrait (9:16), square (1:1), and formats like 4:3, 3:4, 2:3, etc.
+const NARROW_THRESHOLD = SIXTEEN_NINE_RATIO * 0.95
 
 interface UseUltraWideVideoProps {
   videoDimensions: string | undefined
@@ -29,26 +32,34 @@ export function useUltraWideVideo({
     setVideoAspectRatio(aspectRatio)
   }, [])
 
-  // Check if video is wider than 16:9 (e.g., ultra-wide video)
-  const isUltraWide = useMemo(() => {
-    // First try to get dimensions from video metadata
+  // Compute aspect ratio from metadata (width / height); null if unparseable
+  const parsedAspectRatio = useMemo(() => {
     if (videoDimensions) {
       const match = videoDimensions.match(/(\d+)x(\d+)/)
       if (match) {
-        const width = parseInt(match[1], 10)
-        const height = parseInt(match[2], 10)
-        const aspectRatio = width / height
-        return aspectRatio > ULTRA_WIDE_THRESHOLD
+        const w = parseInt(match[1], 10)
+        const h = parseInt(match[2], 10)
+        if (h > 0) return w / h
       }
     }
+    return null
+  }, [videoDimensions])
 
-    // Fall back to video element dimensions
-    if (videoAspectRatio !== null) {
-      return videoAspectRatio > ULTRA_WIDE_THRESHOLD
-    }
+  // Effective aspect ratio: metadata first, then from video element
+  const effectiveAspectRatio = parsedAspectRatio ?? videoAspectRatio
 
+  // Check if video is wider than 16:9 (e.g., ultra-wide video)
+  const isUltraWide = useMemo(() => {
+    if (effectiveAspectRatio !== null) return effectiveAspectRatio > ULTRA_WIDE_THRESHOLD
     return false
-  }, [videoDimensions, videoAspectRatio])
+  }, [effectiveAspectRatio])
+
+  // True for any video narrower than 16:9 — portrait, square, 4:3, etc.
+  // These get a height-driven container sized to their actual aspect ratio.
+  const isPortrait = useMemo(() => {
+    if (effectiveAspectRatio !== null) return effectiveAspectRatio < NARROW_THRESHOLD
+    return false
+  }, [effectiveAspectRatio])
 
   // Reset aspect ratio and temp cinema mode when video changes
   useEffect(() => {
@@ -84,6 +95,8 @@ export function useUltraWideVideo({
 
   return {
     isUltraWide,
+    isPortrait,
+    effectiveAspectRatio,
     tempCinemaModeForWideVideo,
     setTempCinemaModeForWideVideo,
     handleVideoDimensionsLoaded,

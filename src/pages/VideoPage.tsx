@@ -8,7 +8,7 @@ import { VideoPlayer } from '@/components/VideoPlayer'
 import { YouTubePlayer } from '@/components/YouTubePlayer'
 import { VideoSuggestions } from '@/components/VideoSuggestions'
 import { HlsFailoverDebugPanel } from '@/components/HlsFailoverDebugPanel'
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   processEvent,
   generateEventLink,
@@ -415,12 +415,17 @@ export function VideoPage() {
   }, [serverList, serverAvailability])
 
   // Use ultra-wide video detection hook
-  const { tempCinemaModeForWideVideo, setTempCinemaModeForWideVideo, handleVideoDimensionsLoaded } =
-    useUltraWideVideo({
-      videoDimensions: video?.dimensions,
-      videoId: video?.id,
-      persistedCinemaMode,
-    })
+  const {
+    tempCinemaModeForWideVideo,
+    setTempCinemaModeForWideVideo,
+    handleVideoDimensionsLoaded,
+    isPortrait,
+    effectiveAspectRatio,
+  } = useUltraWideVideo({
+    videoDimensions: video?.dimensions,
+    videoId: video?.id,
+    persistedCinemaMode,
+  })
 
   // Effective cinema mode: temp override for ultra-wide, or persisted preference
   const cinemaMode = tempCinemaModeForWideVideo || persistedCinemaMode
@@ -638,6 +643,16 @@ export function VideoPage() {
     const playerKey = playlistParam ? `playlist-${playlistParam}` : video.id
     const chapters = parseVideoChapters(video.description, video.duration)
 
+    // Portrait videos (e.g. 9:16) should fill the viewport height rather than width.
+    // Landscape videos keep the existing width-first layout.
+    const portraitStyle: React.CSSProperties | undefined =
+      isPortrait && effectiveAspectRatio ? { aspectRatio: String(effectiveAspectRatio) } : undefined
+    const playerClassName = isPortrait
+      ? `max-h-[90dvh] w-auto mx-auto ${isMobile ? '' : 'rounded-lg'}`
+      : cinemaMode
+        ? 'w-full max-h-[80dvh]'
+        : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
+
     return (
       <VideoPlayer
         key={playerKey}
@@ -648,11 +663,8 @@ export function VideoPage() {
         poster={video.images[0] || ''}
         posterHash={video.thumbnailVariants?.[0]?.hash}
         loop={shouldVideoLoop(video.kind)}
-        className={
-          cinemaMode
-            ? 'w-full max-h-[80dvh]'
-            : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
-        }
+        className={playerClassName}
+        style={portraitStyle}
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={initialPlayPos}
         contentWarning={video.contentWarning}
@@ -680,6 +692,8 @@ export function VideoPage() {
     mergedAllVideoVariants,
     cinemaMode,
     isMobile,
+    isPortrait,
+    effectiveAspectRatio,
     initialPlayPos,
     setCurrentPlayPos,
     handleAllSourcesFailed,

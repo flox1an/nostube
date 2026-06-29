@@ -33,6 +33,7 @@ interface VideoPlayerProps {
   posterHash?: string
   onTimeUpdate?: (time: number) => void
   className?: string
+  style?: React.CSSProperties
   contentWarning?: string
   sha256?: string
   authorPubkey?: string
@@ -66,6 +67,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   loop: loopProp = false,
   onTimeUpdate,
   className,
+  style,
   contentWarning,
   sha256,
   authorPubkey,
@@ -1034,6 +1036,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   return (
     <div
       ref={containerRef}
+      style={style}
       className={`relative bg-black overflow-hidden ${className || ''} ${
         !controlsVisibleForRender && playerState.isPlaying ? 'cursor-none' : ''
       } ${effectiveCinemaMode && !isFullscreen ? 'flex items-center justify-center' : ''}`}

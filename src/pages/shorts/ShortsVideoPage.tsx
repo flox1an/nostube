@@ -382,6 +382,10 @@ export function ShortsVideoPage() {
     return 'calc(100vh * 9 / 16)'
   }, [currentAspectRatio])
 
+  // Portrait videos (ratio < 1) fill the screen with overscan (object-cover, no maxWidth cap).
+  // Landscape videos keep the constrained object-contain layout.
+  const isPortraitVideo = currentAspectRatio !== null && currentAspectRatio < 1.0
+
   const handleVideoRef = useCallback((node: HTMLVideoElement | null) => {
     singletonVideoRef.current = node
     setActiveVideoElement(node)
@@ -786,11 +790,11 @@ export function ShortsVideoPage() {
             <div className="relative w-full h-full flex items-center justify-center bg-transparent">
               <div
                 className="relative w-full h-full pointer-events-auto"
-                style={{ maxWidth: videoMaxWidth }}
+                style={isPortraitVideo ? undefined : { maxWidth: videoMaxWidth }}
               >
                 <video
                   ref={handleVideoRef}
-                  className={`w-full h-full object-contain cursor-pointer ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
+                  className={`w-full h-full cursor-pointer ${isPortraitVideo ? 'object-cover' : 'object-contain'} ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                   loop
                   playsInline
                   poster={videoPoster}

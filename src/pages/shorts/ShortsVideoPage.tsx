@@ -35,6 +35,7 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useVideoPrefetch } from '@/hooks/useVideoPrefetch'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ShortVideoItem } from './ShortVideoItem'
+import { ShortVideoOverlay } from './ShortVideoOverlay'
 
 type DeckPhase = 'idle' | 'settling'
 
@@ -744,7 +745,7 @@ export function ShortsVideoPage() {
         <Header transparent />
       </div>
       <div
-        className="fixed top-0 left-0 right-0 bottom-0 bg-black overflow-hidden touch-none select-none"
+        className="fixed top-0 left-0 right-0 bottom-0 z-50 bg-black overflow-hidden touch-none select-none"
         style={{ paddingTop: 'calc(56px + env(safe-area-inset-top, 0))' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -807,6 +808,24 @@ export function ShortsVideoPage() {
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Interactive overlay (action icons + bottom info) for the current video.
+            Rendered at z-20 — above the singleton <video> (z-10) and the slide
+            thumbnail backgrounds (z-auto) — so buttons are always tappable.
+            pointer-events-none on the root lets taps on transparent areas fall
+            through to the <video> element for play/pause toggling. */}
+        {currentVideo && (
+          <div
+            className="absolute inset-0 z-20"
+            style={{
+              transform: `translate3d(0, ${deckOffsetY}px, 0)`,
+              transition: videoTransition,
+              willChange: deckPhase === 'idle' ? undefined : 'transform',
+            }}
+          >
+            <ShortVideoOverlay video={currentVideo} maxWidth={videoMaxWidth} />
           </div>
         )}
       </div>

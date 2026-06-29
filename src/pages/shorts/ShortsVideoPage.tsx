@@ -32,6 +32,7 @@ import { getKindsForType } from '@/lib/video-types'
 import { Header } from '@/components/Header'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
+import { useVideoPrefetch } from '@/hooks/useVideoPrefetch'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ShortVideoItem } from './ShortVideoItem'
 
@@ -334,6 +335,15 @@ export function ShortsVideoPage() {
     enabled: !!currentVideo,
     onError: handleVideoUrlError,
   })
+
+  // Preload neighbor videos (Tier 1): resolve their URLs now through the same
+  // pipeline and warm the HTTP cache so the singleton can play them
+  // near-instantly on swipe. sha256-keyed discovery is cached, so this also
+  // primes the resolution the singleton will reuse when the neighbor activates.
+  const nextVideo = allVideos[currentVideoIndex + 1] ?? null
+  const previousVideo = allVideos[currentVideoIndex - 1] ?? null
+  useVideoPrefetch({ video: nextVideo, enabled: !!nextVideo })
+  useVideoPrefetch({ video: previousVideo, enabled: !!previousVideo })
 
   useVideoViewTracking({
     video: currentVideo,

@@ -63,6 +63,7 @@ export type { VideoNote } from './useVideoNotes'
 export { useUltraWideVideo } from './useUltraWideVideo'
 export { useCinemaMode } from './useCinemaMode'
 export { usePreloadVideoData } from './usePreloadVideoData'
+export { useVideoPrefetch } from './useVideoPrefetch'
 export { useMissingVideos } from './useMissingVideos'
 
 // ============================================================================

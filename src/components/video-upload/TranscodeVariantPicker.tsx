@@ -9,11 +9,7 @@ import {
 } from '@/lib/video-transcode'
 
 function estimateVariantSizeMB(height: number, sourceMeta: TranscodeSourceMeta): number {
-  const { width, height: h } = computeTargetDimensions(
-    sourceMeta.width,
-    sourceMeta.height,
-    height
-  )
+  const { width, height: h } = computeTargetDimensions(sourceMeta.width, sourceMeta.height, height)
   const videoBitrateBps = computeBrowserTranscodeVideoBitrate(width, h, 'balanced', sourceMeta)
   const bytes = ((videoBitrateBps + BROWSER_TRANSCODE_AUDIO_BITRATE) * sourceMeta.duration) / 8
   return bytes / (1024 * 1024)
@@ -75,16 +71,14 @@ export function TranscodeVariantPicker({
             htmlFor={id}
             className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 hover:bg-muted/50"
           >
-            <Checkbox
-              id={id}
-              checked={checked}
-              onCheckedChange={v => toggle(opt.height, !!v)}
-            />
+            <Checkbox id={id} checked={checked} onCheckedChange={v => toggle(opt.height, !!v)} />
             <span className="flex-1 text-sm">
               <span className="block font-medium">
                 {opt.height}p · {getCodecLabel(codec)}
               </span>
-              <span className="block text-xs text-muted-foreground">~{formatEstimatedSize(sizeMB)}</span>
+              <span className="block text-xs text-muted-foreground">
+                ~{formatEstimatedSize(sizeMB)}
+              </span>
             </span>
           </label>
         )

@@ -155,7 +155,6 @@ export function useVideoNotes() {
       { eventStore }
     )
 
-
     // Subscribe to current user's video events to build the published URL set
     if (videoLoader) {
       videoSub = videoLoader().subscribe({
@@ -175,7 +174,6 @@ export function useVideoNotes() {
         error: err => console.error('VideoNotes: Error loading video events:', err),
       })
     }
-
 
     // Subscribe to Kind 1 notes
     notesSub = notesLoader().subscribe({

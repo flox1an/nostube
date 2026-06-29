@@ -13,8 +13,15 @@ const FALLBACK_INDEXED_DB_CACHE_NAMES = [
 const CLEAR_ON_LOAD_KEY = 'clearCacheOnLoad'
 const CLEAR_TIMEOUT_MS = 5000
 
-function withTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = CLEAR_TIMEOUT_MS): Promise<T> {
-  return Promise.race([promise, new Promise<T>(resolve => setTimeout(resolve, timeoutMs, fallback))])
+function withTimeout<T>(
+  promise: Promise<T>,
+  fallback: T,
+  timeoutMs = CLEAR_TIMEOUT_MS
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>(resolve => setTimeout(resolve, timeoutMs, fallback)),
+  ])
 }
 
 function deleteDatabase(name: string): Promise<void> {

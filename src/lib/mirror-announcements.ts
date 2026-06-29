@@ -270,7 +270,6 @@ export function getMirrorAnnouncementRelays(
   return Array.from(relaySet)
 }
 
-
 /**
  * Build MirrorAnnouncementOptions for a freshly transcoded+uploaded MP4 variant.
  */

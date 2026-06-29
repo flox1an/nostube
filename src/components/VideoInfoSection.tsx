@@ -404,10 +404,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 {userPubkey && (
                   <DropdownMenuItem onSelect={handleToggleProfilePin} disabled={isPinning}>
                     {isVideoPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
-                    &nbsp;{' '}
-                    {isVideoPinned
-                      ? t('video.unpinFromProfile')
-                      : t('video.pinToProfile')}
+                    &nbsp; {isVideoPinned ? t('video.unpinFromProfile') : t('video.pinToProfile')}
                   </DropdownMenuItem>
                 )}
                 {isEditable && videoEvent && (

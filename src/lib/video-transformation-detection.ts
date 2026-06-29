@@ -1,7 +1,6 @@
 import { type VideoVariant } from '@/utils/video-event'
 import { isCodecSupported } from './codec-compatibility'
 
-
 /**
  * Extract quality/resolution from variant data
  * Priority: quality field > parse from dimensions
@@ -161,4 +160,3 @@ export function needsIOSCompatibleVariants(videoVariants: VideoVariant[]): boole
   // If we have at least one iOS-compatible variant, no transformation needed
   return !hasIOSCompatibleVariant
 }
-

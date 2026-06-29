@@ -405,4 +405,3 @@ Mitigations:
 - Do we want to reuse kind `25050` signaling as-is, or define a NosTube label/tag to avoid cross-app mesh confusion?
 - Should cache metadata include author/pubkey so user settings can avoid seeding muted or blocked authors?
 - How should HLS playlist hash maps be represented in Nostr events if segment URLs are not Blossom URLs?
-

@@ -101,11 +101,14 @@ export function useSearchVideoAuthors({
         if (controller.signal.aborted) return
         setMeiliResults((hits ?? []).map(peopleHitToProfileResult))
       })
-      .catch(() => { if (!controller.signal.aborted) setMeiliResults([]) })
+      .catch(() => {
+        if (!controller.signal.aborted) setMeiliResults([])
+      })
       .finally(onSettled)
 
     // Primal API — broader coverage for authors not yet in video index
-    primal.userSearch(trimmed)
+    primal
+      .userSearch(trimmed)
       .then(events => {
         if (controller.signal.aborted) return
         const results: ProfileResult[] = []
@@ -116,7 +119,9 @@ export function useSearchVideoAuthors({
         }
         setPrimalResults(results)
       })
-      .catch(() => { if (!controller.signal.aborted) setPrimalResults([]) })
+      .catch(() => {
+        if (!controller.signal.aborted) setPrimalResults([])
+      })
       .finally(onSettled)
 
     return () => controller.abort()
@@ -128,10 +133,16 @@ export function useSearchVideoAuthors({
     const merged: ProfileResult[] = []
 
     for (const r of meiliResults) {
-      if (!seen.has(r.pubkey)) { seen.add(r.pubkey); merged.push(r) }
+      if (!seen.has(r.pubkey)) {
+        seen.add(r.pubkey)
+        merged.push(r)
+      }
     }
     for (const r of primalResults) {
-      if (!seen.has(r.pubkey)) { seen.add(r.pubkey); merged.push(r) }
+      if (!seen.has(r.pubkey)) {
+        seen.add(r.pubkey)
+        merged.push(r)
+      }
     }
 
     return merged.slice(0, limit)

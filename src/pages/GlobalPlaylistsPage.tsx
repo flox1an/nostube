@@ -26,8 +26,7 @@ function GlobalPlaylistCard({ playlist }: GlobalPlaylistCardProps) {
   })
 
   const authorUrl = buildProfileUrlFromPubkey(playlist.pubkey, readRelays)
-  const displayName =
-    profile?.display_name || profile?.name || playlist.pubkey.slice(0, 8)
+  const displayName = profile?.display_name || profile?.name || playlist.pubkey.slice(0, 8)
   const videoIds = playlist.videos.map((v: { id: string }) => v.id)
 
   return (
@@ -98,7 +97,10 @@ export default function GlobalPlaylistsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {playlists.map(playlist => (
-            <GlobalPlaylistCard key={`${playlist.pubkey}-${playlist.identifier}`} playlist={playlist} />
+            <GlobalPlaylistCard
+              key={`${playlist.pubkey}-${playlist.identifier}`}
+              playlist={playlist}
+            />
           ))}
         </div>
       )}

@@ -80,7 +80,6 @@ function formatEstimatedSize(sizeMB: number): string {
   return `${(sizeMB / 1024).toFixed(2)} GB`
 }
 
-
 function getSourceVariantCodec(
   sourceMeta: TranscodeSourceMeta
 ): ResolutionOption['suggestedCodec'] {
@@ -740,7 +739,9 @@ function ResolutionRow({ option, codec, checked, onToggle }: ResolutionRowProps)
         {option.height === 360 && (
           <span className="ml-1 text-xs text-muted-foreground">(standard fallback resolution)</span>
         )}
-        <span className="ml-1.5 text-xs text-muted-foreground">{codec === 'hevc' ? 'HEVC' : 'H.264'}</span>
+        <span className="ml-1.5 text-xs text-muted-foreground">
+          {codec === 'hevc' ? 'HEVC' : 'H.264'}
+        </span>
       </span>
     </label>
   )

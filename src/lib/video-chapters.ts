@@ -6,7 +6,11 @@ export type VideoChapter = {
 const CHAPTER_LINE_REGEX =
   /^\s*(?:(?<hours>\d{1,2}):)?(?<minutes>\d{1,2}):(?<seconds>\d{2})(?:[ \t]*[-–—|:][ \t]*|\s+)(?<title>\S.*)$/
 
-function parseTimestamp(hours: string | undefined, minutes: string, seconds: string): number | null {
+function parseTimestamp(
+  hours: string | undefined,
+  minutes: string,
+  seconds: string
+): number | null {
   const hourValue = hours ? Number(hours) : 0
   const minuteValue = Number(minutes)
   const secondValue = Number(seconds)

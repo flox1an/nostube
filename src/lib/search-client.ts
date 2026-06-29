@@ -49,7 +49,9 @@ export function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
     dimensions: hit.dimensions ?? undefined,
     link: nip19.neventEncode({ kind: hit.kind, id: hit.event_id, author: hit.pubkey, relays: [] }),
     type,
-    textTracks: (hit.textTracks ?? []).filter(t => t.lang).map(t => ({ url: t.url, lang: t.lang! })),
+    textTracks: (hit.textTracks ?? [])
+      .filter(t => t.lang)
+      .map(t => ({ url: t.url, lang: t.lang! })),
     contentWarning: hit.contentWarning ?? undefined,
     origins: [],
     videoVariants,
@@ -108,7 +110,7 @@ export async function fetchPeopleResults(
   query: string,
   signal: AbortSignal,
   serviceUrl: string = SEARCH_SERVICE_URL,
-  limit = 10,
+  limit = 10
 ): Promise<PeopleHit[] | null> {
   try {
     const url = `${serviceUrl}/api/people?q=${encodeURIComponent(query)}&limit=${limit}`

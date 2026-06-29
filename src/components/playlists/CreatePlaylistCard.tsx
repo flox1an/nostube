@@ -208,7 +208,9 @@ export function CreatePlaylistDialog({
                 <Lock className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <Label htmlFor="cdp-private">{t('playlists.private.label')}</Label>
-                  <p className="text-xs text-muted-foreground">{t('playlists.private.description')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('playlists.private.description')}
+                  </p>
                 </div>
               </div>
               <Switch
@@ -219,7 +221,9 @@ export function CreatePlaylistDialog({
               />
             </div>
             {!hasNip44 && (
-              <p className="text-xs text-yellow-600">{t('playlists.private.noEncryptionSupport')}</p>
+              <p className="text-xs text-yellow-600">
+                {t('playlists.private.noEncryptionSupport')}
+              </p>
             )}
           </div>
           <DialogFooter>

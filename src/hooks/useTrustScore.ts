@@ -216,7 +216,13 @@ async function processBatches() {
           const results: TrustScoreResult[] = await calculateTrustScores(client, chunk)
 
           if (import.meta.env.DEV) {
-            console.log('[TrustScore] Got', results.length, 'results for', chunk.length, 'requested')
+            console.log(
+              '[TrustScore] Got',
+              results.length,
+              'results for',
+              chunk.length,
+              'requested'
+            )
           }
 
           const validResults = results.filter(

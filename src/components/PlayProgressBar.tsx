@@ -1,6 +1,10 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useState, useEffect } from 'react'
-import { getPlayPosCache, readPlayPosition, type PlayPositionData } from '@/lib/play-position-storage'
+import {
+  getPlayPosCache,
+  readPlayPosition,
+  type PlayPositionData,
+} from '@/lib/play-position-storage'
 
 interface PlayProgressBarProps {
   videoId: string

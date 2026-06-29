@@ -7,11 +7,11 @@ Companion spec: `docs/browser-transcode-upload-ui-spec.md` (transcode-step inter
 
 Restructure the upload wizard so the user enters metadata **while** transcode/upload runs in the background, instead of waiting on a blocking step. Every existing feature is preserved — only relocated. The 6-step wizard becomes 3 screens:
 
-| New screen | Replaces old steps | Purpose |
-| --- | --- | --- |
-| **Source** | 1 (Upload Video) + 2 (Transcode Settings) | Pick file/URL, confirm optimise settings, start background job |
+| New screen  | Replaces old steps                                             | Purpose                                                                |
+| ----------- | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Source**  | 1 (Upload Video) + 2 (Transcode Settings)                      | Pick file/URL, confirm optimise settings, start background job         |
 | **Details** | 3 (Details) + 4 (Thumbnail) + 5 (Subtitles) + 6's form content | All metadata on one scrollable form, with a persistent processing rail |
-| **Review** | 6's publish action | Readiness checklist, relay selection, event preview, Publish |
+| **Review**  | 6's publish action                                             | Readiness checklist, relay selection, event preview, Publish           |
 
 ### Non-goals
 
@@ -24,15 +24,15 @@ Restructure the upload wizard so the user enters metadata **while** transcode/up
 
 ### Key files
 
-| File | Role | Size |
-| --- | --- | --- |
-| `src/components/VideoUpload.tsx` | The whole wizard: 6-step state machine + footer nav + server-config dialogs | ~980 lines |
-| `src/hooks/useVideoUpload.ts` | All upload state + handlers (form fields, file/url processing, thumbnail, subtitles, browser-transcode job wiring, publish) | ~1300 lines |
-| `src/components/video-upload/BrowserTranscodeStep.tsx` | Transcode settings + progress UI (`forwardRef`, exposes `BrowserTranscodeStepHandle.start()`) | ~1000 lines |
-| `src/pages/UploadPage.tsx` | Draft selection shell: `DraftPicker` ↔ `VideoUpload` | |
-| `src/hooks/useUploadDrafts.ts` | Draft CRUD, localStorage key `nostube_upload_drafts`, MAX_DRAFTS=10, Nostr sync flush | |
-| `src/types/upload-draft.ts` | `UploadDraft`, `BrowserTranscodeState`, `OriginalVideoInfo` | |
-| `src/components/video-upload/index.ts` | Barrel for all step components | |
+| File                                                   | Role                                                                                                                        | Size        |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `src/components/VideoUpload.tsx`                       | The whole wizard: 6-step state machine + footer nav + server-config dialogs                                                 | ~980 lines  |
+| `src/hooks/useVideoUpload.ts`                          | All upload state + handlers (form fields, file/url processing, thumbnail, subtitles, browser-transcode job wiring, publish) | ~1300 lines |
+| `src/components/video-upload/BrowserTranscodeStep.tsx` | Transcode settings + progress UI (`forwardRef`, exposes `BrowserTranscodeStepHandle.start()`)                               | ~1000 lines |
+| `src/pages/UploadPage.tsx`                             | Draft selection shell: `DraftPicker` ↔ `VideoUpload`                                                                        |             |
+| `src/hooks/useUploadDrafts.ts`                         | Draft CRUD, localStorage key `nostube_upload_drafts`, MAX_DRAFTS=10, Nostr sync flush                                       |             |
+| `src/types/upload-draft.ts`                            | `UploadDraft`, `BrowserTranscodeState`, `OriginalVideoInfo`                                                                 |             |
+| `src/components/video-upload/index.ts`                 | Barrel for all step components                                                                                              |             |
 
 ### Current step machine (in `VideoUpload.tsx`)
 
@@ -84,13 +84,13 @@ type UploadScreen = 'source' | 'details' | 'review'
 
 ### New components (all under `src/components/video-upload/`, exported via the barrel)
 
-| Component | Contents | Sources from old code |
-| --- | --- | --- |
-| `UploadSourceScreen` | Input method selection, dropzone/URL, transcode settings, advanced server disclosure | step 1 + step 2 render branches |
-| `UploadDetailsScreen` | Metadata form + `ProcessingRail` + accordions | steps 3, 4, 5, 6 render branches |
-| `UploadReviewScreen` | Preview card, checklist, relay picker, `EventPreview`, `PublishButton` | step 6 footer + `EventPreview` |
-| `ProcessingRail` | Compact live progress for `BrowserTranscodeState` / `uploadState`; expands to `VideoFilesPanel` on completion | new; renders state already produced |
-| `VideoFilesPanel` | `VideoVariantsTable` + `DvmTranscodeAlert` + add-another-quality dropzone + HLS preview link | the duplicated block from steps 1–2 (dedupe!) |
+| Component             | Contents                                                                                                      | Sources from old code                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `UploadSourceScreen`  | Input method selection, dropzone/URL, transcode settings, advanced server disclosure                          | step 1 + step 2 render branches               |
+| `UploadDetailsScreen` | Metadata form + `ProcessingRail` + accordions                                                                 | steps 3, 4, 5, 6 render branches              |
+| `UploadReviewScreen`  | Preview card, checklist, relay picker, `EventPreview`, `PublishButton`                                        | step 6 footer + `EventPreview`                |
+| `ProcessingRail`      | Compact live progress for `BrowserTranscodeState` / `uploadState`; expands to `VideoFilesPanel` on completion | new; renders state already produced           |
+| `VideoFilesPanel`     | `VideoVariantsTable` + `DvmTranscodeAlert` + add-another-quality dropzone + HLS preview link                  | the duplicated block from steps 1–2 (dedupe!) |
 
 Props are plain pass-through from `videoUploadState`; none of these components own side effects except `VideoFilesPanel`'s dropzone (`useDropzone` moves in with it).
 
@@ -172,7 +172,10 @@ Layout: two-column on desktop (preview left, checklist+publish right), stacked o
 
 - `UploadDraft` type: **no new fields.** Screen position is derived, not stored:
   ```ts
-  function initialScreen(draft: UploadDraft, browserTranscodeState: BrowserTranscodeState | null): UploadScreen {
+  function initialScreen(
+    draft: UploadDraft,
+    browserTranscodeState: BrowserTranscodeState | null
+  ): UploadScreen {
     const hasVideo = draft.uploadInfo.videos.length > 0
     const jobActive = !!browserTranscodeState
     if (!hasVideo && !jobActive && !draft.videoUrl) return 'source'

@@ -85,23 +85,20 @@ export function useFirstLineTitle(note: VideoNote | null): string {
   }, [mentionKey, eventStore, pool])
 
   // Subscribe to all profiles reactively, emit resolved name map
-  const nameMap = use$(
-    () => {
-      if (!mentions.length) return of({} as Record<string, string>)
-      return combineLatest(
-        mentions.map(({ pubkey }) =>
-          eventStore.profile(pubkey).pipe(
-            startWith(undefined),
-            map(profile => {
-              const name = profile?.display_name || profile?.name || genUserName(pubkey)
-              return [pubkey, name] as const
-            })
-          )
+  const nameMap = use$(() => {
+    if (!mentions.length) return of({} as Record<string, string>)
+    return combineLatest(
+      mentions.map(({ pubkey }) =>
+        eventStore.profile(pubkey).pipe(
+          startWith(undefined),
+          map(profile => {
+            const name = profile?.display_name || profile?.name || genUserName(pubkey)
+            return [pubkey, name] as const
+          })
         )
-      ).pipe(map(pairs => Object.fromEntries(pairs)))
-    },
-    [mentionKey, eventStore]
-  )
+      )
+    ).pipe(map(pairs => Object.fromEntries(pairs)))
+  }, [mentionKey, eventStore])
 
   return useMemo(() => {
     if (!firstLine) return ''

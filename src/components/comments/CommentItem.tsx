@@ -7,7 +7,16 @@
 
 import React, { useState } from 'react'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Reply, MoreVertical, Flag, ChevronDown, ChevronUp, Copy, VolumeX, Trash2 } from 'lucide-react'
+import {
+  Reply,
+  MoreVertical,
+  Flag,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  VolumeX,
+  Trash2,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'

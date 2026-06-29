@@ -21,7 +21,7 @@ i18n
       es: { translation: es },
       ru: { translation: ru },
       zh: { translation: zh },
-      ja: { translation: ja }
+      ja: { translation: ja },
     },
     fallbackLng: 'en',
     debug: false,

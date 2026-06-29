@@ -48,4 +48,3 @@ export const TimelineMarkersLoader = memo(function TimelineMarkersLoader({
     </Suspense>
   )
 })
-

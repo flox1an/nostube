@@ -23,6 +23,10 @@ vi.mock('@/components/PageLoader', () => ({
   PageLoader: () => <div data-testid="page-loader" />,
 }))
 
+vi.mock('@/components/page-loaders', () => ({
+  SubscriptionsPageLoader: () => <div data-testid="subscriptions-page-loader" />,
+}))
+
 import { useCurrentUser, useFollowSet } from '@/hooks'
 import { loadActiveAccount } from '@/hooks/useAccountPersistence'
 import { SmartHomePage } from './SmartHomePage'
@@ -80,7 +84,7 @@ describe('SmartHomePage', () => {
     expect(screen.queryByTestId('subscriptions-page')).not.toBeInTheDocument()
   })
 
-  it('renders PageLoader on first render while persisted account is being restored', () => {
+  it('renders the subscriptions skeleton while a persisted account is being restored', () => {
     // localStorage knows about an account; AccountRestoreInit useEffect
     // hasn't fired yet, so useCurrentUser still returns undefined.
     setHooks({
@@ -89,19 +93,21 @@ describe('SmartHomePage', () => {
       followSet: { followSetLoaded: false },
     })
     render(<SmartHomePage />)
-    expect(screen.getByTestId('page-loader')).toBeInTheDocument()
+    expect(screen.getByTestId('subscriptions-page-loader')).toBeInTheDocument()
+    expect(screen.queryByTestId('page-loader')).not.toBeInTheDocument()
     expect(screen.queryByTestId('home-page')).not.toBeInTheDocument()
     expect(screen.queryByTestId('subscriptions-page')).not.toBeInTheDocument()
   })
 
-  it('renders PageLoader while the kind 10020 follow set is still loading', () => {
+  it('renders the subscriptions skeleton while the kind 10020 follow set is still loading', () => {
     setHooks({
       user: { pubkey: 'pubkey-hex', signer: {} },
       activeAccountInStorage: 'pubkey-hex',
       followSet: { followSetLoaded: false, followedPubkeys: [] },
     })
     render(<SmartHomePage />)
-    expect(screen.getByTestId('page-loader')).toBeInTheDocument()
+    expect(screen.getByTestId('subscriptions-page-loader')).toBeInTheDocument()
+    expect(screen.queryByTestId('page-loader')).not.toBeInTheDocument()
   })
 
   it('renders SubscriptionsPage once follow set is loaded and contains follows', () => {
@@ -112,7 +118,7 @@ describe('SmartHomePage', () => {
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('subscriptions-page')).toBeInTheDocument()
-    expect(screen.queryByTestId('page-loader')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('subscriptions-page-loader')).not.toBeInTheDocument()
     expect(screen.queryByTestId('home-page')).not.toBeInTheDocument()
   })
 

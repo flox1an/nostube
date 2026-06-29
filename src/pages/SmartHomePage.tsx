@@ -3,6 +3,7 @@ import { loadActiveAccount } from '@/hooks/useAccountPersistence'
 import { HomePage } from './HomePage'
 import { SubscriptionsPage } from './SubscriptionsPage'
 import { PageLoader } from '@/components/PageLoader'
+import { SubscriptionsPageLoader } from '@/components/page-loaders'
 
 export function SmartHomePage() {
   const { user } = useCurrentUser()
@@ -24,7 +25,7 @@ export function SmartHomePage() {
   const isWaitingForFollowSet = !!user && !followSetLoaded
 
   if (isWaitingForAccountRestore || isWaitingForFollowSet) {
-    return <PageLoader />
+    return hasPersistedAccount ? <SubscriptionsPageLoader /> : <PageLoader />
   }
 
   if (user && followedPubkeys.length > 0) {

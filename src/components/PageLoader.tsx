@@ -3,17 +3,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 /**
- * Shared loading skeleton for top-level pages that render a video grid
- * (Home / Subscriptions / Hashtag / etc.). Matches PageLoader's shape so
- * the transition between Suspense fallback and the page's own loading
- * state is visually seamless.
+ * Loading skeleton for feed-style pages that pair a sticky
+ * `CategoryButtonBar` with a horizontal video grid (`/`, `/explore`,
+ * `/category/:slug`). Page-specific loaders live in
+ * `components/page-loaders.tsx`.
  */
 export function PageLoader() {
   return (
     <div className="max-w-560 mx-auto">
       {/* Category bar skeleton */}
       <div className="sm:px-2">
-        <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md border-b">
+        <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md">
           <div className="flex gap-2 p-2 min-w-max">
             {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton

@@ -3,6 +3,23 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { MainLayout } from '@/components/MainLayout'
 import { PageLoader } from '@/components/PageLoader'
+import {
+  AdminPageLoader,
+  AuthorPageLoader,
+  GlobalPlaylistsPageLoader,
+  HashtagPageLoader,
+  HistoryPageLoader,
+  LikedVideosPageLoader,
+  Mp4DebugPageLoader,
+  NotFoundLoader,
+  SearchPageLoader,
+  ShortsFeedPageLoader,
+  ShortsVideoPageLoader,
+  SinglePlaylistPageLoader,
+  SubscriptionsPageLoader,
+  UploadPageLoader,
+  VideoNotesPageLoader,
+} from '@/components/page-loaders'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const SmartHomePage = lazy(() =>
@@ -154,7 +171,7 @@ export function AppRouter() {
           <Route
             path="/shorts"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<ShortsFeedPageLoader />}>
                 <ShortsPage />
               </Suspense>
             }
@@ -162,7 +179,7 @@ export function AppRouter() {
           <Route
             path="/subscriptions"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<SubscriptionsPageLoader />}>
                 <SubscriptionsPage />
               </Suspense>
             }
@@ -170,7 +187,7 @@ export function AppRouter() {
           <Route
             path="/liked-videos"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<LikedVideosPageLoader />}>
                 <LikedVideosPage />
               </Suspense>
             }
@@ -194,7 +211,7 @@ export function AppRouter() {
           <Route
             path="/author/:nprofile"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<AuthorPageLoader />}>
                 <AuthorPage />
               </Suspense>
             }
@@ -202,7 +219,7 @@ export function AppRouter() {
           <Route
             path="/author/:nprofile/:tab"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<AuthorPageLoader />}>
                 <AuthorPage />
               </Suspense>
             }
@@ -210,7 +227,7 @@ export function AppRouter() {
           <Route
             path="/p/:nprofile"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<AuthorPageLoader />}>
                 <AuthorPage />
               </Suspense>
             }
@@ -218,7 +235,7 @@ export function AppRouter() {
           <Route
             path="/p/:nprofile/:tab"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<AuthorPageLoader />}>
                 <AuthorPage />
               </Suspense>
             }
@@ -226,7 +243,7 @@ export function AppRouter() {
           <Route
             path="/tag/:tag"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<HashtagPageLoader />}>
                 <HashtagPage />
               </Suspense>
             }
@@ -242,7 +259,7 @@ export function AppRouter() {
           <Route
             path="/search"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<SearchPageLoader />}>
                 <SearchPage />
               </Suspense>
             }
@@ -250,7 +267,7 @@ export function AppRouter() {
           <Route
             path="/history"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<HistoryPageLoader />}>
                 <HistoryPage />
               </Suspense>
             }
@@ -258,7 +275,7 @@ export function AppRouter() {
           <Route
             path="/video-notes"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<VideoNotesPageLoader />}>
                 <VideoNotesPage />
               </Suspense>
             }
@@ -266,7 +283,7 @@ export function AppRouter() {
           <Route
             path="/upload"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<UploadPageLoader />}>
                 <UploadPage />
               </Suspense>
             }
@@ -274,7 +291,7 @@ export function AppRouter() {
           <Route
             path="/playlists"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<GlobalPlaylistsPageLoader />}>
                 <PlaylistPage />
               </Suspense>
             }
@@ -282,7 +299,7 @@ export function AppRouter() {
           <Route
             path="/playlist/:nip19"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<SinglePlaylistPageLoader />}>
                 <SinglePlaylistPage />
               </Suspense>
             }
@@ -365,7 +382,7 @@ export function AppRouter() {
           <Route
             path="/admin"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<AdminPageLoader />}>
                 <AdminPage />
               </Suspense>
             }
@@ -373,7 +390,7 @@ export function AppRouter() {
           <Route
             path="/mp4-debug"
             element={
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<Mp4DebugPageLoader />}>
                 <Mp4DebugPage />
               </Suspense>
             }
@@ -382,7 +399,7 @@ export function AppRouter() {
         <Route
           path="/short/:nevent"
           element={
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<ShortsVideoPageLoader />}>
               <ShortsVideoPage />
             </Suspense>
           }
@@ -390,7 +407,7 @@ export function AppRouter() {
         <Route
           path="*"
           element={
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<NotFoundLoader />}>
               <NotFound />
             </Suspense>
           }

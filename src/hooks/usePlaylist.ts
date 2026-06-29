@@ -10,6 +10,7 @@ import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
 import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
+import { usePlaylistValidation } from './usePlaylistValidation'
 
 export interface Video {
   id: string
@@ -717,30 +718,59 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     [playlistEvents]
   )
 
-  // Same NSFW gate as `useGlobalPlaylists`: when the viewer's setting is
-  // `hide`, drop playlists carrying a `content-warning` tag OR referencing any
-  // video known unsafe (preset NSFW/blocked author, blocked event, or one of
-  // the viewer's reported events). Applies regardless of profile owner — the
-  // owner can still open their own playlists via direct naddr link.
+  // Two-stage NSFW gate (same shape as `useGlobalPlaylists`):
+  //
+  //  1. Sync-drop playlists already marked `content-warning` by their owner.
+  //  2. Hand the rest to `usePlaylistValidation`, which resolves every
+  //     referenced video (from cache or relays) and only reports `clean` for
+  //     playlists with no unsafe refs. `unsafe`/`pending` stay hidden when
+  //     `hideNsfw` is on. Verdicts are cached in IndexedDB keyed by
+  //     `(address, eventId)`, so re-publishes invalidate naturally.
+  //
+  // Applies regardless of profile owner — the owner can still open their own
+  // playlists via direct naddr link.
   const nsfwFilter = config.nsfwFilter ?? 'hide'
+  const hideNsfw = nsfwFilter === 'hide'
   const reportedEventIds = config.reportedEventIds
-  const playlists = useMemo<Playlist[]>(() => {
-    const hideNsfw = nsfwFilter === 'hide'
-    const sources = {
+
+  const candidateEvents = useMemo(() => {
+    return publicPlaylistEvents.filter(event => {
+      const cwTag = event.tags.find(t => t[0] === 'content-warning')
+      if (hideNsfw && cwTag) return false
+      return true
+    })
+  }, [publicPlaylistEvents, hideNsfw])
+
+  const validationSources = useMemo(
+    () => ({
       nsfwPubkeys: presetContent.nsfwPubkeys,
       blockedPubkeys: presetContent.blockedPubkeys,
       blockedEvents: presetContent.blockedEvents,
       reportedEventIds: reportedEventIds ?? [],
-    }
+    }),
+    [
+      presetContent.nsfwPubkeys,
+      presetContent.blockedPubkeys,
+      presetContent.blockedEvents,
+      reportedEventIds,
+    ]
+  )
+
+  const validationStatuses = usePlaylistValidation(candidateEvents, {
+    enabled: hideNsfw,
+    sources: validationSources,
+    relays: readRelays,
+  })
+
+  const playlists = useMemo<Playlist[]>(() => {
     const results: Playlist[] = []
-    for (const event of publicPlaylistEvents) {
+    for (const event of candidateEvents) {
+      if (hideNsfw && validationStatuses.get(event.id) !== 'clean') continue
       const titleTag = event.tags.find(t => t[0] === 'title')
       const descTag = event.tags.find(t => t[0] === 'description')
       const cwTag = event.tags.find(t => t[0] === 'content-warning')
       const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
-      if (hideNsfw && contentWarning) continue
       const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
-      if (hideNsfw && playlistHasUnsafeVideo(videos, eventStore, sources)) continue
       results.push({
         identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
         name: titleTag ? titleTag[1] : 'Untitled Playlist',
@@ -752,15 +782,7 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
       })
     }
     return results
-  }, [
-    publicPlaylistEvents,
-    eventStore,
-    nsfwFilter,
-    presetContent.nsfwPubkeys,
-    presetContent.blockedPubkeys,
-    presetContent.blockedEvents,
-    reportedEventIds,
-  ])
+  }, [candidateEvents, eventStore, hideNsfw, validationStatuses])
 
   return {
     data: playlists,

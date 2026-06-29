@@ -199,9 +199,9 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
         </Button>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={handleRefresh}
-          className="text-muted-foreground"
+          className="h-8 w-8 shrink-0 text-muted-foreground"
           aria-label={t('auth.login.qrRefresh', 'New Code')}
           title={t('auth.login.qrRefresh', 'New Code')}
         >

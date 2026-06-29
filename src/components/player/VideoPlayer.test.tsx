@@ -51,6 +51,10 @@ vi.mock('./hooks', () => ({
     activeLevel: -1,
     setLevel: vi.fn(),
   }),
+  useDash: () => ({
+    isLoading: false,
+    error: null,
+  }),
   usePlayerState: () => ({
     isPlaying: false,
     currentTime: 0,

@@ -128,6 +128,15 @@ function isAudioUrl(url?: string): boolean {
   return AUDIO_URL_EXTENSIONS.some(extension => pathname.endsWith(extension))
 }
 
+function isDashMimeType(mimeType?: string): boolean {
+  return getBaseMimeType(mimeType) === 'application/dash+xml'
+}
+
+function isDashUrl(url?: string): boolean {
+  if (!url) return false
+  return getUrlPathname(url).endsWith('.mpd')
+}
+
 function isVideoFileUrl(url?: string): boolean {
   if (!url) return false
   const pathname = getUrlPathname(url)
@@ -454,7 +463,9 @@ export function processEvent(
         isAudioMimeType(v.mimeType) ||
         isAudioUrl(v.url) ||
         v.mimeType === 'application/vnd.apple.mpegurl' ||
-        v.url?.endsWith('.m3u8')
+        v.url?.endsWith('.m3u8') ||
+        isDashMimeType(v.mimeType) ||
+        isDashUrl(v.url)
     )
     // Sort all variants by quality (highest first) - keep unfiltered for debugging
     const allVideoVariants = sortVideoVariantsByQuality(parsedVideoVariants)

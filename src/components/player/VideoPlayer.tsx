@@ -6,6 +6,7 @@ import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useIsMobile } from '@/hooks'
 import {
   useHls,
+  useDash,
   usePlayerState,
   useControlsVisibility,
   useSeekAccumulator,
@@ -119,7 +120,8 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
-  const isAudioOnly = mediaType === 'audio' || mime.startsWith('audio/')
+  const baseMime = mime.split(';')[0]?.trim().toLowerCase() ?? ''
+  const isAudioOnly = mediaType === 'audio' || baseMime.startsWith('audio/')
   const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
 
   // Video quality variant selector with position preservation
@@ -176,13 +178,20 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   const hasHlsSource = useMemo(
     () =>
-      mime === 'application/vnd.apple.mpegurl' || effectiveUrls.some(url => url.endsWith('.m3u8')),
-    [effectiveUrls, mime]
+      baseMime === 'application/vnd.apple.mpegurl' ||
+      effectiveUrls.some(url => url.endsWith('.m3u8')),
+    [baseMime, effectiveUrls]
   )
 
-  // HLS manifests contain their own variants and segment URLs. Feeding the master
-  // through video proxy candidates can add failed requests before ABR has any useful data.
-  const proxyConfig = useMemo(() => ({ enabled: !hasHlsSource }), [hasHlsSource])
+  const hasDashSource = useMemo(
+    () => baseMime === 'application/dash+xml' || effectiveUrls.some(url => url.endsWith('.mpd')),
+    [baseMime, effectiveUrls]
+  )
+
+  // HLS and DASH manifests contain their own variants and segment URLs. Feeding the
+  // manifest through video proxy candidates can add failed requests before ABR has useful data.
+  const hasManifestSource = hasHlsSource || hasDashSource
+  const proxyConfig = useMemo(() => ({ enabled: !hasManifestSource }), [hasManifestSource])
 
   const {
     currentUrl: videoUrl,
@@ -201,10 +210,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    const hlsByInput = hasHlsSource
-    if (!hlsByInput && !(videoUrl?.endsWith('.m3u8') ?? false)) return
+    const manifestByInput = hasManifestSource
+    const manifestByUrl = videoUrl?.endsWith('.m3u8') || videoUrl?.endsWith('.mpd') || false
+    if (!manifestByInput && !manifestByUrl) return
 
-    console.info('[HLS:VideoPlayer]', 'source selection', {
+    console.info('[Streaming:VideoPlayer]', 'source selection', {
       mime,
       eventId,
       authorPubkey,
@@ -214,14 +224,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       hasMoreVideoUrls,
       isLoadingVideoUrls,
       proxyConfig,
+      hasHlsSource,
+      hasDashSource,
     })
   }, [
     authorPubkey,
     effectiveSha256,
     effectiveUrls,
     eventId,
-    hasMoreVideoUrls,
+    hasDashSource,
     hasHlsSource,
+    hasManifestSource,
+    hasMoreVideoUrls,
     isLoadingVideoUrls,
     mime,
     proxyConfig,
@@ -235,22 +249,29 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     }
   }, [hasMoreVideoUrls, isLoadingVideoUrls, videoUrl])
 
-  // Determine if HLS
+  // Determine if HLS / DASH
   const isHls = useMemo(
     () => hasHlsSource || (videoUrl?.endsWith('.m3u8') ?? false),
     [hasHlsSource, videoUrl]
   )
+  const isDash = useMemo(
+    () => hasDashSource || (videoUrl?.endsWith('.mpd') ?? false),
+    [hasDashSource, videoUrl]
+  )
 
   useEffect(() => {
-    if (!import.meta.env.DEV || !isHls) return
-    console.info('[HLS:VideoPlayer]', 'hls mode resolved', {
+    if (!import.meta.env.DEV || (!isHls && !isDash)) return
+    console.info('[Streaming:VideoPlayer]', 'streaming mode resolved', {
       isHls,
+      isDash,
       mime,
       videoUrl,
-      byMime: mime === 'application/vnd.apple.mpegurl',
-      byUrl: videoUrl?.endsWith('.m3u8') ?? false,
+      byHlsMime: baseMime === 'application/vnd.apple.mpegurl',
+      byDashMime: baseMime === 'application/dash+xml',
+      byHlsUrl: videoUrl?.endsWith('.m3u8') ?? false,
+      byDashUrl: videoUrl?.endsWith('.mpd') ?? false,
     })
-  }, [isHls, mime, videoUrl])
+  }, [baseMime, isDash, isHls, mime, videoUrl])
 
   // Initialize HLS
   const {
@@ -259,6 +280,20 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     activeLevel: hlsActiveLevel,
     setLevel: setHlsLevel,
   } = useHls(videoRef, videoUrl, isHls, authorPubkey, eventId, 'never')
+
+  const handleDashError = useCallback(
+    (message: string) => {
+      console.error('DASH playback failed:', message)
+      if (hasMoreVideoUrls) {
+        moveToNextVideo()
+      } else {
+        onAllSourcesFailedRef.current?.(urlsRef.current)
+      }
+    },
+    [hasMoreVideoUrls, moveToNextVideo]
+  )
+
+  useDash(videoRef, videoUrl, isDash, !contentWarning, handleDashError)
 
   // Validate text tracks (check availability, use blossom fallback)
   const { validatedTracks } = useValidatedTextTracks(textTracks)
@@ -1041,7 +1076,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           )}
           <audio
             ref={setMediaElementRef}
-            src={isHls ? undefined : (videoUrl ?? undefined)}
+            src={isHls || isDash ? undefined : (videoUrl ?? undefined)}
             loop={loopEnabled}
             autoPlay={!contentWarning}
             playsInline
@@ -1062,7 +1097,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       ) : (
         <video
           ref={setMediaElementRef}
-          src={isHls ? undefined : (videoUrl ?? undefined)}
+          src={isHls || isDash ? undefined : (videoUrl ?? undefined)}
           poster={posterUrl ?? undefined}
           loop={loopEnabled}
           autoPlay={!contentWarning}

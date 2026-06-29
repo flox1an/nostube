@@ -5,6 +5,7 @@
  */
 
 export { useHls } from './useHls'
+export { useDash } from './useDash'
 export { usePlayerState } from './usePlayerState'
 export { useControlsVisibility } from './useControlsVisibility'
 export { useSeekAccumulator } from './useSeekAccumulator'

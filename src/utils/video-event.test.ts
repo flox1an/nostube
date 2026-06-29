@@ -436,6 +436,38 @@ describe('processEvent', () => {
       })
     })
 
+    it('should process DASH imeta events as playable video manifests', () => {
+      const dashEvent = {
+        content: '',
+        created_at: 1782717535,
+        id: 'dash-event',
+        kind: 34235,
+        pubkey: 'dash-pubkey',
+        sig: 'dash-sig',
+        tags: [
+          ['d', 'dash-video'],
+          ['title', 'DASH Video'],
+          [
+            'imeta',
+            'url https://example.com/video.mpd',
+            'm application/dash+xml',
+            'image https://example.com/poster.jpg',
+          ],
+        ],
+      }
+
+      const result = processEvent(dashEvent, defaultRelays)
+
+      expect(result).toBeDefined()
+      expect(result?.mediaType).toBe('video')
+      expect(result?.mimeType).toBe('application/dash+xml')
+      expect(result?.urls).toEqual(['https://example.com/video.mpd'])
+      expect(result?.images).toEqual(['https://example.com/poster.jpg'])
+      expect(result?.videoVariants[0]).toMatchObject({
+        mimeType: 'application/dash+xml',
+        url: 'https://example.com/video.mpd',
+      })
+    })
     it('should process audio/ogg imeta events as playable audio', () => {
       const oggEvent = {
         content: 'Ogg audio episode',

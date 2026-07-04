@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useAppContext } from '@/hooks'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
+import { YOUTUBE_REGEX } from '@/utils/origin-utils'
 import type { RecommendationVideo } from '@/types/recommendation'
 
 const TIMEOUT_MS = 5000
+
+export function filterRecommendationsForSettings(
+  videos: RecommendationVideo[],
+  options: { includeYouTube: boolean }
+): RecommendationVideo[] {
+  if (options.includeYouTube) return videos
+  return videos.filter(video => !video.urls.some(url => YOUTUBE_REGEX.test(url)))
+}
 
 export function useSearchRecommendations(params: {
   videoRef: string | undefined
@@ -42,7 +51,13 @@ export function useSearchRecommendations(params: {
         return res.json() as Promise<{ hits: RecommendationVideo[] }>
       })
       .then(data => {
-        if (!cancelled) setVideos(data.hits ?? [])
+        if (!cancelled) {
+          setVideos(
+            filterRecommendationsForSettings(data.hits ?? [], {
+              includeYouTube: config.showYouTubeContent ?? true,
+            })
+          )
+        }
       })
       .catch(() => {
         if (!cancelled) setVideos(null)
@@ -57,7 +72,14 @@ export function useSearchRecommendations(params: {
       controller.abort()
       clearTimeout(timeoutId)
     }
-  }, [videoRef, userPubkey, excludeContentWarnings, limit, config.searchServiceUrl])
+  }, [
+    videoRef,
+    userPubkey,
+    excludeContentWarnings,
+    limit,
+    config.searchServiceUrl,
+    config.showYouTubeContent,
+  ])
 
   return { videos, isLoading }
 }

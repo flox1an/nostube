@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nostube-search.apps2.slidestr.net/sitemap.xml

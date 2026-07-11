@@ -7,7 +7,7 @@ import {
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { useFileUpload } from './useFileUpload'
-import { type BlobDescriptor, type Signer } from 'blossom-client-sdk'
+import { type BlobDescriptor, type Signer } from '@/lib/blossom-auth'
 import { nowInSecs } from '@/lib/utils'
 import {
   type VideoVariant,
@@ -207,8 +207,7 @@ export function useVideoUpload(
   onDraftChange?: (updates: Partial<UploadDraft>) => void
 ) {
   const legacyDraft = initialDraft as
-    | (UploadDraft & { browserTranscodeState?: BrowserTranscodeState })
-    | undefined
+    (UploadDraft & { browserTranscodeState?: BrowserTranscodeState }) | undefined
   const initialBrowserTranscodeJob = initialDraft?.id
     ? getBrowserTranscodeUploadDraft(initialDraft.id)
     : undefined

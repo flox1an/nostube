@@ -1,4 +1,4 @@
-import { type BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { getCodecsFromFile, getCodecsFromUrl, type CodecInfo } from './codec-detection'
 import { extractMetadataFromFile, extractMetadataFromUrl } from './metadata-extraction'
 import type { VideoMetadata } from './metadata-extraction'

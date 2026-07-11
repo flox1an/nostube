@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Camera, Loader2 } from 'lucide-react'
-import type { Signer } from 'blossom-client-sdk'
+import type { Signer } from '@/lib/blossom-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

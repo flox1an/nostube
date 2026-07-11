@@ -57,7 +57,7 @@ import { TrustBadge } from '@/components/TrustBadge'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 import { toast } from 'sonner'
-import type { Signer } from 'blossom-client-sdk'
+import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'

@@ -1,9 +1,4 @@
-import {
-  type BlobDescriptor,
-  createUploadAuth,
-  createDeleteAuth,
-  type Signer,
-} from 'blossom-client-sdk'
+import { type BlobDescriptor, createBlossomAuthorization, type Signer } from '@/lib/blossom-auth'
 import { createSHA256 } from 'hash-wasm'
 import { encodeAuthToken, extractServerDomain, normalizeServerUrl } from './blossom-utils'
 
@@ -121,9 +116,12 @@ export async function mirrorBlobsToServers({
 
         console.debug(`File does not exist on ${server}, proceeding with mirror`)
         // Create server-scoped auth token per BUD-11
-        const auth = await createUploadAuth(signer, blob.sha256, {
-          servers: [extractServerDomain(server)],
-        })
+        const auth = await createBlossomAuthorization(
+          signer,
+          'upload',
+          blob.sha256,
+          extractServerDomain(server)
+        )
         const authToken = encodeAuthToken(auth)
         const uploaded = await customMirrorBlob(server, blob, authToken)
         onServerSettle?.({ ok: true, server, blob: uploaded, alreadyExisted: false })
@@ -433,12 +431,13 @@ export async function createChunkedUploadAuthWithHash(
     if (import.meta.env.DEV)
       console.log(`[AUTH] Creating upload auth with hash: ${fileHash.substring(0, 16)}...`)
 
-    // Use BlossomClient's createUploadAuth method with hash to avoid re-reading file
-    // Include server tag for BUD-11 scoping when server URL is provided
-    const authEvent = await createUploadAuth(signer, fileHash, {
-      ...(serverUrl ? { servers: [extractServerDomain(serverUrl)] } : {}),
-    })
-    if (import.meta.env.DEV) console.log(`[AUTH] createUploadAuth completed successfully`)
+    const authEvent = await createBlossomAuthorization(
+      signer,
+      'upload',
+      fileHash,
+      serverUrl ? extractServerDomain(serverUrl) : undefined
+    )
+    if (import.meta.env.DEV) console.log(`[AUTH] Blossom upload authorization created successfully`)
 
     // Encode as Base64url without padding per BUD-11
     const authBase64url = encodeAuthToken(authEvent)
@@ -845,9 +844,12 @@ async function uploadFileToSingleServer(
 
   throwIfAborted(signal)
   // Create auth with server tag for BUD-11 scoping
-  const authEvent = await createUploadAuth(signer, fileHash, {
-    servers: [extractServerDomain(normalizedServer)],
-  })
+  const authEvent = await createBlossomAuthorization(
+    signer,
+    'upload',
+    fileHash,
+    extractServerDomain(normalizedServer)
+  )
   const authToken = encodeAuthToken(authEvent)
   throwIfAborted(signal)
 
@@ -889,9 +891,12 @@ export async function deleteBlobFromServer(
   try {
     // Create deletion auth event with server tag for BUD-11 scoping
     // (unscoped delete tokens can be replayed on other servers)
-    const authEvent = await createDeleteAuth(signer, blobHash, {
-      servers: [extractServerDomain(normalizedServer)],
-    })
+    const authEvent = await createBlossomAuthorization(
+      signer,
+      'delete',
+      blobHash,
+      extractServerDomain(normalizedServer)
+    )
     const authToken = encodeAuthToken(authEvent)
 
     const response = await fetch(`${normalizedServer}/${blobHash}`, {

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EventTemplate } from 'nostr-tools'
-import type { Signer } from 'blossom-client-sdk'
+import type { Signer } from '@/lib/blossom-auth'
 import { loadSourceForContribution } from '@/lib/variant-source'
 import {
   assignMp4ResolutionCodecs,

@@ -4,7 +4,7 @@ import { useAppContext } from './useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import { type EventTemplate } from 'nostr-tools'
 import { nowInSecs } from '@/lib/utils'
-import { type BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import { buildDvmEncryptedContent, type DvmHandlerInfo, type TranscodeCodec } from '@/lib/dvm-utils'
 import {

@@ -57,7 +57,7 @@ import { getTrackedDvms } from '@/hooks/useDvmTracker'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'
 import type { VideoVariant } from '@/lib/video-processing'
-import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 
 import type { UploadManagerContextType, TranscodeJob, ResolutionQueueInfo } from './types'

@@ -1,4 +1,4 @@
-import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { BlobDescriptor } from '@/lib/blossom-auth'
 import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'

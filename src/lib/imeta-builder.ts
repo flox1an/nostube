@@ -1,4 +1,4 @@
-import { type BlobDescriptor } from 'blossom-client-sdk'
+import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { type VideoVariant } from '@/lib/video-processing'
 import { buildAdvancedMimeType } from '@/lib/utils'
 import { generateQualityLabel } from '@/lib/video-processing'

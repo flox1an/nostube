@@ -41,7 +41,7 @@ import {
   deduplicateVariants,
   getTotalBlobSize,
 } from '@/lib/blossom-blob-extractor'
-import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { BlobDescriptor } from '@/lib/blossom-auth'
 import type { BlossomServer } from '@/contexts/AppContext'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { useTranslation } from 'react-i18next'

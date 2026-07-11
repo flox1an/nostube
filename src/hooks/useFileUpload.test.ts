@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { useFileUpload, type FileUploadOptions } from './useFileUpload'
 
 // ---------------------------------------------------------------------------

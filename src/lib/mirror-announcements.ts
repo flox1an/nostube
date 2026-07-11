@@ -7,7 +7,7 @@
  */
 
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
-import type { BlobDescriptor } from 'blossom-client-sdk'
+import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { relayPool } from '@/nostr/core'
 import { nowInSecs, buildAdvancedMimeType } from '@/lib/utils'
 import type { BlossomBlob } from '@/lib/blossom-blob-extractor'

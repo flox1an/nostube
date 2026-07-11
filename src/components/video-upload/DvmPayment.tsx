@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Zap, Wallet, AlertCircle, ExternalLink } from 'lucide-react'
-import { CashuMint, CashuWallet, getEncodedToken } from '@cashu/cashu-ts'
+import { Wallet as CashuWallet, getEncodedToken, normalizeProofAmounts } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'
 import { useWalletContext } from '@/contexts/WalletContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -83,22 +83,22 @@ export function DvmPayment({
           throw new Error(`Insufficient tokens at mint ${mintUrl}`)
         }
         // Encode the selected proofs as a Cashu token string
-        encodedToken = getEncodedToken({ mint: mintUrl, proofs })
+        encodedToken = getEncodedToken({ mint: mintUrl, proofs: normalizeProofAmounts(proofs) })
         // Note: The mint will mark these proofs as spent when the DVM claims them.
         // The wallet will sync and remove them on next balance refresh.
       } else if (canPayNwc) {
         // Mint fresh Cashu tokens by getting a Lightning invoice from the mint and paying via NWC
-        const mint = new CashuMint(mintUrl)
-        const cashuWallet = new CashuWallet(mint)
+        const cashuWallet = new CashuWallet(mintUrl)
+        await cashuWallet.loadMint()
 
-        // Get a mint quote (returns a Lightning invoice)
-        const mintQuote = await cashuWallet.createMintQuote(amountSats)
+        // Get a BOLT11 mint quote (including its Lightning invoice).
+        const mintQuote = await cashuWallet.createMintQuoteBolt11(amountSats)
 
-        // Pay the Lightning invoice via NWC
+        // Pay the Lightning invoice via NWC.
         await wallet.payInvoice(mintQuote.request)
 
-        // Collect the fresh Cashu proofs from the mint
-        const proofs = await cashuWallet.mintProofs(amountSats, mintQuote.quote)
+        // Collect fresh Cashu proofs and encode them for the DVM.
+        const proofs = await cashuWallet.mintProofsBolt11(amountSats, mintQuote)
         encodedToken = getEncodedToken({ mint: mintUrl, proofs })
       } else {
         throw new Error('No compatible wallet available for payment')

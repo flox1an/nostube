@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
+import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
 import {
   type ChunkedUploadProgress,
   deleteBlobsFromServers,

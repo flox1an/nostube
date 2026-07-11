@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { type BlobDescriptor, type Signer } from 'blossom-client-sdk'
+import { type BlobDescriptor, type Signer } from '@/lib/blossom-auth'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,
@@ -9,12 +9,7 @@ import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/
 import { parseBlossomUrl } from '@/lib/blossom-url'
 
 export type VideoFileUploadStatus =
-  | 'idle'
-  | 'uploading'
-  | 'probing'
-  | 'mirroring'
-  | 'done'
-  | 'error'
+  'idle' | 'uploading' | 'probing' | 'mirroring' | 'done' | 'error'
 
 export interface VideoFileUploadResult {
   variant: VideoVariant

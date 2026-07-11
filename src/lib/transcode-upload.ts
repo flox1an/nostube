@@ -1,4 +1,4 @@
-import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
+import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
 import {
   mirrorBlobsToServers,
   uploadFileToMultipleServersChunked,

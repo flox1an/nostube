@@ -1,4 +1,4 @@
-import type { BlobDescriptor, Signer } from 'blossom-client-sdk'
+import type { BlobDescriptor, Signer } from '@/lib/blossom-auth'
 import {
   DEFAULT_CHUNK_SIZE,
   DEFAULT_MAX_CONCURRENT_CHUNKS,

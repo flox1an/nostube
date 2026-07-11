@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { WalletConnect } from 'applesauce-wallet-connect'
 import type { ActionRunner } from 'applesauce-actions'
-import { CashuMint, CashuWallet, type MeltQuoteResponse } from '@cashu/cashu-ts'
+import { Wallet } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'
 import * as WalletModels from 'applesauce-wallet/models'
 import * as WalletActions from 'applesauce-wallet/actions'
@@ -327,12 +327,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         // Use the first mint with sufficient balance
         const mintUrl = mints[0]
-        const mint = new CashuMint(mintUrl)
-        const cashuWallet = new CashuWallet(mint)
+        const cashuWallet = new Wallet(mintUrl)
+        await cashuWallet.loadMint()
 
-        // Get melt quote to know the amount needed
-        const meltQuote: MeltQuoteResponse = await cashuWallet.createMeltQuote(bolt11)
-        const amountNeeded = meltQuote.amount + meltQuote.fee_reserve
+        // Get a BOLT11 melt quote to determine the amount plus fee reserve.
+        const meltQuote = await cashuWallet.createMeltQuoteBolt11(bolt11)
+        const amountNeeded = meltQuote.amount.add(meltQuote.fee_reserve).toNumber()
 
         // Get token events from store
         const tokenEvents = eventStore.getByFilters([
@@ -343,7 +343,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const { proofs } = WalletHelpers.dumbTokenSelection(tokenEvents, amountNeeded, mintUrl)
 
         // Melt the tokens to pay the invoice
-        const meltResult = await cashuWallet.meltProofs(meltQuote, proofs)
+        const meltResult = await cashuWallet.meltProofsBolt11(meltQuote, proofs)
 
         // Store change if any
         if (meltResult.change && meltResult.change.length > 0 && actionRunner) {

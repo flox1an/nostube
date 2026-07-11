@@ -122,7 +122,10 @@ export async function cacheRequest(filters: Filter[]) {
     const cache = await ensureCache()
     const events = await getEventsForFilters(cache, [...filters, ...buildDeletionFilters(filters)])
     const cutoff = Math.floor(Date.now() / 1000) - CACHE_TTL_SECONDS
-    return events.filter(e => e.created_at >= cutoff)
+    return events.filter(
+      (event): event is NostrEvent =>
+        event.created_at >= cutoff && 'sig' in event && typeof event.sig === 'string'
+    )
   } catch (error) {
     console.warn('Cache unavailable (possibly iOS lockdown mode):', error)
     return [] // Return empty array to continue with relay fetching

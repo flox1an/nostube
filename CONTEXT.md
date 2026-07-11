@@ -4,6 +4,10 @@
 
 A media file (video, image, thumbnail) identified by its SHA256 hash. Blobs are content-addressed: the same bytes produce the same hash regardless of which server hosts the file. See also: Blossom Server.
 
+## Blob Placement
+
+The publishable placement of one Blob: its primary verified location, same-hash Blossom Mirror locations, and an optional direct source URL retained as a final fallback. For HLS, Blob Placement applies to the master playlist only; segment and variant playlist Blobs remain lifecycle data for upload, mirroring, and deletion.
+
 ## Blossom Server
 
 A server implementing the Blossom protocol (BUD-01/BUD-03) for blob storage. Clients upload blobs and receive a URL; any Blossom server can host any blob, enabling third-party mirroring. A user's server list is published in a Nostr kind 10063 event.

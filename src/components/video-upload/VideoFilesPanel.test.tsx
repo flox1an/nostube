@@ -26,6 +26,7 @@ const baseVideo: VideoVariant = {
   inputMethod: 'url',
   uploadedBlobs: [],
   mirroredBlobs: [],
+  placement: { fallbackBlobs: [], directUrl: 'https://example.com/video.mp4' },
 }
 
 const hlsVideo: VideoVariant = {
@@ -36,6 +37,7 @@ const hlsVideo: VideoVariant = {
   inputMethod: 'url',
   uploadedBlobs: [],
   mirroredBlobs: [],
+  placement: { fallbackBlobs: [], directUrl: 'https://example.com/playlist.m3u8' },
 }
 
 function renderPanel(overrides: Partial<VideoFilesPanelProps> = {}) {

@@ -31,6 +31,7 @@ const baseVideo: VideoVariant = {
   inputMethod: 'url',
   uploadedBlobs: [],
   mirroredBlobs: [],
+  placement: { fallbackBlobs: [], directUrl: 'https://example.com/video.mp4' },
 }
 
 function noop() {}

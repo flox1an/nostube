@@ -36,6 +36,16 @@ const mockDraft: UploadDraft = {
           },
         ],
         mirroredBlobs: [],
+        placement: {
+          primaryBlob: {
+            url: 'http://test.com/video',
+            sha256: 'abc',
+            size: 100,
+            type: 'video/mp4',
+            uploaded: Date.now(),
+          },
+          fallbackBlobs: [],
+        },
       },
     ],
   },

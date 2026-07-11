@@ -5,6 +5,64 @@ import type { VideoMetadata } from './metadata-extraction'
 import type { OriginalVideoInfo } from '@/types/upload-draft'
 
 /**
+ * The publishable placement of one media Blob.
+ *
+ * Fallback Blobs must contain the same SHA256 as the primary Blob. A direct URL is
+ * retained only after every verified Blob location has been tried.
+ */
+export interface BlobPlacement {
+  primaryBlob?: BlobDescriptor
+  fallbackBlobs: BlobDescriptor[]
+  directUrl?: string
+}
+
+export interface BlobPlacementOptions {
+  primaryBlob?: BlobDescriptor
+  candidateBlobs?: BlobDescriptor[]
+  directUrl?: string
+}
+
+export function createBlobPlacement({
+  primaryBlob,
+  candidateBlobs = [],
+  directUrl,
+}: BlobPlacementOptions): BlobPlacement {
+  const primary = primaryBlob ?? candidateBlobs[0]
+  const fallbackBlobs = primary
+    ? candidateBlobs.filter(blob => blob.sha256 === primary.sha256 && blob.url !== primary.url)
+    : []
+  const uniqueFallbackBlobs = Array.from(
+    new Map(fallbackBlobs.map(blob => [blob.url, blob])).values()
+  )
+
+  return {
+    primaryBlob: primary,
+    fallbackBlobs: uniqueFallbackBlobs,
+    ...(directUrl && directUrl !== primary?.url ? { directUrl } : {}),
+  }
+}
+
+/**
+ * Adapts a persisted VideoVariant from before Blob Placement was explicit.
+ * This is intentionally pure; Draft persistence writes the normalized value only
+ * during a later Draft update.
+ */
+export function normalizeVideoVariantPlacement(variant: VideoVariant): VideoVariant {
+  if (variant.placement) return variant
+
+  const candidateBlobs = [...(variant.uploadedBlobs ?? []), ...(variant.mirroredBlobs ?? [])]
+  const primaryBlob = candidateBlobs.find(blob => blob.url === variant.url) ?? candidateBlobs[0]
+
+  return {
+    ...variant,
+    placement: createBlobPlacement({
+      primaryBlob,
+      candidateBlobs,
+      directUrl: variant.url,
+    }),
+  }
+}
+/**
  * Interface representing a single video variant (e.g., different quality levels)
  */
 export interface VideoVariant {
@@ -16,8 +74,9 @@ export interface VideoVariant {
   videoCodec?: string // e.g., "avc1.64001F"
   audioCodec?: string // e.g., "mp4a.40.2"
   bitrate?: number // Total bitrate
-  uploadedBlobs: BlobDescriptor[] // Blobs from initial upload servers
-  mirroredBlobs: BlobDescriptor[] // Blobs from mirror servers
+  uploadedBlobs: BlobDescriptor[] // Blobs from initial upload servers and HLS asset lifecycle
+  mirroredBlobs: BlobDescriptor[] // Blobs from mirror servers and HLS asset lifecycle
+  placement: BlobPlacement // Publishable Blob location; independent of acquisition provenance
   inputMethod: 'file' | 'url' // How this video was added
   file?: File // Original file (only for uploaded files)
   qualityLabel?: string // e.g., "1080p", "720p", "480p"
@@ -129,6 +188,10 @@ export async function processUploadedVideo(
       bitrate: bitrate ? Math.floor(bitrate) : undefined,
       uploadedBlobs,
       mirroredBlobs: [],
+      placement: createBlobPlacement({
+        primaryBlob: uploadedBlobs[0],
+        candidateBlobs: uploadedBlobs,
+      }),
       inputMethod: 'file',
       file,
       qualityLabel,
@@ -257,6 +320,7 @@ export async function processVideoUrl(
     bitrate: bitrate ? Math.floor(bitrate) : undefined,
     uploadedBlobs: [],
     mirroredBlobs,
+    placement: createBlobPlacement({ candidateBlobs: mirroredBlobs, directUrl: url }),
     inputMethod: 'url',
     qualityLabel,
     extractedMetadata,

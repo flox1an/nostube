@@ -20,7 +20,7 @@ import {
   type DvmBid,
   type DvmResultContent,
 } from '@/lib/dvm-utils'
-import type { VideoVariant } from '@/lib/video-processing'
+import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -104,6 +104,7 @@ export function buildDvmVideoVariant(
     audioCodec,
     uploadedBlobs: [],
     mirroredBlobs: [],
+    placement: createBlobPlacement({ directUrl: result.urls[0] }),
     inputMethod: 'url',
     qualityLabel: resolution,
   }

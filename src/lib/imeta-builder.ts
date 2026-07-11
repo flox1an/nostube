@@ -1,5 +1,5 @@
 import { type BlobDescriptor } from '@/lib/blossom-auth'
-import { type VideoVariant } from '@/lib/video-processing'
+import { normalizeVideoVariantPlacement, type VideoVariant } from '@/lib/video-processing'
 import { buildAdvancedMimeType } from '@/lib/utils'
 import { generateQualityLabel } from '@/lib/video-processing'
 
@@ -104,22 +104,18 @@ export interface BuildImetaTagParams {
  * Returns a string[] suitable for use as a Nostr event tag.
  */
 export function buildImetaTag(params: BuildImetaTagParams): string[] {
-  const { variant, thumbnailUrls, blurhash } = params
-
+  const { thumbnailUrls, blurhash } = params
+  const variant = normalizeVideoVariantPlacement(params.variant)
+  const { placement } = variant
   const tag = ['imeta', `dim ${variant.dimension}`]
 
-  const uploadedBlobs = variant.uploadedBlobs || []
-  const mirroredBlobs = variant.mirroredBlobs || []
-
-  // Add primary URL
-  const primaryUrl = variant.inputMethod === 'url' ? variant.url : uploadedBlobs[0]?.url
+  // Blob placement, not acquisition provenance, determines the published URL and hash.
+  const primaryUrl = placement.primaryBlob?.url ?? placement.directUrl
   if (primaryUrl) {
     tag.push(`url ${primaryUrl}`)
   }
-
-  // Add SHA256 hash
-  if (uploadedBlobs[0]?.sha256) {
-    tag.push(`x ${uploadedBlobs[0].sha256}`)
+  if (placement.primaryBlob) {
+    tag.push(`x ${placement.primaryBlob.sha256}`)
   }
 
   // Add MIME type with codecs
@@ -152,18 +148,12 @@ export function buildImetaTag(params: BuildImetaTagParams): string[] {
     tag.push(`blurhash ${blurhash}`)
   }
 
-  // Add fallback URLs from multiple upload servers
-  if (variant.inputMethod === 'file') {
-    if (uploadedBlobs.length > 1) {
-      for (const blob of uploadedBlobs.slice(1)) {
-        tag.push(`fallback ${blob.url}`)
-      }
-    }
-    if (mirroredBlobs.length > 0) {
-      for (const blob of mirroredBlobs) {
-        tag.push(`fallback ${blob.url}`)
-      }
-    }
+  // Verified same-hash Blob locations precede an unverified direct source URL.
+  for (const blob of placement.fallbackBlobs) {
+    tag.push(`fallback ${blob.url}`)
+  }
+  if (placement.directUrl) {
+    tag.push(`fallback ${placement.directUrl}`)
   }
 
   return tag
@@ -232,19 +222,11 @@ export function buildImetaTags(params: {
     })
     imetaTags.push(tag)
 
-    // Collect fallback URLs for the return value
-    const uploadedBlobs = video.uploadedBlobs || []
-    const mirroredBlobs = video.mirroredBlobs || []
-    if (video.inputMethod === 'file') {
-      if (uploadedBlobs.length > 1) {
-        for (const blob of uploadedBlobs.slice(1)) {
-          allFallbackUrls.push(blob.url)
-        }
-      }
-      for (const blob of mirroredBlobs) {
-        allFallbackUrls.push(blob.url)
-      }
-    }
+    const placement = normalizeVideoVariantPlacement(video).placement
+    allFallbackUrls.push(
+      ...placement.fallbackBlobs.map(blob => blob.url),
+      ...(placement.directUrl ? [placement.directUrl] : [])
+    )
   }
 
   return { imetaTags, allFallbackUrls }

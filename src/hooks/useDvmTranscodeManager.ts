@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useUploadManager } from '@/providers/UploadManagerProvider'
-import type { VideoVariant } from '@/lib/video-processing'
+import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
 import type { UploadTask } from '@/types/upload-manager'
 import type { TranscodeCodec, DvmBid } from '@/lib/dvm-utils'
 
@@ -184,6 +184,7 @@ export function useDvmTranscodeManager({
           qualityLabel: video.qualityLabel,
           uploadedBlobs: [],
           mirroredBlobs: [],
+          placement: createBlobPlacement({ directUrl: video.url }),
           inputMethod: 'url',
         }
 

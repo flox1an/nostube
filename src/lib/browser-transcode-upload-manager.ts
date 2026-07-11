@@ -10,7 +10,7 @@ import {
   uploadFileToMultipleServersChunked,
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
-import type { VideoVariant } from '@/lib/video-processing'
+import { createBlobPlacement, type VideoVariant } from '@/lib/video-processing'
 import { getItemsFromStorage } from '@/lib/draft-persistence-storage'
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 import {
@@ -847,9 +847,12 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         return qb - qa
       })
       const highestHlsStream = sortedHlsVariantStreams[0]
+      const masterBlob = allHlsBlobs.find(blob => blob.url === masterUrl)
+      const masterMirrorBlobs = masterBlob
+        ? hlsMirroredBlobs.filter(blob => blob.sha256 === masterBlob.sha256)
+        : []
 
-      // Add HLS variant — use inputMethod:'url' so buildImetaTag uses variant.url directly.
-      // Store all uploaded blobs (segments, playlists, master) so they can be deleted later.
+      // Placement tracks the master playlist; all HLS assets remain lifecycle data.
       uploadedVideos.push({
         url: masterUrl,
         mimeType: 'application/vnd.apple.mpegurl',
@@ -859,6 +862,11 @@ export async function startBrowserTranscodeUploadJob(options: BrowserTranscodeUp
         duration: sourceMeta.duration,
         uploadedBlobs: allHlsBlobs,
         mirroredBlobs: hlsMirroredBlobs,
+        placement: createBlobPlacement({
+          primaryBlob: masterBlob,
+          candidateBlobs: [...allHlsBlobs, ...masterMirrorBlobs],
+          directUrl: masterUrl,
+        }),
         inputMethod: 'url',
       })
     } else if (transcodedFiles instanceof Array) {

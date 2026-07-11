@@ -14,6 +14,7 @@ import {
   processOriginalVideoInfo,
   processUploadedVideo,
   processVideoUrl,
+  normalizeVideoVariantPlacement,
 } from '@/lib/video-processing'
 import { buildImetaTags } from '@/lib/imeta-builder'
 import { getPublishableDimension } from '@/lib/upload-media'
@@ -178,10 +179,8 @@ function buildVideoEvent(params: BuildVideoEventParams): BuildVideoEventResult {
     ],
   }
 
-  const firstVideoBlobs = firstVideo.uploadedBlobs || []
-  const primaryVideoUrl =
-    firstVideo.inputMethod === 'url' ? firstVideo.url : firstVideoBlobs[0]?.url
-
+  const firstPlacement = normalizeVideoVariantPlacement(firstVideo).placement
+  const primaryVideoUrl = firstPlacement.primaryBlob?.url ?? firstPlacement.directUrl
   return { event, allFallbackUrls, primaryVideoUrl }
 }
 
@@ -208,6 +207,13 @@ export function useVideoUpload(
 ) {
   const legacyDraft = initialDraft as
     (UploadDraft & { browserTranscodeState?: BrowserTranscodeState }) | undefined
+  const initialUploadInfo: UploadInfo = {
+    videos: (initialDraft?.uploadInfo?.videos ?? []).map(normalizeVideoVariantPlacement),
+  }
+  const hasLegacyBlobPlacement =
+    initialDraft?.uploadInfo?.videos.some(video => !video.placement) ?? false
+  const skipInitialFormDraftSync = useRef(hasLegacyBlobPlacement)
+  const skipInitialUploadDraftSync = useRef(hasLegacyBlobPlacement)
   const initialBrowserTranscodeJob = initialDraft?.id
     ? getBrowserTranscodeUploadDraft(initialDraft.id)
     : undefined
@@ -230,16 +236,14 @@ export function useVideoUpload(
   const [videoUrl, setVideoUrl] = useState(initialDraft?.videoUrl || '')
   const [file, setFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
-  const [uploadInfo, setUploadInfo] = useState<UploadInfo>(
-    initialDraft?.uploadInfo || { videos: [] }
-  )
+  const [uploadInfo, setUploadInfo] = useState<UploadInfo>(initialUploadInfo)
   const [uploadState, setUploadState] = useState<
     'initial' | 'transcoding' | 'uploading' | 'finished'
   >(
     initialBrowserTranscodeState &&
       ['queued', 'transcoding', 'uploading'].includes(initialBrowserTranscodeState.status)
       ? 'transcoding'
-      : initialDraft?.uploadInfo && initialDraft.uploadInfo.videos.length > 0
+      : initialUploadInfo.videos.length > 0
         ? 'finished'
         : 'initial'
   )
@@ -1020,24 +1024,25 @@ export function useVideoUpload(
             const relayHint = writeRelays[0] || ''
 
             for (const video of uploadInfo.videos) {
-              if (video.mirroredBlobs.length > 0 && video.uploadedBlobs[0]?.sha256 && video.url) {
+              const placement = normalizeVideoVariantPlacement(video).placement
+              if (placement.primaryBlob && placement.fallbackBlobs.length > 0) {
                 announcements.push({
                   blob: {
                     type: 'video',
                     variant: {
-                      url: video.url,
-                      hash: video.uploadedBlobs[0].sha256,
+                      url: placement.primaryBlob.url,
+                      hash: placement.primaryBlob.sha256,
                       size: video.sizeMB ? Math.round(video.sizeMB * 1024 * 1024) : undefined,
                       dimensions: video.dimension,
                       mimeType: video.file?.type,
                       quality: video.qualityLabel,
-                      fallbackUrls: video.mirroredBlobs.map(b => b.url),
+                      fallbackUrls: placement.fallbackBlobs.map(blob => blob.url),
                     },
                     label: `Video ${video.qualityLabel || video.dimension}`,
-                    hash: video.uploadedBlobs[0].sha256,
+                    hash: placement.primaryBlob.sha256,
                     ext: 'mp4',
                   },
-                  mirrorResults: video.mirroredBlobs,
+                  mirrorResults: placement.fallbackBlobs,
                   videoEvent: {
                     id: publishedEvent.id,
                     kind: publishedEvent.kind,
@@ -1146,6 +1151,10 @@ export function useVideoUpload(
 
   // Sync form field changes back to draft (debounced in useUploadDrafts)
   useEffect(() => {
+    if (skipInitialFormDraftSync.current) {
+      skipInitialFormDraftSync.current = false
+      return
+    }
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
         title,
@@ -1181,6 +1190,10 @@ export function useVideoUpload(
 
   // Sync upload milestone changes separately (immediate in useUploadDrafts)
   useEffect(() => {
+    if (skipInitialUploadDraftSync.current) {
+      skipInitialUploadDraftSync.current = false
+      return
+    }
     if (onDraftChangeRef.current) {
       onDraftChangeRef.current({
         uploadInfo,

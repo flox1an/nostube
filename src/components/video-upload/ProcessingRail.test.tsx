@@ -20,6 +20,7 @@ const video: VideoVariant = {
   inputMethod: 'url',
   uploadedBlobs: [],
   mirroredBlobs: [],
+  placement: { fallbackBlobs: [], directUrl: 'https://example.com/video.mp4' },
 }
 
 const baseState: BrowserTranscodeState = {

@@ -56,7 +56,11 @@ import { extractBlossomHash } from '@/utils/video-event'
 import { getTrackedDvms } from '@/hooks/useDvmTracker'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'
-import type { VideoVariant } from '@/lib/video-processing'
+import {
+  createBlobPlacement,
+  normalizeVideoVariantPlacement,
+  type VideoVariant,
+} from '@/lib/video-processing'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { useUploadNotifications } from '@/hooks/useUploadNotifications'
 
@@ -67,6 +71,16 @@ const UploadManagerContext = createContext<UploadManagerContextType | undefined>
 
 interface UploadManagerProviderProps {
   children: ReactNode
+}
+
+function normalizeDraftBlobPlacement(draft: UploadDraft): UploadDraft {
+  return {
+    ...draft,
+    uploadInfo: {
+      ...draft.uploadInfo,
+      videos: draft.uploadInfo.videos.map(normalizeVideoVariantPlacement),
+    },
+  }
 }
 
 export function UploadManagerProvider({ children }: UploadManagerProviderProps) {
@@ -101,7 +115,10 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     isMilestone: isMilestoneUpdate,
   })
 
-  const drafts = draftPersistence.items
+  const drafts = useMemo(
+    () => draftPersistence.items.map(normalizeDraftBlobPlacement),
+    [draftPersistence.items]
+  )
   const refreshDrafts = draftPersistence.refreshItems
   const flushNostrSync = draftPersistence.flushSync
 
@@ -164,7 +181,21 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   const updateDraftFn = useCallback(
     (id: string, updates: Partial<UploadDraft>) => {
-      draftPersistence.updateItem(id, updates)
+      const currentDraft = draftPersistence.getItem(id)
+      const normalizedCurrentDraft = currentDraft && normalizeDraftBlobPlacement(currentDraft)
+      const uploadInfo = updates.uploadInfo ?? normalizedCurrentDraft?.uploadInfo
+
+      draftPersistence.updateItem(id, {
+        ...updates,
+        ...(uploadInfo
+          ? {
+              uploadInfo: {
+                ...uploadInfo,
+                videos: uploadInfo.videos.map(normalizeVideoVariantPlacement),
+              },
+            }
+          : {}),
+      })
     },
     [draftPersistence]
   )
@@ -178,7 +209,8 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
 
   const getDraftFn = useCallback(
     (id: string): UploadDraft | undefined => {
-      return draftPersistence.getItem(id)
+      const draft = draftPersistence.getItem(id)
+      return draft && normalizeDraftBlobPlacement(draft)
     },
     [draftPersistence]
   )
@@ -371,6 +403,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
     }
 
     const updatedVideo = { ...video }
+    const directUrl = video.placement.directUrl ?? video.url
 
     if (uploadServers.length > 0) {
       try {
@@ -400,6 +433,14 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         console.warn('[UploadManager] Failed to mirror to mirror servers:', err)
       }
     }
+
+    const candidateBlobs = [...updatedVideo.uploadedBlobs, ...updatedVideo.mirroredBlobs]
+    updatedVideo.placement = createBlobPlacement({
+      primaryBlob: updatedVideo.uploadedBlobs[0] ?? updatedVideo.mirroredBlobs[0],
+      candidateBlobs,
+      directUrl,
+    })
+    updatedVideo.url = updatedVideo.placement.primaryBlob?.url ?? directUrl
 
     return updatedVideo
   }, [])
@@ -841,9 +882,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
             const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
             if (!isDuplicate) {
               const updatedVideos = [...existingVideos, mirroredVideo]
-              draftPersistence.updateItem(taskId, {
-                uploadInfo: { videos: updatedVideos },
-              })
+              updateDraftFn(taskId, { uploadInfo: { videos: updatedVideos } })
 
               if (import.meta.env.DEV) {
                 console.debug(
@@ -876,7 +915,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
         startingTasksRef.current.delete(taskId)
       }
     },
-    [updateTasksState, processResolution, completeTask, failTask, draftPersistence]
+    [updateTasksState, processResolution, completeTask, failTask, draftPersistence, updateDraftFn]
   )
 
   // Resume transcode from persisted state
@@ -979,7 +1018,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
               if (!isDuplicate) {
                 const updatedVideos = [...existingVideos, mirroredVideo]
-                draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
+                updateDraftFn(taskId, { uploadInfo: { videos: updatedVideos } })
               }
             }
 
@@ -1061,7 +1100,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               const isDuplicate = existingVideos.some(v => v.url === mirroredVideo.url)
               if (!isDuplicate) {
                 const updatedVideos = [...existingVideos, mirroredVideo]
-                draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
+                updateDraftFn(taskId, { uploadInfo: { videos: updatedVideos } })
               }
             }
 
@@ -1109,7 +1148,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
               const isDuplicate = existingVideos.some(v => v.url === video.url)
               if (!isDuplicate) {
                 const updatedVideos = [...existingVideos, video]
-                draftPersistence.updateItem(taskId, { uploadInfo: { videos: updatedVideos } })
+                updateDraftFn(taskId, { uploadInfo: { videos: updatedVideos } })
               }
             }
 
@@ -1137,6 +1176,7 @@ export function UploadManagerProvider({ children }: UploadManagerProviderProps) 
       completeTask,
       failTask,
       draftPersistence,
+      updateDraftFn,
     ]
   )
 

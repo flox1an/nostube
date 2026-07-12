@@ -170,7 +170,7 @@ export const VideoCard = React.memo(function VideoCard({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <Skeleton className="absolute inset-0 w-full h-full" />
+                    <Skeleton className="absolute inset-0 w-full h-full rounded-none sm:rounded-lg" />
                   ))}
                 <img
                   src={cascade.src ?? ''}
@@ -265,7 +265,7 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
     <div className={cn(tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2' : 'px-2 py-2')}>
-      <Skeleton className={cn('w-full', aspectRatio)} />
+      <Skeleton className={cn('w-full rounded-none sm:rounded-lg', aspectRatio)} />
       <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
         <div className="flex gap-3">
           {format !== 'vertical' && (

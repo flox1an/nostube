@@ -28,6 +28,7 @@ interface VideoCardProps {
   playlistParam?: string
   allVideos?: VideoEvent[] // Full list of videos for shorts navigation
   videoIndex?: number // Index of this video in the allVideos array
+  tightGridGap?: boolean // Minimal horizontal gap on mobile (shorts grids)
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -37,6 +38,7 @@ export const VideoCard = React.memo(function VideoCard({
   playlistParam,
   allVideos,
   videoIndex,
+  tightGridGap,
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -127,7 +129,10 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className="p-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
+      className={cn(
+        'pt-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
+        tightGridGap ? 'px-[0.5px] sm:px-2' : 'px-2'
+      )}
       style={{ contain: 'layout style paint' }}
     >
       <div>
@@ -249,15 +254,17 @@ export const VideoCard = React.memo(function VideoCard({
 
 interface VideoCardSkeletonProps {
   format: 'vertical' | 'horizontal' | 'square'
+  tightGridGap?: boolean
 }
 
 export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   format,
+  tightGridGap,
 }: VideoCardSkeletonProps) {
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
-    <div className="p-2">
+    <div className={cn('py-2', tightGridGap ? 'px-[0.5px] sm:px-2' : 'px-2')}>
       <Skeleton className={cn('w-full', aspectRatio)} />
       <div className="pt-3">
         <div className="flex gap-3">

@@ -49,7 +49,7 @@ export function ShortsFeedPageLoader() {
       <div className="sm:p-2">
         <div className={VERTICAL_GRID}>
           {Array.from({ length: 24 }).map((_, i) => (
-            <VideoCardSkeleton key={i} format="vertical" />
+            <VideoCardSkeleton key={i} format="vertical" tightGridGap />
           ))}
         </div>
       </div>

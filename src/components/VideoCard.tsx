@@ -28,6 +28,7 @@ interface VideoCardProps {
   playlistParam?: string
   allVideos?: VideoEvent[] // Full list of videos for shorts navigation
   videoIndex?: number // Index of this video in the allVideos array
+  tightGridGap?: boolean // Minimal horizontal gap on mobile (shorts grids)
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -37,6 +38,7 @@ export const VideoCard = React.memo(function VideoCard({
   playlistParam,
   allVideos,
   videoIndex,
+  tightGridGap,
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -127,14 +129,22 @@ export const VideoCard = React.memo(function VideoCard({
 
   return (
     <div
-      className="p-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]"
+      className={cn(
+        'hover:bg-accent transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
+        tightGridGap
+          ? 'rounded-none sm:rounded-lg px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4'
+          : 'rounded-lg px-2 pt-2 pb-4'
+      )}
       style={{ contain: 'layout style paint' }}
     >
       <div>
         <Link to={to} onClick={handleShortsClick}>
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
-            className={cn('w-full overflow-hidden sm:rounded-lg relative bg-muted', aspectRatio)}
+            className={cn(
+              'w-full overflow-hidden rounded-none sm:rounded-lg relative bg-muted',
+              aspectRatio
+            )}
           >
             {/* Show error state if both thumbnail and fallback failed */}
             {cascade.exhausted ? (
@@ -165,7 +175,7 @@ export const VideoCard = React.memo(function VideoCard({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <Skeleton className="absolute inset-0 w-full h-full" />
+                    <Skeleton className="absolute inset-0 w-full h-full rounded-none sm:rounded-lg" />
                   ))}
                 <img
                   src={cascade.src ?? ''}
@@ -199,7 +209,7 @@ export const VideoCard = React.memo(function VideoCard({
             )}
           </div>
         </Link>
-        <div className="pt-3">
+        <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
               <Link to={authorProfileUrl} className="shrink-0">
@@ -249,17 +259,19 @@ export const VideoCard = React.memo(function VideoCard({
 
 interface VideoCardSkeletonProps {
   format: 'vertical' | 'horizontal' | 'square'
+  tightGridGap?: boolean
 }
 
 export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   format,
+  tightGridGap,
 }: VideoCardSkeletonProps) {
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
-    <div className="p-2">
-      <Skeleton className={cn('w-full', aspectRatio)} />
-      <div className="pt-3">
+    <div className={cn(tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2' : 'px-2 py-2')}>
+      <Skeleton className={cn('w-full rounded-none sm:rounded-lg', aspectRatio)} />
+      <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
         <div className="flex gap-3">
           {format !== 'vertical' && (
             <div className="shrink-0">

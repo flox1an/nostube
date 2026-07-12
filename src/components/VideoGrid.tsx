@@ -117,7 +117,7 @@ export function VideoGrid({
           {chunk(Array.from({ length: 24 }), portraitCols).map((row, i) => (
             <div key={'portrait-skel-' + i} className={`grid ${gridColsClass(portraitCols)}`}>
               {row.map((_, j) => (
-                <VideoCardSkeleton key={j} format="vertical" />
+                <VideoCardSkeleton key={j} format="vertical" tightGridGap />
               ))}
             </div>
           ))}
@@ -140,7 +140,7 @@ export function VideoGrid({
         )}
       >
         {Array.from({ length: 24 }).map((_, i) => (
-          <VideoCardSkeleton key={i} format={cardFormat} />
+          <VideoCardSkeleton key={i} format={cardFormat} tightGridGap={isShort} />
         ))}
       </div>
     )
@@ -198,6 +198,7 @@ export function VideoGrid({
                 playlistParam={playlistParam}
                 allVideos={portraitVideos}
                 videoIndex={portraitIndexMap.get(video.id)}
+                tightGridGap
               />
             ))}
           </div>
@@ -233,6 +234,7 @@ export function VideoGrid({
           playlistParam={playlistParam}
           allVideos={isShort ? filteredVideos : undefined}
           videoIndex={isShort ? index : undefined}
+          tightGridGap={isShort}
         />
       ))}
     </div>

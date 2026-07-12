@@ -130,8 +130,10 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
-        tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4' : 'px-2 pt-2 pb-4'
+        'hover:bg-accent transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
+        tightGridGap
+          ? 'rounded-none sm:rounded-lg px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4'
+          : 'rounded-lg px-2 pt-2 pb-4'
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -139,7 +141,10 @@ export const VideoCard = React.memo(function VideoCard({
         <Link to={to} onClick={handleShortsClick}>
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
-            className={cn('w-full overflow-hidden sm:rounded-lg relative bg-muted', aspectRatio)}
+            className={cn(
+              'w-full overflow-hidden rounded-none sm:rounded-lg relative bg-muted',
+              aspectRatio
+            )}
           >
             {/* Show error state if both thumbnail and fallback failed */}
             {cascade.exhausted ? (

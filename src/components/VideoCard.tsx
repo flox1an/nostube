@@ -130,8 +130,8 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'pt-2 pb-4 hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
-        tightGridGap ? 'px-[0.5px] sm:px-2' : 'px-2'
+        'hover:bg-accent rounded-lg transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
+        tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4' : 'px-2 pt-2 pb-4'
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -204,7 +204,7 @@ export const VideoCard = React.memo(function VideoCard({
             )}
           </div>
         </Link>
-        <div className="pt-3">
+        <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
               <Link to={authorProfileUrl} className="shrink-0">
@@ -264,9 +264,9 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
-    <div className={cn('py-2', tightGridGap ? 'px-[0.5px] sm:px-2' : 'px-2')}>
+    <div className={cn(tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2' : 'px-2 py-2')}>
       <Skeleton className={cn('w-full', aspectRatio)} />
-      <div className="pt-3">
+      <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
         <div className="flex gap-3">
           {format !== 'vertical' && (
             <div className="shrink-0">

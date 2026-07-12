@@ -1196,7 +1196,7 @@ export function AuthorPage() {
                   </Button>
                 </div>
                 <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-2 min-w-max">
+                  <div className="flex gap-0 sm:gap-2 min-w-max">
                     {shorts.slice(0, 10).map((video, index) => (
                       <div key={`latest-short-${video.id}`} className="w-44 shrink-0">
                         <VideoCard
@@ -1204,6 +1204,7 @@ export function AuthorPage() {
                           format="vertical"
                           allVideos={shorts}
                           videoIndex={index}
+                          tightGridGap
                         />
                       </div>
                     ))}

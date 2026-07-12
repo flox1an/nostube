@@ -559,12 +559,13 @@ export function VideoPage() {
   )
 
   // Stable callback for video failed (memoized)
+  // A local/private event source is a deterministic safety decision, not a
+  // persistent “missing video” result. A later hash mirror may resolve it.
   const handleAllSourcesFailed = useCallback(
     (urls: string[]) => {
-      if (video?.id) {
+      if (video?.id && video.mediaSourceStatus === 'safe-declared-source') {
         markVideoAsMissing(video.id, urls)
       }
-      // Trigger availability check to find alternative servers
       checkAvailability()
     },
     [video, markVideoAsMissing, checkAvailability]
@@ -710,6 +711,18 @@ export function VideoPage() {
     nextPlaylistVideo,
     navigateToNext,
   ])
+
+  if (!isLoading && video?.mediaSourceStatus === 'unavailable') {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('video.unavailable')}</AlertTitle>
+          <AlertDescription>{t('video.unavailableDescription')}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   // Handle video not found or missing
   if (!isLoading && !video) {

@@ -23,6 +23,12 @@ export function filterVideoSuggestions(videos: VideoEvent[], options: FilterOpti
   for (const video of deduplicated) {
     // Skip videos with content warnings
     if (video.contentWarning) continue
+    if (
+      video.mediaSourceStatus === 'requires-hash-resolution' ||
+      video.mediaSourceStatus === 'unavailable'
+    ) {
+      continue
+    }
 
     // Skip current video
     if (currentVideoId && video.id === currentVideoId) continue

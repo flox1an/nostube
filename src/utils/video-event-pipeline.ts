@@ -88,6 +88,8 @@ export function filterVideoEvents(videos: VideoEvent[], policy: FilterPolicy = {
     video =>
       (resolvedPolicy.includeYouTube || !isYouTubeVideo(video)) &&
       (resolvedPolicy.includeAudio || !isAudioVideo(video)) &&
+      video.mediaSourceStatus !== 'requires-hash-resolution' &&
+      video.mediaSourceStatus !== 'unavailable' &&
       (!resolvedPolicy.blockPubkeys || !resolvedPolicy.blockPubkeys[video.pubkey]) &&
       (!resolvedPolicy.missingVideoIds || !resolvedPolicy.missingVideoIds.has(video.id)) &&
       (!reportedSet || !reportedSet.has(video.id))

@@ -8,6 +8,11 @@
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { normalizeServerUrl } from './blossom-utils'
 import { extractBlossomHash, isBlossomUrl } from './blossom-url'
+import {
+  isAllowedConfiguredServiceUrl,
+  isAllowedEventMediaUrl,
+  isPublicMediaServerHint,
+} from './media-url-policy'
 
 // Re-export for backwards compatibility
 export { extractBlossomHash, isBlossomUrl }
@@ -58,6 +63,7 @@ function generateMirrorUrls(
   }
 
   for (const server of mirrorServers) {
+    if (!isAllowedConfiguredServiceUrl(server.url)) continue
     const baseUrl = normalizeServerUrl(server.url)
     const mirrorUrl = ext ? `${baseUrl}/${sha256}.${ext}` : `${baseUrl}/${sha256}`
 
@@ -106,8 +112,10 @@ function generateProxyUrls(
     return { urls, metadata }
   }
 
-  // Generate proxy URLs for each caching server
+  // A local cache is intentional user configuration and remains a valid
+  // browser target. It is never inferred from an event URL.
   for (const server of cachingServers) {
+    if (!isAllowedConfiguredServiceUrl(server.url)) continue
     const baseUrl = normalizeServerUrl(server.url)
 
     // Check if the original URL is already from this caching server
@@ -128,14 +136,17 @@ function generateProxyUrls(
     // Build proxy URL
     let proxyUrl = ext ? `${baseUrl}/${sha256}.${ext}` : `${baseUrl}/${sha256}`
 
-    // Add query parameters
+    // A remote proxy's localhost belongs to the remote machine. Keep private
+    // hints only when the selected proxy itself is local user configuration.
+    const allowPrivateHints = !isPublicMediaServerHint(baseUrl)
     const params = new URLSearchParams()
     const addedHostnames = new Set<string>() // Track added hostnames to avoid duplicates
 
     // Add all caching servers as XS query parameters (except the current caching server)
     for (const cachingServer of cachingServers) {
+      if (!isAllowedConfiguredServiceUrl(cachingServer.url)) continue
       const proxyServerUrl = normalizeServerUrl(cachingServer.url)
-
+      if (!allowPrivateHints && !isPublicMediaServerHint(proxyServerUrl)) continue
       // Skip if this is the same server we're creating the proxy URL for
       try {
         const proxyServerOrigin = new URL(proxyServerUrl).origin
@@ -157,8 +168,9 @@ function generateProxyUrls(
 
     // Add mirror servers as XS query parameters (they can serve the content as fallbacks)
     for (const mirrorServer of mirrorServers) {
+      if (!isAllowedConfiguredServiceUrl(mirrorServer.url)) continue
       const mirrorServerUrl = mirrorServer.url.replace(/\/$/, '')
-
+      if (!allowPrivateHints && !isPublicMediaServerHint(mirrorServerUrl)) continue
       // Skip if this mirror server is the same as the current proxy server
       try {
         const mirrorServerOrigin = new URL(mirrorServerUrl).origin
@@ -178,9 +190,9 @@ function generateProxyUrls(
       }
     }
 
-    // Add original URL's server as XS parameter if it's a Blossom server and different from proxy
-    // This allows the proxy server to fall back to the original source if needed
-    if (originalOrigin && originalOrigin !== proxyOrigin) {
+    // Event origins are untrusted. Never make a remote cache fetch a private
+    // source through an XS hint.
+    if (originalOrigin && originalOrigin !== proxyOrigin && isAllowedEventMediaUrl(originalUrl)) {
       try {
         const originalHostname = new URL(originalUrl).hostname
         if (!addedHostnames.has(originalHostname)) {
@@ -223,13 +235,6 @@ function generateProxyUrls(
 }
 
 /**
- * Check if a URL is a data URL (e.g., data:image/png;base64,...)
- */
-function isDataUrl(url: string): boolean {
-  return url.startsWith('data:')
-}
-
-/**
  * Generate all possible media URLs with fallbacks
  *
  * Priority Order:
@@ -258,14 +263,31 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
 
   // Process each original URL
   for (const originalUrl of originalUrls) {
-    // Data URLs should be used directly without any processing
-    if (isDataUrl(originalUrl)) {
-      allUrls.push(originalUrl)
-      allMetadata.push({ source: 'original' })
+    const isAllowedEventUrl = isAllowedEventMediaUrl(originalUrl)
+    const isBlossom = isBlossomUrl(originalUrl)
+
+    // Event-provided data URLs bypass every network control and are not valid
+    // media sources. Generated local placeholders never enter this function.
+    if (!isAllowedEventUrl) {
+      const { urls: proxyUrls, metadata: proxyMetadata } = generateProxyUrls(
+        originalUrl,
+        cachingServers,
+        proxyConfig,
+        authorPubkey,
+        mirrorServers,
+        mediaType
+      )
+      allUrls.push(...proxyUrls)
+      allMetadata.push(...proxyMetadata)
+
+      const { urls: mirrorUrls, metadata: mirrorMetadata } = generateMirrorUrls(
+        originalUrl,
+        mirrorServers
+      )
+      allUrls.push(...mirrorUrls)
+      allMetadata.push(...mirrorMetadata)
       continue
     }
-
-    const isBlossom = isBlossomUrl(originalUrl)
 
     // 1. Generate and add proxy URLs FIRST (if caching servers configured)
     if (cachingServers.length > 0) {
@@ -281,7 +303,6 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
       allMetadata.push(...proxyMetadata)
     }
 
-    // 2. Add valid Blossom original URLs
     if (isBlossom) {
       allUrls.push(originalUrl)
       allMetadata.push({ source: 'original' })
@@ -297,7 +318,6 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
       allMetadata.push(...mirrorMetadata)
     }
 
-    // 4. Add non-Blossom URLs at the end
     if (!isBlossom) {
       allUrls.push(originalUrl)
       allMetadata.push({ source: 'original' })

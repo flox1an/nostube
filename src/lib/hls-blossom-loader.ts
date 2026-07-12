@@ -12,6 +12,7 @@ import { extractBlossomHash } from '@/lib/blossom-url'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { emitHlsFailoverDebug, isHlsDebugEnabled } from '@/lib/hls-failover-debug'
 import { getDefaultVerifiedBlobCache, type VerifiedBlobCache } from '@/lib/p2p/verified-blob-cache'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import type { P2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 
 interface HlsBlossomLoaderOptions {
@@ -86,13 +87,8 @@ function buildFallbackUrls(url: string, options: HlsBlossomLoaderOptions): strin
   return generated
 }
 
-function isLocalhostUrl(url: string): boolean {
-  try {
-    const hostname = new URL(url).hostname
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
-  } catch {
-    return false
-  }
+function isBlockedEventUrl(url: string): boolean {
+  return !isAllowedEventMediaUrl(url)
 }
 
 function normalizeUrl(url: string | undefined): string | undefined {
@@ -224,17 +220,30 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
       const candidatesBeforeFiltering = candidates
 
       if (localhostMode === 'never') {
-        candidates = candidates.filter(url => !isLocalhostUrl(url))
+        candidates = candidates.filter(url => !isBlockedEventUrl(url))
       } else if (
         localhostMode === 'master-gated' &&
         !isMasterRequest &&
         masterServedFromLocalhost === false
       ) {
-        candidates = candidates.filter(url => !isLocalhostUrl(url))
+        candidates = candidates.filter(url => !isBlockedEventUrl(url))
       }
 
       if (candidates.length === 0) {
-        candidates = [context.url]
+        // A local manifest may legitimately refer to a local cache configured by
+        // this user. A public manifest must never regain a private URL after
+        // filtering its candidates.
+        if (masterServedFromLocalhost || isAllowedEventMediaUrl(context.url)) {
+          candidates = [context.url]
+        } else {
+          callbacks.onError(
+            { code: 403, text: 'Blocked private HLS media URL' },
+            context,
+            null,
+            this.stats
+          )
+          return
+        }
       }
 
       const { sha256 } = extractBlossomHash(context.url)
@@ -410,7 +419,7 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
           onSuccess: (response, stats, successContext, networkDetails) => {
             copyLoaderStats(this.stats, stats)
             if (isMasterRequest) {
-              masterServedFromLocalhost = isLocalhostUrl(candidateUrl)
+              masterServedFromLocalhost = isBlockedEventUrl(candidateUrl)
             }
             logHlsLoader('success', {
               videoId: options.videoId,

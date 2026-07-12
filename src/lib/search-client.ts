@@ -1,6 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { getTypeForKind } from '@/lib/video-types'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
 
@@ -25,32 +26,40 @@ export interface ExternalSearchHit {
 
 export function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
   const type = getTypeForKind(hit.kind)
-  const videoVariants: VideoVariant[] = hit.videoUrl
-    ? [{ url: hit.videoUrl, fallbackUrls: [] }]
+  const safeVideoUrl = hit.videoUrl && isAllowedEventMediaUrl(hit.videoUrl) ? hit.videoUrl : null
+  const safeThumbnail =
+    hit.thumbnail && isAllowedEventMediaUrl(hit.thumbnail) ? hit.thumbnail : null
+  const videoVariants: VideoVariant[] = safeVideoUrl
+    ? [{ url: safeVideoUrl, fallbackUrls: [] }]
     : []
-  const thumbnailVariants: VideoVariant[] = hit.thumbnail
-    ? [{ url: hit.thumbnail, fallbackUrls: [], mediaType: 'image' as const }]
+  const thumbnailVariants: VideoVariant[] = safeThumbnail
+    ? [{ url: safeThumbnail, fallbackUrls: [], mediaType: 'image' as const }]
     : []
   return {
     id: hit.event_id,
     kind: hit.kind,
     title: hit.title,
     description: hit.content_preview,
-    images: hit.thumbnail ? [hit.thumbnail] : [],
+    images: safeThumbnail ? [safeThumbnail] : [],
     pubkey: hit.pubkey,
     created_at: hit.created_at,
     published_at: hit.published_at ?? undefined,
     duration: hit.duration ?? 0,
     tags: Array.isArray(hit.tags) ? hit.tags : [],
     searchText: `${hit.title} ${hit.content_preview}`,
-    urls: hit.videoUrl ? [hit.videoUrl] : [],
+    urls: safeVideoUrl ? [safeVideoUrl] : [],
+    sourceUrls: hit.videoUrl ? [hit.videoUrl] : [],
+    mediaSourceStatus: safeVideoUrl ? 'safe-declared-source' : 'unavailable',
+    blockedEventMediaUrlCount: [hit.videoUrl, hit.thumbnail]
+      .filter((candidate): candidate is string => Boolean(candidate))
+      .filter(candidate => !isAllowedEventMediaUrl(candidate)).length,
     mimeType: hit.mimeType ?? undefined,
     mediaType: hit.mediaType ?? undefined,
     dimensions: hit.dimensions ?? undefined,
     link: nip19.neventEncode({ kind: hit.kind, id: hit.event_id, author: hit.pubkey, relays: [] }),
     type,
     textTracks: (hit.textTracks ?? [])
-      .filter(t => t.lang)
+      .filter(t => t.lang && isAllowedEventMediaUrl(t.url))
       .map(t => ({ url: t.url, lang: t.lang! })),
     contentWarning: hit.contentWarning ?? undefined,
     origins: [],

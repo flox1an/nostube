@@ -6,6 +6,7 @@ import { YOUTUBE_REGEX } from './origin-utils'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { sanitizeRelayUrl } from '@/lib/utils'
 
@@ -68,6 +69,8 @@ export interface VideoEvent {
   searchText: string
   urls: string[]
   sourceUrls?: string[]
+  mediaSourceStatus?: 'safe-declared-source' | 'requires-hash-resolution' | 'unavailable'
+  blockedEventMediaUrlCount?: number
   mimeType?: string
   mediaType?: 'video' | 'audio'
   dimensions?: string
@@ -393,6 +396,16 @@ export function deduplicateByIdentifier(videos: VideoEvent[]): VideoEvent[] {
 
   return Array.from(seen.values())
 }
+function filterEventVariantUrls(variant: VideoVariant): VideoVariant | null {
+  const allowedUrls = [variant.url, ...variant.fallbackUrls].filter(isAllowedEventMediaUrl)
+  if (allowedUrls.length === 0) return null
+
+  return {
+    ...variant,
+    url: allowedUrls[0],
+    fallbackUrls: allowedUrls.slice(1),
+  }
+}
 
 export function processEvent(
   event: Event,
@@ -421,11 +434,15 @@ export function processEvent(
   const published_at = publishedAtTag ? parseInt(publishedAtTag, 10) : undefined
 
   if (imetaTags.length > 0) {
-    // Parse all imeta tags
+    // Preserve raw declarations for diagnostics and hash resolution, but expose
+    // only safe candidates to components that can issue network requests.
     const allVariants = imetaTags
       .map(tag => parseImetaTag(tag))
       .filter((v): v is VideoVariant => v !== null)
     const sourceUrls = allVariants.flatMap(variant => [variant.url, ...variant.fallbackUrls])
+    const safeVariants = allVariants
+      .map(filterEventVariantUrls)
+      .filter((variant): variant is VideoVariant => variant !== null)
 
     // Extract thumbnail variants from 'image' fields in imeta tags
     // Multiple 'image' fields in the same imeta tag are fallback URLs for the SAME thumbnail
@@ -443,20 +460,22 @@ export function processEvent(
           }
         }
       }
-      // Create a single thumbnail variant with first URL as primary and rest as fallbacks
+      // Create a single thumbnail variant with first URL as primary and the
+      // remaining URLs as fallbacks, excluding unsafe event-provided targets.
       if (imageUrls.length > 0) {
-        thumbnailsFromImeta.push({
+        const variant = filterEventVariantUrls({
           url: imageUrls[0],
           fallbackUrls: imageUrls.slice(1),
-          mimeType: 'image/jpeg', // Default mime type for images
+          mimeType: 'image/jpeg',
         })
+        if (variant) thumbnailsFromImeta.push(variant)
       }
     }
 
     // Separate playable media variants from thumbnail variants.
     // NIP-71 video events can legitimately carry audio-only media (e.g. MP3 podcasts).
     // Also accept HLS master playlists (application/vnd.apple.mpegurl) and .m3u8 URLs.
-    const parsedVideoVariants = allVariants.filter(
+    const parsedVideoVariants = safeVariants.filter(
       v =>
         v.mimeType?.startsWith('video/') ||
         isVideoFileUrl(v.url) ||
@@ -474,7 +493,7 @@ export function processEvent(
     const videoVariants = sortVideoVariantsByQuality(compatibleVideoVariants)
 
     const thumbnailVariants = [
-      ...allVariants.filter(v => v.mimeType?.startsWith('image/')),
+      ...safeVariants.filter(v => v.mimeType?.startsWith('image/')),
       ...thumbnailsFromImeta,
     ]
 
@@ -505,8 +524,7 @@ export function processEvent(
     let url = imetaValues.get('url')?.[0]
     const mimeType: string | undefined = imetaValues.get('m')?.[0]
 
-    const images: string[] = []
-    imetaValues.get('image')?.forEach(url => images.push(url))
+    const images = (imetaValues.get('image') ?? []).filter(isAllowedEventMediaUrl)
 
     const videoUrls: string[] = url ? [url] : []
     imetaValues.get('fallback')?.forEach(url => videoUrls.push(url))
@@ -557,6 +575,7 @@ export function processEvent(
     const textTrackTags = event.tags.filter(t => t[0] === 'text-track')
     textTrackTags.forEach(vtt => {
       let url = vtt[1]
+      if (!url || !isAllowedEventMediaUrl(url)) return
       const lang = vtt[2]
       // Generate mirror URLs if the URL is a Blossom URL and mirror servers are configured
       if (url && blossomServers && blossomServers.length > 0) {
@@ -601,6 +620,24 @@ export function processEvent(
       allVideoVariants.find(v => v.duration !== undefined)?.duration ??
       topLevelDuration ??
       0
+    const fallbackImage =
+      primaryVariant?.url ?? (url && isAllowedEventMediaUrl(url) ? url : undefined)
+    const blurhashImage = blurhash ? blurHashToDataURL(blurhash) : undefined
+    const defaultImages: string[] =
+      primaryMediaType === 'audio'
+        ? []
+        : fallbackImage
+          ? [fallbackImage]
+          : blurhashImage
+            ? [blurhashImage]
+            : []
+    const blockedEventMediaUrlCount = [
+      ...sourceUrls,
+      ...(imetaValues.get('image') ?? []),
+      ...textTrackTags.flatMap(tag => (tag[1] ? [tag[1]] : [])),
+    ].filter(candidate => !isAllowedEventMediaUrl(candidate)).length
+    const mediaSourceStatus =
+      finalUrls.length > 0 ? 'safe-declared-source' : x ? 'requires-hash-resolution' : 'unavailable'
 
     const videoEvent: VideoEvent = {
       id: event.id,
@@ -608,12 +645,7 @@ export function processEvent(
       identifier,
       title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
       description: event.content || '',
-      images:
-        images.length > 0
-          ? images
-          : primaryMediaType === 'audio'
-            ? []
-            : [url || blurHashToDataURL(blurhash) || ''], // for audio without images, use empty array; for video, the image proxy can generate a thumbnail from the video URL
+      images: images.length > 0 ? images : defaultImages,
       pubkey: event.pubkey,
       created_at: event.created_at,
       published_at,
@@ -623,6 +655,8 @@ export function processEvent(
       searchText: '',
       urls: finalUrls,
       sourceUrls,
+      mediaSourceStatus,
+      blockedEventMediaUrlCount,
       mimeType: primaryMimeType,
       mediaType: primaryMediaType,
       dimensions: primaryDimensions,
@@ -680,33 +714,34 @@ export function processEvent(
     }
     const origin = origins[0]
 
-    // NOTE: URL generation (mirrors, proxies) is now handled by useMediaUrls hook in VideoPlayer
-    // We just pass the raw video URL here
-    const finalUrls = [url]
+    const sourceUrls = url ? [url] : []
+    const safeUrl = isAllowedEventMediaUrl(url) ? url : ''
+    const safeThumb = thumb && isAllowedEventMediaUrl(thumb) ? thumb : ''
+    const finalUrls = safeUrl ? [safeUrl] : []
 
     // For old format, create single video variant
     const dimensions = event.tags.find(t => t[0] === 'dim')?.[1]
     const size = parseInt(event.tags.find(t => t[0] === 'size')?.[1] || '0')
     const x = event.tags.find(t => t[0] === 'x')?.[1]
 
-    const videoVariants: VideoVariant[] = url
+    const videoVariants: VideoVariant[] = safeUrl
       ? [
           {
-            url,
+            url: safeUrl,
             hash: x,
             size: size || undefined,
             dimensions,
             mimeType,
-            mediaType: getVariantMediaType(mimeType, url),
+            mediaType: getVariantMediaType(mimeType, safeUrl),
             fallbackUrls: [],
           },
         ]
       : []
 
-    const thumbnailVariants: VideoVariant[] = thumb
+    const thumbnailVariants: VideoVariant[] = safeThumb
       ? [
           {
-            url: thumb,
+            url: safeThumb,
             fallbackUrls: [],
           },
         ]
@@ -718,7 +753,7 @@ export function processEvent(
       identifier,
       title,
       description,
-      images: [thumb || url], // use the video url, which is converted to an image by the image proxy
+      images: [safeThumb || safeUrl].filter(Boolean),
       pubkey: event.pubkey,
       created_at: event.created_at,
       published_at,
@@ -726,7 +761,16 @@ export function processEvent(
       tags,
       searchText: '',
       urls: finalUrls,
-      sourceUrls: finalUrls,
+      sourceUrls,
+      mediaSourceStatus:
+        finalUrls.length > 0
+          ? 'safe-declared-source'
+          : x
+            ? 'requires-hash-resolution'
+            : 'unavailable',
+      blockedEventMediaUrlCount: [url, thumb]
+        .filter((candidate): candidate is string => Boolean(candidate))
+        .filter(candidate => !isAllowedEventMediaUrl(candidate)).length,
       textTracks: [],
       mimeType,
       mediaType: getVariantMediaType(mimeType, url) === 'audio' ? 'audio' : 'video',

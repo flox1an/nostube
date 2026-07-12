@@ -27,14 +27,19 @@ export function VideoGrid({
   const width = useWindowWidth()
   const { config } = useAppContext()
 
-  // Filter out NSFW videos if nsfwFilter is 'hide' (default to 'hide' if not set)
+  // A public event without a safe playable source is retained in the event
+  // store, but must not create a broken card in a global grid.
   const nsfwFilter = config.nsfwFilter ?? 'hide'
-  const filteredVideos = useMemo(() => {
-    if (nsfwFilter === 'hide') {
-      return videos.filter(video => !video.contentWarning)
-    }
-    return videos
-  }, [videos, nsfwFilter])
+  const filteredVideos = useMemo(
+    () =>
+      videos.filter(
+        video =>
+          video.mediaSourceStatus !== 'requires-hash-resolution' &&
+          video.mediaSourceStatus !== 'unavailable' &&
+          (nsfwFilter !== 'hide' || !video.contentWarning)
+      ),
+    [videos, nsfwFilter]
+  )
 
   // Determine number of columns for each type based on width
   const getCols = useCallback(

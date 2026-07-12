@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useImageProxy } from '@/hooks/useImageProxy'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 
 /**
  * The variant of proxy URL to build when the proxy is healthy and the image hasn't
@@ -53,8 +54,20 @@ type Stage = ImageCascadeResult['stage']
  */
 export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const variant: ImageCascadeVariant = input.variant ?? 'preview'
-  const rawImage = input.src ?? null
-  const videoUrl = input.videoUrl ?? null
+  const rawImage =
+    input.src &&
+    (isAllowedEventMediaUrl(input.src) ||
+      input.src.startsWith('blob:') ||
+      input.src.startsWith('data:'))
+      ? input.src
+      : null
+  const videoUrl =
+    input.videoUrl &&
+    (isAllowedEventMediaUrl(input.videoUrl) ||
+      input.videoUrl.startsWith('blob:') ||
+      input.videoUrl.startsWith('data:'))
+      ? input.videoUrl
+      : null
   const proxy = useImageProxy()
 
   // Initial stage: skip 'proxy' when there's no image at all but a video might give us one.

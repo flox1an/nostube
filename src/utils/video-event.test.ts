@@ -1033,8 +1033,9 @@ describe('processEvents', () => {
     expect(results[1].id).toBe(nostubeEvent.id)
   })
 
-  it('should process events with empty URL as empty string', () => {
-    // Events without imeta or url tags fall back to old format with empty URL
+  it('should filter out events without a usable media URL', () => {
+    // Events without imeta or url tags fall back to old format with an invalid
+    // empty source and must not produce a broken feed card.
     const eventWithNoUrl = {
       ...zapStreamEvent,
       tags: [['title', 'No URL']],
@@ -1042,8 +1043,7 @@ describe('processEvents', () => {
 
     const results = processEvents([eventWithNoUrl], defaultRelays)
 
-    expect(results).toHaveLength(1)
-    expect(results[0].urls).toEqual([''])
+    expect(results).toEqual([])
   })
 
   it('should include YouTube URLs by default', () => {

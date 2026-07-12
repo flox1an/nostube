@@ -13,6 +13,7 @@ import {
 } from '@/lib/media-url-generator'
 import { discoverUrlsWithCache, type DiscoveryOptions } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { INDEXER_RELAYS } from '@/constants/relays'
 
@@ -248,9 +249,8 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
 
         if (cancelled) return
 
-        // Add discovered URLs to the end of the list
         if (discovered.length > 0) {
-          const discoveredUrls = discovered.map(d => d.url)
+          const discoveredUrls = discovered.map(d => d.url).filter(isAllowedEventMediaUrl)
 
           setGeneratedUrls(prev => {
             // Filter out duplicates

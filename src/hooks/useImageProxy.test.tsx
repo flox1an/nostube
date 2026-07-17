@@ -5,6 +5,8 @@ import { useImageProxy } from './useImageProxy'
 import { useProxyHealthStore } from '@/stores/proxyHealthStore'
 
 const RAW_URL = 'https://blossom.example/cat.jpg'
+const HASH = 'a'.repeat(64)
+const BLOSSOM_URL = `https://origin.example/${HASH}.jpg`
 
 describe('useImageProxy', () => {
   beforeEach(() => {
@@ -19,6 +21,33 @@ describe('useImageProxy', () => {
     expect(previewSrc).toContain('/plain/')
     expect(previewSrc).toContain(encodeURIComponent(RAW_URL))
     expect(result.current.isProxyDown).toBe(false)
+  })
+
+  it('uses the Blossom endpoint with source, fallback, and author candidates', () => {
+    const { result } = renderHook(() => useImageProxy(), { wrapper: TestApp })
+
+    const previewSrc = result.current.preview(BLOSSOM_URL, undefined, {
+      authorPubkey: 'author-pubkey',
+      fallbackUrls: [`https://fallback.example/${HASH}.jpg`],
+    })
+    const parsed = new URL(previewSrc)
+
+    expect(parsed.pathname).toBe(`/thumb/${HASH}.jpg`)
+    expect(parsed.searchParams.get('f')).toBe('webp')
+    expect(parsed.searchParams.get('rs')).toBe('fit:480:480')
+    expect(parsed.searchParams.get('as')).toBe('author-pubkey')
+    expect(parsed.searchParams.getAll('xs')).toEqual([
+      'https://origin.example',
+      'https://fallback.example',
+    ])
+  })
+
+  it('uses the Blossom endpoint for a bare hash', () => {
+    const { result } = renderHook(() => useImageProxy(), { wrapper: TestApp })
+
+    const previewSrc = result.current.preview(`https://origin.example/${HASH}`)
+
+    expect(new URL(previewSrc).pathname).toBe(`/thumb/${HASH}`)
   })
 
   it('returns the raw URL once the proxy status flips to down', () => {

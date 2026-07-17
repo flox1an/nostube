@@ -39,7 +39,11 @@ function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
     return processed?.images?.[0] || null
   }, [event, config.blossomServers])
 
-  const cascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
+  const cascade = useImageCascade({
+    src: thumbnailUrl,
+    variant: 'preview',
+    authorPubkey: event?.pubkey,
+  })
 
   if (!cascade.src) {
     return (

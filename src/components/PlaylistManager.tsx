@@ -67,7 +67,12 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
   const thumbnailUrl = processedVideo?.images?.[0]
   const title = processedVideo?.title || video.title || 'Untitled Video'
 
-  const cascade = useImageCascade({ src: thumbnailUrl, variant: 'preview' })
+  const cascade = useImageCascade({
+    src: thumbnailUrl,
+    variant: 'preview',
+    authorPubkey: processedVideo?.pubkey,
+    fallbackUrls: processedVideo?.thumbnailVariants[0]?.fallbackUrls,
+  })
 
   const handleClick = () => {
     const event = eventStore.getEvent(video.id)

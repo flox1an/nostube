@@ -34,6 +34,7 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
     src: item.images?.[0],
     videoUrl: item.urls?.[0],
     variant: 'preview',
+    authorPubkey: item.pubkey,
   })
 
   return (

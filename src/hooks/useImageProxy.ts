@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { useProxyHealthStore } from '@/stores/proxyHealthStore'
 import {
+  type BlossomThumbnailOptions,
   ensureFileExtension,
   imageProxy as buildAvatarUrl,
   imageProxyInline as buildInlineUrl,
@@ -15,19 +16,25 @@ import {
  * the proxy and returns the raw original URL (or an empty string for cases the proxy is
  * the only way to derive a thumbnail, e.g. extracting a frame from a video).
  */
+
+export type BlossomThumbnailContext = Pick<BlossomThumbnailOptions, 'authorPubkey' | 'fallbackUrls'>
 export interface ImageProxyHelpers {
   /** Standard square avatar — `imageProxy(url)` style, 80×80 WebP via proxy. */
-  avatar: (url: string | null | undefined) => string
+  avatar: (url: string | null | undefined, context?: BlossomThumbnailContext) => string
   /** Resized preview/thumbnail, fit 480×480 WebP via proxy. */
-  preview: (url: string | null | undefined, mimeType?: string) => string
+  preview: (
+    url: string | null | undefined,
+    mimeType?: string,
+    context?: BlossomThumbnailContext
+  ) => string
   /** Inline image (comments, notes), fit 400×400 WebP via proxy. */
-  inline: (url: string | null | undefined) => string
+  inline: (url: string | null | undefined, context?: BlossomThumbnailContext) => string
   /**
    * Frame extracted from a video URL by the proxy. Only the proxy can do this — if the
-   * proxy is down we have no way to derive a still client-side, so the function returns
-   * an empty string. Callers should treat that as "no thumbnail available".
+   * proxy is down we have no way to derive a still frame from a video URL, so the function
+   * returns an empty string. Callers should treat that as "no thumbnail available".
    */
-  videoThumbnail: (videoUrl: string | null | undefined) => string
+  videoThumbnail: (videoUrl: string | null | undefined, context?: BlossomThumbnailContext) => string
   /** True iff the circuit breaker has tripped or a probe declared the proxy unreachable. */
   isProxyDown: boolean
   /** Call from `<img onError>` when a proxy URL fails. Trips the breaker after N. */
@@ -70,43 +77,57 @@ export function useImageProxy(): ImageProxyHelpers {
 
   const base = config?.thumbResizeServerUrl
   const proxyDown = status === 'down' || !base
+  const mirrorServers = useMemo(
+    () =>
+      config?.blossomServers
+        ?.filter(server => server.tags.includes('mirror'))
+        .map(server => server.url) ?? [],
+    [config?.blossomServers]
+  )
+  const withConfiguredMirrors = useCallback(
+    (context?: BlossomThumbnailContext): BlossomThumbnailOptions => ({
+      ...context,
+      mirrorServers,
+    }),
+    [mirrorServers]
+  )
 
   const avatar = useCallback(
-    (url: string | null | undefined) => {
+    (url: string | null | undefined, context?: BlossomThumbnailContext) => {
       if (!url) return ''
       if (proxyDown) return url
-      return buildAvatarUrl(url, base)
+      return buildAvatarUrl(url, base, withConfiguredMirrors(context))
     },
-    [proxyDown, base]
+    [proxyDown, base, withConfiguredMirrors]
   )
 
   const preview = useCallback(
-    (url: string | null | undefined, mimeType?: string) => {
+    (url: string | null | undefined, mimeType?: string, context?: BlossomThumbnailContext) => {
       if (!url) return ''
       const withExt = mimeType ? ensureFileExtension(url, mimeType) : url
       if (proxyDown) return withExt
-      return buildPreviewUrl(withExt, base)
+      return buildPreviewUrl(withExt, base, withConfiguredMirrors(context))
     },
-    [proxyDown, base]
+    [proxyDown, base, withConfiguredMirrors]
   )
 
   const inline = useCallback(
-    (url: string | null | undefined) => {
+    (url: string | null | undefined, context?: BlossomThumbnailContext) => {
       if (!url) return ''
       if (proxyDown) return url
-      return buildInlineUrl(url, base)
+      return buildInlineUrl(url, base, withConfiguredMirrors(context))
     },
-    [proxyDown, base]
+    [proxyDown, base, withConfiguredMirrors]
   )
 
   const videoThumbnail = useCallback(
-    (videoUrl: string | null | undefined) => {
+    (videoUrl: string | null | undefined, context?: BlossomThumbnailContext) => {
       if (!videoUrl) return ''
       // Only the proxy can derive a still frame from a video URL. Without it, give up.
       if (proxyDown) return ''
-      return buildVideoThumbnailUrl(videoUrl, base)
+      return buildVideoThumbnailUrl(videoUrl, base, withConfiguredMirrors(context))
     },
-    [proxyDown, base]
+    [proxyDown, base, withConfiguredMirrors]
   )
 
   const reportFailure = useCallback(

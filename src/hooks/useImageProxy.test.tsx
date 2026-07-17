@@ -23,31 +23,24 @@ describe('useImageProxy', () => {
     expect(result.current.isProxyDown).toBe(false)
   })
 
-  it('uses the Blossom endpoint with source, fallback, and author candidates', () => {
+  it('proxies an exact Blossom source URL instead of delegating resolution to /thumb', () => {
     const { result } = renderHook(() => useImageProxy(), { wrapper: TestApp })
 
-    const previewSrc = result.current.preview(BLOSSOM_URL, undefined, {
-      authorPubkey: 'author-pubkey',
-      fallbackUrls: [`https://fallback.example/${HASH}.jpg`],
-    })
-    const parsed = new URL(previewSrc)
+    const previewSrc = result.current.preview(BLOSSOM_URL)
 
-    expect(parsed.pathname).toBe(`/thumb/${HASH}.jpg`)
-    expect(parsed.searchParams.get('f')).toBe('webp')
-    expect(parsed.searchParams.get('rs')).toBe('fit:480:480')
-    expect(parsed.searchParams.get('as')).toBe('author-pubkey')
-    expect(parsed.searchParams.getAll('xs')).toEqual([
-      'https://origin.example',
-      'https://fallback.example',
-    ])
+    expect(previewSrc).toBe(
+      `https://imgproxy.nostu.be/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(BLOSSOM_URL)}`
+    )
   })
 
-  it('uses the Blossom endpoint for a bare hash', () => {
+  it('proxies a bare-hash Blossom URL through its supplied origin', () => {
     const { result } = renderHook(() => useImageProxy(), { wrapper: TestApp })
 
-    const previewSrc = result.current.preview(`https://origin.example/${HASH}`)
+    const source = `https://origin.example/${HASH}`
 
-    expect(new URL(previewSrc).pathname).toBe(`/thumb/${HASH}`)
+    expect(result.current.preview(source)).toBe(
+      `https://imgproxy.nostu.be/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(source)}`
+    )
   })
 
   it('returns the raw URL once the proxy status flips to down', () => {

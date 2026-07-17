@@ -61,8 +61,6 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     src: video.images?.[0],
     videoUrl: video.urls?.[0],
     variant: 'preview',
-    authorPubkey: video.pubkey,
-    fallbackUrls: video.thumbnailVariants[0]?.fallbackUrls,
   })
 
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
@@ -162,8 +160,6 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
     src: primaryImage,
     videoUrl,
     variant: 'preview',
-    authorPubkey: video.pubkey,
-    fallbackUrls: video.thumbnailVariants?.[0]?.fallbackUrls,
   })
 
   const [thumbnailLoaded, setThumbnailLoaded] = useState(false)

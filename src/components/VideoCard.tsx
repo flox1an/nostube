@@ -70,8 +70,6 @@ export const VideoCard = React.memo(function VideoCard({
     src: video.images?.[0],
     videoUrl: video.urls?.[0],
     variant: 'preview',
-    authorPubkey: video.pubkey,
-    fallbackUrls: video.thumbnailVariants[0]?.fallbackUrls,
   })
 
   // Reset the loading-state placeholder whenever the cascade advances to a new candidate

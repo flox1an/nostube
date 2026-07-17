@@ -65,8 +65,6 @@ export const ShortVideoItem = memo(
     const thumbnailCascade = useImageCascade({
       src: thumbnailUrl,
       variant: 'preview',
-      authorPubkey: video.pubkey,
-      fallbackUrls: video.thumbnailVariants[0]?.fallbackUrls,
     })
 
     const aspectRatio = useMemo(() => dimensionsToAspectRatio(video.dimensions), [video.dimensions])

@@ -42,7 +42,6 @@ function ThumbnailItem({ videoId, className }: ThumbnailItemProps) {
   const cascade = useImageCascade({
     src: thumbnailUrl,
     variant: 'preview',
-    authorPubkey: event?.pubkey,
   })
 
   if (!cascade.src) {

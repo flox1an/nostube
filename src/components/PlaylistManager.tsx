@@ -70,8 +70,6 @@ function PlaylistVideoItem({ video, playlistParam, onRemove }: PlaylistVideoItem
   const cascade = useImageCascade({
     src: thumbnailUrl,
     variant: 'preview',
-    authorPubkey: processedVideo?.pubkey,
-    fallbackUrls: processedVideo?.thumbnailVariants[0]?.fallbackUrls,
   })
 
   const handleClick = () => {

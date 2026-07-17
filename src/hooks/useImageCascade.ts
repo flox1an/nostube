@@ -21,10 +21,6 @@ export interface ImageCascadeInput {
   variant?: ImageCascadeVariant
   /** Optional MIME type used to repair URLs that lack a file extension. */
   mimeType?: string
-  /** Author key used by `/thumb` to resolve NIP-63 Blossom servers. */
-  authorPubkey?: string
-  /** Event-provided alternate Blob URLs for the same thumbnail. */
-  fallbackUrls?: string[]
 }
 
 export interface ImageCascadeResult {
@@ -73,13 +69,6 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
       ? input.videoUrl
       : null
   const proxy = useImageProxy()
-  const blossomContext = useMemo(
-    () => ({
-      authorPubkey: input.authorPubkey,
-      fallbackUrls: input.fallbackUrls?.filter(isAllowedEventMediaUrl),
-    }),
-    [input.authorPubkey, input.fallbackUrls]
-  )
 
   // Initial stage: skip 'proxy' when there's no image at all but a video might give us one.
   // Skip everything to 'exhausted' when there's no candidate of any kind.
@@ -101,18 +90,18 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
     switch (stage) {
       case 'proxy': {
         if (!rawImage) return null
-        if (variant === 'inline') return proxy.inline(rawImage, blossomContext)
-        if (variant === 'avatar') return proxy.avatar(rawImage, blossomContext)
-        return proxy.preview(rawImage, input.mimeType, blossomContext)
+        if (variant === 'inline') return proxy.inline(rawImage)
+        if (variant === 'avatar') return proxy.avatar(rawImage)
+        return proxy.preview(rawImage, input.mimeType)
       }
       case 'raw':
         return rawImage
       case 'video-frame':
-        return videoUrl ? proxy.videoThumbnail(videoUrl, blossomContext) : null
+        return videoUrl ? proxy.videoThumbnail(videoUrl) : null
       case 'exhausted':
         return null
     }
-  }, [stage, rawImage, videoUrl, variant, input.mimeType, blossomContext, proxy])
+  }, [stage, rawImage, videoUrl, variant, input.mimeType, proxy])
 
   const onError = useCallback(() => {
     setStage(current => {

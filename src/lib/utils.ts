@@ -2,7 +2,6 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import langs from 'langs'
 import { defaultResizeServer } from '@/constants/servers'
-import { extractBlossomHash } from '@/lib/blossom-url'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -197,56 +196,10 @@ export function getLanguageLabel(lang: string): string {
   return label
 }
 
-export interface BlossomThumbnailOptions {
-  authorPubkey?: string
-  fallbackUrls?: string[]
-  mirrorServers?: string[]
-}
-
-function buildBlossomThumbnailUrl(
-  url: string,
-  proxyBaseUrl: string | undefined,
-  resize: string,
-  options: BlossomThumbnailOptions | undefined
-): string | null {
-  const { sha256, ext } = extractBlossomHash(url)
-  if (!sha256) return null
-
-  const baseUrl = proxyBaseUrl || defaultResizeServer
-  const params = new URLSearchParams({ f: 'webp', rs: resize })
-  const seen = new Set<string>()
-
-  const addHint = (candidate: string, preservePath = false) => {
-    try {
-      const parsed = new URL(candidate)
-      const server = preservePath ? parsed.href.replace(/\/$/, '') : parsed.origin
-      if (seen.has(server)) return
-      seen.add(server)
-      params.append('xs', server)
-    } catch {
-      // Invalid candidates are ignored; the proxy still has its configured fallbacks.
-    }
-  }
-
-  addHint(url)
-  options?.fallbackUrls?.forEach(url => addHint(url))
-  options?.mirrorServers?.forEach(server => addHint(server, true))
-  if (options?.authorPubkey) params.set('as', options.authorPubkey)
-
-  const filename = ext ? `${sha256}.${ext}` : sha256
-  return `${baseUrl.replace(/\/$/, '')}/thumb/${filename}?${params.toString()}`
-}
-
-export const imageProxy = (
-  url?: string,
-  proxyBaseUrl?: string,
-  options?: BlossomThumbnailOptions
-) => {
+export const imageProxy = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  const blossomUrl = buildBlossomThumbnailUrl(url, proxyBaseUrl, 'fill:80:80', options)
-  if (blossomUrl) return blossomUrl
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   return `${cleanBaseUrl}/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
@@ -286,31 +239,19 @@ export function ensureFileExtension(url: string, mimeType?: string): string {
   return urlObj.toString()
 }
 
-export const imageProxyVideoPreview = (
-  url?: string,
-  proxyBaseUrl?: string,
-  options?: BlossomThumbnailOptions
-) => {
+export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   // Check for data URLs and return them immediately
   if (url.startsWith('data:')) return url
-  const blossomUrl = buildBlossomThumbnailUrl(url, proxyBaseUrl, 'fit:480:480', options)
-  if (blossomUrl) return blossomUrl
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
 }
 
 /** Resize an inline image for comment/note display — fit 400×400, WebP. */
-export const imageProxyInline = (
-  url?: string,
-  proxyBaseUrl?: string,
-  options?: BlossomThumbnailOptions
-) => {
+export const imageProxyInline = (url?: string, proxyBaseUrl?: string) => {
   if (!url) return ''
   if (url.startsWith('data:')) return url
-  const blossomUrl = buildBlossomThumbnailUrl(url, proxyBaseUrl, 'fit:400:400', options)
-  if (blossomUrl) return blossomUrl
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   return `${cleanBaseUrl}/insecure/f:webp/rs:fit:400:400/plain/${encodeURIComponent(url)}`
@@ -320,16 +261,10 @@ export const imageProxyInline = (
  * Generate thumbnail from video URL using imgproxy's video thumbnail feature
  * This is used as a fallback when the image thumbnail fails to load
  */
-export const imageProxyVideoThumbnail = (
-  videoUrl: string,
-  proxyBaseUrl?: string,
-  options?: BlossomThumbnailOptions
-) => {
+export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string) => {
   if (!videoUrl) return ''
   // Check for data URLs and return them immediately
   if (videoUrl.startsWith('data:')) return videoUrl
-  const blossomUrl = buildBlossomThumbnailUrl(videoUrl, proxyBaseUrl, 'fit:480:480', options)
-  if (blossomUrl) return blossomUrl
   const baseUrl = proxyBaseUrl || defaultResizeServer
   const cleanBaseUrl = baseUrl.replace(/\/$/, '')
   // imgproxy can generate thumbnails from video URLs

@@ -32,8 +32,9 @@ import {
 import { getKindsForType } from '@/lib/video-types'
 import { Header } from '@/components/Header'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
+import { LoadingSpinner } from '@/components/player'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { useVideoPrefetch } from '@/hooks/useVideoPrefetch'
+import { useVideoPrefetch, getPrefetchedVideoBlob } from '@/hooks/useVideoPrefetch'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
 import { ShortVideoItem } from './ShortVideoItem'
 import { ShortVideoOverlay } from './ShortVideoOverlay'
@@ -81,6 +82,7 @@ export function ShortsVideoPage() {
   const userPausedRef = useRef(false)
   const initializedVideoElementRef = useRef(false)
   const sourceSwitchIdRef = useRef(0)
+  const objectUrlRef = useRef<string | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
   const wheelCooldownTimeoutRef = useRef<number | undefined>(undefined)
   const [deckOffsetY, setDeckOffsetY] = useState(0)
@@ -88,6 +90,8 @@ export function ShortsVideoPage() {
   const [settlingTargetIndex, setSettlingTargetIndex] = useState<number | null>(null)
   const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(null)
   const [isVideoReady, setIsVideoReady] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(false)
+  const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -401,6 +405,16 @@ export function ShortsVideoPage() {
     initializedVideoElementRef.current = true
   }, [])
 
+  // Revoke any outstanding prefetch object URL when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+  }, [])
+
   useEffect(() => {
     const videoElement = singletonVideoRef.current
     if (!videoElement || !currentVideo || !videoUrl) return
@@ -420,8 +434,12 @@ export function ShortsVideoPage() {
       }
     }
 
+    // Compare against the canonical remote URL we recorded for this element,
+    // not videoElement.src directly — the assigned src may be a local object
+    // URL (from a prefetched Blob) rather than videoUrl itself.
     const sourceChanged =
-      videoElement.dataset.videoId !== currentVideo.id || videoElement.src !== videoUrl
+      videoElement.dataset.videoId !== currentVideo.id ||
+      videoElement.dataset.sourceUrl !== videoUrl
     if (!sourceChanged) {
       playCurrentSource()
       return
@@ -430,24 +448,51 @@ export function ShortsVideoPage() {
     const switchId = sourceSwitchIdRef.current + 1
     sourceSwitchIdRef.current = switchId
     setIsVideoReady(false)
+    setIsBuffering(true)
 
+    // Stop and hide the outgoing video immediately so a slow-loading next
+    // video never appears to keep looping the previous one.
     const mutedPreference = userMutedPreferenceRef.current ?? videoElement.muted
     videoElement.pause()
     videoElement.removeAttribute('src')
     videoElement.dataset.videoId = ''
+    videoElement.dataset.sourceUrl = ''
     videoElement.load()
 
-    window.requestAnimationFrame(() => {
+    const rafId = window.requestAnimationFrame(() => {
       if (sourceSwitchIdRef.current !== switchId) return
 
+      // Prefer a fully prefetched Blob (see useVideoPrefetch): playing it via
+      // an object URL is a real local source, so playback starts instantly
+      // with no buffering, instead of hoping the browser's HTTP cache can
+      // serve the <video> element's range requests.
+      const prefetchedBlob = getPrefetchedVideoBlob(videoUrl)
+      const previousObjectUrl = objectUrlRef.current
+      objectUrlRef.current = null
+
       videoElement.dataset.videoId = currentVideo.id
-      videoElement.src = videoUrl
+      videoElement.dataset.sourceUrl = videoUrl
+      if (prefetchedBlob) {
+        const objectUrl = URL.createObjectURL(prefetchedBlob)
+        objectUrlRef.current = objectUrl
+        videoElement.src = objectUrl
+      } else {
+        videoElement.src = videoUrl
+      }
       videoElement.currentTime = 0
       videoElement.muted = mutedPreference
       videoElement.load()
       userPausedRef.current = false
       playCurrentSource()
+
+      if (previousObjectUrl) {
+        URL.revokeObjectURL(previousObjectUrl)
+      }
     })
+
+    return () => {
+      window.cancelAnimationFrame(rafId)
+    }
   }, [currentVideo, videoUrl])
 
   const handleVideoError = useCallback(() => {
@@ -474,6 +519,7 @@ export function ShortsVideoPage() {
       if (sourceSwitchIdRef.current !== switchId) return
       if (videoElement.dataset.videoId !== currentVideo.id) return
       setIsVideoReady(true)
+      setIsBuffering(false)
     }
 
     if (typeof videoElement.requestVideoFrameCallback === 'function') {
@@ -488,6 +534,23 @@ export function ShortsVideoPage() {
       })
     }
   }, [currentVideo])
+
+  // Mid-playback rebuffering (e.g. the current video stalls on a slow
+  // connection): show the same loading feedback as an initial swap.
+  const handleVideoWaiting = useCallback(() => {
+    setIsBuffering(true)
+  }, [])
+
+  // Debounce the spinner so brief/instant loads never flash it.
+  useEffect(() => {
+    if (!isBuffering) {
+      setShowBufferingSpinner(false)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => setShowBufferingSpinner(true), 500)
+    return () => window.clearTimeout(timeoutId)
+  }, [isBuffering])
 
   const handleVideoClick = useCallback(() => {
     const videoElement = singletonVideoRef.current
@@ -807,7 +870,9 @@ export function ShortsVideoPage() {
                   onLoadedData={handleVideoLoadedData}
                   onCanPlay={handleVideoLoadedData}
                   onPlaying={handleVideoLoadedData}
+                  onWaiting={handleVideoWaiting}
                 />
+                <LoadingSpinner isVisible={showBufferingSpinner} />
                 <PlayPauseOverlay
                   videoRef={singletonVideoRef}
                   userInitiatedRef={userInitiatedPlayPauseRef}

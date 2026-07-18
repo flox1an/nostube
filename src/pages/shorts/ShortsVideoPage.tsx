@@ -343,14 +343,18 @@ export function ShortsVideoPage() {
     onError: handleVideoUrlError,
   })
 
-  // Preload neighbor videos (Tier 1): resolve their URLs now through the same
-  // pipeline and warm the HTTP cache so the singleton can play them
-  // near-instantly on swipe. sha256-keyed discovery is cached, so this also
-  // primes the resolution the singleton will reuse when the neighbor activates.
+  // Prefetch neighbor videos into the content-addressed Blob cache so the
+  // singleton can play them instantly on swipe. Forward is the dominant swipe
+  // direction, so the immediate next video gets top priority, then the one
+  // after it, then the previous video (for swipe-backs). The shared manager
+  // limits concurrency and memory; the sha256-keyed cache lets the singleton
+  // reuse whatever was downloaded here even if a different mirror is resolved.
   const nextVideo = allVideos[currentVideoIndex + 1] ?? null
+  const nextNextVideo = allVideos[currentVideoIndex + 2] ?? null
   const previousVideo = allVideos[currentVideoIndex - 1] ?? null
-  useVideoPrefetch({ video: nextVideo, enabled: !!nextVideo })
-  useVideoPrefetch({ video: previousVideo, enabled: !!previousVideo })
+  useVideoPrefetch({ video: nextVideo, enabled: !!nextVideo, priority: 1 })
+  useVideoPrefetch({ video: nextNextVideo, enabled: !!nextNextVideo, priority: 2 })
+  useVideoPrefetch({ video: previousVideo, enabled: !!previousVideo, priority: 3 })
 
   useVideoViewTracking({
     video: currentVideo,
@@ -465,8 +469,9 @@ export function ShortsVideoPage() {
       // Prefer a fully prefetched Blob (see useVideoPrefetch): playing it via
       // an object URL is a real local source, so playback starts instantly
       // with no buffering, instead of hoping the browser's HTTP cache can
-      // serve the <video> element's range requests.
-      const prefetchedBlob = getPrefetchedVideoBlob(videoUrl)
+      // serve the <video> element's range requests. Looked up by content hash
+      // first so a Blob prefetched from a different mirror still matches.
+      const prefetchedBlob = getPrefetchedVideoBlob({ sha256: currentVideo.x, url: videoUrl })
       const previousObjectUrl = objectUrlRef.current
       objectUrlRef.current = null
 

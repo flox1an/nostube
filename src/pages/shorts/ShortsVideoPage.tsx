@@ -50,6 +50,7 @@ interface DragState {
 const SWIPE_DISTANCE_THRESHOLD_PX = 80
 const SWIPE_VELOCITY_THRESHOLD_PX_PER_MS = 0.45
 const SETTLE_TRANSITION_MS = 260
+const SETTLE_EASING = 'cubic-bezier(0.25, 0.8, 0.5, 1)'
 const WHEEL_NAVIGATION_COOLDOWN_MS = 420
 
 export function ShortsVideoPage() {
@@ -718,9 +719,7 @@ export function ShortsVideoPage() {
 
   const videoPoster = currentVideo?.images[0]
   const videoTransition =
-    deckPhase === 'settling'
-      ? `transform ${SETTLE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
-      : 'none'
+    deckPhase === 'settling' ? `transform ${SETTLE_TRANSITION_MS}ms ${SETTLE_EASING}` : 'none'
 
   // Show loading state while fetching initial event OR while loading videos from relays
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {

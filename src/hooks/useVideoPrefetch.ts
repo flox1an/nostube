@@ -3,10 +3,13 @@
  *
  * Resolves a video's playback URL through the same pipeline the active player
  * uses (generateMediaUrls + kind 1063 discovery, cached by sha256), then GETs
- * the resolved URL to warm the browser's HTTP cache. When that video later
- * becomes active, the <video> element's byte request is served locally instead
- * of hitting the network — removing the fetch + demux latency from the
- * swipe-to-playback critical path.
+ * the resolved URL and keeps the downloaded bytes as a Blob in a small
+ * module-level cache. When that video later becomes active, the shorts
+ * singleton can play the cached Blob directly via an object URL — a real,
+ * guaranteed-instant local source rather than hoping the browser's HTTP cache
+ * will serve the <video> element's range requests. This removes the buffering
+ * gap from the swipe-to-playback critical path, which HTTP-cache warming
+ * alone doesn't reliably do (range requests aren't always served from cache).
  *
  * Best-effort: errors are swallowed. The active player's own failover still
  * handles real playback failures. Prefetch is skipped on Data Saver / 2g to
@@ -15,6 +18,27 @@
 import { useEffect, useRef } from 'react'
 import { useMediaUrls } from './useMediaUrls'
 import type { VideoEvent } from '@/utils/video-event'
+
+// Bounded to roughly the number of neighbors the shorts deck prefetches
+// (next + previous) plus a little slack for fast successive swipes.
+const MAX_CACHED_BLOBS = 3
+const prefetchedBlobs = new Map<string, Blob>()
+
+/** Returns the fully-downloaded Blob for a video URL, if it was prefetched. */
+export function getPrefetchedVideoBlob(url: string): Blob | undefined {
+  return prefetchedBlobs.get(url)
+}
+
+function cachePrefetchedBlob(url: string, blob: Blob): void {
+  // Re-inserting refreshes recency (Map preserves insertion order).
+  prefetchedBlobs.delete(url)
+  prefetchedBlobs.set(url, blob)
+  while (prefetchedBlobs.size > MAX_CACHED_BLOBS) {
+    const oldestKey = prefetchedBlobs.keys().next().value
+    if (oldestKey === undefined) break
+    prefetchedBlobs.delete(oldestKey)
+  }
+}
 
 interface UseVideoPrefetchOptions {
   video: VideoEvent | null
@@ -81,9 +105,10 @@ export function useVideoPrefetch({ video, enabled }: UseVideoPrefetchOptions): v
     })
       .then(response => {
         if (!response.ok) return undefined
-        // Drain to completion so the full response is cached. A Blob is backed
-        // by a file reference (not JS heap) and is discarded immediately.
         return response.blob()
+      })
+      .then(blob => {
+        if (blob) cachePrefetchedBlob(currentUrl, blob)
       })
       .catch(error => {
         if (error instanceof DOMException && error.name === 'AbortError') return

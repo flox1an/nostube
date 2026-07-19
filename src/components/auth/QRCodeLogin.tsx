@@ -161,6 +161,17 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          disabled={!nostrConnectUri}
+          className="text-muted-foreground"
+          aria-label={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
+          title={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </Button>
         {nostrConnectUri ? (
           <Button asChild variant="default" size="sm">
             <a href={nostrConnectUri}>
@@ -174,17 +185,6 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
             {t('auth.login.qrOpen', 'Use Signer')}
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          disabled={!nostrConnectUri}
-          className="text-muted-foreground"
-          aria-label={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
-          title={copied ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        </Button>
         <Button
           variant="ghost"
           size="icon"

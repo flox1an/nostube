@@ -34,6 +34,8 @@ function GlobalPlaylistCard({ playlist }: GlobalPlaylistCardProps) {
       <Link to={`/playlist/${naddr}`} className="block">
         <PlaylistThumbnailCollage
           videoIds={videoIds}
+          safetyState={playlist.safetyState}
+          contentWarning={playlist.contentWarning}
           className="rounded-t-lg transition-transform duration-200 group-hover:scale-[1.01]"
         />
       </Link>

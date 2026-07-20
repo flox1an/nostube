@@ -10,7 +10,7 @@ import { filterDeletedEvents } from '@/lib/deletions'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
 import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
-import { usePlaylistValidation } from './usePlaylistValidation'
+import { type ValidationStatus, usePlaylistValidation } from './usePlaylistValidation'
 
 export interface Video {
   id: string
@@ -41,6 +41,8 @@ export interface Playlist {
    * the global overview can hide it like any other NSFW content.
    */
   contentWarning?: string
+  /** Current safety verdict for rendering playlist thumbnails. */
+  safetyState?: ValidationStatus
 }
 
 // NIP-51 kind 30005 is for mutable lists including playlists
@@ -264,6 +266,52 @@ export function usePlaylists() {
       cancelled = true
     }
   }, [playlistEvents, user?.pubkey, user?.signer, eventStore])
+  const nsfwFilter = config.nsfwFilter ?? 'hide'
+  const validateNsfw = nsfwFilter !== 'show'
+  const validationSources = useMemo(
+    () => ({
+      nsfwPubkeys: presetContent.nsfwPubkeys,
+      blockedPubkeys: presetContent.blockedPubkeys,
+      blockedEvents: presetContent.blockedEvents,
+      reportedEventIds: config.reportedEventIds ?? [],
+    }),
+    [
+      presetContent.nsfwPubkeys,
+      presetContent.blockedPubkeys,
+      presetContent.blockedEvents,
+      config.reportedEventIds,
+    ]
+  )
+  const playlistVideosByEventId = useMemo(() => {
+    const videosByEventId = new Map<string, readonly Video[]>()
+    for (const playlist of playlists) {
+      if (playlist.eventId) videosByEventId.set(playlist.eventId, playlist.videos)
+    }
+    return videosByEventId
+  }, [playlists])
+  const playlistEventsForValidation = useMemo(
+    () => playlistEvents.filter(event => !event.tags.some(tag => tag[0] === 'content-warning')),
+    [playlistEvents]
+  )
+  const validationStatuses = usePlaylistValidation(playlistEventsForValidation, {
+    enabled: validateNsfw,
+    sources: validationSources,
+    relays: readRelays,
+    videosByEventId: playlistVideosByEventId,
+  })
+  const playlistsWithSafety = useMemo(
+    () =>
+      playlists.map(playlist => {
+        const safetyState: ValidationStatus =
+          !validateNsfw || !playlist.eventId
+            ? 'clean'
+            : playlist.contentWarning
+              ? 'unsafe'
+              : (validationStatuses.get(playlist.eventId) ?? 'pending')
+        return { ...playlist, safetyState }
+      }),
+    [playlists, validateNsfw, validationStatuses]
+  )
 
   const updatePlaylist = useCallback(
     async (playlist: Playlist) => {
@@ -606,7 +654,7 @@ export function usePlaylists() {
   ])
 
   return {
-    playlists,
+    playlists: playlistsWithSafety,
     isLoading,
     createPlaylist,
     addVideo,
@@ -718,19 +766,12 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     [playlistEvents]
   )
 
-  // Two-stage NSFW gate (same shape as `useGlobalPlaylists`):
-  //
-  //  1. Sync-drop playlists already marked `content-warning` by their owner.
-  //  2. Hand the rest to `usePlaylistValidation`, which resolves every
-  //     referenced video (from cache or relays) and only reports `clean` for
-  //     playlists with no unsafe refs. `unsafe`/`pending` stay hidden when
-  //     `hideNsfw` is on. Verdicts are cached in IndexedDB keyed by
-  //     `(address, eventId)`, so re-publishes invalidate naturally.
-  //
-  // Applies regardless of profile owner — the owner can still open their own
-  // playlists via direct naddr link.
+  // Playlist safety is verified from every referenced video. Explicit playlist
+  // warnings are decisive immediately; all other playlists stay pending until
+  // their refs resolve when the filter is set to `hide` or `warning`.
   const nsfwFilter = config.nsfwFilter ?? 'hide'
   const hideNsfw = nsfwFilter === 'hide'
+  const validateNsfw = nsfwFilter !== 'show'
   const reportedEventIds = config.reportedEventIds
 
   const candidateEvents = useMemo(() => {
@@ -740,6 +781,10 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
       return true
     })
   }, [publicPlaylistEvents, hideNsfw])
+  const validationEvents = useMemo(
+    () => candidateEvents.filter(event => !event.tags.some(tag => tag[0] === 'content-warning')),
+    [candidateEvents]
+  )
 
   const validationSources = useMemo(
     () => ({
@@ -756,8 +801,8 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
     ]
   )
 
-  const validationStatuses = usePlaylistValidation(candidateEvents, {
-    enabled: hideNsfw,
+  const validationStatuses = usePlaylistValidation(validationEvents, {
+    enabled: validateNsfw,
     sources: validationSources,
     relays: readRelays,
   })
@@ -765,11 +810,16 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
   const playlists = useMemo<Playlist[]>(() => {
     const results: Playlist[] = []
     for (const event of candidateEvents) {
-      if (hideNsfw && validationStatuses.get(event.id) !== 'clean') continue
-      const titleTag = event.tags.find(t => t[0] === 'title')
-      const descTag = event.tags.find(t => t[0] === 'description')
       const cwTag = event.tags.find(t => t[0] === 'content-warning')
       const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
+      const safetyState: ValidationStatus = !validateNsfw
+        ? 'clean'
+        : contentWarning
+          ? 'unsafe'
+          : (validationStatuses.get(event.id) ?? 'pending')
+      if (hideNsfw && safetyState !== 'clean') continue
+      const titleTag = event.tags.find(t => t[0] === 'title')
+      const descTag = event.tags.find(t => t[0] === 'description')
       const videos: Video[] = parseVideoTags(event.tags, event.created_at, eventStore)
       results.push({
         identifier: event.tags.find(t => t[0] === 'd')?.[1] || '',
@@ -779,10 +829,11 @@ export function useUserPlaylists(pubkey?: string, customRelays?: string[]) {
         eventId: event.id,
         isPrivate: false,
         contentWarning,
+        safetyState,
       })
     }
     return results
-  }, [candidateEvents, eventStore, hideNsfw, validationStatuses])
+  }, [candidateEvents, eventStore, hideNsfw, validateNsfw, validationStatuses])
 
   return {
     data: playlists,

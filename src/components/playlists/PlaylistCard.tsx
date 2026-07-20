@@ -118,7 +118,11 @@ export function PlaylistCard({
       >
         {/* Thumbnail area with hover overlay */}
         <div className="relative">
-          <PlaylistThumbnailCollage videoIds={videoIds} />
+          <PlaylistThumbnailCollage
+            videoIds={videoIds}
+            safetyState={playlist.safetyState}
+            contentWarning={playlist.contentWarning}
+          />
 
           {/* Hover overlay with action buttons */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-2 gap-1">

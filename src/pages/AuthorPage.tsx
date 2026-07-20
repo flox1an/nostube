@@ -1242,6 +1242,8 @@ function AuthorPageContent() {
                         >
                           <PlaylistThumbnailCollage
                             videoIds={videoIds}
+                            safetyState={playlist.safetyState}
+                            contentWarning={playlist.contentWarning}
                             className="rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
                           />
                           <div className="pt-3">

@@ -3,7 +3,7 @@ import { useAppContext } from './useAppContext'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useSelectedPreset } from './useSelectedPreset'
-import { usePlaylistValidation } from './usePlaylistValidation'
+import { type ValidationStatus, usePlaylistValidation } from './usePlaylistValidation'
 import type { Video } from './usePlaylist'
 
 export interface GlobalPlaylist {
@@ -14,6 +14,8 @@ export interface GlobalPlaylist {
   description?: string
   /** Reason from the playlist event's `content-warning` tag, if present. */
   contentWarning?: string
+  /** Current safety verdict for rendering the playlist thumbnail. */
+  safetyState: ValidationStatus
   videos: Video[]
 }
 
@@ -109,20 +111,12 @@ export function useGlobalPlaylists() {
     }
   }, [loader, eventStore])
 
-  // Two-stage NSFW gate for the global overview:
-  //
-  //  1. Drop anything obviously blocked here: private playlists (content body
-  //     is encrypted; we can't validate) and playlists whose owner already
-  //     marked them with a `content-warning` tag.
-  //  2. For everything else, `usePlaylistValidation` resolves every referenced
-  //     video against the EventStore (loading from relays as needed) and only
-  //     reports `clean` once all refs check out. Anything else (`unsafe` or
-  //     still `pending`) stays hidden when `hideNsfw` is on.
-  //
-  // The validator persists its verdict per `(address, eventId)` in IndexedDB,
-  // so revisits never re-pay the relay cost unless the owner re-publishes.
+  // Explicit playlist warnings are decisive immediately. Every other playlist
+  // is verified from its referenced videos when the filter is set to `hide` or
+  // `warning`; unverified playlists remain pending.
   const nsfwFilter = config.nsfwFilter ?? 'hide'
   const hideNsfw = nsfwFilter === 'hide'
+  const validateNsfw = nsfwFilter !== 'show'
   const { presetContent } = useSelectedPreset()
   const reportedEventIds = config.reportedEventIds
 
@@ -134,6 +128,10 @@ export function useGlobalPlaylists() {
       return true
     })
   }, [allEvents, hideNsfw])
+  const validationEvents = useMemo(
+    () => candidateEvents.filter(event => !event.tags.some(tag => tag[0] === 'content-warning')),
+    [candidateEvents]
+  )
 
   const validationSources = useMemo(
     () => ({
@@ -150,8 +148,8 @@ export function useGlobalPlaylists() {
     ]
   )
 
-  const validationStatuses = usePlaylistValidation(candidateEvents, {
-    enabled: hideNsfw,
+  const validationStatuses = usePlaylistValidation(validationEvents, {
+    enabled: validateNsfw,
     sources: validationSources,
     relays: readRelays,
   })
@@ -159,9 +157,14 @@ export function useGlobalPlaylists() {
   const playlists = useMemo((): GlobalPlaylist[] => {
     const results: GlobalPlaylist[] = []
     for (const event of candidateEvents) {
-      if (hideNsfw && validationStatuses.get(event.id) !== 'clean') continue
       const cwTag = event.tags.find(t => t[0] === 'content-warning')
       const contentWarning = cwTag ? cwTag[1] || 'NSFW' : undefined
+      const safetyState: ValidationStatus = !validateNsfw
+        ? 'clean'
+        : contentWarning
+          ? 'unsafe'
+          : (validationStatuses.get(event.id) ?? 'pending')
+      if (hideNsfw && safetyState !== 'clean') continue
       const videos = parseVideoIds(event.tags)
       const titleTag = event.tags.find(t => t[0] === 'title')
       const descTag = event.tags.find(t => t[0] === 'description')
@@ -173,11 +176,12 @@ export function useGlobalPlaylists() {
         name: titleTag?.[1] || 'Untitled Playlist',
         description: descTag?.[1],
         contentWarning,
+        safetyState,
         videos,
       })
     }
     return results
-  }, [candidateEvents, hideNsfw, validationStatuses])
+  }, [candidateEvents, hideNsfw, validateNsfw, validationStatuses])
 
   return { playlists, isLoading }
 }

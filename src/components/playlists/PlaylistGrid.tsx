@@ -40,10 +40,18 @@ export function PlaylistGrid({
     [config.relays]
   )
 
+  const visiblePlaylists = useMemo(
+    () =>
+      playlists.filter(
+        playlist => (config.nsfwFilter ?? 'hide') !== 'hide' || playlist.safetyState === 'clean'
+      ),
+    [playlists, config.nsfwFilter]
+  )
+
   // Load video events for thumbnails
   useEffect(() => {
-    // Collect all video IDs from all playlists (first 4 from each for thumbnails)
-    const videoIds = playlists.flatMap(p => p.videos.slice(0, 4).map(v => v.id))
+    // Collect thumbnail source videos only from cards that may be rendered.
+    const videoIds = visiblePlaylists.flatMap(p => p.videos.slice(0, 4).map(v => v.id))
 
     // Filter out videos we already have
     const missingIds = videoIds.filter(id => !eventStore.hasEvent(id))
@@ -64,12 +72,12 @@ export function PlaylistGrid({
     })
 
     return () => subscription.unsubscribe()
-  }, [playlists, eventStore, pool, readRelays])
+  }, [visiblePlaylists, eventStore, pool, readRelays])
 
   // Sort playlists by video count (most videos first)
   const sortedPlaylists = useMemo(() => {
-    return [...playlists].sort((a, b) => b.videos.length - a.videos.length)
-  }, [playlists])
+    return [...visiblePlaylists].sort((a, b) => b.videos.length - a.videos.length)
+  }, [visiblePlaylists])
 
   if (isLoading) {
     return (

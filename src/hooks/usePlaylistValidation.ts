@@ -45,6 +45,8 @@ export interface UsePlaylistValidationOptions {
   sources: UnsafeContentSources
   /** Relays to load missing referenced video events from. */
   relays: string[]
+  /** Decrypted or otherwise locally resolved video refs keyed by playlist event id. */
+  videosByEventId?: ReadonlyMap<string, readonly Video[]>
   /** Maximum wait for relay loads before pending playlists stay hidden. */
   loadTimeoutMs?: number
 }
@@ -104,12 +106,19 @@ interface PlaylistMeta {
   videos: Video[]
 }
 
-function buildPlaylistMeta(events: readonly NostrEvent[]): PlaylistMeta[] {
+function buildPlaylistMeta(
+  events: readonly NostrEvent[],
+  videosByEventId?: ReadonlyMap<string, readonly Video[]>
+): PlaylistMeta[] {
   const out: PlaylistMeta[] = []
   for (const event of events) {
     const address = playlistAddress(event)
     if (!address) continue
-    out.push({ event, address, videos: parsePlaylistVideos(event) })
+    out.push({
+      event,
+      address,
+      videos: [...(videosByEventId?.get(event.id) ?? parsePlaylistVideos(event))],
+    })
   }
   return out
 }
@@ -154,11 +163,11 @@ export function usePlaylistValidation(
   events: readonly NostrEvent[],
   options: UsePlaylistValidationOptions
 ): Map<string, ValidationStatus> {
-  const { enabled, sources, relays, loadTimeoutMs = 15000 } = options
+  const { enabled, sources, relays, videosByEventId, loadTimeoutMs = 15000 } = options
   const eventStore = useEventStore()
   const { pool } = useAppContext()
 
-  const meta = useMemo(() => buildPlaylistMeta(events), [events])
+  const meta = useMemo(() => buildPlaylistMeta(events, videosByEventId), [events, videosByEventId])
   // sources is captured by ref so transient identity changes (e.g. a new
   // array literal each render for `reportedEventIds`) don't restart the
   // pipeline. New playlist arrivals or relay changes do.

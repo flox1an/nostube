@@ -16,7 +16,7 @@ import {
   sortVideoVariantsByQuality,
 } from '@/utils/video-event'
 import { YOUTUBE_REGEX } from '@/utils/origin-utils'
-import { decodeVideoEventIdentifier } from '@/lib/nip19'
+import { decodeVideoEventIdentifier, type VideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   useAppContext,
@@ -37,6 +37,7 @@ import {
   useIsMobile,
   usePreloadVideoData,
 } from '@/hooks'
+import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
 import { useContributedVariants } from '@/hooks/useContributedVariants'
@@ -56,12 +57,14 @@ import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
 import { ContributeVariantDialog } from '@/components/ContributeVariantDialog'
 import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { useTranslation } from 'react-i18next'
-import type { BlossomServerTag } from '@/contexts/AppContext'
+import type { BlossomServerTag, NsfwFilter } from '@/contexts/AppContext'
+import { ContentSafetyGate, ContentSafetyRoute } from '@/components/ContentSafetyGate'
+import { getContentSafetyGate } from '@/lib/content-safety'
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_URLS: string[] = []
 
-export function VideoPage() {
+function VideoPageContent() {
   const { t } = useTranslation()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
@@ -83,13 +86,10 @@ export function VideoPage() {
   const { addToHistory } = useVideoHistory()
   const isMobile = useIsMobile()
 
-  // Extract author pubkey from identifier (naddr always has it, nevent may have it)
-  const identifierAuthorPubkey = useMemo(() => {
-    if (videoIdentifier?.type === 'address') return videoIdentifier.data?.pubkey
-    if (videoIdentifier?.type === 'event')
-      return (videoIdentifier.data as { author?: string })?.author
-    return undefined
-  }, [videoIdentifier])
+  const identifierAuthorPubkey = useMemo(
+    () => (videoIdentifier ? getVideoIdentifierAuthorPubkey(videoIdentifier) : undefined),
+    [videoIdentifier]
+  )
 
   // Get initial relays for loading the video event (includes author's NIP-65 outbox relays)
   const initialRelays = useVideoPageRelays({
@@ -831,5 +831,145 @@ export function VideoPage() {
         />
       )}
     </>
+  )
+}
+
+function getVideoIdentifierAuthorPubkey(videoIdentifier: VideoEventIdentifier): string | undefined {
+  if (videoIdentifier.type === 'address') return videoIdentifier.data.pubkey
+  if ('author' in videoIdentifier.data && typeof videoIdentifier.data.author === 'string') {
+    return videoIdentifier.data.author
+  }
+  return undefined
+}
+
+function UnresolvedVideoSafetyGate({
+  videoIdentifier,
+  nsfwFilter,
+  nsfwPubkeys,
+  blockedPubkeys,
+  onGoHome,
+}: {
+  videoIdentifier: VideoEventIdentifier
+  nsfwFilter: NsfwFilter | undefined
+  nsfwPubkeys: string[]
+  blockedPubkeys?: Record<string, unknown>
+  onGoHome: () => void
+}) {
+  const { pool } = useAppContext()
+  const eventStore = useEventStore()
+  const [videoEvent, setVideoEvent] = useState<NostrEvent | undefined>(undefined)
+  const [hasResolved, setHasResolved] = useState(false)
+  const initialRelays = useVideoPageRelays({
+    neventRelays: videoIdentifier.data?.relays,
+    videoEvent: undefined,
+    playlistEvent: undefined,
+    authorPubkey: undefined,
+  })
+  const eventLoader = useMemo(
+    () => createEventLoader(pool, { eventStore, extraRelays: initialRelays }),
+    [pool, eventStore, initialRelays]
+  )
+  const addressLoader = useMemo(
+    () => createAddressLoader(pool, { eventStore, extraRelays: initialRelays }),
+    [pool, eventStore, initialRelays]
+  )
+
+  useEffect(() => {
+    let sub: Subscription | undefined
+
+    if (videoIdentifier.type === 'event') {
+      const eventPointer = videoIdentifier.data
+      sub = eventStore
+        .event(eventPointer.id)
+        .pipe(
+          switchMap(event => (event ? of(event) : eventLoader(eventPointer))),
+          catchError(() => eventLoader(eventPointer)),
+          take(1)
+        )
+        .subscribe({
+          next: event => {
+            setVideoEvent(event ?? undefined)
+            setHasResolved(true)
+          },
+          error: () => {
+            setVideoEvent(undefined)
+            setHasResolved(true)
+          },
+        })
+    } else if (videoIdentifier.type === 'address' && videoIdentifier.data) {
+      const addressPointer = videoIdentifier.data
+      sub = eventStore
+        .replaceable(addressPointer.kind, addressPointer.pubkey, addressPointer.identifier)
+        .pipe(
+          switchMap(event => (event ? of(event) : addressLoader(addressPointer))),
+          catchError(() => addressLoader(addressPointer)),
+          take(1)
+        )
+        .subscribe({
+          next: event => {
+            setVideoEvent(event ?? undefined)
+            setHasResolved(true)
+          },
+          error: () => {
+            setVideoEvent(undefined)
+            setHasResolved(true)
+          },
+        })
+    } else {
+      setHasResolved(true)
+    }
+
+    return () => {
+      sub?.unsubscribe()
+      setVideoEvent(undefined)
+      setHasResolved(false)
+    }
+  }, [addressLoader, eventLoader, eventStore, videoIdentifier])
+
+  const safetyGate = getContentSafetyGate(videoEvent?.pubkey, nsfwFilter, {
+    nsfwPubkeys,
+    blockedPubkeys,
+  })
+
+  if (!hasResolved) return <ContentSafetyGate state="loading" />
+
+  return (
+    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={onGoHome}>
+      <VideoPageContent />
+    </ContentSafetyRoute>
+  )
+}
+
+export function VideoPage() {
+  const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
+  const blockedPubkeys = useReportedPubkeys()
+  const { nevent } = useParams<{ nevent: string }>()
+  const navigate = useNavigate()
+  const videoIdentifier = useMemo(() => decodeVideoEventIdentifier(nevent ?? ''), [nevent])
+
+  if (!videoIdentifier) return <VideoPageContent />
+
+  const authorPubkey = getVideoIdentifierAuthorPubkey(videoIdentifier)
+  if (!authorPubkey) {
+    return (
+      <UnresolvedVideoSafetyGate
+        videoIdentifier={videoIdentifier}
+        nsfwFilter={config.nsfwFilter}
+        nsfwPubkeys={presetContent.nsfwPubkeys}
+        blockedPubkeys={blockedPubkeys}
+        onGoHome={() => navigate('/', { replace: true })}
+      />
+    )
+  }
+
+  const safetyGate = getContentSafetyGate(authorPubkey, config.nsfwFilter, {
+    nsfwPubkeys: presetContent.nsfwPubkeys,
+    blockedPubkeys,
+  })
+  return (
+    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={() => navigate('/', { replace: true })}>
+      <VideoPageContent />
+    </ContentSafetyRoute>
   )
 }

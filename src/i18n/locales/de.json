@@ -1307,5 +1307,13 @@
   },
   "player": {
     "nextChapter": "Weiter zu: {{title}}"
+  },
+  "contentSafety": {
+    "loading": "Wird geladen…",
+    "warning": {
+      "title": "Sensible Inhalte",
+      "description": "Dieses Profil kann Inhalte für Erwachsene oder sensible Inhalte enthalten.",
+      "goHome": "Zur Startseite"
+    }
   }
 }

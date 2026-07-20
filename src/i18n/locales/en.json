@@ -1307,5 +1307,13 @@
   },
   "player": {
     "nextChapter": "Skip to: {{title}}"
+  },
+  "contentSafety": {
+    "loading": "Loading…",
+    "warning": {
+      "title": "Sensitive content",
+      "description": "This profile may contain adult or sensitive material.",
+      "goHome": "Go home"
+    }
   }
 }

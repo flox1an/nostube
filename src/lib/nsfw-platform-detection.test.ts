@@ -16,6 +16,11 @@ describe('NSFW platform detection', () => {
     expect(hasNsfwPlatformAttributes([['source', ' XhAmStEr ']])).toBe(true)
   })
 
+  it('detects PornTubeAI d prefixes and client values case-insensitively', () => {
+    expect(hasNsfwPlatformAttributes([['d', '  PORNTUBEAI-video']])).toBe(true)
+    expect(hasNsfwPlatformAttributes([['client', ' PornTubeAI ']])).toBe(true)
+  })
+
   it('detects a matching value in any repeated d or source tag', () => {
     expect(
       hasNsfwPlatformAttributes([

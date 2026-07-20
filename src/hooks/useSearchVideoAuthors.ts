@@ -6,6 +6,10 @@ import { PrimalCache } from 'applesauce-extra'
 import { useEventStore } from 'applesauce-react/hooks'
 import { fetchPeopleResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
 import type { PeopleHit } from '@/lib/search-client'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
+import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
+import { isNSFWAuthor } from '@/lib/nsfw-authors'
 
 export interface ProfileResult {
   pubkey: string
@@ -21,6 +25,18 @@ interface UseSearchVideoAuthorsOptions {
   debounceMs?: number
   /** Max results to return (default: 10) */
   limit?: number
+}
+
+export function filterPeopleSearchResults<T extends { pubkey: string }>(
+  profiles: T[],
+  hideNsfw: boolean,
+  nsfwPubkeys: string[],
+  blockedPubkeys?: Record<string, unknown>
+): T[] {
+  return profiles.filter(
+    profile =>
+      !blockedPubkeys?.[profile.pubkey] && (!hideNsfw || !isNSFWAuthor(profile.pubkey, nsfwPubkeys))
+  )
 }
 
 function peopleHitToProfileResult(hit: PeopleHit): ProfileResult {
@@ -57,6 +73,11 @@ export function useSearchVideoAuthors({
   loading: boolean
 } {
   const eventStore = useEventStore()
+  const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
+  const blockedPubkeys = useReportedPubkeys()
+  const hideNsfw = (config.nsfwFilter ?? 'hide') === 'hide'
+
   const primal = useMemo(() => new PrimalCache(), [])
 
   const [loading, setLoading] = useState(false)
@@ -145,8 +166,13 @@ export function useSearchVideoAuthors({
       }
     }
 
-    return merged.slice(0, limit)
-  }, [meiliResults, primalResults, limit])
+    return filterPeopleSearchResults(
+      merged,
+      hideNsfw,
+      presetContent.nsfwPubkeys,
+      blockedPubkeys
+    ).slice(0, limit)
+  }, [meiliResults, primalResults, limit, hideNsfw, presetContent.nsfwPubkeys, blockedPubkeys])
 
   return { profiles, loading }
 }

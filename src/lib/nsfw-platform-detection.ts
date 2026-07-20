@@ -1,4 +1,4 @@
-const NSFW_PLATFORM_TRIGGERS: readonly string[] = ['xhamster']
+const NSFW_IDENTIFIER_PREFIXES: readonly string[] = ['xhamster', 'porntubeai']
 
 export function hasNsfwPlatformAttributes(tags: string[][]): boolean {
   return tags.some(([name, value]) => {
@@ -7,11 +7,15 @@ export function hasNsfwPlatformAttributes(tags: string[][]): boolean {
     const normalizedValue = value.trim().toLowerCase()
 
     if (name === 'd') {
-      return NSFW_PLATFORM_TRIGGERS.some(trigger => normalizedValue.startsWith(trigger))
+      return NSFW_IDENTIFIER_PREFIXES.some(trigger => normalizedValue.startsWith(trigger))
     }
 
     if (name === 'source') {
-      return NSFW_PLATFORM_TRIGGERS.includes(normalizedValue)
+      return normalizedValue === 'xhamster'
+    }
+
+    if (name === 'client') {
+      return normalizedValue === 'porntubeai'
     }
 
     return false

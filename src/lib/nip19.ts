@@ -1,5 +1,5 @@
 import { nip19 } from 'nostr-tools'
-import { type EventPointer, type ProfilePointer } from 'nostr-tools/nip19'
+import { type AddressPointer, type EventPointer, type ProfilePointer } from 'nostr-tools/nip19'
 
 /**
  * Safely decode a NIP-19 identifier
@@ -38,16 +38,14 @@ export function decodeEventPointer(nevent: string): EventPointer | null {
   }
 }
 
+export type VideoEventIdentifier =
+  { type: 'event'; data: EventPointer } | { type: 'address'; data: AddressPointer }
+
 /**
  * Decode a video event identifier (nevent, note, or naddr)
  * Returns an object indicating the type and decoded data
  */
-export function decodeVideoEventIdentifier(
-  nip19String: string
-):
-  | { type: 'event'; data: EventPointer }
-  | { type: 'address'; data: ReturnType<typeof decodeAddressPointer> }
-  | null {
+export function decodeVideoEventIdentifier(nip19String: string): VideoEventIdentifier | null {
   try {
     const decoded = nip19.decode(nip19String)
 

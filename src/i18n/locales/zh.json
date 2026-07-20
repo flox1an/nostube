@@ -1307,5 +1307,13 @@
   },
   "player": {
     "nextChapter": "跳到：{{title}}"
+  },
+  "contentSafety": {
+    "loading": "正在加载…",
+    "warning": {
+      "title": "敏感内容",
+      "description": "此个人资料可能包含成人或敏感内容。",
+      "goHome": "返回首页"
+    }
   }
 }

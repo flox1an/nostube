@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
@@ -59,6 +59,8 @@ import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-se
 import { toast } from 'sonner'
 import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
+import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
+import { getContentSafetyGate } from '@/lib/content-safety'
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
 const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
@@ -585,7 +587,7 @@ function ProfileField({
   )
 }
 
-export function AuthorPage() {
+function AuthorPageContent() {
   const { t } = useTranslation()
   const { nprofile, tab } = useParams<{ nprofile: string; tab?: string }>()
   const location = useLocation()
@@ -1411,5 +1413,24 @@ export function AuthorPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export function AuthorPage() {
+  const { nprofile } = useParams<{ nprofile: string }>()
+  const navigate = useNavigate()
+  const { config } = useAppContext()
+  const { presetContent } = useSelectedPreset()
+  const blockedPubkeys = useReportedPubkeys()
+  const pubkey = useMemo(() => decodeProfilePointer(nprofile ?? '')?.pubkey, [nprofile])
+  const safetyGate = getContentSafetyGate(pubkey, config.nsfwFilter, {
+    nsfwPubkeys: presetContent.nsfwPubkeys,
+    blockedPubkeys,
+  })
+
+  return (
+    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={() => navigate('/', { replace: true })}>
+      <AuthorPageContent />
+    </ContentSafetyRoute>
   )
 }

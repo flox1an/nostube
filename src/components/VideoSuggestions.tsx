@@ -21,7 +21,7 @@ import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
-import { MIN_PERSONAL_SCORE, MIN_GLOBAL_SCORE } from '@/hooks/useTrustFilter'
+import { passesTrustFilter } from '@/hooks/useTrustFilter'
 import { combineRelays } from '@/lib/utils'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { type TimelessFilter } from 'applesauce-loaders'
@@ -490,17 +490,16 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   const shouldFadeIn = !hadScoresOnMount && scoresReady
 
   const filteredSuggestions = useMemo(() => {
-    return suggestions.filter(v => {
-      // Always show videos from followed authors
-      if (followedSet.has(v.pubkey)) return true
-      const personal = personalScores.get(v.pubkey)
-      const global = globalScores.get(v.pubkey)
-      // Don't hide while scores are still loading
-      if (personal === null || personal === undefined) return true
-      if (global === null || global === undefined) return true
-      return personal >= MIN_PERSONAL_SCORE && global >= MIN_GLOBAL_SCORE
-    })
-  }, [suggestions, personalScores, globalScores, followedSet])
+    return suggestions.filter(v =>
+      passesTrustFilter({
+        authorPubkey: v.pubkey,
+        currentUserPubkey: user?.pubkey,
+        followedPubkeys: followedSet,
+        personalScore: personalScores.get(v.pubkey),
+        globalScore: globalScores.get(v.pubkey),
+      })
+    )
+  }, [suggestions, personalScores, globalScores, followedSet, user])
 
   const showLoadingSkeletons =
     (isLoadingService && filteredServiceVideos === null) ||

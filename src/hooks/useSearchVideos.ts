@@ -11,6 +11,8 @@ import { relayPool } from '@/nostr/core'
 import type { IEventStore } from 'applesauce-core'
 import { getTypeForKind } from '@/lib/video-types'
 import { SEARCH_SERVICE_URL, fetchExternalSearchResults } from '@/lib/search-client'
+import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import type { NsfwFilter } from '@/contexts/AppContext'
 
 // Search configuration
 const SEARCH_LIMIT = 1000 // Max events to load from relays
@@ -152,6 +154,31 @@ interface UseSearchVideosOptions {
   query: string | null
   kinds?: number[]
   limit?: number
+}
+
+export function filterSearchVideosForSafety(
+  videos: VideoEvent[],
+  nsfwFilter: NsfwFilter | undefined,
+  nsfwPubkeys: string[],
+  blockedPubkeys?: Record<string, unknown>
+): VideoEvent[] {
+  const hideNsfw = (nsfwFilter ?? 'hide') === 'hide'
+  const markNsfw = nsfwFilter === 'warning'
+  const filtered: VideoEvent[] = []
+
+  for (const video of videos) {
+    if (blockedPubkeys?.[video.pubkey]) continue
+
+    if (!isNSFWAuthor(video.pubkey, nsfwPubkeys)) {
+      filtered.push(video)
+      continue
+    }
+
+    if (hideNsfw) continue
+    filtered.push(markNsfw && !video.contentWarning ? { ...video, contentWarning: 'NSFW' } : video)
+  }
+
+  return filtered
 }
 
 export function useSearchVideos({
@@ -366,7 +393,12 @@ export function useSearchVideos({
       includeYouTube: config.showYouTubeContent ?? true,
       includeAudio: config.showAudioContent ?? true,
     })
-    return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    return filterSearchVideosForSafety(
+      processed,
+      config.nsfwFilter,
+      presetContent.nsfwPubkeys,
+      blockedPubkeys
+    ).sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     query,
     matchingIds,
@@ -374,17 +406,23 @@ export function useSearchVideos({
     readRelays,
     blockedPubkeys,
     config.blossomServers,
+    config.nsfwFilter,
     presetContent.nsfwPubkeys,
     config.reportedEventIds,
     config.showYouTubeContent,
     config.showAudioContent,
   ])
 
-  // Filter external results by blocked pubkeys
-  const filteredExternalVideos = useMemo(() => {
-    if (!externalVideos) return []
-    return externalVideos.filter(v => !blockedPubkeys?.[v.pubkey])
-  }, [externalVideos, blockedPubkeys])
+  const filteredExternalVideos = useMemo(
+    () =>
+      filterSearchVideosForSafety(
+        externalVideos ?? [],
+        config.nsfwFilter,
+        presetContent.nsfwPubkeys,
+        blockedPubkeys
+      ),
+    [externalVideos, config.nsfwFilter, presetContent.nsfwPubkeys, blockedPubkeys]
+  )
 
   const loadMore = useCallback(() => {}, [])
 

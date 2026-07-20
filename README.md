@@ -4,6 +4,14 @@ A Nostr-based video sharing platform built with React 18.x, TailwindCSS 3.x, Vit
 
 Support for both landscape and portrait videos (shorts in 9:16 format).
 
+## AI Agent Skill
+
+Install the NosTube-compatible Nostr video publishing skill:
+
+```bash
+npx skills add https://github.com/flox1an/nostube/tree/main/.agents/skills/nostr-video-publisher
+```
+
 ## Screenshots
 
 ### Homepage and User Menu

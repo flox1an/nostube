@@ -21,6 +21,11 @@ describe('NSFW platform detection', () => {
     expect(hasNsfwPlatformAttributes([['client', ' PornTubeAI ']])).toBe(true)
   })
 
+  it('detects PMVHaven d prefixes and client values case-insensitively', () => {
+    expect(hasNsfwPlatformAttributes([['d', '  PMVHAVEN-6a44843ecd1d5ca72c761a89']])).toBe(true)
+    expect(hasNsfwPlatformAttributes([['client', ' PMVHaven ']])).toBe(true)
+  })
+
   it('detects a matching value in any repeated d or source tag', () => {
     expect(
       hasNsfwPlatformAttributes([

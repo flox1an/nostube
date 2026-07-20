@@ -7,6 +7,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
+import { getExplicitContentWarning, hasNsfwPlatformAttributes } from '@/lib/nsfw-platform-detection'
 import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { sanitizeRelayUrl } from '@/lib/utils'
 
@@ -425,9 +426,12 @@ export function processEvent(
 
   // Find ALL imeta tags
   const imetaTags = event.tags.filter(t => t[0] === 'imeta')
+  const explicitContentWarning = getExplicitContentWarning(event.tags)
   const contentWarning =
-    event.tags.find(t => t[0] == 'content-warning')?.[1] ||
-    (isNSFWAuthor(event.pubkey, nsfwPubkeys) ? 'NSFW' : undefined)
+    explicitContentWarning ??
+    (isNSFWAuthor(event.pubkey, nsfwPubkeys) || hasNsfwPlatformAttributes(event.tags)
+      ? 'NSFW'
+      : undefined)
 
   // Extract published_at timestamp (NIP-71 scheduled publish date)
   const publishedAtTag = event.tags.find(t => t[0] === 'published_at')?.[1]

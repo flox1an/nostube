@@ -604,6 +604,17 @@ describe('processEvent', () => {
       expect(result?.contentWarning).toBe('NSFW')
     })
 
+    it('automatically marks xHamster video attributes as NSFW', () => {
+      const xHamsterEvent = {
+        ...nostubeEvent,
+        tags: [...nostubeEvent.tags, ['d', 'xhamster-xhvyK3N'], ['source', 'xhamster']],
+      }
+
+      const result = processEvent(xHamsterEvent, defaultRelays)
+
+      expect(result?.contentWarning).toBe('NSFW')
+    })
+
     it('should automatically mark videos from NSFW authors as NSFW', () => {
       const nsfwPubkey = 'e7fa9dd5b19fb96ff882456e99dd32e2fd59937409e398b75efc65a5131a2400'
       const nsfwAuthorEvent = {

@@ -9,7 +9,7 @@ import type {
 } from 'hls.js'
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { extractBlossomHash } from '@/lib/blossom-url'
-import { generateMediaUrls } from '@/lib/media-url-generator'
+import { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
 import { emitHlsFailoverDebug, isHlsDebugEnabled } from '@/lib/hls-failover-debug'
 import { getDefaultVerifiedBlobCache, type VerifiedBlobCache } from '@/lib/p2p/verified-blob-cache'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
@@ -25,6 +25,7 @@ interface HlsBlossomLoaderOptions {
   p2pHlsBlobCacheEnabled?: boolean
   verifiedBlobCache?: VerifiedBlobCache
   p2pBlobMesh?: P2PBlobMesh
+  ladder?: PlaybackUrlLadder
 }
 
 function logHlsLoader(message: string, details: Record<string, unknown>) {
@@ -64,28 +65,6 @@ function copyLoaderStats(target: LoaderStats, source: LoaderStats) {
   copyTiming(target.buffering, source.buffering)
 }
 
-function buildFallbackUrls(url: string, options: HlsBlossomLoaderOptions): string[] {
-  const { sha256 } = extractBlossomHash(url)
-  if (!sha256) {
-    return [url]
-  }
-
-  const generated = generateMediaUrls({
-    urls: [url],
-    blossomServers: options.blossomServers,
-    cachingServers: options.cachingServers,
-    sha256,
-    mediaType: 'video',
-    authorPubkey: options.authorPubkey,
-    proxyConfig: { enabled: true },
-  }).urls
-
-  if (generated.length === 0) {
-    return [url]
-  }
-
-  return generated
-}
 
 function isBlockedEventUrl(url: string): boolean {
   return !isAllowedEventMediaUrl(url)
@@ -170,6 +149,16 @@ function createCacheHitStats(baseStats: LoaderStats, bytes: Uint8Array): LoaderS
 }
 
 export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
+  const ladder =
+    options.ladder ??
+    new PlaybackUrlLadder({
+      urls: options.masterUrl ? [options.masterUrl] : [],
+      blossomServers: options.blossomServers,
+      cachingServers: options.cachingServers,
+      mediaType: 'video',
+      authorPubkey: options.authorPubkey,
+      proxyConfig: { enabled: true },
+    })
   const BaseLoader = Hls.DefaultConfig.loader as new (config: HlsConfig) => Loader<LoaderContext>
   let masterServedFromLocalhost: boolean | null = null
   const verifiedBlobCache = options.verifiedBlobCache ?? getDefaultVerifiedBlobCache()
@@ -215,7 +204,16 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
       const isMasterRequest =
         normalizedMasterUrl !== undefined && normalizedMasterUrl === normalizedRequestUrl
 
-      let candidates = buildFallbackUrls(context.url, options)
+      let candidates = ladder.candidatesFor(context.url)
+      if (candidates.length === 0) {
+        callbacks.onError(
+          { code: 410, text: 'All HLS media URL candidates failed' },
+          context,
+          null,
+          this.stats
+        )
+        return
+      }
       const localhostMode = options.localhostProxyMode ?? 'master-gated'
       const candidatesBeforeFiltering = candidates
 
@@ -452,6 +450,7 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
             callbacks.onSuccess(response, this.stats, successContext, networkDetails)
           },
           onError: (response, errorContext, networkDetails, stats) => {
+            ladder.onError(candidateUrl, isMasterRequest ? 'manifest' : 'segment')
             if (stats) {
               copyLoaderStats(this.stats, stats)
             }
@@ -489,6 +488,7 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
             callbacks.onError(response, errorContext, networkDetails, this.stats)
           },
           onTimeout: (stats, timeoutContext, networkDetails) => {
+            ladder.onError(candidateUrl, isMasterRequest ? 'manifest' : 'segment')
             copyLoaderStats(this.stats, stats)
             logHlsLoader('candidate timeout', {
               videoId: options.videoId,

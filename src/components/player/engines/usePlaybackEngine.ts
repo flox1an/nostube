@@ -1,5 +1,6 @@
 import { useMemo, type RefObject } from 'react'
 import type { VideoVariant } from '@/utils/video-event'
+import type { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
 import { useHls } from '../hooks/useHls'
 import { useDash } from '../hooks/useDash'
 import type { PlaybackEngine, PlaybackEngineMode, QualityOption } from './types'
@@ -58,6 +59,7 @@ function useNativeEngine(
 function useHlsEngine(
   videoRef: RefObject<HTMLMediaElement | null>,
   videoUrl: string | null,
+  ladder: PlaybackUrlLadder | undefined,
   isHlsSource: boolean,
   authorPubkey: string | undefined,
   eventId: string | undefined
@@ -66,6 +68,7 @@ function useHlsEngine(
     videoRef,
     videoUrl,
     isHlsSource,
+    ladder,
     authorPubkey,
     eventId,
     'never'
@@ -158,6 +161,7 @@ export function resolvePlaybackMode(
 interface UsePlaybackEngineOptions {
   videoRef: RefObject<HTMLMediaElement | null>
   videoUrl: string | null
+  ladder?: PlaybackUrlLadder
   mime: string
   effectiveUrls: string[]
   videoVariants: VideoVariant[] | undefined
@@ -181,6 +185,7 @@ export function usePlaybackEngine({
   videoRef,
   videoUrl,
   mime,
+  ladder,
   effectiveUrls,
   videoVariants,
   selectedVariantIndex,
@@ -193,7 +198,7 @@ export function usePlaybackEngine({
   const mode = resolvePlaybackMode(mime, effectiveUrls, videoUrl)
 
   const native = useNativeEngine(videoUrl, videoVariants, selectedVariantIndex, handleVariantChange)
-  const hls = useHlsEngine(videoRef, videoUrl, mode === 'hls', authorPubkey, eventId)
+  const hls = useHlsEngine(videoRef, videoUrl, ladder, mode === 'hls', authorPubkey, eventId)
   const dash = useDashEngine(videoRef, videoUrl, mode === 'dash', autoPlay, onError)
 
   if (mode === 'hls') return hls

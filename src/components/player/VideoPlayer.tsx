@@ -196,6 +196,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   const {
     currentUrl: videoUrl,
+    ladder: videoUrlLadder,
     moveToNext: moveToNextVideo,
     hasMore: hasMoreVideoUrls,
     isLoading: isLoadingVideoUrls,
@@ -266,6 +267,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const engine = usePlaybackEngine({
     videoRef,
     videoUrl,
+    ladder: videoUrlLadder,
     mime,
     effectiveUrls,
     videoVariants,

@@ -1,62 +1,45 @@
-/**
- * useMediaUrls Hook
- *
- * React integration for media URL failover system.
- * Provides automatic URL discovery and failover for any media type.
- */
-
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import {
-  generateMediaUrls,
-  type MediaUrlOptions,
-  type GeneratedUrls,
-} from '@/lib/media-url-generator'
-import { discoverUrlsWithCache, type DiscoveryOptions } from '@/lib/url-discovery'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import type { MediaUrlOptions, MediaType } from '@/lib/media-url-generator'
+import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@/lib/playback-url-ladder'
+import { discoverUrlsWithCache } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { INDEXER_RELAYS } from '@/constants/relays'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
-  enabled?: boolean // Enable URL generation (default: true)
-  discoveryEnabled?: boolean // Enable relay discovery for kind 1063 (default: true when sha256 provided)
-  discoveryRelays?: string[] // Relays for discovery
-  discoveryTimeout?: number // Discovery timeout (default: 10s)
-  preValidate?: boolean // Pre-validate URLs before returning (default: false)
-  validationOptions?: ValidationOptions // Validation options
-  authorPubkey?: string // Author pubkey (npub or hex) for AS query parameter
+  enabled?: boolean
+  discoveryEnabled?: boolean
+  discoveryRelays?: string[]
+  discoveryTimeout?: number
+  preValidate?: boolean
+  validationOptions?: ValidationOptions
   onError?: (error: Error) => void
 }
 
 export interface MediaUrlsResult {
-  urls: string[] // All available URLs
+  ladder: PlaybackUrlLadder
+  urls: string[]
   isLoading: boolean
-  isDiscovering: boolean // Currently discovering URLs
+  isDiscovering: boolean
   error: Error | null
-  currentIndex: number // Which URL is active
-  currentUrl: string | null // Current active URL
-  moveToNext: () => void // Try next URL
-  reset: () => void // Start over
-  hasMore: boolean // Are there more URLs to try?
+  currentIndex: number
+  currentUrl: string | null
+  moveToNext: () => void
+  reset: () => void
+  hasMore: boolean
 }
 
 /**
- * Hook for managing media URLs with automatic failover and discovery
+ * React binding for a single Video Event's playback URL ladder.
  *
- * Usage:
- * ```tsx
- * const { urls, currentUrl, moveToNext, isLoading } = useMediaUrls({
- *   urls: videoUrls,
- *   mediaType: 'video',
- *   sha256: videoHash,
- *   discoveryEnabled: true,
- *   discoveryRelays: relays,
- * })
- * ```
+ * URL generation, discovery, validation, and failover all mutate the same
+ * plain ladder instance. Consumers that need the underlying playback policy
+ * (notably the HLS loader) receive that instance from the result.
  */
 export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   const {
-    urls: originalUrls,
+    urls,
     mediaType,
     sha256,
     kind,
@@ -70,372 +53,176 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     validationOptions,
     onError,
   } = options
-
-  // Get configuration from AppContext (may be undefined in embed context)
   const appContext = useAppContextSafe()
   const config = appContext?.config
-
-  // Store onError in ref to avoid it as a dependency
-  const onErrorRef = useRef(onError)
-  useEffect(() => {
-    onErrorRef.current = onError
-  }, [onError])
-
-  // Memoize blossomServers to prevent unnecessary re-renders
-  const blossomServers = useMemo(() => config?.blossomServers || [], [config?.blossomServers])
-
-  // Memoize cachingServers to prevent unnecessary re-renders
-  const cachingServers = useMemo(() => config?.cachingServers || [], [config?.cachingServers])
-
-  // Use media config from context if not provided in options
+  const blossomServers = useMemo(
+    () => config?.blossomServers ?? [],
+    [config?.blossomServers]
+  )
+  const cachingServers = useMemo(
+    () => config?.cachingServers ?? [],
+    [config?.cachingServers]
+  )
   const mediaConfig = config?.media
-
-  // Memoize all computed config values to prevent unnecessary re-renders
-  // Enable discovery by default when sha256 is available (required for kind 1063 lookup)
-  const finalDiscoveryEnabled = useMemo(
-    () => discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? !!sha256,
-    [discoveryEnabled, mediaConfig?.failover.discovery.enabled, sha256]
-  )
-
-  // Use user's relays + indexer relays for discovery
-  // Indexer relays are good for finding kind 1063 file metadata events
-  const finalDiscoveryRelays = useMemo(() => {
-    const userRelays = discoveryRelays ?? config?.relays.map(r => r.url) ?? []
-    // Combine user relays with indexer relays, deduplicate
-    const allRelays = [...new Set([...userRelays, ...INDEXER_RELAYS])]
-    return allRelays
-  }, [discoveryRelays, config?.relays])
-
-  const finalDiscoveryTimeout = useMemo(
-    () => discoveryTimeout ?? mediaConfig?.failover.discovery.timeout ?? 10000,
-    [discoveryTimeout, mediaConfig?.failover.discovery.timeout]
-  )
-
-  const finalPreValidate = useMemo(
-    () => preValidate ?? mediaConfig?.failover.validation.enabled ?? false,
-    [preValidate, mediaConfig?.failover.validation.enabled]
-  )
-
-  const finalValidationOptions = useMemo(
-    () =>
-      validationOptions ?? {
-        timeout: mediaConfig?.failover.validation.timeout ?? 5000,
-      },
-    [validationOptions, mediaConfig?.failover.validation.timeout]
-  )
-
-  const [generatedUrls, setGeneratedUrls] = useState<GeneratedUrls>({
-    urls: [],
-    metadata: [],
-  })
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDiscovering, setIsDiscovering] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const [isDiscovering, setIsDiscovering] = useState(false)
+  const [, update] = useReducer(version => version + 1, 0)
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
 
-  // Serialize URL arrays for stable comparison
-  const originalUrlsKey = useMemo(() => originalUrls.join('|'), [originalUrls])
-  const sourceMediaKey = useMemo(
-    () => [mediaType, kind ?? '', sha256 ?? '', authorPubkey ?? '', originalUrlsKey].join('|'),
-    [authorPubkey, kind, mediaType, originalUrlsKey, sha256]
+  const sourceKey = useMemo(
+    () =>
+      [enabled, mediaType, sha256 ?? '', kind ?? '', authorPubkey ?? '', ...urls].join('\u0000'),
+    [authorPubkey, enabled, kind, mediaType, sha256, urls]
   )
-  const previousSourceMediaKeyRef = useRef<string | null>(null)
-  const blossomServersKey = useMemo(
-    () => blossomServers.map(s => s.url).join('|'),
-    [blossomServers]
+  const ladderOptions = useMemo<PlaybackUrlLadderOptions>(
+    () => ({
+      urls: enabled ? urls : [],
+      blossomServers,
+      cachingServers,
+      sha256,
+      kind,
+      mediaType,
+      authorPubkey,
+      proxyConfig,
+    }),
+    [authorPubkey, blossomServers, cachingServers, enabled, kind, mediaType, proxyConfig, sha256, urls]
   )
-  const cachingServersKey = useMemo(
-    () => cachingServers.map(s => s.url).join('|'),
-    [cachingServers]
+  const ladderConfigKey = useMemo(
+    () =>
+      [
+        sourceKey,
+        proxyConfig?.enabled,
+        proxyConfig?.maxSize?.width ?? '',
+        proxyConfig?.maxSize?.height ?? '',
+        ...blossomServers.map(server => `${server.url}:${server.tags.join(',')}`),
+        ...cachingServers.map(server => server.url),
+      ].join('\u0000'),
+    [blossomServers, cachingServers, proxyConfig, sourceKey]
   )
+  const ladderRef = useRef<{ sourceKey: string; ladder: PlaybackUrlLadder } | null>(null)
 
-  // Generate URLs from original URLs + mirrors + proxies
+  if (ladderRef.current?.sourceKey !== sourceKey) {
+    ladderRef.current = {
+      sourceKey,
+      ladder: new PlaybackUrlLadder(ladderOptions),
+    }
+  }
+
+  const ladder = ladderRef.current.ladder
+  const ladderOptionsRef = useRef(ladderOptions)
+  ladderOptionsRef.current = ladderOptions
+  const finalDiscoveryEnabled = discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? Boolean(sha256)
+  const finalDiscoveryRelays = useMemo(
+    () => [...new Set([...(discoveryRelays ?? config?.relays.map(relay => relay.url) ?? []), ...INDEXER_RELAYS])],
+    [config?.relays, discoveryRelays]
+  )
+  const finalDiscoveryTimeout =
+    discoveryTimeout ?? mediaConfig?.failover.discovery.timeout ?? 10_000
+  const finalPreValidate = preValidate ?? mediaConfig?.failover.validation.enabled ?? false
+  const finalValidationOptions = useMemo(
+    () => validationOptions ?? { timeout: mediaConfig?.failover.validation.timeout ?? 5_000 },
+    [mediaConfig?.failover.validation.timeout, validationOptions]
+  )
+  const ladderUrlsKey = ladder.urls.join('\u0000')
+
   useEffect(() => {
-    if (!enabled || originalUrls.length === 0) {
-      setIsLoading(false)
-      return
-    }
+    if (ladder.refresh(ladderOptionsRef.current)) update()
+  }, [ladder, ladderConfigKey])
 
-    try {
-      const generated = generateMediaUrls({
-        urls: originalUrls,
-        blossomServers,
-        cachingServers,
-        sha256,
-        kind,
-        mediaType,
-        proxyConfig,
-        authorPubkey,
-      })
-
-      const sourceMediaChanged = previousSourceMediaKeyRef.current !== sourceMediaKey
-      previousSourceMediaKeyRef.current = sourceMediaKey
-
-      setGeneratedUrls(prev => {
-        // If we already have URLs and the current one is still in the new list,
-        // merge new URLs without disrupting playback. This prevents glitches when
-        // config changes (e.g. blossom servers loading from relays after video started).
-        if (!sourceMediaChanged && prev.urls.length > 0) {
-          const existingSet = new Set(prev.urls)
-          const newUrls = generated.urls.filter(u => !existingSet.has(u))
-          if (newUrls.length > 0) {
-            // Append newly discovered mirror/proxy URLs without resetting index
-            return {
-              urls: [...prev.urls, ...newUrls],
-              metadata: [...prev.metadata, ...newUrls.map(() => ({ source: 'mirror' as const }))],
-            }
-          }
-          // No new URLs, keep everything as-is (don't reset index)
-          return prev
-        }
-        // First load or media source change: full reset. This is required when
-        // switching between quality variants, where the first generated URL must
-        // become active instead of being appended behind the previous stream.
-        setCurrentIndex(0)
-        return generated
-      })
-      setIsLoading(false)
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to generate URLs')
-      setError(error)
-      setIsLoading(false)
-      onErrorRef.current?.(error)
-    }
-  }, [
-    originalUrlsKey,
-    sourceMediaKey,
-    originalUrls,
-    mediaType,
-    sha256,
-    kind,
-    proxyConfig,
-    authorPubkey,
-    enabled,
-    blossomServersKey,
-    blossomServers,
-    cachingServersKey,
-    cachingServers,
-  ])
-
-  // Serialize discovery relays for stable comparison
-  const discoveryRelaysKey = useMemo(() => finalDiscoveryRelays.join('|'), [finalDiscoveryRelays])
-
-  // Discover alternative URLs via kind 1063 lookup if enabled
   useEffect(() => {
-    if (!enabled || !finalDiscoveryEnabled || !sha256 || finalDiscoveryRelays.length === 0) {
-      return
-    }
+    if (!enabled || !finalDiscoveryEnabled || !sha256 || finalDiscoveryRelays.length === 0) return
 
     let cancelled = false
+    setIsDiscovering(true)
 
-    const discover = async () => {
-      setIsDiscovering(true)
-
-      if (import.meta.env.DEV) {
-        console.log(
-          `[useMediaUrls] Discovering kind 1063 for ${mediaType} hash=${sha256.slice(0, 8)}...`
-        )
-      }
-
-      try {
-        const discoveryOptions: DiscoveryOptions = {
-          sha256,
-          relays: finalDiscoveryRelays,
-          timeout: finalDiscoveryTimeout,
-          maxResults: 20,
-        }
-
-        const discovered = await discoverUrlsWithCache(discoveryOptions)
-
-        if (cancelled) return
-
-        if (discovered.length > 0) {
-          const discoveredUrls = discovered.map(d => d.url).filter(isAllowedEventMediaUrl)
-
-          setGeneratedUrls(prev => {
-            // Filter out duplicates
-            const existingUrls = new Set(prev.urls)
-            const newUrls = discoveredUrls.filter(url => !existingUrls.has(url))
-
-            if (newUrls.length === 0) return prev
-
-            return {
-              urls: [...prev.urls, ...newUrls],
-              metadata: [
-                ...prev.metadata,
-                ...newUrls.map(() => ({ source: 'discovered' as const })),
-              ],
-            }
-          })
-
-          if (import.meta.env.DEV) {
-            console.log(`Discovered ${discovered.length} alternative URLs for ${mediaType}`)
-          }
-        }
-      } catch (err) {
-        if (cancelled) return
-
-        const error = err instanceof Error ? err : new Error('URL discovery failed')
-        console.error('URL discovery error:', error)
-        // Don't set error state for discovery failures - just log them
-      } finally {
-        if (!cancelled) {
-          setIsDiscovering(false)
-        }
-      }
-    }
-
-    discover()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    enabled,
-    finalDiscoveryEnabled,
-    sha256,
-    discoveryRelaysKey,
-    finalDiscoveryRelays,
-    finalDiscoveryTimeout,
-    mediaType,
-  ])
-
-  // Serialize generated URLs for stable comparison
-  const generatedUrlsKey = useMemo(() => generatedUrls.urls.join('|'), [generatedUrls.urls])
-
-  // Pre-validate URLs if enabled
-  useEffect(() => {
-    if (!enabled || !finalPreValidate || generatedUrls.urls.length === 0) {
-      return
-    }
-
-    let cancelled = false
-
-    const validate = async () => {
-      const validUrls: string[] = []
-
-      // Validate up to first 5 URLs
-      const urlsToValidate = generatedUrls.urls.slice(0, 5)
-
-      for (const url of urlsToValidate) {
-        if (cancelled) break
-
-        try {
-          const isValid = await validateMediaUrl(url, finalValidationOptions)
-          if (isValid) {
-            validUrls.push(url)
-          }
-        } catch (err) {
-          console.debug(`Pre-validation failed for ${url}:`, err)
-        }
-      }
-
-      if (cancelled) return
-
-      // If we found valid URLs, reorder to put them first
-      if (validUrls.length > 0) {
-        setGeneratedUrls(prev => {
-          const validSet = new Set(validUrls)
-          const otherUrls = prev.urls.filter(url => !validSet.has(url))
-
-          return {
-            urls: [...validUrls, ...otherUrls],
-            metadata: prev.metadata, // Keep original metadata order
-          }
-        })
-
-        if (import.meta.env.DEV) {
-          console.log(`Pre-validated ${validUrls.length} URLs for ${mediaType}`)
-        }
-      }
-    }
-
-    validate()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    enabled,
-    finalPreValidate,
-    generatedUrlsKey,
-    generatedUrls.urls,
-    mediaType,
-    finalValidationOptions,
-  ])
-
-  // Move to next URL
-  const moveToNext = useCallback(() => {
-    setCurrentIndex(prev => {
-      if (prev < generatedUrls.urls.length - 1) {
-        return prev + 1
-      }
-      return prev
+    void discoverUrlsWithCache({
+      sha256,
+      relays: finalDiscoveryRelays,
+      timeout: finalDiscoveryTimeout,
+      maxResults: 20,
     })
-  }, [generatedUrls.urls.length])
+      .then(discovered => {
+        if (cancelled) return
+        const discoveredUrls = discovered.map(result => result.url).filter(isAllowedEventMediaUrl)
+        if (ladder.merge(discoveredUrls)) update()
+      })
+      .catch(discoveryError => {
+        if (cancelled) return
+        const nextError =
+          discoveryError instanceof Error ? discoveryError : new Error('URL discovery failed')
+        setError(nextError)
+        onErrorRef.current?.(nextError)
+      })
+      .finally(() => {
+        if (!cancelled) setIsDiscovering(false)
+      })
 
-  // Reset to first URL
+    return () => {
+      cancelled = true
+    }
+  }, [enabled, finalDiscoveryEnabled, finalDiscoveryRelays, finalDiscoveryTimeout, ladder, sha256])
+
+  useEffect(() => {
+    if (!enabled || !finalPreValidate || ladder.urls.length === 0) return
+
+    let cancelled = false
+    const candidates = ladder.urls.slice(0, 5)
+
+    void Promise.all(
+      candidates.map(async url => ({
+        url,
+        isValid: await validateMediaUrl(url, finalValidationOptions).catch(() => false),
+      }))
+    ).then(results => {
+      if (cancelled) return
+      const validUrls = results.filter(result => result.isValid).map(result => result.url)
+      if (validUrls.length === 0) return
+      ladder.promote(validUrls)
+      update()
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [enabled, finalPreValidate, finalValidationOptions, ladder, ladderUrlsKey])
+
+  const moveToNext = useCallback(() => {
+    if (ladder.tryNext()) update()
+  }, [ladder])
   const reset = useCallback(() => {
-    setCurrentIndex(0)
-    setError(null)
-  }, [])
-
-  const currentUrl = generatedUrls.urls[currentIndex] || null
-  const hasMore = currentIndex < generatedUrls.urls.length - 1
+    ladder.reset()
+    update()
+  }, [ladder])
 
   return {
-    urls: generatedUrls.urls,
-    isLoading,
+    ladder,
+    urls: ladder.urls,
+    isLoading: false,
     isDiscovering,
     error,
-    currentIndex,
-    currentUrl,
+    currentIndex: ladder.currentIndex,
+    currentUrl: ladder.currentUrl,
     moveToNext,
     reset,
-    hasMore,
+    hasMore: ladder.hasMore,
   }
 }
 
-/**
- * Hook variant that automatically tries next URL on error
- *
- * Usage:
- * ```tsx
- * const { currentUrl, handleError } = useMediaUrlsWithAutoRetry({
- *   urls: videoUrls,
- *   mediaType: 'video',
- * })
- *
- * <video
- *   src={currentUrl}
- *   onError={handleError}
- * />
- * ```
- */
 export function useMediaUrlsWithAutoRetry(options: UseMediaUrlsOptions) {
   const result = useMediaUrls(options)
-  const { moveToNext, hasMore, currentIndex, urls } = result
-
-  // Store onError in ref to avoid it as a dependency
   const onErrorRef = useRef(options.onError)
-  useEffect(() => {
-    onErrorRef.current = options.onError
-  }, [options.onError])
+  onErrorRef.current = options.onError
 
   const handleError = useCallback(() => {
-    if (hasMore) {
-      if (import.meta.env.DEV) {
-        console.log(`Auto-retrying with next URL (${currentIndex + 1}/${urls.length})`)
-      }
-      moveToNext()
-    } else {
-      console.warn('All URLs failed, no more alternatives available')
-      onErrorRef.current?.(new Error('All media URLs failed'))
+    if (result.hasMore) {
+      result.moveToNext()
+      return
     }
-  }, [hasMore, moveToNext, currentIndex, urls.length])
+    onErrorRef.current?.(new Error('All media URLs failed'))
+  }, [result])
 
-  return {
-    ...result,
-    handleError,
-  }
+  return { ...result, handleError }
 }
+
+export type { MediaType }

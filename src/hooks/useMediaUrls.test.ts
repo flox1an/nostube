@@ -50,4 +50,31 @@ describe('useMediaUrls', () => {
       expect(result.current.urls).toEqual(['https://cdn.example/2160p.mp4'])
     })
   })
+
+  it('preserves failed URLs when the same video rerenders', async () => {
+    const { result, rerender } = renderHook(
+      ({ urls }: { urls: string[] }) =>
+        useMediaUrls({
+          urls,
+          mediaType: 'video',
+          discoveryEnabled: false,
+        }),
+      {
+        initialProps: {
+          urls: ['https://cdn.example/primary.mp4', 'https://cdn.example/fallback.mp4'],
+        },
+      }
+    )
+
+    await waitFor(() => {
+      expect(result.current.currentUrl).toBe('https://cdn.example/primary.mp4')
+    })
+
+    result.current.moveToNext()
+    rerender({
+      urls: ['https://cdn.example/primary.mp4', 'https://cdn.example/fallback.mp4'],
+    })
+
+    expect(result.current.currentUrl).toBe('https://cdn.example/fallback.mp4')
+  })
 })

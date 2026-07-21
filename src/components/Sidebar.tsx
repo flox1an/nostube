@@ -1,30 +1,16 @@
-import {
-  Home,
-  Play,
-  Users,
-  History,
-  ListVideo,
-  ThumbsUp,
-  Cog,
-  FileText,
-  MenuIcon,
-  Compass,
-} from 'lucide-react'
+import { MenuIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
-import { useCurrentUser, useAppContext, useReadRelays, useIsMobile, useFollowSet } from '@/hooks'
+import { useAppContext, useIsMobile } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
-import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { cn } from '@/lib/utils'
-import { isBetaUser } from '@/lib/beta-users'
-import { useMemo } from 'react'
+import { useNavigationMenu } from '@/hooks/useNavigationMenu'
 import { useTranslation } from 'react-i18next'
 
 export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto' }) {
   const { t } = useTranslation()
-  const { user } = useCurrentUser()
   const { toggleSidebar } = useAppContext()
   const { colorTheme } = useTheme()
   const currentTheme = getThemeById(colorTheme)
@@ -32,58 +18,9 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
   const isMobile = useIsMobile()
   const location = useLocation()
   const isDrawer = mode === 'drawer' || (mode === 'auto' && isMobile)
-  const readRelays = useReadRelays()
-  const { followedPubkeys } = useFollowSet()
-  const hasFollows = !!user && followedPubkeys.length > 0
-  const pubkey = user?.pubkey
+  const { navigationItems, libraryItems, configurationItems } = useNavigationMenu()
 
-  const userProfileUrl = useMemo(() => {
-    if (!pubkey) return ''
-    return buildProfileUrlFromPubkey(pubkey, readRelays)
-  }, [pubkey, readRelays])
-
-  // Beta feature: only show video-notes for beta users
-  const isVideoNotesBetaUser = isBetaUser(pubkey)
-
-  const navigationItems = hasFollows
-    ? [
-        { name: t('navigation.subscriptions'), icon: Users, href: '/' },
-        { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
-        { name: t('navigation.explore'), icon: Compass, href: '/explore' },
-      ]
-    : [
-        { name: t('navigation.home'), icon: Home, href: '/' },
-        { name: t('navigation.shorts'), icon: Play, href: '/shorts' },
-      ]
-
-  const libraryItems = [
-    { name: t('navigation.history'), icon: History, href: '/history', disabled: false },
-    { name: t('navigation.playlists'), icon: ListVideo, href: '/playlists' },
-    {
-      name: t('navigation.yourVideos'),
-      icon: Play,
-      href: userProfileUrl,
-    },
-    // Only show video-notes for beta users
-    ...(isVideoNotesBetaUser
-      ? [
-          {
-            name: t('navigation.videoNotes'),
-            icon: FileText,
-            href: '/video-notes',
-            disabled: false,
-          },
-        ]
-      : []),
-    { name: t('navigation.likedVideos'), icon: ThumbsUp, href: '/liked-videos' },
-  ]
-
-  const configItems = [
-    { name: t('navigation.settings'), icon: Cog, href: '/settings', disabled: false },
-  ]
-
-  const handleItemClick = (disabled?: boolean) => {
-    if (disabled) return
+  const handleItemClick = () => {
     if (isDrawer) {
       toggleSidebar()
     }
@@ -127,22 +64,22 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
             const isActive = location.pathname === item.href
             return (
               <Link
-                key={item.name}
+                key={item.id}
                 to={item.href}
-                onClick={() => handleItemClick()}
+                onClick={handleItemClick}
                 className={cn(
                   'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                   isActive ? 'bg-accent' : 'hover:bg-accent'
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.name}</span>
+                <span className="font-medium">{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
-        {user && (
+        {libraryItems.length > 0 && (
           <>
             <Separator className="my-4" />
             <h2 className="text-xs font-semibold uppercase text-muted-foreground px-4 mb-2">
@@ -153,20 +90,16 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
                 const isActive = location.pathname === item.href
                 return (
                   <Link
-                    key={item.name}
-                    to={item.disabled ? '#' : item.href}
-                    onClick={() => handleItemClick(item.disabled)}
+                    key={item.id}
+                    to={item.href}
+                    onClick={handleItemClick}
                     className={cn(
                       'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
-                      item.disabled
-                        ? 'pointer-events-none opacity-50 cursor-not-allowed'
-                        : isActive
-                          ? 'bg-accent'
-                          : 'hover:bg-accent'
+                      isActive ? 'bg-accent' : 'hover:bg-accent'
                     )}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.name}</span>
+                    <span className="font-medium">{item.label}</span>
                   </Link>
                 )
               })}
@@ -179,24 +112,20 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
           {t('navigation.configuration')}
         </h2>
         <nav className="px-2">
-          {configItems.map(item => {
+          {configurationItems.map(item => {
             const isActive = location.pathname === item.href
             return (
               <Link
-                key={item.name}
-                to={item.disabled ? '#' : item.href}
-                onClick={() => handleItemClick(item.disabled)}
+                key={item.id}
+                to={item.href}
+                onClick={handleItemClick}
                 className={cn(
                   'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
-                  item.disabled
-                    ? 'pointer-events-none opacity-50 cursor-not-allowed'
-                    : isActive
-                      ? 'bg-accent'
-                      : 'hover:bg-accent'
+                  isActive ? 'bg-accent' : 'hover:bg-accent'
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.name}</span>
+                <span className="font-medium">{item.label}</span>
               </Link>
             )
           })}

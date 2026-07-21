@@ -1,61 +1,12 @@
-import { Home, Play, Users, ListVideo, Compass } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useTranslation } from 'react-i18next'
-import { useCurrentUser, useFollowSet } from '@/hooks'
+import { useNavigationMenu } from '@/hooks/useNavigationMenu'
 
 export function MiniSidebar() {
-  const { t } = useTranslation()
   const location = useLocation()
-  const { user } = useCurrentUser()
-  const { followedPubkeys } = useFollowSet()
-  const hasFollows = !!user && followedPubkeys.length > 0
+  const { compactItems } = useNavigationMenu()
 
-  const navItems = hasFollows
-    ? [
-        {
-          label: t('navigation.subscriptions'),
-          icon: Users,
-          href: '/',
-        },
-        {
-          label: t('navigation.shorts'),
-          icon: Play,
-          href: '/shorts',
-        },
-        {
-          label: t('navigation.explore'),
-          icon: Compass,
-          href: '/explore',
-          noFill: true,
-        },
-        {
-          label: t('navigation.playlists'),
-          icon: ListVideo,
-          href: '/playlists',
-        },
-      ]
-    : [
-        {
-          label: t('navigation.home'),
-          icon: Home,
-          href: '/',
-        },
-        {
-          label: t('navigation.shorts'),
-          icon: Play,
-          href: '/shorts',
-        },
-        ...(user
-          ? [
-              {
-                label: t('navigation.playlists'),
-                icon: ListVideo,
-                href: '/playlists',
-              },
-            ]
-          : []),
-      ]
+  const navItems = compactItems
 
   return (
     <aside className="flex flex-col w-20 bg-background pt-4 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">

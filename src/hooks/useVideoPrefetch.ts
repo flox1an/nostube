@@ -39,7 +39,7 @@ const PROXY_CONFIG = { enabled: true }
 export function useVideoPrefetch({ video, enabled, priority = 1 }: UseVideoPrefetchOptions): void {
   // Resolve the neighbor URL ahead of time. This also primes the sha256-keyed
   // discovery cache, so when the singleton resolves the same video it is instant.
-  const { currentUrl } = useMediaUrls({
+  const { ladder } = useMediaUrls({
     urls: video?.urls ?? [],
     mediaType: 'video',
     sha256: video?.x,
@@ -48,6 +48,7 @@ export function useVideoPrefetch({ video, enabled, priority = 1 }: UseVideoPrefe
     proxyConfig: PROXY_CONFIG,
     enabled: enabled && !!video,
   })
+  const currentUrl = ladder.currentUrl
 
   const sha256 = video?.x
 

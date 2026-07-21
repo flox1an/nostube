@@ -2,6 +2,7 @@ import { createRef } from 'react'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VideoVariant } from '@/utils/video-event'
+import { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
 import {
   usePlaybackEngine,
   resolvePlaybackMode,
@@ -139,6 +140,12 @@ describe('usePlaybackEngine adapters', () => {
       isLoading: false,
       error: null,
     })
+    const ladder = new PlaybackUrlLadder({
+      urls: ['https://cdn/x.m3u8'],
+      blossomServers: [],
+      mediaType: 'video',
+    })
+
 
     const { result } = renderHook(() =>
       usePlaybackEngine({
@@ -146,6 +153,7 @@ describe('usePlaybackEngine adapters', () => {
         videoUrl: 'https://cdn/x.m3u8',
         mime: 'application/vnd.apple.mpegurl',
         effectiveUrls: ['https://cdn/x.m3u8'],
+        ladder,
       })
     )
 
@@ -159,6 +167,15 @@ describe('usePlaybackEngine adapters', () => {
     ])
     expect(result.current.selectedQuality).toBe(-1)
     expect(result.current.activeQualityLabel).toBe('720p')
+    expect(useHls).toHaveBeenLastCalledWith(
+      videoRef,
+      'https://cdn/x.m3u8',
+      true,
+      ladder,
+      undefined,
+      undefined,
+      'never'
+    )
   })
 
   it('dash adapter manages the source and exposes no selectable quality', () => {

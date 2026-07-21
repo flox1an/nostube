@@ -172,11 +172,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     urlsRef.current = urls
   }, [onAllSourcesFailed, urls])
 
-  // Video URL failover
-  const handleVideoUrlError = useCallback((error: Error) => {
-    console.error('Video URL failover error:', error)
-  }, [])
-
   const hasHlsSource = useMemo(
     () =>
       baseMime === 'application/vnd.apple.mpegurl' ||
@@ -194,20 +189,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const hasManifestSource = hasHlsSource || hasDashSource
   const proxyConfig = useMemo(() => ({ enabled: !hasManifestSource }), [hasManifestSource])
 
-  const {
-    currentUrl: videoUrl,
-    moveToNext: moveToNextVideo,
-    hasMore: hasMoreVideoUrls,
-    isLoading: isLoadingVideoUrls,
-  } = useMediaUrls({
+  const { ladder: videoUrlLadder, isLoading: isLoadingVideoUrls } = useMediaUrls({
     urls: effectiveUrls,
+    variants: videoVariants,
     mediaType: isAudioOnly ? 'audio' : 'video',
     sha256: effectiveSha256,
     kind: 34235,
     authorPubkey,
     proxyConfig,
-    onError: handleVideoUrlError,
   })
+  const videoUrl = videoUrlLadder.currentUrl
+  const hasMoreVideoUrls = videoUrlLadder.hasMore
+  const moveToNextVideo = videoUrlLadder.tryNext.bind(videoUrlLadder)
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -266,6 +259,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const engine = usePlaybackEngine({
     videoRef,
     videoUrl,
+    ladder: videoUrlLadder,
     mime,
     effectiveUrls,
     videoVariants,
@@ -977,12 +971,13 @@ export const VideoPlayer = React.memo(function VideoPlayer({
 
   // Get poster URL with blossom fallback support (no resize proxy)
   const posterUrls = useMemo(() => (poster ? [poster] : []), [poster])
-  const { currentUrl: posterUrl } = useMediaUrls({
+  const { ladder: posterUrlLadder } = useMediaUrls({
     urls: posterUrls,
     mediaType: 'image',
     sha256: posterHash,
     enabled: !!poster,
   })
+  const posterUrl = posterUrlLadder.currentUrl
 
   // Media Session API - lock screen / Control Center controls + background audio
   useMediaSession({

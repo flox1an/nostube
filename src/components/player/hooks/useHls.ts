@@ -5,6 +5,7 @@ import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@/lib/hls-failover-debug'
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
+import type { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
 
 export interface HlsQualityLevel {
   index: number
@@ -62,6 +63,7 @@ export function useHls(
   videoRef: React.RefObject<HTMLMediaElement | null>,
   src: string | null,
   isHlsSource: boolean,
+  ladder?: PlaybackUrlLadder,
   authorPubkey?: string,
   videoId?: string,
   localhostProxyMode: 'always' | 'master-gated' | 'never' = 'master-gated'
@@ -152,6 +154,7 @@ export function useHls(
         localhostProxyMode,
         p2pHlsBlobCacheEnabled,
         p2pBlobMesh,
+        ladder,
       }),
     })
 
@@ -392,6 +395,7 @@ export function useHls(
     authorPubkey,
     videoId,
     localhostProxyMode,
+    ladder,
   ])
 
   // Set quality level

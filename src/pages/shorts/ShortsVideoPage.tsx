@@ -316,10 +316,6 @@ export function ShortsVideoPage() {
   const currentVideo = allVideos[currentVideoIndex]
   const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
-  const handleVideoUrlError = useCallback((error: Error) => {
-    console.error('Video URL failover error:', error)
-  }, [])
-
   // Memoize proxyConfig to prevent infinite loops
   const proxyConfig = useMemo(
     () => ({
@@ -328,11 +324,7 @@ export function ShortsVideoPage() {
     []
   )
 
-  const {
-    currentUrl: videoUrl,
-    moveToNext: moveToNextVideo,
-    hasMore: hasMoreVideoUrls,
-  } = useMediaUrls({
+  const { ladder: videoUrlLadder } = useMediaUrls({
     urls: currentVideo?.urls ?? [],
     mediaType: 'video',
     sha256: currentVideo?.x,
@@ -340,8 +332,10 @@ export function ShortsVideoPage() {
     authorPubkey: currentVideo?.pubkey,
     proxyConfig,
     enabled: !!currentVideo,
-    onError: handleVideoUrlError,
   })
+  const videoUrl = videoUrlLadder.currentUrl
+  const hasMoreVideoUrls = videoUrlLadder.hasMore
+  const moveToNextVideo = videoUrlLadder.tryNext.bind(videoUrlLadder)
 
   // Prefetch neighbor videos into the content-addressed Blob cache so the
   // singleton can play them instantly on swipe. Forward is the dominant swipe

@@ -92,6 +92,7 @@ export function ShortsVideoPage() {
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
+  const [isMuted, setIsMuted] = useState(true)
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -401,6 +402,7 @@ export function ShortsVideoPage() {
     node.muted = true
     userMutedPreferenceRef.current = true
     initializedVideoElementRef.current = true
+    setIsMuted(true)
   }, [])
 
   // Revoke any outstanding prefetch object URL when the component unmounts.
@@ -412,6 +414,16 @@ export function ShortsVideoPage() {
       }
     }
   }, [])
+  useEffect(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement) return
+
+    const syncMutedState = () => setIsMuted(videoElement.muted)
+    videoElement.addEventListener('volumechange', syncMutedState)
+    syncMutedState()
+
+    return () => videoElement.removeEventListener('volumechange', syncMutedState)
+  }, [activeVideoElement])
 
   useEffect(() => {
     const videoElement = singletonVideoRef.current
@@ -584,6 +596,26 @@ export function ShortsVideoPage() {
     }
   }, [])
 
+  const handleToggleMute = useCallback(() => {
+    const videoElement = singletonVideoRef.current
+    if (!videoElement) return
+
+    const nextMuted = !videoElement.muted
+    videoElement.muted = nextMuted
+    userMutedPreferenceRef.current = nextMuted
+    setIsMuted(nextMuted)
+
+    if (!nextMuted) {
+      userPausedRef.current = false
+      const playPromise = videoElement.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error unmuting singleton short video:', error)
+        })
+      }
+    }
+  }, [])
+
   const finishSettling = useCallback(() => {
     if (settlingTargetIndex !== null) {
       setIsVideoReady(false)
@@ -642,6 +674,9 @@ export function ShortsVideoPage() {
 
   const handlePointerUp = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement
+      if (target.closest('button,a,[role="button"],input,textarea,[data-no-drag]')) return
+
       const dragState = dragStateRef.current
       if (!dragState || dragState.pointerId !== event.pointerId) return
 
@@ -895,7 +930,12 @@ export function ShortsVideoPage() {
               willChange: deckPhase === 'idle' ? undefined : 'transform',
             }}
           >
-            <ShortVideoOverlay video={currentVideo} maxWidth={videoMaxWidth} />
+            <ShortVideoOverlay
+              video={currentVideo}
+              isMuted={isMuted}
+              onToggleMute={handleToggleMute}
+              maxWidth={videoMaxWidth}
+            />
           </div>
         )}
       </div>

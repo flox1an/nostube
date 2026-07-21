@@ -22,7 +22,7 @@ import { FollowButton } from '@/components/FollowButton'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { formatDistance } from 'date-fns/formatDistance'
-import { memo, useState, useMemo } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   type VideoEvent,
@@ -34,7 +34,7 @@ import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { useProfile, useReadRelays, useCommentCount, usePreloadVideoData } from '@/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { MessageCircle, Share2, ExternalLink, Flag } from 'lucide-react'
+import { MessageCircle, Share2, ExternalLink, Flag, Volume2, VolumeX } from 'lucide-react'
 import { ReportDialog } from '@/components/ReportDialog'
 import { combineRelays } from '@/lib/utils'
 import { buildProfileUrl } from '@/lib/nprofile'
@@ -48,12 +48,16 @@ const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)
 
 interface ShortVideoOverlayProps {
   video: VideoEvent
+  /** Whether the singleton short-video player is muted. */
+  isMuted: boolean
+  /** Toggles audio for the singleton short-video player. */
+  onToggleMute: () => void
   /** maxWidth matching the singleton <video> element, e.g. 'calc(100vh * 9 / 16)' */
   maxWidth: string
 }
 
 export const ShortVideoOverlay = memo(
-  function ShortVideoOverlay({ video, maxWidth }: ShortVideoOverlayProps) {
+  function ShortVideoOverlay({ video, isMuted, onToggleMute, maxWidth }: ShortVideoOverlayProps) {
     const { i18n } = useTranslation()
     const dateLocale = getDateLocale(i18n.language)
     const metadata = useProfile({ pubkey: video.pubkey })
@@ -63,6 +67,8 @@ export const ShortVideoOverlay = memo(
     const userReadRelays = useReadRelays()
     const [commentsOpen, setCommentsOpen] = useState(false)
     const [showReportDialog, setShowReportDialog] = useState(false)
+    const [muted, setMuted] = useState(isMuted)
+    useEffect(() => setMuted(isMuted), [isMuted])
     const { user } = useCurrentUser()
     const commentCount = useCommentCount({ videoId: video.id })
 
@@ -125,7 +131,7 @@ export const ShortVideoOverlay = memo(
       <div className="relative w-full h-full pointer-events-none">
         {/* Action sidebar — right rail, TikTok-style */}
         <div
-          className="absolute right-4 md:right-0 flex flex-col items-center gap-4 pointer-events-auto md:pr-8 pb-8"
+          className="absolute right-4 md:right-0 flex flex-col items-center gap-3 md:gap-4 pointer-events-auto md:pr-8 pb-8 [&_.rounded-full.bg-secondary]:bg-secondary/50"
           style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <VideoReactionButtons
@@ -163,7 +169,6 @@ export const ShortVideoOverlay = memo(
             >
               <Share2 className="h-5 w-5" />
             </Button>
-            <span className="text-sm font-medium">Share</span>
           </div>
 
           {/* Report (logged-in users only) */}
@@ -180,6 +185,21 @@ export const ShortVideoOverlay = memo(
               </Button>
             </div>
           )}
+          {/* Audio */}
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full"
+              onClick={() => {
+                setMuted(previousMuted => !previousMuted)
+                onToggleMute()
+              }}
+              aria-label={muted ? 'Unmute video' : 'Mute video'}
+            >
+              {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
 
         {/* Bottom info bar */}

@@ -131,6 +131,8 @@
     "unavailable": "Video Unavailable",
     "notFound": "Video Not Found",
     "unavailableDescription": "This video has been marked as unavailable because it could not be loaded from any source. It will be automatically retried later.",
+    "networkError": "Network Error",
+    "networkErrorDescription": "The video could not be loaded from any available source. Check your network connection or try again later.",
     "notFoundDescription": "This video could not be found. It may have been deleted or the event ID is incorrect.",
     "watchThisVideo": "Watch this video",
     "mirrorVideo": "Mirror Video",

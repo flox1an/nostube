@@ -116,6 +116,7 @@ function VideoPageContent() {
 
   // State for video event loaded from EventStore/relays
   const [videoEvent, setVideoEvent] = useState<NostrEvent | undefined>(undefined)
+  const [failedVideoId, setFailedVideoId] = useState<string | null>(null)
 
   const preloadVideoId = useMemo(() => {
     if (videoEvent) return videoEvent.id
@@ -563,6 +564,7 @@ function VideoPageContent() {
   // persistent “missing video” result. A later hash mirror may resolve it.
   const handleAllSourcesFailed = useCallback(
     (urls: string[]) => {
+      setFailedVideoId(video?.id ?? null)
       if (video?.id && video.mediaSourceStatus === 'safe-declared-source') {
         markVideoAsMissing(video.id, urls)
       }
@@ -657,6 +659,16 @@ function VideoPageContent() {
         ? 'w-full max-h-[80dvh]'
         : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
 
+    if (failedVideoId === video.id) {
+      return (
+        <Alert variant="destructive" role="alert">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('video.networkError')}</AlertTitle>
+          <AlertDescription>{t('video.networkErrorDescription')}</AlertDescription>
+        </Alert>
+      )
+    }
+
     return (
       <VideoPlayer
         key={playerKey}
@@ -709,6 +721,8 @@ function VideoPageContent() {
     prevPlaylistVideo,
     navigateToPrevious,
     nextPlaylistVideo,
+    failedVideoId,
+    t,
     navigateToNext,
   ])
 

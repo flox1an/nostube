@@ -131,6 +131,8 @@
     "unavailable": "视频不可用",
     "notFound": "视频未找到",
     "unavailableDescription": "此视频已被标记为不可用，因为无法从任何来源加载。稍后将自动重试。",
+    "networkError": "网络错误",
+    "networkErrorDescription": "无法从任何可用来源加载视频。请检查网络连接或稍后重试。",
     "notFoundDescription": "未找到该视频。可能已被删除或事件 ID 不正确。",
     "watchThisVideo": "观看此视频",
     "mirrorVideo": "镜像视频",

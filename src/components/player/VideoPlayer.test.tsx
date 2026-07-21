@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoPlayer } from './VideoPlayer'
 
@@ -147,5 +147,42 @@ describe('VideoPlayer initial play position', () => {
     await waitFor(() => {
       expect(video!.currentTime).toBe(12)
     })
+  })
+})
+
+describe('VideoPlayer source failures', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
+  it('does not require CORS for native video playback', () => {
+    const { container } = render(
+      <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />
+    )
+
+    expect(container.querySelector('video')).not.toHaveAttribute('crossorigin')
+  })
+
+  it('reports a final source failure only when no fallback remains', () => {
+    const onAllSourcesFailed = vi.fn()
+    const urls = ['https://example.com/video.mp4']
+    const { container } = render(
+      <VideoPlayer
+        urls={urls}
+        textTracks={[]}
+        mime="video/mp4"
+        onAllSourcesFailed={onAllSourcesFailed}
+      />
+    )
+
+    fireEvent.error(container.querySelector('video')!)
+
+    expect(onAllSourcesFailed).toHaveBeenCalledWith(urls)
   })
 })

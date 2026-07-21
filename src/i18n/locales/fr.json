@@ -131,6 +131,8 @@
     "unavailable": "Vidéo indisponible",
     "notFound": "Vidéo introuvable",
     "unavailableDescription": "Cette vidéo a été marquée comme indisponible car elle n'a pu être chargée depuis aucune source. Elle sera automatiquement réessayée ultérieurement.",
+    "networkError": "Erreur réseau",
+    "networkErrorDescription": "La vidéo n’a pu être chargée depuis aucune source disponible. Vérifiez votre connexion réseau ou réessayez plus tard.",
     "notFoundDescription": "Cette vidéo n'a pas pu être trouvée. Elle a peut-être été supprimée ou l'ID de l'événement est incorrect.",
     "watchThisVideo": "Regarder cette vidéo",
     "mirrorVideo": "Dupliquer la vidéo",

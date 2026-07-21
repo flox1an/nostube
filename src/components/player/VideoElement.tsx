@@ -29,7 +29,6 @@ export const VideoElement = forwardRef<HTMLVideoElement, VideoElementProps>(func
       loop={loop}
       autoPlay={autoPlay}
       playsInline
-      crossOrigin="anonymous"
       className={className}
       onError={onError}
     >

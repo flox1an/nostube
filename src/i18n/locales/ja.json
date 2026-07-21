@@ -131,6 +131,8 @@
     "unavailable": "動画を再生できません",
     "notFound": "動画が見つかりません",
     "unavailableDescription": "この動画はどのソースからも読み込めなかったため、利用不可としてマークされました。後で自動的に再試行されます。",
+    "networkError": "ネットワークエラー",
+    "networkErrorDescription": "利用可能なソースのどれからも動画を読み込めませんでした。ネットワーク接続を確認するか、後でもう一度お試しください。",
     "notFoundDescription": "動画が見つかりませんでした。削除されたか、イベント ID が正しくない可能性があります。",
     "watchThisVideo": "この動画を見る",
     "mirrorVideo": "動画をミラー",

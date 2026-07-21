@@ -131,6 +131,8 @@
     "unavailable": "Video nicht verfügbar",
     "notFound": "Video nicht gefunden",
     "unavailableDescription": "Dieses Video wurde als nicht verfügbar markiert, da es von keiner Quelle geladen werden konnte. Es wird später automatisch erneut versucht.",
+    "networkError": "Netzwerkfehler",
+    "networkErrorDescription": "Das Video konnte von keiner verfügbaren Quelle geladen werden. Prüfe deine Netzwerkverbindung oder versuche es später erneut.",
     "notFoundDescription": "Dieses Video konnte nicht gefunden werden. Es wurde möglicherweise gelöscht oder die Event-ID ist falsch.",
     "watchThisVideo": "Dieses Video ansehen",
     "mirrorVideo": "Video spiegeln",

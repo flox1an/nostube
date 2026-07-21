@@ -1076,7 +1076,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
             loop={loopEnabled}
             autoPlay={!contentWarning}
             playsInline
-            crossOrigin="anonymous"
             className="absolute h-px w-px opacity-0 pointer-events-none"
             onError={handleVideoError}
           >
@@ -1098,7 +1097,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
           loop={loopEnabled}
           autoPlay={!contentWarning}
           playsInline
-          crossOrigin="anonymous"
           className={`w-full object-contain ${effectiveCinemaMode && !isFullscreen ? 'max-h-[80dvh]' : 'h-full'}`}
           onError={handleVideoError}
           onClick={handleTogglePlay}

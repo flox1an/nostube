@@ -131,6 +131,8 @@
     "unavailable": "Video No Disponible",
     "notFound": "Video No Encontrado",
     "unavailableDescription": "Este video ha sido marcado como no disponible porque no pudo cargarse desde ninguna fuente. Se reintentará automáticamente más tarde.",
+    "networkError": "Error de red",
+    "networkErrorDescription": "El vídeo no se pudo cargar desde ninguna fuente disponible. Comprueba tu conexión de red o inténtalo de nuevo más tarde.",
     "notFoundDescription": "No se pudo encontrar este video. Puede haber sido eliminado o el ID del evento es incorrecto.",
     "watchThisVideo": "Ver este video",
     "mirrorVideo": "Replicar Video",

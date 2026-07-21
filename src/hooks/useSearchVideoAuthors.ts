@@ -74,7 +74,7 @@ export function useSearchVideoAuthors({
 } {
   const eventStore = useEventStore()
   const { config } = useAppContext()
-  const { presetContent } = useSelectedPreset()
+  const { presetContent, selectedPubkey } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
   const hideNsfw = (config.nsfwFilter ?? 'hide') === 'hide'
 
@@ -117,10 +117,21 @@ export function useSearchVideoAuthors({
     }
 
     // Meili people index — video authors ranked by videoCount
-    fetchPeopleResults(trimmed, controller.signal, SEARCH_SERVICE_URL, limit)
-      .then(hits => {
+    fetchPeopleResults(
+      trimmed,
+      controller.signal,
+      config.searchServiceUrl || SEARCH_SERVICE_URL,
+      selectedPubkey,
+      config.nsfwFilter,
+      limit
+    )
+      .then(result => {
         if (controller.signal.aborted) return
-        setMeiliResults((hits ?? []).map(peopleHitToProfileResult))
+        if (result.ok) {
+          setMeiliResults((result.data ?? []).map(peopleHitToProfileResult))
+        } else {
+          setMeiliResults([])
+        }
       })
       .catch(() => {
         if (!controller.signal.aborted) setMeiliResults([])
@@ -146,7 +157,15 @@ export function useSearchVideoAuthors({
       .finally(onSettled)
 
     return () => controller.abort()
-  }, [debouncedQuery, eventStore, primal, limit])
+  }, [
+    debouncedQuery,
+    eventStore,
+    primal,
+    limit,
+    selectedPubkey,
+    config.searchServiceUrl,
+    config.nsfwFilter,
+  ])
 
   // Merge: meili first (video authors), then Primal for pubkeys not present
   const profiles = useMemo(() => {

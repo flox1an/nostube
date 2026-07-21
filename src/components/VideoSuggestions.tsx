@@ -281,7 +281,11 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   // Search service recommendations (primary source)
   const excludeContentWarnings = config.nsfwFilter === 'hide'
-  const { videos: serviceVideos, isLoading: isLoadingService } = useSearchRecommendations({
+  const {
+    videos: serviceVideos,
+    isLoading: isLoadingService,
+    presetUnavailable: servicePresetUnavailable,
+  } = useSearchRecommendations({
     videoRef,
     userPubkey: user?.pubkey,
     excludeContentWarnings,
@@ -290,8 +294,12 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
   const filteredServiceVideos = useMemo(() => {
     if (!serviceVideos) return null
-    return serviceVideos.filter(v => !isNSFWAuthor(v.pubkey, presetContent.nsfwPubkeys))
-  }, [serviceVideos, presetContent.nsfwPubkeys])
+    if (config.nsfwFilter === 'hide') {
+      return serviceVideos.filter(v => !isNSFWAuthor(v.pubkey, presetContent.nsfwPubkeys))
+    }
+    // In warning/show modes, preserve server contentWarning annotations
+    return serviceVideos
+  }, [serviceVideos, presetContent.nsfwPubkeys, config.nsfwFilter])
 
   // Combine provided relays with config relays (prioritize provided relays)
   // Use combineRelays to normalize URLs and remove duplicates (e.g., 'nos.lol' vs 'nos.lol/')
@@ -502,7 +510,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   }, [suggestions, personalScores, globalScores, followedSet, user])
 
   const showLoadingSkeletons =
-    (isLoadingService && filteredServiceVideos === null) ||
+    (isLoadingService && filteredServiceVideos === null && !servicePresetUnavailable) ||
     (!filteredServiceVideos && isLoadingSuggestions && suggestions.length === 0)
 
   // Use service results when available, fall back to relay-based suggestions
@@ -525,6 +533,15 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
             {t('video.noSuggestions', 'No suggestions yet.')}
           </div>
         )
+      ) : servicePresetUnavailable ? (
+        <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
+          <p className="font-semibold text-destructive">
+            {t('video.presetUnavailable', 'Safety configuration unavailable')}
+          </p>
+          <p className="mt-1">
+            {t('video.presetUnavailableDescription', 'Recommendations may not be fully filtered.')}
+          </p>
+        </div>
       ) : filteredSuggestions.length > 0 ? (
         filteredSuggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)
       ) : (

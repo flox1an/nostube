@@ -6,6 +6,8 @@ import { PrimalCache } from 'applesauce-extra'
 import { useEventStore } from 'applesauce-react/hooks'
 import { fetchPeopleResults, SEARCH_SERVICE_URL } from '@/lib/search-client'
 import type { PeopleHit } from '@/lib/search-client'
+import { useAppContext } from '@/hooks/useAppContext'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 
 export interface ProfileResult {
   pubkey: string
@@ -57,15 +59,16 @@ export function useSearchProfiles({
   loading: boolean
 } {
   const eventStore = useEventStore()
+  const { config } = useAppContext()
+  const { selectedPubkey } = useSelectedPreset()
   const primal = useMemo(() => new PrimalCache(), [])
-
-  const [loading, setLoading] = useState(false)
-  const [meiliResults, setMeiliResults] = useState<ProfileResult[]>([])
-  const [primalResults, setPrimalResults] = useState<ProfileResult[]>([])
-  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => () => primal.close(), [primal])
 
+  const [meiliResults, setMeiliResults] = useState<ProfileResult[]>([])
+  const [primalResults, setPrimalResults] = useState<ProfileResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
   // Debounced query
   const [debouncedQuery, setDebouncedQuery] = useState(query)
   useEffect(() => {
@@ -96,16 +99,26 @@ export function useSearchProfiles({
     }
 
     // Meili people index
-    fetchPeopleResults(trimmed, controller.signal, SEARCH_SERVICE_URL, limit)
-      .then(hits => {
+    fetchPeopleResults(
+      trimmed,
+      controller.signal,
+      config.searchServiceUrl || SEARCH_SERVICE_URL,
+      selectedPubkey,
+      config.nsfwFilter,
+      limit
+    )
+      .then(result => {
         if (controller.signal.aborted) return
-        setMeiliResults((hits ?? []).map(peopleHitToProfileResult))
+        if (result.ok) {
+          setMeiliResults((result.data ?? []).map(peopleHitToProfileResult))
+        } else {
+          setMeiliResults([])
+        }
       })
       .catch(() => {
         if (!controller.signal.aborted) setMeiliResults([])
       })
       .finally(onSettled)
-
     // Primal API
     primal
       .userSearch(trimmed)
@@ -125,7 +138,15 @@ export function useSearchProfiles({
       .finally(onSettled)
 
     return () => controller.abort()
-  }, [debouncedQuery, eventStore, primal, limit])
+  }, [
+    debouncedQuery,
+    eventStore,
+    primal,
+    limit,
+    selectedPubkey,
+    config.searchServiceUrl,
+    config.nsfwFilter,
+  ])
 
   // Merge: meili first, then Primal for pubkeys not already present
   const profiles = useMemo(() => {

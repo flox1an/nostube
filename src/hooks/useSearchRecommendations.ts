@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppContext } from '@/hooks'
+import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 import { YOUTUBE_REGEX } from '@/utils/origin-utils'
 import type { RecommendationVideo } from '@/types/recommendation'
@@ -19,11 +20,13 @@ export function useSearchRecommendations(params: {
   userPubkey: string | undefined
   excludeContentWarnings: boolean
   limit?: number
-}): { videos: RecommendationVideo[] | null; isLoading: boolean } {
+}): { videos: RecommendationVideo[] | null; isLoading: boolean; presetUnavailable: boolean } {
   const { videoRef, userPubkey, excludeContentWarnings, limit = 30 } = params
   const { config } = useAppContext()
+  const { selectedPubkey } = useSelectedPreset()
   const [videos, setVideos] = useState<RecommendationVideo[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [presetUnavailable, setPresetUnavailable] = useState(false)
 
   useEffect(() => {
     if (!videoRef) return
@@ -34,6 +37,7 @@ export function useSearchRecommendations(params: {
 
     setIsLoading(true)
     setVideos(null)
+    setPresetUnavailable(false)
 
     fetch(`${config.searchServiceUrl || SEARCH_SERVICE_URL}/api/recommendations/related`, {
       method: 'POST',
@@ -43,15 +47,26 @@ export function useSearchRecommendations(params: {
         ...(userPubkey ? { user: userPubkey } : {}),
         limit,
         excludeContentWarnings,
+        presetPubkey: selectedPubkey,
+        nsfwFilter: config.nsfwFilter,
       }),
       signal: controller.signal,
     })
       .then(res => {
+        if (res.status === 503) {
+          return res.json().then(body => {
+            if (body?.code === 'preset_unavailable') {
+              if (!cancelled) setPresetUnavailable(true)
+              return null
+            }
+            throw new Error(`HTTP ${res.status}`)
+          })
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<{ hits: RecommendationVideo[] }>
       })
       .then(data => {
-        if (!cancelled) {
+        if (!cancelled && data) {
           setVideos(
             filterRecommendationsForSettings(data.hits ?? [], {
               includeYouTube: config.showYouTubeContent ?? true,
@@ -60,7 +75,7 @@ export function useSearchRecommendations(params: {
         }
       })
       .catch(() => {
-        if (!cancelled) setVideos(null)
+        if (!cancelled && !presetUnavailable) setVideos(null)
       })
       .finally(() => {
         clearTimeout(timeoutId)
@@ -79,7 +94,9 @@ export function useSearchRecommendations(params: {
     limit,
     config.searchServiceUrl,
     config.showYouTubeContent,
+    selectedPubkey,
+    config.nsfwFilter,
   ])
 
-  return { videos, isLoading }
+  return { videos, isLoading, presetUnavailable }
 }

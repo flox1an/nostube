@@ -53,7 +53,7 @@ export function useHashtagVideos({
 }: UseHashtagVideosOptions): UseHashtagVideosResult {
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
-  const { presetContent } = useSelectedPreset()
+  const { presetContent, selectedPubkey } = useSelectedPreset()
   const blockedPubkeys = useReportedPubkeys()
 
   // Phase 1: Native videos with #t tags (reactive via use$)
@@ -152,14 +152,16 @@ export function useHashtagVideos({
     const controller = new AbortController()
     const serviceUrl = config.searchServiceUrl || SEARCH_SERVICE_URL
 
-    fetchTagResults(tag, controller.signal, serviceUrl).then(results => {
-      if (!controller.signal.aborted && results) {
-        setExternalVideos(results)
+    fetchTagResults(tag, controller.signal, serviceUrl, selectedPubkey, config.nsfwFilter).then(
+      result => {
+        if (!controller.signal.aborted && result.ok) {
+          setExternalVideos(result.data)
+        }
       }
-    })
+    )
 
     return () => controller.abort()
-  }, [tag, config.searchServiceUrl])
+  }, [tag, config.searchServiceUrl, selectedPubkey, config.nsfwFilter])
 
   // Phase 1: Load native videos from relays into EventStore
   useEffect(() => {

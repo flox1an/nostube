@@ -67,6 +67,7 @@ describe('SearchPage', () => {
       loading: false,
       hasLoaded: true,
       loadMore: vi.fn(),
+      presetUnavailable: false,
     })
   })
 

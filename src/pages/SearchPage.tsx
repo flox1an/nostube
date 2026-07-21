@@ -66,7 +66,7 @@ export function SearchPage() {
   const videoKinds = useMemo(() => getKindsForType('all'), [])
 
   // Use dedicated search hook with client-side MiniSearch
-  const { videos, loading, hasLoaded, loadMore } = useSearchVideos({
+  const { videos, loading, hasLoaded, loadMore, presetUnavailable } = useSearchVideos({
     query,
     kinds: videoKinds, // All video kinds: 21, 22, 34235, 34236
   })
@@ -113,6 +113,22 @@ export function SearchPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <p className="text-muted-foreground">{t('pages.search.emptyState')}</p>
+      </div>
+    )
+  }
+
+  if (presetUnavailable) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <p className="text-lg font-semibold text-destructive">
+          {t('pages.search.presetUnavailable')}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            'pages.search.presetUnavailableDescription',
+            'The safety configuration could not be loaded. Please try selecting a different preset.'
+          )}
+        </p>
       </div>
     )
   }

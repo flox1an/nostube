@@ -5,6 +5,15 @@ import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
 
+export type SearchErrorCode = 'preset_unavailable'
+
+/**
+ * Result of an external search API call.
+ * `ok: true` with `data` on success.
+ * `ok: false` with optional `code` on error.
+ */
+export type SearchResult<T> = { ok: true; data: T[] } | { ok: false; code?: SearchErrorCode }
+
 export interface ExternalSearchHit {
   event_id: string
   title: string
@@ -71,33 +80,45 @@ export function mapExternalHitToVideoEvent(hit: ExternalSearchHit): VideoEvent {
 export async function fetchExternalSearchResults(
   query: string,
   signal: AbortSignal,
-  serviceUrl: string = SEARCH_SERVICE_URL
-): Promise<VideoEvent[] | null> {
+  serviceUrl: string,
+  presetPubkey: string,
+  nsfwFilter: string
+): Promise<SearchResult<VideoEvent>> {
   try {
-    const url = `${serviceUrl}/api/search?q=${encodeURIComponent(query)}&limit=50`
+    const url = `${serviceUrl}/api/search?q=${encodeURIComponent(query)}&limit=50&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })
-    if (!res.ok) return null
+    if (res.status === 503) {
+      const body = await res.json().catch(() => ({}))
+      if (body?.code === 'preset_unavailable') return { ok: false, code: 'preset_unavailable' }
+    }
+    if (!res.ok) return { ok: false }
     const data = (await res.json()) as { hits: ExternalSearchHit[] }
-    return (data.hits ?? []).map(mapExternalHitToVideoEvent)
+    return { ok: true, data: (data.hits ?? []).map(mapExternalHitToVideoEvent) }
   } catch {
-    return null
+    return { ok: false }
   }
 }
 
 export async function fetchTagResults(
   tag: string,
   signal: AbortSignal,
-  serviceUrl: string = SEARCH_SERVICE_URL,
+  serviceUrl: string,
+  presetPubkey: string,
+  nsfwFilter: string,
   limit = 100
-): Promise<VideoEvent[] | null> {
+): Promise<SearchResult<VideoEvent>> {
   try {
-    const url = `${serviceUrl}/api/tags?t=${encodeURIComponent(tag.toLowerCase())}&limit=${limit}`
+    const url = `${serviceUrl}/api/tags?t=${encodeURIComponent(tag.toLowerCase())}&limit=${limit}&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })
-    if (!res.ok) return null
+    if (res.status === 503) {
+      const body = await res.json().catch(() => ({}))
+      if (body?.code === 'preset_unavailable') return { ok: false, code: 'preset_unavailable' }
+    }
+    if (!res.ok) return { ok: false }
     const data = (await res.json()) as { hits: ExternalSearchHit[] }
-    return (data.hits ?? []).map(mapExternalHitToVideoEvent)
+    return { ok: true, data: (data.hits ?? []).map(mapExternalHitToVideoEvent) }
   } catch {
-    return null
+    return { ok: false }
   }
 }
 
@@ -118,16 +139,22 @@ export interface PeopleHit {
 export async function fetchPeopleResults(
   query: string,
   signal: AbortSignal,
-  serviceUrl: string = SEARCH_SERVICE_URL,
+  serviceUrl: string,
+  presetPubkey: string,
+  nsfwFilter: string,
   limit = 10
-): Promise<PeopleHit[] | null> {
+): Promise<SearchResult<PeopleHit>> {
   try {
-    const url = `${serviceUrl}/api/people?q=${encodeURIComponent(query)}&limit=${limit}`
+    const url = `${serviceUrl}/api/people?q=${encodeURIComponent(query)}&limit=${limit}&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })
-    if (!res.ok) return null
+    if (res.status === 503) {
+      const body = await res.json().catch(() => ({}))
+      if (body?.code === 'preset_unavailable') return { ok: false, code: 'preset_unavailable' }
+    }
+    if (!res.ok) return { ok: false }
     const data = (await res.json()) as { hits: PeopleHit[] }
-    return data.hits ?? []
+    return { ok: true, data: data.hits ?? [] }
   } catch {
-    return null
+    return { ok: false }
   }
 }

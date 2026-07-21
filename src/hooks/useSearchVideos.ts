@@ -190,12 +190,19 @@ export function useSearchVideos({
   loading: boolean
   hasLoaded: boolean
   loadMore: () => void
+  presetUnavailable: boolean
 } {
+  const blockedPubkeys = useReportedPubkeys()
+  const { presetContent, selectedPubkey } = useSelectedPreset()
+  const readRelays = useReadRelays()
+
   const eventStore = useEventStore()
   const { config } = useAppContext()
-  const blockedPubkeys = useReportedPubkeys()
-  const { presetContent } = useSelectedPreset()
-  const readRelays = useReadRelays()
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
+  const hasFetchedRef = useRef(false)
+
+  // External search error state: 'preset_unavailable' when the service cannot provide a valid preset
+  const [presetUnavailable, setPresetUnavailable] = useState(false)
 
   // External search state
   const [externalVideos, setExternalVideos] = useState<VideoEvent[] | null>(null)
@@ -207,20 +214,19 @@ export function useSearchVideos({
   const [hasLoaded, setHasLoaded] = useState(false)
   const [matchingIds, setMatchingIds] = useState<Set<string>>(new Set())
   const [allEvents, setAllEvents] = useState<NostrEvent[]>([])
-  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
-  const hasFetchedRef = useRef(false)
-
   // External search: try the remote API first
   useEffect(() => {
     if (!query) {
       setExternalVideos(null)
       setExternalFailed(false)
+      setPresetUnavailable(false)
       setExternalLoading(false)
       return
     }
 
     setExternalVideos(null)
     setExternalFailed(false)
+    setPresetUnavailable(false)
     setExternalLoading(true)
 
     const controller = new AbortController()
@@ -229,12 +235,16 @@ export function useSearchVideos({
     fetchExternalSearchResults(
       query,
       controller.signal,
-      config.searchServiceUrl || SEARCH_SERVICE_URL
-    ).then(results => {
+      config.searchServiceUrl || SEARCH_SERVICE_URL,
+      selectedPubkey,
+      config.nsfwFilter
+    ).then(result => {
       clearTimeout(timeoutId)
       if (controller.signal.aborted) return
-      if (results !== null) {
-        setExternalVideos(results)
+      if (result.ok) {
+        setExternalVideos(result.data)
+      } else if (result.code === 'preset_unavailable') {
+        setPresetUnavailable(true)
       } else {
         setExternalFailed(true)
       }
@@ -245,7 +255,7 @@ export function useSearchVideos({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [query, config.searchServiceUrl])
+  }, [query, config.searchServiceUrl, selectedPubkey, config.nsfwFilter])
 
   // Local fallback: index events already in IEventStore when external fails
   useEffect(() => {
@@ -428,13 +438,24 @@ export function useSearchVideos({
 
   // Return external results when available, otherwise fall back to local
   if (externalVideos !== null) {
-    return { videos: filteredExternalVideos, loading: false, hasLoaded: true, loadMore }
+    return {
+      videos: filteredExternalVideos,
+      loading: false,
+      hasLoaded: true,
+      loadMore,
+      presetUnavailable: false,
+    }
   }
 
   if (externalLoading) {
-    return { videos: [], loading: true, hasLoaded: false, loadMore }
+    return { videos: [], loading: true, hasLoaded: false, loadMore, presetUnavailable: false }
+  }
+
+  // presetUnavailable: fail-closed — show explicit error, no fallback
+  if (presetUnavailable) {
+    return { videos: [], loading: false, hasLoaded: true, loadMore, presetUnavailable: true }
   }
 
   // externalFailed: return local search results
-  return { videos: localVideos, loading, hasLoaded, loadMore }
+  return { videos: localVideos, loading, hasLoaded, loadMore, presetUnavailable: false }
 }

@@ -25,7 +25,7 @@ export function useValidUrl(options: UseValidUrlOptions): UseValidUrlResult {
   const { urls, resourceType = 'video', enabled = true, sha256 } = options
 
   // Use new media URL failover system
-  const { currentUrl, isLoading, error } = useMediaUrls({
+  const { ladder, isLoading, error } = useMediaUrls({
     urls,
     mediaType: resourceType as MediaType,
     sha256,
@@ -33,7 +33,7 @@ export function useValidUrl(options: UseValidUrlOptions): UseValidUrlResult {
   })
 
   return {
-    validUrl: currentUrl,
+    validUrl: ladder.currentUrl,
     isValidating: isLoading,
     error,
   }

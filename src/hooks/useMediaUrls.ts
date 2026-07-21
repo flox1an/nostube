@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { MediaUrlOptions, MediaType } from '@/lib/media-url-generator'
 import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@/lib/playback-url-ladder'
 import { discoverUrlsWithCache } from '@/lib/url-discovery'
@@ -6,28 +6,22 @@ import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { INDEXER_RELAYS } from '@/constants/relays'
+import type { VideoVariant } from '@/utils/video-event'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
+  variants?: VideoVariant[]
   enabled?: boolean
   discoveryEnabled?: boolean
   discoveryRelays?: string[]
   discoveryTimeout?: number
   preValidate?: boolean
   validationOptions?: ValidationOptions
-  onError?: (error: Error) => void
 }
 
 export interface MediaUrlsResult {
   ladder: PlaybackUrlLadder
-  urls: string[]
   isLoading: boolean
-  isDiscovering: boolean
   error: Error | null
-  currentIndex: number
-  currentUrl: string | null
-  moveToNext: () => void
-  reset: () => void
-  hasMore: boolean
 }
 
 /**
@@ -40,6 +34,7 @@ export interface MediaUrlsResult {
 export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   const {
     urls,
+    variants,
     mediaType,
     sha256,
     kind,
@@ -51,33 +46,32 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     discoveryTimeout,
     preValidate,
     validationOptions,
-    onError,
   } = options
   const appContext = useAppContextSafe()
   const config = appContext?.config
-  const blossomServers = useMemo(
-    () => config?.blossomServers ?? [],
-    [config?.blossomServers]
-  )
-  const cachingServers = useMemo(
-    () => config?.cachingServers ?? [],
-    [config?.cachingServers]
-  )
+  const blossomServers = useMemo(() => config?.blossomServers ?? [], [config?.blossomServers])
+  const cachingServers = useMemo(() => config?.cachingServers ?? [], [config?.cachingServers])
   const mediaConfig = config?.media
-  const [error, setError] = useState<Error | null>(null)
   const [isDiscovering, setIsDiscovering] = useState(false)
   const [, update] = useReducer(version => version + 1, 0)
-  const onErrorRef = useRef(onError)
-  onErrorRef.current = onError
 
   const sourceKey = useMemo(
     () =>
-      [enabled, mediaType, sha256 ?? '', kind ?? '', authorPubkey ?? '', ...urls].join('\u0000'),
-    [authorPubkey, enabled, kind, mediaType, sha256, urls]
+      [
+        enabled,
+        mediaType,
+        sha256 ?? '',
+        kind ?? '',
+        authorPubkey ?? '',
+        ...urls,
+        ...(variants ?? []).flatMap(variant => [variant.url, variant.mimeType ?? '']),
+      ].join('\u0000'),
+    [authorPubkey, enabled, kind, mediaType, sha256, urls, variants]
   )
   const ladderOptions = useMemo<PlaybackUrlLadderOptions>(
     () => ({
       urls: enabled ? urls : [],
+      variants: enabled ? variants : undefined,
       blossomServers,
       cachingServers,
       sha256,
@@ -86,7 +80,18 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
       authorPubkey,
       proxyConfig,
     }),
-    [authorPubkey, blossomServers, cachingServers, enabled, kind, mediaType, proxyConfig, sha256, urls]
+    [
+      authorPubkey,
+      blossomServers,
+      cachingServers,
+      enabled,
+      kind,
+      mediaType,
+      proxyConfig,
+      sha256,
+      urls,
+      variants,
+    ]
   )
   const ladderConfigKey = useMemo(
     () =>
@@ -103,18 +108,25 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   const ladderRef = useRef<{ sourceKey: string; ladder: PlaybackUrlLadder } | null>(null)
 
   if (ladderRef.current?.sourceKey !== sourceKey) {
-    ladderRef.current = {
-      sourceKey,
-      ladder: new PlaybackUrlLadder(ladderOptions),
-    }
+    ladderRef.current = { sourceKey, ladder: new PlaybackUrlLadder(ladderOptions) }
   }
 
   const ladder = ladderRef.current.ladder
   const ladderOptionsRef = useRef(ladderOptions)
   ladderOptionsRef.current = ladderOptions
-  const finalDiscoveryEnabled = discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? Boolean(sha256)
+  const refreshedConfigRef = useRef({ ladder, key: ladderConfigKey })
+  if (refreshedConfigRef.current.ladder !== ladder) {
+    refreshedConfigRef.current = { ladder, key: ladderConfigKey }
+  }
+  const finalDiscoveryEnabled =
+    discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? Boolean(sha256)
   const finalDiscoveryRelays = useMemo(
-    () => [...new Set([...(discoveryRelays ?? config?.relays.map(relay => relay.url) ?? []), ...INDEXER_RELAYS])],
+    () => [
+      ...new Set([
+        ...(discoveryRelays ?? config?.relays.map(relay => relay.url) ?? []),
+        ...INDEXER_RELAYS,
+      ]),
+    ],
     [config?.relays, discoveryRelays]
   )
   const finalDiscoveryTimeout =
@@ -126,8 +138,12 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   )
   const ladderUrlsKey = ladder.urls.join('\u0000')
 
+  useEffect(() => ladder.subscribe(update), [ladder])
+
   useEffect(() => {
-    if (ladder.refresh(ladderOptionsRef.current)) update()
+    if (refreshedConfigRef.current.key === ladderConfigKey) return
+    refreshedConfigRef.current = { ladder, key: ladderConfigKey }
+    ladder.refresh(ladderOptionsRef.current)
   }, [ladder, ladderConfigKey])
 
   useEffect(() => {
@@ -144,15 +160,10 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     })
       .then(discovered => {
         if (cancelled) return
-        const discoveredUrls = discovered.map(result => result.url).filter(isAllowedEventMediaUrl)
-        if (ladder.merge(discoveredUrls)) update()
+        ladder.merge(discovered.map(result => result.url).filter(isAllowedEventMediaUrl))
       })
-      .catch(discoveryError => {
-        if (cancelled) return
-        const nextError =
-          discoveryError instanceof Error ? discoveryError : new Error('URL discovery failed')
-        setError(nextError)
-        onErrorRef.current?.(nextError)
+      .catch(() => {
+        // Discovery supplements event URLs and must never block playback.
       })
       .finally(() => {
         if (!cancelled) setIsDiscovering(false)
@@ -176,10 +187,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
       }))
     ).then(results => {
       if (cancelled) return
-      const validUrls = results.filter(result => result.isValid).map(result => result.url)
-      if (validUrls.length === 0) return
-      ladder.promote(validUrls)
-      update()
+      ladder.promote(results.filter(result => result.isValid).map(result => result.url))
     })
 
     return () => {
@@ -187,42 +195,7 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     }
   }, [enabled, finalPreValidate, finalValidationOptions, ladder, ladderUrlsKey])
 
-  const moveToNext = useCallback(() => {
-    if (ladder.tryNext()) update()
-  }, [ladder])
-  const reset = useCallback(() => {
-    ladder.reset()
-    update()
-  }, [ladder])
-
-  return {
-    ladder,
-    urls: ladder.urls,
-    isLoading: false,
-    isDiscovering,
-    error,
-    currentIndex: ladder.currentIndex,
-    currentUrl: ladder.currentUrl,
-    moveToNext,
-    reset,
-    hasMore: ladder.hasMore,
-  }
-}
-
-export function useMediaUrlsWithAutoRetry(options: UseMediaUrlsOptions) {
-  const result = useMediaUrls(options)
-  const onErrorRef = useRef(options.onError)
-  onErrorRef.current = options.onError
-
-  const handleError = useCallback(() => {
-    if (result.hasMore) {
-      result.moveToNext()
-      return
-    }
-    onErrorRef.current?.(new Error('All media URLs failed'))
-  }, [result])
-
-  return { ...result, handleError }
+  return { ladder, isLoading: isDiscovering, error: ladder.error }
 }
 
 export type { MediaType }

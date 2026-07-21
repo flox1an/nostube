@@ -44,22 +44,23 @@ export const VideoElement = forwardRef<HTMLVideoElement, VideoElementProps>(func
  * Caption Track component with automatic failover using useMediaUrls
  */
 function CaptionTrack({ track, sha256 }: { track: TextTrack; sha256?: string }) {
-  const { currentUrl, moveToNext, hasMore } = useMediaUrls({
+  const { ladder } = useMediaUrls({
     urls: [track.url],
     mediaType: 'vtt',
     sha256,
   })
+  const currentUrl = ladder.currentUrl
 
   const handleTrackError = useCallback(() => {
-    if (hasMore) {
+    if (ladder.hasMore) {
       if (import.meta.env.DEV) {
         console.log(`VTT track error for ${track.lang}, trying next URL...`)
       }
-      moveToNext()
+      ladder.tryNext()
     } else {
       console.warn(`All VTT track URLs failed for ${track.lang}`)
     }
-  }, [hasMore, moveToNext, track.lang])
+  }, [ladder, track.lang])
 
   if (!currentUrl) {
     return null

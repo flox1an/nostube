@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { PlaybackUrlLadder } from './playback-url-ladder'
-
 describe('PlaybackUrlLadder', () => {
-  const createLadder = (urls = ['https://primary.example/video.mp4', 'https://fallback.example/video.mp4']) =>
+  const createLadder = (
+    urls = ['https://primary.example/video.mp4', 'https://fallback.example/video.mp4']
+  ) =>
     new PlaybackUrlLadder({
       urls,
       blossomServers: [],
       mediaType: 'video',
     })
-
   it('advances after an active URL fails and does not retry it after refresh', () => {
     const ladder = createLadder()
 

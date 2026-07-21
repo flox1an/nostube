@@ -8,15 +8,13 @@ vi.mock('@/hooks', () => ({
 
 vi.mock('@/hooks/useMediaUrls', () => ({
   useMediaUrls: ({ urls }: { urls: string[] }) => ({
-    urls,
+    ladder: {
+      currentUrl: urls[0] ?? null,
+      hasMore: false,
+      tryNext: vi.fn(),
+    },
     isLoading: false,
-    isDiscovering: false,
     error: null,
-    currentIndex: 0,
-    currentUrl: urls[0] ?? null,
-    moveToNext: vi.fn(),
-    reset: vi.fn(),
-    hasMore: false,
   }),
 }))
 

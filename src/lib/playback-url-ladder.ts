@@ -8,9 +8,12 @@ import {
   type UrlMetadata,
   type UrlSource,
 } from './media-url-generator'
+import { filterCompatibleVariants } from './codec-compatibility'
+import type { VideoVariant } from '@/utils/video-event'
 
 export interface PlaybackUrlLadderOptions {
   urls: string[]
+  variants?: VideoVariant[]
   blossomServers: BlossomServer[]
   cachingServers?: CachingServer[]
   sha256?: string
@@ -33,11 +36,13 @@ export class PlaybackUrlLadder {
   private _urls: string[]
   private _metadata: UrlMetadata[]
   private _index = 0
+  private _error: Error | null = null
   private readonly failed = new Set<string>()
+  private readonly listeners = new Set<() => void>()
 
   constructor(options: PlaybackUrlLadderOptions) {
     this.options = options
-    const generated = this.generate(options.urls, options.sha256)
+    const generated = this.generate(this.sourceUrls(options), options.sha256)
     this._urls = generated.urls
     this._metadata = generated.metadata
   }
@@ -62,6 +67,10 @@ export class PlaybackUrlLadder {
     return this.findNextIndex(this._index + 1) !== -1
   }
 
+  get error(): Error | null {
+    return this._error
+  }
+
   get failedUrls(): string[] {
     return [...this.failed]
   }
@@ -70,47 +79,47 @@ export class PlaybackUrlLadder {
     return this.failed.has(url)
   }
 
-  /** Report the active candidate as failed and advance to the next unfailed candidate. */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
   tryNext(): boolean {
     const current = this.currentUrl
     if (current) this.failed.add(current)
     return this.advance()
   }
 
-  /**
-   * Record a failed candidate from the player or HLS loader. A failure advances
-   * only when it belongs to the active URL; segment failures remain available
-   * to the requesting loader through {@link candidatesFor}.
-   */
   onError(url = this.currentUrl ?? undefined, _kind?: PlaybackErrorKind): boolean {
     if (!url) return false
     const isCurrent = url === this.currentUrl
     this.failed.add(url)
-    return isCurrent ? this.advance() : false
+    const advanced = isCurrent ? this.advance() : false
+    this.notify()
+    return advanced
   }
 
-  /** Start again at the first candidate that has not already failed. */
   reset(): void {
     const first = this.findNextIndex(0)
     this._index = first === -1 ? this._urls.length : first
+    this._error = null
+    this.notify()
   }
 
-  /**
-   * Re-apply the shared generation policy when the configuration changes. New
-   * candidates append without disrupting the active candidate or failed set.
-   */
   refresh(options: PlaybackUrlLadderOptions): boolean {
     this.options = options
-    const generated = this.generate(options.urls, options.sha256)
-    return this.appendNew(generated.urls, index => generated.metadata[index])
+    const generated = this.generate(this.sourceUrls(options), options.sha256)
+    const changed = this.appendNew(generated.urls, index => generated.metadata[index])
+    if (changed) this.notify()
+    return changed
   }
 
-  /** Merge asynchronous discovery candidates after the generated candidates. */
   merge(urls: string[], source: UrlSource = 'discovered'): boolean {
-    return this.appendNew(urls, () => ({ source }))
+    const changed = this.appendNew(urls, () => ({ source }))
+    if (changed) this.notify()
+    return changed
   }
 
-  /** Promote known-good candidates while preserving the current URL. */
   promote(urls: string[]): void {
     const current = this.currentUrl
     const promoted = new Set(urls.filter(url => this._urls.includes(url) && !this.failed.has(url)))
@@ -123,37 +132,47 @@ export class PlaybackUrlLadder {
     this._urls = orderedIndexes.map(index => this._urls[index])
     this._metadata = orderedIndexes.map(index => this._metadata[index])
     this._index = current ? this._urls.indexOf(current) : this.findNextIndex(0)
+    this.notify()
   }
 
-  /**
-   * Generate fallback candidates for a manifest or segment through the same
-   * policy and remove candidates already known to have failed.
-   */
   candidatesFor(url: string): string[] {
     const { sha256 } = extractBlossomHash(url)
     const candidates = sha256 ? this.generate([url], sha256).urls : [url]
     return candidates.filter(candidate => !this.failed.has(candidate))
   }
 
+  private sourceUrls(options: PlaybackUrlLadderOptions): string[] {
+    if (!options.variants) return options.urls
+    return filterCompatibleVariants(options.variants).map(variant => variant.url)
+  }
+
   private generate(urls: string[], sha256?: string): GeneratedUrls {
     if (urls.length === 0) return { urls: [], metadata: [] }
 
-    return generateMediaUrls({
-      urls,
-      blossomServers: this.options.blossomServers,
-      cachingServers: this.options.cachingServers,
-      sha256,
-      kind: this.options.kind,
-      mediaType: this.options.mediaType,
-      authorPubkey: this.options.authorPubkey,
-      proxyConfig: this.options.proxyConfig,
-    })
+    try {
+      const generated = generateMediaUrls({
+        urls,
+        blossomServers: this.options.blossomServers,
+        cachingServers: this.options.cachingServers,
+        sha256,
+        kind: this.options.kind,
+        mediaType: this.options.mediaType,
+        authorPubkey: this.options.authorPubkey,
+        proxyConfig: this.options.proxyConfig,
+      })
+      this._error = null
+      return generated
+    } catch (error) {
+      this._error = error instanceof Error ? error : new Error('Media URL generation failed')
+      return { urls: [], metadata: [] }
+    }
   }
 
   private advance(): boolean {
     const next = this.findNextIndex(this._index + 1)
     if (next === -1) return false
     this._index = next
+    this.notify()
     return true
   }
 
@@ -180,5 +199,9 @@ export class PlaybackUrlLadder {
     this._urls = [...this._urls, ...newUrls]
     this._metadata = [...this._metadata, ...newMetadata]
     return true
+  }
+
+  private notify(): void {
+    this.listeners.forEach(listener => listener())
   }
 }

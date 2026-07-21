@@ -1,5 +1,7 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
+import { isTauri } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
@@ -689,6 +691,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const enterFullscreen = useCallback(async () => {
+    if (isTauri()) {
+      try {
+        await getCurrentWindow().setFullscreen(true)
+        setIsFullscreen(true)
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.log('Native fullscreen error:', err)
+        }
+      }
+      return
+    }
+
     const container = containerRef.current
     const video = videoRef.current
     if (!container || document.fullscreenElement) return
@@ -719,6 +733,18 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const exitFullscreen = useCallback(async () => {
+    if (isTauri()) {
+      try {
+        await getCurrentWindow().setFullscreen(false)
+        setIsFullscreen(false)
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.log('Native fullscreen exit error:', err)
+        }
+      }
+      return
+    }
+
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen()
@@ -739,6 +765,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
+    if (isTauri()) {
+      if (await getCurrentWindow().isFullscreen()) {
+        await exitFullscreen()
+      } else {
+        await enterFullscreen()
+      }
+      return
+    }
+
     const videoEl = videoRef.current as HTMLMediaElement & {
       webkitDisplayingFullscreen?: boolean
     }

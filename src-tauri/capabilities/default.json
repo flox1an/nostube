@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "NosTube desktop window capabilities",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:window:allow-set-fullscreen"]
+}

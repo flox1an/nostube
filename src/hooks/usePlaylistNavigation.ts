@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { buildVideoUrl } from '@/utils/video-utils'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { buildDesktopPlayerUrl, buildVideoUrl } from '@/utils/video-utils'
 
 interface PlaylistVideo {
   id: string
@@ -29,6 +29,8 @@ export function usePlaylistNavigation({
   onPlayPosReset,
 }: UsePlaylistNavigationProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isDesktopPlayer = location.pathname.startsWith('/desktop/player/')
 
   // Get current video index in playlist
   const currentPlaylistIndex = useMemo(() => {
@@ -52,24 +54,35 @@ export function usePlaylistNavigation({
   const navigateToPrevious = useCallback(() => {
     if (!playlistParam || !prevPlaylistVideo) return
     onPlayPosReset()
-    navigate(buildVideoUrl(prevPlaylistVideo.link, 'video', { playlist: playlistParam }))
-  }, [playlistParam, prevPlaylistVideo, navigate, onPlayPosReset])
+    const route = isDesktopPlayer
+      ? buildDesktopPlayerUrl(prevPlaylistVideo.link, { playlist: playlistParam })
+      : buildVideoUrl(prevPlaylistVideo.link, 'video', { playlist: playlistParam })
+    navigate(route)
+  }, [playlistParam, prevPlaylistVideo, navigate, onPlayPosReset, isDesktopPlayer])
 
   // Navigate to next video
   const navigateToNext = useCallback(() => {
     if (!playlistParam || !nextPlaylistVideo) return
     onPlayPosReset()
-    navigate(buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam }))
-  }, [playlistParam, nextPlaylistVideo, navigate, onPlayPosReset])
+    const route = isDesktopPlayer
+      ? buildDesktopPlayerUrl(nextPlaylistVideo.link, { playlist: playlistParam })
+      : buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam })
+    navigate(route)
+  }, [playlistParam, nextPlaylistVideo, navigate, onPlayPosReset, isDesktopPlayer])
 
   // Handle video end (auto-advance to next video)
   const handlePlaylistVideoEnd = useCallback(() => {
     if (!playlistParam || shouldLoop || !nextPlaylistVideo) return
     onPlayPosReset()
     navigate(
-      buildVideoUrl(nextPlaylistVideo.link, 'video', { playlist: playlistParam, autoplay: true })
+      isDesktopPlayer
+        ? buildDesktopPlayerUrl(nextPlaylistVideo.link, { playlist: playlistParam, autoplay: true })
+        : buildVideoUrl(nextPlaylistVideo.link, 'video', {
+            playlist: playlistParam,
+            autoplay: true,
+          })
     )
-  }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate, onPlayPosReset])
+  }, [playlistParam, shouldLoop, nextPlaylistVideo, navigate, onPlayPosReset, isDesktopPlayer])
 
   return {
     currentPlaylistIndex,

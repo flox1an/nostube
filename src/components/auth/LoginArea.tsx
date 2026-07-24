@@ -10,6 +10,7 @@ import { AccountSwitcher } from './AccountSwitcher'
 import { cn } from '@/lib/utils'
 import { useActiveAccount } from 'applesauce-react/hooks'
 
+import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 export interface LoginAreaProps {
   className?: string
 }
@@ -18,6 +19,15 @@ export function LoginArea({ className }: LoginAreaProps) {
   const currentUser = useActiveAccount()
   const [loginDialogOpen, setLoginDialogOpen] = useState(false)
   const [signupDialogOpen, setSignupDialogOpen] = useState(false)
+  const desktopWindowCoordinator = useDesktopWindowCoordinator()
+
+  const openLogin = () => {
+    if (desktopWindowCoordinator) {
+      void desktopWindowCoordinator.openAuth()
+      return
+    }
+    setLoginDialogOpen(true)
+  }
 
   const handleLogin = () => {
     setLoginDialogOpen(false)
@@ -27,9 +37,9 @@ export function LoginArea({ className }: LoginAreaProps) {
   return (
     <div className={cn('inline-flex items-center justify-center', className)}>
       {currentUser ? (
-        <AccountSwitcher onAddAccount={() => setLoginDialogOpen(true)} />
+        <AccountSwitcher onAddAccount={openLogin} />
       ) : (
-        <Button onClick={() => setLoginDialogOpen(true)}>
+        <Button onClick={openLogin}>
           <User className="w-4 h-4" />
           <span className="truncate">Log in</span>
         </Button>

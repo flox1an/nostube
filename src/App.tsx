@@ -33,6 +33,9 @@ import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
 import { defaultResizeServer } from '@/constants/servers'
+import { DesktopAccountSync } from '@/desktop/DesktopAccountSync'
+import { DesktopActivityReporter } from '@/desktop/DesktopActivityReporter'
+import { isTauri } from '@tauri-apps/api/core'
 import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
 
@@ -97,6 +100,7 @@ function AccountRestoreInit() {
   useEffect(() => {
     // Only restore once
     if (hasRestored.current || !manager) return
+    if (isTauri()) return
     hasRestored.current = true
 
     restoreAccountsToManager(manager).catch(error => {
@@ -217,6 +221,8 @@ export function App() {
                   <UploadManagerProvider>
                     <WalletProvider>
                       <TooltipProvider>
+                        <DesktopActivityReporter />
+                        <DesktopAccountSync />
                         <AccountRestoreInit />
                         <UserRelaySync />
                         <RelayPoolSync />

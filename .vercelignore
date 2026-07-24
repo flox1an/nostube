@@ -1,0 +1,32 @@
+# Desktop app sources and build output
+src-tauri/
+
+# Documentation and generated reports
+docs/
+graphify-out/
+tag-analysis.txt
+PERFORMANCE_OPTIMIZATIONS.md
+DOCKER.md
+
+# Local dependency and build output directories
+node_modules/
+dist/
+coverage/
+.vite/
+.vitest/
+.turbo/
+.cache/
+.worktrees/
+
+# Local tool and editor state
+.vercel/
+.claude/
+.cursor/
+.vscode/
+.DS_Store
+*.log
+
+# Docker-only assets
+docker/
+Dockerfile
+docker-compose.yml

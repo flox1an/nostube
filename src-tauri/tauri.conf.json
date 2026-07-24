@@ -13,6 +13,9 @@
     "windows": [
       {
         "title": "NosTube",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 16, "y": 28 },
         "width": 1280,
         "height": 800,
         "minWidth": 960,

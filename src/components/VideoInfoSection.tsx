@@ -107,6 +107,29 @@ interface VideoInfoSectionProps {
   userServers?: string[]
   geohash?: string | null
   currentTime?: number // Current video playback position (for timestamped zaps)
+  desktop?: boolean
+  hideTitle?: boolean
+  showComments?: boolean
+}
+
+export function VideoCommentsSection({
+  video,
+  relaysToUse,
+}: Pick<VideoInfoSectionProps, 'video' | 'relaysToUse'>) {
+  if (!video) return null
+
+  return (
+    <div className="pt-4 px-2 md:px-0">
+      <VideoComments
+        videoId={video.id}
+        authorPubkey={video.pubkey}
+        link={video.link}
+        relays={relaysToUse}
+        videoKind={video.kind}
+        identifier={video.identifier}
+      />
+    </div>
+  )
 }
 
 export const VideoInfoSection = React.memo(function VideoInfoSection({
@@ -132,6 +155,9 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   userServers,
   geohash,
   currentTime,
+  showComments = true,
+  desktop = false,
+  hideTitle = false,
 }: VideoInfoSectionProps) {
   const { t, i18n } = useTranslation()
   const { publish, isPending: isDeleting } = useNostrPublish()
@@ -302,32 +328,40 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   return (
     <>
       <div className="flex flex-col gap-4 px-2 md:px-0 min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {video?.title && (
-            <h1 className="text-xl md:text-2xl font-bold line-clamp-2 md:line-clamp-none">
-              {video?.title}
-            </h1>
-          )}
-          {expirationDate && !isExpired && (
-            <Badge
-              variant="secondary"
-              className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
-            >
-              <Clock className="w-3 h-3" />
-              {t('video.expiresIn', {
-                time: formatDistance(expirationDate, new Date()),
-              })}
-            </Badge>
-          )}
-          {isExpired && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {t('video.expired')}
-            </Badge>
-          )}
-        </div>
+        {((!hideTitle && video?.title) || expirationDate) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {!hideTitle && video?.title && (
+              <h1 className="text-xl md:text-2xl font-bold line-clamp-2 md:line-clamp-none">
+                {video?.title}
+              </h1>
+            )}
+            {expirationDate && !isExpired && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
+              >
+                <Clock className="w-3 h-3" />
+                {t('video.expiresIn', {
+                  time: formatDistance(expirationDate, new Date()),
+                })}
+              </Badge>
+            )}
+            {isExpired && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {t('video.expired')}
+              </Badge>
+            )}
+          </div>
+        )}
 
-        <div className="flex flex-col md:flex-row items-start justify-between">
+        <div
+          className={
+            desktop
+              ? 'flex flex-col gap-3'
+              : 'flex flex-col md:flex-row items-start justify-between'
+          }
+        >
           <Link
             to={buildProfileUrlFromPubkey(video?.pubkey || '', relaysToUse)}
             className="flex items-center gap-4"
@@ -359,7 +393,13 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             </div>
           </Link>
 
-          <div className="flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto">
+          <div
+            className={
+              desktop
+                ? 'flex w-full flex-wrap items-center gap-2'
+                : 'flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto'
+            }
+          >
             <VideoReactionButtons
               eventId={video.id}
               authorPubkey={video.pubkey}
@@ -454,6 +494,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
         {video?.description ? (
           <CollapsibleText
+            alwaysExpanded={desktop}
             text={video.description}
             className="bg-muted p-4 rounded-lg text-muted-foreground"
             videoLink={video.link}
@@ -599,18 +640,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
           contentAuthor={video.pubkey}
         />
       )}
-      {video && (
-        <div className="pt-4 px-2 md:px-0">
-          <VideoComments
-            videoId={video.id}
-            authorPubkey={video.pubkey}
-            link={video.link}
-            relays={relaysToUse}
-            videoKind={video.kind}
-            identifier={video.identifier}
-          />
-        </div>
-      )}
+      {showComments && <VideoCommentsSection video={video} relaysToUse={relaysToUse} />}
     </>
   )
 })

@@ -18,6 +18,8 @@ import {
 import { YOUTUBE_REGEX } from '@/utils/origin-utils'
 import { decodeVideoEventIdentifier, type VideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
+import { isTauri } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import {
   useAppContext,
   useCurrentUser,
@@ -46,7 +48,7 @@ import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loade
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { PlaylistSidebar } from '@/components/PlaylistSidebar'
-import { VideoInfoSection } from '@/components/VideoInfoSection'
+import { VideoCommentsSection, VideoInfoSection } from '@/components/VideoInfoSection'
 import { VideoAvailabilityAlert } from '@/components/VideoAvailabilityAlert'
 import { VideoTransformAlert } from '@/components/VideoTransformAlert'
 import { VideoPageLayout } from '@/components/VideoPageLayout'
@@ -82,6 +84,7 @@ function VideoPageContent() {
   const { markVideoAsMissing, clearMissingVideo, isVideoMissing } = useMissingVideos()
   const { cinemaMode: persistedCinemaMode, setCinemaMode } = useCinemaMode()
   const location = useLocation()
+  const isDesktopPlayer = location.pathname.startsWith('/desktop/player/')
   const { user } = useCurrentUser()
   const { addToHistory } = useVideoHistory()
   const isMobile = useIsMobile()
@@ -303,6 +306,11 @@ function VideoPageContent() {
 
     return null
   }, [nevent, videoEvent, hintRelays, config.blossomServers, presetContent.nsfwPubkeys])
+
+  useEffect(() => {
+    if (!isDesktopPlayer || !isTauri()) return
+    void getCurrentWindow().setTitle(video?.title ? `NosTube – ${video.title}` : 'NosTube')
+  }, [isDesktopPlayer, video?.title])
 
   const isLoading = !video && videoEvent === undefined
   const contributedVariantsResult = useContributedVariants(video ?? null)
@@ -618,7 +626,11 @@ function VideoPageContent() {
   // Render video player (placed before early returns to satisfy React hooks rules)
   const videoPlayer = useMemo(() => {
     if (isLoading) {
-      return <Skeleton className="w-full aspect-video" />
+      return isDesktopPlayer ? (
+        <div className="h-dvh w-full bg-black" />
+      ) : (
+        <Skeleton className="w-full aspect-video" />
+      )
     }
 
     const youtubeOrigin = video?.origins.find(o => o.platform === 'youtube')
@@ -629,9 +641,11 @@ function VideoPageContent() {
         <YouTubePlayer
           videoId={youtubeOrigin.externalId}
           className={
-            cinemaMode
-              ? 'w-full max-h-[80dvh] aspect-video'
-              : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
+            isDesktopPlayer
+              ? 'h-dvh w-full'
+              : cinemaMode
+                ? 'w-full max-h-[80dvh] aspect-video'
+                : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
           }
         />
       )
@@ -653,11 +667,13 @@ function VideoPageContent() {
       portraitOnMobile && effectiveAspectRatio
         ? { aspectRatio: String(effectiveAspectRatio) }
         : undefined
-    const playerClassName = portraitOnMobile
-      ? 'max-h-[90dvh] w-auto mx-auto'
-      : cinemaMode
-        ? 'w-full max-h-[80dvh]'
-        : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
+    const playerClassName = isDesktopPlayer
+      ? 'h-dvh w-full'
+      : portraitOnMobile
+        ? 'max-h-[90dvh] w-auto mx-auto'
+        : cinemaMode
+          ? 'w-full max-h-[80dvh]'
+          : `w-full max-h-[80dvh] aspect-video ${isMobile ? '' : 'rounded-lg'}`
 
     if (failedVideoId === video.id) {
       return (
@@ -707,6 +723,7 @@ function VideoPageContent() {
     playlistParam,
     mergedAllVideoVariants,
     cinemaMode,
+    isDesktopPlayer,
     isMobile,
     isPortrait,
     effectiveAspectRatio,
@@ -773,6 +790,12 @@ function VideoPageContent() {
     <>
       <VideoPageLayout
         cinemaMode={cinemaMode}
+        desktop={isDesktopPlayer}
+        playlistLabel={playlistParam ? 'Playlist' : 'Suggestions'}
+        playerTitle={video?.title}
+        comments={
+          <VideoCommentsSection video={videoWithLabels ?? null} relaysToUse={relaysToUse} />
+        }
         videoPlayer={videoPlayer}
         videoInfo={
           <VideoInfoSection
@@ -798,6 +821,9 @@ function VideoPageContent() {
             onContribute={handleContribute}
             geohash={videoGeohash}
             currentTime={currentPlayPos}
+            desktop={isDesktopPlayer}
+            hideTitle={isDesktopPlayer}
+            showComments={!location.pathname.startsWith('/desktop/player/')}
           />
         }
         sidebar={

@@ -40,3 +40,38 @@ The HTTPS local-cache proof first requested the MP4 via `http://127.0.0.1:24242/
 ## Decision impact for #56
 
 The local-cache path is viable: a bundled, host-managed Almond can use app-specific storage, complete the required health check, proxy HTTPS and FIPS HTTP Blossom sources, cache them, and return byte ranges from `127.0.0.1:24242`. The direct FIPS origin is reachable from macOS, but the native `<video>`/WKWebView rendering verdict and the FIPS HLS verdict remain open.
+
+## #58 transport decision
+
+NosTube remains WebView-first. Direct HTTPS and HLS stay in the WebView; HLS is
+never eligible for native fallback. A future session-bound loopback proxy may
+serve only progressive FIPS or Local Blossom Cache media that this matrix
+classifies as failing in WKWebView. It must authorize one normalized URL and
+`GET`, reject redirects and multi-range requests, omit cookies and credentials,
+and forward only playback response headers.
+
+No source is classified for that proxy yet. Until this matrix records a
+reproducible FIPS or Local Cache failure, the media resolver must keep using
+direct WebView URLs and must not activate a native transport.
+
+## #67 matrix — FIPS HLS fixture
+
+| Source          | URL form                                                                                                                                            | HTTP evidence                                                                                                                                          | WKWebView playback / seek     | Classification                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | --------------------------------------------------------------------------------------- |
+| FIPS HLS master | `http://npub1080hnas4cuhp7cwty4cayhfftvgtadueem9kwygu88mjy7ksgpgsswkgud.fips/3751b84f27234fc8ce3227d132b422f7e00f4a50c6cdc322080fed89a302d7dd.m3u8` | `200`, `application/vnd.apple.mpegurl`, `Access-Control-Allow-Origin: *`; both declared variants return `200` with the same MIME type and CORS policy. | Pending real WebKit exercise. | No fallback classification: HTTP reachability and CORS alone do not establish playback. |
+
+Temporary validation event published to `wss://relay.damus.io`:
+`nevent1qvzqqqy9hvpzqupf9w0zfpqc4en2nzw7uk2u04nhcg8fzqldz6zvztp2gmlracz5qy28wumn8ghj7un9d3shjtnyv9kh2uewd9hsqgpjfu7ntkhprflq2z3kl50xx9z7nfhvtjdvdqyntpufs7pfjymlzguslcfv`.
+
+Validation platform for this fixture: macOS 26.5.2 (25F84), Tauri 2.11.0,
+and bundled WebKit 21624. The pending playback/seek row must capture the
+WKWebView request and console traces on this same platform.
+
+Packaged WKWebView result: playback failed before start with NosTube's terminal
+message, “The video could not be loaded from any available source. Check your
+network connection or try again later.” The equivalent playlist is reported to
+work through a direct HTTPS connection. No Web Inspector request or console
+trace was captured with this result, so the concrete cause remains
+**unclassified**; it must not be inferred as FIPS, CORS, mixed-content, or
+codec failure. Because this is HLS, #58 excludes it from native fallback even
+after classification.

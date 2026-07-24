@@ -22,6 +22,7 @@ import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
+import { useDesktopPlayerControls } from '@/desktop/DesktopPlayerControlsContext'
 import type { VideoChapter } from '@/lib/video-chapters'
 // import { BulletComments } from './BulletComments' // disabled for now
 
@@ -123,6 +124,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
+  const desktopPlayerControls = useDesktopPlayerControls()
   const baseMime = mime.split(';')[0]?.trim().toLowerCase() ?? ''
   const isAudioOnly = mediaType === 'audio' || baseMime.startsWith('audio/')
   const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
@@ -950,7 +952,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         case 't':
         case 'T':
           e.preventDefault()
-          onToggleCinemaMode?.()
+          if (desktopPlayerControls) {
+            desktopPlayerControls.toggleInspector()
+          } else {
+            onToggleCinemaMode?.()
+          }
           break
         default: {
           const digit = parseInt(e.key, 10)
@@ -973,6 +979,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     toggleFullscreen,
     togglePip,
     toggleCaptions,
+    desktopPlayerControls,
     onToggleCinemaMode,
   ])
 
@@ -1202,8 +1209,10 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         onSubtitleChange={handleSubtitleChange}
         isPipSupported={showPipButton}
         onTogglePip={togglePip}
-        cinemaMode={effectiveCinemaMode}
-        onToggleCinemaMode={isAudioOnly ? undefined : onToggleCinemaMode}
+        cinemaMode={desktopPlayerControls ? false : effectiveCinemaMode}
+        onToggleCinemaMode={desktopPlayerControls || isAudioOnly ? undefined : onToggleCinemaMode}
+        isSidebarOpen={desktopPlayerControls?.isInspectorOpen}
+        onToggleSidebar={desktopPlayerControls?.toggleInspector}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
         eventId={eventId}

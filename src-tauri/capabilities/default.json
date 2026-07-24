@@ -2,6 +2,11 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "NosTube desktop window capabilities",
-  "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-fullscreen"]
+  "windows": ["main", "auth", "player", "player:*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-start-dragging"
+  ]
 }

@@ -7,10 +7,13 @@ import { MiniSidebar } from './MiniSidebar'
 import { MobileBottomNav } from './MobileBottomNav'
 import { useAppContext } from '@/hooks/useAppContext'
 import { cn } from '@/lib/utils'
+import { isTauri } from '@tauri-apps/api/core'
+import { DesktopMainHeader } from '@/desktop/DesktopMainHeader'
 
 export function MainLayout() {
   const { isSidebarOpen, toggleSidebar } = useAppContext()
   const location = useLocation()
+  const isDesktop = isTauri()
 
   // Hide sidebar and mobile bottom nav on individual video pages to save space
   // Note: /shorts feed page should show sidebar like homepage, only /short/:id hides it
@@ -32,13 +35,19 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      {isDesktop ? <DesktopMainHeader /> : <Header />}
       <OfflineBanner />
       <div className={cn('flex flex-1 relative w-full lg:mb-0', !isVideoPage && 'mb-16')}>
         {/* Desktop Sidebar - Inline toggle between Mini and Full (hidden on video pages) */}
         {!isVideoPage && (
           <div className="hidden lg:block shrink-0">
-            {isSidebarOpen ? <Sidebar mode="inline" /> : <MiniSidebar />}
+            {isDesktop ? (
+              <MiniSidebar />
+            ) : isSidebarOpen ? (
+              <Sidebar mode="inline" />
+            ) : (
+              <MiniSidebar />
+            )}
           </div>
         )}
 
@@ -68,7 +77,7 @@ export function MainLayout() {
           made with 💜 and vibes
         </a>
       </footer>
-      {!isVideoPage && <MobileBottomNav />}
+      {!isDesktop && !isVideoPage && <MobileBottomNav />}
     </div>
   )
 }

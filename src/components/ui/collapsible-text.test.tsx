@@ -157,6 +157,15 @@ describe('CollapsibleText', () => {
       const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
       expect(textElement).toHaveClass('line-clamp-5') // Uses default maxLines, not prop
     })
+
+    it('renders the complete description without a line clamp when always expanded', () => {
+      const { container } = renderWithRouter(
+        <CollapsibleText text="A complete desktop description" alwaysExpanded />
+      )
+
+      const textElement = container.querySelector('[class*="whitespace-pre-wrap"]')
+      expect(textElement).not.toHaveClass('line-clamp-5')
+    })
   })
 
   describe('Edge Cases', () => {

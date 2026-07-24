@@ -1,3 +1,5 @@
+import { DesktopVideoLink } from '@/desktop/DesktopVideoLink'
+import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 import { Link } from 'react-router-dom'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
@@ -6,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useImageCascade } from '@/hooks/useImageCascade'
-import { buildVideoUrl } from '@/utils/video-utils'
+import { buildDesktopPlayerUrl, buildVideoUrl } from '@/utils/video-utils'
 import { useProfile } from '@/hooks'
 
 interface PlaylistVideoItem {
@@ -22,13 +24,15 @@ interface PlaylistVideoItemProps {
   item: PlaylistVideoItem
   isActive: boolean
   href: string
+  desktopRoute: string
 }
 
 // Component for rendering individual playlist video item with author info
-const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => {
+const PlaylistVideoItem = ({ item, isActive, href, desktopRoute }: PlaylistVideoItemProps) => {
   const metadata = useProfile(item.pubkey ? { pubkey: item.pubkey } : undefined)
   const authorName = metadata?.display_name ?? metadata?.name ?? item.pubkey?.slice(0, 8) ?? ''
   const authorPicture = metadata?.picture
+  const desktopWindowCoordinator = useDesktopWindowCoordinator()
 
   const cascade = useImageCascade({
     src: item.images?.[0],
@@ -37,8 +41,10 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
   })
 
   return (
-    <Link
+    <DesktopVideoLink
       to={href}
+      desktopCoordinator={desktopWindowCoordinator}
+      desktopRoute={desktopRoute}
       className={cn(
         'flex gap-3 rounded-lg border border-transparent p-2 transition hover:border-border hover:bg-muted',
         isActive && 'border-primary'
@@ -71,7 +77,7 @@ const PlaylistVideoItem = ({ item, isActive, href }: PlaylistVideoItemProps) => 
         </div>
         {isActive && <Badge variant="default">Now playing</Badge>}
       </div>
-    </Link>
+    </DesktopVideoLink>
   )
 }
 
@@ -149,16 +155,24 @@ export function PlaylistSidebar({
           View all
         </Link>
       </div>
-
-      <div className="">
+      <div>
         {videoEvents.length === 0 && !isLoadingVideos ? (
           <div className="text-sm text-muted-foreground">No videos in this playlist yet.</div>
         ) : (
           videoEvents.map(item => {
             const isActive = currentVideoId === item.id
             const href = buildVideoUrl(item.link, 'video', { playlist: playlistParam })
+            const desktopRoute = buildDesktopPlayerUrl(item.link, { playlist: playlistParam })
 
-            return <PlaylistVideoItem key={item.id} item={item} isActive={isActive} href={href} />
+            return (
+              <PlaylistVideoItem
+                key={item.id}
+                item={item}
+                isActive={isActive}
+                href={href}
+                desktopRoute={desktopRoute}
+              />
+            )
           })
         )}
 

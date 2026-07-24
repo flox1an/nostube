@@ -75,7 +75,7 @@ export function useSearchRecommendations(params: {
         }
       })
       .catch(() => {
-        if (!cancelled && !presetUnavailable) setVideos(null)
+        if (!cancelled) setVideos(null)
       })
       .finally(() => {
         clearTimeout(timeoutId)

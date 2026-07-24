@@ -1,5 +1,6 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { Link } from 'react-router-dom'
+import { DesktopVideoLink } from '@/desktop/DesktopVideoLink'
+import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 import { useTranslation } from 'react-i18next'
 import {
   processEvent,
@@ -8,7 +9,7 @@ import {
   isAudioVideo,
   isYouTubeVideo,
 } from '@/utils/video-event'
-import { buildVideoPath } from '@/utils/video-utils'
+import { buildDesktopPlayerUrl, buildVideoPath } from '@/utils/video-utils'
 import { getKindsForType, type VideoType } from '@/lib/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,6 +57,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
   const isAudio = video.mediaType === 'audio'
+  const desktopWindowCoordinator = useDesktopWindowCoordinator()
 
   const cascade = useImageCascade({
     src: video.images?.[0],
@@ -83,9 +85,15 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
   // Link to shorts page for short videos, video page for regular videos
   const linkTo = buildVideoPath(video.link, video.type === 'shorts' ? 'shorts' : 'video')
+  const desktopPlayerRoute = video.type === 'shorts' ? undefined : buildDesktopPlayerUrl(video.link)
 
   return (
-    <Link to={linkTo} className="group">
+    <DesktopVideoLink
+      to={linkTo}
+      className="group"
+      desktopCoordinator={desktopWindowCoordinator}
+      desktopRoute={desktopPlayerRoute}
+    >
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
         <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0">
           {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
@@ -137,7 +145,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
           </div>
         </div>
       </div>
-    </Link>
+    </DesktopVideoLink>
   )
 })
 
@@ -151,10 +159,10 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
   const authorPicture = metadata?.picture
-  // thumbnailVariants[0].url is the primary source from the search API; images[0] is the fallback
   const primaryImage = video.thumbnailVariants?.[0]?.url ?? video.images?.[0]
   const videoUrl = video.urls?.[0]
   const isAudio = video.mediaType === 'audio'
+  const desktopWindowCoordinator = useDesktopWindowCoordinator()
 
   const cascade = useImageCascade({
     src: primaryImage,
@@ -181,9 +189,15 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
 
   const publishDate = video.published_at ?? video.created_at
   const linkTo = buildVideoPath(video.link, video.type === 'shorts' ? 'shorts' : 'video')
+  const desktopPlayerRoute = video.type === 'shorts' ? undefined : buildDesktopPlayerUrl(video.link)
 
   return (
-    <Link to={linkTo} className="group">
+    <DesktopVideoLink
+      to={linkTo}
+      className="group"
+      desktopCoordinator={desktopWindowCoordinator}
+      desktopRoute={desktopPlayerRoute}
+    >
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
         <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
           {!thumbnailLoaded &&
@@ -234,7 +248,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
           </div>
         </div>
       </div>
-    </Link>
+    </DesktopVideoLink>
   )
 })
 

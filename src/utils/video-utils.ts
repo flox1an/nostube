@@ -56,6 +56,13 @@ export function buildVideoUrl(
 }
 
 /**
+ * Builds a route that keeps playback inside the dedicated desktop player window.
+ */
+export function buildDesktopPlayerUrl(link: string, options?: VideoUrlOptions): string {
+  return buildVideoUrl(link, 'video', options).replace(`/v/${link}`, `/desktop/player/${link}`)
+}
+
+/**
  * Build video URL as an object for react-router Link/navigate
  * Returns { pathname, search } for use with react-router
  */

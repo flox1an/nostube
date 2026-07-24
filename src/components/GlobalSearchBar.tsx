@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, X, User, Loader2, Clock } from 'lucide-react'
@@ -11,18 +11,37 @@ import { cn } from '@/lib/utils'
 import { getSearchHistory, addSearchHistory, removeSearchHistory } from '@/lib/search-history'
 
 interface GlobalSearchBarProps {
+  className?: string
+  clearButtonClassName?: string
+  containerClassName?: string
+  iconClassName?: string
+  inputClassName?: string
   isMobileExpanded?: boolean
   onSearch?: () => void
+  preserveSearchFilters?: boolean
+  syncWithSearchParam?: boolean
 }
 
-export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarProps) {
+export function GlobalSearchBar({
+  className,
+  clearButtonClassName,
+  containerClassName,
+  iconClassName,
+  inputClassName,
+  isMobileExpanded,
+  onSearch,
+  preserveSearchFilters = false,
+  syncWithSearchParam = false,
+}: GlobalSearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [history, setHistory] = useState<string[]>(() => getSearchHistory())
   const navigate = useNavigate()
+  const location = useLocation()
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const searchParam = new URLSearchParams(location.search).get('q') ?? ''
 
   // Focus input on mount if expanded on mobile
   useEffect(() => {
@@ -30,6 +49,13 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
       inputRef.current?.focus()
     }
   }, [isMobileExpanded])
+
+  useEffect(() => {
+    if (!syncWithSearchParam) return
+    if (location.pathname === '/search') {
+      setSearchQuery(searchParam)
+    }
+  }, [location.pathname, searchParam, syncWithSearchParam])
 
   const { profiles, loading } = useSearchVideoAuthors({
     query: searchQuery,
@@ -76,13 +102,28 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
     }
   }, [])
 
+  const navigateToVideoSearch = (query: string) => {
+    if (!preserveSearchFilters || location.pathname !== '/search') {
+      navigate(`/search?q=${encodeURIComponent(query)}`)
+      return
+    }
+
+    const nextParams = new URLSearchParams(location.search)
+    nextParams.set('q', query)
+    navigate(`/search?${nextParams.toString()}`)
+  }
+
+  const completeSearch = () => {
+    setIsOpen(false)
+    onSearch?.()
+  }
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const query = trimmedQuery
     if (!query) return
 
-    setIsOpen(false)
-    onSearch?.()
+    completeSearch()
 
     // Check for npub/nprofile — navigate to profile page (not saved to history)
     if (query.startsWith('npub1') || query.startsWith('nprofile1')) {
@@ -106,20 +147,18 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
 
     // Plain text video search — save to history
     setHistory(addSearchHistory(query))
-    navigate(`/search?q=${encodeURIComponent(query)}`)
+    navigateToVideoSearch(query)
   }
 
   const handleProfileClick = (pubkey: string) => {
-    setIsOpen(false)
-    onSearch?.()
+    completeSearch()
     setSearchQuery('')
     navigate(buildProfileUrlFromPubkey(pubkey))
   }
 
   const handleHistoryClick = (query: string) => {
-    setIsOpen(false)
-    onSearch?.()
-    navigate(`/search?q=${encodeURIComponent(query)}`)
+    completeSearch()
+    navigateToVideoSearch(query)
   }
 
   const handleHistoryDelete = (e: React.MouseEvent, query: string) => {
@@ -191,13 +230,15 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
       onSubmit={handleSubmit}
       className={cn(
         'flex gap-2 items-center justify-center w-full',
-        !isMobileExpanded && 'hidden md:flex'
+        !isMobileExpanded && 'hidden md:flex',
+        className
       )}
     >
       <div
         className={cn(
           'relative w-full',
-          !isMobileExpanded && 'max-w-[20em] lg:max-w-[28em] lg:w-[28em]'
+          !isMobileExpanded && 'max-w-[20em] lg:max-w-[28em] lg:w-[28em]',
+          containerClassName
         )}
       >
         <Input
@@ -210,16 +251,18 @@ export function GlobalSearchBar({ isMobileExpanded, onSearch }: GlobalSearchBarP
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className="pl-10"
+          className={cn('pl-10', inputClassName)}
           placeholder="Search videos and creators..."
         />
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Search
+          className={cn('absolute left-3 top-3 h-4 w-4 text-muted-foreground', iconClassName)}
+        />
         {searchQuery && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute right-2 top-2 h-6 w-6 p-0"
+            className={cn('absolute right-2 top-2 h-6 w-6 p-0', clearButtonClassName)}
             onClick={clearSearch}
           >
             <X className="h-4 w-4" />

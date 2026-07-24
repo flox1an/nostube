@@ -37,6 +37,12 @@ const LikedVideosPage = lazy(() =>
   import('./pages/LikedVideosPage').then(m => ({ default: m.LikedVideosPage }))
 )
 const VideoPage = lazy(() => import('./pages/VideoPage').then(m => ({ default: m.VideoPage })))
+const DesktopPlayerPage = lazy(() =>
+  import('./pages/DesktopPlayerPage').then(m => ({ default: m.DesktopPlayerPage }))
+)
+const DesktopAuthPage = lazy(() =>
+  import('./pages/DesktopAuthPage').then(m => ({ default: m.DesktopAuthPage }))
+)
 const AuthorPage = lazy(() => import('./pages/AuthorPage').then(m => ({ default: m.AuthorPage })))
 const HashtagPage = lazy(() =>
   import('./pages/HashtagPage').then(m => ({ default: m.HashtagPage }))
@@ -396,6 +402,22 @@ export function AppRouter() {
             }
           />
         </Route>
+        <Route
+          path="/desktop/player/:nevent"
+          element={
+            <Suspense fallback={<VideoPageLoader />}>
+              <DesktopPlayerPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/desktop/auth"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <DesktopAuthPage />
+            </Suspense>
+          }
+        />
         <Route
           path="/short/:nevent"
           element={

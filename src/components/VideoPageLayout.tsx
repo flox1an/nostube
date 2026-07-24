@@ -5,12 +5,17 @@ import { Button } from '@/components/ui/button'
 import { PanelRight } from 'lucide-react'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useTranslation } from 'react-i18next'
+import { DesktopPlayerShell } from '@/desktop/DesktopPlayerShell'
 
 interface VideoPageLayoutProps {
   cinemaMode: boolean
   videoPlayer: ReactNode
   videoInfo: ReactNode
   sidebar: ReactNode
+  playerTitle?: string
+  comments?: ReactNode
+  playlistLabel?: 'Playlist' | 'Suggestions'
+  desktop?: boolean
 }
 
 /**
@@ -31,9 +36,26 @@ export function VideoPageLayout({
   videoPlayer,
   videoInfo,
   sidebar,
+  comments,
+  playerTitle,
+  playlistLabel = 'Suggestions',
+  desktop = false,
 }: VideoPageLayoutProps) {
   const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  if (desktop) {
+    return (
+      <DesktopPlayerShell
+        comments={comments ?? videoInfo}
+        details={videoInfo}
+        player={videoPlayer}
+        playlist={sidebar}
+        playerTitle={playerTitle}
+        playlistLabel={playlistLabel}
+      />
+    )
+  }
 
   return (
     <div className={cn('pb-8', !cinemaMode && 'max-w-560 mx-auto sm:py-2 md:px-4')}>

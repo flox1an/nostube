@@ -1,6 +1,19 @@
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoPlayer } from './VideoPlayer'
+
+const nativeWindow = vi.hoisted(() => ({
+  isFullscreen: vi.fn(),
+  setFullscreen: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/api/core', () => ({
+  isTauri: () => true,
+}))
+
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: () => nativeWindow,
+}))
 
 vi.mock('@/hooks', () => ({
   useIsMobile: () => false,
@@ -27,7 +40,9 @@ vi.mock('../PlayPauseOverlay', () => ({
 }))
 
 vi.mock('./ControlBar', () => ({
-  ControlBar: () => null,
+  ControlBar: ({ onToggleFullscreen }: { onToggleFullscreen: () => void }) => (
+    <button onClick={onToggleFullscreen}>Fullscreen</button>
+  ),
 }))
 
 vi.mock('./LoadingSpinner', () => ({
@@ -184,5 +199,45 @@ describe('VideoPlayer source failures', () => {
     fireEvent.error(container.querySelector('video')!)
 
     expect(onAllSourcesFailed).toHaveBeenCalledWith(urls)
+  })
+})
+
+describe('VideoPlayer Tauri fullscreen', () => {
+  beforeEach(() => {
+    nativeWindow.isFullscreen.mockResolvedValue(false)
+    nativeWindow.setFullscreen.mockResolvedValue(undefined)
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+    nativeWindow.isFullscreen.mockReset()
+    nativeWindow.setFullscreen.mockReset()
+  })
+
+  it('uses native window fullscreen for the F shortcut', async () => {
+    render(
+      <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />
+    )
+
+    fireEvent.keyDown(window, { key: 'f' })
+
+    await waitFor(() => {
+      expect(nativeWindow.setFullscreen).toHaveBeenCalledWith(true)
+    })
+  })
+
+  it('uses native window fullscreen for the fullscreen control', async () => {
+    render(
+      <VideoPlayer urls={['https://example.com/video.mp4']} textTracks={[]} mime="video/mp4" />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }))
+
+    await waitFor(() => {
+      expect(nativeWindow.setFullscreen).toHaveBeenCalledWith(true)
+    })
   })
 })

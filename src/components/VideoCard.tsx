@@ -20,6 +20,8 @@ import audioFallback from '@/assets/audio-fallback.webp'
 import { useTranslation } from 'react-i18next'
 import { getDateLocale } from '@/lib/date-locale'
 import { formatDate } from 'date-fns'
+import { DesktopVideoLink } from '@/desktop/DesktopVideoLink'
+import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -46,6 +48,7 @@ export const VideoCard = React.memo(function VideoCard({
   const eventStore = useEventStore()
   const { config } = useAppContext()
   const { setVideos } = useShortsFeedStore()
+  const desktopWindowCoordinator = useDesktopWindowCoordinator()
 
   // Map i18n language codes to date-fns locales
   const dateLocale = getDateLocale(i18n.language)
@@ -114,6 +117,11 @@ export const VideoCard = React.memo(function VideoCard({
     videoIndex,
   ])
 
+  const desktopPlayerRoute =
+    videoType === 'video'
+      ? `/desktop/player/${video.link}${playlistParam ? `?playlist=${encodeURIComponent(playlistParam)}` : ''}`
+      : undefined
+
   const handleThumbnailLoad = () => {
     setThumbnailLoaded(true)
     cascade.onLoad()
@@ -138,7 +146,12 @@ export const VideoCard = React.memo(function VideoCard({
       style={{ contain: 'layout style paint' }}
     >
       <div>
-        <Link to={to} onClick={handleShortsClick}>
+        <DesktopVideoLink
+          to={to}
+          onClick={handleShortsClick}
+          desktopCoordinator={desktopWindowCoordinator}
+          desktopRoute={desktopPlayerRoute}
+        >
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
             className={cn(
@@ -208,7 +221,7 @@ export const VideoCard = React.memo(function VideoCard({
               </div>
             )}
           </div>
-        </Link>
+        </DesktopVideoLink>
         <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
@@ -222,9 +235,13 @@ export const VideoCard = React.memo(function VideoCard({
               </Link>
             )}
             <div className="min-w-0 flex-1">
-              <Link to={to}>
+              <DesktopVideoLink
+                to={to}
+                desktopCoordinator={desktopWindowCoordinator}
+                desktopRoute={desktopPlayerRoute}
+              >
                 <h3 className="font-medium line-clamp-2 break-words">{video.title}</h3>
-              </Link>
+              </DesktopVideoLink>
               <div className="flex items-center text-xs">
                 {!hideAuthor && (
                   <>

@@ -60,3 +60,17 @@ Follow Conventional Commits (`feat:`, `fix:`, `chore:`) with ≤72 char subjects
 ## Security & Configuration Tips
 
 Never log secrets; debug output is already gated by `import.meta.env.DEV`. Inject relay/storage endpoints via Vite env vars or Applesauce config rather than hardcoding them in shared modules. Use helpers such as `lib/blossom-upload.ts` for chunking and signing, update relay allowlists under `src/nostr/` when infra changes, and ensure mirroring honors existing hash + size metadata before uploading.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in GitHub Issues for `flox1an/nostube`, managed with `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the canonical five-label vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Uses a single-context layout: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

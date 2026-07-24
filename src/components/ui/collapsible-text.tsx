@@ -7,6 +7,7 @@ import { RichTextContent } from '@/components/RichTextContent'
 interface CollapsibleTextProps {
   text: string
   maxLines?: number
+  alwaysExpanded?: boolean
   className?: string
   /**
    * Optional video link for timestamp linking (e.g., "nevent1...")
@@ -20,19 +21,24 @@ export function CollapsibleText({
   maxLines = 5,
   className,
   videoLink,
+  alwaysExpanded = false,
 }: CollapsibleTextProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showButton, setShowButton] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (alwaysExpanded) {
+      setShowButton(false)
+      return
+    }
     if (textRef.current) {
       const lineHeight = parseInt(getComputedStyle(textRef.current).lineHeight)
       const height = textRef.current.scrollHeight
       const lines = height / lineHeight
       setShowButton(lines > maxLines)
     }
-  }, [text, maxLines])
+  }, [alwaysExpanded, text, maxLines])
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Don't toggle if clicking on a link
@@ -50,7 +56,7 @@ export function CollapsibleText({
         ref={textRef}
         className={cn(
           'whitespace-pre-wrap break-words break-all',
-          !isExpanded && 'line-clamp-5',
+          !alwaysExpanded && !isExpanded && 'line-clamp-5',
           showButton && 'cursor-pointer'
         )}
         onClick={handleClick}

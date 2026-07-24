@@ -4,6 +4,7 @@ import {
   Subtitles,
   Maximize,
   Minimize,
+  PanelRight,
   MoveHorizontal,
   SkipForward,
 } from 'lucide-react'
@@ -66,6 +67,8 @@ interface ControlBarProps {
   // Theater mode
   cinemaMode: boolean
   onToggleCinemaMode?: () => void
+  isSidebarOpen?: boolean
+  onToggleSidebar?: () => void
 
   // Fullscreen
   isFullscreen: boolean
@@ -118,6 +121,8 @@ export const ControlBar = memo(function ControlBar({
   onTogglePip,
   cinemaMode,
   onToggleCinemaMode,
+  isSidebarOpen,
+  onToggleSidebar,
   isFullscreen,
   onToggleFullscreen,
   eventId,
@@ -231,15 +236,26 @@ export const ControlBar = memo(function ControlBar({
             onToggleLoop={onToggleLoop}
           />
 
-          {/* Theater mode button - hidden in fullscreen */}
-          {!isMobile && !isFullscreen && onToggleCinemaMode && (
+          {!isMobile && !isFullscreen && onToggleSidebar ? (
             <ControlButton
-              onClick={onToggleCinemaMode}
-              icon={<MoveHorizontal className="w-5 h-5" />}
-              label={cinemaMode ? 'Exit theater mode' : 'Theater mode'}
+              onClick={onToggleSidebar}
+              icon={<PanelRight className="w-5 h-5" />}
+              label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
               shortcut="T"
-              active={cinemaMode}
+              active={isSidebarOpen}
             />
+          ) : (
+            !isMobile &&
+            !isFullscreen &&
+            onToggleCinemaMode && (
+              <ControlButton
+                onClick={onToggleCinemaMode}
+                icon={<MoveHorizontal className="w-5 h-5" />}
+                label={cinemaMode ? 'Exit theater mode' : 'Theater mode'}
+                shortcut="T"
+                active={cinemaMode}
+              />
+            )
           )}
 
           {/* Fullscreen button */}

@@ -47,3 +47,19 @@ One level in the three-tier encoding pipeline: (1) local browser transcoding via
 ## Trust Score
 
 A reputation signal derived from a user's Nostr social graph. The Trust Score gates NSFW content visibility: users with low or no trust score cannot override the NSFW filter.
+
+## Desktop Host
+
+A Tauri application that packages NosTube's existing web interface in a system WebView and exposes only capability-scoped native operations to it. It is the security boundary for local services, storage, and signer access; the web interface remains unprivileged.
+
+## FIPS Network
+
+The Free Internetworking Peering System: an externally installed, self-organizing encrypted mesh. In the first Desktop Host scope it is an optional prerequisite; when available, NosTube may reach FIPS-resolved IPv6 services as ordinary HTTP origins from the WebView where the media API permits it.
+
+## Local Blossom Cache
+
+A Host-managed Blossom caching server on `127.0.0.1:24242`, started, health-checked, and stopped by the Desktop Host and selected through the existing cache-server configuration. It serves content-addressed Blobs locally, uses `xs` source hints and `as` author hints to retrieve a missing Blob, and is the authoritative local storage boundary for cached video data. Its interoperability contract is the [Local Blossom Cache specification](https://github.com/hzrd149/blossom/blob/master/implementations/local-blossom-cache.md).
+
+## Almond Sidecar
+
+The bundled Almond process that implements the Local Blossom Cache for a Desktop Host. It is distributed inside the desktop installer, bound to `127.0.0.1:24242`, and lifecycle-managed by the Desktop Host; it is not a separately installed application.

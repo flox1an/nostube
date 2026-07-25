@@ -54,11 +54,10 @@ function generatePng(width: number, height: number, rgbaString: string) {
     const MAX_STORE_LENGTH = 65535
     let storeBuffer = ''
     let remaining
-    let blockType
 
     for (let i = 0; i < data.length; i += MAX_STORE_LENGTH) {
       remaining = data.length - i
-      blockType = ''
+      let blockType
 
       if (remaining <= MAX_STORE_LENGTH) {
         blockType = String.fromCharCode(0x01)

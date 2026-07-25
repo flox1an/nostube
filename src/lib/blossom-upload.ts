@@ -408,10 +408,13 @@ async function calculateSHA256Streaming(blob: Blob, signal?: AbortSignal): Promi
   } catch (error) {
     console.error(`[SHA256] Error calculating hash:`, error)
     if (error instanceof Error && error.name === 'NotReadableError') {
-      throw new Error(
-        `Cannot read file for hash calculation. ` +
-          `File may be corrupted or too large. ` +
-          `Original error: ${error.message}`
+      throw Object.assign(
+        new Error(
+          `Cannot read file for hash calculation. ` +
+            `File may be corrupted or too large. ` +
+            `Original error: ${error.message}`
+        ),
+        { cause: error }
       )
     }
     throw error
@@ -738,10 +741,13 @@ export async function uploadFileChunked(
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     console.debug(`BUD-10 PATCH chunked upload failed for ${server}:`, error)
     // NO PUT fallback - BUD-10 requires PATCH-only uploads
-    throw new Error(
-      `BUD-10 PATCH chunked upload failed for ${server}. ` +
-        `Server must support PATCH /upload according to BUD-10 specification. ` +
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    throw Object.assign(
+      new Error(
+        `BUD-10 PATCH chunked upload failed for ${server}. ` +
+          `Server must support PATCH /upload according to BUD-10 specification. ` +
+          `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      ),
+      { cause: error }
     )
   }
 }

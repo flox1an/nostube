@@ -30,6 +30,9 @@
     "active": true,
     "targets": "app",
     "externalBin": ["binaries/almond"],
-    "icon": ["../public/og-image.png"]
+    "icon": ["../public/og-image.png"],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

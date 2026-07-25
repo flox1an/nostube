@@ -4,6 +4,18 @@ A Nostr-based video sharing platform built with React 18.x, TailwindCSS 3.x, Vit
 
 Support for both landscape and portrait videos (shorts in 9:16 format).
 
+## Install Desktop App
+
+Download the latest desktop app from
+[GitHub Releases](https://github.com/flox1an/nostube/releases). Release builds
+include macOS DMGs for Apple Silicon and Intel Macs, a Windows x64 installer,
+and Linux x64 AppImage and `.deb` packages.
+
+The macOS app is not signed with an Apple Developer ID. On first launch, macOS
+may warn that it cannot verify the developer or may block opening the app until
+you explicitly allow it from Finder or System Settings. The exact prompt depends
+on your macOS version.
+
 ## AI Agent Skill
 
 Install the NosTube-compatible Nostr video publishing skill:

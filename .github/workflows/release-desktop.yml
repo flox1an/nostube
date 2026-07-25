@@ -1,0 +1,102 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            platform: macos-latest
+            rust-target: aarch64-apple-darwin
+            bundles: dmg
+            sidecar-ext: ''
+          - name: macOS Intel
+            platform: macos-13
+            rust-target: x86_64-apple-darwin
+            bundles: dmg
+            sidecar-ext: ''
+          - name: Windows x64
+            platform: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            bundles: nsis
+            sidecar-ext: '.exe'
+          - name: Linux x64
+            platform: ubuntu-22.04
+            rust-target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb
+            sidecar-ext: ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Almond sidecar
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/almond
+          path: almond
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Cache Rust builds
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+            almond
+
+      - name: Clean install dependencies
+        shell: bash
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Prepare Almond sidecar
+        shell: bash
+        run: |
+          cargo build --manifest-path almond/Cargo.toml --release --target "${{ matrix.rust-target }}"
+          mkdir -p src-tauri/binaries
+          cp "almond/target/${{ matrix.rust-target }}/release/almond${{ matrix.sidecar-ext }}" \
+            "src-tauri/binaries/almond-${{ matrix.rust-target }}${{ matrix.sidecar-ext }}"
+
+      - name: Build and publish release artifacts
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'NosTube ${{ github.ref_name }}'
+          releaseBody: 'Desktop installers for NosTube ${{ github.ref_name }}.'
+          releaseDraft: false
+          prerelease: false
+          args: --target ${{ matrix.rust-target }} --bundles ${{ matrix.bundles }}

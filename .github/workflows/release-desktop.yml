@@ -88,6 +88,7 @@ jobs:
           mkdir -p src-tauri/binaries
           cp "almond/target/${{ matrix.rust-target }}/release/almond${{ matrix.sidecar-ext }}" \
             "src-tauri/binaries/almond-${{ matrix.rust-target }}${{ matrix.sidecar-ext }}"
+          rm -rf almond
 
       - name: Build and publish release artifacts
         uses: tauri-apps/tauri-action@v0

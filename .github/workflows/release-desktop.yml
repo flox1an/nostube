@@ -23,7 +23,7 @@ jobs:
             bundles: dmg
             sidecar-ext: ''
           - name: macOS Intel
-            platform: macos-13
+            platform: macos-15-intel
             rust-target: x86_64-apple-darwin
             bundles: dmg
             sidecar-ext: ''
@@ -40,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Checkout Almond sidecar
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ github.repository_owner }}/almond
           path: almond
@@ -59,7 +59,7 @@ jobs:
             patchelf
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -73,7 +73,6 @@ jobs:
         with:
           workspaces: |
             src-tauri
-            almond
 
       - name: Clean install dependencies
         shell: bash

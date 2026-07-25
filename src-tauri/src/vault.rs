@@ -5,6 +5,7 @@ use nostr::{
     nips::nip49::EncryptedSecretKey,
     Keys, SecretKey,
 };
+#[cfg(target_os = "macos")]
 use security_framework::passwords::{
     delete_generic_password_options, generic_password, set_generic_password_options,
     PasswordOptions,
@@ -12,6 +13,7 @@ use security_framework::passwords::{
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, Zeroizing};
 
+#[cfg(target_os = "macos")]
 const KEYCHAIN_SERVICE: &str = "org.nostube.desktop.vault";
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -196,6 +198,20 @@ fn parse_credential(credential: &str, password: Option<&str>) -> Result<Keys, St
 }
 
 fn store_credential(pubkey: &str, credential: &[u8]) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        return store_keychain_credential(pubkey, credential);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (pubkey, credential);
+        Err("Desktop credential storage is not yet supported on this platform".to_string())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn store_keychain_credential(pubkey: &str, credential: &[u8]) -> Result<(), String> {
     set_generic_password_options(
         credential,
         PasswordOptions::new_generic_password(KEYCHAIN_SERVICE, pubkey),
@@ -204,6 +220,20 @@ fn store_credential(pubkey: &str, credential: &[u8]) -> Result<(), String> {
 }
 
 fn load_credential(pubkey: &str) -> Result<Vec<u8>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        return load_keychain_credential(pubkey);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = pubkey;
+        Err("Desktop credential storage is not yet supported on this platform".to_string())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn load_keychain_credential(pubkey: &str) -> Result<Vec<u8>, String> {
     generic_password(PasswordOptions::new_generic_password(
         KEYCHAIN_SERVICE,
         pubkey,
@@ -212,6 +242,20 @@ fn load_credential(pubkey: &str) -> Result<Vec<u8>, String> {
 }
 
 fn delete_credential(pubkey: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        return delete_keychain_credential(pubkey);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = pubkey;
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn delete_keychain_credential(pubkey: &str) -> Result<(), String> {
     delete_generic_password_options(PasswordOptions::new_generic_password(
         KEYCHAIN_SERVICE,
         pubkey,

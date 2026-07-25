@@ -13,7 +13,9 @@ reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] 
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-shell = "2.3.5"
 nostr = { version = "0.44.4", features = ["nip04", "nip44", "nip49"] }
-security-framework = "3.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 zeroize = "1.9.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3.7.0"

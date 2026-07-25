@@ -9,10 +9,9 @@ use std::{
 mod vault;
 
 use tauri::Emitter;
-use tauri::{
-    AppHandle, LogicalPosition, Manager, RunEvent, TitleBarStyle, WebviewUrl, WebviewWindowBuilder,
-    WindowEvent,
-};
+use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+#[cfg(target_os = "macos")]
+use tauri::{LogicalPosition, TitleBarStyle};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 use zeroize::Zeroize;
 
@@ -338,11 +337,16 @@ fn focus_or_open_player(app: &AppHandle, route: &str) -> Result<(), String> {
             .map_err(|error| error.to_string());
     }
 
-    WebviewWindowBuilder::new(app, "player", WebviewUrl::App(route.into()))
-        .title("NosTube player")
+    let builder = WebviewWindowBuilder::new(app, "player", WebviewUrl::App(route.into()))
+        .title("NosTube player");
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
         .title_bar_style(TitleBarStyle::Overlay)
         .traffic_light_position(LogicalPosition::new(16.0, 24.0))
-        .hidden_title(true)
+        .hidden_title(true);
+
+    builder
         .inner_size(1280.0, 720.0)
         .min_inner_size(800.0, 480.0)
         .build()

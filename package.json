@@ -14,6 +14,7 @@
     "format:check": "npx prettier --check .",
     "format:staged": "npx prettier --write --ignore-unknown",
     "server:dev": "npx tsx --watch server/standalone.ts",
+    "tauri": "tauri",
     "desktop:prepare-sidecar": "cargo build --manifest-path ../almond/Cargo.toml --release && mkdir -p src-tauri/binaries && cp ../almond/target/release/almond src-tauri/binaries/almond-aarch64-apple-darwin",
     "desktop:dev": "npm run desktop:prepare-sidecar && tauri dev",
     "desktop:build": "npm run desktop:prepare-sidecar && CI=true tauri build",

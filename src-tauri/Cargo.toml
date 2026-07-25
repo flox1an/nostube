@@ -1,6 +1,6 @@
 [package]
 name = "nostube-desktop"
-version = "0.1.0"
+version = "0.2.31"
 description = "NosTube macOS desktop host"
 authors = ["NosTube contributors"]
 edition = "2021"

@@ -969,7 +969,9 @@ export function useVideoUpload(
               return
             } catch (error) {
               console.error('Failed to upload generated thumbnail:', error)
-              throw new Error('Failed to upload generated thumbnail')
+              throw Object.assign(new Error('Failed to upload generated thumbnail'), {
+                cause: error,
+              })
             }
           }
 

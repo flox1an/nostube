@@ -103,7 +103,7 @@ function generateProxyUrls(
   }
 
   // Extract origin from original URL to check for self-reference
-  let originalOrigin = ''
+  let originalOrigin: string
   try {
     const urlObj = new URL(originalUrl)
     originalOrigin = urlObj.origin
@@ -119,7 +119,7 @@ function generateProxyUrls(
     const baseUrl = normalizeServerUrl(server.url)
 
     // Check if the original URL is already from this caching server
-    let proxyOrigin = ''
+    let proxyOrigin: string
     try {
       const proxyUrlObj = new URL(baseUrl)
       proxyOrigin = proxyUrlObj.origin

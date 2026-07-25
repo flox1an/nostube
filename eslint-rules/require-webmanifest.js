@@ -18,7 +18,7 @@ export default {
   },
 
   create(context) {
-    const filename = context.getFilename()
+    const filename = context.filename ?? context.getFilename()
 
     // Only run this rule on HTML files
     if (!filename.endsWith('.html')) {
@@ -27,7 +27,7 @@ export default {
 
     return {
       Program(node) {
-        const sourceCode = context.getSourceCode()
+        const sourceCode = context.sourceCode ?? context.getSourceCode()
         const htmlContent = sourceCode.getText()
 
         // Check for manifest link tag in HTML

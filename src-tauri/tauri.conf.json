@@ -30,7 +30,7 @@
     "active": true,
     "targets": "app",
     "externalBin": ["binaries/almond"],
-    "icon": ["../public/og-image.png"],
+    "icon": ["../public/nostube.png", "../public/nostubeios.png", "../public/favicon.ico"],
     "macOS": {
       "signingIdentity": "-"
     }

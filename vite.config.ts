@@ -43,7 +43,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -67,8 +67,8 @@ export default defineConfig({
     },
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        embed: resolve(__dirname, 'embed.html'),
+        main: resolve(import.meta.dirname, 'index.html'),
+        embed: resolve(import.meta.dirname, 'embed.html'),
       },
       // Disable native modules for Vercel deployment
       external: ['@rollup/rollup-linux-x64-gnu'],

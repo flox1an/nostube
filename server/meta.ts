@@ -1,8 +1,5 @@
 import type { NostrEvent } from 'nostr-tools/pure'
 import { npubEncode } from 'nostr-tools/nip19'
-import { fetchBlossomServers, log } from './nostr.js'
-
-const THUMB_HEAD_TIMEOUT_MS = 3000
 
 export interface VideoMeta {
   title: string
@@ -13,125 +10,8 @@ export interface VideoMeta {
   width: number | null
   height: number | null
   authorNpub: string
-  /** All candidate thumbnail URLs extracted from the event (for validation) */
   candidateThumbnails: string[]
 }
-
-/** Extract SHA256 hash from a blossom-style URL like https://server.com/<hash>.ext */
-function extractHash(url: string): string | null {
-  try {
-    const pathname = new URL(url).pathname
-    const filename = pathname.split('/').pop() || ''
-    const match = filename.match(/^([a-f0-9]{64})\.[^.]+$/i)
-    return match ? match[1] : null
-  } catch {
-    return null
-  }
-}
-
-/** Extract file extension from a URL */
-function extractExt(url: string): string {
-  try {
-    const pathname = new URL(url).pathname
-    const filename = pathname.split('/').pop() || ''
-    const dotIdx = filename.lastIndexOf('.')
-    return dotIdx !== -1 ? filename.slice(dotIdx + 1) : 'jpg'
-  } catch {
-    return 'jpg'
-  }
-}
-
-/** HEAD-request a URL and return true if it responds with 2xx/3xx */
-async function urlExists(url: string): Promise<boolean> {
-  try {
-    const res = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(THUMB_HEAD_TIMEOUT_MS),
-      redirect: 'follow',
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
-/**
- * Try each candidate thumbnail URL with a HEAD request.
- * If none are reachable, extract the SHA256 hash and try the author's
- * blossom servers (kind 10063) as alternative hosts.
- */
-export async function findValidThumbnail(
-  candidates: string[],
-  authorPubkey: string
-): Promise<string | null> {
-  if (candidates.length === 0) return null
-
-  // Try each candidate URL
-  for (const url of candidates) {
-    log('thumbnail:head', { url: url.slice(0, 80) })
-    if (await urlExists(url)) {
-      log('thumbnail:found', { url: url.slice(0, 80) })
-      return url
-    }
-  }
-
-  // None of the original URLs worked — try blossom server fallback
-  // Extract hash + extension from any candidate
-  let hash: string | null = null
-  let ext = 'jpg'
-  for (const url of candidates) {
-    hash = extractHash(url)
-    if (hash) {
-      ext = extractExt(url)
-      break
-    }
-  }
-
-  if (!hash) {
-    log('thumbnail:no-hash', { candidates: candidates.length })
-    return null
-  }
-
-  // Fetch the author's blossom server list
-  const blossomServers = await fetchBlossomServers(authorPubkey)
-  if (blossomServers.length === 0) {
-    log('thumbnail:no-blossom-servers')
-    return null
-  }
-
-  // Deduplicate: skip servers we already tried
-  const triedHosts = new Set(
-    candidates.map(u => {
-      try {
-        return new URL(u).host
-      } catch {
-        return ''
-      }
-    })
-  )
-  const newServers = blossomServers.filter(s => {
-    try {
-      return !triedHosts.has(new URL(s).host)
-    } catch {
-      return false
-    }
-  })
-
-  log('thumbnail:trying-blossom', { servers: newServers.length, hash: hash.slice(0, 16) })
-
-  for (const server of newServers) {
-    const normalized = server.replace(/\/+$/, '')
-    const url = `${normalized}/${hash}.${ext}`
-    if (await urlExists(url)) {
-      log('thumbnail:blossom-hit', { url: url.slice(0, 80) })
-      return url
-    }
-  }
-
-  log('thumbnail:all-failed', { candidates: candidates.length, blossomServers: newServers.length })
-  return null
-}
-
 export function extractVideoMeta(event: NostrEvent): VideoMeta {
   const tags = event.tags
   const getTag = (name: string) => tags.find(t => t[0] === name)?.[1]

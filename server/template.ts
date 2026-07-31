@@ -1,3 +1,7 @@
+function escapeHtmlText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 /**
  * Inject meta tags into the HTML template by replacing existing OG/Twitter meta tags
  * and inserting the new ones before </head>.
@@ -9,7 +13,10 @@ export function injectMeta(html: string, metaTags: string, title: string): strin
     .replace(/<meta\s+name="twitter:[^"]*"\s+content="[^"]*"\s*\/?>/g, '')
 
   // Replace the <title> tag
-  result = result.replace(/<title>[^<]*<\/title>/, `<title>${title} - nostube</title>`)
+  result = result.replace(
+    /<title>[^<]*<\/title>/,
+    `<title>${escapeHtmlText(title)} - nostube</title>`
+  )
 
   // Insert new meta tags before </head>
   result = result.replace('</head>', `    ${metaTags}\n  </head>`)

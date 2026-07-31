@@ -40,7 +40,7 @@ The shared logic lives in `server/` and is imported by the edge functions:
 Crawler → GET /v/:nevent
   → vercel.json rewrite → api/v/[nevent].ts
     → _nostr.ts: decodeIdentifier + fetchEvent (relay fetch)
-    → server/meta.ts: extractVideoMeta + findValidThumbnail
+    → server/meta.ts: extractVideoMeta
     → server/template.ts: injectMeta into index.html
   ← enriched HTML with <meta og:*, twitter:*, link[oEmbed]>
 ```

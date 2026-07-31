@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { XIcon, Cog, LoaderIcon, ChevronDown, ChevronRight } from 'lucide-react'
+import { XIcon, Cog, LoaderIcon, ChevronDown, ChevronRight, LockKeyhole } from 'lucide-react'
 import { normalizeRelayUrl, cn } from '@/lib/utils'
 import { isBlossomServerBlocked } from '@/constants/relays'
 import {
@@ -26,6 +26,7 @@ import {
 } from '@/contexts/AppContext'
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -285,6 +286,124 @@ function RelaysSubSection() {
       <Button variant="outline" size="sm" onClick={handleResetRelays}>
         {t('settings.relays.resetButton')}
       </Button>
+    </>
+  )
+}
+
+// ─── Private relays ──────────────────────────────────
+
+function PrivateRelaysSubSection() {
+  const { relays, isLoading, error, canConfigure, statuses, configure } = usePrivateRelays()
+  const [newRelayUrl, setNewRelayUrl] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const save = async (nextRelays: string[]) => {
+    setIsSaving(true)
+    try {
+      await configure(nextRelays)
+      setNewRelayUrl('')
+    } catch (cause) {
+      toast({
+        title: 'Could not update private relays',
+        description: cause instanceof Error ? cause.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleAddRelay = async () => {
+    const normalized = normalizeRelayUrl(newRelayUrl)
+    try {
+      const parsed = new URL(normalized)
+      if (
+        (parsed.protocol !== 'wss:' && parsed.protocol !== 'ws:') ||
+        relays.includes(normalized)
+      ) {
+        return
+      }
+    } catch {
+      return
+    }
+
+    await save([...relays, normalized])
+  }
+
+  return (
+    <>
+      <div className="rounded-md border border-blue-500/40 bg-blue-500/10 p-3">
+        <div className="flex gap-2">
+          <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+          <p className="text-sm text-muted-foreground">
+            Private playlists and upload drafts are published only to these relays. The relay list
+            is NIP-44 encrypted and advertised as kind 10013 on your NIP-65 write relays. There is
+            no public-relay fallback.
+          </p>
+        </div>
+      </div>
+
+      {!canConfigure && (
+        <p className="text-sm text-yellow-600 dark:text-yellow-400">
+          A NIP-44 capable signer and a published NIP-65 write relay list are required.
+        </p>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error.message}</p>}
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <LoaderIcon className="h-4 w-4 animate-spin" />
+          Loading private relay list…
+        </div>
+      ) : relays.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No private relays configured.</p>
+      ) : (
+        <ScrollArea className="max-h-48 w-full rounded-md border p-3">
+          <ul className="space-y-1.5">
+            {relays.map(relay => (
+              <li key={relay} className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate">{relay}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant={statuses[relay] === 'authenticated' ? 'default' : 'outline'}>
+                    {statuses[relay] ?? 'disconnected'}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={isSaving}
+                    onClick={() => void save(relays.filter(candidate => candidate !== relay))}
+                    aria-label={`Remove ${relay}`}
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="wss://private-relay.example"
+          value={newRelayUrl}
+          disabled={!canConfigure || isSaving}
+          onChange={event => setNewRelayUrl(event.target.value)}
+          onKeyDown={event => {
+            if (event.key === 'Enter') void handleAddRelay()
+          }}
+        />
+        <Button
+          size="sm"
+          disabled={!canConfigure || isSaving || !newRelayUrl.trim()}
+          onClick={() => void handleAddRelay()}
+        >
+          {isSaving && <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />}
+          Add
+        </Button>
+      </div>
     </>
   )
 }
@@ -701,6 +820,15 @@ export function NetworkSettingsSection() {
         defaultOpen={!activeSection || activeSection === 'relays'}
       >
         <RelaysSubSection />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="private-relays"
+        title="Private relays"
+        description="Encrypted relay routing for private nostube content."
+        defaultOpen={activeSection === 'private-relays'}
+      >
+        <PrivateRelaysSubSection />
       </CollapsibleSection>
 
       <CollapsibleSection

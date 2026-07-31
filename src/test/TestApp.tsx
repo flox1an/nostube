@@ -5,6 +5,8 @@ import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
 import { defaultResizeServer } from '@/constants/servers'
+import { PrivateRelaysProvider } from '@/contexts/PrivateRelaysContext'
+import { UserRelaysProvider } from '@/contexts/UserRelaysContext'
 
 interface TestAppProps {
   children: React.ReactNode
@@ -25,7 +27,11 @@ export function TestApp({ children }: TestAppProps) {
     <BrowserRouter>
       <AppProvider storageKey="test-app-config" defaultConfig={defaultConfig}>
         <AccountsProvider manager={accountManager}>
-          <EventStoreProvider eventStore={eventStore}>{children}</EventStoreProvider>
+          <EventStoreProvider eventStore={eventStore}>
+            <UserRelaysProvider>
+              <PrivateRelaysProvider>{children}</PrivateRelaysProvider>
+            </UserRelaysProvider>
+          </EventStoreProvider>
         </AccountsProvider>
       </AppProvider>
     </BrowserRouter>

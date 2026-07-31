@@ -11,6 +11,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event } from 'nostr-tools'
 import { playlistHasUnsafeVideo } from '@/lib/playlist-content-warning'
 import { type ValidationStatus, usePlaylistValidation } from './usePlaylistValidation'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 export interface Video {
   id: string
@@ -110,12 +111,17 @@ export function usePlaylists() {
   const { publish } = useNostrPublish()
   const { config, pool } = useAppContext()
   const { presetContent } = useSelectedPreset()
+  const { relays: privateRelays, publish: publishPrivate } = usePrivateRelays()
   const [isLoading, setIsLoading] = useState(false)
   const hasLoadedOnceRef = useRef(false)
 
   const readRelays = useMemo(
     () => config.relays.filter(r => r.tags.includes('read')).map(r => r.url),
     [config.relays]
+  )
+  const playlistRelays = useMemo(
+    () => Array.from(new Set([...readRelays, ...privateRelays])),
+    [privateRelays, readRelays]
   )
   const filters = useMemo(() => [playlistFilter(user?.pubkey)], [user?.pubkey])
 
@@ -127,10 +133,10 @@ export function usePlaylists() {
 
   const loader = useMemo(
     () =>
-      createTimelineLoader(pool, readRelays, [...filters, ...deletionFilters], {
+      createTimelineLoader(pool, playlistRelays, [...filters, ...deletionFilters], {
         eventStore,
       }),
-    [pool, readRelays, filters, deletionFilters, eventStore]
+    [pool, playlistRelays, filters, deletionFilters, eventStore]
   )
 
   // Use EventStore timeline to get playlists for current user
@@ -390,10 +396,12 @@ export function usePlaylists() {
           content,
         }
 
-        const signedEvent = await publish({
-          event: draftEvent,
-          relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-        })
+        const signedEvent = playlist.isPrivate
+          ? await publishPrivate(draftEvent)
+          : await publish({
+              event: draftEvent,
+              relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+            })
 
         // Add the updated playlist to the event store immediately for instant feedback
         eventStore.add(signedEvent)
@@ -403,7 +411,7 @@ export function usePlaylists() {
         setIsLoading(false)
       }
     },
-    [user?.pubkey, user?.signer, publish, config.relays, eventStore]
+    [user?.pubkey, user?.signer, publish, publishPrivate, config.relays, eventStore]
   )
 
   const createPlaylist = useCallback(
@@ -497,15 +505,18 @@ export function usePlaylists() {
         content: 'Deleted by author',
       }
 
-      const signedDeleteEvent = await publish({
-        event: deleteEvent,
-        relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
-      })
+      const playlist = playlists.find(candidate => candidate.eventId === eventId)
+      const signedDeleteEvent = playlist?.isPrivate
+        ? await publishPrivate(deleteEvent)
+        : await publish({
+            event: deleteEvent,
+            relays: config.relays.filter(r => r.tags.includes('write')).map(r => r.url),
+          })
 
       // Add the deletion event to the event store immediately for instant feedback
       eventStore.add(signedDeleteEvent)
     },
-    [user?.pubkey, publish, config.relays, eventStore]
+    [user?.pubkey, playlists, publish, publishPrivate, config.relays, eventStore]
   )
 
   // Prefetch every video event referenced by my own public unflagged

@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useCurrentUser } from '@/hooks'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 interface CreatePlaylistCardProps {
   onCreatePlaylist: (name: string, description?: string, isPrivate?: boolean) => Promise<void>
@@ -24,6 +25,7 @@ interface CreatePlaylistCardProps {
 export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const { relays: privateRelays } = usePrivateRelays()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -31,6 +33,7 @@ export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const hasNip44 = Boolean(user?.signer?.nip44)
+  const canCreatePrivate = hasNip44 && privateRelays.length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,12 +116,14 @@ export function CreatePlaylistCard({ onCreatePlaylist }: CreatePlaylistCardProps
                   id="private-toggle"
                   checked={isPrivate}
                   onCheckedChange={setIsPrivate}
-                  disabled={!hasNip44}
+                  disabled={!canCreatePrivate}
                 />
               </div>
-              {!hasNip44 && (
+              {!canCreatePrivate && (
                 <p className="text-xs text-yellow-600">
-                  {t('playlists.private.noEncryptionSupport')}
+                  {hasNip44
+                    ? 'Configure a private relay in Network settings to create private playlists.'
+                    : t('playlists.private.noEncryptionSupport')}
                 </p>
               )}
             </div>
@@ -152,12 +157,14 @@ export function CreatePlaylistDialog({
 }: CreatePlaylistDialogProps) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const { relays: privateRelays } = usePrivateRelays()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const hasNip44 = Boolean(user?.signer?.nip44)
+  const canCreatePrivate = hasNip44 && privateRelays.length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -217,12 +224,14 @@ export function CreatePlaylistDialog({
                 id="cdp-private"
                 checked={isPrivate}
                 onCheckedChange={setIsPrivate}
-                disabled={!hasNip44}
+                disabled={!canCreatePrivate}
               />
             </div>
-            {!hasNip44 && (
+            {!canCreatePrivate && (
               <p className="text-xs text-yellow-600">
-                {t('playlists.private.noEncryptionSupport')}
+                {hasNip44
+                  ? 'Configure a private relay in Network settings to create private playlists.'
+                  : t('playlists.private.noEncryptionSupport')}
               </p>
             )}
           </div>

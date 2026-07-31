@@ -18,6 +18,7 @@ import { useAppContext } from './useAppContext'
 import { useCurrentUser } from './useCurrentUser'
 import { useReadRelays } from './useReadRelays'
 import { useSelectedPreset } from './useSelectedPreset'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 import { ZAP_RELAYS } from '@/constants/relays'
 
@@ -72,6 +73,7 @@ export function usePlaylistDetails(
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
+  const { relays: privateRelays } = usePrivateRelays()
 
   const [failedVideoIds, setFailedVideoIds] = useState<Set<string>>(new Set())
   const [loadingVideoIds, setLoadingVideoIds] = useState<Set<string>>(new Set())
@@ -114,8 +116,8 @@ export function usePlaylistDetails(
   const relaysToUse = useMemo(() => {
     const pointerRelays = (playlistPointer as { relays?: string[] } | null)?.relays || []
     const videoRelays = videoEventRelays || []
-    return combineRelays([videoRelays, pointerRelays, allConfigRelays, ZAP_RELAYS])
-  }, [playlistPointer, allConfigRelays, videoEventRelays])
+    return combineRelays([videoRelays, pointerRelays, privateRelays, allConfigRelays, ZAP_RELAYS])
+  }, [playlistPointer, privateRelays, allConfigRelays, videoEventRelays])
 
   const eventLoader = useMemo(
     () => createEventLoader(pool, { eventStore, extraRelays: relaysToUse }),

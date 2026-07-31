@@ -11,6 +11,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
 import { nowInSecs } from '@/lib/utils'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 // ---------------------------------------------------------------------------
 // Debounce utility
@@ -92,7 +93,8 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
   }, [storageKey, version])
 
   const { user } = useCurrentUser()
-  const { config, pool } = useAppContext()
+  const { pool } = useAppContext()
+  const { relays: privateRelays, publish: publishPrivate } = usePrivateRelays()
 
   // Track in-flight Nostr saves so flushSync can await them
   const inflightSaveRef = useRef<Promise<void> | null>(null)
@@ -132,23 +134,19 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
 
           const event = {
             kind: 30078,
-            pubkey: user.pubkey,
             content,
             created_at: nowInSecs(),
             tags: [['d', nostrIdentifier]],
           }
 
-          const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
-
-          const signedEvent = await user.signer.signEvent(event)
-          await pool.publish(writeRelays, signedEvent)
+          await publishPrivate(event)
 
           // Update last synced content on success
           lastSyncedContentRef.current = contentJson
 
           if (import.meta.env.DEV) {
             console.log(
-              `[useDraftPersistence:${storageKey}] saveToNostr published to ${writeRelays.length} relays`
+              `[useDraftPersistence:${storageKey}] saveToNostr published to ${privateRelays.length} private relays`
             )
           }
         } catch (error) {
@@ -162,7 +160,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
       inflightSaveRef.current = promise
       return promise
     },
-    [user, config.relays, pool, storageKey, nostrIdentifier]
+    [user, privateRelays.length, publishPrivate, storageKey, nostrIdentifier]
   )
 
   // Keep a stable ref so the debounced callback always calls the latest version
@@ -246,16 +244,14 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
   // ------------------------------------------------------------------
 
   useEffect(() => {
-    if (!user?.pubkey || !user.signer?.nip44) return
-
-    const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+    if (!user?.pubkey || !user.signer?.nip44 || privateRelays.length === 0) return
 
     const loader = createAddressLoader(pool)
     const sub = loader({
       kind: 30078,
       pubkey: user.pubkey,
       identifier: nostrIdentifier,
-      relays: readRelays,
+      relays: privateRelays,
     }).subscribe(async event => {
       if (!event) return
       try {
@@ -292,7 +288,7 @@ export function useDraftPersistence<T extends { id: string; updatedAt: number }>
     })
 
     return () => sub.unsubscribe()
-  }, [user?.pubkey, user?.signer, pool, config.relays, storageKey, nostrIdentifier, bumpVersion])
+  }, [user?.pubkey, user?.signer, pool, privateRelays, storageKey, nostrIdentifier, bumpVersion])
 
   // ------------------------------------------------------------------
   // flushSync

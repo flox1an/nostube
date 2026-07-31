@@ -31,6 +31,7 @@ import {
 import { PlaylistThumbnailCollage } from './PlaylistThumbnailCollage'
 import type { Playlist } from '@/hooks/usePlaylist'
 import { useCurrentUser } from '@/hooks'
+import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 
 interface PlaylistCardProps {
   playlist: Playlist
@@ -49,6 +50,7 @@ export function PlaylistCard({
 }: PlaylistCardProps) {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
+  const { relays: privateRelays } = usePrivateRelays()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -63,7 +65,7 @@ export function PlaylistCard({
     kind: 30005,
     pubkey: userPubkey,
     identifier: playlist.identifier,
-    relays: writeRelays.slice(0, 3),
+    relays: (playlist.isPrivate ? privateRelays : writeRelays).slice(0, 3),
   })
 
   const videoIds = playlist.videos.map(v => v.id)
@@ -223,12 +225,14 @@ export function PlaylistCard({
                   id="edit-private-toggle"
                   checked={editIsPrivate}
                   onCheckedChange={setEditIsPrivate}
-                  disabled={!hasNip44}
+                  disabled={!hasNip44 || (!editIsPrivate && privateRelays.length === 0)}
                 />
               </div>
-              {!hasNip44 && (
+              {(!hasNip44 || privateRelays.length === 0) && (
                 <p className="text-xs text-yellow-600">
-                  {t('playlists.private.noEncryptionSupport')}
+                  {hasNip44
+                    ? 'Configure a private relay in Network settings before making this playlist private.'
+                    : t('playlists.private.noEncryptionSupport')}
                 </p>
               )}
             </div>

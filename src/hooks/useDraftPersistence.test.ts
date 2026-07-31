@@ -17,6 +17,13 @@ vi.mock('./useAppContext', () => ({
   }),
 }))
 
+vi.mock('@/contexts/PrivateRelaysContext', () => ({
+  usePrivateRelays: () => ({
+    relays: [],
+    publish: vi.fn(),
+  }),
+}))
+
 vi.mock('applesauce-loaders/loaders', () => ({
   createAddressLoader: () => () => ({
     subscribe: () => ({ unsubscribe: () => {} }),

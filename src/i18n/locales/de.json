@@ -715,7 +715,7 @@
       "title": "Relays",
       "description": "Verwalte die Nostr-Relays, mit denen dein Client sich verbindet.",
       "noRelays": "Keine Relays konfiguriert. Füge unten welche hinzu oder setze auf Standard zurück.",
-      "addPlaceholder": "Neue Relay-URL hinzufügen (z.B. wss://relay.damus.io)",
+      "addPlaceholder": "Neue Relay-URL hinzufügen (z.B. wss://relay.primal.net)",
       "addButton": "Relay hinzufügen",
       "resetButton": "Auf Standard-Relays zurücksetzen",
       "editTags": "Tags bearbeiten",

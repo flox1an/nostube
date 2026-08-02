@@ -3,8 +3,8 @@ import { sanitizeRelayUrl } from './utils'
 
 describe('sanitizeRelayUrl', () => {
   it('should handle normal relay URLs without modification', () => {
-    const result = sanitizeRelayUrl('wss://relay.damus.io')
-    expect(result).toEqual(['wss://relay.damus.io'])
+    const result = sanitizeRelayUrl('wss://relay.primal.net')
+    expect(result).toEqual(['wss://relay.primal.net'])
   })
 
   it('should normalize relay URLs by removing trailing slashes', () => {
@@ -14,7 +14,7 @@ describe('sanitizeRelayUrl', () => {
 
   it('should ignore corrupted concatenated relay URLs', () => {
     const corrupted =
-      'wss://nos.lol/%20wss://nostr.land/%20%20avatar%20wss://nostr.wine/%20%20avatar%20wss://purplerelay.com/%20wss://relay.damus.io/%20wss://relay.snort.social/'
+      'wss://nos.lol/%20wss://nostr.land/%20%20avatar%20wss://nostr.wine/%20%20avatar%20wss://purplerelay.com/%20wss://relay.snort.social/'
 
     const result = sanitizeRelayUrl(corrupted)
 
@@ -50,7 +50,7 @@ describe('sanitizeRelayUrl', () => {
   it('should ignore the exact corrupted URL from the bug report', () => {
     // This is the actual corrupted URL from relay tag [2]
     const corrupted =
-      'wss://nos.lol/%20wss://nostr.land/%20%20avatar%20wss://nostr.wine/%20%20avatar%20wss://purplerelay.com/%20wss://relay.damus.io/%20wss://relay.snort.social/'
+      'wss://nos.lol/%20wss://nostr.land/%20%20avatar%20wss://nostr.wine/%20%20avatar%20wss://purplerelay.com/%20wss://relay.snort.social/'
 
     const result = sanitizeRelayUrl(corrupted)
 

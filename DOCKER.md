@@ -29,7 +29,7 @@ docker build -t nostube:latest .
 docker run -d \
   -p 8080:80 \
   --name nostube \
-  -e RUNTIME_RELAYS="wss://relay.divine.video,wss://relay.damus.io" \
+  -e RUNTIME_RELAYS="wss://relay.divine.video,wss://relay.primal.net" \
   -e RUNTIME_BLOSSOM_SERVERS="https://almond.slidestr.net" \
   nostube:latest
 
@@ -47,13 +47,13 @@ The Docker image supports runtime environment configuration through `RUNTIME_*` 
 
 ### Available Environment Variables
 
-| Variable                  | Description                                 | Default                                                       |
-| ------------------------- | ------------------------------------------- | ------------------------------------------------------------- |
-| `RUNTIME_RELAYS`          | Comma-separated list of Nostr relay URLs    | `wss://relay.divine.video,wss://relay.damus.io,wss://nos.lol` |
-| `RUNTIME_BLOSSOM_SERVERS` | Comma-separated list of Blossom server URLs | `https://almond.slidestr.net`                                 |
-| `RUNTIME_APP_TITLE`       | Application title                           | `Nostube`                                                     |
-| `RUNTIME_DEBUG`           | Enable debug mode (true/false)              | `false`                                                       |
-| `RUNTIME_CUSTOM_CONFIG`   | Custom JSON configuration                   | `null`                                                        |
+| Variable                  | Description                                 | Default                                                         |
+| ------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| `RUNTIME_RELAYS`          | Comma-separated list of Nostr relay URLs    | `wss://relay.divine.video,wss://relay.primal.net,wss://nos.lol` |
+| `RUNTIME_BLOSSOM_SERVERS` | Comma-separated list of Blossom server URLs | `https://almond.slidestr.net`                                   |
+| `RUNTIME_APP_TITLE`       | Application title                           | `Nostube`                                                       |
+| `RUNTIME_DEBUG`           | Enable debug mode (true/false)              | `false`                                                         |
+| `RUNTIME_CUSTOM_CONFIG`   | Custom JSON configuration                   | `null`                                                          |
 
 ### Example Configurations
 
@@ -61,7 +61,7 @@ The Docker image supports runtime environment configuration through `RUNTIME_*` 
 
 ```yaml
 environment:
-  - RUNTIME_RELAYS=wss://relay.divine.video,wss://relay.damus.io,wss://nos.lol,wss://relay.snort.social,wss://relay.nostr.band
+  - RUNTIME_RELAYS=wss://relay.divine.video,wss://relay.primal.net,wss://nos.lol,wss://relay.snort.social,wss://relay.nostr.band
   - RUNTIME_BLOSSOM_SERVERS=https://almond.slidestr.net,https://cdn.satellite.earth,https://blossom.primal.net
   - RUNTIME_DEBUG=false
 ```
@@ -93,7 +93,7 @@ const debug = window.__RUNTIME_ENV__.DEBUG === 'true'
 
 // Parse comma-separated values
 const relayList = window.__RUNTIME_ENV__.parseCSV(window.__RUNTIME_ENV__.RELAYS)
-// Returns: ["wss://relay.divine.video", "wss://relay.damus.io", ...]
+// Returns: ["wss://relay.divine.video", "wss://relay.primal.net", ...]
 
 // Access custom config
 const customConfig = JSON.parse(window.__RUNTIME_ENV__.CUSTOM_CONFIG || '{}')
@@ -140,7 +140,7 @@ spec:
             - containerPort: 80
           env:
             - name: RUNTIME_RELAYS
-              value: 'wss://relay.divine.video,wss://relay.damus.io'
+              value: 'wss://relay.divine.video,wss://relay.primal.net'
             - name: RUNTIME_BLOSSOM_SERVERS
               value: 'https://almond.slidestr.net'
           livenessProbe:
@@ -175,7 +175,7 @@ Create a `.env` file for docker-compose:
 
 ```bash
 # .env
-RUNTIME_RELAYS=wss://relay.divine.video,wss://relay.damus.io,wss://nos.lol
+RUNTIME_RELAYS=wss://relay.divine.video,wss://relay.primal.net,wss://nos.lol
 RUNTIME_BLOSSOM_SERVERS=https://almond.slidestr.net,https://cdn.satellite.earth
 RUNTIME_APP_TITLE=Nostube
 RUNTIME_DEBUG=false

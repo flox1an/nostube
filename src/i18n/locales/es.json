@@ -715,7 +715,7 @@
       "title": "Relays",
       "description": "Administre los relays de Nostr a los que su cliente se conecta.",
       "noRelays": "No hay relays configurados. Agregue algunos a continuación o restablezca a los predeterminados.",
-      "addPlaceholder": "Agregar nueva URL de relay (ej., wss://relay.damus.io)",
+      "addPlaceholder": "Agregar nueva URL de relay (ej., wss://relay.primal.net)",
       "addButton": "Agregar Relay",
       "resetButton": "Restablecer a Relays Predeterminados",
       "editTags": "Editar etiquetas",

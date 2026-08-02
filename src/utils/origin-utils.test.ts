@@ -46,7 +46,7 @@ describe('parseOriginInput', () => {
 
   it('should parse nevent with relay correctly', () => {
     const hex = '3bf0c63fcb29d869287c8a6d9e1cecc32740982f39e21510b20b897fd6bfa2d2'
-    const relay = 'wss://relay.damus.io'
+    const relay = 'wss://relay.primal.net'
     const nevent = nip19.neventEncode({ id: hex, relays: [relay] })
     const tags = parseOriginInput(nevent)
     expect(tags?.[0][0]).toBe('e')

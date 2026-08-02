@@ -715,7 +715,7 @@
       "title": "Relais",
       "description": "Gérez les relais Nostr auxquels votre client se connecte.",
       "noRelays": "Aucun relais configuré. Ajoutez-en ci-dessous ou réinitialisez aux valeurs par défaut.",
-      "addPlaceholder": "Ajouter une nouvelle URL de relais (par ex., wss://relay.damus.io)",
+      "addPlaceholder": "Ajouter une nouvelle URL de relais (par ex., wss://relay.primal.net)",
       "addButton": "Ajouter un relais",
       "resetButton": "Réinitialiser aux relais par défaut",
       "editTags": "Modifier les tags",

@@ -715,7 +715,7 @@
       "title": "中继",
       "description": "管理客户端连接的 Nostr 中继。",
       "noRelays": "未配置中继。请在下方添加或重置为默认值。",
-      "addPlaceholder": "添加新的中继 URL（例如 wss://relay.damus.io）",
+      "addPlaceholder": "添加新的中继 URL（例如：wss://relay.primal.net）",
       "addButton": "添加中继",
       "resetButton": "重置为默认中继",
       "editTags": "编辑标签",

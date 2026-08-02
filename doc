@@ -47,7 +47,7 @@ Send a kind 5207 event to request a video transformation.
     ["i", "https://example.com/video.mp4", "url"],
     ["p", "7ea7fe97f9814b61f1383286a27c44c3000b864aa6d0163fe5ba4f9714b777c2"],
     ["param", "mode", "hls"],
-    ["relays", "wss://relay.damus.io", "wss://nos.lol"]
+    ["relays", "wss://relay.primal.net", "wss://nos.lol"]
   ]
 }
 ```
@@ -63,7 +63,7 @@ Send a kind 5207 event to request a video transformation.
     ["p", "7ea7fe97f9814b61f1383286a27c44c3000b864aa6d0163fe5ba4f9714b777c2"],
     ["param", "mode", "mp4"],
     ["param", "resolution", "720p"],
-    ["relays", "wss://relay.damus.io"]
+    ["relays", "wss://relay.primal.net"]
   ]
 }
 ```

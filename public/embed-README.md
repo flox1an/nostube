@@ -303,7 +303,7 @@ Improve page load performance with lazy loading:
 
 **Solutions:**
 
-1. Try specifying custom relays: `&relays=wss://relay.damus.io,wss://relay.nostr.band`
+1. Try specifying custom relays: `&relays=wss://relay.primal.net,wss://relay.nostr.band`
 2. Check that the relays in the hint are online
 3. Test with default relay: `wss://relay.divine.video`
 4. Verify the video event ID is correct
@@ -651,7 +651,7 @@ Specify multiple relays for better reliability:
 
 ```html
 <iframe
-  src="https://nostu.be/embed?v=nevent1qqs...&relays=wss://relay.damus.io,wss://relay.nostr.band,wss://relay.divine.video"
+  src="https://nostu.be/embed?v=nevent1qqs...&relays=wss://relay.primal.net,wss://relay.nostr.band,wss://relay.divine.video"
 >
 </iframe>
 ```
@@ -886,7 +886,7 @@ All parameters are optional except `v`:
 
 - **Type:** comma-separated URLs
 - **Default:** auto (from hint)
-- **Example:** `relays=wss://relay.damus.io,wss://relay.nostr.band`
+- **Example:** `relays=wss://relay.primal.net,wss://relay.nostr.band`
 - **Description:** Custom relay list for fetching events
 
 ---

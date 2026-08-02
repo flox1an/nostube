@@ -715,7 +715,7 @@
       "title": "リレー",
       "description": "クライアントが接続する Nostr リレーを管理します。",
       "noRelays": "リレーが設定されていません。以下で追加するか、デフォルトにリセットしてください。",
-      "addPlaceholder": "新しいリレー URL を追加（例：wss://relay.damus.io）",
+      "addPlaceholder": "新しいリレー URL を追加（例：wss://relay.primal.net）",
       "addButton": "リレーを追加",
       "resetButton": "デフォルトのリレーにリセット",
       "editTags": "タグを編集",

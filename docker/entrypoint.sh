@@ -15,7 +15,7 @@ cat > /usr/share/nginx/html/runtime-env.js <<EOF
 
 window.__RUNTIME_ENV__ = {
   // Default relay URLs (comma-separated list)
-  RELAYS: "${RUNTIME_RELAYS:-wss://relay.divine.video,wss://relay.damus.io,wss://nos.lol}",
+  RELAYS: "${RUNTIME_RELAYS:-wss://relay.divine.video,wss://nos.lol}",
 
   // Default Blossom servers (comma-separated list)
   BLOSSOM_SERVERS: "${RUNTIME_BLOSSOM_SERVERS:-https://almond.slidestr.net}",

@@ -15,7 +15,6 @@ export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@/lib/blossom-u
 
 export const presetRelays: Relay[] = [
   { url: 'wss://relay.divine.video', name: 'relay.divine.video', tags: ['read'] },
-  { url: 'wss://relay.damus.io', name: 'relay.damus.io', tags: ['read'] },
   { url: 'wss://relay.primal.net', name: 'relay.primal.net', tags: ['read'] },
   { url: 'wss://nos.lol', name: 'nos.lol', tags: ['read'] },
 ]
@@ -42,11 +41,7 @@ export const INDEXER_RELAYS: string[] = [
  * Used as fallback when the user has no read relays configured,
  * and as supplement to ensure zap events are found.
  */
-export const ZAP_RELAYS: string[] = [
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-  'wss://nos.lol',
-]
+export const ZAP_RELAYS: string[] = ['wss://relay.primal.net', 'wss://nos.lol']
 
 /**
  * Default relays for publishing kind 22236 view-tracking events.

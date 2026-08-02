@@ -6,7 +6,6 @@ import type { Filter } from 'nostr-tools/filter'
 export const FALLBACK_RELAYS = [
   'wss://relay.nostu.be',
   'wss://relay.divine.video',
-  'wss://relay.damus.io',
   'wss://relay.primal.net',
   'wss://nos.lol',
 ]

@@ -1,4 +1,5 @@
 import { decodeNip19 } from '@/lib/nip19'
+import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 
 export const YOUTUBE_REGEX =
   /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?/\s]{11})/i
@@ -27,6 +28,13 @@ const NOSTR_IDENTIFIER_REGEX =
   /(?:nostr:|https?:\/\/(?:njump\.me|primal\.net)\/[ep]\/)?((?:nevent|note|naddr|npub|nprofile)1[023456789acdefghjklmnpqrstuvwxyz]+|[a-f0-9]{64})/i
 
 const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
+
+/**
+ * Returns an event-provided origin URL only when it is safe to open externally.
+ */
+export function getOriginLink(originalUrl: string | undefined): string | undefined {
+  return originalUrl && isAllowedEventMediaUrl(originalUrl) ? originalUrl : undefined
+}
 
 export function getIdentity(tags: string[][]): string {
   const originTag = tags.find(t => t[0] === 'origin')

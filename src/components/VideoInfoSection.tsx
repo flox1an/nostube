@@ -65,6 +65,7 @@ import { getDateLocale } from '@/lib/date-locale'
 import { isBetaUser } from '@/lib/beta-users'
 import { getLanguageDisplay } from '@/lib/language-flags'
 import ngeohash from 'ngeohash'
+import { getOriginLink } from '@/utils/origin-utils'
 
 interface ProfileMetadata {
   name?: string
@@ -543,24 +544,37 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             {/* Origin badges */}
             {video &&
               video.origins &&
-              video.origins.map((origin, index) => (
-                <a
-                  key={`origin-${index}`}
-                  href={origin.originalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={origin.platform}
-                  className="inline-flex"
-                >
-                  <Badge
-                    variant="secondary"
-                    className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
+              video.origins.map((origin, index) => {
+                const originUrl = getOriginLink(origin.originalUrl)
+
+                return originUrl ? (
+                  <a
+                    key={`origin-${index}`}
+                    href={originUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={origin.platform}
+                    className="inline-flex"
                   >
-                    <ExternalLink className="w-3 h-3" />
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                    </Badge>
+                  </a>
+                ) : (
+                  <Badge
+                    key={`origin-${index}`}
+                    variant="secondary"
+                    title={origin.platform}
+                    className="shrink-0 whitespace-nowrap"
+                  >
                     {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
                   </Badge>
-                </a>
-              ))}
+                )
+              })}
             {geohash && (
               <a
                 href={(() => {

@@ -42,6 +42,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { VideoComments } from '@/components/VideoComments'
 import { presetRelays } from '@/constants/relays'
 import { getDateLocale } from '@/lib/date-locale'
+import { getOriginLink } from '@/utils/origin-utils'
 
 // Module-scope constant — avoids recreation on every render.
 const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)
@@ -244,19 +245,31 @@ export const ShortVideoOverlay = memo(
                   </Link>
                 ))}
                 {video.origins &&
-                  video.origins.map((origin, index) => (
-                    <a
-                      key={`origin-${index}`}
-                      href={origin.originalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={origin.platform}
-                      className="text-blue-400 text-sm hover:underline inline-flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
-                    </a>
-                  ))}
+                  video.origins.map((origin, index) => {
+                    const originUrl = getOriginLink(origin.originalUrl)
+
+                    return originUrl ? (
+                      <a
+                        key={`origin-${index}`}
+                        href={originUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={origin.platform}
+                        className="text-blue-400 text-sm hover:underline inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                      </a>
+                    ) : (
+                      <span
+                        key={`origin-${index}`}
+                        title={origin.platform}
+                        className="text-white/70 text-sm"
+                      >
+                        {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                      </span>
+                    )
+                  })}
               </div>
             )}
           </div>

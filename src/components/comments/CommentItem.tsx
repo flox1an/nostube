@@ -249,7 +249,7 @@ export const CommentItem = React.memo(function CommentItem({
                   : comment.content
               }
               videoLink={link}
-              className="break-all text-sm"
+              className="break-all text-sm [&>a>img]:max-h-[min(60svh,32rem)]"
             />
             {hasMoreThan3Lines && (
               <button

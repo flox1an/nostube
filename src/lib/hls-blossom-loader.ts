@@ -6,6 +6,7 @@ import type {
   LoaderConfiguration,
   LoaderContext,
   LoaderStats,
+  NullableNetworkDetails,
 } from 'hls.js'
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
 import { extractBlossomHash } from '@/lib/blossom-url'
@@ -64,7 +65,6 @@ function copyLoaderStats(target: LoaderStats, source: LoaderStats) {
   copyTiming(target.parsing, source.parsing)
   copyTiming(target.buffering, source.buffering)
 }
-
 
 function isBlockedEventUrl(url: string): boolean {
   return !isAllowedEventMediaUrl(url)
@@ -260,7 +260,7 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
       })
       let index = 0
 
-      const deliverBytesFromCache = (bytes: Uint8Array, networkDetails: unknown) => {
+      const deliverBytesFromCache = (bytes: Uint8Array, networkDetails: NullableNetworkDetails) => {
         const stats = createCacheHitStats(this.stats, bytes)
         const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
         logHlsLoader('cache hit', {

@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { viteSingleFile } from 'vite-plugin-singlefile'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -35,11 +34,6 @@ export default defineConfig({
       manifest: false,
       injectRegister: 'auto',
     }),
-    viteSingleFile({
-      useRecommendedBuildConfig: false,
-      removeViteModuleLoader: true,
-      inlinePattern: ['embed/**/*'],
-    }),
   ],
   resolve: {
     alias: {
@@ -65,19 +59,26 @@ export default defineConfig({
         drop_debugger: true,
       },
     },
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
-        embed: resolve(import.meta.dirname, 'embed.html'),
       },
       // Disable native modules for Vercel deployment
       external: ['@rollup/rollup-linux-x64-gnu'],
       output: {
-        inlineDynamicImports: false,
         chunkFileNames: 'assets/[name]-[hash].js',
-        // Use experimental min chunk size instead of manual chunking
-        // This allows Vite to automatically optimize chunk sizes
-        experimentalMinChunkSize: 20000, // 20kb minimum
+        strictExecutionOrder: true,
+        codeSplitting: {
+          minSize: 20000,
+          minShareCount: 2,
+          groups: [
+            {
+              name: 'app',
+              entriesAware: true,
+              entriesAwareMergeThreshold: 20 * 1024,
+            },
+          ],
+        },
       },
     },
     chunkSizeWarningLimit: 1100,

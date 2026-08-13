@@ -59,7 +59,7 @@ export function GlobalSearchBar({
 
   const { profiles, loading } = useSearchVideoAuthors({
     query: searchQuery,
-    limit: 5,
+    limit: 10,
   })
 
   const trimmedQuery = searchQuery.trim()

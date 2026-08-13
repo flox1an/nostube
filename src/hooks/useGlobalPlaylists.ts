@@ -166,6 +166,7 @@ export function useGlobalPlaylists() {
           : (validationStatuses.get(event.id) ?? 'pending')
       if (hideNsfw && safetyState !== 'clean') continue
       const videos = parseVideoIds(event.tags)
+      if (videos.length === 0) continue
       const titleTag = event.tags.find(t => t[0] === 'title')
       const descTag = event.tags.find(t => t[0] === 'description')
       const identifier = event.tags.find(t => t[0] === 'd')?.[1] || ''

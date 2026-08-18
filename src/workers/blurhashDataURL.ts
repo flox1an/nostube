@@ -4,9 +4,15 @@ import { decode } from 'blurhash'
 export function blurHashToDataURL(hash: string | undefined): string | undefined {
   if (!hash) return undefined
 
-  const pixels = decode(hash, 32, 32)
-  const dataURL = parsePixels(pixels, 32, 32)
-  return dataURL
+  try {
+    const pixels = decode(hash, 32, 32)
+    return parsePixels(pixels, 32, 32)
+  } catch (error) {
+    // Blurhash strings come from untrusted remote Nostr events (imeta tags).
+    // A malformed/truncated hash must not crash the render tree.
+    console.warn('[blurHashToDataURL] Failed to decode blurhash:', error)
+    return undefined
+  }
 }
 
 // thanks to https://github.com/wheany/js-png-encoder

@@ -499,6 +499,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
             text={video.description}
             className="bg-muted p-4 rounded-lg text-muted-foreground"
             videoLink={video.link}
+            authorPubkey={video.pubkey}
           />
         ) : (
           <Separator />

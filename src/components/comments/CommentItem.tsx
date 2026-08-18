@@ -250,6 +250,7 @@ export const CommentItem = React.memo(function CommentItem({
               }
               videoLink={link}
               className="break-all text-sm [&>a>img]:max-h-[min(60svh,32rem)]"
+              authorPubkey={comment.pubkey}
             />
             {hasMoreThan3Lines && (
               <button

@@ -185,8 +185,8 @@ const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|avif|svg)(\?[^#]*)?$/i
 
 const isImageUrl = (url: string): boolean => IMAGE_EXTENSIONS.test(url)
 
-function InlineImage({ url }: { url: string }) {
-  const cascade = useImageCascade({ src: url, variant: 'inline' })
+function InlineImage({ url, authorPubkey }: { url: string; authorPubkey?: string }) {
+  const cascade = useImageCascade({ src: url, variant: 'inline', authorPubkey })
   if (!cascade.src) return null
   return (
     <img
@@ -214,6 +214,12 @@ interface RichTextContentProps {
    * If provided, timestamps like "1:23" will be rendered as clickable links
    */
   videoLink?: string
+  /**
+   * Pubkey of the Nostr event this content was rendered from (comment author,
+   * video/note author, profile owner, etc). Sent to imgproxy as the `as=` hint
+   * for any inline image URLs found in the content.
+   */
+  authorPubkey?: string
 }
 
 /**
@@ -224,7 +230,12 @@ interface RichTextContentProps {
  * - Clickable timestamps (if videoLink is provided)
  * - Preserves line breaks (newlines are rendered as <br> tags)
  */
-export function RichTextContent({ content, className, videoLink }: RichTextContentProps) {
+export function RichTextContent({
+  content,
+  className,
+  videoLink,
+  authorPubkey,
+}: RichTextContentProps) {
   const renderContent = () => {
     const parts: React.ReactNode[] = []
 
@@ -349,7 +360,7 @@ export function RichTextContent({ content, className, videoLink }: RichTextConte
                 rel="noopener noreferrer"
                 className="block mt-1"
               >
-                <InlineImage url={url} />
+                <InlineImage url={url} authorPubkey={authorPubkey} />
               </a>
             )
           } else {

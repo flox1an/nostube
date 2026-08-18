@@ -14,6 +14,8 @@ interface CollapsibleTextProps {
    * If provided, timestamps like "1:23" will be rendered as clickable links
    */
   videoLink?: string
+  /** Pubkey of the event this text was rendered from, forwarded to inline images. */
+  authorPubkey?: string
 }
 
 export function CollapsibleText({
@@ -22,6 +24,7 @@ export function CollapsibleText({
   className,
   videoLink,
   alwaysExpanded = false,
+  authorPubkey,
 }: CollapsibleTextProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showButton, setShowButton] = useState(false)
@@ -61,7 +64,7 @@ export function CollapsibleText({
         )}
         onClick={handleClick}
       >
-        <RichTextContent content={text} videoLink={videoLink} />
+        <RichTextContent content={text} videoLink={videoLink} authorPubkey={authorPubkey} />
       </div>
       {showButton && (
         <Button

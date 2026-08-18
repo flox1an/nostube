@@ -23,4 +23,17 @@ describe('RichTextContent', () => {
     expect(link).toHaveAttribute('href', 'https://example.com/path')
     expect(screen.getByText(/, then continue\./)).toBeInTheDocument()
   })
+
+  it('forwards the author pubkey and source server to inline image preset URLs', () => {
+    const hash = 'a'.repeat(64)
+    const { container } = render(
+      <RichTextContent content={`https://cdn.example.com/${hash}.jpg`} authorPubkey="deadbeef" />
+    )
+
+    const image = container.querySelector('img')
+    const src = new URL(image!.getAttribute('src')!)
+    expect(src.pathname).toBe(`/v1/preset/feed-preview-v1/${hash}.jpg`)
+    expect(src.searchParams.getAll('xs')).toEqual(['https://cdn.example.com'])
+    expect(src.searchParams.get('as')).toBe('deadbeef')
+  })
 })

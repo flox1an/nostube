@@ -197,6 +197,7 @@ function VideoNoteCard({
               <RichTextContent
                 content={note.content}
                 className="text-sm text-muted-foreground line-clamp-3"
+                authorPubkey={user?.pubkey}
               />
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-xs text-muted-foreground">

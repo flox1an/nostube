@@ -167,7 +167,11 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
             {/* Description */}
             {description && (
               <div className="rounded-md border bg-muted/40 p-3 text-sm">
-                <RichTextContent content={description} className="text-muted-foreground" />
+                <RichTextContent
+                  content={description}
+                  className="text-muted-foreground"
+                  authorPubkey={user?.pubkey}
+                />
               </div>
             )}
 

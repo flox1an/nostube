@@ -258,7 +258,7 @@ function AuthorProfile({
               ref={aboutRef}
               className={cn('text-sm text-muted-foreground', !isAboutExpanded && 'line-clamp-3')}
             >
-              <RichTextContent content={metadata.about} />
+              <RichTextContent content={metadata.about} authorPubkey={pubkey} />
             </div>
             {(isAboutClamped || isAboutExpanded) && (
               <button

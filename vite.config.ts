@@ -72,10 +72,20 @@ export default defineConfig({
           minSize: 20000,
           minShareCount: 2,
           groups: [
+            // Only the modules actually needed before first render (the static
+            // import chain from index.html) get bucketed here. Anything only
+            // reachable through a lazy `import()` (route pages, video codecs,
+            // etc.) is left to rolldown's automatic per-route chunking below,
+            // so it never gets pulled into the initial pageload.
+            {
+              name: 'vendor',
+              test: /node_modules/,
+              tags: ['$initial'],
+              priority: 1,
+            },
             {
               name: 'app',
-              entriesAware: true,
-              entriesAwareMergeThreshold: 20 * 1024,
+              tags: ['$initial'],
             },
           ],
         },

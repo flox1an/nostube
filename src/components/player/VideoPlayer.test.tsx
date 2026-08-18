@@ -212,7 +212,7 @@ describe('VideoPlayer preset thumbnails', () => {
     cleanup()
     vi.restoreAllMocks()
   })
-  it('uses the direct preset URL for a hash-addressed poster', () => {
+  it('uses the direct preset URL for a hash-addressed poster, with the source server as an xs hint', () => {
     const hash = 'a'.repeat(64)
     const { container } = render(
       <VideoPlayer
@@ -225,8 +225,24 @@ describe('VideoPlayer preset thumbnails', () => {
 
     expect(container.querySelector('video')).toHaveAttribute(
       'poster',
-      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${hash}.mp4`
+      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${hash}.mp4?xs=https%3A%2F%2Fblossom.example`
     )
+  })
+
+  it('includes the author pubkey as an as hint when provided', () => {
+    const hash = 'a'.repeat(64)
+    const { container } = render(
+      <VideoPlayer
+        urls={['https://example.com/video.mp4']}
+        textTracks={[]}
+        mime="video/mp4"
+        poster={`https://blossom.example/${hash}.mp4`}
+        authorPubkey="deadbeef"
+      />
+    )
+
+    const posterUrl = new URL(container.querySelector('video')!.getAttribute('poster')!)
+    expect(posterUrl.searchParams.get('as')).toBe('deadbeef')
   })
 })
 

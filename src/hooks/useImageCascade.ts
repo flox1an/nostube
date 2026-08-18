@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppContextSafe } from '@/hooks/useAppContext'
-import { extractBlossomHash } from '@/lib/blossom-url'
+import { parseBlossomUrl } from '@/lib/blossom-url'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { presetThumbnailUrl, type PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
 
@@ -14,6 +14,8 @@ export interface ImageCascadeInput {
   variant?: ImageCascadeVariant
   /** Override for embed cards; normal UI derives the preset from variant. */
   preset?: PresetThumbnailPreset
+  /** Media author's pubkey, sent as `as=` so the proxy can look up their Blossom server list. */
+  authorPubkey?: string | null
   /** Retained for callers whose source selection uses MIME metadata. */
   mimeType?: string
 }
@@ -56,23 +58,32 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
       input.videoUrl.startsWith('data:'))
       ? input.videoUrl
       : null
-  const imageMedia = useMemo(() => (rawImage ? extractBlossomHash(rawImage) : {}), [rawImage])
-  const videoMedia = useMemo(() => (videoUrl ? extractBlossomHash(videoUrl) : {}), [videoUrl])
+  const imageMedia = useMemo(() => (rawImage ? parseBlossomUrl(rawImage) : undefined), [rawImage])
+  const videoMedia = useMemo(() => (videoUrl ? parseBlossomUrl(videoUrl) : undefined), [videoUrl])
+  const authorPubkey = input.authorPubkey ?? undefined
   const presetImage = useMemo(
     () =>
-      imageMedia.sha256
-        ? presetThumbnailUrl(imgproxyBaseUrl, preset, imageMedia.sha256, imageMedia.ext)
+      imageMedia?.sha256
+        ? presetThumbnailUrl(imgproxyBaseUrl, preset, imageMedia.sha256, {
+            extension: imageMedia.ext,
+            serverHints: [imageMedia.server],
+            authorPubkey,
+          })
         : rawImage,
-    [imgproxyBaseUrl, imageMedia.ext, imageMedia.sha256, preset, rawImage]
+    [imgproxyBaseUrl, imageMedia, preset, rawImage, authorPubkey]
   )
   const presetVideoFrame = useMemo(
     () =>
-      videoMedia.sha256
-        ? presetThumbnailUrl(imgproxyBaseUrl, preset, videoMedia.sha256, videoMedia.ext)
+      videoMedia?.sha256
+        ? presetThumbnailUrl(imgproxyBaseUrl, preset, videoMedia.sha256, {
+            extension: videoMedia.ext,
+            serverHints: [videoMedia.server],
+            authorPubkey,
+          })
         : null,
-    [imgproxyBaseUrl, preset, videoMedia.ext, videoMedia.sha256]
+    [imgproxyBaseUrl, preset, videoMedia, authorPubkey]
   )
-  const imageUsesPreset = Boolean(imageMedia.sha256)
+  const imageUsesPreset = Boolean(imageMedia?.sha256)
   const videoFrameAvailable = Boolean(presetVideoFrame)
 
   const initialStage: Stage = useMemo(() => {

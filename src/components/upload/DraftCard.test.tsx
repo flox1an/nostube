@@ -5,6 +5,9 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n/config'
 import { AppProvider } from '@/components/AppProvider'
+import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
+import { AccountManager } from 'applesauce-accounts'
+import { eventStore } from '@/nostr/core'
 
 const mockDraft: UploadDraft = {
   id: 'test-id',
@@ -65,6 +68,8 @@ const mockDraft: UploadDraft = {
   thumbnailSource: 'generated',
 }
 
+const accountManager = new AccountManager()
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AppProvider
     storageKey="test-draft-card"
@@ -75,7 +80,11 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       nsfwFilter: 'warning',
     }}
   >
-    <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+    <AccountsProvider manager={accountManager}>
+      <EventStoreProvider eventStore={eventStore}>
+        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+      </EventStoreProvider>
+    </AccountsProvider>
   </AppProvider>
 )
 

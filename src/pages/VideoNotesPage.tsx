@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow'
 import { getDateLocale } from '@/lib/date-locale'
 import { useImageCascade } from '@/hooks/useImageCascade'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { formatDuration } from '@/lib/formatDuration'
 import { formatFileSize } from '@/lib/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -41,6 +42,7 @@ function VideoNoteCard({
   isPublished?: boolean
 }) {
   const { t, i18n } = useTranslation()
+  const { user } = useCurrentUser()
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState<number | undefined>(undefined)
   const [sizeBytes, setSizeBytes] = useState<number | undefined>(note.sizeBytes)
@@ -104,6 +106,7 @@ function VideoNoteCard({
     src: thumbnailIsSameAsVideo ? undefined : note.thumbnailUrl,
     videoUrl: note.videoUrls[0],
     variant: 'preview',
+    authorPubkey: user?.pubkey,
   })
 
   const handlePublish = () => onPublish(note)

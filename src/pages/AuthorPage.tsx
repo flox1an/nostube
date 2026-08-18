@@ -98,7 +98,7 @@ function AuthorBanner({
 }) {
   const metadata = useProfile({ pubkey })
   const banner = metadata?.banner
-  const cascade = useImageCascade({ src: banner, variant: 'preview' })
+  const cascade = useImageCascade({ src: banner, variant: 'preview', authorPubkey: pubkey })
 
   if (!cascade.src) return null
 
@@ -119,8 +119,8 @@ function AuthorBanner({
   )
 }
 
-function AuthorBannerDisplay({ banner }: { banner: string }) {
-  const cascade = useImageCascade({ src: banner, variant: 'preview' })
+function AuthorBannerDisplay({ banner, pubkey }: { banner: string; pubkey: string }) {
+  const cascade = useImageCascade({ src: banner, variant: 'preview', authorPubkey: pubkey })
   if (!cascade.src) return null
 
   return (
@@ -153,7 +153,7 @@ function AuthorProfile({
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
-  const profilePicture = useImageCascade({ src: picture, variant: 'avatar' })
+  const profilePicture = useImageCascade({ src: picture, variant: 'avatar', authorPubkey: pubkey })
   const [isAboutExpanded, setIsAboutExpanded] = useState(false)
   const [isAboutClamped, setIsAboutClamped] = useState(false)
   const aboutRef = useRef<HTMLDivElement>(null)
@@ -312,8 +312,12 @@ function EditProfileDialog({
   })
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null)
-  const formBanner = useImageCascade({ src: form.banner, variant: 'preview' })
-  const formPicture = useImageCascade({ src: form.picture, variant: 'avatar' })
+  const formBanner = useImageCascade({ src: form.banner, variant: 'preview', authorPubkey: pubkey })
+  const formPicture = useImageCascade({
+    src: form.picture,
+    variant: 'avatar',
+    authorPubkey: pubkey,
+  })
 
   const setField = (field: keyof typeof form, value: string) => {
     setFieldError(null)
@@ -1094,7 +1098,7 @@ function AuthorPageContent() {
   return (
     <div className="max-w-560 mx-auto sm:p-4">
       <AuthorBanner pubkey={pubkey} onLoad={handleBannerLoad} onError={handleBannerError} />
-      {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} />}
+      {bannerUrl && <AuthorBannerDisplay banner={bannerUrl} pubkey={pubkey} />}
       <AuthorProfile className="p-2" pubkey={pubkey} hasBanner={!!bannerUrl} />
 
       <div className="p-2">

@@ -6,7 +6,7 @@ import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useAppContext, useIsMobile } from '@/hooks'
-import { extractBlossomHash } from '@/lib/blossom-url'
+import { parseBlossomUrl } from '@/lib/blossom-url'
 import { presetThumbnailUrl, type PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
 import {
   usePlayerState,
@@ -1026,20 +1026,19 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   })
   const posterSource = posterUrlLadder.currentUrl
   const posterMedia = useMemo(
-    () => (posterSource ? extractBlossomHash(posterSource) : {}),
+    () => (posterSource ? parseBlossomUrl(posterSource) : undefined),
     [posterSource]
   )
   const posterUrl = useMemo(
     () =>
-      posterMedia.sha256
-        ? presetThumbnailUrl(
-            config.imgproxyBaseUrl,
-            posterPreset,
-            posterMedia.sha256,
-            posterMedia.ext
-          )
+      posterMedia?.sha256
+        ? presetThumbnailUrl(config.imgproxyBaseUrl, posterPreset, posterMedia.sha256, {
+            extension: posterMedia.ext,
+            serverHints: [posterMedia.server],
+            authorPubkey,
+          })
         : posterSource,
-    [config.imgproxyBaseUrl, posterMedia.ext, posterMedia.sha256, posterPreset, posterSource]
+    [config.imgproxyBaseUrl, posterMedia, posterPreset, posterSource, authorPubkey]
   )
 
   // Media Session API - lock screen / Control Center controls + background audio

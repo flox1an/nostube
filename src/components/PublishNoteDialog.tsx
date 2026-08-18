@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PeoplePicker, type SelectedPerson } from '@/components/ui/people-picker'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
 import type { VideoNote } from '@/hooks/useVideoNotes'
@@ -64,6 +65,7 @@ function buildTags(
 
 export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNoteDialogProps) {
   const { publish, isPending } = useNostrPublish()
+  const { user } = useCurrentUser()
   const { toast } = useToast()
   const [title, setTitle] = useState('')
   const [people, setPeople] = useState<SelectedPerson[]>([])
@@ -77,6 +79,7 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
     src: note?.thumbnailUrl,
     videoUrl: note?.videoUrls[0],
     variant: 'preview',
+    authorPubkey: user?.pubkey,
   })
 
   // Initialize people from note.pubkeys whenever the note changes

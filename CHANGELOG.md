@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Infinite scroll paging delay reduced from ~5s to ~300ms — early-complete now watches the processed video list instead of raw events; `loading` and `subscriptionActive` are released as soon as the first new videos appear in the rendered grid rather than waiting for relay EOSE or a safety timeout; relay request timeout reduced from 5 s to 2 s as a fallback for silent relays; `next()` uses refs for `loading`/`exhausted` so its callback reference is stable and the re-subscribe loop that caused the previous OOM fix cannot recur
-- Image thumbnails, profile images, video posters, embeds, and preloads now resolve directly against imgproxy's fixed preset routes (`GET /v1/preset/{preset}/{sha256}[.{ext}]`) — no signing, authentication, mint request, batching, or expiry-aware caching; the previous NIP-98-authenticated `/v1/mint` flow is removed entirely; a personal, browser-local imgproxy endpoint can still override Nostube's built-in default
+- Image thumbnails, profile images, video posters, embeds, and preloads now resolve directly against imgproxy's fixed preset routes (`GET /v1/preset/{preset}/{sha256}[.{ext}]`) — no signing, authentication, mint request, batching, or expiry-aware caching; the previous NIP-98-authenticated `/v1/mint` flow is removed entirely; a personal, browser-local imgproxy endpoint can still override Nostube's built-in default; every preset request now includes the source Blossom server as an `xs` hint (derived from the media URL itself) and, where the author's pubkey is known, an `as` hint for a relay-side server-list fallback
 
 ### Added
 

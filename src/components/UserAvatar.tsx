@@ -30,7 +30,7 @@ export const UserAvatar = React.memo(function UserAvatar({
   name,
   className,
 }: UserAvatarProps) {
-  const cascade = useImageCascade({ src: picture, variant: 'avatar' })
+  const cascade = useImageCascade({ src: picture, variant: 'avatar', authorPubkey: pubkey })
 
   const fallbackSeed = pubkey || name || 'default'
   const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackSeed}`

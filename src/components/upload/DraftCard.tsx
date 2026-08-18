@@ -6,6 +6,7 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from '@/lib/upload-draft-utils'
 import { ensureFileExtension } from '@/lib/utils'
 import { useImageCascade } from '@/hooks/useImageCascade'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 interface DraftCardProps {
   draft: UploadDraft
@@ -15,6 +16,7 @@ interface DraftCardProps {
 
 export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const { t } = useTranslation()
+  const { user } = useCurrentUser()
   const uploadedThumbnailBlob = draft.thumbnailUploadInfo.uploadedBlobs[0]
   const uploadedThumbnailUrl = uploadedThumbnailBlob?.url
   const uploadedThumbnailType = uploadedThumbnailBlob?.type
@@ -41,6 +43,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
     videoUrl: generatedVideoUrl,
     variant: 'preview',
     mimeType: uploadedThumbnailType,
+    authorPubkey: user?.pubkey,
   })
 
   return (

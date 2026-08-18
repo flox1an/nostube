@@ -171,7 +171,7 @@ const ZapperAvatar = memo(function ZapperAvatar({
   size: number
 }) {
   const profile = useProfile({ pubkey })
-  const avatar = useImageCascade({ src: profile?.picture, variant: 'avatar' })
+  const avatar = useImageCascade({ src: profile?.picture, variant: 'avatar', authorPubkey: pubkey })
 
   if (avatar.src) {
     return (

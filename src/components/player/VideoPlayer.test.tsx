@@ -225,7 +225,7 @@ describe('VideoPlayer preset thumbnails', () => {
 
     expect(container.querySelector('video')).toHaveAttribute(
       'poster',
-      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${hash}.mp4?xs=https%3A%2F%2Fblossom.example`
+      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${hash}.mp4?xs=blossom.example`
     )
   })
 

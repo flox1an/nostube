@@ -33,7 +33,7 @@ describe('RichTextContent', () => {
     const image = container.querySelector('img')
     const src = new URL(image!.getAttribute('src')!)
     expect(src.pathname).toBe(`/v1/preset/feed-preview-v1/${hash}.jpg`)
-    expect(src.searchParams.getAll('xs')).toEqual(['https://cdn.example.com'])
+    expect(src.searchParams.getAll('xs')).toEqual(['cdn.example.com'])
     expect(src.searchParams.get('as')).toBe('deadbeef')
   })
 })

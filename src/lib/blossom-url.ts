@@ -107,13 +107,16 @@ export function isBlossomUrl(url: string): boolean {
  * Parse a Blossom URL and extract hash, extension, and server information.
  *
  * @param url - The URL to parse
- * @returns Object with isBlossomUrl flag, and if true, sha256, ext, and server URL
+ * @returns Object with isBlossomUrl flag, and if true, sha256, ext, server origin, and host
  */
 export function parseBlossomUrl(url: string): {
   isBlossomUrl: boolean
   sha256?: string
   ext?: string
+  /** Full server origin, e.g. `https://cdn.example.com`. */
   server?: string
+  /** Bare hostname (with port if present), e.g. `cdn.example.com`. */
+  host?: string
 } {
   const { sha256, ext } = extractBlossomHash(url)
 
@@ -129,6 +132,7 @@ export function parseBlossomUrl(url: string): {
       sha256,
       ext,
       server,
+      host: urlObj.host,
     }
   } catch {
     return { isBlossomUrl: false }

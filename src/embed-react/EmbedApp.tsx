@@ -1,8 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { VideoPlayer } from '@/components/player/VideoPlayer'
-import { useAppContext } from '@/hooks/useAppContext'
-import { parseBlossomUrl } from '@/lib/blossom-url'
-import { presetThumbnailUrl } from '@/lib/preset-thumbnail-url'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import type { EmbedParams } from './lib/url-params'
 import type { VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
@@ -21,22 +19,14 @@ interface EmbedAppProps {
 }
 
 export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppProps) {
-  const { config } = useAppContext()
   const [contentWarningAccepted, setContentWarningAccepted] = useState(false)
   const [allSourcesFailed, setAllSourcesFailed] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
-  const thumbnailSource = video?.thumbnailVariants[0]?.url
-  const embedPoster = useMemo(() => {
-    if (!thumbnailSource) return undefined
-    const media = parseBlossomUrl(thumbnailSource)
-    return media.sha256
-      ? presetThumbnailUrl(config.imgproxyBaseUrl, 'embed-card-v1', media.sha256, {
-          extension: media.ext,
-          serverHints: [media.server],
-          authorPubkey: video?.pubkey,
-        })
-      : thumbnailSource
-  }, [config.imgproxyBaseUrl, thumbnailSource, video?.pubkey])
+  const embedPoster = useImageCascade({
+    src: video?.thumbnailVariants[0]?.url,
+    preset: 'embed-card-v1',
+    authorPubkey: video?.pubkey,
+  }).src
 
   // Handle all sources failed
   const handleAllSourcesFailed = useCallback(() => {
@@ -87,7 +77,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         reason={video.contentWarning}
         onAccept={() => setContentWarningAccepted(true)}
         color={params.accentColor}
-        poster={embedPoster}
+        poster={embedPoster ?? undefined}
       />
     )
   }

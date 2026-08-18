@@ -5,9 +5,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { useAppContext, useIsMobile } from '@/hooks'
-import { parseBlossomUrl } from '@/lib/blossom-url'
-import { presetThumbnailUrl, type PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
+import { useIsMobile } from '@/hooks'
+import { useImageCascade } from '@/hooks/useImageCascade'
+import type { PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
 import {
   usePlayerState,
   useControlsVisibility,
@@ -129,7 +129,6 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
   const desktopPlayerControls = useDesktopPlayerControls()
-  const { config } = useAppContext()
   const baseMime = mime.split(';')[0]?.trim().toLowerCase() ?? ''
   const isAudioOnly = mediaType === 'audio' || baseMime.startsWith('audio/')
   const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
@@ -1016,7 +1015,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     showControls()
   }, [showControls, isMobile])
 
-  // Resolve Blossom mirrors first, then construct the fixed preset URL for the selected poster.
+  // Resolve Blossom mirrors first, then let the cascade proxy the selected poster
+  // (preset route for Blossom-hash media, legacy insecure route otherwise), with an
+  // automatic fallback to the raw URL if the proxied poster fails to load.
   const posterUrls = useMemo(() => (poster ? [poster] : []), [poster])
   const { ladder: posterUrlLadder } = useMediaUrls({
     urls: posterUrls,
@@ -1025,21 +1026,15 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     enabled: !!poster,
   })
   const posterSource = posterUrlLadder.currentUrl
-  const posterMedia = useMemo(
-    () => (posterSource ? parseBlossomUrl(posterSource) : undefined),
-    [posterSource]
-  )
-  const posterUrl = useMemo(
-    () =>
-      posterMedia?.sha256
-        ? presetThumbnailUrl(config.imgproxyBaseUrl, posterPreset, posterMedia.sha256, {
-            extension: posterMedia.ext,
-            serverHints: [posterMedia.server],
-            authorPubkey,
-          })
-        : posterSource,
-    [config.imgproxyBaseUrl, posterMedia, posterPreset, posterSource, authorPubkey]
-  )
+  const posterCascade = useImageCascade({
+    src: posterSource,
+    preset: posterPreset,
+    authorPubkey,
+  })
+  const posterUrl = posterCascade.src
+  const posterExhausted = posterCascade.exhausted
+  const handlePosterLoad = posterCascade.onLoad
+  const handlePosterError = posterCascade.onError
 
   // Media Session API - lock screen / Control Center controls + background audio
   useMediaSession({
@@ -1075,8 +1070,16 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     queueMicrotask(() => setPosterLoaded(false))
 
     const img = new Image()
-    img.onload = () => setPosterLoaded(true)
-    img.onerror = () => setPosterLoaded(true) // Still mark as "loaded" on error to hide blurhash
+    img.onload = () => {
+      setPosterLoaded(true)
+      handlePosterLoad()
+    }
+    img.onerror = () => {
+      // Keep the blurhash visible while a fallback attempt is still pending; only hide
+      // it once the cascade has truly run out of candidates.
+      if (posterExhausted) setPosterLoaded(true)
+      handlePosterError()
+    }
     img.src = posterUrl
 
     // Cleanup when poster URL changes
@@ -1084,7 +1087,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
       img.onload = null
       img.onerror = null
     }
-  }, [posterUrl])
+  }, [posterUrl, posterExhausted, handlePosterLoad, handlePosterError])
 
   const hasCaptions = validatedTracks.length > 0
   const showPipButton = isPipSupported && !isAudioOnly

@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { parseBlossomUrl } from '@/lib/blossom-url'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
-import { presetThumbnailUrl, type PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
+import {
+  presetThumbnailUrl,
+  insecureThumbnailUrl,
+  type PresetThumbnailPreset,
+} from '@/lib/preset-thumbnail-url'
 
 export type ImageCascadeVariant = 'preview' | 'inline' | 'avatar'
 
 export interface ImageCascadeInput {
-  /** Raw image candidate. Hash-addressed Blossom URLs use the fixed image-proxy preset. */
+  /** Raw image candidate. Blossom-hash URLs use the fixed preset route; any other URL uses the legacy `/insecure/` directive route. */
   src: string | null | undefined
-  /** Raw Blossom video candidate from which imgproxy may create a still frame. */
+  /** Raw video candidate from which imgproxy may create a still frame. */
   videoUrl?: string | null
   variant?: ImageCascadeVariant
   /** Override for embed cards; normal UI derives the preset from variant. */
@@ -25,19 +29,18 @@ export interface ImageCascadeResult {
   onError: () => void
   onLoad: () => void
   exhausted: boolean
-  stage: 'preset' | 'raw' | 'video-frame' | 'exhausted'
+  stage: 'proxied' | 'raw' | 'video-frame' | 'exhausted'
 }
 
 type Stage = ImageCascadeResult['stage']
 
 /**
  * Image loading cascade:
- * 1. a fixed image-proxy preset URL for hash-addressed Blossom media;
- * 2. the raw image when the preset URL fails;
- * 3. a fixed-preset frame from the Blossom video;
+ * 1. a proxied URL — the fixed image-proxy preset for hash-addressed Blossom media, or the
+ *    legacy unsigned `/insecure/` directive route for any other source URL;
+ * 2. the raw image when the proxied URL fails;
+ * 3. a proxied frame from the Blossom or direct video URL;
  * 4. the caller's placeholder.
- *
- * Arbitrary remote URLs are never sent to imgproxy.
  */
 export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const imgproxyBaseUrl = useAppContextSafe()?.config.imgproxyBaseUrl
@@ -61,36 +64,41 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const imageMedia = useMemo(() => (rawImage ? parseBlossomUrl(rawImage) : undefined), [rawImage])
   const videoMedia = useMemo(() => (videoUrl ? parseBlossomUrl(videoUrl) : undefined), [videoUrl])
   const authorPubkey = input.authorPubkey ?? undefined
-  const presetImage = useMemo(
-    () =>
-      imageMedia?.sha256
-        ? presetThumbnailUrl(imgproxyBaseUrl, preset, imageMedia.sha256, {
-            extension: imageMedia.ext,
-            serverHints: [imageMedia.server],
-            authorPubkey,
-          })
-        : rawImage,
-    [imgproxyBaseUrl, imageMedia, preset, rawImage, authorPubkey]
-  )
-  const presetVideoFrame = useMemo(
-    () =>
-      videoMedia?.sha256
-        ? presetThumbnailUrl(imgproxyBaseUrl, preset, videoMedia.sha256, {
-            extension: videoMedia.ext,
-            serverHints: [videoMedia.server],
-            authorPubkey,
-          })
-        : null,
-    [imgproxyBaseUrl, preset, videoMedia, authorPubkey]
-  )
-  const imageUsesPreset = Boolean(imageMedia?.sha256)
-  const videoFrameAvailable = Boolean(presetVideoFrame)
+
+  // blob:/data: URLs are local-only and never reach imgproxy in either mode.
+  const isProxyable = (url: string) => !url.startsWith('blob:') && !url.startsWith('data:')
+
+  const proxiedImage = useMemo(() => {
+    if (!rawImage || !isProxyable(rawImage)) return rawImage
+    if (imageMedia?.sha256) {
+      return presetThumbnailUrl(imgproxyBaseUrl, preset, imageMedia.sha256, {
+        extension: imageMedia.ext,
+        serverHints: [imageMedia.host],
+        authorPubkey,
+      })
+    }
+    return insecureThumbnailUrl(imgproxyBaseUrl, preset, rawImage)
+  }, [imgproxyBaseUrl, imageMedia, preset, rawImage, authorPubkey])
+
+  const proxiedVideoFrame = useMemo(() => {
+    if (!videoUrl || !isProxyable(videoUrl)) return null
+    if (videoMedia?.sha256) {
+      return presetThumbnailUrl(imgproxyBaseUrl, preset, videoMedia.sha256, {
+        extension: videoMedia.ext,
+        serverHints: [videoMedia.host],
+        authorPubkey,
+      })
+    }
+    return insecureThumbnailUrl(imgproxyBaseUrl, preset, videoUrl)
+  }, [imgproxyBaseUrl, preset, videoMedia, videoUrl, authorPubkey])
+
+  const videoFrameAvailable = Boolean(proxiedVideoFrame)
 
   const initialStage: Stage = useMemo(() => {
-    if (rawImage) return imageUsesPreset ? 'preset' : 'raw'
+    if (rawImage) return isProxyable(rawImage) ? 'proxied' : 'raw'
     if (videoFrameAvailable) return 'video-frame'
     return 'exhausted'
-  }, [imageUsesPreset, rawImage, videoFrameAvailable])
+  }, [rawImage, videoFrameAvailable])
 
   const [stage, setStage] = useState<Stage>(initialStage)
 
@@ -103,21 +111,21 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
 
   const src = useMemo<string | null>(() => {
     switch (effectiveStage) {
-      case 'preset':
-        return presetImage
+      case 'proxied':
+        return proxiedImage
       case 'raw':
         return rawImage
       case 'video-frame':
-        return presetVideoFrame
+        return proxiedVideoFrame
       case 'exhausted':
         return null
     }
-  }, [effectiveStage, presetImage, presetVideoFrame, rawImage])
+  }, [effectiveStage, proxiedImage, proxiedVideoFrame, rawImage])
 
   const onError = useCallback(() => {
     setStage(current => {
-      if (current === 'preset' && rawImage) return 'raw'
-      if ((current === 'preset' || current === 'raw') && videoFrameAvailable) {
+      if (current === 'proxied' && rawImage) return 'raw'
+      if ((current === 'proxied' || current === 'raw') && videoFrameAvailable) {
         return 'video-frame'
       }
       return 'exhausted'

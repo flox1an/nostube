@@ -108,7 +108,7 @@ describe('DraftCard', () => {
     expect(img.getAttribute('src')).toContain('http')
   })
 
-  it('does not send an arbitrary video URL to thumbnail minting', () => {
+  it('proxies an arbitrary (non-Blossom) video URL through the legacy insecure route', () => {
     const draftGeneratedThumb = {
       ...mockDraft,
       thumbnailSource: 'generated' as const,
@@ -121,7 +121,11 @@ describe('DraftCard', () => {
       }
     )
 
-    expect(container.querySelector('img')).not.toBeInTheDocument()
+    const img = container.querySelector('img')
+    expect(img).toHaveAttribute(
+      'src',
+      'https://imgproxy.nostu.be/insecure/f:webp/q:82/rs:fit:480:480/plain/http%3A%2F%2Ftest.com%2Fvideo.mp4'
+    )
   })
 
   it('renders placeholder when no thumbnail and no video', () => {

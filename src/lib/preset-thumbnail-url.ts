@@ -38,3 +38,30 @@ export function presetThumbnailUrl(
 
   return url.toString()
 }
+
+/** Visual output for each preset, mirrored as raw imgproxy directives for the `/insecure/` route. */
+const PRESET_DIRECTIVES: Record<
+  PresetThumbnailPreset,
+  { resize: 'fit' | 'fill'; width: number; height: number; quality: number }
+> = {
+  'feed-preview-v1': { resize: 'fit', width: 480, height: 480, quality: 82 },
+  'profile-avatar-v1': { resize: 'fill', width: 160, height: 160, quality: 85 },
+  'embed-card-v1': { resize: 'fit', width: 1200, height: 630, quality: 82 },
+}
+
+/**
+ * Builds a legacy unsigned imgproxy directive URL (`/insecure/f:webp/q:.../rs:.../plain/<url>`)
+ * for a non-Blossom source URL, matching the visual output of the given preset.
+ *
+ * Only usable when the proxy has `ALLOW_UNSIGNED_URLS` enabled. Blossom-hash media MUST use
+ * `presetThumbnailUrl` instead — it needs no such server opt-in and never expires.
+ */
+export function insecureThumbnailUrl(
+  baseUrl: string | undefined,
+  preset: PresetThumbnailPreset,
+  sourceUrl: string
+): string {
+  const { resize, width, height, quality } = PRESET_DIRECTIVES[preset]
+  const directives = `f:webp/q:${quality}/rs:${resize}:${width}:${height}`
+  return `${getImgproxyBaseUrl(baseUrl)}/insecure/${directives}/plain/${encodeURIComponent(sourceUrl)}`
+}

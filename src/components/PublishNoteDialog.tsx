@@ -17,6 +17,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
 import type { VideoNote } from '@/hooks/useVideoNotes'
+import { useImageCascade } from '@/hooks/useImageCascade'
 
 interface PublishNoteDialogProps {
   note: VideoNote | null
@@ -72,6 +73,11 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
 
   const description = useMemo(() => (note ? buildDescription(note) : ''), [note])
   const hashtags = useMemo(() => (note ? extractHashtags(note.content) : []), [note])
+  const thumbnail = useImageCascade({
+    src: note?.thumbnailUrl,
+    videoUrl: note?.videoUrls[0],
+    variant: 'preview',
+  })
 
   // Initialize people from note.pubkeys whenever the note changes
   useMemo(() => {
@@ -131,15 +137,14 @@ export function PublishNoteDialog({ note, onOpenChange, onPublished }: PublishNo
         {note && (
           <div className="space-y-4">
             {/* Thumbnail / video preview */}
-            {note.thumbnailUrl && (
+            {thumbnail.src && (
               <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted">
                 <img
-                  src={note.thumbnailUrl}
+                  src={thumbnail.src}
                   alt=""
                   className="h-full w-full object-cover"
-                  onError={e => {
-                    ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                  }}
+                  onError={thumbnail.onError}
+                  onLoad={thumbnail.onLoad}
                 />
                 {note.videoUrls[0] && (
                   <a

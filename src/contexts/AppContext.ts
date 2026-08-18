@@ -62,8 +62,6 @@ export interface AppConfig {
   blossomServers?: BlossomServer[]
   /** Media caching servers for proxying/caching video content */
   cachingServers?: CachingServer[]
-  /** Thumbnail resize server URL (optional) */
-  thumbResizeServerUrl?: string
   /** NSFW content filter setting */
   nsfwFilter: NsfwFilter
   /** Show videos whose playable media URL points to YouTube */
@@ -82,6 +80,8 @@ export interface AppConfig {
   reportedEventIds?: string[]
   /** External search service base URL (overrides built-in default) */
   searchServiceUrl?: string
+  /** Image proxy base URL for fixed thumbnail presets, stored only in this browser. */
+  imgproxyBaseUrl?: string
   /** Publish view-tracking events (kind 22236) to these relays. */
   viewTrackingRelays?: string[]
   /** When false, no view events are enqueued or published. Default true. */

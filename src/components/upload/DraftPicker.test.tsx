@@ -57,7 +57,6 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       relays: [],
       videoType: 'videos',
       nsfwFilter: 'warning',
-      thumbResizeServerUrl: 'https://almond.slidestr.net',
     }}
   >
     <AccountsProvider manager={accountManager}>

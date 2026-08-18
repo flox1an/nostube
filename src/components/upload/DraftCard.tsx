@@ -27,7 +27,7 @@ export function DraftCard({ draft, onSelect, onDelete }: DraftCardProps) {
   const timeText =
     typeof relativeTime === 'string' ? t(relativeTime) : t(relativeTime[0], relativeTime[1])
 
-  // The proxy detects MIME types from the URL extension; some Blossom URLs lack one.
+  // Preserve known extensions so imgproxy can select image versus video processing.
   const primaryImage = uploadedThumbnailUrl
     ? ensureFileExtension(uploadedThumbnailUrl, uploadedThumbnailType)
     : undefined

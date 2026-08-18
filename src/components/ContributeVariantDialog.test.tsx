@@ -6,7 +6,6 @@ import type { VideoEvent } from '@/utils/video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
 import { AppProvider } from '@/components/AppProvider'
 import type { AppConfig } from '@/contexts/AppContext'
-import { defaultResizeServer } from '@/constants/servers'
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
@@ -103,7 +102,6 @@ function renderDialog(video = makeVideo(), opts: { blossomServers?: BlossomServe
     relays: [{ url: 'wss://relay.test', name: 'relay.test', tags: ['read', 'write'] }],
     videoType: 'videos',
     nsfwFilter: 'warning',
-    thumbResizeServerUrl: defaultResizeServer,
     blossomServers: opts.blossomServers ?? [],
   }
   return render(

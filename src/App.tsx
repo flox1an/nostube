@@ -20,7 +20,6 @@ import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'
-import { useProxyHealthMonitor } from '@/hooks/useProxyHealthMonitor'
 import { usePlaylists } from '@/hooks/usePlaylist'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
@@ -33,7 +32,6 @@ import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
 import { WalletProvider } from '@/contexts/WalletContext'
-import { defaultResizeServer } from '@/constants/servers'
 import { DesktopAccountSync } from '@/desktop/DesktopAccountSync'
 import { DesktopActivityReporter } from '@/desktop/DesktopActivityReporter'
 import { isTauri } from '@tauri-apps/api/core'
@@ -49,7 +47,7 @@ const defaultConfig: AppConfig = {
   nsfwFilter: 'hide',
   showYouTubeContent: true,
   showAudioContent: true,
-  thumbResizeServerUrl: defaultResizeServer,
+  imgproxyBaseUrl: undefined,
   p2p: {
     hlsBlobCacheEnabled: false,
   },
@@ -124,11 +122,6 @@ function TrustScoreProviderInit() {
 
 function LoginTimeTrackingInit() {
   useLoginTimeTracking()
-  return null
-}
-
-function ProxyHealthMonitorInit() {
-  useProxyHealthMonitor()
   return null
 }
 
@@ -232,7 +225,6 @@ export function App() {
                           <BatchedProfileLoaderInit />
                           <TrustScoreProviderInit />
                           <LoginTimeTrackingInit />
-                          <ProxyHealthMonitorInit />
                           <ViewEventSweeperInit />
                           <PlaylistAutoFlagInit />
                           <BlossomServerSync />

@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import langs from 'langs'
-import { defaultResizeServer } from '@/constants/servers'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -196,15 +195,6 @@ export function getLanguageLabel(lang: string): string {
   return label
 }
 
-export const imageProxy = (url?: string, proxyBaseUrl?: string) => {
-  if (!url) return ''
-  // Check for data URLs and return them immediately
-  if (url.startsWith('data:')) return url
-  const baseUrl = proxyBaseUrl || defaultResizeServer
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fill:80:80/plain/${encodeURIComponent(url)}`
-}
-
 /**
  * Add file extension to URL based on MIME type if missing
  * This is needed for image proxies that detect file type from extension
@@ -237,40 +227,6 @@ export function ensureFileExtension(url: string, mimeType?: string): string {
   // Append extension to the pathname
   urlObj.pathname += extension
   return urlObj.toString()
-}
-
-export const imageProxyVideoPreview = (url?: string, proxyBaseUrl?: string) => {
-  if (!url) return ''
-  // Check for data URLs and return them immediately
-  if (url.startsWith('data:')) return url
-  const baseUrl = proxyBaseUrl || defaultResizeServer
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(url)}`
-}
-
-/** Resize an inline image for comment/note display — fit 400×400, WebP. */
-export const imageProxyInline = (url?: string, proxyBaseUrl?: string) => {
-  if (!url) return ''
-  if (url.startsWith('data:')) return url
-  const baseUrl = proxyBaseUrl || defaultResizeServer
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:400:400/plain/${encodeURIComponent(url)}`
-}
-
-/**
- * Generate thumbnail from video URL using imgproxy's video thumbnail feature
- * This is used as a fallback when the image thumbnail fails to load
- */
-export const imageProxyVideoThumbnail = (videoUrl: string, proxyBaseUrl?: string) => {
-  if (!videoUrl) return ''
-  // Check for data URLs and return them immediately
-  if (videoUrl.startsWith('data:')) return videoUrl
-  const baseUrl = proxyBaseUrl || defaultResizeServer
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
-  // imgproxy can generate thumbnails from video URLs
-  // Format: /insecure/f:webp/rs:fit:480:480/plain/{video_url}
-  // The video URL itself will be used to extract a frame.
-  return `${cleanBaseUrl}/insecure/f:webp/rs:fit:480:480/plain/${encodeURIComponent(videoUrl)}`
 }
 
 function bigIntHash(str: string): string {

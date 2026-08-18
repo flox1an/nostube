@@ -1,6 +1,7 @@
 import { useMemo, useState, memo, useRef, useEffect, useCallback } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { useProfile } from '@/hooks'
+import { useImageCascade } from '@/hooks/useImageCascade'
 import { getInvoiceAmount } from '@/lib/zap-utils'
 import type { NostrEvent } from 'nostr-tools'
 import { Zap } from 'lucide-react'
@@ -170,10 +171,18 @@ const ZapperAvatar = memo(function ZapperAvatar({
   size: number
 }) {
   const profile = useProfile({ pubkey })
+  const avatar = useImageCascade({ src: profile?.picture, variant: 'avatar' })
 
-  if (profile?.picture) {
+  if (avatar.src) {
     return (
-      <img src={profile.picture} alt="" className="w-full h-full object-cover" loading="lazy" />
+      <img
+        src={avatar.src}
+        alt=""
+        className="w-full h-full object-cover"
+        loading="lazy"
+        onError={avatar.onError}
+        onLoad={avatar.onLoad}
+      />
     )
   }
 

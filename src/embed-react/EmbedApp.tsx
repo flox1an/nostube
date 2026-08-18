@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { VideoPlayer } from '@/components/player/VideoPlayer'
+import { useAppContext } from '@/hooks/useAppContext'
+import { extractBlossomHash } from '@/lib/blossom-url'
+import { presetThumbnailUrl } from '@/lib/preset-thumbnail-url'
 import type { EmbedParams } from './lib/url-params'
 import type { VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
@@ -18,9 +21,18 @@ interface EmbedAppProps {
 }
 
 export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppProps) {
+  const { config } = useAppContext()
   const [contentWarningAccepted, setContentWarningAccepted] = useState(false)
   const [allSourcesFailed, setAllSourcesFailed] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
+  const thumbnailSource = video?.thumbnailVariants[0]?.url
+  const embedPoster = useMemo(() => {
+    if (!thumbnailSource) return undefined
+    const media = extractBlossomHash(thumbnailSource)
+    return media.sha256
+      ? presetThumbnailUrl(config.imgproxyBaseUrl, 'embed-card-v1', media.sha256, media.ext)
+      : thumbnailSource
+  }, [config.imgproxyBaseUrl, thumbnailSource])
 
   // Handle all sources failed
   const handleAllSourcesFailed = useCallback(() => {
@@ -71,7 +83,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         reason={video.contentWarning}
         onAccept={() => setContentWarningAccepted(true)}
         color={params.accentColor}
-        poster={video.thumbnailVariants[0]?.url}
+        poster={embedPoster}
       />
     )
   }
@@ -94,6 +106,7 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
         mime={video.videoVariants[0]?.mimeType || 'video/mp4'}
         poster={poster}
         posterHash={posterHash}
+        posterPreset="embed-card-v1"
         loop={params.loop}
         initialPlayPos={params.startTime}
         contentWarning={undefined} // Already handled above

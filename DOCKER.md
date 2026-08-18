@@ -43,7 +43,7 @@ docker rm nostube
 
 ## Runtime Environment Configuration
 
-The Docker image supports runtime environment configuration through `RUNTIME_*` prefixed environment variables. These are injected when the container starts and can be modified without rebuilding the image.
+The Docker image injects the public runtime variables below when the container starts. They can be changed without rebuilding the main browser bundle.
 
 ### Available Environment Variables
 

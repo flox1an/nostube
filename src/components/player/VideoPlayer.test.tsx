@@ -16,6 +16,7 @@ vi.mock('@tauri-apps/api/window', () => ({
 }))
 
 vi.mock('@/hooks', () => ({
+  useAppContext: () => ({ config: {} }),
   useIsMobile: () => false,
 }))
 
@@ -199,6 +200,33 @@ describe('VideoPlayer source failures', () => {
     fireEvent.error(container.querySelector('video')!)
 
     expect(onAllSourcesFailed).toHaveBeenCalledWith(urls)
+  })
+})
+describe('VideoPlayer preset thumbnails', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+  it('uses the direct preset URL for a hash-addressed poster', () => {
+    const hash = 'a'.repeat(64)
+    const { container } = render(
+      <VideoPlayer
+        urls={['https://example.com/video.mp4']}
+        textTracks={[]}
+        mime="video/mp4"
+        poster={`https://blossom.example/${hash}.mp4`}
+      />
+    )
+
+    expect(container.querySelector('video')).toHaveAttribute(
+      'poster',
+      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${hash}.mp4`
+    )
   })
 })
 

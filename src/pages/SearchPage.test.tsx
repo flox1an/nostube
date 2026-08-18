@@ -7,7 +7,6 @@ import { AccountManager } from 'applesauce-accounts'
 import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
-import { defaultResizeServer } from '@/constants/servers'
 import { SearchPage } from './SearchPage'
 import * as useSearchVideos from '@/hooks/useSearchVideos'
 
@@ -41,7 +40,6 @@ function TestWrapper({ children, initialUrl }: { children: React.ReactNode; init
     relays: [{ url: 'wss://relay.nostr.band', name: 'relay.nostr.band', tags: ['read', 'write'] }],
     videoType: 'videos',
     nsfwFilter: 'warning',
-    thumbResizeServerUrl: defaultResizeServer,
   }
 
   return (

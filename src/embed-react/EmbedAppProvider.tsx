@@ -7,7 +7,8 @@ import {
 } from '@/contexts/AppContext'
 import { RelayPool } from 'applesauce-relay'
 import { EventStore } from 'applesauce-core'
-import { EventStoreProvider } from 'applesauce-react/providers'
+import { AccountManager } from 'applesauce-accounts'
+import { AccountsProvider, EventStoreProvider } from 'applesauce-react/providers'
 
 interface EmbedAppProviderProps {
   children: React.ReactNode
@@ -19,6 +20,7 @@ interface EmbedAppProviderProps {
 // These are created outside the component to persist across re-renders
 const embedEventStore = new EventStore()
 const embedRelayPool = new RelayPool()
+const embedAccountManager = new AccountManager()
 
 /**
  * Minimal AppContext provider for the embed player.
@@ -76,8 +78,10 @@ export function EmbedAppProvider({ children, authorBlossomServers = [] }: EmbedA
   }, [authorBlossomServers])
 
   return (
-    <EventStoreProvider eventStore={embedEventStore}>
-      <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
-    </EventStoreProvider>
+    <AccountsProvider manager={embedAccountManager}>
+      <EventStoreProvider eventStore={embedEventStore}>
+        <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+      </EventStoreProvider>
+    </AccountsProvider>
   )
 }

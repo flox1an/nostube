@@ -5,7 +5,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { useIsMobile } from '@/hooks'
+import { useAppContext, useIsMobile } from '@/hooks'
+import { extractBlossomHash } from '@/lib/blossom-url'
+import { presetThumbnailUrl, type PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
 import {
   usePlayerState,
   useControlsVisibility,
@@ -34,6 +36,7 @@ interface VideoPlayerProps {
   mediaType?: 'video' | 'audio'
   poster?: string
   posterHash?: string
+  posterPreset?: PresetThumbnailPreset
   onTimeUpdate?: (time: number) => void
   className?: string
   style?: React.CSSProperties
@@ -66,6 +69,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   mediaType,
   poster,
   posterHash,
+  posterPreset = 'feed-preview-v1',
   textTracks,
   loop: loopProp = false,
   onTimeUpdate,
@@ -125,6 +129,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
   const desktopPlayerControls = useDesktopPlayerControls()
+  const { config } = useAppContext()
   const baseMime = mime.split(';')[0]?.trim().toLowerCase() ?? ''
   const isAudioOnly = mediaType === 'audio' || baseMime.startsWith('audio/')
   const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
@@ -1011,7 +1016,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     showControls()
   }, [showControls, isMobile])
 
-  // Get poster URL with blossom fallback support (no resize proxy)
+  // Resolve Blossom mirrors first, then construct the fixed preset URL for the selected poster.
   const posterUrls = useMemo(() => (poster ? [poster] : []), [poster])
   const { ladder: posterUrlLadder } = useMediaUrls({
     urls: posterUrls,
@@ -1019,7 +1024,23 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     sha256: posterHash,
     enabled: !!poster,
   })
-  const posterUrl = posterUrlLadder.currentUrl
+  const posterSource = posterUrlLadder.currentUrl
+  const posterMedia = useMemo(
+    () => (posterSource ? extractBlossomHash(posterSource) : {}),
+    [posterSource]
+  )
+  const posterUrl = useMemo(
+    () =>
+      posterMedia.sha256
+        ? presetThumbnailUrl(
+            config.imgproxyBaseUrl,
+            posterPreset,
+            posterMedia.sha256,
+            posterMedia.ext
+          )
+        : posterSource,
+    [config.imgproxyBaseUrl, posterMedia.ext, posterMedia.sha256, posterPreset, posterSource]
+  )
 
   // Media Session API - lock screen / Control Center controls + background audio
   useMediaSession({

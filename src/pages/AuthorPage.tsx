@@ -61,6 +61,7 @@ import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
 import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
 import { getContentSafetyGate } from '@/lib/content-safety'
+import { useImageCascade } from '@/hooks/useImageCascade'
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
 const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
@@ -97,16 +98,40 @@ function AuthorBanner({
 }) {
   const metadata = useProfile({ pubkey })
   const banner = metadata?.banner
+  const cascade = useImageCascade({ src: banner, variant: 'preview' })
 
-  if (!banner) return null
+  if (!cascade.src) return null
 
-  return <img src={banner} alt="" className="hidden" onLoad={onLoad} onError={onError} />
+  return (
+    <img
+      src={cascade.src}
+      alt=""
+      className="hidden"
+      onLoad={() => {
+        cascade.onLoad()
+        onLoad()
+      }}
+      onError={() => {
+        if (cascade.stage === 'raw') onError()
+        cascade.onError()
+      }}
+    />
+  )
 }
 
 function AuthorBannerDisplay({ banner }: { banner: string }) {
+  const cascade = useImageCascade({ src: banner, variant: 'preview' })
+  if (!cascade.src) return null
+
   return (
     <div className="relative w-full h-32 sm:h-48 md:h-56 overflow-hidden rounded-lg">
-      <img src={banner} alt="" className="w-full h-full object-cover" />
+      <img
+        src={cascade.src}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={cascade.onError}
+        onLoad={cascade.onLoad}
+      />
       {/* Gradient fade to background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% to-background" />
     </div>
@@ -128,6 +153,7 @@ function AuthorProfile({
   const metadata = useProfile({ pubkey })
   const displayName = metadata?.display_name ?? metadata?.name ?? pubkey?.slice(0, 8) ?? pubkey
   const picture = metadata?.picture
+  const profilePicture = useImageCascade({ src: picture, variant: 'avatar' })
   const [isAboutExpanded, setIsAboutExpanded] = useState(false)
   const [isAboutClamped, setIsAboutClamped] = useState(false)
   const aboutRef = useRef<HTMLDivElement>(null)
@@ -170,13 +196,11 @@ function AuthorProfile({
     >
       <div className="shrink-0">
         <img
-          src={picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
+          src={profilePicture.src || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
           alt={displayName}
           className="w-24 h-24 rounded-full ring-2 ring-background object-cover"
-          onError={e => {
-            const target = e.target as HTMLImageElement
-            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
-          }}
+          onError={profilePicture.onError}
+          onLoad={profilePicture.onLoad}
         />
       </div>
       <div className="flex-1 min-w-0">
@@ -288,6 +312,8 @@ function EditProfileDialog({
   })
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [uploading, setUploading] = useState<'picture' | 'banner' | null>(null)
+  const formBanner = useImageCascade({ src: form.banner, variant: 'preview' })
+  const formPicture = useImageCascade({ src: form.picture, variant: 'avatar' })
 
   const setField = (field: keyof typeof form, value: string) => {
     setFieldError(null)
@@ -434,8 +460,14 @@ function EditProfileDialog({
               onClick={() => bannerInputRef.current?.click()}
               disabled={isSaving}
             >
-              {form.banner ? (
-                <img src={form.banner} alt="" className="h-full w-full object-cover" />
+              {formBanner.src ? (
+                <img
+                  src={formBanner.src}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={formBanner.onError}
+                  onLoad={formBanner.onLoad}
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   {t('pages.author.addBanner', 'Add banner')}
@@ -456,12 +488,11 @@ function EditProfileDialog({
               disabled={isSaving}
             >
               <img
-                src={form.picture || fallbackPicture}
+                src={formPicture.src || fallbackPicture}
                 alt=""
                 className="h-full w-full object-cover"
-                onError={event => {
-                  event.currentTarget.src = fallbackPicture
-                }}
+                onError={formPicture.onError}
+                onLoad={formPicture.onLoad}
               />
               <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity group-hover:opacity-100">
                 {uploading === 'picture' ? (

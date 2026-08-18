@@ -73,7 +73,6 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       relays: [],
       videoType: 'videos',
       nsfwFilter: 'warning',
-      thumbResizeServerUrl: 'https://almond.slidestr.net',
     }}
   >
     <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
@@ -100,7 +99,7 @@ describe('DraftCard', () => {
     expect(img.getAttribute('src')).toContain('http')
   })
 
-  it('renders generated thumbnail from video URL when no uploaded thumbnail', () => {
+  it('does not send an arbitrary video URL to thumbnail minting', () => {
     const draftGeneratedThumb = {
       ...mockDraft,
       thumbnailSource: 'generated' as const,
@@ -112,11 +111,8 @@ describe('DraftCard', () => {
         wrapper,
       }
     )
-    // Should have img element with proxy URL for generated thumbnail
-    const img = container.querySelector('img')
-    expect(img).toBeInTheDocument()
-    // URL should contain the video URL (encoded in the proxy URL)
-    expect(img?.getAttribute('src')).toContain('http')
+
+    expect(container.querySelector('img')).not.toBeInTheDocument()
   })
 
   it('renders placeholder when no thumbnail and no video', () => {

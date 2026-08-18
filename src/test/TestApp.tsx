@@ -4,7 +4,6 @@ import { AccountManager } from 'applesauce-accounts'
 import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
-import { defaultResizeServer } from '@/constants/servers'
 import { PrivateRelaysProvider } from '@/contexts/PrivateRelaysContext'
 import { UserRelaysProvider } from '@/contexts/UserRelaysContext'
 
@@ -20,7 +19,6 @@ export function TestApp({ children }: TestAppProps) {
     relays: [{ url: 'wss://relay.nostr.band', name: 'relay.nostr.band', tags: ['read', 'write'] }],
     videoType: 'videos',
     nsfwFilter: 'warning',
-    thumbResizeServerUrl: defaultResizeServer,
   }
 
   return (

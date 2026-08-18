@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useAppContext, useSelectedPreset, useFollowSet, useCurrentUser } from '@/hooks'
+import { useAppContext, useFollowSet, useCurrentUser } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
-import { defaultResizeServer } from '@/constants/servers'
 import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
@@ -23,7 +22,6 @@ import { Download, CheckCircle2, X } from 'lucide-react'
 
 export function GeneralSettingsSection() {
   const { config, updateConfig } = useAppContext()
-  const { presetContent } = useSelectedPreset()
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
   const { t, i18n } = useTranslation()
   const { user } = useCurrentUser()
@@ -32,17 +30,17 @@ export function GeneralSettingsSection() {
   const [isImporting, setIsImporting] = useState(false)
   const [importDone, setImportDone] = useState(false)
 
-  const handleThumbServerChange = (value: string) => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      thumbResizeServerUrl: value.trim() || undefined,
-    }))
-  }
-
   const handleSearchServiceUrlChange = (value: string) => {
     updateConfig(currentConfig => ({
       ...currentConfig,
       searchServiceUrl: value.trim() || undefined,
+    }))
+  }
+
+  const handleImgproxyBaseUrlChange = (value: string) => {
+    updateConfig(currentConfig => ({
+      ...currentConfig,
+      imgproxyBaseUrl: value.trim().replace(/\/+$/, '') || undefined,
     }))
   }
 
@@ -148,21 +146,6 @@ export function GeneralSettingsSection() {
         <p className="text-xs text-muted-foreground">{t('settings.general.languageDescription')}</p>
       </div>
 
-      {/* Thumbnail Resize Server */}
-      <div className="space-y-2 py-6">
-        <h3 className="text-base font-semibold">{t('settings.general.thumbnailServer')}</h3>
-        <Input
-          id="thumb-server"
-          type="url"
-          placeholder={presetContent.defaultThumbResizeServer || defaultResizeServer}
-          value={config.thumbResizeServerUrl || ''}
-          onChange={e => handleThumbServerChange(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">
-          {t('settings.general.thumbnailServerDescription')}
-        </p>
-      </div>
-
       {/* Search Service URL */}
       <div className="space-y-2 py-6">
         <h3 className="text-base font-semibold">
@@ -179,6 +162,26 @@ export function GeneralSettingsSection() {
           {t('settings.general.searchServiceUrlDescription', {
             defaultValue:
               'Base URL of the external video search API. Leave empty to use the default.',
+          })}
+        </p>
+      </div>
+
+      {/* Image Proxy URL */}
+      <div className="space-y-2 py-6">
+        <Label htmlFor="imgproxy-base-url" className="text-base font-semibold">
+          {t('settings.general.imgproxyBaseUrl', { defaultValue: 'Image Proxy URL' })}
+        </Label>
+        <Input
+          id="imgproxy-base-url"
+          type="url"
+          placeholder="https://imgproxy.nostu.be"
+          value={config.imgproxyBaseUrl ?? ''}
+          onChange={event => handleImgproxyBaseUrlChange(event.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t('settings.general.imgproxyBaseUrlDescription', {
+            defaultValue:
+              'Base URL for image and video thumbnail presets. Leave empty to use the Nostube default.',
           })}
         </p>
       </div>

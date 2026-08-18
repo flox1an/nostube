@@ -20,6 +20,7 @@ window.__RUNTIME_ENV__ = {
   // Default Blossom servers (comma-separated list)
   BLOSSOM_SERVERS: "${RUNTIME_BLOSSOM_SERVERS:-https://almond.slidestr.net}",
 
+
   // Application title
   APP_TITLE: "${RUNTIME_APP_TITLE:-Nostube}",
 

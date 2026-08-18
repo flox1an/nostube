@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useAppContext, useSelectedPreset } from '@/hooks'
-import { Input } from '@/components/ui/input'
+import { useAppContext } from '@/hooks'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -10,13 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { defaultResizeServer } from '@/constants/servers'
 import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
 
 export function ContentSettingsSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
-  const { presetContent } = useSelectedPreset()
 
   const handleNsfwFilterChange = (value: NsfwFilter) => {
     updateConfig(currentConfig => ({
@@ -43,13 +40,6 @@ export function ContentSettingsSection() {
     updateConfig(currentConfig => ({
       ...currentConfig,
       preferredQuality: value,
-    }))
-  }
-
-  const handleThumbServerChange = (value: string) => {
-    updateConfig(currentConfig => ({
-      ...currentConfig,
-      thumbResizeServerUrl: value.trim() || undefined,
     }))
   }
 
@@ -175,21 +165,6 @@ export function ContentSettingsSection() {
         </div>
         <p className="text-xs text-muted-foreground">
           {t('settings.general.nsfwFilterDescription')}
-        </p>
-      </div>
-
-      {/* Thumbnail Resize Server */}
-      <div className="space-y-2 py-6">
-        <h3 className="text-base font-semibold">{t('settings.general.thumbnailServer')}</h3>
-        <Input
-          id="content-thumb-server"
-          type="url"
-          placeholder={presetContent.defaultThumbResizeServer || defaultResizeServer}
-          value={config.thumbResizeServerUrl || ''}
-          onChange={e => handleThumbServerChange(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">
-          {t('settings.general.thumbnailServerDescription')}
         </p>
       </div>
     </div>

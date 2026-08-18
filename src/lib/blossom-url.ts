@@ -6,11 +6,11 @@
  */
 
 /**
- * Servers that look like Blossom servers but resize/re-encode videos,
+ * Servers that look like Blossom servers but resize/re-encode media,
  * so the SHA256 hash in the URL doesn't match the actual content.
  * These should NOT be treated as Blossom servers for mirroring/fallback purposes.
  */
-export const NON_BLOSSOM_SERVERS = ['video.nostr.build', 'cdn.nostrcheck.me']
+export const NON_BLOSSOM_SERVERS = ['video.nostr.build', 'image.nostr.build', 'cdn.nostrcheck.me']
 
 /**
  * Blossom servers that should be blocked/filtered out from user configuration.

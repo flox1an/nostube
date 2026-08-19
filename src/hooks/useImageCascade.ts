@@ -35,6 +35,17 @@ export interface ImageCascadeResult {
 type Stage = ImageCascadeResult['stage']
 
 /**
+ * How long the proxied candidate gets before we race it against the raw URL. imgproxy's
+ * preset/insecure routes do synchronous on-demand fetch+transcode on a cache miss — typically
+ * 250-950ms, occasionally multiple seconds for a slow third-party origin. Past this timeout we
+ * optimistically show the raw image while a hidden `Image()` keeps loading the proxied URL in
+ * the background; if it finishes we swap the visible `src` to it (already warm in the browser
+ * cache, so the swap is instant). A genuine proxied failure (not just slowness) still cascades
+ * to 'raw' immediately via `onError`, race or not.
+ */
+const RAW_RACE_TIMEOUT_MS = 900
+
+/**
  * Image loading cascade:
  * 1. a proxied URL — the fixed image-proxy preset for hash-addressed Blossom media, or the
  *    legacy unsigned `/insecure/` directive route for any other source URL;
@@ -101,13 +112,51 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   }, [rawImage, videoFrameAvailable])
 
   const [stage, setStage] = useState<Stage>(initialStage)
+  // True once the proxied candidate has taken longer than RAW_RACE_TIMEOUT_MS: we show the raw
+  // image in the meantime while a hidden preloader keeps waiting for the proxied one.
+  const [racing, setRacing] = useState(false)
 
   useEffect(() => {
     setStage(initialStage)
+    setRacing(false)
   }, [initialStage, rawImage, videoUrl])
 
+  // Race timer: only relevant while we're actually attempting the proxied candidate and a raw
+  // fallback exists to race it against.
+  useEffect(() => {
+    if (stage !== 'proxied' || !proxiedImage || !rawImage) return
+    const timer = setTimeout(() => setRacing(true), RAW_RACE_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [stage, proxiedImage, rawImage])
+
+  // Background preloader while racing: resolves the race without ever cancelling the in-flight
+  // proxied request (changing the visible <img>'s src would abort it).
+  useEffect(() => {
+    if (!racing || !proxiedImage) return
+    let cancelled = false
+    const preloader = new Image()
+    preloader.onload = () => {
+      if (!cancelled) setRacing(false) // proxied is warm in cache now — swap back to it
+    }
+    preloader.onerror = () => {
+      if (cancelled) return
+      setRacing(false)
+      setStage('raw') // proxied genuinely failed, not just slow; raw is already on screen
+    }
+    preloader.src = proxiedImage
+    return () => {
+      cancelled = true
+      preloader.onload = null
+      preloader.onerror = null
+    }
+  }, [racing, proxiedImage])
+
   const effectiveStage: Stage =
-    stage === 'video-frame' && !videoFrameAvailable ? 'exhausted' : stage
+    stage === 'video-frame' && !videoFrameAvailable
+      ? 'exhausted'
+      : stage === 'proxied' && racing
+        ? 'raw'
+        : stage
 
   const src = useMemo<string | null>(() => {
     switch (effectiveStage) {
@@ -123,14 +172,21 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   }, [effectiveStage, proxiedImage, proxiedVideoFrame, rawImage])
 
   const onError = useCallback(() => {
-    setStage(current => {
-      if (current === 'proxied' && rawImage) return 'raw'
-      if ((current === 'proxied' || current === 'raw') && videoFrameAvailable) {
-        return 'video-frame'
-      }
-      return 'exhausted'
-    })
-  }, [rawImage, videoFrameAvailable])
+    const displayed =
+      stage === 'video-frame' && !videoFrameAvailable
+        ? 'exhausted'
+        : stage === 'proxied' && racing
+          ? 'raw'
+          : stage
+    setRacing(false)
+    if (displayed === 'proxied' && rawImage) {
+      setStage('raw')
+    } else if ((displayed === 'proxied' || displayed === 'raw') && videoFrameAvailable) {
+      setStage('video-frame')
+    } else {
+      setStage('exhausted')
+    }
+  }, [stage, racing, rawImage, videoFrameAvailable])
 
   const onLoad = useCallback(() => {}, [])
 

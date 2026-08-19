@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useImageCascade, type ImageCascadeInput } from './useImageCascade'
 
 const BLOSSOM_HASH = 'a'.repeat(64)
@@ -103,5 +103,85 @@ describe('useImageCascade', () => {
     render(<Probe src={null} />)
     expect(probeStage()).toBe('exhausted')
     expect(probeSrc()).toBe('')
+  })
+})
+
+describe('useImageCascade proxied/raw race', () => {
+  class FakeImage {
+    onload: (() => void) | null = null
+    onerror: (() => void) | null = null
+    src = ''
+  }
+
+  let instances: FakeImage[] = []
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    instances = []
+    vi.stubGlobal(
+      'Image',
+      class extends FakeImage {
+        constructor() {
+          super()
+          instances.push(this)
+        }
+      }
+    )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('races the raw URL in once the proxied candidate is slow, then upgrades when it resolves', () => {
+    render(<Probe src={BLOSSOM_URL} />)
+    expect(probeStage()).toBe('proxied')
+
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+
+    expect(probeStage()).toBe('raw')
+    expect(probeSrc()).toBe(BLOSSOM_URL)
+    expect(instances).toHaveLength(1)
+
+    act(() => {
+      instances[0].onload?.()
+    })
+
+    expect(probeStage()).toBe('proxied')
+    expect(probeSrc()).toBe(
+      `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${BLOSSOM_HASH}.jpg?xs=blossom.example`
+    )
+  })
+
+  it('does not race before the timeout — proxied stays on screen if it is fast', () => {
+    render(<Probe src={BLOSSOM_URL} />)
+
+    act(() => {
+      vi.advanceTimersByTime(899)
+    })
+
+    expect(probeStage()).toBe('proxied')
+    expect(instances).toHaveLength(0)
+  })
+
+  it('cascades past raw if the background probe also fails during a race', () => {
+    render(<Probe src={DIRECT_URL} />)
+
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+    expect(probeStage()).toBe('raw')
+
+    act(() => {
+      instances[0].onerror?.()
+    })
+    expect(probeStage()).toBe('raw')
+
+    triggerError()
+
+    expect(probeStage()).toBe('exhausted')
   })
 })

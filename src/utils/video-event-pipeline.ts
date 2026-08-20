@@ -1,5 +1,6 @@
 import type { ReportedPubkeys } from '@/hooks'
 import type { BlossomServer } from '@/contexts/AppContext'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import {
   deduplicateByIdentifier,
   isAudioVideo,
@@ -68,14 +69,64 @@ export function validateVideoEvents(events: (Event | undefined)[]): Event[] {
   return events.filter((event): event is Event => event !== undefined)
 }
 
+interface TransformCacheEntry {
+  relays: string[]
+  blossomServers: BlossomServer[] | undefined
+  nsfwPubkeys: string[] | undefined
+  seenRelayCount: number
+  result: VideoEvent | undefined
+}
+
+/**
+ * Preserves `VideoEvent` object identity across timeline emissions.
+ *
+ * The timeline re-emits a growing array every `auditTime(100)` tick while
+ * events stream in. Without this cache every tick rebuilt every `VideoEvent`,
+ * so `React.memo(VideoCard)` never held and the entire grid re-rendered —
+ * which in turn re-subscribed one profile model per card per tick.
+ *
+ * Keyed on the stored event object (applesauce reuses it), invalidated when
+ * any transform input changes. `seenRelayCount` is tracked because
+ * `processEvent` reads mutable seen-relay tracking off the event.
+ */
+const transformCache = new WeakMap<Event, TransformCacheEntry>()
+
 export function transformVideoEvents(
   events: Event[],
   relays: string[],
   policy: FilterPolicy = {}
 ): VideoEvent[] {
-  return events
-    .map(event => processEvent(event, relays, policy.blossomServers, policy.nsfwPubkeys))
-    .filter((video): video is VideoEvent => video !== undefined && Boolean(video.id))
+  const { blossomServers, nsfwPubkeys } = policy
+  const videos: VideoEvent[] = []
+
+  for (const event of events) {
+    const seenRelayCount = getSeenRelays(event)?.size ?? 0
+    const cached = transformCache.get(event)
+    let video: VideoEvent | undefined
+
+    if (
+      cached !== undefined &&
+      cached.relays === relays &&
+      cached.blossomServers === blossomServers &&
+      cached.nsfwPubkeys === nsfwPubkeys &&
+      cached.seenRelayCount === seenRelayCount
+    ) {
+      video = cached.result
+    } else {
+      video = processEvent(event, relays, blossomServers, nsfwPubkeys)
+      transformCache.set(event, {
+        relays,
+        blossomServers,
+        nsfwPubkeys,
+        seenRelayCount,
+        result: video,
+      })
+    }
+
+    if (video !== undefined && video.id) videos.push(video)
+  }
+
+  return videos
 }
 
 export function filterVideoEvents(videos: VideoEvent[], policy: FilterPolicy = {}): VideoEvent[] {

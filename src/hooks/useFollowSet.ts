@@ -67,7 +67,10 @@ export function useFollowSet(): UseFollowSetReturn {
   useEffect(() => {
     if (user?.pubkey) {
       setFollowSetLoaded(false)
-      const loader = createAddressLoader(pool)
+      // bufferTime: 0 — this loader is on the critical boot path; applesauce's
+      // default 1000ms batching window would delay the follow set (and with it
+      // the whole feed REQ) by a full second.
+      const loader = createAddressLoader(pool, { bufferTime: 0 })
       const subscription = loader({
         kind: MEDIA_FOLLOWS_KIND,
         pubkey: user.pubkey,
@@ -84,7 +87,7 @@ export function useFollowSet(): UseFollowSetReturn {
   // Also load kind 3 for migration detection
   useEffect(() => {
     if (user?.pubkey && !eventStore.hasReplaceable(kinds.Contacts, user.pubkey)) {
-      const loader = createAddressLoader(pool)
+      const loader = createAddressLoader(pool, { bufferTime: 0 })
       const subscription = loader({
         kind: kinds.Contacts,
         pubkey: user.pubkey,

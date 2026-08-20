@@ -11,6 +11,7 @@ import {
   validateVideoEvents,
 } from './video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Mock dependencies
 vi.mock('@/workers/blurhashDataURL', () => ({
@@ -1304,5 +1305,58 @@ describe('processEvents', () => {
 
     expect(results).toHaveLength(1)
     expect(results[0].id).toBe(verticalVideoEvent.id)
+  })
+})
+
+describe('transformVideoEvents identity cache', () => {
+  const relays = ['wss://relay.example.com']
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('reuses the same VideoEvent object when inputs are unchanged', () => {
+    // The timeline re-emits a growing array on every audit tick. Stable
+    // identity is what lets React.memo(VideoCard) skip the re-render.
+    const first = transformVideoEvents([zapStreamEvent], relays, {})
+    const second = transformVideoEvents([zapStreamEvent, nostubeEvent], relays, {})
+
+    expect(second[0]).toBe(first[0])
+  })
+
+  it('rebuilds when the relay list changes', () => {
+    const first = transformVideoEvents([zapStreamEvent], relays, {})
+    const second = transformVideoEvents([zapStreamEvent], ['wss://other.example.com'], {})
+
+    expect(second[0]).not.toBe(first[0])
+  })
+
+  it('rebuilds when the blossom server list changes', () => {
+    const servers: BlossomServer[] = [
+      { name: 'example', url: 'https://blossom.example.com', tags: [] },
+    ]
+    const first = transformVideoEvents([zapStreamEvent], relays, {})
+    const second = transformVideoEvents([zapStreamEvent], relays, { blossomServers: servers })
+
+    expect(second[0]).not.toBe(first[0])
+  })
+
+  it('rebuilds when the nsfw pubkey list changes', () => {
+    const first = transformVideoEvents([zapStreamEvent], relays, {})
+    const second = transformVideoEvents([zapStreamEvent], relays, {
+      nsfwPubkeys: [zapStreamEvent.pubkey],
+    })
+
+    expect(second[0]).not.toBe(first[0])
+    expect(second[0].contentWarning).toBe('NSFW')
+  })
+
+  it('rebuilds when the event is seen on an additional relay', () => {
+    const first = transformVideoEvents([zapStreamEvent], relays, {})
+
+    vi.mocked(getSeenRelays).mockReturnValueOnce(new Set(['wss://relay.example.com']))
+    const second = transformVideoEvents([zapStreamEvent], relays, {})
+
+    expect(second[0]).not.toBe(first[0])
   })
 })

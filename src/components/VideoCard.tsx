@@ -6,7 +6,7 @@ import { formatDuration } from '../lib/formatDuration'
 import { UserAvatar } from '@/components/UserAvatar'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { PlayProgressBar } from './PlayProgressBar'
 import { useProfile } from '@/hooks/useProfile'
@@ -74,21 +74,21 @@ export const VideoCard = React.memo(function VideoCard({
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
 
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
-
   const cascade = useImageCascade({
     src: video.images?.[0],
     videoUrl: video.urls?.[0],
     variant: 'preview',
     authorPubkey: video.pubkey,
+    // Off-screen cards are lazy: their <img> has not started fetching, so racing the raw URL
+    // would force-load both candidates for every card in the grid at once.
+    race: priority,
   })
 
-  // Reset the loading-state placeholder whenever the cascade advances to a new candidate
-  // (e.g. proxy → raw → video-frame). Without this we'd keep showing the previously-loaded
-  // image briefly even after its src changed.
-  useEffect(() => {
-    setThumbnailLoaded(false)
-  }, [cascade.src])
+  // While the cascade advances to a new candidate (proxy → raw → video-frame) the previously
+  // decoded image stays painted underneath, so a slow or rate-limited follow-up request never
+  // regresses a visible thumbnail back to a skeleton.
+  const thumbnailLoaded = cascade.loaded
+  const heldThumbnail = cascade.loadedSrc
 
   // Generate blurhash placeholder for LQIP (Low Quality Image Placeholder)
   const blurhashPlaceholder = useMemo(() => {
@@ -130,10 +130,7 @@ export const VideoCard = React.memo(function VideoCard({
       ? `/desktop/player/${video.link}${playlistParam ? `?playlist=${encodeURIComponent(playlistParam)}` : ''}`
       : undefined
 
-  const handleThumbnailLoad = () => {
-    setThumbnailLoaded(true)
-    cascade.onLoad()
-  }
+  const handleThumbnailLoad = cascade.onLoad
 
   // Handle shorts click - populate store with video list
   const handleShortsClick = () => {
@@ -186,9 +183,19 @@ export const VideoCard = React.memo(function VideoCard({
               )
             ) : (
               <>
-                {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
+                {/* Placeholder while the current candidate loads: last loaded image, blurhash, skeleton */}
                 {!thumbnailLoaded &&
-                  (blurhashPlaceholder ? (
+                  (heldThumbnail ? (
+                    <img
+                      src={heldThumbnail}
+                      alt=""
+                      aria-hidden="true"
+                      className={cn(
+                        showNsfwWarning ? 'blur-lg' : '',
+                        'absolute inset-0 w-full h-full object-cover'
+                      )}
+                    />
+                  ) : blurhashPlaceholder ? (
                     <img
                       src={blurhashPlaceholder}
                       alt=""

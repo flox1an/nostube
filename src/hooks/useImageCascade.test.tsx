@@ -9,13 +9,18 @@ const DIRECT_URL = 'https://cdn.example.com/photo.jpg'
 function Probe(props: ImageCascadeInput) {
   const cascade = useImageCascade(props)
   return (
-    <div
-      data-testid="probe"
-      data-src={cascade.src ?? ''}
-      data-stage={cascade.stage}
-      data-exhausted={cascade.exhausted}
-      onClick={cascade.onError}
-    />
+    <>
+      <div
+        data-testid="probe"
+        data-src={cascade.src ?? ''}
+        data-stage={cascade.stage}
+        data-exhausted={cascade.exhausted}
+        data-loaded={cascade.loaded}
+        data-loaded-src={cascade.loadedSrc ?? ''}
+        onClick={cascade.onError}
+      />
+      <button data-testid="load" onClick={cascade.onLoad} />
+    </>
   )
 }
 
@@ -27,9 +32,23 @@ function probeStage() {
   return screen.getByTestId('probe').getAttribute('data-stage')
 }
 
+function probeLoadedSrc() {
+  return screen.getByTestId('probe').getAttribute('data-loaded-src')
+}
+
+function probeLoaded() {
+  return screen.getByTestId('probe').getAttribute('data-loaded')
+}
+
 function triggerError() {
   act(() => {
     screen.getByTestId('probe').click()
+  })
+}
+
+function triggerLoad() {
+  act(() => {
+    screen.getByTestId('load').click()
   })
 }
 
@@ -183,5 +202,65 @@ describe('useImageCascade proxied/raw race', () => {
     triggerError()
 
     expect(probeStage()).toBe('exhausted')
+  })
+
+  it('never races once the proxied candidate has loaded', () => {
+    render(<Probe src={BLOSSOM_URL} />)
+
+    act(() => {
+      vi.advanceTimersByTime(400)
+    })
+    triggerLoad()
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+
+    expect(probeStage()).toBe('proxied')
+    expect(probeLoaded()).toBe('true')
+    expect(instances).toHaveLength(0)
+  })
+
+  it('does not race when racing is disabled for off-screen images', () => {
+    render(<Probe src={BLOSSOM_URL} race={false} />)
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+
+    expect(probeStage()).toBe('proxied')
+    expect(instances).toHaveLength(0)
+  })
+
+  it('keeps the raw image on screen once it has loaded mid-race', () => {
+    render(<Probe src={BLOSSOM_URL} />)
+
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+    expect(probeStage()).toBe('raw')
+
+    triggerLoad()
+
+    act(() => {
+      instances[0].onload?.()
+    })
+
+    expect(probeStage()).toBe('raw')
+    expect(probeSrc()).toBe(BLOSSOM_URL)
+  })
+
+  it('reports the last loaded candidate while the next one loads', () => {
+    render(<Probe src={BLOSSOM_URL} />)
+    const proxied = `https://imgproxy.nostu.be/v1/preset/feed-preview-v1/${BLOSSOM_HASH}.jpg?xs=blossom.example`
+
+    triggerLoad()
+    expect(probeLoadedSrc()).toBe(proxied)
+
+    triggerError()
+
+    expect(probeStage()).toBe('raw')
+    expect(probeLoaded()).toBe('false')
+    expect(probeLoadedSrc()).toBe(proxied)
   })
 })

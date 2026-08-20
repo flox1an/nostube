@@ -66,13 +66,14 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     authorPubkey: video.pubkey,
   })
 
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
-  useEffect(() => {
-    setThumbnailLoaded(false)
-  }, [cascade.src])
-
   // Audio fallback fills in when the cascade has no candidate left and we're playing audio.
   const displaySrc = cascade.src ?? (isAudio ? audioFallback : null)
+  const usingFallback = !cascade.src && displaySrc !== null
+  const [fallbackLoaded, setFallbackLoaded] = useState(false)
+  // The previously decoded candidate stays painted while the next one loads, so a slow or
+  // rate-limited cascade step never regresses a visible thumbnail to a skeleton.
+  const thumbnailLoaded = usingFallback ? fallbackLoaded : cascade.loaded
+  const heldThumbnail = usingFallback ? null : cascade.loadedSrc
 
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash
@@ -80,8 +81,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   }, [video.thumbnailVariants])
 
   const handleThumbnailLoad = () => {
-    setThumbnailLoaded(true)
-    cascade.onLoad()
+    if (usingFallback) setFallbackLoaded(true)
+    else cascade.onLoad()
   }
 
   // Link to shorts page for short videos, video page for regular videos
@@ -97,9 +98,16 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
     >
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
         <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0">
-          {/* Placeholder shown while thumbnail loads - blurhash or skeleton */}
+          {/* Placeholder while loading: last loaded image, blurhash, skeleton */}
           {!thumbnailLoaded &&
-            (blurhashPlaceholder ? (
+            (heldThumbnail ? (
+              <img
+                src={heldThumbnail}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover rounded-md absolute"
+              />
+            ) : blurhashPlaceholder ? (
               <img
                 src={blurhashPlaceholder}
                 alt=""
@@ -172,12 +180,11 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
     authorPubkey: video.pubkey,
   })
 
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(false)
-  useEffect(() => {
-    setThumbnailLoaded(false)
-  }, [cascade.src])
-
   const displaySrc = cascade.src ?? (isAudio ? audioFallback : null)
+  const usingFallback = !cascade.src && displaySrc !== null
+  const [fallbackLoaded, setFallbackLoaded] = useState(false)
+  const thumbnailLoaded = usingFallback ? fallbackLoaded : cascade.loaded
+  const heldThumbnail = usingFallback ? null : cascade.loadedSrc
 
   const blurhashPlaceholder = useMemo(() => {
     const blurhash = video.thumbnailVariants?.[0]?.blurhash
@@ -185,8 +192,8 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   }, [video.thumbnailVariants])
 
   const handleThumbnailLoad = () => {
-    setThumbnailLoaded(true)
-    cascade.onLoad()
+    if (usingFallback) setFallbackLoaded(true)
+    else cascade.onLoad()
   }
 
   const publishDate = video.published_at ?? video.created_at
@@ -203,7 +210,14 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
       <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
         <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
           {!thumbnailLoaded &&
-            (blurhashPlaceholder ? (
+            (heldThumbnail ? (
+              <img
+                src={heldThumbnail}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover rounded-md absolute"
+              />
+            ) : blurhashPlaceholder ? (
               <img
                 src={blurhashPlaceholder}
                 alt=""

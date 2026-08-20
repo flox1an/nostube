@@ -22,10 +22,23 @@ export interface ImageCascadeInput {
   authorPubkey?: string | null
   /** Retained for callers whose source selection uses MIME metadata. */
   mimeType?: string
+  /**
+   * Race a slow proxied candidate against the raw source (default `true`). Pass `false` for
+   * lazily-loaded, off-screen images: their `<img>` has not started fetching yet, so racing
+   * would only force both candidates over the wire for content nobody is looking at.
+   */
+  race?: boolean
 }
 
 export interface ImageCascadeResult {
   src: string | null
+  /**
+   * Last candidate that decoded successfully. Keep painting it while `src` loads so a cascade
+   * step (proxied → raw) never blanks an image the user is already looking at.
+   */
+  loadedSrc: string | null
+  /** `src` itself has decoded — safe to reveal the live `<img>`. */
+  loaded: boolean
   onError: () => void
   onLoad: () => void
   exhausted: boolean
@@ -75,6 +88,7 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const imageMedia = useMemo(() => (rawImage ? parseBlossomUrl(rawImage) : undefined), [rawImage])
   const videoMedia = useMemo(() => (videoUrl ? parseBlossomUrl(videoUrl) : undefined), [videoUrl])
   const authorPubkey = input.authorPubkey ?? undefined
+  const raceEnabled = input.race ?? true
 
   // blob:/data: URLs are local-only and never reach imgproxy in either mode.
   const isProxyable = (url: string) => !url.startsWith('blob:') && !url.startsWith('data:')
@@ -115,24 +129,33 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   // True once the proxied candidate has taken longer than RAW_RACE_TIMEOUT_MS: we show the raw
   // image in the meantime while a hidden preloader keeps waiting for the proxied one.
   const [racing, setRacing] = useState(false)
+  // Candidate that actually decoded in the consumer's <img>.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
 
   useEffect(() => {
     setStage(initialStage)
     setRacing(false)
+    setLoadedSrc(null)
   }, [initialStage, rawImage, videoUrl])
 
-  // Race timer: only relevant while we're actually attempting the proxied candidate and a raw
-  // fallback exists to race it against.
+  // Race timer: only relevant while we're actually attempting the proxied candidate, a raw
+  // fallback exists to race it against, and the proxied candidate has not already arrived.
+  // Without the `loadedSrc` guard every card in a grid would flip to its raw URL 900ms after
+  // mount even though the proxied thumbnail was already on screen — a full-grid re-fetch storm
+  // plus a visible loaded-image → placeholder regression.
   useEffect(() => {
-    if (stage !== 'proxied' || !proxiedImage || !rawImage) return
+    if (!raceEnabled || stage !== 'proxied' || !proxiedImage || !rawImage) return
+    if (loadedSrc === proxiedImage) return
     const timer = setTimeout(() => setRacing(true), RAW_RACE_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [stage, proxiedImage, rawImage])
+  }, [raceEnabled, stage, proxiedImage, rawImage, loadedSrc])
 
   // Background preloader while racing: resolves the race without ever cancelling the in-flight
-  // proxied request (changing the visible <img>'s src would abort it).
+  // proxied request (changing the visible <img>'s src would abort it). Once the raw image is
+  // painted the race is over: swapping to a smaller copy of the picture the user is already
+  // looking at buys nothing and costs another decode plus a placeholder frame.
   useEffect(() => {
-    if (!racing || !proxiedImage) return
+    if (!racing || !proxiedImage || loadedSrc === rawImage) return
     let cancelled = false
     const preloader = new Image()
     preloader.onload = () => {
@@ -149,7 +172,7 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
       preloader.onload = null
       preloader.onerror = null
     }
-  }, [racing, proxiedImage])
+  }, [racing, proxiedImage, rawImage, loadedSrc])
 
   const effectiveStage: Stage =
     stage === 'video-frame' && !videoFrameAvailable
@@ -188,10 +211,12 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
     }
   }, [stage, racing, rawImage, videoFrameAvailable])
 
-  const onLoad = useCallback(() => {}, [])
+  const onLoad = useCallback(() => setLoadedSrc(src), [src])
 
   return {
     src,
+    loadedSrc,
+    loaded: src !== null && loadedSrc === src,
     onError,
     onLoad,
     exhausted: effectiveStage === 'exhausted',

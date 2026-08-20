@@ -65,12 +65,11 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
     const urlObj = new URL(url)
     const pathname = urlObj.pathname
 
-    // Extract filename from path
-    const filename = pathname.split('/').pop() || ''
-
-    // Check if it looks like a Blossom URL (64 char hex hash + optional extension)
-    // Supports both /hash.ext and /hash formats
-    const matchWithExt = filename.match(/^([a-f0-9]{64})\.([^.]+)$/i)
+    // Per the Blossom spec, a blob is served directly at the server root:
+    // `/{sha256}[.{ext}]`. Any leading path segment (e.g. `/media/2f/ff/ed/…`)
+    // means this is an ordinary CDN URL whose hash-looking filename is not a
+    // content hash — routing it through the hash-preset proxy would 404.
+    const matchWithExt = pathname.match(/^\/([a-f0-9]{64})\.([^.]+)$/i)
     if (matchWithExt) {
       return {
         sha256: matchWithExt[1].toLowerCase(),
@@ -78,8 +77,8 @@ export function extractBlossomHash(url: string): { sha256?: string; ext?: string
       }
     }
 
-    // Also match bare hash without extension
-    const matchBare = filename.match(/^([a-f0-9]{64})$/i)
+    // Also match a bare hash without extension.
+    const matchBare = pathname.match(/^\/([a-f0-9]{64})$/i)
     if (matchBare) {
       return {
         sha256: matchBare[1].toLowerCase(),

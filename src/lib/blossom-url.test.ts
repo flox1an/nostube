@@ -25,3 +25,29 @@ describe('extractBlossomHash / parseBlossomUrl for image.nostr.build', () => {
     expect(parseBlossomUrl(url)).toEqual({ isBlossomUrl: false })
   })
 })
+
+describe('extractBlossomHash / parseBlossomUrl path shape', () => {
+  it('treats a hash at the server root as a Blossom URL', () => {
+    const url = `https://blossom.example/${HASH}.webm`
+    expect(extractBlossomHash(url)).toEqual({ sha256: HASH, ext: 'webm' })
+    expect(parseBlossomUrl(url)).toEqual({
+      isBlossomUrl: true,
+      sha256: HASH,
+      ext: 'webm',
+      server: 'https://blossom.example',
+      host: 'blossom.example',
+    })
+  })
+
+  it('treats a bare hash at the server root as a Blossom URL', () => {
+    const url = `https://blossom.example/${HASH}`
+    expect(extractBlossomHash(url)).toEqual({ sha256: HASH })
+  })
+
+  it('rejects a hash-looking filename nested under a subdirectory', () => {
+    const url =
+      'https://bbs.kawa-kun.com/media/2f/ff/ed/2fffed753eb33c07af647a006a8afe32d038ad66a2a90a1ebe08b7340bec8802.webm'
+    expect(extractBlossomHash(url)).toEqual({})
+    expect(parseBlossomUrl(url)).toEqual({ isBlossomUrl: false })
+  })
+})

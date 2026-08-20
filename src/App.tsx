@@ -24,6 +24,7 @@ import { usePlaylists } from '@/hooks/usePlaylist'
 import { presetRelays, presetBlossomServers, presetCachingServers } from '@/constants/relays'
 import { BlossomServerSync } from '@/components/BlossomServerSync'
 import { UserRelaysProvider, useUserRelaysContext } from '@/contexts/UserRelaysContext'
+import { FollowSetProvider } from '@/contexts/FollowSetContext'
 import { PrivateRelaysProvider } from '@/contexts/PrivateRelaysContext'
 import { PresetProvider } from '@/contexts/PresetContext'
 import { useAppContext, useViewEventSweeper } from '@/hooks'
@@ -213,28 +214,30 @@ export function App() {
               <PresetProvider>
                 <UserRelaysProvider>
                   <PrivateRelaysProvider>
-                    <UploadManagerProvider>
-                      <WalletProvider>
-                        <TooltipProvider>
-                          <DesktopActivityReporter />
-                          <DesktopAccountSync />
-                          <AccountRestoreInit />
-                          <UserRelaySync />
-                          <RelayPoolSync />
-                          <P2PHlsBlobSharingSync />
-                          <BatchedProfileLoaderInit />
-                          <TrustScoreProviderInit />
-                          <LoginTimeTrackingInit />
-                          <ViewEventSweeperInit />
-                          <PlaylistAutoFlagInit />
-                          <BlossomServerSync />
-                          <OnboardingDialog />
-                          <Suspense>
-                            <AppRouter />
-                          </Suspense>
-                        </TooltipProvider>
-                      </WalletProvider>
-                    </UploadManagerProvider>
+                    <FollowSetProvider>
+                      <UploadManagerProvider>
+                        <WalletProvider>
+                          <TooltipProvider>
+                            <DesktopActivityReporter />
+                            <DesktopAccountSync />
+                            <AccountRestoreInit />
+                            <UserRelaySync />
+                            <RelayPoolSync />
+                            <P2PHlsBlobSharingSync />
+                            <BatchedProfileLoaderInit />
+                            <TrustScoreProviderInit />
+                            <LoginTimeTrackingInit />
+                            <ViewEventSweeperInit />
+                            <PlaylistAutoFlagInit />
+                            <BlossomServerSync />
+                            <OnboardingDialog />
+                            <Suspense>
+                              <AppRouter />
+                            </Suspense>
+                          </TooltipProvider>
+                        </WalletProvider>
+                      </UploadManagerProvider>
+                    </FollowSetProvider>
                   </PrivateRelaysProvider>
                 </UserRelaysProvider>
               </PresetProvider>

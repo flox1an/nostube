@@ -31,6 +31,12 @@ interface VideoCardProps {
   allVideos?: VideoEvent[] // Full list of videos for shorts navigation
   videoIndex?: number // Index of this video in the allVideos array
   tightGridGap?: boolean // Minimal horizontal gap on mobile (shorts grids)
+  /**
+   * Above-the-fold card: fetch the thumbnail eagerly at high priority.
+   * Lazy images are only dispatched after layout, so on a busy main thread
+   * the first visible row would otherwise wait for the render storm to end.
+   */
+  priority?: boolean
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -41,6 +47,7 @@ export const VideoCard = React.memo(function VideoCard({
   allVideos,
   videoIndex,
   tightGridGap,
+  priority = false,
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -193,7 +200,9 @@ export const VideoCard = React.memo(function VideoCard({
                   ))}
                 <img
                   src={cascade.src ?? ''}
-                  loading="lazy"
+                  loading={priority ? 'eager' : 'lazy'}
+                  fetchPriority={priority ? 'high' : 'auto'}
+                  decoding="async"
                   alt={video.title}
                   referrerPolicy="no-referrer"
                   className={cn(

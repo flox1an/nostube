@@ -1,17 +1,14 @@
 import { useEventStore } from 'applesauce-react/hooks'
 import { useCurrentUser } from './useCurrentUser'
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
-import { createAddressLoader } from 'applesauce-loaders/loaders'
-import { kinds, type NostrEvent } from 'nostr-tools'
+import { useMemo, useState, useCallback, useRef } from 'react'
+import { type NostrEvent } from 'nostr-tools'
 import type { RelayReqEventMessage } from 'applesauce-relay'
 import { useAppContext } from './useAppContext'
-import { METADATA_RELAY } from '@/constants/relays'
+import { MEDIA_FOLLOWS_KIND, useFollowSetContext } from '@/contexts/FollowSetContext'
 import { useNostrPublish } from './useNostrPublish'
 import { nowInSecs } from '@/lib/utils'
 import { getKindsForType } from '@/lib/video-types'
 
-/** NIP-51 multimedia (photos, short video) follow list */
-const MEDIA_FOLLOWS_KIND = 10020
 const BATCH_SIZE = 50 // Number of pubkeys to check per query
 
 export interface ImportProgress {
@@ -36,13 +33,19 @@ export interface UseFollowSetReturn {
   cancelImport: () => void
 }
 
+/**
+ * Follow-set state plus the mutation helpers.
+ *
+ * Loading lives in {@link FollowSetProvider} so it happens once per app,
+ * not once per consumer.
+ */
 export function useFollowSet(): UseFollowSetReturn {
   const { user } = useCurrentUser()
   const { pool, config } = useAppContext()
   const eventStore = useEventStore()
   const { publish } = useNostrPublish()
+  const { followSetEvent, kind3Event, followSetLoaded, followedPubkeys } = useFollowSetContext()
   const [isLoading, setIsLoading] = useState(false)
-  const [followSetLoaded, setFollowSetLoaded] = useState(false)
   const [importProgress, setImportProgress] = useState<ImportProgress>({
     phase: 'idle',
     checked: 0,
@@ -59,89 +62,12 @@ export function useFollowSet(): UseFollowSetReturn {
     return config.relays.filter(relay => relay.tags.includes('write')).map(relay => relay.url)
   }, [config.relays])
 
-  const relaysWithMetadata = useMemo(() => {
-    return [...readRelays, METADATA_RELAY]
-  }, [readRelays])
-
-  // Load kind 10020 media follows list (NIP-51)
-  useEffect(() => {
-    if (user?.pubkey) {
-      setFollowSetLoaded(false)
-      // bufferTime: 0 — this loader is on the critical boot path; applesauce's
-      // default 1000ms batching window would delay the follow set (and with it
-      // the whole feed REQ) by a full second.
-      const loader = createAddressLoader(pool, { bufferTime: 0 })
-      const subscription = loader({
-        kind: MEDIA_FOLLOWS_KIND,
-        pubkey: user.pubkey,
-        relays: relaysWithMetadata,
-      }).subscribe({
-        next: e => eventStore.add(e),
-        complete: () => setFollowSetLoaded(true),
-      })
-
-      return () => subscription.unsubscribe()
-    }
-  }, [user?.pubkey, eventStore, pool, relaysWithMetadata])
-
-  // Also load kind 3 for migration detection
-  useEffect(() => {
-    if (user?.pubkey && !eventStore.hasReplaceable(kinds.Contacts, user.pubkey)) {
-      const loader = createAddressLoader(pool, { bufferTime: 0 })
-      const subscription = loader({
-        kind: kinds.Contacts,
-        pubkey: user.pubkey,
-        relays: relaysWithMetadata,
-      }).subscribe(e => eventStore.add(e))
-
-      return () => subscription.unsubscribe()
-    }
-  }, [user?.pubkey, eventStore, pool, relaysWithMetadata])
-
-  // Get current follow set event using reactive approach
-  const [followSetEvent, setFollowSetEvent] = useState<NostrEvent | null>(null)
-  const [kind3Event, setKind3Event] = useState<NostrEvent | null>(null)
-
-  useEffect(() => {
-    if (!user?.pubkey) {
-      setFollowSetEvent(null)
-      return
-    }
-
-    // Subscribe to follow set event changes (kind 10020 is replaceable)
-    const sub = eventStore.replaceable(MEDIA_FOLLOWS_KIND, user.pubkey).subscribe(event => {
-      setFollowSetEvent(event ?? null)
-    })
-
-    return () => sub.unsubscribe()
-  }, [user?.pubkey, eventStore])
-
-  useEffect(() => {
-    if (!user?.pubkey) {
-      setKind3Event(null)
-      return
-    }
-
-    // Subscribe to kind 3 event changes
-    const sub = eventStore.replaceable(kinds.Contacts, user.pubkey).subscribe(event => {
-      setKind3Event(event ?? null)
-    })
-
-    return () => sub.unsubscribe()
-  }, [user?.pubkey, eventStore])
-
   const hasFollowSet = !!followSetEvent
   const hasKind3Contacts = !!(kind3Event && kind3Event.tags.some(tag => tag[0] === 'p'))
   const kind3PubkeyCount = useMemo(() => {
     if (!kind3Event) return 0
     return kind3Event.tags.filter(tag => tag[0] === 'p' && tag[1]).length
   }, [kind3Event])
-
-  // Extract followed pubkeys from kind 30000
-  const followedPubkeys = useMemo(() => {
-    if (!followSetEvent) return []
-    return followSetEvent.tags.filter(tag => tag[0] === 'p' && tag[1]).map(tag => tag[1])
-  }, [followSetEvent])
 
   // Add a follow
   const addFollow = useCallback(

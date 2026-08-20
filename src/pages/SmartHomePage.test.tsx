@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import type { UseFollowSetReturn } from '@/hooks/useFollowSet'
 
 vi.mock('@/hooks', () => ({
   useCurrentUser: vi.fn(),
-  useFollowSet: vi.fn(),
+}))
+
+vi.mock('@/contexts/FollowSetContext', () => ({
+  useFollowSetContext: vi.fn(),
 }))
 
 vi.mock('@/hooks/useAccountPersistence', () => ({
@@ -27,7 +29,8 @@ vi.mock('@/components/page-loaders', () => ({
   SubscriptionsPageLoader: () => <div data-testid="subscriptions-page-loader" />,
 }))
 
-import { useCurrentUser, useFollowSet } from '@/hooks'
+import { useCurrentUser } from '@/hooks'
+import { useFollowSetContext } from '@/contexts/FollowSetContext'
 import { loadActiveAccount } from '@/hooks/useAccountPersistence'
 import { SmartHomePage } from './SmartHomePage'
 
@@ -36,7 +39,8 @@ type CurrentUser = { pubkey: string; signer: unknown } | undefined
 function setHooks(opts: {
   user: CurrentUser
   activeAccountInStorage: string | null
-  followSet: Partial<UseFollowSetReturn>
+  followSetLoaded: boolean
+  optimisticFollowedPubkeys?: string[]
 }) {
   vi.mocked(loadActiveAccount).mockReturnValue(opts.activeAccountInStorage)
   // SmartHomePage only reads `user` off useCurrentUser; bypass the rest
@@ -50,21 +54,13 @@ function setHooks(opts: {
     loginWithBunker: vi.fn(),
     logout: vi.fn(),
   } as never)
-  const fullFollowSet: UseFollowSetReturn = {
-    followedPubkeys: [],
-    isLoading: false,
-    addFollow: vi.fn(),
-    removeFollow: vi.fn(),
-    importFromKind3: vi.fn().mockResolvedValue(false),
-    hasFollowSet: false,
-    followSetLoaded: false,
-    hasKind3Contacts: false,
-    kind3PubkeyCount: 0,
-    importProgress: { phase: 'idle', checked: 0, total: 0, withVideos: 0 },
-    cancelImport: vi.fn(),
-    ...opts.followSet,
-  }
-  vi.mocked(useFollowSet).mockReturnValue(fullFollowSet)
+  vi.mocked(useFollowSetContext).mockReturnValue({
+    followSetEvent: null,
+    kind3Event: null,
+    followSetLoaded: opts.followSetLoaded,
+    followedPubkeys: opts.optimisticFollowedPubkeys ?? [],
+    optimisticFollowedPubkeys: opts.optimisticFollowedPubkeys ?? [],
+  })
 }
 
 describe('SmartHomePage', () => {
@@ -76,7 +72,7 @@ describe('SmartHomePage', () => {
     setHooks({
       user: undefined,
       activeAccountInStorage: null,
-      followSet: { followSetLoaded: true },
+      followSetLoaded: true,
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('home-page')).toBeInTheDocument()
@@ -90,7 +86,7 @@ describe('SmartHomePage', () => {
     setHooks({
       user: undefined,
       activeAccountInStorage: 'pubkey-hex',
-      followSet: { followSetLoaded: false },
+      followSetLoaded: false,
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('subscriptions-page-loader')).toBeInTheDocument()
@@ -103,7 +99,8 @@ describe('SmartHomePage', () => {
     setHooks({
       user: { pubkey: 'pubkey-hex', signer: {} },
       activeAccountInStorage: 'pubkey-hex',
-      followSet: { followSetLoaded: false, followedPubkeys: [] },
+      followSetLoaded: false,
+      optimisticFollowedPubkeys: [],
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('subscriptions-page-loader')).toBeInTheDocument()
@@ -114,7 +111,8 @@ describe('SmartHomePage', () => {
     setHooks({
       user: { pubkey: 'pubkey-hex', signer: {} },
       activeAccountInStorage: 'pubkey-hex',
-      followSet: { followSetLoaded: true, followedPubkeys: ['a', 'b'] },
+      followSetLoaded: true,
+      optimisticFollowedPubkeys: ['a', 'b'],
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('subscriptions-page')).toBeInTheDocument()
@@ -126,7 +124,8 @@ describe('SmartHomePage', () => {
     setHooks({
       user: { pubkey: 'pubkey-hex', signer: {} },
       activeAccountInStorage: 'pubkey-hex',
-      followSet: { followSetLoaded: true, followedPubkeys: [] },
+      followSetLoaded: true,
+      optimisticFollowedPubkeys: [],
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('home-page')).toBeInTheDocument()
@@ -138,9 +137,23 @@ describe('SmartHomePage', () => {
     setHooks({
       user: undefined,
       activeAccountInStorage: null,
-      followSet: { followSetLoaded: false },
+      followSetLoaded: false,
     })
     render(<SmartHomePage />)
     expect(screen.getByTestId('home-page')).toBeInTheDocument()
+  })
+
+  it('renders SubscriptionsPage from the cached follow list before the live set arrives', () => {
+    // The cached list lets SubscriptionsPage build its timeline filter on the
+    // first render instead of waiting a relay round-trip for kind 10020.
+    setHooks({
+      user: { pubkey: 'pubkey-hex', signer: {} },
+      activeAccountInStorage: 'pubkey-hex',
+      followSetLoaded: false,
+      optimisticFollowedPubkeys: ['a', 'b'],
+    })
+    render(<SmartHomePage />)
+    expect(screen.getByTestId('subscriptions-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('subscriptions-page-loader')).not.toBeInTheDocument()
   })
 })

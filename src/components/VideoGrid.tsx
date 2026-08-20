@@ -8,6 +8,13 @@ import { useCallback, useMemo } from 'react'
 import { useAppContext } from '@/hooks'
 import { useTranslation } from 'react-i18next'
 
+/**
+ * Rows fetched eagerly at high priority. Lazy images are only dispatched
+ * after layout, so on a busy main thread the first visible rows would
+ * otherwise wait for the feed render storm to finish.
+ */
+const PRIORITY_ROWS = 2
+
 interface VideoGridProps {
   videos: VideoEvent[]
   isLoading?: boolean
@@ -175,6 +182,7 @@ export function VideoGrid({
     while (wideIdx < wideRows.length || portraitIdx < portraitRows.length) {
       // Emit up to 2 wide rows
       for (let r = 0; r < 2 && wideIdx < wideRows.length; r++, wideIdx++) {
+        const rowIsAboveFold = wideIdx < PRIORITY_ROWS
         rows.push(
           <div key={'wide-' + wideIdx} className={`grid ${gridColsClass(getCols('horizontal'))}`}>
             {wideRows[wideIdx].map(video => (
@@ -183,6 +191,7 @@ export function VideoGrid({
                 video={video}
                 format="horizontal"
                 playlistParam={playlistParam}
+                priority={rowIsAboveFold}
               />
             ))}
           </div>
@@ -204,6 +213,7 @@ export function VideoGrid({
                 allVideos={portraitVideos}
                 videoIndex={portraitIndexMap.get(video.id)}
                 tightGridGap
+                priority={wideRows.length === 0 && portraitIdx < PRIORITY_ROWS}
               />
             ))}
           </div>
@@ -240,6 +250,7 @@ export function VideoGrid({
           allVideos={isShort ? filteredVideos : undefined}
           videoIndex={isShort ? index : undefined}
           tightGridGap={isShort}
+          priority={index < getCols(isShort ? 'vertical' : 'horizontal') * PRIORITY_ROWS}
         />
       ))}
     </div>

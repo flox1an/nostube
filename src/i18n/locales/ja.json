@@ -742,9 +742,7 @@
       "noServers": "ストリーミングサーバーが設定されていません。動画はホスティングサーバーから直接再生されます。",
       "addPlaceholder": "ストリーミングサーバー URL を追加",
       "addButton": "サーバーを追加",
-      "resetButton": "デフォルトにリセット",
-      "p2pCacheTitle": "P2P HLS 共有",
-      "p2pCacheDescription": "検証済みの HLS セグメントをローカルに保存し、ピアからリクエストし、キャッシュしたセグメントをピアと共有します。"
+      "resetButton": "デフォルトにリセット"
     },
     "cache": {
       "title": "キャッシュ管理",

@@ -742,9 +742,7 @@
       "noServers": "未配置流媒体服务器。视频将直接从托管服务器播放。",
       "addPlaceholder": "添加流媒体服务器 URL",
       "addButton": "添加服务器",
-      "resetButton": "重置为默认值",
-      "p2pCacheTitle": "P2P HLS 分享",
-      "p2pCacheDescription": "在本地存储已验证的 HLS 片段，从对等节点请求，并与对等节点共享缓存的片段。"
+      "resetButton": "重置为默认值"
     },
     "cache": {
       "title": "缓存管理",

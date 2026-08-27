@@ -28,7 +28,6 @@ import { FollowSetProvider } from '@/contexts/FollowSetContext'
 import { PrivateRelaysProvider } from '@/contexts/PrivateRelaysContext'
 import { PresetProvider } from '@/contexts/PresetContext'
 import { useAppContext, useViewEventSweeper } from '@/hooks'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { UserRelaySync } from '@/components/UserRelaySync'
 import { OnboardingDialog } from '@/components/OnboardingDialog'
 import { UploadManagerProvider } from '@/providers/UploadManagerProvider'
@@ -36,7 +35,6 @@ import { WalletProvider } from '@/contexts/WalletContext'
 import { DesktopAccountSync } from '@/desktop/DesktopAccountSync'
 import { DesktopActivityReporter } from '@/desktop/DesktopActivityReporter'
 import { isTauri } from '@tauri-apps/api/core'
-import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
 
 const defaultConfig: AppConfig = {
@@ -49,9 +47,6 @@ const defaultConfig: AppConfig = {
   showYouTubeContent: true,
   showAudioContent: true,
   imgproxyBaseUrl: undefined,
-  p2p: {
-    hlsBlobCacheEnabled: false,
-  },
   media: {
     failover: {
       enabled: true,
@@ -158,48 +153,6 @@ function RelayPoolSync() {
   return null
 }
 
-function P2PHlsBlobSharingSync() {
-  const { config, pool } = useAppContext()
-  const { user } = useCurrentUser()
-  const { readRelays, writeRelays } = useUserRelaysContext()
-  const pubkey = user?.pubkey
-  const signer = user?.signer
-
-  useEffect(() => {
-    const mesh = getDefaultP2PBlobMesh(pool)
-    const enabled = config.p2p?.hlsBlobCacheEnabled ?? false
-
-    if (!enabled || !pubkey || !signer) {
-      mesh.stop()
-      return
-    }
-
-    const relaySet = new Set<string>([
-      ...(readRelays ?? []),
-      ...(writeRelays ?? []),
-      ...config.relays.map(relay => relay.url),
-    ])
-
-    mesh.start({
-      pubkey,
-      signer,
-      relays: Array.from(relaySet),
-    })
-
-    return () => mesh.stop()
-  }, [
-    config.p2p?.hlsBlobCacheEnabled,
-    config.relays,
-    pool,
-    pubkey,
-    readRelays,
-    signer,
-    writeRelays,
-  ])
-
-  return null
-}
-
 export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
@@ -223,7 +176,6 @@ export function App() {
                             <AccountRestoreInit />
                             <UserRelaySync />
                             <RelayPoolSync />
-                            <P2PHlsBlobSharingSync />
                             <BatchedProfileLoaderInit />
                             <TrustScoreProviderInit />
                             <LoginTimeTrackingInit />

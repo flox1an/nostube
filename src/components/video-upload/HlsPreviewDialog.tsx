@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/useToast'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
 import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
-import { getDefaultP2PBlobMesh } from '@/lib/p2p/p2p-blob-mesh'
 
 interface HlsPreviewDialogProps {
   url: string | null
@@ -30,8 +29,6 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
   const appContext = useAppContextSafe()
   const blossomServers = appContext?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
   const cachingServers = appContext?.config.cachingServers ?? EMPTY_CACHING_SERVERS
-  const p2pHlsBlobCacheEnabled = appContext?.config.p2p?.hlsBlobCacheEnabled ?? false
-  const p2pBlobMesh = appContext ? getDefaultP2PBlobMesh(appContext.pool) : undefined
 
   useEffect(() => {
     console.log(LOG, 'effect triggered', {
@@ -76,8 +73,6 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
           blossomServers,
           cachingServers,
           masterUrl: url,
-          p2pHlsBlobCacheEnabled,
-          p2pBlobMesh,
         }),
       })
       hlsRef.current = hls
@@ -167,7 +162,7 @@ export function HlsPreviewDialog({ url, open, onOpenChange }: HlsPreviewDialogPr
       setIsLoading(false)
       setError('HLS playback is not supported in this browser.')
     }, 0)
-  }, [url, open, blossomServers, cachingServers, p2pHlsBlobCacheEnabled, p2pBlobMesh, videoElement])
+  }, [url, open, blossomServers, cachingServers, videoElement])
 
   useEffect(() => {
     if (!open) {

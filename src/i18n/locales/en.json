@@ -742,9 +742,7 @@
       "noServers": "No streaming servers configured. Videos will play directly from hosting servers.",
       "addPlaceholder": "Add streaming server URL",
       "addButton": "Add Server",
-      "resetButton": "Reset to Defaults",
-      "p2pCacheTitle": "P2P HLS sharing",
-      "p2pCacheDescription": "Store verified HLS segments locally, request them from peers, and share cached segments with peers."
+      "resetButton": "Reset to Defaults"
     },
     "cache": {
       "title": "Cache Management",

@@ -3,12 +3,7 @@
  */
 
 export type ErrorCategory =
-  | 'network'
-  | 'authentication'
-  | 'permission'
-  | 'validation'
-  | 'notfound'
-  | 'unknown'
+  'network' | 'authentication' | 'permission' | 'validation' | 'notfound' | 'unknown'
 
 export interface AppError {
   message: string

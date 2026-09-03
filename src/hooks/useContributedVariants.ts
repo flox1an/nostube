@@ -9,11 +9,7 @@ import { extractBlossomHash, type VideoEvent, type VideoVariant } from '@/utils/
 export type ContributedMediaType = 'video' | 'image' | 'subtitle' | 'audio' | 'other'
 
 export type ContributedVariantDebugStatus =
-  | 'accepted'
-  | 'checking'
-  | 'duplicate'
-  | 'invalid'
-  | 'unavailable'
+  'accepted' | 'checking' | 'duplicate' | 'invalid' | 'unavailable'
 
 export interface ContributedVariantDebugRecord {
   eventId: string

@@ -4,14 +4,7 @@ export const VIDEO_VIEW_EVENT_KIND = 22236
 export const MIN_VIEW_SECONDS = 1
 
 export type ViewEventSource =
-  | 'video'
-  | 'shorts'
-  | 'home'
-  | 'profile'
-  | 'search'
-  | 'playlist'
-  | 'share'
-  | 'unknown'
+  'video' | 'shorts' | 'home' | 'profile' | 'search' | 'playlist' | 'share' | 'unknown'
 
 export interface ViewSegment {
   start: number

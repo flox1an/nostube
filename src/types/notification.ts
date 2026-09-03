@@ -13,10 +13,7 @@ export interface VideoNotification {
 }
 
 export type UploadNotificationType =
-  | 'upload_complete'
-  | 'transcode_complete'
-  | 'upload_error'
-  | 'transcode_error'
+  'upload_complete' | 'transcode_complete' | 'upload_error' | 'transcode_error'
 
 export interface UploadNotification {
   id: string

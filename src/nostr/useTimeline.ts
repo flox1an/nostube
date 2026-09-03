@@ -15,13 +15,7 @@ import { auditTime, of } from 'rxjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export type TimelinePhase =
-  | 'idle'
-  | 'loading-initial'
-  | 'ready'
-  | 'loading-more'
-  | 'prefetching'
-  | 'exhausted'
-  | 'error'
+  'idle' | 'loading-initial' | 'ready' | 'loading-more' | 'prefetching' | 'exhausted' | 'error'
 
 type LoadIntent = 'initial' | 'load-more' | 'prefetch'
 

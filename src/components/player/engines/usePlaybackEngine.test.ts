@@ -146,7 +146,6 @@ describe('usePlaybackEngine adapters', () => {
       mediaType: 'video',
     })
 
-
     const { result } = renderHook(() =>
       usePlaybackEngine({
         ...baseOptions,

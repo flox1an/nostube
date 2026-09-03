@@ -116,19 +116,20 @@ scripts/
 - ✅ Accessibility features (keyboard navigation, ARIA labels)
 
 **11 URL Parameters:**
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| v | _required_ | Video identifier (nevent/naddr/note) |
-| autoplay | 0 | Auto-play video on load |
-| muted | 0 | Start video muted |
-| loop | 0 | Loop video playback |
-| t | 0 | Start time in seconds |
-| controls | 1 | Show/hide video controls ✅ **Fixed!** |
-| title | 1 | Show/hide title overlay |
-| branding | 1 | Show/hide "Watch on Nostube" link |
-| quality | auto | Preferred quality (1080p/720p/480p/auto) |
-| color | 8b5cf6 | Accent color (hex without #) |
-| relays | auto | Custom relay list (comma-separated) |
+
+| Parameter | Default    | Description                              |
+| --------- | ---------- | ---------------------------------------- |
+| v         | _required_ | Video identifier (nevent/naddr/note)     |
+| autoplay  | 0          | Auto-play video on load                  |
+| muted     | 0          | Start video muted                        |
+| loop      | 0          | Loop video playback                      |
+| t         | 0          | Start time in seconds                    |
+| controls  | 1          | Show/hide video controls ✅ **Fixed!**   |
+| title     | 1          | Show/hide title overlay                  |
+| branding  | 1          | Show/hide "Watch on Nostube" link        |
+| quality   | auto       | Preferred quality (1080p/720p/480p/auto) |
+| color     | 8b5cf6     | Accent color (hex without #)             |
+| relays    | auto       | Custom relay list (comma-separated)      |
 
 ---
 

@@ -841,8 +841,7 @@ export function VideoDebugInfo({
 
   // Selection state for the unified left/right panel
   type PanelSelection =
-    | { kind: 'variant'; idx: number }
-    | { kind: 'hls'; masterUrl: string; nodeUrl: string }
+    { kind: 'variant'; idx: number } | { kind: 'hls'; masterUrl: string; nodeUrl: string }
 
   const nonHlsVariants = useMemo(
     () =>

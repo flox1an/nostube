@@ -15,12 +15,7 @@ import {
 import { runBrowserTranscodeJob } from '@/lib/browser-transcode-worker'
 
 export type VideoTranscodeStatus =
-  | 'idle'
-  | 'analyzing'
-  | 'waiting'
-  | 'transcoding'
-  | 'done'
-  | 'error'
+  'idle' | 'analyzing' | 'waiting' | 'transcoding' | 'done' | 'error'
 
 export interface VariantProgress {
   variant: BrowserTranscodeVariant

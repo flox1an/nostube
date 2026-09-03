@@ -109,7 +109,7 @@ export async function decryptNcryptsec(
     throw new Error('Password is required to unlock this key')
   }
 
-  const decoded = bech32.decodeToBytes(ncryptsec.trim())
+  const decoded = bech32.decodeToBytes(ncryptsec.trim(), false)
   if (decoded.prefix !== 'ncryptsec') {
     throw new Error('Expected an ncryptsec encrypted key')
   }

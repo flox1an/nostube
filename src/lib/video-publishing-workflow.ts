@@ -1,13 +1,7 @@
 import type { UploadTask } from '@/types/upload-manager'
 
 export type WorkflowPhase =
-  | 'validating'
-  | 'uploading'
-  | 'transcoding'
-  | 'mirroring'
-  | 'publishing'
-  | 'done'
-  | 'failed'
+  'validating' | 'uploading' | 'transcoding' | 'mirroring' | 'publishing' | 'done' | 'failed'
 
 export interface PublishedVideo {
   id: string

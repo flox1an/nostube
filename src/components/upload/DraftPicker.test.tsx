@@ -188,7 +188,7 @@ describe('DraftPicker', () => {
 
     // Find delete button (first one - has trash icon)
     const deleteButtons = screen.getAllByRole('button')
-    const firstDeleteBtn = deleteButtons.find(btn => btn.querySelector('svg.lucide-trash-2'))
+    const firstDeleteBtn = deleteButtons.find(btn => btn.querySelector('svg.lucide-trash'))
 
     expect(firstDeleteBtn).toBeTruthy()
     if (firstDeleteBtn) {

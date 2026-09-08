@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { useAppContext } from '@/hooks'
+import { useAppContext, useMutedPubkeys, useProfile } from '@/hooks'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { UserAvatar } from '@/components/UserAvatar'
 import {
   Select,
   SelectContent,
@@ -167,6 +169,66 @@ export function ContentSettingsSection() {
           {t('settings.general.nsfwFilterDescription')}
         </p>
       </div>
+
+      {/* Muted accounts */}
+      <div className="space-y-3 py-6">
+        <div>
+          <h3 className="text-base font-semibold">
+            {t('settings.general.mutedAccounts', { defaultValue: 'Muted accounts' })}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.general.mutedAccountsDescription', {
+              defaultValue:
+                'Videos and comments from these accounts are hidden. Your mute list is published to Nostr, so other clients honour it too.',
+            })}
+          </p>
+        </div>
+        <MutedAccountsList />
+      </div>
+    </div>
+  )
+}
+
+function MutedAccountsList() {
+  const { t } = useTranslation()
+  const { mutedPubkeys, unmutePubkey } = useMutedPubkeys()
+
+  if (mutedPubkeys.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t('settings.general.mutedAccountsEmpty', { defaultValue: 'You have not muted anyone.' })}
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {mutedPubkeys.map(pubkey => (
+        <MutedAccountRow key={pubkey} pubkey={pubkey} onUnmute={() => void unmutePubkey(pubkey)} />
+      ))}
+    </div>
+  )
+}
+
+function MutedAccountRow({ pubkey, onUnmute }: { pubkey: string; onUnmute: () => void }) {
+  const { t } = useTranslation()
+  const metadata = useProfile({ pubkey })
+  const name = metadata?.display_name || metadata?.name || pubkey.slice(0, 12)
+
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-4 rounded-lg border p-3 sm:p-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <UserAvatar
+          picture={metadata?.picture}
+          pubkey={pubkey}
+          name={name}
+          className="h-8 w-8 shrink-0"
+        />
+        <span className="truncate text-sm font-medium">{name}</span>
+      </div>
+      <Button variant="outline" size="sm" className="shrink-0" onClick={onUnmute}>
+        {t('mute.unmute', { defaultValue: 'Unmute' })}
+      </Button>
     </div>
   )
 }

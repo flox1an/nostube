@@ -128,12 +128,13 @@ global.IntersectionObserver = vi.fn().mockImplementation(_callback => ({
   thresholds: [],
 }))
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(_callback => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Mock ResizeObserver. Must be a class: Radix constructs it with `new`, and an
+// arrow-function mock implementation is not constructible.
+global.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver
 
 // Mock localStorage
 const localStorageMock = (() => {

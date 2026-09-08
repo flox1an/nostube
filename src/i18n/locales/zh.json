@@ -698,6 +698,9 @@
       "youtubeContentDescription": "显示媒体来源为 YouTube URL 的视频。",
       "audioContent": "音频内容",
       "audioContentDescription": "显示纯音频帖子，如 MP3 播客节目。",
+      "mutedAccounts": "已屏蔽的账号",
+      "mutedAccountsDescription": "这些账号的视频和评论将被隐藏。你的屏蔽列表会发布到 Nostr，其他客户端也会遵循。",
+      "mutedAccountsEmpty": "你还没有屏蔽任何人。",
       "nsfwFilter": "NSFW 内容过滤",
       "nsfwHide": "隐藏 — 不显示 NSFW 内容",
       "nsfwWarning": "警告 — 显示模糊并带警告",
@@ -1037,9 +1040,18 @@
     "transcodeError": "转码失败",
     "markAllAsRead": "全部标为已读"
   },
+  "mute": {
+    "unmute": "取消屏蔽",
+    "unmuteUser": "取消屏蔽用户",
+    "userUnmuted": "已取消屏蔽用户",
+    "moreActions": "更多操作",
+    "error": "无法更新屏蔽列表"
+  },
   "report": {
     "titleVideo": "举报视频",
     "titleComment": "举报评论",
+    "titleProfile": "举报用户",
+    "reportUser": "举报用户",
     "description": "帮助我们了解此内容的问题。",
     "reasonLabel": "举报原因",
     "reasons": {

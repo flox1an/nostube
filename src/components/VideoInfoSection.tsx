@@ -10,7 +10,7 @@ import { formatDistance } from 'date-fns/formatDistance'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
-import { useAppContext, useNostrPublish } from '@/hooks'
+import { useAppContext, useMuteUser, useNostrPublish } from '@/hooks'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -45,6 +45,8 @@ import {
   Pencil,
   ExternalLink,
   Zap,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -172,6 +174,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
   const loadedPinListKeyRef = useRef<string | null>(null)
+  const { isMuted: isAuthorMuted, toggleMute: toggleAuthorMute } = useMuteUser(video?.pubkey ?? '')
 
   // Check if video is editable (owner + addressable event)
   const isOwner = userPubkey === video?.pubkey
@@ -476,6 +479,22 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                   <Bug className="w-5 h-5" />
                   &nbsp; {t('errors.debugInfo')}
                 </DropdownMenuItem>
+                {userPubkey && video && userPubkey !== video.pubkey && (
+                  <DropdownMenuItem
+                    onSelect={() => void toggleAuthorMute()}
+                    className={isAuthorMuted ? undefined : 'text-destructive'}
+                  >
+                    {isAuthorMuted ? (
+                      <Volume2 className="w-5 h-5" />
+                    ) : (
+                      <VolumeX className="w-5 h-5" />
+                    )}
+                    &nbsp;{' '}
+                    {isAuthorMuted
+                      ? t('mute.unmuteUser', { defaultValue: 'Unmute user' })
+                      : t('video.comments.muteUser')}
+                  </DropdownMenuItem>
+                )}
                 {userPubkey && (
                   <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
                     <Flag className="w-5 h-5" />

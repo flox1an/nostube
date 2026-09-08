@@ -31,7 +31,8 @@ const REPORT_REASONS: Record<ReportReason, string> = {
 interface ReportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  reportType: 'video' | 'comment'
+  reportType: 'video' | 'comment' | 'profile'
+  /** Event id of the reported video/comment, or the pubkey when reporting a profile. */
   contentId: string
   contentAuthor?: string
 }
@@ -53,8 +54,11 @@ export function ReportDialog({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    const tags: string[][] = [['e', contentId, reason]]
-    if (contentAuthor) {
+    // NIP-56: a profile report carries only the `p` tag, content reports tag
+    // the event and its author.
+    const tags: string[][] =
+      reportType === 'profile' ? [['p', contentId, reason]] : [['e', contentId, reason]]
+    if (reportType !== 'profile' && contentAuthor) {
       tags.push(['p', contentAuthor, reason])
     }
 
@@ -68,11 +72,14 @@ export function ReportDialog({
         },
       })
 
-      // Add to local reported event IDs for immediate hiding
-      updateConfig(config => ({
-        ...config,
-        reportedEventIds: [...(config.reportedEventIds ?? []), contentId],
-      }))
+      // Hide the reported event locally. A pubkey is not an event id, so
+      // profile reports have nothing to add here; muting is the hiding action.
+      if (reportType !== 'profile') {
+        updateConfig(config => ({
+          ...config,
+          reportedEventIds: [...(config.reportedEventIds ?? []), contentId],
+        }))
+      }
 
       toast({
         title: t('report.successTitle'),
@@ -104,7 +111,11 @@ export function ReportDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {reportType === 'video' ? t('report.titleVideo') : t('report.titleComment')}
+              {reportType === 'video'
+                ? t('report.titleVideo')
+                : reportType === 'profile'
+                  ? t('report.titleProfile', { defaultValue: 'Report User' })
+                  : t('report.titleComment')}
             </DialogTitle>
             <DialogDescription>{t('report.description')}</DialogDescription>
           </DialogHeader>

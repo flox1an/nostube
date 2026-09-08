@@ -22,6 +22,7 @@ import { CreatePlaylistDialog } from '@/components/playlists'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { RichTextContent } from '@/components/RichTextContent'
 import { ZapButton } from '@/components/ZapButton'
+import { UserActionsMenu } from '@/components/UserActionsMenu'
 import { FollowingList } from '@/components/FollowingList'
 import { Camera, Plus, Minus, Loader2, Upload } from 'lucide-react'
 import {
@@ -36,6 +37,7 @@ import {
   useFollowSet,
   useUserRelays,
   useAuthorLikedVideos,
+  useBlockedPubkeys,
   useReportedPubkeys,
   useAuthorFollowing,
   useProfilePublish,
@@ -250,6 +252,10 @@ function AuthorProfile({
                 size="sm"
               />
             )}
+            <UserActionsMenu
+              pubkey={pubkey}
+              className="bg-white/10 backdrop-blur-md hover:bg-white/30"
+            />
           </div>
         </div>
         {metadata?.about && (
@@ -1458,7 +1464,7 @@ export function AuthorPage() {
   const navigate = useNavigate()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
-  const blockedPubkeys = useReportedPubkeys()
+  const blockedPubkeys = useBlockedPubkeys()
   const pubkey = useMemo(() => decodeProfilePointer(nprofile ?? '')?.pubkey, [nprofile])
   const safetyGate = getContentSafetyGate(pubkey, config.nsfwFilter, {
     nsfwPubkeys: presetContent.nsfwPubkeys,

@@ -22,6 +22,7 @@ import { getDateLocale } from '@/lib/date-locale'
 import { formatDate } from 'date-fns'
 import { DesktopVideoLink } from '@/desktop/DesktopVideoLink'
 import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
+import { UserActionsMenu } from '@/components/UserActionsMenu'
 
 interface VideoCardProps {
   video: VideoEvent
@@ -284,6 +285,12 @@ export const VideoCard = React.memo(function VideoCard({
                 </div>
               </div>
             </div>
+            {/* Hidden until hover on desktop, always reachable on touch. */}
+            <UserActionsMenu
+              pubkey={video.pubkey}
+              videoId={video.id}
+              className="-mr-1 shrink-0 transition-opacity data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+            />
           </div>
         </div>
       </div>

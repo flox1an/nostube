@@ -39,7 +39,7 @@ import {
   useIsMobile,
   usePreloadVideoData,
 } from '@/hooks'
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
+import { useBlockedPubkeys } from '@/hooks/useReportedPubkeys'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useVideoLabels } from '@/hooks/useVideoLabels'
 import { useContributedVariants } from '@/hooks/useContributedVariants'
@@ -983,7 +983,7 @@ function UnresolvedVideoSafetyGate({
 export function VideoPage() {
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
-  const blockedPubkeys = useReportedPubkeys()
+  const blockedPubkeys = useBlockedPubkeys()
   const { nevent } = useParams<{ nevent: string }>()
   const navigate = useNavigate()
   const videoIdentifier = useMemo(() => decodeVideoEventIdentifier(nevent ?? ''), [nevent])

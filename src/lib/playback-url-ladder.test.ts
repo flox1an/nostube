@@ -57,4 +57,29 @@ describe('PlaybackUrlLadder', () => {
     ladder.onError(segment, 'segment')
     expect(ladder.candidatesFor(segment)).toEqual([])
   })
+
+  it('offers collected ladder URLs to manifest retries after the original fails', () => {
+    const sha = '3751b84f27234fc8ce3227d132b422f7e00f4a50c6cdc322080fed89a302d7dd'
+    const original = `https://origin.example/${sha}.m3u8`
+    const mirror = `https://mirror.example/${sha}.m3u8`
+    const ladder = createLadder([original])
+
+    // Discovery merges mirrors after hls.js already started loading the original
+    ladder.merge([mirror], 'discovered')
+    ladder.onError(original, 'manifest')
+
+    expect(ladder.candidatesFor(original)).toEqual([mirror])
+  })
+
+  it('does not surface a failed original when discovery lands after the failure', () => {
+    const original = 'https://primary.example/video.m3u8'
+    const mirror = 'https://discovered.example/video.m3u8'
+    const ladder = createLadder([original])
+
+    ladder.onError(original, 'manifest')
+    expect(ladder.currentUrl).toBeNull()
+
+    ladder.merge([mirror], 'discovered')
+    expect(ladder.currentUrl).toBe(mirror)
+  })
 })

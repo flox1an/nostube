@@ -1308,6 +1308,14 @@
       "validators": "Validadores",
       "reportPenalty": "Penalización por reporte activa: ×{{score}}",
       "trustLabel": "Confianza {{label}}"
+    },
+    "filterWarning": {
+      "title": "Estás entrando en la zona de peligro",
+      "body1": "Al desactivar el filtro de confianza se mostrarán videos de cuentas no confiables y sin verificar. Algunos de estos contenidos pueden ser inapropiados, ofensivos o solo para adultos (18+).",
+      "body2": "Lo que veas a partir de ahora es bajo tu propio riesgo: eres el único responsable de lo que decides ver.",
+      "body3": "Si no estás seguro, deja el filtro activado.",
+      "cancel": "Mantener el filtro activado",
+      "confirm": "Entiendo, desactivar"
     }
   },
   "relaySource": {

@@ -60,7 +60,10 @@ export class PlaybackUrlLadder {
   }
 
   get currentUrl(): string | null {
-    return this._urls[this._index] ?? null
+    // Never surface a known-failed URL: a late merge (discovery) can leave
+    // _index pointing at the dead original, pinning consumers to it forever.
+    const index = this.findNextIndex(this._index)
+    return index === -1 ? null : this._urls[index]
   }
 
   get hasMore(): boolean {
@@ -137,8 +140,13 @@ export class PlaybackUrlLadder {
 
   candidatesFor(url: string): string[] {
     const { sha256 } = extractBlossomHash(url)
-    const candidates = sha256 ? this.generate([url], sha256).urls : [url]
-    return candidates.filter(candidate => !this.failed.has(candidate))
+    const own = sha256 ? this.generate([url], sha256).urls : [url]
+    // Known ladder URLs (the manifest) must also fall back to every URL the
+    // ladder has collected since load — discovery, refresh, and promote keep
+    // _urls current, while `own` only reflects static server config. Without
+    // this, an HLS retry after the event URL fails gets zero candidates.
+    const pool = this._urls.includes(url) ? [...own, ...this._urls] : own
+    return [...new Set(pool)].filter(candidate => !this.failed.has(candidate))
   }
 
   private sourceUrls(options: PlaybackUrlLadderOptions): string[] {

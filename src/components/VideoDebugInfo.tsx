@@ -40,9 +40,9 @@ import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVariants'
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
-import { blossomServerCandidates, fetchPlaylistWithFallback } from '@/lib/hls-playlist-fetch'
-import type { SegmentStatus } from '@/components/hls-segment-grid'
+import { fetchPlaylistWithFallback } from '@/lib/hls-playlist-fetch'
 import { useAppContext } from '@/hooks/useAppContext'
+import { useSegmentAvailability } from '@/hooks/useSegmentAvailability'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import type { ServerAvailability } from '@/hooks/useVideoServerAvailability'
 import { useMultiVideoServerAvailability } from '@/hooks/useMultiVideoServerAvailability'
@@ -161,6 +161,9 @@ interface NodeCheck {
   error?: string
 }
 
+/** Stable identity so `blossomServers ?? EMPTY_SERVERS` never restarts effects. */
+const EMPTY_SERVERS: BlossomServer[] = []
+
 function useNodeCheck(url: string | null, configServers: BlossomServer[]) {
   const [check, setCheck] = useState<NodeCheck>({ url: '', status: 'idle' })
   const [serverChecks, setServerChecks] = useState<
@@ -168,6 +171,7 @@ function useNodeCheck(url: string | null, configServers: BlossomServer[]) {
   >([])
   const serversRef = useRef(configServers)
   serversRef.current = configServers
+  const serversKey = configServers.map(server => server.url).join('\u0000')
 
   useEffect(() => {
     if (!url) return
@@ -220,83 +224,9 @@ function useNodeCheck(url: string | null, configServers: BlossomServer[]) {
           )
       })
     }
-  }, [url, configServers])
+  }, [url, serversKey])
 
   return { check, serverChecks }
-}
-
-// ── Segment availability hook ─────────────────────────────────────────────────
-
-async function headOk(url: string, signal: AbortSignal): Promise<boolean> {
-  try {
-    const response = await fetch(url, { method: 'HEAD', signal })
-    return response.ok
-  } catch {
-    return false
-  }
-}
-
-/**
- * HEAD-checks segment URLs with max 6 concurrent requests. A segment the
- * playlist's own server does not have is retried on the other configured
- * Blossom servers and reported as `mirrored` when one of them holds it.
- */
-function useSegmentAvailability(
-  segmentUrls: string[],
-  enabled: boolean,
-  configServers: BlossomServer[]
-) {
-  const [statuses, setStatuses] = useState<SegmentStatus[]>([])
-  const abortRef = useRef<AbortController | null>(null)
-  const serversRef = useRef(configServers)
-  serversRef.current = configServers
-
-  useEffect(() => {
-    if (!enabled || segmentUrls.length === 0) return
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    const servers = serversRef.current
-
-    setStatuses(segmentUrls.map(() => 'pending'))
-
-    const setStatus = (index: number, status: SegmentStatus) => {
-      if (controller.signal.aborted) return
-      setStatuses(prev => prev.map((s, j) => (j === index ? status : s)))
-    }
-
-    let next = 0
-    const worker = async () => {
-      while (next < segmentUrls.length && !controller.signal.aborted) {
-        const index = next++
-        setStatus(index, 'checking')
-        const [own, ...mirrors] = blossomServerCandidates(segmentUrls[index], servers)
-
-        if (await headOk(own, controller.signal)) {
-          setStatus(index, 'available')
-          continue
-        }
-
-        let status: SegmentStatus = 'unavailable'
-        for (const mirror of mirrors) {
-          if (controller.signal.aborted) return
-          if (await headOk(mirror, controller.signal)) {
-            status = 'mirrored'
-            break
-          }
-        }
-        setStatus(index, status)
-      }
-    }
-
-    // ponytail: fixed 6-way concurrency, plenty for a debug panel
-    void Promise.all(Array.from({ length: Math.min(6, segmentUrls.length) }, worker))
-
-    return () => controller.abort()
-  }, [segmentUrls, enabled])
-
-  return statuses
 }
 
 // ── Variant segment content (init items + availability grid) ─────────────────
@@ -314,7 +244,7 @@ function VariantSegmentContent({
   onSelectUrl: (url: string) => void
   configServers: BlossomServer[]
 }) {
-  const nonInitSegments = stream.segments.filter(s => !s.isInit)
+  const nonInitSegments = useMemo(() => stream.segments.filter(s => !s.isInit), [stream.segments])
   const segmentUrls = useMemo(() => nonInitSegments.map(s => s.url), [nonInitSegments])
   const availabilityStatuses = useSegmentAvailability(
     segmentUrls,
@@ -1188,7 +1118,7 @@ export function VideoDebugInfo({
                           onSelectUrl={url =>
                             setSelection({ kind: 'hls', masterUrl, nodeUrl: url })
                           }
-                          configServers={blossomServers ?? []}
+                          configServers={blossomServers ?? EMPTY_SERVERS}
                         />
                       </div>
                     ))}
@@ -1207,7 +1137,7 @@ export function VideoDebugInfo({
                     {selection?.kind === 'hls' && (
                       <HlsNodeDetails
                         url={selection.nodeUrl}
-                        configServers={blossomServers ?? []}
+                        configServers={blossomServers ?? EMPTY_SERVERS}
                       />
                     )}
                   </div>

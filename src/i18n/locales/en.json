@@ -698,6 +698,9 @@
       "youtubeContentDescription": "Show videos whose media source is a YouTube URL.",
       "audioContent": "Audio content",
       "audioContentDescription": "Show audio-only posts such as MP3 podcast episodes.",
+      "mutedAccounts": "Muted accounts",
+      "mutedAccountsDescription": "Videos and comments from these accounts are hidden. Your mute list is published to Nostr, so other clients honour it too.",
+      "mutedAccountsEmpty": "You have not muted anyone.",
       "nsfwFilter": "NSFW Content Filter",
       "nsfwHide": "Hide - Don't show NSFW content",
       "nsfwWarning": "Warning - Show blurred with warning",
@@ -1037,9 +1040,18 @@
     "transcodeError": "Transcode failed",
     "markAllAsRead": "Mark all as read"
   },
+  "mute": {
+    "unmute": "Unmute",
+    "unmuteUser": "Unmute user",
+    "userUnmuted": "User unmuted",
+    "moreActions": "More actions",
+    "error": "Could not update your mute list"
+  },
   "report": {
     "titleVideo": "Report Video",
     "titleComment": "Report Comment",
+    "titleProfile": "Report User",
+    "reportUser": "Report user",
     "description": "Help us understand what's wrong with this content.",
     "reasonLabel": "Reason for report",
     "reasons": {

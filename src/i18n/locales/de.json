@@ -698,6 +698,9 @@
       "youtubeContentDescription": "Videos anzeigen, die auf YouTube-Inhalte verlinken oder diese einbetten.",
       "audioContent": "Audio-Inhalte",
       "audioContentDescription": "Audio-only-Beiträge wie MP3-Podcastfolgen anzeigen.",
+      "mutedAccounts": "Stummgeschaltete Konten",
+      "mutedAccountsDescription": "Videos und Kommentare dieser Konten werden ausgeblendet. Deine Stummschaltungsliste wird auf Nostr veröffentlicht, andere Clients berücksichtigen sie ebenfalls.",
+      "mutedAccountsEmpty": "Du hast niemanden stummgeschaltet.",
       "nsfwFilter": "NSFW-Inhaltsfilter",
       "nsfwHide": "Ausblenden - NSFW-Inhalte nicht anzeigen",
       "nsfwWarning": "Warnung - Unscharf mit Warnung anzeigen",
@@ -1037,9 +1040,18 @@
     "transcodeError": "Transkodierung fehlgeschlagen",
     "markAllAsRead": "Alle als gelesen markieren"
   },
+  "mute": {
+    "unmute": "Stummschaltung aufheben",
+    "unmuteUser": "Nutzer nicht mehr stummschalten",
+    "userUnmuted": "Stummschaltung aufgehoben",
+    "moreActions": "Weitere Aktionen",
+    "error": "Stummschaltungsliste konnte nicht aktualisiert werden"
+  },
   "report": {
     "titleVideo": "Video melden",
     "titleComment": "Kommentar melden",
+    "titleProfile": "Nutzer melden",
+    "reportUser": "Nutzer melden",
     "description": "Helfen Sie uns zu verstehen, was mit diesem Inhalt nicht stimmt.",
     "reasonLabel": "Grund für die Meldung",
     "reasons": {

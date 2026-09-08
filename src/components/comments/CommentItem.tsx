@@ -14,13 +14,14 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Volume2,
   VolumeX,
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { useProfile, useMutedPubkeys, useNostrPublish, useAppContext } from '@/hooks'
+import { useProfile, useMuteUser, useNostrPublish, useAppContext } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -30,7 +31,6 @@ import { CommentInput } from '@/components/CommentInput'
 import { CommentReactions } from '@/components/CommentReactions'
 import { ReportDialog } from '@/components/ReportDialog'
 import { TrustBadge } from '@/components/TrustBadge'
-import { ToastAction } from '@/components/ui/toast'
 import { useToast } from '@/hooks/useToast'
 import {
   AlertDialog,
@@ -106,28 +106,13 @@ export const CommentItem = React.memo(function CommentItem({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
   const eventStore = useEventStore()
-  const { mutePubkey, unmutePubkey } = useMutedPubkeys()
+  const { isMuted, toggleMute } = useMuteUser(comment.pubkey)
   const { publish } = useNostrPublish()
   const { config } = useAppContext()
   const { toast } = useToast()
   const showDebug = isBetaUser(currentUserPubkey)
 
   const isOwnComment = currentUserPubkey ? comment.pubkey === currentUserPubkey : false
-
-  const handleMuteUser = () => {
-    mutePubkey(comment.pubkey)
-    toast({
-      title: t('video.comments.userMuted'),
-      action: (
-        <ToastAction
-          altText={t('common.undo', { defaultValue: 'Undo' })}
-          onClick={() => unmutePubkey(comment.pubkey)}
-        >
-          {t('common.undo', { defaultValue: 'Undo' })}
-        </ToastAction>
-      ),
-    })
-  }
 
   const handleDeleteComment = async () => {
     setIsDeleting(true)
@@ -215,9 +200,18 @@ export const CommentItem = React.memo(function CommentItem({
                     </DropdownMenuItem>
                   )}
                   {!isOwnComment && currentUserPubkey && (
-                    <DropdownMenuItem onSelect={handleMuteUser} className="text-destructive">
-                      <VolumeX className="w-4 h-4 mr-2" />
-                      {t('video.comments.muteUser')}
+                    <DropdownMenuItem
+                      onSelect={() => void toggleMute()}
+                      className={isMuted ? undefined : 'text-destructive'}
+                    >
+                      {isMuted ? (
+                        <Volume2 className="w-4 h-4 mr-2" />
+                      ) : (
+                        <VolumeX className="w-4 h-4 mr-2" />
+                      )}
+                      {isMuted
+                        ? t('mute.unmuteUser', { defaultValue: 'Unmute user' })
+                        : t('video.comments.muteUser')}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>

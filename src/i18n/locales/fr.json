@@ -698,6 +698,9 @@
       "youtubeContentDescription": "Afficher les vidéos qui lient ou intègrent du contenu YouTube.",
       "audioContent": "Contenu audio",
       "audioContentDescription": "Afficher les publications uniquement audio, comme les épisodes de podcast MP3.",
+      "mutedAccounts": "Comptes masqués",
+      "mutedAccountsDescription": "Les vidéos et commentaires de ces comptes sont masqués. Votre liste de masquage est publiée sur Nostr, les autres clients la respectent aussi.",
+      "mutedAccountsEmpty": "Vous n'avez masqué personne.",
       "nsfwFilter": "Filtre de contenu NSFW",
       "nsfwHide": "Masquer - Ne pas afficher le contenu NSFW",
       "nsfwWarning": "Avertissement - Afficher flouté avec avertissement",
@@ -1037,9 +1040,18 @@
     "transcodeError": "Échec du transcodage",
     "markAllAsRead": "Tout marquer comme lu"
   },
+  "mute": {
+    "unmute": "Réactiver",
+    "unmuteUser": "Réactiver l'utilisateur",
+    "userUnmuted": "Utilisateur réactivé",
+    "moreActions": "Plus d'actions",
+    "error": "Impossible de mettre à jour votre liste de masquage"
+  },
   "report": {
     "titleVideo": "Signaler la vidéo",
     "titleComment": "Signaler le commentaire",
+    "titleProfile": "Signaler l'utilisateur",
+    "reportUser": "Signaler l'utilisateur",
     "description": "Aidez-nous à comprendre ce qui ne va pas avec ce contenu.",
     "reasonLabel": "Raison du signalement",
     "reasons": {

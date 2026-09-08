@@ -698,6 +698,9 @@
       "youtubeContentDescription": "メディアソースが YouTube URL の動画を表示します。",
       "audioContent": "音声コンテンツ",
       "audioContentDescription": "MP3 ポッドキャストなどの音声のみの投稿を表示します。",
+      "mutedAccounts": "ミュートしたアカウント",
+      "mutedAccountsDescription": "これらのアカウントの動画とコメントは非表示になります。ミュートリストは Nostr に公開されるため、他のクライアントにも反映されます。",
+      "mutedAccountsEmpty": "ミュートしているユーザーはいません。",
       "nsfwFilter": "NSFW コンテンツフィルター",
       "nsfwHide": "非表示 — NSFW コンテンツを表示しない",
       "nsfwWarning": "警告 — ぼかしと警告付きで表示",
@@ -1037,9 +1040,18 @@
     "transcodeError": "トランスコードに失敗しました",
     "markAllAsRead": "すべて既読にする"
   },
+  "mute": {
+    "unmute": "ミュート解除",
+    "unmuteUser": "ユーザーのミュートを解除",
+    "userUnmuted": "ユーザーのミュートを解除しました",
+    "moreActions": "その他の操作",
+    "error": "ミュートリストを更新できませんでした"
+  },
   "report": {
     "titleVideo": "動画を報告",
     "titleComment": "コメントを報告",
+    "titleProfile": "ユーザーを報告",
+    "reportUser": "ユーザーを報告",
     "description": "このコンテンツの問題を特定するのにご協力ください。",
     "reasonLabel": "報告理由",
     "reasons": {

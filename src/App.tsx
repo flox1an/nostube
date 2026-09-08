@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useContext } from 'react'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/toaster'
+import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import {
   AccountsProvider,
   EventStoreProvider,
@@ -15,7 +17,7 @@ import { ActionRunner } from 'applesauce-actions'
 import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 // Import applesauce-common to register EventFactory extensions (note, reaction, etc.)
 import 'applesauce-common'
-import { eventStore, publishMethod } from '@/nostr/core'
+import { DEFAULT_RELAYS, eventStore, publishMethod } from '@/nostr/core'
 import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
@@ -81,7 +83,9 @@ const accountManager = new AccountManager()
 registerCommonAccountTypes(accountManager)
 
 const actionRunner = new ActionRunner(eventStore, accountManager.signer, (event, relays) => {
-  publishMethod(relays ?? [], event)
+  // Actions pass the user's outbox relays. Fall back to the defaults, since
+  // publishing to an empty relay list would silently drop the event.
+  publishMethod(relays?.length ? relays : DEFAULT_RELAYS, event)
 })
 
 /**
@@ -186,6 +190,9 @@ export function App() {
                             <Suspense>
                               <AppRouter />
                             </Suspense>
+                            {/* Toast viewports: without them every toast() call is a no-op. */}
+                            <Toaster />
+                            <SonnerToaster />
                           </TooltipProvider>
                         </WalletProvider>
                       </UploadManagerProvider>

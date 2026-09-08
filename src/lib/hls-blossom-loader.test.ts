@@ -49,8 +49,13 @@ class StubLoader implements Loader<LoaderContext> {
     if (context.url === ORIGIN) {
       callbacks.onError({ code: 503, text: 'Service Unavailable' }, context, null, this.stats)
     } else {
+      // Blossom servers redirect to hash-prefixed internal storage paths
       callbacks.onSuccess(
-        { url: context.url, data: new ArrayBuffer(4), code: 200 },
+        {
+          url: `https://cdn.internal.example/uploads/3/75/1b/blob`,
+          data: new ArrayBuffer(4),
+          code: 200,
+        },
         this.stats,
         context,
         null
@@ -104,6 +109,45 @@ describe('createBlossomHlsLoader', () => {
 
       expect(StubLoader.requested).toEqual([ORIGIN, MIRROR])
       expect(outcomes).toEqual(['error:503', `success:${MIRROR}`])
+    } finally {
+      Hls.DefaultConfig.loader = original
+    }
+  })
+
+  it('reports the requested URL so playlists resolve against the flat blob path', () => {
+    const original = Hls.DefaultConfig.loader
+    Hls.DefaultConfig.loader = StubLoader as unknown as typeof original
+    try {
+      StubLoader.requested = []
+      const ladder = new PlaybackUrlLadder({
+        urls: [MIRROR],
+        blossomServers: [],
+        mediaType: 'video',
+        sha256: SHA,
+      })
+      const LoaderClass = createBlossomHlsLoader({
+        blossomServers: [],
+        cachingServers: [],
+        masterUrl: MIRROR,
+        localhostProxyMode: 'never',
+        ladder,
+      })
+      const loader = new LoaderClass({} as Hls['config'])
+      const context = { url: MIRROR, responseType: '' } as LoaderContext
+
+      let reportedUrl: string | null = null
+      const callbacks = {
+        onProgress: null,
+        onSuccess: (response: { url: string }) => {
+          reportedUrl = response.url
+        },
+        onError: () => {},
+        onTimeout: () => {},
+      } as unknown as LoaderCallbacks<LoaderContext>
+
+      loader.load(context, {} as LoaderConfiguration, callbacks)
+
+      expect(reportedUrl).toBe(MIRROR)
     } finally {
       Hls.DefaultConfig.loader = original
     }

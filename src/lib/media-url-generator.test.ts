@@ -27,4 +27,23 @@ describe('generateMediaUrls', () => {
     expect(remoteProxy).toBeDefined()
     expect(new URL(remoteProxy!).searchParams.getAll('xs')).not.toContain('127.0.0.1')
   })
+
+  it('offers every configured server as a fallback, not just mirror-tagged ones', () => {
+    const eventUrl = `https://dead.example.com/${hash}.m3u8`
+    const generated = generateMediaUrls({
+      urls: [eventUrl],
+      mediaType: 'video',
+      sha256: hash,
+      blossomServers: [
+        { name: 'upload', url: 'https://upload.example.com', tags: ['initial upload'] },
+        { name: 'plain', url: 'https://plain.example.com', tags: [] },
+      ],
+    })
+
+    expect(generated.urls).toEqual([
+      eventUrl,
+      `https://upload.example.com/${hash}.m3u8`,
+      `https://plain.example.com/${hash}.m3u8`,
+    ])
+  })
 })

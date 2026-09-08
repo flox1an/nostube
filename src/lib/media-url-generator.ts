@@ -258,8 +258,10 @@ export function generateMediaUrls(options: MediaUrlOptions): GeneratedUrls {
   const allUrls: string[] = []
   const allMetadata: UrlMetadata[] = []
 
-  // Filter Blossom servers by type
-  const mirrorServers = blossomServers.filter(server => server.tags.includes('mirror'))
+  // Every configured Blossom server can serve any blob by hash, so all of them
+  // are read fallbacks. The `mirror` tag only steers uploads, and gating
+  // failover on it left videos unplayable whenever the event's own host died.
+  const mirrorServers = blossomServers
 
   // Process each original URL
   for (const originalUrl of originalUrls) {

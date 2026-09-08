@@ -1308,6 +1308,14 @@
       "validators": "Validators",
       "reportPenalty": "Report penalty active: ×{{score}}",
       "trustLabel": "{{label}} Trust"
+    },
+    "filterWarning": {
+      "title": "You are entering the danger zone",
+      "body1": "Disabling the trust filter will show videos from untrusted and unverified accounts. Some of this content may be inappropriate, offensive, or intended for adults only (18+).",
+      "body2": "What you see from this point on is entirely at your own risk — you are solely responsible for what you choose to watch.",
+      "body3": "If you are not sure, keep the filter on.",
+      "cancel": "Keep filter on",
+      "confirm": "I understand, disable it"
     }
   },
   "relaySource": {

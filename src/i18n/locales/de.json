@@ -1308,6 +1308,14 @@
       "validators": "Validatoren",
       "reportPenalty": "Meldestrafe aktiv: ×{{score}}",
       "trustLabel": "{{label}} Vertrauen"
+    },
+    "filterWarning": {
+      "title": "Du betrittst den Gefahrenbereich",
+      "body1": "Wenn du den Vertrauensfilter deaktivierst, werden Videos von nicht vertrauenswürdigen und unbestätigten Konten angezeigt. Einige dieser Inhalte können unangemessen, anstößig oder nur für Erwachsene geeignet sein (18+).",
+      "body2": "Was du ab jetzt siehst, geschieht auf eigenes Risiko — du bist allein verantwortlich dafür, was du dir ansiehst.",
+      "body3": "Wenn du unsicher bist, lasse den Filter aktiviert.",
+      "cancel": "Filter aktiviert lassen",
+      "confirm": "Ich habe verstanden, deaktivieren"
     }
   },
   "relaySource": {

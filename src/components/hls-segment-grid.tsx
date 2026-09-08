@@ -7,6 +7,7 @@ export type SegmentStatus =
   | 'checking'
   | 'done'
   | 'available'
+  | 'mirrored'
   | 'error'
   | 'unavailable'
 
@@ -25,6 +26,8 @@ function segmentColor(status: SegmentStatus): string {
     case 'done':
     case 'available':
       return 'bg-green-500'
+    case 'mirrored':
+      return 'bg-amber-500'
     case 'uploading':
     case 'mirroring':
       return 'bg-blue-400 animate-pulse'
@@ -45,6 +48,8 @@ function segmentLabel(status: SegmentStatus): string {
       return 'Uploaded'
     case 'available':
       return 'Available'
+    case 'mirrored':
+      return 'Missing here · available on another server'
     case 'uploading':
       return 'Uploading'
     case 'mirroring':
@@ -68,6 +73,7 @@ export function HlsSegmentGrid({ streams, className }: HlsSegmentGridProps) {
     <div className={cn('space-y-2', className)}>
       {streams.map(stream => {
         const done = stream.statuses.filter(s => s === 'done' || s === 'available').length
+        const mirrored = stream.statuses.filter(s => s === 'mirrored').length
         const total = stream.statuses.length
         return (
           <div key={stream.label} className="space-y-1">
@@ -75,6 +81,7 @@ export function HlsSegmentGrid({ streams, className }: HlsSegmentGridProps) {
               <span className="text-xs font-medium">{stream.label}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
                 {done}/{total}
+                {mirrored > 0 && ` · ${mirrored} on mirrors`}
               </span>
             </div>
             <div className="flex flex-wrap gap-[2px]">

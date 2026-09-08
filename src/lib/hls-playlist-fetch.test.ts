@@ -1,5 +1,26 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchPlaylistWithFallback } from './hls-playlist-fetch'
+import { blossomServerCandidates, fetchPlaylistWithFallback } from './hls-playlist-fetch'
+
+describe('blossomServerCandidates', () => {
+  const sha = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+  it('keeps the requested URL first and rewrites the hash onto every server', () => {
+    expect(
+      blossomServerCandidates(`https://origin.example/${sha}.m4s`, [
+        { url: 'https://origin.example', name: 'origin', tags: [] },
+        { url: 'https://mirror.example/', name: 'mirror', tags: [] },
+      ])
+    ).toEqual([`https://origin.example/${sha}.m4s`, `https://mirror.example/${sha}.m4s`])
+  })
+
+  it('returns only the URL when it carries no Blossom hash', () => {
+    expect(
+      blossomServerCandidates('https://origin.example/segment-3.ts', [
+        { url: 'https://mirror.example', name: 'mirror', tags: [] },
+      ])
+    ).toEqual(['https://origin.example/segment-3.ts'])
+  })
+})
 
 describe('fetchPlaylistWithFallback', () => {
   const sha = '3751b84f27234fc8ce3227d132b422f7e00f4a50c6cdc322080fed89a302d7dd'

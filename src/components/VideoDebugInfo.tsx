@@ -40,6 +40,7 @@ import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVariants'
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
+import { fetchPlaylistWithFallback } from '@/lib/hls-playlist-fetch'
 import type { SegmentStatus } from '@/components/hls-segment-grid'
 import { useAppContext } from '@/hooks/useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
@@ -337,22 +338,32 @@ function HlsStreamTree({
   masterUrl,
   selectedUrl,
   onSelectUrl,
+  configServers,
 }: {
   masterUrl: string
   selectedUrl: string
   onSelectUrl: (url: string) => void
+  configServers: BlossomServer[]
 }) {
   const [master, setMaster] = useState<HlsMaster>({ streams: [], loadState: 'idle' })
+  const serversRef = useRef(configServers)
+  serversRef.current = configServers
 
   useEffect(() => {
+    let cancelled = false
     setMaster({ streams: [], loadState: 'loading' })
-    fetch(masterUrl)
-      .then(r => r.text())
-      .then(text => {
-        const streams = parseMasterPlaylist(text, masterUrl)
-        setMaster({ streams, loadState: 'done' })
+    fetchPlaylistWithFallback(masterUrl, serversRef.current)
+      .then(({ text, url }) => {
+        if (cancelled) return
+        setMaster({ streams: parseMasterPlaylist(text, url), loadState: 'done' })
       })
-      .catch(err => setMaster({ streams: [], loadState: 'error', error: String(err) }))
+      .catch(err => {
+        if (cancelled) return
+        setMaster({ streams: [], loadState: 'error', error: String(err) })
+      })
+    return () => {
+      cancelled = true
+    }
   }, [masterUrl])
 
   const expandVariant = useCallback((idx: number) => {
@@ -362,10 +373,9 @@ function HlsStreamTree({
       const updated = prev.streams.map((s, i) =>
         i === idx ? { ...s, loadState: 'loading' as const } : s
       )
-      fetch(stream.url)
-        .then(r => r.text())
-        .then(text => {
-          const segments = parseVariantPlaylist(text, stream.url)
+      fetchPlaylistWithFallback(stream.url, serversRef.current)
+        .then(({ text, url }) => {
+          const segments = parseVariantPlaylist(text, url)
           setMaster(p => ({
             ...p,
             streams: p.streams.map((s, i) =>
@@ -1152,6 +1162,7 @@ export function VideoDebugInfo({
                           onSelectUrl={url =>
                             setSelection({ kind: 'hls', masterUrl, nodeUrl: url })
                           }
+                          configServers={blossomServers ?? []}
                         />
                       </div>
                     ))}

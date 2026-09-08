@@ -250,7 +250,16 @@ export function createBlossomHlsLoader(options: HlsBlossomLoaderOptions) {
               totalCandidates: candidates.length,
               statusCode: response.code,
             })
-            callbacks.onSuccess(response, this.stats, successContext, networkDetails)
+            // Blossom servers may redirect to internal storage paths keyed by
+            // each blob's own hash (…/uploads2/3/75/1b/<hash>). Resolving a
+            // playlist's relative URIs against that path 404s, so report the
+            // URL we asked for as the response URL and keep the base flat.
+            callbacks.onSuccess(
+              { ...response, url: candidateUrl },
+              this.stats,
+              successContext,
+              networkDetails
+            )
           },
           onError: (response, errorContext, networkDetails, stats) => {
             ladder.onError(candidateUrl, isMasterRequest ? 'manifest' : 'segment')

@@ -359,7 +359,6 @@
       "description": "Füge Mitwirkende oder im Video gezeigte Personen hinzu",
       "placeholder": "Nach Personen suchen..."
     },
-    "loginRequired": "Bitte melde dich an, um Videos hochzuladen",
     "onboarding": {
       "yourDevice": "Dein Gerät",
       "primaryServer": "Primärer Server",

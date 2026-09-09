@@ -11,15 +11,14 @@ let uploadStateStub: VideoUploadStateStub
 const mocks = vi.hoisted(() => ({
   updateDraft: vi.fn(),
   toast: vi.fn(),
+  currentUser: {
+    pubkey: 'pubkey',
+    signer: { signEvent: vi.fn(async event => event) },
+  } as { pubkey: string; signer: unknown } | null,
 }))
 
 vi.mock('@/hooks', () => ({
-  useCurrentUser: () => ({
-    user: {
-      pubkey: 'pubkey',
-      signer: { signEvent: vi.fn(async event => event) },
-    },
-  }),
+  useCurrentUser: () => ({ user: mocks.currentUser }),
   useVideoUpload: () => uploadStateStub,
   useAppContext: () => ({
     config: { blossomServers: [], relays: [] },
@@ -60,6 +59,10 @@ vi.mock('./video-upload/UploadReviewScreen', () => ({
 
 vi.mock('./video-upload/UploadOnboardingDialog', () => ({
   UploadOnboardingDialog: () => null,
+}))
+
+vi.mock('./auth/AuthDialog', () => ({
+  AuthDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Auth dialog marker</div> : null),
 }))
 
 vi.mock('./video-upload/DeleteVideoDialog', () => ({
@@ -129,6 +132,7 @@ describe('VideoUpload screen selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     uploadStateStub = makeVideoUploadState()
+    mocks.currentUser = { pubkey: 'pubkey', signer: { signEvent: vi.fn(async event => event) } }
   })
 
   it('starts on Source for an empty draft', () => {
@@ -169,6 +173,7 @@ describe('VideoUpload Save Draft', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     uploadStateStub = makeVideoUploadState()
+    mocks.currentUser = { pubkey: 'pubkey', signer: { signEvent: vi.fn(async event => event) } }
   })
 
   it('persists the current edits and exits without regressing a wizard step', async () => {
@@ -204,5 +209,29 @@ describe('VideoUpload Save Draft', () => {
       })
     )
     expect(onBack).not.toHaveBeenCalled()
+  })
+})
+
+describe('VideoUpload signed-out entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    uploadStateStub = makeVideoUploadState()
+    mocks.currentUser = null
+  })
+
+  it('shows an actionable creator welcome instead of the upload form', () => {
+    renderUpload(makeDraft())
+    expect(screen.queryByText('Source screen marker')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in to upload/i })).toBeInTheDocument()
+  })
+
+  it('opens sign-in on request and leaves the draft untouched', () => {
+    renderUpload(makeDraft())
+    expect(screen.queryByText('Auth dialog marker')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /sign in to upload/i }))
+
+    expect(screen.getByText('Auth dialog marker')).toBeInTheDocument()
+    expect(mocks.updateDraft).not.toHaveBeenCalled()
   })
 })

@@ -375,7 +375,6 @@
       "description": "Add contributors, collaborators, or people featured in this video",
       "placeholder": "Search for people..."
     },
-    "loginRequired": "Please log in to upload videos",
     "onboarding": {
       "yourDevice": "Your Device",
       "primaryServer": "Primary Server",

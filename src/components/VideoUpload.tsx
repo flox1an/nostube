@@ -2,10 +2,12 @@ import { useCurrentUser, useVideoUpload, useAppContext } from '@/hooks'
 import { buildVideoPath } from '@/utils/video-utils'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { BlossomOnboardingStep } from './onboarding/BlossomOnboardingStep'
 import { BlossomServerPicker } from './onboarding/BlossomServerPicker'
 import { UploadOnboardingDialog } from './video-upload/UploadOnboardingDialog'
+import { AuthDialog } from './auth/AuthDialog'
 import { DeleteVideoDialog } from './video-upload/DeleteVideoDialog'
 import { DeleteDraftDialog } from './upload/DeleteDraftDialog'
 import { deleteBlobsFromServers, type DeleteBlobsProgress } from '@/lib/blossom-upload'
@@ -26,6 +28,7 @@ import type { UploadScreen } from './video-upload/UploadFlowFooter'
 import { UploadSourceScreen } from './video-upload/UploadSourceScreen'
 import { UploadDetailsScreen } from './video-upload/UploadDetailsScreen'
 import { UploadReviewScreen } from './video-upload/UploadReviewScreen'
+import { Film, ListChecks, UploadCloud } from 'lucide-react'
 
 // ── Screen derivation ────────────────────────────────────────────────────────
 
@@ -90,6 +93,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
   const { removeByDraftId } = useUploadNotifications()
   const { user } = useCurrentUser()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
 
   const handleDraftChange = useCallback(
     (updates: Partial<UploadDraft>) => {
@@ -523,7 +527,48 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
         : t('upload.screen.review.description', { defaultValue: 'Review and publish your video' })
 
   if (!user) {
-    return <div>{t('upload.loginRequired')}</div>
+    return (
+      <div className="mt-4 max-w-lg mx-auto text-center space-y-6 py-16">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">
+            {t('upload.signedOut.title', { defaultValue: 'Share your video with nostube' })}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t('upload.signedOut.subtitle', {
+              defaultValue: 'Sign in to publish. Uploading takes three quick steps.',
+            })}
+          </p>
+        </div>
+        <ol className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
+          <li className="flex items-center gap-2">
+            <UploadCloud className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('upload.signedOut.stepChoose', { defaultValue: 'Choose video' })}
+          </li>
+          <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
+            →
+          </span>
+          <li className="flex items-center gap-2">
+            <Film className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('upload.signedOut.stepDetails', { defaultValue: 'Add details' })}
+          </li>
+          <span className="hidden text-muted-foreground/50 sm:inline" aria-hidden="true">
+            →
+          </span>
+          <li className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t('upload.signedOut.stepPublish', { defaultValue: 'Publish' })}
+          </li>
+        </ol>
+        <Button className="rounded-full px-8" onClick={() => setAuthDialogOpen(true)}>
+          {t('upload.signedOut.cta', { defaultValue: 'Sign in to upload' })}
+        </Button>
+        <AuthDialog
+          isOpen={authDialogOpen}
+          onClose={() => setAuthDialogOpen(false)}
+          onLogin={() => setAuthDialogOpen(false)}
+        />
+      </div>
+    )
   }
 
   return (

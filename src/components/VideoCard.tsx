@@ -259,7 +259,7 @@ export const VideoCard = React.memo(function VideoCard({
         <div
           className={cn(
             'pt-3',
-            format === 'vertical' && 'hidden sm:block',
+            format === 'vertical' && !isQuietCinema && 'hidden sm:block',
             isQuietCinema && 'px-1'
           )}
         >
@@ -277,6 +277,7 @@ export const VideoCard = React.memo(function VideoCard({
             <div className="min-w-0 flex-1">
               <DesktopVideoLink
                 to={to}
+                onClick={handleShortsClick}
                 desktopCoordinator={desktopWindowCoordinator}
                 desktopRoute={desktopPlayerRoute}
                 className={cn(
@@ -288,14 +289,24 @@ export const VideoCard = React.memo(function VideoCard({
                   className={cn(
                     'line-clamp-2 break-words',
                     isQuietCinema
-                      ? 'text-[0.95rem] font-semibold leading-5 tracking-[-0.01em]'
+                      ? cn(
+                          'font-semibold leading-5 tracking-[-0.01em]',
+                          format === 'vertical' ? 'text-sm' : 'text-[0.95rem]'
+                        )
                       : 'font-medium'
                   )}
                 >
                   {video.title}
                 </h3>
               </DesktopVideoLink>
-              <div className={cn('flex items-center', isQuietCinema ? 'mt-1 text-sm' : 'text-xs')}>
+              <div
+                className={cn(
+                  'flex items-center',
+                  isQuietCinema
+                    ? cn('mt-1', format === 'vertical' ? 'text-xs' : 'text-sm')
+                    : 'text-xs'
+                )}
+              >
                 {!hideAuthor && (
                   <>
                     <Link
@@ -368,7 +379,11 @@ export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
         )}
       />
       <div
-        className={cn('pt-3', format === 'vertical' && 'hidden sm:block', isQuietCinema && 'px-1')}
+        className={cn(
+          'pt-3',
+          format === 'vertical' && !isQuietCinema && 'hidden sm:block',
+          isQuietCinema && 'px-1'
+        )}
       >
         <div className="flex gap-3">
           {format !== 'vertical' && (

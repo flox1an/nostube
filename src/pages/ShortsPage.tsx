@@ -74,6 +74,7 @@ export function ShortsPage() {
         exhaustedMessage={t('pages.shorts.noMore')}
         error={phase === 'error'}
         className="sm:p-2"
+        cardTreatment="quiet-cinema"
       />
     </div>
   )

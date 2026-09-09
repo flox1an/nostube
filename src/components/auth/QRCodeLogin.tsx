@@ -26,15 +26,21 @@ function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string)
 interface QRCodeLoginProps {
   onLogin: () => void
   onError: (error: string) => void
+  /** Phones prioritize the same-device signer-app deep link; desktop keeps QR as primary. */
+  isMobile?: boolean
 }
 
-export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
+export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginProps) {
   const { t } = useTranslation()
   const accountManager = useContext(AccountsContext)
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const signerRef = useRef<NostrConnectSigner | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  // Distinguishes an abort WE triggered (regenerate, unmount — expected, silent)
+  // from one that surfaces unprompted (e.g. an underlying transport timeout),
+  // which the viewer should actually see instead of the QR silently resetting.
+  const intentionalAbortRef = useRef(false)
 
   if (!accountManager) {
     throw new Error('QRCodeLogin must be used within AccountsProvider')
@@ -43,6 +49,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
   const generateQRCode = useCallback(async () => {
     // Cleanup previous signer/controller
     if (abortControllerRef.current) {
+      intentionalAbortRef.current = true
       abortControllerRef.current.abort()
     }
 
@@ -94,14 +101,12 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
 
       onLogin()
     } catch (error) {
-      // Check if this was an abort (user cancelled, tab switched, or regenerated)
-      const isAbort =
-        error instanceof Error &&
-        (error.name === 'AbortError' ||
-          error.message.toLowerCase().includes('aborted') ||
-          error.message.toLowerCase().includes('abort'))
-      if (isAbort) {
-        // User cancelled or regenerated, ignore
+      // An abort we triggered ourselves (regenerate, unmount) is expected and silent —
+      // the UI already reflects it (fresh QR, or the component is gone). Anything else
+      // that surfaces as an abort (e.g. a transport-level timeout) is unexpected and
+      // should tell the viewer instead of silently resetting.
+      if (intentionalAbortRef.current) {
+        intentionalAbortRef.current = false
         return
       }
       console.error('QR code login failed:', error)
@@ -116,6 +121,7 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
     return () => {
       // Cleanup on unmount
       if (abortControllerRef.current) {
+        intentionalAbortRef.current = true
         abortControllerRef.current.abort()
       }
     }
@@ -140,15 +146,46 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      <div className="text-center">
-        <Smartphone className="w-10 h-10 mx-auto mb-2 text-primary" />
-        <p className="text-sm text-muted-foreground">
-          {t('auth.login.qrDescription', 'Scan with your Nostr signer app')}
+      {isMobile ? (
+        <div className="w-full text-center space-y-3">
+          <Smartphone className="w-10 h-10 mx-auto text-primary" />
+          <p className="text-sm text-muted-foreground">
+            {t(
+              'auth.login.qrMobileDescription',
+              'Sign in with your Nostr signer app on this device'
+            )}
+          </p>
+          {nostrConnectUri ? (
+            <Button asChild className="w-full rounded-full py-6">
+              <a href={nostrConnectUri}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('auth.login.qrOpen', 'Use Signer')}
+              </a>
+            </Button>
+          ) : (
+            <Button className="w-full rounded-full py-6" disabled>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              {t('auth.login.qrOpen', 'Use Signer')}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="text-center">
+          <Smartphone className="w-10 h-10 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground">
+            {t('auth.login.qrDescription', 'Scan with your Nostr signer app')}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('auth.login.qrApps', 'Amber, Nostrudel, or other NIP-46 signers')}
+          </p>
+        </div>
+      )}
+
+      {isMobile && (
+        <p className="text-xs text-muted-foreground">
+          {t('auth.login.qrAnotherDevice', 'Or scan this code from another device:')}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {t('auth.login.qrApps', 'Amber, Nostrudel, or other NIP-46 signers')}
-        </p>
-      </div>
+      )}
 
       <div className="p-4 bg-white rounded-xl">
         {nostrConnectUri ? (
@@ -172,19 +209,20 @@ export function QRCodeLogin({ onLogin, onError }: QRCodeLoginProps) {
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         </Button>
-        {nostrConnectUri ? (
-          <Button asChild variant="default" size="sm">
-            <a href={nostrConnectUri}>
+        {!isMobile &&
+          (nostrConnectUri ? (
+            <Button asChild variant="default" size="sm">
+              <a href={nostrConnectUri}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('auth.login.qrOpen', 'Use Signer')}
+              </a>
+            </Button>
+          ) : (
+            <Button variant="default" size="sm" disabled>
               <ExternalLink className="w-4 h-4 mr-2" />
               {t('auth.login.qrOpen', 'Use Signer')}
-            </a>
-          </Button>
-        ) : (
-          <Button variant="default" size="sm" disabled>
-            <ExternalLink className="w-4 h-4 mr-2" />
-            {t('auth.login.qrOpen', 'Use Signer')}
-          </Button>
-        )}
+            </Button>
+          ))}
         <Button
           variant="ghost"
           size="icon"

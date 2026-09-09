@@ -5,6 +5,7 @@ import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Shield, Upload, AlertCircle, QrCode, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { Badge } from '@/components/ui/badge.tsx'
 import {
   Dialog,
   DialogContent,
@@ -27,13 +28,6 @@ interface LoginDialogProps {
   onSignup?: () => void
 }
 
-// Minimal NIP-07 shape we probe for. A real browser-extension provider must
-// implement at least getPublicKey + signEvent.
-interface NostrWindowExtension {
-  getPublicKey: unknown
-  signEvent: unknown
-}
-
 // NIP-07 browser extensions don't exist on mobile browsers (iOS/Android Chrome,
 // Safari), so the "Extension" login tab must never be offered there. A coarse
 // pointer or a mobile UA is enough to rule it out.
@@ -53,6 +47,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   )
   const [authUrl, setAuthUrl] = useState<string | null>(null)
   const [hasNostrExtension, setHasNostrExtension] = useState(false)
+  const [activeTab, setActiveTab] = useState('qr')
+  const manualTabSelectRef = useRef(false)
+  const autoSelectedExtensionRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const login = useLoginActions()
   const isEncryptedKey = isNcryptsec(keyInput)
@@ -66,13 +63,15 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     const detectExtension = () => {
       // Probe for the NIP-07 minimum contract (getPublicKey + signEvent). A bare
       // truthy `window.nostr` false-positives on some mobile browsers (e.g. iOS Chrome).
-      const nostr =
-        typeof window !== 'undefined'
-          ? (window as unknown as { nostr?: NostrWindowExtension }).nostr
-          : undefined
-      setHasNostrExtension(
-        !!nostr && typeof nostr.getPublicKey === 'function' && typeof nostr.signEvent === 'function'
-      )
+      const nostr = typeof window !== 'undefined' && 'nostr' in window ? window.nostr : undefined
+      const hasSigningMethods =
+        !!nostr &&
+        typeof nostr === 'object' &&
+        'getPublicKey' in nostr &&
+        typeof nostr.getPublicKey === 'function' &&
+        'signEvent' in nostr &&
+        typeof nostr.signEvent === 'function'
+      setHasNostrExtension(hasSigningMethods)
     }
 
     detectExtension()
@@ -85,6 +84,36 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
       detectionTimers.forEach(window.clearTimeout)
     }
   }, [isOpen])
+
+  // Reset tab selection each time the dialog opens fresh.
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab('qr')
+      manualTabSelectRef.current = false
+      autoSelectedExtensionRef.current = false
+    }
+  }, [isOpen])
+
+  // Recommend the detected extension by default for compatible desktop users —
+  // without removing or hiding any other tab, and without overriding a tab the
+  // user already picked manually (extension detection resolves async).
+  useEffect(() => {
+    if (
+      isOpen &&
+      showExtensionTab &&
+      !autoSelectedExtensionRef.current &&
+      !manualTabSelectRef.current
+    ) {
+      autoSelectedExtensionRef.current = true
+      setActiveTab('extension')
+    }
+  }, [isOpen, showExtensionTab])
+
+  const handleTabChange = (value: string) => {
+    manualTabSelectRef.current = true
+    setActiveTab(value)
+    setError(null)
+  }
 
   const handleBunkerAuth = useCallback(async (url: string) => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -222,7 +251,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             </Alert>
           )}
 
-          <Tabs defaultValue="qr" className="w-full" onValueChange={() => setError(null)}>
+          <Tabs value={activeTab} className="w-full" onValueChange={handleTabChange}>
             <TabsList
               className={`grid h-auto mb-6 ${
                 showExtensionTab ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
@@ -233,8 +262,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 <span className="truncate">{t('auth.login.qr', 'QR')}</span>
               </TabsTrigger>
               {showExtensionTab && (
-                <TabsTrigger value="extension" className="min-w-0 text-xs sm:text-sm">
+                <TabsTrigger value="extension" className="min-w-0 gap-1 text-xs sm:text-sm">
                   <span className="truncate">{t('auth.login.extension')}</span>
+                  <Badge variant="secondary" className="px-1 py-0 text-[10px] leading-4 shrink-0">
+                    {t('auth.login.recommended', 'Recommended')}
+                  </Badge>
                 </TabsTrigger>
               )}
               <TabsTrigger value="protected" className="min-w-0 text-xs sm:text-sm">
@@ -252,6 +284,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   onClose()
                 }}
                 onError={setError}
+                isMobile={isMobileBrowser}
               />
             </TabsContent>
 

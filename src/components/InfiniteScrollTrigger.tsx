@@ -1,28 +1,37 @@
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
 
 interface InfiniteScrollTriggerProps {
   triggerRef: (node?: Element | null) => void
   loading: boolean
   exhausted: boolean
   itemCount: number
-  emptyMessage?: string
+  /** True when the most recent load-more attempt failed. Only rendered once items already exist;
+   *  the zero-item case is owned by VideoGrid to avoid a duplicate empty/error message. */
+  error?: boolean
+  onRetry?: () => void
   loadingMessage?: string
   exhaustedMessage?: string
+  errorMessage?: string
 }
 
 /**
- * Component that displays loading states for infinite scroll
- * Should be placed at the bottom of the scrollable content
+ * Component that displays loading/exhausted/error states for infinite scroll pagination.
+ * Should be placed at the bottom of the scrollable content.
  */
 export function InfiniteScrollTrigger({
   triggerRef,
   loading,
   exhausted,
   itemCount,
-  emptyMessage = 'No items found.',
+  error = false,
+  onRetry,
   loadingMessage = 'Loading more...',
   exhaustedMessage = 'No more items to load.',
+  errorMessage,
 }: InfiniteScrollTriggerProps) {
+  const { t } = useTranslation()
   return (
     <div ref={triggerRef} className="w-full py-8 flex items-center justify-center">
       {loading && itemCount > 0 && (
@@ -31,10 +40,19 @@ export function InfiniteScrollTrigger({
           {loadingMessage}
         </div>
       )}
-      {!loading && exhausted && itemCount > 0 && (
+      {!loading && error && itemCount > 0 && (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span>{errorMessage ?? t('video.networkError')}</span>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {t('common.retry')}
+            </Button>
+          )}
+        </div>
+      )}
+      {!loading && !error && exhausted && itemCount > 0 && (
         <div className="text-muted-foreground">{exhaustedMessage}</div>
       )}
-      {itemCount === 0 && !loading && <div className="text-muted-foreground">{emptyMessage}</div>}
     </div>
   )
 }

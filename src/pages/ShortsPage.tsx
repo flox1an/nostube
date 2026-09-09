@@ -36,11 +36,19 @@ export function ShortsPage() {
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('shorts') }), [])
 
-  const { videos, loading, exhausted, loadMore, prefetchMore, isPrefetching, subscriptionActive } =
-    useInfiniteTimeline(loader, effectiveRelays, {
-      filters: timelineFilter,
-      directMode: !!relayOverride,
-    })
+  const {
+    videos,
+    loading,
+    exhausted,
+    loadMore,
+    prefetchMore,
+    isPrefetching,
+    subscriptionActive,
+    phase,
+  } = useInfiniteTimeline(loader, effectiveRelays, {
+    filters: timelineFilter,
+    directMode: !!relayOverride,
+  })
   const { filteredVideos, filterButton } = useTrustFilter(videos)
 
   return (
@@ -64,6 +72,7 @@ export function ShortsPage() {
         emptyMessage={t('pages.shorts.noShorts')}
         loadingMessage={t('pages.shorts.loadingMore')}
         exhaustedMessage={t('pages.shorts.noMore')}
+        error={phase === 'error'}
         className="sm:p-2"
       />
     </div>

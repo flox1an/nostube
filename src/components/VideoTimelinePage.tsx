@@ -2,7 +2,7 @@ import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { useInfiniteScroll } from '@/hooks'
 import type { VideoEvent } from '@/utils/video-event'
-import { useCallback } from 'react'
+import { useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface VideoTimelinePageProps {
@@ -15,10 +15,14 @@ interface VideoTimelinePageProps {
   onPrefetch?: () => void
   layoutMode?: 'horizontal' | 'vertical' | 'auto'
   emptyMessage?: string
+  /** Optional recovery action rendered under emptyMessage, e.g. "Clear filters". */
+  emptyAction?: ReactNode
   loadingMessage?: string
   exhaustedMessage?: string
   showSkeletons?: boolean
   className?: string
+  /** True when the most recent retrieval attempt failed. Retried via onLoadMore. */
+  error?: boolean
 }
 
 /**
@@ -37,10 +41,12 @@ export function VideoTimelinePage({
   onPrefetch,
   layoutMode = 'horizontal',
   emptyMessage,
+  emptyAction,
   loadingMessage,
   exhaustedMessage,
   showSkeletons = true,
   className = 'sm:p-4',
+  error = false,
 }: VideoTimelinePageProps) {
   const { t } = useTranslation()
   const { loadMoreRef, prefetchRef } = useInfiniteScroll({
@@ -73,6 +79,10 @@ export function VideoTimelinePage({
         isLoading={loading}
         showSkeletons={showSkeletons}
         layoutMode={layoutMode}
+        emptyMessage={defaultEmptyMessage}
+        emptyAction={emptyAction}
+        error={error}
+        onRetry={onLoadMore}
       />
 
       <InfiniteScrollTrigger
@@ -80,7 +90,8 @@ export function VideoTimelinePage({
         loading={isLoadingMore}
         exhausted={exhausted}
         itemCount={videos.length}
-        emptyMessage={defaultEmptyMessage}
+        error={error}
+        onRetry={onLoadMore}
         loadingMessage={defaultLoadingMessage}
         exhaustedMessage={defaultExhaustedMessage}
       />

@@ -49,11 +49,19 @@ export function HomePage() {
 
   const timelineFilter = useMemo(() => ({ kinds: getKindsForType('videos') }), [])
 
-  const { videos, loading, exhausted, loadMore, prefetchMore, isPrefetching, subscriptionActive } =
-    useInfiniteTimeline(loader, effectiveRelays, {
-      filters: timelineFilter,
-      directMode: !!relayOverride,
-    })
+  const {
+    videos,
+    loading,
+    exhausted,
+    loadMore,
+    prefetchMore,
+    isPrefetching,
+    subscriptionActive,
+    phase,
+  } = useInfiniteTimeline(loader, effectiveRelays, {
+    filters: timelineFilter,
+    directMode: !!relayOverride,
+  })
 
   // Show at most one long-form and one short per pubkey per day (videos are already sorted newest-first)
   const dedupedVideos = useMemo(() => {
@@ -102,6 +110,7 @@ export function HomePage() {
         layoutMode="horizontal"
         emptyMessage={t('pages.home.noVideos')}
         exhaustedMessage={t('pages.home.noMore')}
+        error={phase === 'error'}
         className="sm:px-2"
       />
     </div>

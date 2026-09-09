@@ -3,10 +3,12 @@ import { type VideoEvent } from '@/utils/video-event'
 import { cn } from '@/lib/utils'
 import { chunk } from '@/lib/array-utils'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useAppContext } from '@/hooks'
 import { useTranslation } from 'react-i18next'
+import { AlertCircle } from 'lucide-react'
 
 /**
  * Rows fetched eagerly at high priority. Lazy images are only dispatched
@@ -21,6 +23,14 @@ interface VideoGridProps {
   showSkeletons?: boolean
   layoutMode?: 'auto' | 'horizontal' | 'vertical' // new prop, default to auto
   playlistParam?: string
+  /** Message shown when there are zero videos and no error. Defaults to a generic "no videos" copy. */
+  emptyMessage?: string
+  /** Optional recovery action (e.g. "Clear filters") rendered under emptyMessage. */
+  emptyAction?: ReactNode
+  /** True when the most recent retrieval attempt failed and produced no videos. */
+  error?: boolean
+  /** Retries the failed retrieval. Required to show a Retry action alongside the error state. */
+  onRetry?: () => void
 }
 
 export function VideoGrid({
@@ -29,6 +39,10 @@ export function VideoGrid({
   showSkeletons,
   layoutMode = 'auto',
   playlistParam,
+  emptyMessage,
+  emptyAction,
+  error = false,
+  onRetry,
 }: VideoGridProps) {
   const { t } = useTranslation()
   const width = useWindowWidth()
@@ -159,12 +173,35 @@ export function VideoGrid({
   }
 
   if (filteredVideos.length === 0 && !isLoading) {
+    if (error) {
+      return (
+        <div className="col-span-full">
+          <Card className="border-dashed">
+            <CardContent className="py-12 px-8 text-center">
+              <div className="max-w-sm mx-auto space-y-4">
+                <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <p className="text-muted-foreground">{t('video.networkError')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('video.networkErrorDescription')}
+                </p>
+                {onRetry && (
+                  <Button variant="outline" size="sm" onClick={onRetry}>
+                    {t('common.retry')}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
     return (
       <div className="col-span-full">
         <Card className="border-dashed">
           <CardContent className="py-12 px-8 text-center">
-            <div className="max-w-sm mx-auto space-y-6">
-              <p className="text-muted-foreground">{t('video.noVideosFound')}</p>
+            <div className="max-w-sm mx-auto space-y-4">
+              <p className="text-muted-foreground">{emptyMessage ?? t('video.noVideosFound')}</p>
+              {emptyAction}
             </div>
           </CardContent>
         </Card>

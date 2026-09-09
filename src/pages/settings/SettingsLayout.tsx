@@ -164,6 +164,9 @@ export function SettingsLayout() {
   const currentCategory = categories.find(c => c.id === activeCategory)
   const needsOldRedirect = oldPathToNew[currentPath] && currentPath !== oldPathToNew[currentPath]
   const redirectTarget = needsOldRedirect ? oldPathToNew[currentPath] : null
+  // The view-sharing on/off preference moved from Network to Privacy and data;
+  // keep the previously supported deep link reaching it.
+  const isOldViewTrackingHash = currentPath === 'network' && location.hash === '#view-tracking'
 
   // Update document title — call BEFORE any early returns per Rules of Hooks
   useEffect(() => {
@@ -182,6 +185,9 @@ export function SettingsLayout() {
   // Old URL redirect
   if (redirectTarget) {
     return <Navigate to={`/settings/${redirectTarget}`} replace />
+  }
+  if (isOldViewTrackingHash) {
+    return <Navigate to="/settings/data#view-sharing" replace />
   }
 
   // Index redirect

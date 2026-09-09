@@ -4,8 +4,39 @@ import { useAppContext, useCurrentUser, useFollowSet } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
 import { Download, CheckCircle2, X } from 'lucide-react'
 
+// ─── View Sharing ────────────────────────────────────
+
+function ViewSharingSection() {
+  const { t } = useTranslation()
+  const { config, updateConfig } = useAppContext()
+  const enabled = config.viewTrackingEnabled !== false
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="p-4 flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h3 className="text-base font-semibold">
+            {t('settings.data.viewSharing', { defaultValue: 'Share your viewing activity' })}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {t('settings.data.viewSharingDescription', {
+              defaultValue:
+                "When enabled, watching someone else's video while signed in publishes a view event signed with your Nostr public key so creators can see view counts. This is not anonymous: anyone reading the relays it's sent to can see which pubkey watched which video. Relay destinations are configurable under Settings \u2192 Network \u2192 View-sharing relays.",
+            })}
+          </p>
+        </div>
+        <Switch
+          id="view-sharing-enabled"
+          checked={enabled}
+          onCheckedChange={checked => updateConfig(c => ({ ...c, viewTrackingEnabled: checked }))}
+        />
+      </div>
+    </div>
+  )
+}
 // ─── Import Follows ──────────────────────────────────
 
 function ImportFollowsSection() {
@@ -185,6 +216,7 @@ function ReportedEventsSection() {
 export function DataSection() {
   return (
     <div className="space-y-6">
+      <ViewSharingSection />
       <ImportFollowsSection />
       <ReportedEventsSection />
     </div>

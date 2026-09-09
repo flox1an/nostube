@@ -838,10 +838,10 @@ export function NetworkSettingsSection() {
       </CollapsibleSection>
 
       <CollapsibleSection
-        id="view-tracking"
-        title="View Tracking"
-        description="Control how your viewing activity is reported to video creators."
-        defaultOpen={activeSection === 'view-tracking'}
+        id="view-tracking-relays"
+        title="View-sharing relays"
+        description="Advanced protocol detail — the on/off preference moved to Settings → Privacy and data."
+        defaultOpen={activeSection === 'view-tracking-relays'}
       >
         <ViewTrackingSettingsSection />
       </CollapsibleSection>

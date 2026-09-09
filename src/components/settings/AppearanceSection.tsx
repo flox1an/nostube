@@ -23,8 +23,11 @@ export function AppearanceSection() {
     <div className="divide-y divide-border">
       {/* Theme Mode */}
       <div className="space-y-3 pb-6">
-        <h3 className="text-base font-semibold">{t('settings.general.themeMode')}</h3>
+        <h3 id="appearance-theme-mode-label" className="text-base font-semibold">
+          {t('settings.general.themeMode')}
+        </h3>
         <RadioGroup
+          aria-labelledby="appearance-theme-mode-label"
           value={theme}
           onValueChange={value => setTheme(value as 'light' | 'dark' | 'system')}
         >
@@ -54,9 +57,11 @@ export function AppearanceSection() {
 
       {/* Color Theme */}
       <div className="space-y-2 py-6">
-        <h3 className="text-base font-semibold">{t('settings.general.colorTheme')}</h3>
+        <h3 id="appearance-color-theme-label" className="text-base font-semibold">
+          {t('settings.general.colorTheme')}
+        </h3>
         <Select value={colorTheme} onValueChange={setColorTheme}>
-          <SelectTrigger id="appearance-color-theme">
+          <SelectTrigger id="appearance-color-theme" aria-labelledby="appearance-color-theme-label">
             <SelectValue placeholder={t('settings.general.selectColorTheme')} />
           </SelectTrigger>
           <SelectContent>
@@ -74,9 +79,11 @@ export function AppearanceSection() {
 
       {/* Language */}
       <div className="space-y-2 py-6">
-        <h3 className="text-base font-semibold">{t('settings.general.language')}</h3>
+        <h3 id="appearance-language-label" className="text-base font-semibold">
+          {t('settings.general.language')}
+        </h3>
         <Select value={i18n.language} onValueChange={handleLanguageChange}>
-          <SelectTrigger id="appearance-language">
+          <SelectTrigger id="appearance-language" aria-labelledby="appearance-language-label">
             <SelectValue placeholder={t('settings.general.selectLanguage')} />
           </SelectTrigger>
           <SelectContent>

@@ -161,6 +161,10 @@
       "technical": "Technical",
       "safety": "Safety"
     },
+    "suggestionsHeading": {
+      "fromCreator": "More from {{name}}",
+      "general": "You might also like"
+    },
     "comments": {
       "title": "Comments",
       "signInToComment": "Sign in to comment",

@@ -283,9 +283,31 @@ function VideoSuggestionItemSkeleton() {
   )
 }
 
+function SuggestionsHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sm:col-span-2 lg:col-span-1 px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </div>
+  )
+}
+
+/** Split a suggestion list into same-creator and general/mixed groups, so the
+ * UI can label each group by why it's actually being shown. */
+function partitionByAuthor<T extends { pubkey: string }>(
+  videos: T[],
+  authorPubkey?: string
+): { sameCreator: T[]; general: T[] } {
+  if (!authorPubkey) return { sameCreator: [], general: videos }
+  return {
+    sameCreator: videos.filter(v => v.pubkey === authorPubkey),
+    general: videos.filter(v => v.pubkey !== authorPubkey),
+  }
+}
+
 interface VideoSuggestionsProps {
   currentVideoId?: string
   authorPubkey?: string
+  authorDisplayName?: string
   currentVideoType?: VideoType
   relays?: string[] // Relays from nevent or other sources
   cinemaMode?: boolean
@@ -296,6 +318,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   currentVideoId,
   currentVideoType,
   authorPubkey,
+  authorDisplayName,
   relays,
   cinemaMode,
   videoRef,
@@ -546,6 +569,16 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
   // Use service results when available, fall back to relay-based suggestions
   const useServiceResults = filteredServiceVideos !== null
 
+  const { sameCreator: sameCreatorService, general: generalService } = partitionByAuthor(
+    filteredServiceVideos ?? [],
+    authorPubkey
+  )
+  const { sameCreator: sameCreatorRelay, general: generalRelay } = partitionByAuthor(
+    filteredSuggestions,
+    authorPubkey
+  )
+  const authorLabel = authorDisplayName || authorPubkey?.slice(0, 8) || ''
+
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
     <div
@@ -555,9 +588,27 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
         Array.from({ length: 10 }).map((_, i) => <VideoSuggestionItemSkeleton key={i} />)
       ) : useServiceResults ? (
         filteredServiceVideos!.length > 0 ? (
-          filteredServiceVideos!.map(video => (
-            <RecommendationVideoSuggestionItem key={video.id} video={video} />
-          ))
+          <>
+            {sameCreatorService.length > 0 && (
+              <SuggestionsHeading>
+                {t('video.suggestionsHeading.fromCreator', {
+                  name: authorLabel,
+                  defaultValue: 'More from {{name}}',
+                })}
+              </SuggestionsHeading>
+            )}
+            {sameCreatorService.map(video => (
+              <RecommendationVideoSuggestionItem key={video.id} video={video} />
+            ))}
+            {generalService.length > 0 && (
+              <SuggestionsHeading>
+                {t('video.suggestionsHeading.general', { defaultValue: 'You might also like' })}
+              </SuggestionsHeading>
+            )}
+            {generalService.map(video => (
+              <RecommendationVideoSuggestionItem key={video.id} video={video} />
+            ))}
+          </>
         ) : (
           <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
             {t('video.noSuggestions', 'No suggestions yet.')}
@@ -573,7 +624,27 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
           </p>
         </div>
       ) : filteredSuggestions.length > 0 ? (
-        filteredSuggestions.map(video => <VideoSuggestionItem key={video.id} video={video} />)
+        <>
+          {sameCreatorRelay.length > 0 && (
+            <SuggestionsHeading>
+              {t('video.suggestionsHeading.fromCreator', {
+                name: authorLabel,
+                defaultValue: 'More from {{name}}',
+              })}
+            </SuggestionsHeading>
+          )}
+          {sameCreatorRelay.map(video => (
+            <VideoSuggestionItem key={video.id} video={video} />
+          ))}
+          {generalRelay.length > 0 && (
+            <SuggestionsHeading>
+              {t('video.suggestionsHeading.general', { defaultValue: 'You might also like' })}
+            </SuggestionsHeading>
+          )}
+          {generalRelay.map(video => (
+            <VideoSuggestionItem key={video.id} video={video} />
+          ))}
+        </>
       ) : (
         <div className="px-3 py-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-1">
           {t('video.noSuggestions', 'No suggestions yet.')}

@@ -614,6 +614,7 @@ function VideoPageContent() {
         <VideoSuggestions
           currentVideoId={video?.id}
           authorPubkey={video?.pubkey}
+          authorDisplayName={authorName}
           currentVideoType={video?.type}
           relays={relaysToUse}
           cinemaMode={cinemaMode}

@@ -175,6 +175,7 @@ export function SearchPage() {
         }
         exhaustedMessage=""
         className=""
+        cardTreatment="quiet-cinema"
       />
     </div>
   )

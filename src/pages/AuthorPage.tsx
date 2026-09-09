@@ -1201,6 +1201,7 @@ function AuthorPageContent() {
                         <VideoCard
                           video={video}
                           format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
+                          treatment="quiet-cinema"
                         />
                       </div>
                     ))}
@@ -1222,7 +1223,7 @@ function AuthorPageContent() {
                   <div className="flex gap-2 min-w-max">
                     {videos.slice(0, 10).map(video => (
                       <div key={`latest-video-${video.id}`} className="w-80 shrink-0">
-                        <VideoCard video={video} format="horizontal" />
+                        <VideoCard video={video} format="horizontal" treatment="quiet-cinema" />
                       </div>
                     ))}
                   </div>
@@ -1249,6 +1250,7 @@ function AuthorPageContent() {
                           allVideos={shorts}
                           videoIndex={index}
                           tightGridGap
+                          treatment="quiet-cinema"
                         />
                       </div>
                     ))}
@@ -1314,6 +1316,7 @@ function AuthorPageContent() {
               emptyMessage={t('pages.author.noVideos')}
               error={phase === 'error'}
               onRetry={loadMore}
+              cardTreatment="quiet-cinema"
             />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
@@ -1338,6 +1341,7 @@ function AuthorPageContent() {
               emptyMessage={t('pages.author.noShorts')}
               error={phase === 'error'}
               onRetry={loadMore}
+              cardTreatment="quiet-cinema"
             />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
@@ -1359,6 +1363,7 @@ function AuthorPageContent() {
               isLoading={loadingLikedVideos || isLoadingLiked}
               showSkeletons={true}
               layoutMode="auto"
+              cardTreatment="quiet-cinema"
             />
             {likedVideos.length === 0 && !loadingLikedVideos && !isLoadingLiked && (
               <div className="text-center py-12 text-muted-foreground">
@@ -1443,6 +1448,7 @@ function AuthorPageContent() {
                           <VideoCard
                             video={video}
                             format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
+                            treatment="quiet-cinema"
                           />
                         </div>
                       ))}

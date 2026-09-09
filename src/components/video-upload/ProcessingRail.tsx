@@ -137,7 +137,18 @@ export function ProcessingRail({
             )}
           </div>
           {browserTranscodeState?.variants.length ? (
-            <Button type="button" variant="ghost" size="icon" onClick={() => setExpanded(v => !v)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setExpanded(v => !v)}
+              aria-expanded={expanded}
+              aria-label={
+                expanded
+                  ? t('upload.processing.hideDetails', { defaultValue: 'Hide processing details' })
+                  : t('upload.processing.showDetails', { defaultValue: 'Show processing details' })
+              }
+            >
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
               />

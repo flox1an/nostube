@@ -237,7 +237,7 @@ export const CommentReactions = memo(function CommentReactions({
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
                 disabled={!user || isZapping || isOwnContent}
-                aria-label="Zap"
+                aria-label="Support with a zap"
               >
                 {isZapping ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -248,7 +248,7 @@ export const CommentReactions = memo(function CommentReactions({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>{`Zapping ${defaultZapAmount} sats. Long press for options...`}</span>
+              <span>{`Support with ${defaultZapAmount} sats — long press for more options`}</span>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

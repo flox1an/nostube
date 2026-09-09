@@ -273,7 +273,7 @@ export const ZapDialog = memo(function ZapDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-yellow-500" />
-            Send Zap
+            Support {displayName}
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2 pt-2">
             <UserAvatar
@@ -282,7 +282,9 @@ export const ZapDialog = memo(function ZapDialog({
               name={displayName}
               className="h-6 w-6"
             />
-            <span>to {displayName}</span>
+            <span>
+              A zap is an instant Lightning (Bitcoin) payment sent directly to {displayName}.
+            </span>
           </DialogDescription>
         </DialogHeader>
 

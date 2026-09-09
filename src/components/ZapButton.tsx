@@ -69,15 +69,22 @@ export const ZapButton = memo(function ZapButton({
     if (isLongPress.current) return
     // Capture timestamp at the moment of click
     setCapturedTimestamp(currentTime)
+    // Logged-out tap surfaces the sign-in prompt directly — never open the
+    // payment dialog before there's an account to zap from.
+    if (!user) {
+      await zap()
+      return
+    }
     // If wallet is connected, do quick zap; otherwise open dialog for QR code
     if (isConnected) {
       await zap({ timestamp: currentTime })
     } else {
       setShowZapDialog(true)
     }
-  }, [zap, isConnected, currentTime])
+  }, [zap, isConnected, currentTime, user])
 
   const handlePointerDown = useCallback(() => {
+    if (!user) return
     isLongPress.current = false
     // Capture timestamp at the moment of press
     setCapturedTimestamp(currentTime)
@@ -85,7 +92,7 @@ export const ZapButton = memo(function ZapButton({
       isLongPress.current = true
       setShowZapDialog(true)
     }, LONG_PRESS_DELAY)
-  }, [currentTime])
+  }, [currentTime, user])
 
   const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
@@ -104,11 +111,12 @@ export const ZapButton = memo(function ZapButton({
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
+      if (!user) return
       // Capture timestamp at the moment of right-click
       setCapturedTimestamp(currentTime)
       setShowZapDialog(true)
     },
-    [currentTime]
+    [currentTime, user]
   )
 
   const handleZapFromDialog = useCallback(
@@ -119,8 +127,8 @@ export const ZapButton = memo(function ZapButton({
   )
 
   if (layout === 'inline') {
-    // Render static display for own content or when not logged in
-    if (isOwnContent || !user) {
+    // Render static display for own content (can't zap yourself)
+    if (isOwnContent) {
       return (
         <div className={cn('inline-flex items-center gap-1 p-2 text-muted-foreground', className)}>
           <Zap className={cn('h-5 w-5', displaySats > 0 && 'text-yellow-500')} />
@@ -144,8 +152,10 @@ export const ZapButton = memo(function ZapButton({
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
-                disabled={!user || isZapping}
-                aria-label="Zap"
+                disabled={isZapping}
+                aria-label={
+                  user ? 'Support creator with a zap' : 'Sign in to support this creator with a zap'
+                }
               >
                 {isZapping ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -158,7 +168,9 @@ export const ZapButton = memo(function ZapButton({
             </TooltipTrigger>
             <TooltipContent>
               <span>
-                {`Zap ${defaultZapAmount}`} sats or<br></br> long press for options...
+                {user
+                  ? `Support with ${defaultZapAmount} sats — long press for more options`
+                  : 'Sign in to support this creator with a zap'}
               </span>
             </TooltipContent>
           </Tooltip>
@@ -180,8 +192,8 @@ export const ZapButton = memo(function ZapButton({
   }
 
   // Vertical layout (for Shorts)
-  // Render static display for own content or when not logged in
-  if (isOwnContent || !user) {
+  // Render static display for own content (can't zap yourself)
+  if (isOwnContent) {
     return (
       <div className={cn('flex flex-col items-center gap-1', className)}>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
@@ -207,8 +219,10 @@ export const ZapButton = memo(function ZapButton({
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerLeave}
                 onContextMenu={handleContextMenu}
-                disabled={!user || isZapping}
-                aria-label="Zap"
+                disabled={isZapping}
+                aria-label={
+                  user ? 'Support creator with a zap' : 'Sign in to support this creator with a zap'
+                }
               >
                 {isZapping ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -218,7 +232,11 @@ export const ZapButton = memo(function ZapButton({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>{`Zapping ${defaultZapAmount} sats. Long press for options...`}</span>
+              <span>
+                {user
+                  ? `Support with ${defaultZapAmount} sats — long press for more options`
+                  : 'Sign in to support this creator with a zap'}
+              </span>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

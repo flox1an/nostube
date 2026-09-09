@@ -882,6 +882,8 @@
   },
   "pages": {
     "home": {
+      "latestVideos": "最新视频",
+      "newestFirst": "最新优先",
       "noVideos": "未找到视频。",
       "noMore": "没有更多视频可加载。",
       "trustFilterOn": "信任过滤已开启 — 隐藏低分作者",

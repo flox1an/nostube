@@ -91,13 +91,20 @@ export function HomePage() {
   if (!filteredVideos) return null
 
   return (
-    <div className="max-w-560 mx-auto">
-      <div className="sm:px-2">
+    <div className="mx-auto max-w-560 px-3 sm:px-4 lg:px-6">
+      <div className="-mx-3 sm:-mx-4 lg:-mx-6">
         <CategoryButtonBar
           selectedRelay={relayOverride}
           onRelayChange={setRelayOverride}
           afterRelay={filterButton}
+          tone="quiet"
         />
+      </div>
+      <div className="mb-4 flex items-baseline justify-between px-1 pt-5 sm:mb-5 sm:pt-7">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          {t('pages.home.latestVideos')}
+        </h1>
+        <span className="text-sm text-muted-foreground">{t('pages.home.newestFirst')}</span>
       </div>
       <VideoTimelinePage
         videos={filteredVideos}
@@ -111,7 +118,8 @@ export function HomePage() {
         emptyMessage={t('pages.home.noVideos')}
         exhaustedMessage={t('pages.home.noMore')}
         error={phase === 'error'}
-        className="sm:px-2"
+        className=""
+        cardTreatment="quiet-cinema"
       />
     </div>
   )

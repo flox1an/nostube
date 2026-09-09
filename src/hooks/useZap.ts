@@ -59,7 +59,7 @@ export function useZap({ eventId, authorPubkey }: UseZapOptions): UseZapReturn {
       const { amount = defaultZapAmount, comment, timestamp } = params || {}
 
       if (!user) {
-        toast.error('Please log in to zap')
+        toast.error('Sign in to support creators with a zap')
         return false
       }
 

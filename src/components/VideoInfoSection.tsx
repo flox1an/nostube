@@ -20,6 +20,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
@@ -47,8 +49,10 @@ import {
   Zap,
   Volume2,
   VolumeX,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
-import { nowInSecs } from '@/lib/utils'
+import { nowInSecs, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
@@ -175,6 +179,10 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
   const [showReportDialog, setShowReportDialog] = useState(false)
   const loadedPinListKeyRef = useRef<string | null>(null)
   const { isMuted: isAuthorMuted, toggleMute: toggleAuthorMute } = useMuteUser(video?.pubkey ?? '')
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleTruncated, setTitleTruncated] = useState(false)
+  const [titleExpanded, setTitleExpanded] = useState(false)
+  const [showMoreMeta, setShowMoreMeta] = useState(false)
 
   // Check if video is editable (owner + addressable event)
   const isOwner = userPubkey === video?.pubkey
@@ -224,6 +232,15 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
     return () => sub.unsubscribe()
   }, [userPubkey, pool, relaysToUse, pinFilters, eventStore])
+
+  // Detect whether the mobile-clamped title actually overflows two lines,
+  // so the "show full title" affordance only appears when it's needed.
+  // ponytail: checked once per title, not on window resize — add a resize
+  // listener if users report stale state after rotating/resizing mid-view.
+  useEffect(() => {
+    if (!titleRef.current) return
+    setTitleTruncated(titleRef.current.scrollHeight > titleRef.current.clientHeight)
+  }, [video?.title])
 
   // Extract expiration timestamp from video event (NIP-40)
   // Calculate once - expiration status won't change during component lifetime
@@ -329,32 +346,63 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
     }
   }
 
+  const videoLanguages: string[] =
+    'languages' in video && Array.isArray(video.languages) ? (video.languages as string[]) : []
+  const allTags = video.tags.slice(0, 20)
+  const previewTags = allTags.slice(0, 3)
+  const remainingTags = allTags.slice(3)
+  const hasMoreMetadata =
+    remainingTags.length > 0 ||
+    videoLanguages.length > 0 ||
+    video.origins.length > 0 ||
+    Boolean(geohash)
+
   return (
     <>
       <div className="flex flex-col gap-4 px-2 md:px-0 min-w-0">
         {((!hideTitle && video?.title) || expirationDate) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {!hideTitle && video?.title && (
-              <h1 className="text-xl md:text-2xl font-bold line-clamp-2 md:line-clamp-none">
-                {video?.title}
-              </h1>
-            )}
-            {expirationDate && !isExpired && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {!hideTitle && video?.title && (
+                <h1
+                  ref={titleRef}
+                  className={cn(
+                    'text-xl md:text-2xl font-bold',
+                    !titleExpanded && 'line-clamp-2 md:line-clamp-none'
+                  )}
+                >
+                  {video.title}
+                </h1>
+              )}
+              {expirationDate && !isExpired && (
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1 text-amber-600 dark:text-amber-400"
+                >
+                  <Clock className="w-3 h-3" />
+                  {t('video.expiresIn', {
+                    time: formatDistance(expirationDate, new Date()),
+                  })}
+                </Badge>
+              )}
+              {isExpired && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {t('video.expired')}
+                </Badge>
+              )}
+            </div>
+            {!hideTitle && titleTruncated && (
+              <button
+                type="button"
+                onClick={() => setTitleExpanded(prev => !prev)}
+                aria-expanded={titleExpanded}
+                className="self-start text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
-                <Clock className="w-3 h-3" />
-                {t('video.expiresIn', {
-                  time: formatDistance(expirationDate, new Date()),
-                })}
-              </Badge>
-            )}
-            {isExpired && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {t('video.expired')}
-              </Badge>
+                {titleExpanded
+                  ? t('video.showLessTitle', { defaultValue: 'Show less' })
+                  : t('video.showFullTitle', { defaultValue: 'Show full title' })}
+              </button>
             )}
           </div>
         )}
@@ -437,32 +485,51 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
-                {isMobile && userPubkey && (
-                  <AddToPlaylistButton
-                    videoId={video.id}
-                    videoKind={video.kind}
-                    videoTitle={video.title}
-                    asMenuItem
-                  />
-                )}
                 {userPubkey && (
-                  <DropdownMenuItem onSelect={handleToggleProfilePin} disabled={isPinning}>
-                    {isVideoPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
-                    &nbsp; {isVideoPinned ? t('video.unpinFromProfile') : t('video.pinToProfile')}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      {t('video.menu.viewer', { defaultValue: 'For you' })}
+                    </DropdownMenuLabel>
+                    {isMobile && (
+                      <AddToPlaylistButton
+                        videoId={video.id}
+                        videoKind={video.kind}
+                        videoTitle={video.title}
+                        asMenuItem
+                      />
+                    )}
+                    <DropdownMenuItem onSelect={handleToggleProfilePin} disabled={isPinning}>
+                      {isVideoPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
+                      &nbsp; {isVideoPinned ? t('video.unpinFromProfile') : t('video.pinToProfile')}
+                    </DropdownMenuItem>
+                  </>
                 )}
-                {isEditable && videoEvent && (
-                  <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
-                    <Pencil className="w-5 h-5" />
-                    &nbsp; {t('editVideo.button')}
-                  </DropdownMenuItem>
+
+                {((isEditable && videoEvent) || userPubkey === video.pubkey) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      {t('video.menu.creator', { defaultValue: 'Creator tools' })}
+                    </DropdownMenuLabel>
+                    {isEditable && videoEvent && (
+                      <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
+                        <Pencil className="w-5 h-5" />
+                        &nbsp; {t('editVideo.button')}
+                      </DropdownMenuItem>
+                    )}
+                    {userPubkey === video.pubkey && (
+                      <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
+                        <TrashIcon className="w-5 h-5" />
+                        &nbsp; {t('video.deleteVideo')}
+                      </DropdownMenuItem>
+                    )}
+                  </>
                 )}
-                {videoEvent && isBetaUser(userPubkey) && !isEditable && (
-                  <DropdownMenuItem onSelect={() => setShowLabelDialog(true)}>
-                    <Tag className="w-5 h-5" />
-                    &nbsp; {t('labelVideo.button')}
-                  </DropdownMenuItem>
-                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                  {t('video.menu.technical', { defaultValue: 'Technical' })}
+                </DropdownMenuLabel>
                 {onMirror && userPubkey && (
                   <DropdownMenuItem onSelect={onMirror}>
                     <Copy className="w-5 h-5" />
@@ -475,37 +542,44 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                     &nbsp; {t('video.contribute.menuItem')}
                   </DropdownMenuItem>
                 )}
+                {videoEvent && isBetaUser(userPubkey) && !isEditable && (
+                  <DropdownMenuItem onSelect={() => setShowLabelDialog(true)}>
+                    <Tag className="w-5 h-5" />
+                    &nbsp; {t('labelVideo.button')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => setShowDebugDialog(true)}>
                   <Bug className="w-5 h-5" />
                   &nbsp; {t('errors.debugInfo')}
                 </DropdownMenuItem>
-                {userPubkey && video && userPubkey !== video.pubkey && (
-                  <DropdownMenuItem
-                    onSelect={() => void toggleAuthorMute()}
-                    className={isAuthorMuted ? undefined : 'text-destructive'}
-                  >
-                    {isAuthorMuted ? (
-                      <Volume2 className="w-5 h-5" />
-                    ) : (
-                      <VolumeX className="w-5 h-5" />
-                    )}
-                    &nbsp;{' '}
-                    {isAuthorMuted
-                      ? t('mute.unmuteUser', { defaultValue: 'Unmute user' })
-                      : t('video.comments.muteUser')}
-                  </DropdownMenuItem>
-                )}
+
                 {userPubkey && (
-                  <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
-                    <Flag className="w-5 h-5" />
-                    &nbsp; {t('video.reportVideo')}
-                  </DropdownMenuItem>
-                )}
-                {userPubkey === video.pubkey && (
-                  <DropdownMenuItem onSelect={() => setShowDeleteDialog(true)}>
-                    <TrashIcon className="w-5 h-5" />
-                    &nbsp; {t('video.deleteVideo')}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      {t('video.menu.safety', { defaultValue: 'Safety' })}
+                    </DropdownMenuLabel>
+                    {userPubkey !== video.pubkey && (
+                      <DropdownMenuItem
+                        onSelect={() => void toggleAuthorMute()}
+                        className={isAuthorMuted ? undefined : 'text-destructive'}
+                      >
+                        {isAuthorMuted ? (
+                          <Volume2 className="w-5 h-5" />
+                        ) : (
+                          <VolumeX className="w-5 h-5" />
+                        )}
+                        &nbsp;{' '}
+                        {isAuthorMuted
+                          ? t('mute.unmuteUser', { defaultValue: 'Unmute user' })
+                          : t('video.comments.muteUser')}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => setShowReportDialog(true)}>
+                      <Flag className="w-5 h-5" />
+                      &nbsp; {t('video.reportVideo')}
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -525,98 +599,125 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
         )}
 
         {/* Display tags, languages, location, and origins */}
-        {(video && video.tags.length > 0) ||
-        (video &&
-          'languages' in video &&
-          Array.isArray(video.languages) &&
-          video.languages.length > 0) ||
-        (video && video.origins && video.origins.length > 0) ||
-        geohash ? (
+        {allTags.length > 0 || videoLanguages.length > 0 || video.origins.length > 0 || geohash ? (
           <div className="flex flex-wrap items-center gap-2 pb-1">
-            {/* Language badges with flag + shortcode */}
-            {video &&
-              'languages' in video &&
-              Array.isArray(video.languages) &&
-              (video.languages as string[]).map((lang: string) => {
-                const { flag, code } = getLanguageDisplay(lang)
-                return (
-                  <Badge
-                    key={`lang-${lang}`}
-                    variant="outline"
-                    className="shrink-0 whitespace-nowrap"
-                  >
-                    {flag} {code}
-                  </Badge>
-                )
-              })}
-            {/* Tag badges */}
-            {video &&
-              video.tags.slice(0, 20).map(tag => (
-                <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
-                  <Badge
-                    variant="secondary"
-                    className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
-                  >
-                    #{tag}
-                  </Badge>
-                </Link>
-              ))}
-            {/* Origin badges */}
-            {video &&
-              video.origins &&
-              video.origins.map((origin, index) => {
-                const originUrl = getOriginLink(origin.originalUrl)
+            {/* Small tag preview — always visible */}
+            {previewTags.map(tag => (
+              <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
+                >
+                  #{tag}
+                </Badge>
+              </Link>
+            ))}
 
-                return originUrl ? (
+            {hasMoreMetadata && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-muted-foreground"
+                onClick={() => setShowMoreMeta(prev => !prev)}
+                aria-expanded={showMoreMeta}
+              >
+                {showMoreMeta ? (
+                  <>
+                    {t('video.lessDetails', { defaultValue: 'Less details' })}
+                    <ChevronUp className="ml-1 h-3 w-3" />
+                  </>
+                ) : (
+                  <>
+                    {t('video.moreDetails', { defaultValue: 'More details' })}
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </>
+                )}
+              </Button>
+            )}
+
+            {showMoreMeta && (
+              <>
+                {/* Language badges with flag + shortcode */}
+                {videoLanguages.map(lang => {
+                  const { flag, code } = getLanguageDisplay(lang)
+                  return (
+                    <Badge
+                      key={`lang-${lang}`}
+                      variant="outline"
+                      className="shrink-0 whitespace-nowrap"
+                    >
+                      {flag} {code}
+                    </Badge>
+                  )
+                })}
+                {/* Remaining tag badges */}
+                {remainingTags.map(tag => (
+                  <Link key={tag} to={`/tag/${tag.toLowerCase()}`}>
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 whitespace-nowrap cursor-pointer hover:bg-secondary/80"
+                    >
+                      #{tag}
+                    </Badge>
+                  </Link>
+                ))}
+                {/* Origin (source) badges */}
+                {video.origins.map((origin, index) => {
+                  const originUrl = getOriginLink(origin.originalUrl)
+
+                  return originUrl ? (
+                    <a
+                      key={`origin-${index}`}
+                      href={originUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={origin.platform}
+                      className="inline-flex"
+                    >
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                      </Badge>
+                    </a>
+                  ) : (
+                    <Badge
+                      key={`origin-${index}`}
+                      variant="secondary"
+                      title={origin.platform}
+                      className="shrink-0 whitespace-nowrap"
+                    >
+                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                    </Badge>
+                  )
+                })}
+                {geohash && (
                   <a
-                    key={`origin-${index}`}
-                    href={originUrl}
+                    href={(() => {
+                      try {
+                        const decoded = ngeohash.decode(geohash)
+                        return `https://www.openstreetmap.org/?mlat=${decoded.latitude}&mlon=${decoded.longitude}&zoom=15`
+                      } catch {
+                        return '#'
+                      }
+                    })()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title={origin.platform}
-                    className="inline-flex"
+                    title={t('video.viewLocation')}
                   >
                     <Badge
                       variant="secondary"
-                      className="shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1 hover:bg-secondary/80"
+                      className="shrink-0 cursor-pointer hover:bg-secondary/80 inline-flex items-center"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
+                      <MapPin className="w-3.5 h-3.5 mr-1" />
+                      {t('video.location')}
                     </Badge>
                   </a>
-                ) : (
-                  <Badge
-                    key={`origin-${index}`}
-                    variant="secondary"
-                    title={origin.platform}
-                    className="shrink-0 whitespace-nowrap"
-                  >
-                    {origin.platform.charAt(0).toUpperCase() + origin.platform.slice(1)}
-                  </Badge>
-                )
-              })}
-            {geohash && (
-              <a
-                href={(() => {
-                  try {
-                    const decoded = ngeohash.decode(geohash)
-                    return `https://www.openstreetmap.org/?mlat=${decoded.latitude}&mlon=${decoded.longitude}&zoom=15`
-                  } catch {
-                    return '#'
-                  }
-                })()}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={t('video.viewLocation')}
-              >
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 cursor-pointer hover:bg-secondary/80 inline-flex items-center"
-                >
-                  <MapPin className="w-3.5 h-3.5 mr-1" />
-                  {t('video.location')}
-                </Badge>
-              </a>
+                )}
+              </>
             )}
           </div>
         ) : null}

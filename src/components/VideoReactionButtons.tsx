@@ -223,7 +223,8 @@ export function VideoReactionButtons({
             className={cn('px-4', className)}
             onClick={handleUpvote}
             disabled={!user || isPending || hasReacted}
-            aria-label="Upvote"
+            aria-label={`Upvote, ${upvoteCount} reactions`}
+            aria-pressed={hasUpvoted}
           >
             <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
           </Button>
@@ -232,6 +233,7 @@ export function VideoReactionButtons({
             className={cn('py-2 text-sm', totalReactions > 0 && 'cursor-pointer hover:underline')}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
+            aria-label={`View ${upvoteCount} reactions`}
           >
             {upvoteCount}
           </button>
@@ -242,7 +244,8 @@ export function VideoReactionButtons({
             className={cn('px-4', className)}
             onClick={handleDownvote}
             disabled={!user || isPending || hasReacted}
-            aria-label="Downvote"
+            aria-label={`Downvote, ${downvoteCount} reactions`}
+            aria-pressed={hasDownvoted}
           >
             <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
           </Button>
@@ -251,6 +254,7 @@ export function VideoReactionButtons({
             className={cn('py-2 text-sm', totalReactions > 0 && 'cursor-pointer hover:underline')}
             onClick={handleCountClick}
             disabled={totalReactions === 0}
+            aria-label={`View ${downvoteCount} downvotes`}
           >
             {downvoteCount}
           </button>
@@ -340,7 +344,8 @@ export function VideoReactionButtons({
           className="rounded-full"
           onClick={handleUpvote}
           disabled={!user || isPending || hasReacted}
-          aria-label="Upvote"
+          aria-label={`Upvote, ${upvoteCount} reactions`}
+          aria-pressed={hasUpvoted}
         >
           <ThumbsUp className={cn('h-5 w-5', hasUpvoted && 'fill-current/80')} />
         </Button>
@@ -352,6 +357,7 @@ export function VideoReactionButtons({
           )}
           onClick={handleCountClick}
           disabled={totalReactions === 0}
+          aria-label={`View ${upvoteCount} reactions`}
         >
           {upvoteCount}
         </button>
@@ -365,7 +371,8 @@ export function VideoReactionButtons({
           className="rounded-full"
           onClick={handleDownvote}
           disabled={!user || isPending || hasReacted}
-          aria-label="Downvote"
+          aria-label={`Downvote, ${downvoteCount} reactions`}
+          aria-pressed={hasDownvoted}
         >
           <ThumbsDown className={cn('h-5 w-5', hasDownvoted && 'fill-current/80')} />
         </Button>
@@ -377,6 +384,7 @@ export function VideoReactionButtons({
           )}
           onClick={handleCountClick}
           disabled={totalReactions === 0}
+          aria-label={`View ${downvoteCount} downvotes`}
         >
           {downvoteCount}
         </button>

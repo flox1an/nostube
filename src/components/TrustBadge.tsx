@@ -45,8 +45,13 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
               e.stopPropagation()
               setDialogOpen(true)
             }}
+            aria-label={t('trust.badge.tooltip', {
+              label: t(trust.labelKey),
+              percentage,
+              defaultValue: '{{label}} trust ({{percentage}}%) — click for details',
+            })}
             className={cn(
-              'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity',
+              'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               trust.colorClass,
               className
             )}

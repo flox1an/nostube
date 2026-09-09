@@ -93,8 +93,8 @@ export function VideoTransformAlert({
     <Alert className="border-primary relative">
       <Button
         variant="ghost"
-        size="icon"
-        className="absolute top-2 right-2 h-6 w-6"
+        className="absolute top-1.5 right-1.5 h-8 w-8"
+        aria-label="Dismiss contribution alert"
         onClick={handleDismiss}
       >
         <X className="h-4 w-4" />

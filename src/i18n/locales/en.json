@@ -1047,6 +1047,17 @@
     "moreActions": "More actions",
     "error": "Could not update your mute list"
   },
+  "presetModeration": {
+    "nsfwAdd": "Add author to NSFW list",
+    "nsfwRemove": "Remove author from NSFW list",
+    "blockedAdd": "Add author to blocked list",
+    "blockedRemove": "Remove author from blocked list",
+    "videoAdd": "Block this video",
+    "videoRemove": "Unblock this video",
+    "buffered": "in buffer",
+    "removedToast": "Removed from your preset",
+    "removeFailedToast": "Failed to update preset"
+  },
   "report": {
     "titleVideo": "Report Video",
     "titleComment": "Report Comment",

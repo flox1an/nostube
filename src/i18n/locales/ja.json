@@ -1047,6 +1047,17 @@
     "moreActions": "その他の操作",
     "error": "ミュートリストを更新できませんでした"
   },
+  "presetModeration": {
+    "nsfwAdd": "投稿者をNSFWリストに追加",
+    "nsfwRemove": "投稿者をNSFWリストから削除",
+    "blockedAdd": "投稿者をブロックリストに追加",
+    "blockedRemove": "投稿者をブロックリストから削除",
+    "videoAdd": "この動画をブロック",
+    "videoRemove": "この動画のブロックを解除",
+    "buffered": "バッファ内",
+    "removedToast": "プリセットから削除しました",
+    "removeFailedToast": "プリセットを更新できませんでした"
+  },
   "report": {
     "titleVideo": "動画を報告",
     "titleComment": "コメントを報告",

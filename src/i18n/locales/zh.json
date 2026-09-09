@@ -1047,6 +1047,17 @@
     "moreActions": "更多操作",
     "error": "无法更新屏蔽列表"
   },
+  "presetModeration": {
+    "nsfwAdd": "将作者加入 NSFW 列表",
+    "nsfwRemove": "将作者移出 NSFW 列表",
+    "blockedAdd": "将作者加入屏蔽列表",
+    "blockedRemove": "将作者移出屏蔽列表",
+    "videoAdd": "屏蔽此视频",
+    "videoRemove": "取消屏蔽此视频",
+    "buffered": "已在缓冲区",
+    "removedToast": "已从你的预设中移除",
+    "removeFailedToast": "更新预设失败"
+  },
   "report": {
     "titleVideo": "举报视频",
     "titleComment": "举报评论",

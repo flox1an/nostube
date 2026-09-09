@@ -289,6 +289,7 @@ export const VideoCard = React.memo(function VideoCard({
             <UserActionsMenu
               pubkey={video.pubkey}
               videoId={video.id}
+              videoTitle={video.title}
               className="-mr-1 shrink-0 transition-opacity data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             />
           </div>

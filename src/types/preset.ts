@@ -52,3 +52,23 @@ export const EMPTY_PRESET_CONTENT: NostubePresetContent = {
   nsfwPubkeys: [],
   blockedEvents: [],
 }
+
+/**
+ * Staging lists for the admin moderation buffer (see usePresetBuffer).
+ * Keys into NostubePresetContent lists.
+ */
+export type PresetBufferList = 'nsfwPubkeys' | 'blockedPubkeys' | 'blockedEvents'
+
+/**
+ * One pending admin moderation action collected from the video grid.
+ * Applied in bulk from /admin — never published on its own.
+ */
+export interface PresetModerationEntry {
+  /** Hex pubkey (author lists) or event id (blockedEvents) */
+  value: string
+  /** Target preset list; adding the same value again replaces the entry */
+  list: PresetBufferList
+  /** Title of the video the action was taken on, for review */
+  source?: string
+  addedAt: number
+}

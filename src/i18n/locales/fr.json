@@ -1047,6 +1047,17 @@
     "moreActions": "Plus d'actions",
     "error": "Impossible de mettre à jour votre liste de masquage"
   },
+  "presetModeration": {
+    "nsfwAdd": "Ajouter l'auteur à la liste NSFW",
+    "nsfwRemove": "Retirer l'auteur de la liste NSFW",
+    "blockedAdd": "Ajouter l'auteur à la liste des bloqués",
+    "blockedRemove": "Retirer l'auteur de la liste des bloqués",
+    "videoAdd": "Bloquer cette vidéo",
+    "videoRemove": "Débloquer cette vidéo",
+    "buffered": "en tampon",
+    "removedToast": "Retiré de votre preset",
+    "removeFailedToast": "Échec de la mise à jour du preset"
+  },
   "report": {
     "titleVideo": "Signaler la vidéo",
     "titleComment": "Signaler le commentaire",

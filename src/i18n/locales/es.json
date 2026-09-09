@@ -1047,6 +1047,17 @@
     "moreActions": "Más acciones",
     "error": "No se pudo actualizar tu lista de silenciados"
   },
+  "presetModeration": {
+    "nsfwAdd": "Añadir autor a la lista NSFW",
+    "nsfwRemove": "Quitar autor de la lista NSFW",
+    "blockedAdd": "Añadir autor a la lista de bloqueados",
+    "blockedRemove": "Quitar autor de la lista de bloqueados",
+    "videoAdd": "Bloquear este video",
+    "videoRemove": "Desbloquear este video",
+    "buffered": "en el búfer",
+    "removedToast": "Eliminado de tu preset",
+    "removeFailedToast": "No se pudo actualizar el preset"
+  },
   "report": {
     "titleVideo": "Reportar video",
     "titleComment": "Reportar comentario",

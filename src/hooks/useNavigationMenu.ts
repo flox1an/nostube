@@ -1,15 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import {
-  Cog,
-  Compass,
-  FileText,
-  History,
-  Home,
-  ListVideo,
-  Play,
-  ThumbsUp,
-  Users,
-} from 'lucide-react'
+import { Cog, Compass, FileText, Home, Library, Play, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser, useFollowSet } from '@/hooks'
@@ -87,17 +77,10 @@ export function useNavigationMenu(): NavigationMenu {
     const libraryItems = user
       ? [
           {
-            id: 'history',
-            label: t('navigation.history'),
-            icon: History,
-            href: '/history',
-            section: 'library' as const,
-          },
-          {
-            id: 'playlists',
-            label: t('navigation.playlists'),
-            icon: ListVideo,
-            href: '/playlists',
+            id: 'library',
+            label: t('navigation.library'),
+            icon: Library,
+            href: '/library',
             section: 'library' as const,
           },
           ...(isBetaUser(user.pubkey)
@@ -111,13 +94,6 @@ export function useNavigationMenu(): NavigationMenu {
                 },
               ]
             : []),
-          {
-            id: 'liked-videos',
-            label: t('navigation.likedVideos'),
-            icon: ThumbsUp,
-            href: '/liked-videos',
-            section: 'library' as const,
-          },
         ]
       : []
 
@@ -133,7 +109,7 @@ export function useNavigationMenu(): NavigationMenu {
     const compactItems = [...navigationItems, ...libraryItems, ...configurationItems]
     const mobilePrimaryItems = [
       ...navigationItems,
-      ...(user ? libraryItems.filter(item => item.id === 'history') : []),
+      ...(user ? libraryItems.filter(item => item.id === 'library') : []),
     ]
     const mobileMoreItems = compactItems.filter(
       item => !mobilePrimaryItems.some(primaryItem => primaryItem.id === item.id)

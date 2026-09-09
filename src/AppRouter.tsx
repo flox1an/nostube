@@ -9,6 +9,7 @@ import {
   GlobalPlaylistsPageLoader,
   HashtagPageLoader,
   HistoryPageLoader,
+  LibraryPageLoader,
   LikedVideosPageLoader,
   Mp4DebugPageLoader,
   NotFoundLoader,
@@ -53,6 +54,9 @@ const CategoryPage = lazy(() =>
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
 const HistoryPage = lazy(() =>
   import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage }))
+)
+const LibraryPage = lazy(() =>
+  import('./pages/LibraryPage').then(m => ({ default: m.LibraryPage }))
 )
 const VideoNotesPage = lazy(() =>
   import('./pages/VideoNotesPage').then(m => ({ default: m.VideoNotesPage }))
@@ -275,6 +279,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<HistoryPageLoader />}>
                 <HistoryPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/library"
+            element={
+              <Suspense fallback={<LibraryPageLoader />}>
+                <LibraryPage />
               </Suspense>
             }
           />

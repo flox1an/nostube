@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoUpload } from './VideoUpload'
@@ -7,6 +7,11 @@ import type { UploadDraft } from '@/types/upload-draft'
 import type { VideoVariant } from '@/lib/video-processing'
 
 let uploadStateStub: VideoUploadStateStub
+
+const mocks = vi.hoisted(() => ({
+  updateDraft: vi.fn(),
+  toast: vi.fn(),
+}))
 
 vi.mock('@/hooks', () => ({
   useCurrentUser: () => ({
@@ -24,7 +29,7 @@ vi.mock('@/hooks', () => ({
 
 vi.mock('@/hooks/useUploadDrafts', () => ({
   useUploadDrafts: () => ({
-    updateDraft: vi.fn(),
+    updateDraft: mocks.updateDraft,
     deleteDraft: vi.fn(),
   }),
 }))
@@ -34,7 +39,7 @@ vi.mock('@/hooks/useUploadNotifications', () => ({
 }))
 
 vi.mock('@/hooks/useToast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast: mocks.toast }),
 }))
 
 vi.mock('@/lib/browser-transcode-upload-manager', () => ({
@@ -105,7 +110,7 @@ function makeDraft(overrides: Partial<UploadDraft> = {}): UploadDraft {
   }
 }
 
-function renderUpload(draft: UploadDraft, route = '/upload') {
+function renderUpload(draft: UploadDraft, route = '/upload', onBack?: () => void) {
   uploadStateStub = makeVideoUploadState({
     inputMethod: draft.inputMethod,
     videoUrl: draft.videoUrl ?? '',
@@ -115,7 +120,7 @@ function renderUpload(draft: UploadDraft, route = '/upload') {
 
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <VideoUpload draft={draft} />
+      <VideoUpload draft={draft} onBack={onBack} />
     </MemoryRouter>
   )
 }
@@ -157,5 +162,47 @@ describe('VideoUpload screen selection', () => {
   it('never resumes directly into Review even when requested', () => {
     renderUpload(makeDraft({ uploadInfo: { videos: [video] } }), '/upload?screen=review')
     expect(screen.getByText('Details screen marker')).toBeInTheDocument()
+  })
+})
+
+describe('VideoUpload Save Draft', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    uploadStateStub = makeVideoUploadState()
+  })
+
+  it('persists the current edits and exits without regressing a wizard step', async () => {
+    const onBack = vi.fn()
+    renderUpload(makeDraft({ uploadInfo: { videos: [video] } }), '/upload', onBack)
+    // Draft has a video, so it starts on Details, not Source.
+    expect(screen.getByText('Details screen marker')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /save draft/i }))
+
+    expect(mocks.updateDraft).toHaveBeenCalledWith('draft-1', expect.any(Object))
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/saved/i) })
+    )
+    await vi.waitFor(() => expect(onBack).toHaveBeenCalledTimes(1))
+    // Still showing Details — Save Draft must not have bounced to Source first.
+    expect(screen.getByText('Details screen marker')).toBeInTheDocument()
+  })
+
+  it('reports an honest error and stays open when persistence fails', () => {
+    mocks.updateDraft.mockImplementationOnce(() => {
+      throw new Error('storage quota exceeded')
+    })
+    const onBack = vi.fn()
+    renderUpload(makeDraft({ uploadInfo: { videos: [video] } }), '/upload', onBack)
+
+    fireEvent.click(screen.getByRole('button', { name: /save draft/i }))
+
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringMatching(/failed/i),
+        variant: 'destructive',
+      })
+    )
+    expect(onBack).not.toHaveBeenCalled()
   })
 })

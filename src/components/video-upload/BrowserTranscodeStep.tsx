@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Progress } from '@/components/ui/progress'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
@@ -23,7 +24,7 @@ import type { BrowserTranscodeVariant } from '@/lib/video-transcode'
 import { TranscodeVariantPicker } from '@/components/video-upload/TranscodeVariantPicker'
 import type { BrowserTranscodeState } from '@/types/upload-draft'
 import { HlsSegmentGrid } from '@/components/hls-segment-grid'
-import { Layers, Loader2, Upload, X, Zap } from 'lucide-react'
+import { ChevronDown, ChevronUp, Layers, Loader2, Upload, X, Zap } from 'lucide-react'
 import { estimateRemainingSeconds } from '@/lib/transcode-progress'
 
 interface BrowserTranscodeStepProps {
@@ -52,6 +53,12 @@ export interface BrowserTranscodePrimaryActionState {
 }
 
 type BrowserOutputFormat = 'upload-only' | 'mp4' | 'hls'
+
+const QUALITY_PRESET_LABELS: Record<BrowserTranscodeQualityPreset, string> = {
+  compact: 'Compact',
+  balanced: 'Balanced',
+  'high-motion': 'High motion',
+}
 
 function estimateVariantSizeMB(
   variant: BrowserTranscodeVariant,
@@ -111,6 +118,9 @@ export const BrowserTranscodeStep = forwardRef<
   const [keepOriginal, setKeepOriginal] = useState(false)
   const [includeSourceVariant, setIncludeSourceVariant] = useState(true)
   const [qualityPreset, setQualityPreset] = useState<BrowserTranscodeQualityPreset>('balanced')
+  // Advanced settings (format/resolution/quality/original) start collapsed —
+  // the recommended defaults above are enough to proceed without opening them.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const {
     status,
@@ -266,6 +276,27 @@ export const BrowserTranscodeStep = forwardRef<
     }
     return 'Create one or more MP4 files optimised for Nostr video delivery.'
   }, [outputFormat])
+
+  // Concise upfront summary of what the recommended (or currently chosen)
+  // settings will actually do — lets a creator proceed without ever opening
+  // "Advanced video settings".
+  const recommendedSummary = useMemo(() => {
+    if (outputFormat === 'upload-only') {
+      return t('upload.browserTranscode.summaryUploadOnly', {
+        defaultValue: 'Upload the original file unchanged',
+      })
+    }
+    const heights = [...effectiveSelectedHeights].sort((a, b) => b - a)
+    const resolutions = heights.length > 0 ? heights.map(h => `${h}p`).join(', ') : null
+    return t('upload.browserTranscode.summaryLine', {
+      defaultValue: '{{format}} · {{resolutions}} · {{quality}} quality',
+      format: outputFormat === 'hls' ? 'HLS' : 'MP4',
+      resolutions:
+        resolutions ??
+        t('upload.browserTranscode.summaryNoResolutions', { defaultValue: 'no resolutions' }),
+      quality: QUALITY_PRESET_LABELS[qualityPreset],
+    })
+  }, [effectiveSelectedHeights, outputFormat, qualityPreset, t])
 
   const getDisplayCodecForHeight = useCallback(
     (height: number): ResolutionOption['suggestedCodec'] => {
@@ -501,153 +532,176 @@ export const BrowserTranscodeStep = forwardRef<
         <div className="space-y-3 p-3 sm:space-y-4 sm:p-4">
           {canTranscode ? (
             <>
-              <div className="grid gap-3 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium sm:text-sm">
-                    {t('upload.browserTranscode.format', { defaultValue: 'Output format' })}
-                  </p>
-                  <ToggleGroup
-                    type="single"
-                    value={outputFormat}
-                    onValueChange={v => {
-                      if (v) setOutputFormat(v as BrowserOutputFormat)
-                    }}
-                    className="grid w-full grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+              <p className="text-sm text-muted-foreground">{recommendedSummary}</p>
+
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-2 gap-1.5 text-muted-foreground"
                   >
-                    <ToggleGroupItem
-                      value="upload-only"
-                      size="sm"
-                      className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      Upload only
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="mp4"
-                      size="sm"
-                      className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      MP4
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="hls"
-                      size="sm"
-                      className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
-                    >
-                      <Layers className="h-3.5 w-3.5" />
-                      HLS (experimental)
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                  <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                    {outputFormatDescription}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-xs font-medium sm:text-sm">
-                    {t('upload.browserTranscode.resolutions', { defaultValue: 'Resolutions' })}
-                  </p>
-                  <div className="overflow-hidden rounded-md border bg-card">
-                    {outputFormat === 'upload-only' && (
-                      <StaticOptionRow
-                        title={t('upload.browserTranscode.sourceOriginal', {
-                          defaultValue: 'Source / Original',
-                        })}
-                        subtitle={`${sourceShortSide ?? 'Original'}p · unchanged`}
-                      />
+                    {advancedOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
                     )}
-                    {hasOriginalHlsVariant && outputFormat === 'hls' && sourceShortSide && (
-                      <OptionRow
-                        title={t('upload.browserTranscode.sourceOriginal', {
-                          defaultValue: 'Source / Original',
-                        })}
-                        subtitle={`${sourceShortSide}p · ${getSourceVariantCodec(sourceMeta) === 'hevc' ? 'HEVC' : 'H.264'}`}
-                        checked={includeSourceVariant}
-                        onToggle={setIncludeSourceVariant}
-                      />
-                    )}
-                    {outputFormat === 'mp4' && (
-                      <div className="p-2">
-                        <TranscodeVariantPicker
-                          sourceMeta={sourceMeta}
-                          availableResolutionOptions={availableResolutionOptions}
-                          selectedHeights={effectiveSelectedHeights}
-                          supportsHevc={supportsHevc}
-                          onChange={setSelectedHeights}
-                        />
-                      </div>
-                    )}
-                    {outputFormat === 'hls' &&
-                      [...availableResolutionOptions]
-                        .reverse()
-                        .map(opt => (
-                          <ResolutionRow
-                            key={opt.height}
-                            option={opt}
-                            codec={getDisplayCodecForHeight(opt.height)}
-                            checked={effectiveSelectedHeights.includes(opt.height)}
-                            onToggle={checked => setHeightSelection(opt.height, checked)}
-                          />
-                        ))}
-                    {outputFormat === 'mp4' && (
-                      <OptionRow
-                        title={t('upload.browserTranscode.sourceOriginal', {
-                          defaultValue: 'Source / Original',
-                        })}
-                        subtitle={t('upload.browserTranscode.keepOriginal', {
-                          defaultValue: 'Keep original',
-                        })}
-                        checked={keepOriginal}
-                        onToggle={setKeepOriginal}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {outputFormat !== 'upload-only' && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium sm:text-sm">
-                    {t('upload.browserTranscode.qualityPreset', {
-                      defaultValue: 'Quality preset',
+                    {t('upload.browserTranscode.advancedSettings', {
+                      defaultValue: 'Advanced video settings',
                     })}
-                  </p>
-                  <ToggleGroup
-                    type="single"
-                    value={qualityPreset}
-                    onValueChange={value => {
-                      if (value) setQualityPreset(value as BrowserTranscodeQualityPreset)
-                    }}
-                    className="grid w-full grid-cols-1 gap-1 sm:grid-cols-3"
-                  >
-                    <ToggleGroupItem
-                      value="compact"
-                      size="sm"
-                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
-                    >
-                      Compact
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="balanced"
-                      size="sm"
-                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
-                    >
-                      Balanced
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="high-motion"
-                      size="sm"
-                      className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
-                    >
-                      High motion
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                  <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                    Higher presets use more bitrate for motion-heavy videos.
-                  </p>
-                </div>
-              )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-3 sm:space-y-4">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium sm:text-sm">
+                        {t('upload.browserTranscode.format', { defaultValue: 'Output format' })}
+                      </p>
+                      <ToggleGroup
+                        type="single"
+                        value={outputFormat}
+                        onValueChange={v => {
+                          if (v) setOutputFormat(v as BrowserOutputFormat)
+                        }}
+                        className="grid w-full grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+                      >
+                        <ToggleGroupItem
+                          value="upload-only"
+                          size="sm"
+                          className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          Upload only
+                        </ToggleGroupItem>
+                        <ToggleGroupItem
+                          value="mp4"
+                          size="sm"
+                          className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          MP4
+                        </ToggleGroupItem>
+                        <ToggleGroupItem
+                          value="hls"
+                          size="sm"
+                          className="h-8 w-full gap-1 px-2 text-xs sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm lg:justify-start"
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                          HLS (experimental)
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                      <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                        {outputFormatDescription}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium sm:text-sm">
+                        {t('upload.browserTranscode.resolutions', { defaultValue: 'Resolutions' })}
+                      </p>
+                      <div className="overflow-hidden rounded-md border bg-card">
+                        {outputFormat === 'upload-only' && (
+                          <StaticOptionRow
+                            title={t('upload.browserTranscode.sourceOriginal', {
+                              defaultValue: 'Source / Original',
+                            })}
+                            subtitle={`${sourceShortSide ?? 'Original'}p · unchanged`}
+                          />
+                        )}
+                        {hasOriginalHlsVariant && outputFormat === 'hls' && sourceShortSide && (
+                          <OptionRow
+                            title={t('upload.browserTranscode.sourceOriginal', {
+                              defaultValue: 'Source / Original',
+                            })}
+                            subtitle={`${sourceShortSide}p · ${getSourceVariantCodec(sourceMeta) === 'hevc' ? 'HEVC' : 'H.264'}`}
+                            checked={includeSourceVariant}
+                            onToggle={setIncludeSourceVariant}
+                          />
+                        )}
+                        {outputFormat === 'mp4' && (
+                          <div className="p-2">
+                            <TranscodeVariantPicker
+                              sourceMeta={sourceMeta}
+                              availableResolutionOptions={availableResolutionOptions}
+                              selectedHeights={effectiveSelectedHeights}
+                              supportsHevc={supportsHevc}
+                              onChange={setSelectedHeights}
+                            />
+                          </div>
+                        )}
+                        {outputFormat === 'hls' &&
+                          [...availableResolutionOptions]
+                            .reverse()
+                            .map(opt => (
+                              <ResolutionRow
+                                key={opt.height}
+                                option={opt}
+                                codec={getDisplayCodecForHeight(opt.height)}
+                                checked={effectiveSelectedHeights.includes(opt.height)}
+                                onToggle={checked => setHeightSelection(opt.height, checked)}
+                              />
+                            ))}
+                        {outputFormat === 'mp4' && (
+                          <OptionRow
+                            title={t('upload.browserTranscode.sourceOriginal', {
+                              defaultValue: 'Source / Original',
+                            })}
+                            subtitle={t('upload.browserTranscode.keepOriginal', {
+                              defaultValue: 'Keep original',
+                            })}
+                            checked={keepOriginal}
+                            onToggle={setKeepOriginal}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {outputFormat !== 'upload-only' && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium sm:text-sm">
+                        {t('upload.browserTranscode.qualityPreset', {
+                          defaultValue: 'Quality preset',
+                        })}
+                      </p>
+                      <ToggleGroup
+                        type="single"
+                        value={qualityPreset}
+                        onValueChange={value => {
+                          if (value) setQualityPreset(value as BrowserTranscodeQualityPreset)
+                        }}
+                        className="grid w-full grid-cols-1 gap-1 sm:grid-cols-3"
+                      >
+                        <ToggleGroupItem
+                          value="compact"
+                          size="sm"
+                          className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                        >
+                          Compact
+                        </ToggleGroupItem>
+                        <ToggleGroupItem
+                          value="balanced"
+                          size="sm"
+                          className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                        >
+                          Balanced
+                        </ToggleGroupItem>
+                        <ToggleGroupItem
+                          value="high-motion"
+                          size="sm"
+                          className="h-8 w-full px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                        >
+                          High motion
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                      <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                        Higher presets use more bitrate for motion-heavy videos.
+                      </p>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-2">
                 {!hidePrimaryAction && (

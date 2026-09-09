@@ -78,6 +78,7 @@ export function SubscriptionsPage() {
     prefetchMore: prefetchMoreVideos,
     isPrefetching: prefetchingVideos,
     subscriptionActive: subscriptionActiveVideos,
+    phase: phaseVideos,
   } = useInfiniteTimeline(videosLoader, relays, {
     filters: videosFilter,
   })
@@ -90,6 +91,7 @@ export function SubscriptionsPage() {
     prefetchMore: prefetchMoreShorts,
     isPrefetching: prefetchingShorts,
     subscriptionActive: subscriptionActiveShorts,
+    phase: phaseShorts,
   } = useInfiniteTimeline(shortsLoader, relays, {
     filters: shortsFilter,
   })
@@ -106,6 +108,7 @@ export function SubscriptionsPage() {
   const exhausted = exhaustedVideos && exhaustedShorts
   const prefetching = prefetchingVideos || prefetchingShorts
   const subscriptionActive = subscriptionActiveVideos || subscriptionActiveShorts
+  const error = phaseVideos === 'error' || phaseShorts === 'error'
 
   const loadMore = useCallback(() => {
     loadMoreVideos()
@@ -175,6 +178,7 @@ export function SubscriptionsPage() {
         layoutMode="auto"
         emptyMessage={t('pages.subscriptions.noVideos')}
         exhaustedMessage={t('pages.subscriptions.noMore')}
+        error={error}
         className="sm:p-4"
       />
     </div>

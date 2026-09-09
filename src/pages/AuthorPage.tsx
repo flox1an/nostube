@@ -1056,6 +1056,7 @@ function AuthorPageContent() {
     loading,
     exhausted,
     loadMore,
+    phase,
   } = useInfiniteTimeline(loader, relays, { filters: timelineFilter, includeAudio: true })
 
   const { loadMoreRef } = useInfiniteScroll({
@@ -1305,13 +1306,22 @@ function AuthorPageContent() {
 
         {activeTab === 'videos' && (
           <div className="mt-6">
-            <VideoGrid videos={videos} isLoading={loading} showSkeletons={true} layoutMode="auto" />
+            <VideoGrid
+              videos={videos}
+              isLoading={loading}
+              showSkeletons={true}
+              layoutMode="auto"
+              emptyMessage={t('pages.author.noVideos')}
+              error={phase === 'error'}
+              onRetry={loadMore}
+            />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
               loading={loading && videos.length > 0}
               exhausted={exhausted}
               itemCount={videos.length}
-              emptyMessage={t('pages.author.noVideos')}
+              error={phase === 'error'}
+              onRetry={loadMore}
               loadingMessage={t('pages.author.loadingMore')}
               exhaustedMessage={t('pages.author.noMore')}
             />
@@ -1325,13 +1335,17 @@ function AuthorPageContent() {
               isLoading={loading}
               showSkeletons={true}
               layoutMode="vertical"
+              emptyMessage={t('pages.author.noShorts')}
+              error={phase === 'error'}
+              onRetry={loadMore}
             />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
               loading={loading && shorts.length > 0}
               exhausted={exhausted}
               itemCount={shorts.length}
-              emptyMessage={t('pages.author.noShorts')}
+              error={phase === 'error'}
+              onRetry={loadMore}
               loadingMessage={t('pages.author.loadingMoreShorts')}
               exhaustedMessage={t('pages.author.noMoreShorts')}
             />

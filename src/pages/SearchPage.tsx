@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { SearchFiltersButton } from '@/components/SearchFiltersButton'
+import { Button } from '@/components/ui/button'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSearchVideos } from '@/hooks/useSearchVideos'
 import { useCallback, useEffect, useMemo } from 'react'
@@ -72,6 +73,7 @@ export function SearchPage() {
   })
 
   const filteredVideos = useMemo(() => applySearchFilters(videos, filters), [videos, filters])
+  const isFilteredEmpty = activeFilterCount > 0 && filteredVideos.length === 0 && videos.length > 0
 
   const handleFiltersChange = useCallback(
     (nextFilters: SearchFilters) => {
@@ -153,7 +155,24 @@ export function SearchPage() {
         exhausted={hasLoaded}
         onLoadMore={loadMore}
         layoutMode="auto"
-        emptyMessage={t('pages.search.noResults', { query })}
+        emptyMessage={
+          isFilteredEmpty
+            ? t('pages.search.noFilteredResults', {
+                defaultValue: 'No results match the current filters.',
+              })
+            : t('pages.search.noResults', { query })
+        }
+        emptyAction={
+          isFilteredEmpty ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFiltersChange(DEFAULT_SEARCH_FILTERS)}
+            >
+              {t('pages.search.clearFilters', { defaultValue: 'Clear filters' })}
+            </Button>
+          ) : undefined
+        }
         exhaustedMessage=""
         className=""
       />

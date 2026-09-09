@@ -151,6 +151,16 @@
     "expiresIn": "Expires in {{time}}",
     "expired": "Expired",
     "updatedAgo": "updated {{time}} ago",
+    "showFullTitle": "Show full title",
+    "showLessTitle": "Show less",
+    "moreDetails": "More details",
+    "lessDetails": "Less details",
+    "menu": {
+      "viewer": "For you",
+      "creator": "Creator tools",
+      "technical": "Technical",
+      "safety": "Safety"
+    },
     "comments": {
       "title": "Comments",
       "addComment": "Add a comment...",

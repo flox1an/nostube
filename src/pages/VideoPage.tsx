@@ -828,6 +828,7 @@ function VideoPageContent() {
         }
         sidebar={
           <>
+            {renderSidebarContent()}
             {video?.id && !isChecking && (
               <VideoAvailabilityAlert
                 videoId={video.id}
@@ -844,7 +845,6 @@ function VideoPageContent() {
                 onContribute={handleContribute}
               />
             )}
-            {renderSidebarContent()}
           </>
         }
       />

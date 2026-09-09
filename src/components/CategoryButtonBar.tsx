@@ -96,32 +96,36 @@ export function CategoryButtonBar({
     !readRelays.some(r => r.url === normalizeRelayUrl(inputValue))
 
   return (
-    <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-0 z-40 bg-background/80 backdrop-blur-md">
-      <div className="flex gap-2 p-2 min-w-max">
-        <Button
-          variant={!activeSlug ? 'default' : 'outline'}
-          size="sm"
-          className="shrink-0 rounded-full px-4"
-          onClick={() => navigate('/')}
-        >
-          All
-        </Button>
-        {TAG_CATEGORIES.map(category => {
-          const isActive = activeSlug === category.slug
+    <div className="w-full sticky top-0 z-40 flex items-center bg-background/80 backdrop-blur-md">
+      <div className="min-w-0 flex-1 overflow-x-auto scroll-smooth scrollbar-hide">
+        <div className="flex gap-2 p-2 min-w-max">
+          <Button
+            variant={!activeSlug ? 'default' : 'outline'}
+            size="sm"
+            className="shrink-0 rounded-full px-4"
+            onClick={() => navigate('/')}
+          >
+            All
+          </Button>
+          {TAG_CATEGORIES.map(category => {
+            const isActive = activeSlug === category.slug
 
-          return (
-            <Button
-              key={category.slug}
-              variant={isActive ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4"
-              onClick={() => navigate(`/category/${category.slug}`)}
-            >
-              {category.name}
-            </Button>
-          )
-        })}
+            return (
+              <Button
+                key={category.slug}
+                variant={isActive ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-full px-4"
+                onClick={() => navigate(`/category/${category.slug}`)}
+              >
+                {category.name}
+              </Button>
+            )
+          })}
+        </div>
+      </div>
 
+      <div className="flex shrink-0 items-center gap-2 py-2 pr-2 pl-1">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button

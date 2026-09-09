@@ -12,8 +12,7 @@ import {
   useReadRelays,
 } from '@/hooks'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
-import LoginDialog from '@/components/auth/LoginDialog'
-import SignupDialog from '@/components/auth/SignupDialog'
+import { AuthDialog } from '@/components/auth/AuthDialog'
 
 interface LibrarySectionProps {
   icon: React.ElementType
@@ -56,8 +55,7 @@ function LibrarySection({
 export function LibraryPage() {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
-  const [signupDialogOpen, setSignupDialogOpen] = useState(false)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
 
   useEffect(() => {
     document.title = `${t('navigation.library')} - nostube`
@@ -107,22 +105,17 @@ export function LibraryPage() {
                 'History, playlists and liked videos are saved to your account, not this device.',
             })}
           </p>
-          <Button onClick={() => setLoginDialogOpen(true)}>
+          <Button onClick={() => setAuthDialogOpen(true)}>
             <LogIn className="h-4 w-4 mr-2" />
             {t('auth.login.signIn', { defaultValue: 'Sign in' })}
           </Button>
         </div>
 
-        <LoginDialog
-          isOpen={loginDialogOpen}
-          onClose={() => setLoginDialogOpen(false)}
-          onLogin={() => setLoginDialogOpen(false)}
-          onSignup={() => {
-            setLoginDialogOpen(false)
-            setSignupDialogOpen(true)
-          }}
+        <AuthDialog
+          isOpen={authDialogOpen}
+          onClose={() => setAuthDialogOpen(false)}
+          onLogin={() => setAuthDialogOpen(false)}
         />
-        <SignupDialog isOpen={signupDialogOpen} onClose={() => setSignupDialogOpen(false)} />
       </div>
     )
   }

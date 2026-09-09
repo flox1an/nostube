@@ -4,8 +4,7 @@
 import { useState } from 'react'
 import { User } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
-import LoginDialog from './LoginDialog'
-import SignupDialog from './SignupDialog'
+import { AuthDialog } from './AuthDialog'
 import { AccountSwitcher } from './AccountSwitcher'
 import { cn } from '@/lib/utils'
 import { useActiveAccount } from 'applesauce-react/hooks'
@@ -17,8 +16,7 @@ export interface LoginAreaProps {
 
 export function LoginArea({ className }: LoginAreaProps) {
   const currentUser = useActiveAccount()
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
-  const [signupDialogOpen, setSignupDialogOpen] = useState(false)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const desktopWindowCoordinator = useDesktopWindowCoordinator()
 
   const openLogin = () => {
@@ -26,12 +24,11 @@ export function LoginArea({ className }: LoginAreaProps) {
       void desktopWindowCoordinator.openAuth()
       return
     }
-    setLoginDialogOpen(true)
+    setAuthDialogOpen(true)
   }
 
   const handleLogin = () => {
-    setLoginDialogOpen(false)
-    setSignupDialogOpen(false)
+    setAuthDialogOpen(false)
   }
 
   return (
@@ -45,14 +42,11 @@ export function LoginArea({ className }: LoginAreaProps) {
         </Button>
       )}
 
-      <LoginDialog
-        isOpen={loginDialogOpen}
-        onClose={() => setLoginDialogOpen(false)}
+      <AuthDialog
+        isOpen={authDialogOpen}
+        onClose={() => setAuthDialogOpen(false)}
         onLogin={handleLogin}
-        onSignup={() => setSignupDialogOpen(true)}
       />
-
-      <SignupDialog isOpen={signupDialogOpen} onClose={() => setSignupDialogOpen(false)} />
     </div>
   )
 }

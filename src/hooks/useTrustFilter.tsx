@@ -87,6 +87,14 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     )
   }, [videos, enabled, personalScores, globalScores, followedSet, user])
 
+  const trustFilterLabel = enabled
+    ? t('pages.home.trustFilterOn', {
+        defaultValue: 'Trust filter on — hiding low-score authors',
+      })
+    : t('pages.home.trustFilterOff', {
+        defaultValue: 'Trust filter off — showing all videos',
+      })
+
   const filterButton = (
     <>
       <Tooltip>
@@ -95,6 +103,8 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
             variant="secondary"
             size="sm"
             className={`shrink-0 rounded-full px-2.5 border ${enabled ? 'border-green-500' : 'border-transparent'}`}
+            aria-label={trustFilterLabel}
+            aria-pressed={enabled}
             onClick={() => {
               if (enabled && !localStorage.getItem('trustFilter.warningShown')) {
                 setShowWarning(true)
@@ -108,15 +118,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
             />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {enabled
-            ? t('pages.home.trustFilterOn', {
-                defaultValue: 'Trust filter on — hiding low-score authors',
-              })
-            : t('pages.home.trustFilterOff', {
-                defaultValue: 'Trust filter off — showing all videos',
-              })}
-        </TooltipContent>
+        <TooltipContent side="bottom">{trustFilterLabel}</TooltipContent>
       </Tooltip>
       <AlertDialog open={showWarning} onOpenChange={setShowWarning}>
         <AlertDialogContent>

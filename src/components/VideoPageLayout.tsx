@@ -2,9 +2,10 @@ import { type ReactNode, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { PanelRight } from 'lucide-react'
+import { ArrowLeft, PanelRight } from 'lucide-react'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { DesktopPlayerShell } from '@/desktop/DesktopPlayerShell'
 
 interface VideoPageLayoutProps {
@@ -42,8 +43,19 @@ export function VideoPageLayout({
   desktop = false,
 }: VideoPageLayoutProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Only real in-app history (idx > 0) can be popped back into; a
+  // direct-linked/refreshed video has none, so fall back to Home.
+  const handleBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/')
+    }
+  }
   if (desktop) {
     return (
       <DesktopPlayerShell
@@ -68,6 +80,15 @@ export function VideoPageLayout({
       >
         {/* Left column: video player + info together */}
         <div className={cn('flex flex-col', cinemaMode && 'col-span-full')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start -ml-2 mb-1 text-muted-foreground"
+            onClick={handleBack}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            {t('video.back', 'Back')}
+          </Button>
           {videoPlayer}
           <div className={cn('pt-2 md:pt-3', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
             {videoInfo}

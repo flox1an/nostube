@@ -38,6 +38,8 @@ interface VideoCardProps {
    * the first visible row would otherwise wait for the render storm to end.
    */
   priority?: boolean
+  /** Scoped reference styling; defaults preserve existing browse surfaces. */
+  treatment?: 'default' | 'quiet-cinema'
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -49,6 +51,7 @@ export const VideoCard = React.memo(function VideoCard({
   videoIndex,
   tightGridGap,
   priority = false,
+  treatment = 'default',
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -131,6 +134,8 @@ export const VideoCard = React.memo(function VideoCard({
       ? `/desktop/player/${video.link}${playlistParam ? `?playlist=${encodeURIComponent(playlistParam)}` : ''}`
       : undefined
 
+  const isQuietCinema = treatment === 'quiet-cinema'
+
   const handleThumbnailLoad = cascade.onLoad
 
   // Handle shorts click - populate store with video list
@@ -144,10 +149,14 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'hover:bg-accent transition-all duration-300 group hover:shadow-md hover:scale-[1.02]',
-        tightGridGap
-          ? 'rounded-none sm:rounded-lg px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4'
-          : 'rounded-lg px-2 pt-2 pb-4'
+        'group',
+        isQuietCinema
+          ? 'rounded-xl px-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2'
+          : 'hover:bg-accent transition-all duration-300 hover:shadow-md hover:scale-[1.02]',
+        !isQuietCinema &&
+          (tightGridGap
+            ? 'rounded-none sm:rounded-lg px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4'
+            : 'rounded-lg px-2 pt-2 pb-4')
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -157,11 +166,18 @@ export const VideoCard = React.memo(function VideoCard({
           onClick={handleShortsClick}
           desktopCoordinator={desktopWindowCoordinator}
           desktopRoute={desktopPlayerRoute}
+          className={cn(
+            isQuietCinema &&
+              'block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+          )}
         >
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
             className={cn(
-              'w-full overflow-hidden rounded-none sm:rounded-lg relative bg-muted',
+              'w-full overflow-hidden relative bg-muted',
+              isQuietCinema
+                ? 'rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10'
+                : 'rounded-none sm:rounded-lg',
               aspectRatio
             )}
           >
@@ -240,7 +256,13 @@ export const VideoCard = React.memo(function VideoCard({
             )}
           </div>
         </DesktopVideoLink>
-        <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
+        <div
+          className={cn(
+            'pt-3',
+            format === 'vertical' && !isQuietCinema && 'hidden sm:block',
+            isQuietCinema && 'px-1'
+          )}
+        >
           <div className="flex gap-3">
             {!hideAuthor && format !== 'vertical' && (
               <Link to={authorProfileUrl} className="shrink-0">
@@ -255,12 +277,36 @@ export const VideoCard = React.memo(function VideoCard({
             <div className="min-w-0 flex-1">
               <DesktopVideoLink
                 to={to}
+                onClick={handleShortsClick}
                 desktopCoordinator={desktopWindowCoordinator}
                 desktopRoute={desktopPlayerRoute}
+                className={cn(
+                  isQuietCinema &&
+                    'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                )}
               >
-                <h3 className="font-medium line-clamp-2 break-words">{video.title}</h3>
+                <h3
+                  className={cn(
+                    'line-clamp-2 break-words',
+                    isQuietCinema
+                      ? cn(
+                          'font-semibold leading-5 tracking-[-0.01em]',
+                          format === 'vertical' ? 'text-sm' : 'text-[0.95rem]'
+                        )
+                      : 'font-medium'
+                  )}
+                >
+                  {video.title}
+                </h3>
               </DesktopVideoLink>
-              <div className="flex items-center text-xs">
+              <div
+                className={cn(
+                  'flex items-center',
+                  isQuietCinema
+                    ? cn('mt-1', format === 'vertical' ? 'text-xs' : 'text-sm')
+                    : 'text-xs'
+                )}
+              >
                 {!hideAuthor && (
                   <>
                     <Link
@@ -302,18 +348,43 @@ export const VideoCard = React.memo(function VideoCard({
 interface VideoCardSkeletonProps {
   format: 'vertical' | 'horizontal' | 'square'
   tightGridGap?: boolean
+  treatment?: 'default' | 'quiet-cinema'
 }
 
 export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   format,
   tightGridGap,
+  treatment = 'default',
 }: VideoCardSkeletonProps) {
+  const isQuietCinema = treatment === 'quiet-cinema'
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
-    <div className={cn(tightGridGap ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2' : 'px-2 py-2')}>
-      <Skeleton className={cn('w-full rounded-none sm:rounded-lg', aspectRatio)} />
-      <div className={cn('pt-3', format === 'vertical' && 'hidden sm:block')}>
+    <div
+      className={cn(
+        isQuietCinema
+          ? 'px-1 pb-6 sm:px-2'
+          : tightGridGap
+            ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2'
+            : 'px-2 py-2'
+      )}
+    >
+      <Skeleton
+        className={cn(
+          'w-full',
+          isQuietCinema
+            ? 'rounded-xl ring-1 ring-inset ring-black/10 dark:ring-white/10'
+            : 'rounded-none sm:rounded-lg',
+          aspectRatio
+        )}
+      />
+      <div
+        className={cn(
+          'pt-3',
+          format === 'vertical' && !isQuietCinema && 'hidden sm:block',
+          isQuietCinema && 'px-1'
+        )}
+      >
         <div className="flex gap-3">
           {format !== 'vertical' && (
             <div className="shrink-0">

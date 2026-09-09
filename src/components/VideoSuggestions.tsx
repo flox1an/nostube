@@ -92,12 +92,12 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   return (
     <DesktopVideoLink
       to={linkTo}
-      className="group"
+      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       desktopCoordinator={desktopWindowCoordinator}
       desktopRoute={desktopPlayerRoute}
     >
-      <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
-        <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0">
+      <div className="relative flex gap-3 rounded-xl p-2 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
+        <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
           {/* Placeholder while loading: last loaded image, blurhash, skeleton */}
           {!thumbnailLoaded &&
             (heldThumbnail ? (
@@ -105,17 +105,17 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
                 src={heldThumbnail}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover rounded-md absolute"
+                className="w-full h-full object-cover absolute inset-0"
               />
             ) : blurhashPlaceholder ? (
               <img
                 src={blurhashPlaceholder}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover rounded-md absolute"
+                className="w-full h-full object-cover absolute inset-0"
               />
             ) : (
-              <Skeleton className="w-full h-full rounded-md absolute" />
+              <Skeleton className="w-full h-full absolute inset-0" />
             ))}
           {displaySrc && (
             <img
@@ -123,7 +123,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover rounded-md"
+              className="w-full h-full object-cover"
               onError={cascade.onError}
               onLoad={handleThumbnailLoad}
             />
@@ -135,9 +135,11 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
             </div>
           )}
         </div>
-        <div className="relative pl-3">
-          <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
-          <div className="flex items-center gap-1.5 mt-1">
+        <div className="relative min-w-0 flex-1">
+          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-2">
+            {video.title}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5">
             <UserAvatar
               picture={authorPicture}
               pubkey={video.pubkey}
@@ -203,29 +205,29 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
   return (
     <DesktopVideoLink
       to={linkTo}
-      className="group"
+      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       desktopCoordinator={desktopWindowCoordinator}
       desktopRoute={desktopPlayerRoute}
     >
-      <div className="relative flex p-2 rounded-lg border-none overflow-hidden transition-all duration-300 hover:bg-accent group-hover:shadow-sm group-hover:scale-[1.02]">
-        <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
+      <div className="relative flex gap-3 rounded-xl p-2 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
+        <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
           {!thumbnailLoaded &&
             (heldThumbnail ? (
               <img
                 src={heldThumbnail}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover rounded-md absolute"
+                className="w-full h-full object-cover absolute inset-0"
               />
             ) : blurhashPlaceholder ? (
               <img
                 src={blurhashPlaceholder}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover rounded-md absolute"
+                className="w-full h-full object-cover absolute inset-0"
               />
             ) : (
-              <Skeleton className="w-full h-full rounded-md absolute" />
+              <Skeleton className="w-full h-full absolute inset-0" />
             ))}
           {displaySrc && (
             <img
@@ -233,7 +235,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover rounded-md"
+              className="w-full h-full object-cover"
               onError={cascade.onError}
               onLoad={handleThumbnailLoad}
             />
@@ -245,9 +247,11 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
             </div>
           )}
         </div>
-        <div className="relative pl-3">
-          <div className="font-medium line-clamp-2 text-sm">{video.title}</div>
-          <div className="flex items-center gap-1.5 mt-1">
+        <div className="relative min-w-0 flex-1">
+          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-2">
+            {video.title}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5">
             <UserAvatar
               picture={authorPicture}
               pubkey={video.pubkey}
@@ -270,11 +274,11 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
 
 function VideoSuggestionItemSkeleton() {
   return (
-    <div className="flex p-2">
-      <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0">
-        <Skeleton className="w-full h-full rounded-md" />
+    <div className="flex gap-3 p-2">
+      <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0 overflow-hidden rounded-xl">
+        <Skeleton className="w-full h-full" />
       </div>
-      <div className="pl-3 space-y-2 flex-1">
+      <div className="space-y-2 flex-1">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-3 w-3/4" />
         <Skeleton className="h-3 w-1/2" />

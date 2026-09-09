@@ -61,6 +61,7 @@ export function Header({ transparent = false }: HeaderProps) {
             size="icon"
             onClick={toggleSidebar}
             aria-label={t('navigation.menu', 'Menu')}
+            className="hidden lg:inline-flex"
           >
             <MenuIcon />
           </Button>

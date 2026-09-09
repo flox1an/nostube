@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Palette,
@@ -12,7 +12,6 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -104,7 +103,10 @@ function SettingsSidebar() {
       {/* Mobile: dropdown select */}
       <div className="md:hidden w-full mb-6">
         <Select value={activeCategory} onValueChange={handleCategoryChange}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger
+            className="w-full"
+            aria-label={t('settings.selectSection', { defaultValue: 'Settings section' })}
+          >
             <SelectValue placeholder={t('settings.selectSection')} />
           </SelectTrigger>
           <SelectContent>
@@ -125,16 +127,16 @@ function SettingsSidebar() {
         {categories.map(cat => {
           const isActive = activeCategory === cat.id
           return (
-            <Button
+            <Link
               key={cat.id}
-              variant="ghost"
+              to={`/settings/${cat.id}`}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'justify-start gap-3 h-auto py-2.5 px-3 text-sm font-normal rounded-lg',
+                'justify-start gap-3 h-auto py-2.5 px-3 text-sm font-normal rounded-lg inline-flex items-center',
                 isActive
                   ? 'bg-accent text-accent-foreground font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
               )}
-              onClick={() => navigate(`/settings/${cat.id}`)}
             >
               <cat.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : '')} />
               <div className="text-left leading-tight min-w-0">
@@ -143,7 +145,7 @@ function SettingsSidebar() {
                   {t(cat.description)}
                 </span>
               </div>
-            </Button>
+            </Link>
           )
         })}
       </nav>

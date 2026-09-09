@@ -236,7 +236,7 @@ function RelaysSubSection() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        aria-label={t('settings.relays.editTags')}
+                        aria-label={`${t('settings.relays.editTags')}: ${relay.name || relay.url}`}
                       >
                         <Cog className="h-4 w-4" />
                       </Button>
@@ -258,6 +258,10 @@ function RelaysSubSection() {
                     size="icon"
                     className="h-7 w-7"
                     onClick={() => handleRemoveRelay(relay.url)}
+                    aria-label={t('settings.relays.removeServer', {
+                      server: relay.name || relay.url,
+                      defaultValue: 'Remove {{server}}',
+                    })}
                   >
                     <XIcon className="h-4 w-4" />
                   </Button>
@@ -552,7 +556,12 @@ function BlossomSubSection() {
                 <div className="flex items-center gap-1 shrink-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label={`${t('settings.blossom.editTags', { defaultValue: 'Edit tags' })}: ${server.name || server.url}`}
+                      >
                         <Cog className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -573,6 +582,10 @@ function BlossomSubSection() {
                     size="icon"
                     className="h-7 w-7"
                     onClick={() => handleRemoveServer(server.url)}
+                    aria-label={t('settings.blossom.removeServer', {
+                      server: server.name || server.url,
+                      defaultValue: 'Remove {{server}}',
+                    })}
                   >
                     <XIcon className="h-4 w-4" />
                   </Button>
@@ -740,6 +753,10 @@ function CachingSubSection() {
                   size="icon"
                   className="h-7 w-7 shrink-0"
                   onClick={() => handleRemoveServer(server.url)}
+                  aria-label={t('settings.caching.removeServer', {
+                    server: server.name || server.url,
+                    defaultValue: 'Remove {{server}}',
+                  })}
                 >
                   <XIcon className="h-4 w-4" />
                 </Button>

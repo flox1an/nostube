@@ -255,6 +255,7 @@ function MissingVideosSubSection() {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => clearMissingVideo(videoId)}
+                        aria-label={`${t('settings.missingVideos.retryNow')}: ${videoId}`}
                         title={t('settings.missingVideos.retryNow')}
                       >
                         <RefreshCw className="h-3.5 w-3.5" />
@@ -264,6 +265,7 @@ function MissingVideosSubSection() {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => clearMissingVideo(videoId)}
+                        aria-label={`${t('settings.missingVideos.remove')}: ${videoId}`}
                         title={t('settings.missingVideos.remove')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

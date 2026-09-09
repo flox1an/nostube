@@ -180,6 +180,7 @@ export function SubscriptionsPage() {
         exhaustedMessage={t('pages.subscriptions.noMore')}
         error={error}
         className="sm:p-4"
+        cardTreatment="quiet-cinema"
       />
     </div>
   )

@@ -23,13 +23,9 @@ vi.mock('@/hooks', () => ({
   useReadRelays: vi.fn(() => []),
 }))
 
-vi.mock('@/components/auth/LoginDialog', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="login-dialog" /> : null,
-}))
-vi.mock('@/components/auth/SignupDialog', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="signup-dialog" /> : null,
+vi.mock('@/components/auth/AuthDialog', () => ({
+  AuthDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="auth-dialog" /> : null,
 }))
 
 import {
@@ -63,7 +59,7 @@ describe('LibraryPage', () => {
     expect(screen.queryByText('Nothing watched yet')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Sign in/i }))
-    expect(screen.getByTestId('login-dialog')).toBeInTheDocument()
+    expect(screen.getByTestId('auth-dialog')).toBeInTheDocument()
   })
 
   it('links each section to its real collection and shows counts for a signed-in viewer', () => {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { useTranslation } from 'react-i18next'
 import { type VideoVariant } from '@/utils/video-event'
+import { isBlossomUrl } from '@/lib/blossom-url'
 import {
   needsLowerResolutionVariants,
   needsIOSCompatibleVariants,
@@ -55,6 +56,10 @@ export function VideoTransformAlert({
 
   // Check if video variants exist
   if (!videoVariants || videoVariants.length === 0) return null
+
+  // Contributing a variant needs a downloadable blossom blob as source —
+  // skip YouTube embeds and other non-blossom URLs
+  if (!videoVariants.some(v => isBlossomUrl(v.url))) return null
 
   // Check if transformation is needed
   const needsLowerRes = needsLowerResolutionVariants(videoVariants)

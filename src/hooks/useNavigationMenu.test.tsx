@@ -35,9 +35,7 @@ describe('useNavigationMenu', () => {
       'subscriptions',
       'shorts',
       'explore',
-      'history',
-      'playlists',
-      'liked-videos',
+      'library',
       'settings',
     ])
     expect(result.current.compactItems).toEqual([
@@ -64,12 +62,8 @@ describe('useNavigationMenu', () => {
       'subscriptions',
       'shorts',
       'explore',
-      'history',
+      'library',
     ])
-    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual([
-      'playlists',
-      'liked-videos',
-      'settings',
-    ])
+    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual(['settings'])
   })
 })

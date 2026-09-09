@@ -48,7 +48,7 @@ export function Header({ transparent = false }: HeaderProps) {
   if (isMobile && isSearchExpanded) {
     return (
       <header
-        className={`sticky top-0 z-50 bg-background flex items-center px-4 h-14 gap-2`}
+        className="sticky top-0 z-50 flex h-14 items-center gap-2 border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80"
         style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
       >
         <Button variant="ghost" size="icon" onClick={() => setIsSearchExpanded(false)}>
@@ -63,7 +63,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-transform duration-300 ${transparent ? '' : 'bg-background'} ${
+      className={`sticky top-0 z-50 border-b border-border/70 backdrop-blur-xl transition-transform duration-300 ${transparent ? '' : 'bg-background/90 supports-[backdrop-filter]:bg-background/80'} ${
         shouldHide ? '-translate-y-full' : 'translate-y-0'
       }`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}

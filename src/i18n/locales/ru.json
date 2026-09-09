@@ -882,6 +882,8 @@
   },
   "pages": {
     "home": {
+      "latestVideos": "Последние видео",
+      "newestFirst": "Сначала новые",
       "noVideos": "Видео не найдены.",
       "noMore": "Больше нет видео для загрузки.",
       "trustFilterOn": "Trust filter on — hiding low-score authors",

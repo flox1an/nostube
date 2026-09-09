@@ -882,6 +882,8 @@
   },
   "pages": {
     "home": {
+      "latestVideos": "最新の動画",
+      "newestFirst": "新しい順",
       "noVideos": "動画が見つかりません。",
       "noMore": "これ以上読み込める動画はありません。",
       "trustFilterOn": "トラストフィルター有効 — 低スコアの作者を非表示",

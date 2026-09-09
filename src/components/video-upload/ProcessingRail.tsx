@@ -19,6 +19,8 @@ export interface ProcessingRailProps {
   hasHlsVideo: boolean
   onCancel: () => void
   onChangeSettings: () => void
+  onRetry: () => void
+  hasSourceFile: boolean
   onRemoveVideo: (index: number) => void
   onAddAdditional: (files: File[]) => void
   onAddTranscodedVideo: (video: VideoVariant) => void
@@ -35,6 +37,8 @@ export function ProcessingRail({
   hasHlsVideo,
   onCancel,
   onChangeSettings,
+  onRetry,
+  hasSourceFile,
   onRemoveVideo,
   onAddAdditional,
   onAddTranscodedVideo,
@@ -203,13 +207,29 @@ export function ProcessingRail({
             <p className="text-sm text-muted-foreground">
               {browserTranscodeState.error ?? browserTranscodeState.message}
             </p>
+            {!hasSourceFile && (
+              <p className="text-sm text-muted-foreground">
+                {t('upload.rail.reselectRequired', {
+                  defaultValue:
+                    'The source file is no longer available in this session — reselect it to try again.',
+                })}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onChangeSettings}>
-                {t('upload.rail.retry', { defaultValue: 'Retry' })}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={onChangeSettings}>
-                {t('upload.rail.changeSettings', { defaultValue: 'Change settings' })}
-              </Button>
+              {hasSourceFile ? (
+                <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                  {t('upload.rail.retry', { defaultValue: 'Retry' })}
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" size="sm" onClick={onChangeSettings}>
+                  {t('upload.rail.reselectFile', { defaultValue: 'Reselect file' })}
+                </Button>
+              )}
+              {hasSourceFile && (
+                <Button type="button" variant="ghost" size="sm" onClick={onChangeSettings}>
+                  {t('upload.rail.changeSettings', { defaultValue: 'Change settings' })}
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -86,6 +86,8 @@ function makeProps(overrides: Partial<UploadDetailsScreenProps> = {}): UploadDet
     onAddTranscodedVideo: noop,
     onStatusChange: noop,
     onChangeSettings: noop,
+    onRetryProcessing: noop,
+    hasSourceFile: false,
     onCancelProcessing: noop,
     onStartBackground: asyncNoop,
     onBrowserTranscodeComplete: noop,

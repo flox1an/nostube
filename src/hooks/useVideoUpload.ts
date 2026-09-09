@@ -235,6 +235,15 @@ export function useVideoUpload(
   )
   const [videoUrl, setVideoUrl] = useState(initialDraft?.videoUrl || '')
   const [file, setFile] = useState<File | null>(null)
+  // Retains the last variants/sourceMeta/keepOriginal passed to
+  // handleStartBrowserTranscodeUpload so a failed job can be retried with the
+  // exact same settings instead of forcing the user back through the picker.
+  // Session-only by design: it can't survive a reload any more than `file` can.
+  const lastTranscodeRequestRef = useRef<{
+    variants: BrowserTranscodeVariant[]
+    sourceMeta: TranscodeSourceMeta
+    keepOriginal: boolean
+  } | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
   const [uploadInfo, setUploadInfo] = useState<UploadInfo>(initialUploadInfo)
   const [uploadState, setUploadState] = useState<
@@ -658,6 +667,7 @@ export function useVideoUpload(
       return
     }
 
+    lastTranscodeRequestRef.current = { variants, sourceMeta, keepOriginal }
     setUploadState('transcoding')
     setUploadProgress(null)
 
@@ -672,6 +682,23 @@ export function useVideoUpload(
       mirrorServers: blossomMirrorServers?.map(s => s.url) || [],
       signer,
     })
+  }
+
+  // Restarts the failed/cancelled job with the exact settings it last used.
+  // Distinct from "change settings": no navigation, no re-picking encoding
+  // options. No-ops (rather than starting a doomed job) when there is no
+  // source file to retry against, e.g. a draft reopened after a reload.
+  const handleRetryBrowserTranscodeUpload = () => {
+    const lastRequest = lastTranscodeRequestRef.current
+    if (!file || !lastRequest) {
+      console.warn('[useVideoUpload] Cannot retry transcode: missing source file or settings')
+      return
+    }
+    void handleStartBrowserTranscodeUpload(
+      lastRequest.variants,
+      lastRequest.sourceMeta,
+      lastRequest.keepOriginal
+    )
   }
 
   const handleCancelBrowserTranscodeUpload = () => {
@@ -1336,6 +1363,7 @@ export function useVideoUpload(
     handleBrowserTranscodeSkip,
     handleStartBrowserTranscodeUpload,
     handleCancelBrowserTranscodeUpload,
+    handleRetryBrowserTranscodeUpload,
     handleReset,
     handleSubmit,
     handleAddVideo,

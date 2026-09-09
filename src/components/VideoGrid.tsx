@@ -31,6 +31,8 @@ interface VideoGridProps {
   error?: boolean
   /** Retries the failed retrieval. Required to show a Retry action alongside the error state. */
   onRetry?: () => void
+  /** Optional visual treatment scoped to the current browse surface. */
+  cardTreatment?: 'default' | 'quiet-cinema'
 }
 
 export function VideoGrid({
@@ -43,6 +45,7 @@ export function VideoGrid({
   emptyAction,
   error = false,
   onRetry,
+  cardTreatment = 'default',
 }: VideoGridProps) {
   const { t } = useTranslation()
   const width = useWindowWidth()
@@ -136,14 +139,19 @@ export function VideoGrid({
           {chunk(Array.from({ length: 24 }), wideCols).map((row, i) => (
             <div key={'wide-skel-' + i} className={`grid ${gridColsClass(wideCols)}`}>
               {row.map((_, j) => (
-                <VideoCardSkeleton key={j} format="horizontal" />
+                <VideoCardSkeleton key={j} format="horizontal" treatment={cardTreatment} />
               ))}
             </div>
           ))}
           {chunk(Array.from({ length: 24 }), portraitCols).map((row, i) => (
             <div key={'portrait-skel-' + i} className={`grid ${gridColsClass(portraitCols)}`}>
               {row.map((_, j) => (
-                <VideoCardSkeleton key={j} format="vertical" tightGridGap />
+                <VideoCardSkeleton
+                  key={j}
+                  format="vertical"
+                  tightGridGap
+                  treatment={cardTreatment}
+                />
               ))}
             </div>
           ))}
@@ -166,7 +174,12 @@ export function VideoGrid({
         )}
       >
         {Array.from({ length: 24 }).map((_, i) => (
-          <VideoCardSkeleton key={i} format={cardFormat} tightGridGap={isShort} />
+          <VideoCardSkeleton
+            key={i}
+            format={cardFormat}
+            tightGridGap={isShort}
+            treatment={cardTreatment}
+          />
         ))}
       </div>
     )
@@ -229,6 +242,7 @@ export function VideoGrid({
                 format="horizontal"
                 playlistParam={playlistParam}
                 priority={rowIsAboveFold}
+                treatment={cardTreatment}
               />
             ))}
           </div>
@@ -251,6 +265,7 @@ export function VideoGrid({
                 videoIndex={portraitIndexMap.get(video.id)}
                 tightGridGap
                 priority={wideRows.length === 0 && portraitIdx < PRIORITY_ROWS}
+                treatment={cardTreatment}
               />
             ))}
           </div>
@@ -288,6 +303,7 @@ export function VideoGrid({
           videoIndex={isShort ? index : undefined}
           tightGridGap={isShort}
           priority={index < getCols(isShort ? 'vertical' : 'horizontal') * PRIORITY_ROWS}
+          treatment={cardTreatment}
         />
       ))}
     </div>

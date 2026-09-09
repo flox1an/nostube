@@ -898,6 +898,8 @@
   },
   "pages": {
     "home": {
+      "latestVideos": "Latest videos",
+      "newestFirst": "Newest first",
       "noVideos": "No videos found.",
       "noMore": "No more videos to load.",
       "trustFilterOn": "Trust filter on — hiding low-score authors",

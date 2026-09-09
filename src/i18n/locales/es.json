@@ -882,6 +882,8 @@
   },
   "pages": {
     "home": {
+      "latestVideos": "Últimos vídeos",
+      "newestFirst": "Más recientes primero",
       "noVideos": "No se encontraron videos.",
       "noMore": "No hay más videos para cargar.",
       "trustFilterOn": "Filtro de confianza activado — ocultando autores con puntuación baja",

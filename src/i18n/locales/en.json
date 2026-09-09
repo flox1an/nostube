@@ -1289,11 +1289,13 @@
   },
   "trust": {
     "badge": {
-      "tooltip": "{{label}} trust ({{percentage}}%) — click for details"
+      "tooltip": "{{label}} trust — tap for details",
+      "tooltipLow": "Low trust ({{percentage}}%) — tap for details"
     },
     "dialog": {
       "title": "Trust Score Details",
       "description": "Personalized trust score from relatr via ContextVM",
+      "explanation": "This reflects how closely this account connects to your network of trusted follows, plus public activity signals. It is not a judgment of content quality.",
       "loading": "Loading trust score...",
       "noScore": "No trust score available for this user."
     },

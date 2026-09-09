@@ -97,6 +97,13 @@ function TrustScoreContent({ result }: { result: TrustScoreResult }) {
         )
       })()}
 
+      <p className="text-sm text-muted-foreground">
+        {t('trust.dialog.explanation', {
+          defaultValue:
+            'This reflects how closely this account connects to your network of trusted follows, plus public activity signals. It is not a judgment of content quality.',
+        })}
+      </p>
+
       {/* NosTube User Level */}
       {globalScore !== null &&
         (() => {

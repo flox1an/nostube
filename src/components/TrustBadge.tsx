@@ -34,6 +34,20 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
 
   const percentage = Math.round(score * 100)
   const trust = getTrustColor(score)
+  const isLowTrust = trust.label === 'Low'
+
+  // Routine identity rows only surface an icon; the raw number is opt-in via
+  // the dialog. Low trust is a meaningful warning, so it stays labeled — not
+  // just color-coded — to remain prominent for color-blind viewers too.
+  const tooltipText = isLowTrust
+    ? t('trust.badge.tooltipLow', {
+        percentage,
+        defaultValue: 'Low trust ({{percentage}}%) — tap for details',
+      })
+    : t('trust.badge.tooltip', {
+        label: t(trust.labelKey),
+        defaultValue: '{{label}} trust — tap for details',
+      })
 
   return (
     <>
@@ -45,28 +59,18 @@ export function TrustBadgeDisplay({ pubkey, score, className }: TrustBadgeDispla
               e.stopPropagation()
               setDialogOpen(true)
             }}
-            aria-label={t('trust.badge.tooltip', {
-              label: t(trust.labelKey),
-              percentage,
-              defaultValue: '{{label}} trust ({{percentage}}%) — click for details',
-            })}
+            aria-label={tooltipText}
             className={cn(
-              'inline-flex items-center gap-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'inline-flex items-center gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               trust.colorClass,
               className
             )}
           >
             <Shield className="h-3 w-3" />
-            {percentage}
+            {isLowTrust && t('trust.labels.low', { defaultValue: 'Low' })}
           </button>
         </TooltipTrigger>
-        <TooltipContent>
-          {t('trust.badge.tooltip', {
-            label: t(trust.labelKey),
-            percentage,
-            defaultValue: '{{label}} trust ({{percentage}}%) — click for details',
-          })}
-        </TooltipContent>
+        <TooltipContent>{tooltipText}</TooltipContent>
       </Tooltip>
       <TrustScoreDialog pubkey={pubkey} open={dialogOpen} onOpenChange={setDialogOpen} />
     </>

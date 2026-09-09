@@ -157,6 +157,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
     handleBrowserTranscodeSkip,
     handleStartBrowserTranscodeUpload,
     handleCancelBrowserTranscodeUpload,
+    handleRetryBrowserTranscodeUpload,
     handleSubmit: originalHandleSubmit,
     handleAddVideo,
     handleRemoveVideo,
@@ -620,6 +621,8 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
                 // DVM status comes from UploadManager on Review; no longer needed here
               }}
               onChangeSettings={() => setScreen('source')}
+              onRetryProcessing={handleRetryBrowserTranscodeUpload}
+              hasSourceFile={!!file}
               onCancelProcessing={handleCancelBrowserTranscodeUpload}
               onStartBackground={wrappedOnStartBackground}
               onBrowserTranscodeComplete={handleBrowserTranscodeComplete}

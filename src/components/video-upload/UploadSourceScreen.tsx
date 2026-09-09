@@ -74,29 +74,59 @@ export function UploadSourceScreen({
 }: UploadSourceScreenProps) {
   const { t } = useTranslation()
 
-  // ── State 1: background job already running (revisit via Back) ─────────────
-  if (browserTranscodeState && browserTranscodeState.status !== 'complete') {
-    const sourceName = browserTranscodeState.sourceName || originalVideoInfo?.name
+  // ── State 1: background job actively running (revisit via Back) ───────────
+  const jobActive =
+    !!browserTranscodeState &&
+    ['queued', 'transcoding', 'uploading'].includes(browserTranscodeState.status)
+  const jobFailedOrCancelled =
+    !!browserTranscodeState &&
+    (browserTranscodeState.status === 'error' || browserTranscodeState.status === 'cancelled')
+
+  if (jobActive || jobFailedOrCancelled) {
+    const sourceName = browserTranscodeState?.sourceName || originalVideoInfo?.name
     const sizeMB =
-      browserTranscodeState.sourceSize != null
+      browserTranscodeState?.sourceSize != null
         ? (browserTranscodeState.sourceSize / 1024 / 1024).toFixed(2)
         : originalVideoInfo?.sizeMB?.toFixed(2)
 
-    return (
-      <div className="space-y-4">
-        <div className="text-sm space-y-1">
-          {sourceName && <div className="font-medium truncate">{sourceName}</div>}
-          {sizeMB && <div className="text-muted-foreground">{sizeMB} MB</div>}
-          <p className="text-muted-foreground text-xs">
-            {t('upload.source.jobRunning', {
-              defaultValue:
-                'Processing continues in the background — manage it on the Details screen',
-            })}
-          </p>
+    // A failed/cancelled job never locks source selection or claims to still
+    // be running — only a genuinely active job does. If the source file
+    // didn't survive (e.g. the draft was reopened after a reload), say so
+    // explicitly and let the dropzone accept a fresh selection.
+    if (jobActive) {
+      return (
+        <div className="space-y-4">
+          <div className="text-sm space-y-1">
+            {sourceName && <div className="font-medium truncate">{sourceName}</div>}
+            {sizeMB && <div className="text-muted-foreground">{sizeMB} MB</div>}
+            <p className="text-muted-foreground text-xs">
+              {t('upload.source.jobRunning', {
+                defaultValue:
+                  'Processing continues in the background — manage it on the Details screen',
+              })}
+            </p>
+          </div>
+          <FileDropzone onDrop={() => {}} accept={{ 'video/*': [] }} disabled />
         </div>
-        <FileDropzone onDrop={() => {}} accept={{ 'video/*': [] }} disabled />
-      </div>
-    )
+      )
+    }
+
+    if (!file) {
+      return (
+        <div className="space-y-4">
+          <div className="text-sm space-y-1">
+            {sourceName && <div className="font-medium truncate">{sourceName}</div>}
+            {sizeMB && <div className="text-muted-foreground">{sizeMB} MB</div>}
+            <p className="text-muted-foreground text-xs">
+              {t('upload.source.reselectRequired', {
+                defaultValue: 'This file needs to be reselected before processing can be retried.',
+              })}
+            </p>
+          </div>
+          <FileDropzone onDrop={onFileDrop} accept={{ 'video/*': [] }} />
+        </div>
+      )
+    }
   }
 
   // ── State 2: file selected, analyzing (BrowserTranscodeStep) ──────────────

@@ -79,6 +79,8 @@ export interface UploadDetailsScreenProps {
   onAddTranscodedVideo: (video: VideoVariant) => void
   onStatusChange: (status: TranscodeStatus) => void
   onChangeSettings: () => void
+  onRetryProcessing: () => void
+  hasSourceFile: boolean
   onCancelProcessing: () => void
   // Variant picker shown when an additional file is being analysed on Details
   onStartBackground: (
@@ -138,6 +140,8 @@ export function UploadDetailsScreen({
   onAddTranscodedVideo,
   onStatusChange,
   onChangeSettings,
+  onRetryProcessing,
+  hasSourceFile,
   onCancelProcessing,
   onStartBackground,
   onBrowserTranscodeComplete,
@@ -194,6 +198,8 @@ export function UploadDetailsScreen({
             hasHlsVideo={hasHlsVideo}
             onCancel={onCancelProcessing}
             onChangeSettings={onChangeSettings}
+            onRetry={onRetryProcessing}
+            hasSourceFile={hasSourceFile}
             onRemoveVideo={onRemoveVideo}
             onAddAdditional={onAddAdditional}
             onAddTranscodedVideo={onAddTranscodedVideo}

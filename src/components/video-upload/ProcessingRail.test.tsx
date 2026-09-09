@@ -47,6 +47,8 @@ function renderRail(overrides: Partial<ProcessingRailProps> = {}) {
         hasHlsVideo={false}
         onCancel={vi.fn()}
         onChangeSettings={vi.fn()}
+        onRetry={vi.fn()}
+        hasSourceFile={true}
         onRemoveVideo={vi.fn()}
         onAddAdditional={vi.fn()}
         onAddTranscodedVideo={vi.fn()}
@@ -110,6 +112,37 @@ describe('ProcessingRail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /change settings/i }))
     expect(onChangeSettings).toHaveBeenCalledOnce()
+  })
+
+  it('retries with retained settings distinctly from changing settings', () => {
+    const onRetry = vi.fn()
+    const onChangeSettings = vi.fn()
+    renderRail({
+      browserTranscodeState: { ...baseState, status: 'error', error: 'Failed' },
+      onRetry,
+      onChangeSettings,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /^retry$/i }))
+    expect(onRetry).toHaveBeenCalledOnce()
+    expect(onChangeSettings).not.toHaveBeenCalled()
+  })
+
+  it('offers only reselection, not retry, when the source file is missing', () => {
+    const onRetry = vi.fn()
+    const onChangeSettings = vi.fn()
+    renderRail({
+      browserTranscodeState: { ...baseState, status: 'error', error: 'Failed' },
+      hasSourceFile: false,
+      onRetry,
+      onChangeSettings,
+    })
+
+    expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /change settings/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /reselect file/i }))
+    expect(onChangeSettings).toHaveBeenCalledOnce()
+    expect(onRetry).not.toHaveBeenCalled()
   })
 
   it('renders VideoFilesPanel after completion', () => {

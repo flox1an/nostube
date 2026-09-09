@@ -359,7 +359,6 @@
       "description": "添加贡献者、协作者或视频中出现的人物",
       "placeholder": "搜索人物..."
     },
-    "loginRequired": "请登录后上传视频",
     "onboarding": {
       "yourDevice": "您的设备",
       "primaryServer": "主服务器",

@@ -359,7 +359,6 @@
       "description": "コントリビューターや動画に登場する人物を追加",
       "placeholder": "人物を検索..."
     },
-    "loginRequired": "動画をアップロードするにはログインしてください",
     "onboarding": {
       "yourDevice": "あなたのデバイス",
       "primaryServer": "プライマリサーバー",

@@ -359,7 +359,6 @@
       "description": "Ajoutez des contributeurs ou des personnes présentées dans cette vidéo",
       "placeholder": "Rechercher des personnes..."
     },
-    "loginRequired": "Veuillez vous connecter pour mettre en ligne des vidéos",
     "onboarding": {
       "yourDevice": "Votre Appareil",
       "primaryServer": "Serveur Principal",

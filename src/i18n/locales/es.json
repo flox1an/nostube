@@ -359,7 +359,6 @@
       "description": "Agregue colaboradores o personas que aparecen en este video",
       "placeholder": "Buscar personas..."
     },
-    "loginRequired": "Por favor, inicie sesión para subir videos",
     "onboarding": {
       "yourDevice": "Tu Dispositivo",
       "primaryServer": "Servidor Principal",

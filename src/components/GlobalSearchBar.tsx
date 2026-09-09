@@ -252,6 +252,7 @@ export function GlobalSearchBar({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           className={cn('pl-10', inputClassName)}
+          aria-label="Search"
           placeholder="Search videos and creators..."
         />
         <Search
@@ -262,7 +263,8 @@ export function GlobalSearchBar({
             type="button"
             variant="ghost"
             size="sm"
-            className={cn('absolute right-2 top-2 h-6 w-6 p-0', clearButtonClassName)}
+            className={cn('absolute right-1 top-1 h-8 w-8 p-0', clearButtonClassName)}
+            aria-label="Clear search"
             onClick={clearSearch}
           >
             <X className="h-4 w-4" />

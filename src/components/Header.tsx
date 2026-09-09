@@ -56,7 +56,12 @@ export function Header({ transparent = false }: HeaderProps) {
     >
       <div className={`w-full px-4 py-2 flex items-center justify-between h-14`}>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            aria-label={t('navigation.menu', 'Menu')}
+          >
             <MenuIcon />
           </Button>
           <Link to="/" className="text-xl font-bold flex flex-row gap-2 items-center">
@@ -78,7 +83,12 @@ export function Header({ transparent = false }: HeaderProps) {
 
         <div className="flex items-center gap-1 lg:gap-2">
           {isMobile && (
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchExpanded(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSearchExpanded(true)}
+              aria-label={t('common.search', 'Search')}
+            >
               <Search className="h-5 w-5" />
             </Button>
           )}

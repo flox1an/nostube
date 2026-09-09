@@ -3,6 +3,9 @@ import { toast } from 'sonner'
 import { Save, Loader2, Plus, X } from 'lucide-react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMyPreset, type PresetFormData } from '@/hooks/useMyPreset'
+import { usePresetBuffer } from '@/hooks/usePresetBuffer'
+import { useProfile } from '@/hooks/useProfile'
+import { type PresetBufferList, type PresetModerationEntry } from '@/types/preset'
 import { PubkeyListEditor } from '@/components/presets/PubkeyListEditor'
 import { LoginArea } from '@/components/auth/LoginArea'
 import { Button } from '@/components/ui/button'
@@ -212,6 +215,7 @@ function EventIdListEditor({
 export function AdminPage() {
   const { user } = useCurrentUser()
   const { preset, isLoading, isPublishing, savePreset, hasPreset } = useMyPreset()
+  const { removeEntries: removeBufferEntries } = usePresetBuffer()
 
   // Form state
   const [formData, setFormData] = useState<PresetFormData>({
@@ -266,6 +270,21 @@ export function AdminPage() {
     }
   }
 
+  // Move staged buffer entries into the form lists; publishing happens on Save.
+  const applyBuffer = (applied: PresetModerationEntry[]) => {
+    setFormData(d => {
+      const next = { ...d }
+      for (const entry of applied) {
+        if (!next[entry.list].includes(entry.value)) {
+          next[entry.list] = [...next[entry.list], entry.value]
+        }
+      }
+      return next
+    })
+    removeBufferEntries(applied.map(entry => entry.value))
+    toast.success('Entries moved into the lists — review and save to publish')
+  }
+
   // Show login prompt if not logged in
   if (!user) {
     return (
@@ -302,6 +321,8 @@ export function AdminPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <PresetBufferPanel onApply={applyBuffer} />
+
         {/* Basic Info */}
         <Card>
           <CardHeader>
@@ -434,5 +455,95 @@ export function AdminPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+/** Name for a buffered pubkey, falling back to a short hex prefix. */
+function PresetBufferPubkeyName({ pubkey }: { pubkey: string }) {
+  const profile = useProfile({ pubkey })
+  return <>{profile?.display_name || profile?.name || pubkey.slice(0, 8) + '...'}</>
+}
+
+const BUFFER_LIST_LABELS: Record<PresetBufferList, string> = {
+  nsfwPubkeys: 'NSFW author',
+  blockedPubkeys: 'Blocked user',
+  blockedEvents: 'Blocked event',
+}
+
+/**
+ * Staged moderation entries collected from video card menus. "Apply to lists"
+ * merges them into the editors below; the preset event is published once, on Save.
+ */
+function PresetBufferPanel({ onApply }: { onApply: (entries: PresetModerationEntry[]) => void }) {
+  const { entries, addEntry, removeEntries } = usePresetBuffer()
+  if (entries.length === 0) return null
+
+  const sorted = [...entries].sort((a, b) => b.addedAt - a.addedAt)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pending Moderation Buffer ({entries.length})</CardTitle>
+        <CardDescription>
+          Collected from video card menus. Apply moves them into the lists below — nothing is
+          published until you save.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {sorted.map(entry => (
+          <div
+            key={entry.value}
+            className="flex items-center gap-2 rounded-md border bg-muted/50 p-2 text-sm"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">
+                {entry.list === 'blockedEvents' ? (
+                  <span className="font-mono">{entry.value.slice(0, 16)}…</span>
+                ) : (
+                  <PresetBufferPubkeyName pubkey={entry.value} />
+                )}
+              </div>
+              {entry.source && (
+                <div className="truncate text-xs text-muted-foreground">via “{entry.source}”</div>
+              )}
+            </div>
+            {entry.list === 'blockedEvents' ? (
+              <span className="text-xs text-muted-foreground">
+                {BUFFER_LIST_LABELS[entry.list]}
+              </span>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  addEntry(
+                    entry.value,
+                    entry.list === 'nsfwPubkeys' ? 'blockedPubkeys' : 'nsfwPubkeys',
+                    entry.source
+                  )
+                }
+              >
+                {BUFFER_LIST_LABELS[entry.list]}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Remove from buffer"
+              onClick={() => removeEntries([entry.value])}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => onApply(sorted)}>
+            Apply to lists
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

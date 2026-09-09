@@ -1,5 +1,6 @@
 import { type RelayPool } from 'applesauce-relay'
 import { createContext } from 'react'
+import { type PresetModerationEntry } from '@/types/preset'
 
 export type Theme = 'dark' | 'light' | 'system'
 export type VideoType = 'all' | 'shorts' | 'videos'
@@ -71,6 +72,8 @@ export interface AppConfig {
   preferredQuality?: PreferredQuality
   /** Event IDs the user has reported (hidden from feeds) */
   reportedEventIds?: string[]
+  /** Staged admin moderation entries awaiting bulk-apply in /admin */
+  presetModerationBuffer?: PresetModerationEntry[]
   /** External search service base URL (overrides built-in default) */
   searchServiceUrl?: string
   /** Image proxy base URL for fixed thumbnail presets, stored only in this browser. */

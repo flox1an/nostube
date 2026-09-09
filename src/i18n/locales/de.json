@@ -1047,6 +1047,17 @@
     "moreActions": "Weitere Aktionen",
     "error": "Stummschaltungsliste konnte nicht aktualisiert werden"
   },
+  "presetModeration": {
+    "nsfwAdd": "Autor zur NSFW-Liste hinzufügen",
+    "nsfwRemove": "Autor aus der NSFW-Liste entfernen",
+    "blockedAdd": "Autor zur Sperrliste hinzufügen",
+    "blockedRemove": "Autor aus der Sperrliste entfernen",
+    "videoAdd": "Dieses Video sperren",
+    "videoRemove": "Video wieder entsperren",
+    "buffered": "im Buffer",
+    "removedToast": "Aus deinem Preset entfernt",
+    "removeFailedToast": "Preset konnte nicht aktualisiert werden"
+  },
   "report": {
     "titleVideo": "Video melden",
     "titleComment": "Kommentar melden",

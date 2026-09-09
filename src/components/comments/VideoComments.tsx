@@ -22,12 +22,14 @@ import {
 } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { CommentInput } from '@/components/CommentInput'
+import { AuthDialog } from '@/components/auth/AuthDialog'
 import { nowInSecs } from '@/lib/utils'
 import { useCommentHighlightStore } from '@/stores/commentHighlightStore'
 import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { Comment, VideoCommentsProps } from './types'
 import { mapEventToComment, buildCommentTree } from './utils'
 import { CommentItem } from './CommentItem'
+import { CommentSkeleton } from './CommentSkeleton'
 
 export function VideoComments({
   videoId,
@@ -42,6 +44,8 @@ export function VideoComments({
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [visibleComments, setVisibleComments] = useState(15) // Pagination: show 15 initially
+  const [isLoadingComments, setIsLoadingComments] = useState(true)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const eventStore = useEventStore()
   const currentUser = useCurrentUser()
   const { user } = currentUser
@@ -170,11 +174,16 @@ export function VideoComments({
 
   // Load comments from relays when filters change
   useEffect(() => {
+    setIsLoadingComments(true)
     const loader = createTimelineLoader(pool, readRelays, filters, {
       limit: 50,
       eventStore,
     })
-    const subscription = loader().subscribe(e => eventStore.add(e))
+    const subscription = loader().subscribe({
+      next: e => eventStore.add(e),
+      complete: () => setIsLoadingComments(false),
+      error: () => setIsLoadingComments(false),
+    })
 
     // Cleanup subscription on unmount or filters change
     return () => subscription.unsubscribe()
@@ -444,17 +453,14 @@ export function VideoComments({
   const visibleThreadedComments = threadedComments.slice(0, visibleComments)
   const hasMoreComments = threadedComments.length > visibleComments
 
-  // Hide entire section when not logged in and no comments exist
-  if (!user && threadedComments.length === 0) {
-    return null
-  }
+  const isResolvedEmpty = !isLoadingComments && threadedComments.length === 0
 
   return (
     <div>
       <h2 className="mb-4">
         {threadedComments.length} {t('video.comments.title')}
       </h2>
-      {user && (
+      {user ? (
         <div className="mb-8">
           <CommentInput
             value={newComment}
@@ -465,31 +471,48 @@ export function VideoComments({
             userPubkey={user.pubkey}
           />
         </div>
+      ) : (
+        <div className="mb-8">
+          <Button variant="outline" onClick={() => setAuthDialogOpen(true)}>
+            {t('video.comments.signInToComment', { defaultValue: 'Sign in to comment' })}
+          </Button>
+        </div>
       )}
 
-      <div>
-        {visibleThreadedComments.map(comment => (
-          <CommentItem
-            key={comment.id}
-            comment={comment}
-            link={link}
-            onScrollToComment={scrollToComment}
-            onReply={user ? handleReply : undefined}
-            replyingTo={replyTo?.id}
-            replyContent={replyContent}
-            onReplyContentChange={setReplyContent}
-            onSubmitReply={handleReplySubmit}
-            onCancelReply={cancelReply}
-            expandedComments={expandedComments}
-            onToggleExpanded={toggleExpanded}
-            highlightedCommentId={highlightedCommentId}
-            currentUserAvatar={userProfile?.picture}
-            currentUserName={userProfile?.name || user?.pubkey.slice(0, 8)}
-            currentUserPubkey={user?.pubkey}
-            videoAuthorPubkey={authorPubkey}
-          />
-        ))}
-      </div>
+      {isLoadingComments && threadedComments.length === 0 ? (
+        <div>
+          <CommentSkeleton />
+          <CommentSkeleton />
+        </div>
+      ) : isResolvedEmpty ? (
+        <p className="py-4 text-sm text-muted-foreground">
+          {t('video.comments.startConversation', { defaultValue: 'Start the conversation.' })}
+        </p>
+      ) : (
+        <div>
+          {visibleThreadedComments.map(comment => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              link={link}
+              onScrollToComment={scrollToComment}
+              onReply={user ? handleReply : undefined}
+              replyingTo={replyTo?.id}
+              replyContent={replyContent}
+              onReplyContentChange={setReplyContent}
+              onSubmitReply={handleReplySubmit}
+              onCancelReply={cancelReply}
+              expandedComments={expandedComments}
+              onToggleExpanded={toggleExpanded}
+              highlightedCommentId={highlightedCommentId}
+              currentUserAvatar={userProfile?.picture}
+              currentUserName={userProfile?.name || user?.pubkey.slice(0, 8)}
+              currentUserPubkey={user?.pubkey}
+              videoAuthorPubkey={authorPubkey}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Load more button */}
       {hasMoreComments && (
@@ -500,6 +523,12 @@ export function VideoComments({
           </Button>
         </div>
       )}
+
+      <AuthDialog
+        isOpen={authDialogOpen}
+        onClose={() => setAuthDialogOpen(false)}
+        onLogin={() => setAuthDialogOpen(false)}
+      />
     </div>
   )
 }

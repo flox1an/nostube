@@ -163,6 +163,8 @@
     },
     "comments": {
       "title": "Comments",
+      "signInToComment": "Sign in to comment",
+      "startConversation": "Start the conversation.",
       "addComment": "Add a comment...",
       "commentButton": "Comment",
       "commentHint": "Ctrl+Enter to submit",

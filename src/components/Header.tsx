@@ -1,7 +1,7 @@
 import { LoginArea } from '@/components/auth/LoginArea'
 import { Button } from '@/components/ui/button'
 import { MenuIcon, Upload, Search, ArrowLeft } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -27,8 +27,6 @@ export function Header({ transparent = false }: HeaderProps) {
   const appTitle = currentTheme.appTitle || { text: 'nostube', imageUrl: '/nostube.svg' }
   const { user } = useCurrentUser()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
-  const location = useLocation()
-  const isShortsPage = location.pathname.startsWith('/short/') || location.pathname === '/shorts'
 
   // On mobile: hide header when scrolling down (unless at top), show when scrolling up
   const shouldHide = isMobile && scrollDirection === 'down' && !isAtTop && !isSearchExpanded
@@ -43,9 +41,7 @@ export function Header({ transparent = false }: HeaderProps) {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          {!isShortsPage && (
-            <GlobalSearchBar isMobileExpanded onSearch={() => setIsSearchExpanded(false)} />
-          )}
+          <GlobalSearchBar isMobileExpanded onSearch={() => setIsSearchExpanded(false)} />
         </div>
       </header>
     )
@@ -76,8 +72,8 @@ export function Header({ transparent = false }: HeaderProps) {
           </Link>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-4 hidden lg:block">
-          {!isShortsPage && <GlobalSearchBar />}
+        <div className="flex-1 max-w-2xl mx-4 hidden md:block">
+          <GlobalSearchBar />
         </div>
 
         <div className="flex items-center gap-1 lg:gap-2">

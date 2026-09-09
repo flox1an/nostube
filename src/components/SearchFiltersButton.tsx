@@ -70,7 +70,7 @@ function FilterRadioGroup<T extends string>({
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-semibold">{title}</h3>
-      <RadioGroup value={value} onValueChange={onChange} className="gap-2">
+      <RadioGroup value={value} onValueChange={onChange} className="gap-2" aria-label={title}>
         {options.map(option => {
           const id = `search-filter-${title}-${option.value}`
           return (
@@ -104,7 +104,13 @@ export function SearchFiltersButton({ filters, onChange }: SearchFiltersButtonPr
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant={activeCount > 0 ? 'default' : 'outline'} size="sm" className="gap-2">
+        <Button
+          variant={activeCount > 0 ? 'default' : 'outline'}
+          size="sm"
+          className="gap-2"
+          aria-pressed={activeCount > 0}
+          aria-label={activeCount > 0 ? `Filter, ${activeCount} active` : 'Filter'}
+        >
           <SlidersHorizontal className="h-4 w-4" />
           <span>Filter</span>
           {activeCount > 0 && (

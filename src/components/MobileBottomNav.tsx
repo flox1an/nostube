@@ -21,6 +21,7 @@ export function MobileBottomNav() {
             <Link
               key={item.id}
               to={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex h-full w-full flex-col items-center justify-center gap-1 transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
@@ -59,6 +60,7 @@ export function MobileBottomNav() {
                   key={item.id}
                   to={item.href}
                   onClick={() => setIsMoreOpen(false)}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-4 rounded-lg px-3 py-3 transition-colors',
                     isActive ? 'bg-accent' : 'hover:bg-accent'

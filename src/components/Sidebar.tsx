@@ -67,6 +67,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
                 key={item.id}
                 to={item.href}
                 onClick={handleItemClick}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                   isActive ? 'bg-accent' : 'hover:bg-accent'
@@ -93,6 +94,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
                     key={item.id}
                     to={item.href}
                     onClick={handleItemClick}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
                       'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                       isActive ? 'bg-accent' : 'hover:bg-accent'
@@ -119,6 +121,7 @@ export function Sidebar({ mode = 'auto' }: { mode?: 'drawer' | 'inline' | 'auto'
                 key={item.id}
                 to={item.href}
                 onClick={handleItemClick}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-4 py-2 px-3 rounded-lg transition-colors',
                   isActive ? 'bg-accent' : 'hover:bg-accent'

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   deduplicateVideoEvents,
+  deriveTitleFromContent,
   extractBlossomHash,
   filterVideoEvents,
   isYouTubeVideo,
@@ -8,6 +9,7 @@ import {
   processEvents,
   processVideoEventPipeline,
   transformVideoEvents,
+  UNTITLED_VIDEO_FALLBACK,
   validateVideoEvents,
 } from './video-event'
 import type { BlossomServer } from '@/contexts/AppContext'
@@ -570,6 +572,46 @@ describe('processEvent', () => {
       const result = processEvent(eventWithoutTitleOrAlt, defaultRelays)
 
       expect(result?.title).toBe('This is the content')
+    })
+
+    it('should strip attached URLs from a content-derived title, keeping surrounding text', () => {
+      const eventWithUrlInContent = {
+        ...zapStreamEvent,
+        content: 'Check out my new video https://cdn.example.com/video.mp4 hope you like it!',
+        tags: zapStreamEvent.tags.filter(t => t[0] !== 'title'),
+      }
+
+      const result = processEvent(eventWithUrlInContent, defaultRelays)
+
+      expect(result?.title).toBe('Check out my new video hope you like it!')
+      expect(result?.title).not.toContain('https://')
+      // Original content, URL included, remains available in the description.
+      expect(result?.description).toContain('https://cdn.example.com/video.mp4')
+    })
+
+    it('should fall back to a deliberate placeholder for URL-only content, not an empty title', () => {
+      const eventWithUrlOnlyContent = {
+        ...zapStreamEvent,
+        content: 'https://cdn.example.com/video.mp4',
+        tags: zapStreamEvent.tags.filter(t => t[0] !== 'title'),
+      }
+
+      const result = processEvent(eventWithUrlOnlyContent, defaultRelays)
+
+      expect(result?.title).toBe(UNTITLED_VIDEO_FALLBACK)
+      expect(result?.title.length).toBeGreaterThan(0)
+    })
+
+    it('should preserve Unicode text in a content-derived title', () => {
+      const eventWithUnicodeContent = {
+        ...zapStreamEvent,
+        content: '跳个舞 https://cdn.example.com/video.mp4 #美女',
+        tags: zapStreamEvent.tags.filter(t => t[0] !== 'title'),
+      }
+
+      const result = processEvent(eventWithUnicodeContent, defaultRelays)
+
+      expect(result?.title).toBe('跳个舞 #美女')
     })
 
     it('should handle blurhash for images', () => {
@@ -1358,5 +1400,37 @@ describe('transformVideoEvents identity cache', () => {
     const second = transformVideoEvents([zapStreamEvent], relays, {})
 
     expect(second[0]).not.toBe(first[0])
+  })
+})
+
+describe('deriveTitleFromContent', () => {
+  it('returns the content unchanged when it has no URLs', () => {
+    expect(deriveTitleFromContent('A great video about cats')).toBe('A great video about cats')
+  })
+
+  it('strips a URL while keeping surrounding text', () => {
+    expect(deriveTitleFromContent('Watch this https://example.com/v.mp4 now')).toBe(
+      'Watch this now'
+    )
+  })
+
+  it('strips multiple URLs and collapses whitespace', () => {
+    expect(
+      deriveTitleFromContent('https://a.example.com/1.mp4 mirror: https://b.example.com/2.mp4')
+    ).toBe('mirror:')
+  })
+
+  it('falls back to a deliberate placeholder for URL-only content', () => {
+    expect(deriveTitleFromContent('https://example.com/only-a-url.mp4')).toBe(
+      UNTITLED_VIDEO_FALLBACK
+    )
+  })
+
+  it('falls back to a deliberate placeholder for empty content', () => {
+    expect(deriveTitleFromContent('')).toBe(UNTITLED_VIDEO_FALLBACK)
+  })
+
+  it('preserves Unicode text', () => {
+    expect(deriveTitleFromContent('跳个舞 https://example.com/v.mp4 #美女')).toBe('跳个舞 #美女')
   })
 })

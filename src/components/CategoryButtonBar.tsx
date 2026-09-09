@@ -98,6 +98,30 @@ export function CategoryButtonBar({
   return (
     <div className="w-full overflow-x-auto scroll-smooth scrollbar-hide sticky top-0 z-40 bg-background/80 backdrop-blur-md">
       <div className="flex gap-2 p-2 min-w-max">
+        <Button
+          variant={!activeSlug ? 'default' : 'outline'}
+          size="sm"
+          className="shrink-0 rounded-full px-4"
+          onClick={() => navigate('/')}
+        >
+          All
+        </Button>
+        {TAG_CATEGORIES.map(category => {
+          const isActive = activeSlug === category.slug
+
+          return (
+            <Button
+              key={category.slug}
+              variant={isActive ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 rounded-full px-4"
+              onClick={() => navigate(`/category/${category.slug}`)}
+            >
+              {category.name}
+            </Button>
+          )
+        })}
+
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -105,6 +129,10 @@ export function CategoryButtonBar({
               size="sm"
               role="combobox"
               aria-expanded={open}
+              aria-label={t('relaySource.selectorLabel', {
+                source: displayLabel,
+                defaultValue: 'Content source: {{source}}',
+              })}
               className="shrink-0 rounded-full px-3 gap-1.5"
             >
               {selectedRelay ? <Wifi className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
@@ -198,30 +226,6 @@ export function CategoryButtonBar({
         </Popover>
 
         {afterRelay}
-
-        <Button
-          variant={!activeSlug ? 'default' : 'outline'}
-          size="sm"
-          className="shrink-0 rounded-full px-4"
-          onClick={() => navigate('/')}
-        >
-          All
-        </Button>
-        {TAG_CATEGORIES.map(category => {
-          const isActive = activeSlug === category.slug
-
-          return (
-            <Button
-              key={category.slug}
-              variant={isActive ? 'default' : 'outline'}
-              size="sm"
-              className="shrink-0 rounded-full px-4"
-              onClick={() => navigate(`/category/${category.slug}`)}
-            >
-              {category.name}
-            </Button>
-          )
-        })}
       </div>
     </div>
   )

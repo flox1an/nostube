@@ -97,6 +97,22 @@ export function getPublishDate(video: VideoEvent): number {
   return video.published_at ?? video.created_at
 }
 
+const URL_IN_TEXT_REGEX = /https?:\/\/[^\s)]+/g
+/** Deliberate fallback for posts whose only content is a URL — never an empty heading. */
+export const UNTITLED_VIDEO_FALLBACK = 'Untitled video'
+
+/**
+ * Derives a readable heading from free-form post content (imeta `alt` text or the raw
+ * event content) when no explicit `title` tag is present. Strips URLs so an attached
+ * media link never becomes the headline, while preserving surrounding Unicode text.
+ * A URL-only post collapses to `UNTITLED_VIDEO_FALLBACK` instead of an empty heading.
+ * The raw, unmodified content remains available separately via `VideoEvent.description`.
+ */
+export function deriveTitleFromContent(content: string): string {
+  const withoutUrls = content.replace(URL_IN_TEXT_REGEX, ' ').replace(/\s+/g, ' ').trim()
+  return withoutUrls || UNTITLED_VIDEO_FALLBACK
+}
+
 // Create an in-memory index for fast text search
 function createSearchIndex(video: VideoEvent): string {
   return `${video.title} ${video.description} ${video.tags.join(' ')}`.toLowerCase()
@@ -647,7 +663,7 @@ export function processEvent(
       id: event.id,
       kind: event.kind,
       identifier,
-      title: event.tags.find(t => t[0] === 'title')?.[1] || alt,
+      title: event.tags.find(t => t[0] === 'title')?.[1] || deriveTitleFromContent(alt),
       description: event.content || '',
       images: images.length > 0 ? images : defaultImages,
       pubkey: event.pubkey,
@@ -681,7 +697,8 @@ export function processEvent(
     return videoEvent
   } else {
     // Fall back to old format
-    const title = event.tags.find(t => t[0] === 'title')?.[1] || ''
+    const title =
+      event.tags.find(t => t[0] === 'title')?.[1] || deriveTitleFromContent(event.content || '')
     const description = event.tags.find(t => t[0] === 'description')?.[1] || event.content || ''
     const thumb = event.tags.find(t => t[0] === 'thumb')?.[1]
     const duration = parseDuration(event.tags.find(t => t[0] === 'duration')?.[1]) ?? 0

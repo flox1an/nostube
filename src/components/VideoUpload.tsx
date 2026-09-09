@@ -226,21 +226,11 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
 
   // ── Back / save / delete handlers ────────────────────────────────────────
 
-  const handleBack = useCallback(() => {
-    if (import.meta.env.DEV) {
-      console.log('[VideoUpload] handleBack from screen:', screen)
-    }
-
-    if (screen === 'review') {
-      setScreen('details')
-      return
-    }
-    if (screen === 'details') {
-      setScreen('source')
-      return
-    }
-    // source → exit: flush draft then call onBack
-    handleDraftChange({
+  // Captures the full editable form state into a draft update — used both by
+  // "Back" exiting from the source screen and by the explicit "Save Draft"
+  // action, so saving never depends on which wizard step is active.
+  const buildDraftSnapshot = useCallback(
+    (): Partial<UploadDraft> => ({
       title,
       description,
       tags,
@@ -260,41 +250,78 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
       publishAt,
       thumbnailSource,
       updatedAt: Date.now(),
-    })
+    }),
+    [
+      title,
+      description,
+      tags,
+      language,
+      people,
+      origins,
+      inputMethod,
+      videoUrl,
+      uploadInfo,
+      thumbnailUploadInfo,
+      subtitles,
+      contentWarningEnabled,
+      contentWarningReason,
+      expiration,
+      publishAt,
+      thumbnailSource,
+    ]
+  )
+
+  const handleBack = useCallback(() => {
+    if (import.meta.env.DEV) {
+      console.log('[VideoUpload] handleBack from screen:', screen)
+    }
+
+    if (screen === 'review') {
+      setScreen('details')
+      return
+    }
+    if (screen === 'details') {
+      setScreen('source')
+      return
+    }
+    // source → exit: flush draft then call onBack
+    handleDraftChange(buildDraftSnapshot())
     if (onBack) {
       queueMicrotask(() => onBack())
     }
-  }, [
-    screen,
-    handleDraftChange,
-    title,
-    description,
-    tags,
-    language,
-    people,
-    origins,
-    inputMethod,
-    videoUrl,
-    uploadInfo,
-    thumbnailUploadInfo,
-    subtitles,
-    contentWarningEnabled,
-    contentWarningReason,
-    expiration,
-    publishAt,
-    thumbnailSource,
-    onBack,
-  ])
+  }, [screen, handleDraftChange, buildDraftSnapshot, onBack])
+
+  // Explicit "Save Draft": persists the current edits regardless of which
+  // wizard step is active and gives honest feedback — it must never regress
+  // a step (that's what Back is for) and must never report success or leave
+  // the editor when persistence actually failed.
+  const handleSaveDraft = useCallback(() => {
+    try {
+      handleDraftChange(buildDraftSnapshot())
+      toast({ title: t('upload.draft.saved', { defaultValue: 'Draft saved' }) })
+      if (onBack) {
+        queueMicrotask(() => onBack())
+      }
+    } catch (error) {
+      console.error('[VideoUpload] Failed to save draft:', error)
+      toast({
+        title: t('upload.draft.saveFailed', { defaultValue: 'Failed to save draft' }),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      })
+    }
+  }, [handleDraftChange, buildDraftSnapshot, onBack, toast, t])
 
   const handleDeleteDraftOnly = useCallback(() => {
     deleteDraft(draft.id)
     removeByDraftId(draft.id)
     toast({
       title: t('upload.draft.deleted'),
-      description: t('upload.draft.deletedDescription'),
-      duration: 3000,
     })
-    if (onBack) onBack()
+
+    if (onBack) {
+      queueMicrotask(() => onBack())
+    }
   }, [deleteDraft, draft.id, removeByDraftId, toast, t, onBack])
 
   const handleDeleteWithMedia = useCallback(
@@ -637,7 +664,7 @@ export function VideoUpload({ draft, onBack, onPersist }: UploadFormProps) {
             }}
             continueDisabled={continueDisabled}
             showContinue={showContinue}
-            onSaveDraft={onBack ? handleBack : undefined}
+            onSaveDraft={onBack ? handleSaveDraft : undefined}
             onDeleteDraft={onBack ? () => setShowDeleteDialog(true) : undefined}
           />
         </CardContent>

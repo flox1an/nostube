@@ -21,6 +21,8 @@ interface VideoTimelinePageProps {
   exhaustedMessage?: string
   showSkeletons?: boolean
   className?: string
+  /** Optional visual treatment for cards on a reference browse surface. */
+  cardTreatment?: 'default' | 'quiet-cinema'
   /** True when the most recent retrieval attempt failed. Retried via onLoadMore. */
   error?: boolean
 }
@@ -46,6 +48,7 @@ export function VideoTimelinePage({
   exhaustedMessage,
   showSkeletons = true,
   className = 'sm:p-4',
+  cardTreatment = 'default',
   error = false,
 }: VideoTimelinePageProps) {
   const { t } = useTranslation()
@@ -83,6 +86,7 @@ export function VideoTimelinePage({
         emptyAction={emptyAction}
         error={error}
         onRetry={onLoadMore}
+        cardTreatment={cardTreatment}
       />
 
       <InfiniteScrollTrigger

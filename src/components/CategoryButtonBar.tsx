@@ -22,6 +22,7 @@ interface CategoryButtonBarProps {
   onRelayChange: (relay: string | null) => void
   /** Optional element rendered right after the relay dropdown */
   afterRelay?: React.ReactNode
+  tone?: 'default' | 'quiet'
 }
 
 export function CategoryButtonBar({
@@ -29,6 +30,7 @@ export function CategoryButtonBar({
   selectedRelay,
   onRelayChange,
   afterRelay,
+  tone = 'default',
 }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -96,13 +98,26 @@ export function CategoryButtonBar({
     !readRelays.some(r => r.url === normalizeRelayUrl(inputValue))
 
   return (
-    <div className="w-full sticky top-0 z-40 flex items-center bg-background/80 backdrop-blur-md">
+    <div
+      className={cn(
+        'sticky top-0 z-40 flex w-full items-center backdrop-blur-md',
+        tone === 'quiet'
+          ? 'border-b bg-background/92 supports-[backdrop-filter]:bg-background/82'
+          : 'bg-background/80'
+      )}
+    >
       <div className="min-w-0 flex-1 overflow-x-auto scroll-smooth scrollbar-hide">
-        <div className="flex gap-2 p-2 min-w-max">
+        <div className={cn('flex min-w-max gap-2', tone === 'quiet' ? 'px-4 py-3' : 'p-2')}>
           <Button
-            variant={!activeSlug ? 'default' : 'outline'}
+            variant={tone === 'quiet' ? 'ghost' : !activeSlug ? 'default' : 'outline'}
             size="sm"
-            className="shrink-0 rounded-full px-4"
+            className={cn(
+              'shrink-0 rounded-full px-4',
+              tone === 'quiet' &&
+                (!activeSlug
+                  ? 'h-11 bg-foreground text-background hover:bg-foreground/90 hover:text-background'
+                  : 'h-11 border border-transparent bg-secondary/70 hover:border-border')
+            )}
             onClick={() => navigate('/')}
           >
             All
@@ -113,9 +128,15 @@ export function CategoryButtonBar({
             return (
               <Button
                 key={category.slug}
-                variant={isActive ? 'default' : 'outline'}
+                variant={tone === 'quiet' ? 'ghost' : isActive ? 'default' : 'outline'}
                 size="sm"
-                className="shrink-0 rounded-full px-4"
+                className={cn(
+                  'shrink-0 rounded-full px-4',
+                  tone === 'quiet' &&
+                    (isActive
+                      ? 'h-11 bg-foreground text-background hover:bg-foreground/90 hover:text-background'
+                      : 'h-11 border border-transparent bg-secondary/70 hover:border-border')
+                )}
                 onClick={() => navigate(`/category/${category.slug}`)}
               >
                 {category.name}
@@ -137,7 +158,10 @@ export function CategoryButtonBar({
                 source: displayLabel,
                 defaultValue: 'Content source: {{source}}',
               })}
-              className="shrink-0 rounded-full px-3 gap-1.5"
+              className={cn(
+                'shrink-0 rounded-full px-3 gap-1.5',
+                tone === 'quiet' && 'h-11 border-border/80 bg-card shadow-none'
+              )}
             >
               {selectedRelay ? <Wifi className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
               <span className="max-w-32 truncate">{displayLabel}</span>

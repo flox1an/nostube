@@ -8,6 +8,7 @@ import { AuthDialog } from './AuthDialog'
 import { AccountSwitcher } from './AccountSwitcher'
 import { cn } from '@/lib/utils'
 import { useActiveAccount } from 'applesauce-react/hooks'
+import { useTranslation } from 'react-i18next'
 
 import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 export interface LoginAreaProps {
@@ -15,6 +16,7 @@ export interface LoginAreaProps {
 }
 
 export function LoginArea({ className }: LoginAreaProps) {
+  const { t } = useTranslation()
   const currentUser = useActiveAccount()
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const desktopWindowCoordinator = useDesktopWindowCoordinator()
@@ -36,9 +38,13 @@ export function LoginArea({ className }: LoginAreaProps) {
       {currentUser ? (
         <AccountSwitcher onAddAccount={openLogin} />
       ) : (
-        <Button onClick={openLogin}>
-          <User className="w-4 h-4" />
-          <span className="truncate">Log in</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={openLogin}
+          aria-label={t('auth.login.signIn', { defaultValue: 'Sign in' })}
+        >
+          <User className="w-5 h-5" />
         </Button>
       )}
 

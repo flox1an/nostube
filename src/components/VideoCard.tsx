@@ -299,14 +299,7 @@ export const VideoCard = React.memo(function VideoCard({
                   {video.title}
                 </h3>
               </DesktopVideoLink>
-              <div
-                className={cn(
-                  'flex items-center',
-                  isQuietCinema
-                    ? cn('mt-1', format === 'vertical' ? 'text-xs' : 'text-sm')
-                    : 'text-xs'
-                )}
-              >
+              <div className={cn('flex items-center text-xs', isQuietCinema && 'mt-1')}>
                 {!hideAuthor && (
                   <>
                     <Link

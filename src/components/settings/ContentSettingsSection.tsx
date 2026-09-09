@@ -55,7 +55,7 @@ export function ContentSettingsSection() {
 
       {/* Default Video Quality */}
       <div className="py-6">
-        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
+        <div className="flex flex-col gap-3 rounded-lg border p-3 sm:min-h-11 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="content-quality-select" className="font-medium">
               {t('settings.general.preferredQuality', { defaultValue: 'Default Video Quality' })}
@@ -71,10 +71,7 @@ export function ContentSettingsSection() {
             value={config.preferredQuality ?? '720p'}
             onValueChange={value => handlePreferredQualityChange(value as PreferredQuality)}
           >
-            <SelectTrigger
-              id="content-quality-select"
-              className="w-full max-w-sm shrink-0 sm:w-[200px]"
-            >
+            <SelectTrigger id="content-quality-select" className="w-full sm:w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -145,7 +142,7 @@ export function ContentSettingsSection() {
         </div>
 
         {/* NSFW filter */}
-        <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
+        <div className="flex flex-col gap-3 rounded-lg border p-3 sm:min-h-11 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="content-nsfw" className="font-medium">
               {t('settings.general.nsfwFilter')}
@@ -155,7 +152,7 @@ export function ContentSettingsSection() {
             value={config.nsfwFilter ?? 'hide'}
             onValueChange={value => handleNsfwFilterChange(value as NsfwFilter)}
           >
-            <SelectTrigger id="content-nsfw" className="w-full max-w-sm shrink-0 sm:w-[360px]">
+            <SelectTrigger id="content-nsfw" className="w-full sm:w-[360px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

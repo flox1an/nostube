@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
-import { useStableRelays, useContinueWatching } from '@/hooks'
+import { useStableRelays, useContinueWatching, useSubscriptionsVideos } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -128,6 +128,7 @@ export function HomePage() {
 
   const { filteredVideos, filterButton } = useTrustFilter(dedupedVideos)
   const { videos: continueWatchingVideos } = useContinueWatching()
+  const { videos: subscriptionsVideos } = useSubscriptionsVideos()
 
   if (!filteredVideos) return null
 
@@ -145,6 +146,11 @@ export function HomePage() {
         title={t('pages.home.continueWatching', 'Continue watching')}
         viewAllTo="/history"
         videos={continueWatchingVideos}
+      />
+      <HomeShelf
+        title={t('pages.home.fromSubscriptions', 'From creators you follow')}
+        viewAllTo="/subscriptions"
+        videos={subscriptionsVideos.slice(0, 12)}
       />
       <div className="mb-4 flex items-baseline justify-between px-1 pt-5 sm:mb-5 sm:pt-7">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">

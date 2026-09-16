@@ -1,4 +1,5 @@
-import { X } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { useTranslation } from 'react-i18next'
@@ -89,20 +90,23 @@ export function VideoTransformAlert({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-      <span className="flex-1">{getAlertDescription()}</span>
-      <Button onClick={onContribute} size="sm" variant="outline" className="h-7 shrink-0 text-xs">
-        {t('video.contribute.contributeButton')}
-      </Button>
+    <Alert className="border-primary relative">
       <Button
         variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
+        className="absolute top-1.5 right-1.5 h-8 w-8"
         aria-label="Dismiss contribution alert"
         onClick={handleDismiss}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4" />
       </Button>
-    </div>
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>{t('video.contribute.alertTitle')}</AlertTitle>
+      <AlertDescription className="flex flex-col gap-3 text-muted-foreground">
+        <span>{getAlertDescription()}</span>
+        <Button onClick={onContribute} size="sm" className="w-fit">
+          {t('video.contribute.contributeButton')}
+        </Button>
+      </AlertDescription>
+    </Alert>
   )
 }

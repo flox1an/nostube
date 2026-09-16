@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useAppContext } from '@/hooks/useAppContext'
 import { useFollowedAuthors, useStableRelays } from '@/hooks'
 import { getKindsForType } from '@/lib/video-types'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
@@ -19,6 +20,7 @@ export function useSubscriptionsVideos() {
   )
 
   const relays = useStableRelays()
+  const { config } = useAppContext()
 
   // Stable key based on sorted pubkeys — only recreate loader when actual follows change
   const pubkeysKey = useMemo(() => [...followedPubkeys].sort().join(','), [followedPubkeys])
@@ -132,8 +134,11 @@ export function useSubscriptionsVideos() {
       }
     }
     // Re-sort by publish date since we interleaved two sets
-    return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
-  }, [videos])
+    const sorted = result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
+    return (config.nsfwFilter ?? 'hide') === 'hide'
+      ? sorted.filter(video => !video.contentWarning)
+      : sorted
+  }, [videos, config.nsfwFilter])
 
   return {
     followedPubkeys,

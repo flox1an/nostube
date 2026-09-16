@@ -61,6 +61,7 @@ export function useContinueWatching() {
         if (!video) continue
         if (!(config.showYouTubeContent ?? true) && isYouTubeVideo(video)) continue
         if (!(config.showAudioContent ?? true) && isAudioVideo(video)) continue
+        if ((config.nsfwFilter ?? 'hide') === 'hide' && video.contentWarning) continue
         result.push(video)
       } catch {
         // Skip videos that fail to process (e.g. malformed cached event)
@@ -74,6 +75,7 @@ export function useContinueWatching() {
     config.blossomServers,
     config.showYouTubeContent,
     config.showAudioContent,
+    config.nsfwFilter,
     presetContent.nsfwPubkeys,
   ])
 

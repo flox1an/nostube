@@ -1,42 +1,23 @@
-# Multi-stage build for nostube
-# Stage 1: Build the application
-FROM node:20-alpine AS builder
-
+# Build: dist/ (web + embed) and compiled server
+FROM node:24-alpine AS build
 WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
+COPY package.json package-lock.json ./
 RUN npm ci
-
-# Copy source code
 COPY . .
+RUN npx vite build \
+ && npx vite build --config vite.embed.config.ts \
+ && cp dist/index.html dist/404.html \
+ && npx tsc server/standalone.ts --outDir server-dist \
+      --module nodenext --moduleResolution nodenext \
+      --target es2022 --skipLibCheck
 
-# Build the application
-RUN npm run build
-
-# Stage 2: Production runtime
-FROM nginx:alpine
-
-# Install bash for entrypoint script
-RUN apk add --no-cache bash
-
-# Copy nginx configuration
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy entrypoint script
-COPY docker/entrypoint.sh /docker-entrypoint.d/40-generate-runtime-env.sh
-RUN chmod +x /docker-entrypoint.d/40-generate-runtime-env.sh
-
-# Expose port 80
-EXPOSE 80
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
-
-# nginx will run via the default entrypoint
+# Runtime: prod deps + dist + compiled server only
+FROM node:24-alpine
+WORKDIR /app
+ENV NODE_ENV=production PORT=8080
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server-dist ./server-dist
+EXPOSE 8080
+CMD ["node", "server-dist/standalone.js"]

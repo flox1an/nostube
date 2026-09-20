@@ -1,0 +1,27 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      COOLIFY_TAILNET_HOST: ${{ vars.COOLIFY_TAILNET_HOST }}
+
+    steps:
+      - name: Join Tailnet as tag:ci
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Deploy nostube-web
+        run: |
+          curl --fail --show-error --connect-timeout 10 \
+            "http://${COOLIFY_TAILNET_HOST}:8000/api/v1/health"
+          curl --fail --show-error --request POST \
+            "http://${COOLIFY_TAILNET_HOST}:8000/api/v1/deploy?uuid=gw7r9tyk7dqhlb3wh9fjvdh3" \
+            --header "Authorization: Bearer ${{ secrets.COOLIFY_DEPLOY_TOKEN }}"

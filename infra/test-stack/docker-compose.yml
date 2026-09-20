@@ -72,14 +72,14 @@ services:
       RUNTIME_APP_TITLE: ${RUNTIME_APP_TITLE:-nostube (test-stack)}
       RUNTIME_DEBUG: ${RUNTIME_DEBUG:-true}
     ports:
-      - '${NOSTUBE_PORT:-18080}:80'
+      - '${NOSTUBE_PORT:-18080}:8080'
     depends_on:
       - relay
       - almond
       - image-resizer
       - divico-dvm
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8080/health']
       interval: 10s
       timeout: 3s
       retries: 10

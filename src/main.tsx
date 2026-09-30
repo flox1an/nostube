@@ -3,7 +3,11 @@ import { App } from './App.tsx'
 import './index.css'
 import { checkAndClearCache } from './lib/cache-clear'
 import { migrateLocalStoragePlayPositions } from './lib/play-position-storage'
+import { installAppHeight } from './lib/app-height'
 import './i18n/config' // Initialize i18n
+
+// iOS PWA full-screen height (--app-height), see lib/app-height.ts
+installAppHeight()
 
 // A deploy replaced the JS chunks this page references: reload to pick up the new
 // build. Rate-limited rather than once per session, so a later deploy in the same

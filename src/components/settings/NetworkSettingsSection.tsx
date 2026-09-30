@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { useAppContext, useSelectedPreset, useUserBlossomServers } from '@/hooks'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ import {
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
+import { SEARCH_SERVICE_URL } from '@/lib/search-client'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -786,6 +788,63 @@ function CachingSubSection() {
   )
 }
 
+// ─── Service endpoints ───────────────────────────────
+
+/** Browser-local overrides for nostube's search API and imgproxy thumbnail presets. */
+export function ServiceEndpointsSubSection() {
+  const { t } = useTranslation()
+  const { config, updateConfig } = useAppContext()
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="search-service-url" className="font-medium">
+          {t('settings.general.searchServiceUrl', { defaultValue: 'Search Service URL' })}
+        </Label>
+        <Input
+          id="search-service-url"
+          type="url"
+          placeholder={SEARCH_SERVICE_URL}
+          value={config.searchServiceUrl || ''}
+          onChange={event => {
+            const value = event.target.value
+            updateConfig(c => ({ ...c, searchServiceUrl: value.trim() || undefined }))
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t('settings.general.searchServiceUrlDescription', {
+            defaultValue:
+              'Base URL of the external video search API. Leave empty to use the default.',
+          })}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="imgproxy-base-url" className="font-medium">
+          {t('settings.general.imgproxyBaseUrl', { defaultValue: 'Image Proxy URL' })}
+        </Label>
+        <Input
+          id="imgproxy-base-url"
+          type="url"
+          placeholder="https://imgproxy.nostu.be"
+          value={config.imgproxyBaseUrl ?? ''}
+          onChange={event => {
+            // Trailing slashes are stripped where the URL is used (getImgproxyBaseUrl);
+            // stripping per keystroke would make "//" impossible to type.
+            const value = event.target.value
+            updateConfig(c => ({ ...c, imgproxyBaseUrl: value.trim() || undefined }))
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t('settings.general.imgproxyBaseUrlDescription', {
+            defaultValue:
+              'Base URL for image and video thumbnail presets. Leave empty to use the Nostube default.',
+          })}
+        </p>
+      </div>
+    </>
+  )
+}
+
 // ─── Main Section ────────────────────────────────────
 
 export function NetworkSettingsSection() {
@@ -844,6 +903,17 @@ export function NetworkSettingsSection() {
         defaultOpen={activeSection === 'view-tracking-relays'}
       >
         <ViewTrackingSettingsSection />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="services"
+        title={t('settings.network.services', { defaultValue: 'Service endpoints' })}
+        description={t('settings.network.servicesDescription', {
+          defaultValue: 'Search API and image proxy used by this browser.',
+        })}
+        defaultOpen={activeSection === 'services'}
+      >
+        <ServiceEndpointsSubSection />
       </CollapsibleSection>
     </div>
   )

@@ -243,7 +243,12 @@ export function VideoGrid({
         rows.push(
           <div
             key={'portrait-' + portraitIdx}
-            className={`grid ${gridColsClass(getCols('vertical'))}`}
+            className={cn(
+              'grid',
+              gridColsClass(getCols('vertical')),
+              // Full-bleed portrait cards drop their padding on mobile; keep a gap before a wide row.
+              fullBleed && wideIdx < wideRows.length && 'mb-6 sm:mb-0'
+            )}
           >
             {portraitRows[portraitIdx].map(video => (
               <VideoCard

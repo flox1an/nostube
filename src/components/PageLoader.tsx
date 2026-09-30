@@ -33,7 +33,7 @@ export function PageLoader() {
           )}
         >
           {Array.from({ length: 24 }).map((_, i) => (
-            <VideoCardSkeleton key={i} format="horizontal" />
+            <VideoCardSkeleton key={i} format="horizontal" fullBleed />
           ))}
         </div>
       </div>

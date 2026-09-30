@@ -49,6 +49,7 @@ export function HashtagPage() {
         exhausted={exhausted}
         onLoadMore={loadMore}
         layoutMode="auto"
+        fullBleed
         emptyMessage={t('pages.hashtag.noVideos', { tag })}
         className=""
       />

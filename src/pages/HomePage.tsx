@@ -41,7 +41,6 @@ function HomeShelf({
               <VideoCard
                 video={video}
                 format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-                treatment="quiet-cinema"
               />
             </div>
           ))}
@@ -158,21 +157,23 @@ export function HomePage() {
         </h1>
         <span className="text-sm text-muted-foreground">{t('pages.home.newestFirst')}</span>
       </div>
-      <VideoTimelinePage
-        videos={filteredVideos}
-        loading={loading}
-        exhausted={exhausted}
-        prefetching={isPrefetching}
-        subscriptionActive={subscriptionActive}
-        onLoadMore={loadMore}
-        onPrefetch={prefetchMore}
-        layoutMode="horizontal"
-        emptyMessage={t('pages.home.noVideos')}
-        exhaustedMessage={t('pages.home.noMore')}
-        error={phase === 'error'}
-        className=""
-        cardTreatment="quiet-cinema"
-      />
+      <div className="-mx-3 sm:mx-0">
+        <VideoTimelinePage
+          videos={filteredVideos}
+          loading={loading}
+          exhausted={exhausted}
+          prefetching={isPrefetching}
+          subscriptionActive={subscriptionActive}
+          onLoadMore={loadMore}
+          onPrefetch={prefetchMore}
+          layoutMode="horizontal"
+          emptyMessage={t('pages.home.noVideos')}
+          exhaustedMessage={t('pages.home.noMore')}
+          error={phase === 'error'}
+          className=""
+          fullBleed
+        />
+      </div>
     </div>
   )
 }

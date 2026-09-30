@@ -91,6 +91,7 @@ export function CategoryPage() {
         exhausted={exhausted}
         onLoadMore={loadMore}
         layoutMode="auto"
+        fullBleed
         emptyMessage={t('pages.category.noVideos', { category: category.name })}
         className=""
       />

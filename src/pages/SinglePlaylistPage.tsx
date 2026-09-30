@@ -308,7 +308,7 @@ export default function SinglePlaylistPage() {
   }
 
   return (
-    <div className="max-w-560 mx-auto p-8 flex flex-col gap-8">
+    <div className="max-w-560 mx-auto px-4 py-6 sm:p-8 flex flex-col gap-8">
       <div className="flex items-start gap-4">
         <div className="flex-1">
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -384,11 +384,14 @@ export default function SinglePlaylistPage() {
           </SortableContext>
         </DndContext>
       ) : (
-        <VideoGrid
-          videos={sortedVideoEvents.length > 0 ? sortedVideoEvents : videoEvents}
-          isLoading={isLoadingVideos || loadingVideoIds.size > 0}
-          playlistParam={nip19param}
-        />
+        <div className="-mx-4 sm:mx-0">
+          <VideoGrid
+            videos={sortedVideoEvents.length > 0 ? sortedVideoEvents : videoEvents}
+            isLoading={isLoadingVideos || loadingVideoIds.size > 0}
+            playlistParam={nip19param}
+            fullBleed
+          />
+        </div>
       )}
 
       {failedVideoIds.size > 0 && (

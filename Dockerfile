@@ -1,6 +1,8 @@
 # Build: dist/ (web + embed) and compiled server
 FROM node:24-alpine AS build
 WORKDIR /app
+# NSFW safety (18+ confirmation, embed gate); only `off` disables it. Self-hosters only.
+ARG VITE_NSFW_SAFETY=on
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

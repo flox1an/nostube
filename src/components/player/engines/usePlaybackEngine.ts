@@ -62,7 +62,8 @@ function useHlsEngine(
   ladder: PlaybackUrlLadder | undefined,
   isHlsSource: boolean,
   authorPubkey: string | undefined,
-  eventId: string | undefined
+  eventId: string | undefined,
+  autoPlay: boolean
 ): PlaybackEngine {
   const { levels, currentLevel, activeLevel, setLevel, isLoading, error } = useHls(
     videoRef,
@@ -71,7 +72,8 @@ function useHlsEngine(
     ladder,
     authorPubkey,
     eventId,
-    'never'
+    'never',
+    autoPlay
   )
 
   const activeQualityLabel = useMemo(
@@ -198,7 +200,15 @@ export function usePlaybackEngine({
   const mode = resolvePlaybackMode(mime, effectiveUrls, videoUrl)
 
   const native = useNativeEngine(videoUrl, videoVariants, selectedVariantIndex, handleVariantChange)
-  const hls = useHlsEngine(videoRef, videoUrl, ladder, mode === 'hls', authorPubkey, eventId)
+  const hls = useHlsEngine(
+    videoRef,
+    videoUrl,
+    ladder,
+    mode === 'hls',
+    authorPubkey,
+    eventId,
+    autoPlay
+  )
   const dash = useDashEngine(videoRef, videoUrl, mode === 'dash', autoPlay, onError)
 
   if (mode === 'hls') return hls

@@ -1,5 +1,16 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useMutedPubkeys, useProfile } from '@/hooks'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -12,16 +23,32 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
+import { NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
 
 export function ContentSettingsSection() {
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
+  const [pendingNsfwFilter, setPendingNsfwFilter] = useState<NsfwFilter | null>(null)
 
   const handleNsfwFilterChange = (value: NsfwFilter) => {
+    // Opting in from 'hide' always needs the 18+ confirmation (see getEffectiveNsfwFilter).
+    if (value !== 'hide' && config.nsfwFilter === 'hide' && NSFW_SAFETY_ENABLED) {
+      setPendingNsfwFilter(value)
+      return
+    }
     updateConfig(currentConfig => ({
       ...currentConfig,
       nsfwFilter: value,
+      // Going back to 'hide' drops the confirmation, so the next opt-in asks again.
+      nsfwAgeConfirmed: value === 'hide' ? false : currentConfig.nsfwAgeConfirmed,
     }))
+  }
+
+  const confirmNsfwOptIn = () => {
+    if (!pendingNsfwFilter) return
+    const nsfwFilter = pendingNsfwFilter
+    updateConfig(currentConfig => ({ ...currentConfig, nsfwFilter, nsfwAgeConfirmed: true }))
+    setPendingNsfwFilter(null)
   }
 
   const handleYouTubeContentChange = (checked: boolean) => {
@@ -165,6 +192,25 @@ export function ContentSettingsSection() {
         <p className="text-xs text-muted-foreground">
           {t('settings.general.nsfwFilterDescription')}
         </p>
+        <AlertDialog
+          open={pendingNsfwFilter !== null}
+          onOpenChange={open => !open && setPendingNsfwFilter(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('settings.general.nsfwAgeGate.title')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('settings.general.nsfwAgeGate.description')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmNsfwOptIn}>
+                {t('settings.general.nsfwAgeGate.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Muted accounts */}

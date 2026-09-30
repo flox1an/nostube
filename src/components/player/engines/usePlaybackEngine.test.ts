@@ -173,7 +173,8 @@ describe('usePlaybackEngine adapters', () => {
       ladder,
       undefined,
       undefined,
-      'never'
+      'never',
+      true
     )
   })
 

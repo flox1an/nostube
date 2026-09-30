@@ -265,15 +265,16 @@ Improve page load performance with lazy loading:
 3. Use percentage widths: `width="100%"`
 4. Maintain 16:9 aspect ratio: height = width × 0.5625
 
-### Content Warning Stuck
+### Sensitive Content Doesn't Play
 
-**Issue:** Content warning overlay won't disappear
+**Issue:** The player shows "Sensitive content" or "Couldn't verify this video" instead of the video
 
-**Solutions:**
+**Explanation:**
 
-1. Click anywhere on the overlay to reveal
-2. Content warnings cannot be bypassed automatically (safety feature)
-3. This is expected behavior for videos with `content-warning` tags
+1. Videos flagged as sensitive (a `content-warning` tag, or an author on the nostube moderation preset's NSFW list) only play for viewers who enabled sensitive content in their own nostube settings, including the 18+ confirmation
+2. Browsers keep a separate, empty storage for iframes from other sites, so on your page the embed can't see the viewer's nostube settings and never plays flagged videos. Viewers use "Open on nostube" instead
+3. If the moderation preset can't be loaded, nothing plays ("Couldn't verify this video")
+4. There is intentionally no URL parameter to change this
 
 ### Title Overlay Not Hiding
 
@@ -459,12 +460,13 @@ The embed player:
 
 ### Content Moderation
 
-The player respects content warnings:
+The player enforces the viewer's own safety settings. Embedders can't override them:
 
-- Videos with `content-warning` tags show an overlay
-- Users must explicitly click to view sensitive content
-- Content warning text is displayed from the event
-- Cannot be bypassed programmatically (safety feature)
+- Videos are flagged by their `content-warning` tag, NSFW platform attributes, or the moderation preset's NSFW author list; blocked authors and events never play
+- Viewers without settings, or without the 18+ confirmation, never get flagged videos played; they see a notice with an "Open on nostube" link
+- Viewers who chose "warning" must click through an overlay; there is no autoplay
+- If the moderation preset can't be loaded, the player fails closed and plays nothing
+- Self-hosted deployments can disable this at build time with `VITE_NSFW_SAFETY=off`; the operator then takes responsibility for the content
 
 ---
 

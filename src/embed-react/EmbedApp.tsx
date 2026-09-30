@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { VideoPlayer } from '@/components/player/VideoPlayer'
 import { useImageCascade } from '@/hooks/useImageCascade'
+import type { VideoPlayback } from '@/lib/content-safety'
+import { buildVideoPath } from '@/utils/video-utils'
 import type { EmbedParams } from './lib/url-params'
 import type { VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
@@ -10,20 +12,26 @@ import { ContentWarning } from './components/ContentWarning'
 import { ErrorMessage } from './components/ErrorMessage'
 import { LoadingState } from './components/LoadingState'
 
+/** `unverified`: the safety check (preset) could not run, so nothing plays. */
+export type EmbedPlayback = VideoPlayback | 'unverified'
+
 interface EmbedAppProps {
   params: EmbedParams
   video: VideoEvent | null
+  playback: EmbedPlayback
   profile: Profile | null
   error: string | null
   isLoading: boolean
 }
 
-export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppProps) {
+export function EmbedApp({ params, video, playback, profile, error, isLoading }: EmbedAppProps) {
   const [contentWarningAccepted, setContentWarningAccepted] = useState(false)
   const [allSourcesFailed, setAllSourcesFailed] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
+  const isBlocked = playback === 'hidden' || playback === 'unverified'
   const embedPoster = useImageCascade({
-    src: video?.thumbnailVariants[0]?.url,
+    // Never fetch the thumbnail of a video the viewer isn't allowed to see.
+    src: isBlocked ? undefined : video?.thumbnailVariants[0]?.url,
     preset: 'embed-card-v1',
     authorPubkey: video?.pubkey,
   }).src
@@ -60,6 +68,26 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
     return <ErrorMessage message={error || 'Video not found'} />
   }
 
+  // NSFW safety comes before anything that could reveal the video.
+  if (isBlocked) {
+    const watchUrl = `https://nostu.be${buildVideoPath(params.videoId, 'video')}`
+    return playback === 'hidden' ? (
+      <ContentWarning
+        title="Sensitive content"
+        message="This video is marked as sensitive. It only plays for viewers who enabled sensitive content in their nostube settings."
+        color={params.accentColor}
+        watchUrl={watchUrl}
+      />
+    ) : (
+      <ContentWarning
+        title="Couldn't verify this video"
+        message="The safety check couldn't be completed, so this video won't play here."
+        color={params.accentColor}
+        watchUrl={watchUrl}
+      />
+    )
+  }
+
   // All sources failed
   if (allSourcesFailed) {
     return <ErrorMessage message="Video unavailable - all sources failed" />
@@ -70,11 +98,11 @@ export function EmbedApp({ params, video, profile, error, isLoading }: EmbedAppP
     return <ErrorMessage message="No video sources found" />
   }
 
-  // Content warning (if not accepted)
-  if (video.contentWarning && !contentWarningAccepted) {
+  if (playback === 'warn' && !contentWarningAccepted) {
     return (
       <ContentWarning
-        reason={video.contentWarning}
+        title="Content Warning"
+        message={video.contentWarning || 'This video may contain sensitive content.'}
         onAccept={() => setContentWarningAccepted(true)}
         color={params.accentColor}
         poster={embedPoster ?? undefined}

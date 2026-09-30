@@ -42,6 +42,17 @@ docker run --rm -p 8080:8080 \
 
 `runtime-env.js` is not cached. Hashed assets use a one-year immutable cache policy.
 
+## Build-time configuration
+
+`VITE_NSFW_SAFETY` controls nostube's NSFW safety: the 18+ confirmation before viewers can opt in to
+sensitive content, and the embed player's refusal to play flagged videos for viewers without that
+opt-in. It is on by default and stays on for any value except `off`. Only disable it on your own
+deployment if you take responsibility for the content it then plays directly:
+
+```bash
+docker build --build-arg VITE_NSFW_SAFETY=off -t nostube .
+```
+
 ## Coolify
 
 Create a public Git application with:

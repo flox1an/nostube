@@ -705,6 +705,11 @@
       "nsfwWarning": "Warnung - Unscharf mit Warnung anzeigen",
       "nsfwShow": "Anzeigen - NSFW-Inhalte immer anzeigen",
       "nsfwFilterDescription": "Steuere, wie NSFW (Not Safe For Work) Inhalte in der App angezeigt werden.",
+      "nsfwAgeGate": {
+        "title": "Alter bestätigen",
+        "description": "Sensible Inhalte können Nacktheit, sexuelle oder gewalttätige Darstellungen enthalten. Mit dem Fortfahren bestätigst du, dass du mindestens 18 Jahre alt bist und das Ansehen solcher Inhalte an deinem Aufenthaltsort erlaubt ist.",
+        "confirm": "Ich bin 18 oder älter"
+      },
       "nsfwLockedInfo": "NSFW-Inhalte werden ausgeblendet, da dein NosTube-Vertrauensscore unter 20% liegt oder noch nicht verfügbar ist. Erhöhe deinen Score durch Interaktion mit der Plattform.",
       "language": "Sprache",
       "selectLanguage": "Sprache auswählen",
@@ -1346,6 +1351,12 @@
     "warning": {
       "title": "Sensible Inhalte",
       "play": "Video abspielen"
+    },
+    "hidden": {
+      "title": "Inhalt nicht verfügbar",
+      "description": "Diese Seite ist durch deine Inhaltseinstellungen ausgeblendet. Sie kann sensible Inhalte enthalten oder von einem blockierten Konto stammen.",
+      "home": "Zur Startseite",
+      "settings": "Inhaltseinstellungen"
     }
   }
 }

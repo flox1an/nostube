@@ -65,7 +65,9 @@ export function useHls(
   ladder?: PlaybackUrlLadder,
   authorPubkey?: string,
   videoId?: string,
-  localhostProxyMode: 'always' | 'master-gated' | 'never' = 'master-gated'
+  localhostProxyMode: 'always' | 'master-gated' | 'never' = 'master-gated',
+  /** false while a content warning is showing: the viewer must start playback. */
+  autoPlay = true
 ): UseHlsResult {
   const hlsRef = useRef<Hls | null>(null)
   const appContext = useAppContextSafe()
@@ -278,9 +280,11 @@ export function useHls(
       hls.startLoad(-1)
 
       // Autoplay when manifest is ready
-      video.play().catch(() => {
-        // Autoplay blocked by browser - expected behavior
-      })
+      if (autoPlay) {
+        video.play().catch(() => {
+          // Autoplay blocked by browser - expected behavior
+        })
+      }
     })
 
     hls.on(Hls.Events.LEVEL_SWITCHING, (_event, data) => {
@@ -389,6 +393,7 @@ export function useHls(
     videoId,
     localhostProxyMode,
     ladder,
+    autoPlay,
   ])
 
   // Set quality level

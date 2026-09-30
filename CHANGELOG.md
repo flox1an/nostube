@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- NSFW content now needs an explicit 18+ confirmation: switching the NSFW filter from "hide" to "warning" or "show" opens a "Confirm your age" dialog, and an opt-in without that confirmation (including existing saved settings) counts as "hide" (`getEffectiveNsfwFilter`)
+- Direct links no longer bypass the NSFW filter: video pages and shorts now also honour a video's own `content-warning` tag and NSFW platform attributes, not just the preset's NSFW author list; hidden pages show a "Content not available" notice with links to the home page and content settings instead of a blank screen
+- The embed player applies the viewer's own NSFW setting (default "hide") and the moderation preset's NSFW/blocked lists, which load in parallel with the video; flagged videos show an "Open on nostube" notice, and nothing plays if the preset can't be verified. URL parameters can't loosen this, and cross-site iframes never see the viewer's settings (browser storage partitioning)
 - NSFW "warning" mode no longer dead-ends on a full-screen warning: NSFW profiles open normally with blurred video thumbnails, and NSFW video pages show a blurred poster with a "Sensitive content" overlay and a "Play video" button; `ContentSafetyGate` keeps only the `hidden`/`loading` states; "show" mode no longer suppresses autoplay for NSFW-author videos
 - Unified video cards across browse pages: mobile grids use square, edge-to-edge thumbnails with approximately 1px gaps between shorts; desktop grids retain rounded thumbnails and wider spacing, while horizontal shelves retain their rounded cards. Loading skeletons follow the same layout.
 - Unified category bars on Home, category pages, and Shorts with neutral selection styling and 40px-high category, relay, and trust-filter controls. A right-edge fade indicates hidden categories while keeping relay/filter controls visible; the fade disappears at the scroll end or when all categories fit.
@@ -26,9 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Video comments no longer stay in the skeleton state forever: `VideoComments` loaded comments through a paging `createTimelineLoader`, whose observable never completes, so `isLoadingComments` was never cleared; comments and reply lookups now use `pool.request`, which completes at relay EOSE (or the pool's idle timeout)
+- NSFW videos using HLS no longer autoplay behind the "Sensitive content" overlay in warning mode: `useHls` ignored the player's `autoPlay` flag and started playback as soon as the manifest loaded, which also dismissed the overlay
+- The shorts player no longer plays flagged shorts: in warning mode the active short waits for "Play video", and in hide mode flagged shorts are left out of the feed and a direct link shows the "Content not available" notice
 
 ### Added
 
+- `VITE_NSFW_SAFETY` build-time switch (`off` disables the 18+ confirmation and the embed's NSFW gate) for self-hosted deployments; nostube's own deployment keeps it on
 - Contribute variant flow — video pages can now re-encode an existing MP4 source in the browser, upload generated MP4 variants to selected Blossom servers, publish kind 1063 announcements, and merge discovered contributed variants into the player quality list
 - HLS audio renditions are now tracked as separate streams throughout the upload pipeline: `HlsVariantStream` gains `type` and `language` fields; `browser-transcode-upload-manager` parses `#EXT-X-MEDIA:TYPE=AUDIO` entries from the master playlist, includes their segments in the upload segment grid, and pushes audio entries into `hlsVariants`; `VideoVariantsTable` renders audio rendition rows (with music icon, language column, "Audio Rendition" badge) separately from video variant rows
 - Upload wizard now runs browser transcode/upload in the background while users fill details: the six-step flow is consolidated into Source, Details, and Review screens with a processing rail, readiness checklist, auto-generated thumbnails, and preserved draft/deep-link behavior

@@ -1363,8 +1363,7 @@
     "loading": "Loading…",
     "warning": {
       "title": "Sensitive content",
-      "description": "This profile may contain adult or sensitive material.",
-      "goHome": "Go home"
+      "play": "Play video"
     }
   }
 }

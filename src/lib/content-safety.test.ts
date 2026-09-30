@@ -24,8 +24,8 @@ describe('getContentSafetyGate', () => {
     expect(getContentSafetyGate(nsfwPubkey, 'hide', sources)).toBe('hidden')
   })
 
-  it('warns for configured NSFW profiles when set to warning', () => {
-    expect(getContentSafetyGate(nsfwPubkey, 'warning', sources)).toBe('warning')
+  it('keeps configured NSFW profiles reachable when set to warning (media is blurred instead)', () => {
+    expect(getContentSafetyGate(nsfwPubkey, 'warning', sources)).toBe('visible')
   })
 
   it('allows configured NSFW profiles when set to show', () => {

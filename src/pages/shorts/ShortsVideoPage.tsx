@@ -431,10 +431,13 @@ export function ShortsVideoPage() {
 
     if (!node || initializedVideoElementRef.current) return
 
-    node.muted = true
-    userMutedPreferenceRef.current = true
+    // Start with sound; playCurrentSource falls back to muted where the browser's autoplay
+    // policy blocks audible playback (no user interaction yet, iOS/Safari). No explicit
+    // mute preference until the user toggles it.
+    node.muted = false
+    userMutedPreferenceRef.current = null
     initializedVideoElementRef.current = true
-    setIsMuted(true)
+    setIsMuted(false)
   }, [])
 
   // Revoke any outstanding prefetch object URL when the component unmounts.
@@ -480,6 +483,18 @@ export function ShortsVideoPage() {
       const playPromise = videoElement.play()
       if (playPromise !== undefined) {
         playPromise.catch(error => {
+          // Sound not allowed yet: keep playing, muted, instead of not playing at all.
+          if (error?.name === 'NotAllowedError' && !videoElement.muted) {
+            videoElement.muted = true
+            videoElement.play().catch(mutedError => {
+              console.error(
+                'Error playing muted short video:',
+                currentVideo.id.substring(0, 8),
+                mutedError
+              )
+            })
+            return
+          }
           console.error(
             'Error playing singleton short video:',
             currentVideo.id.substring(0, 8),
@@ -505,9 +520,11 @@ export function ShortsVideoPage() {
     setIsVideoReady(false)
     setIsBuffering(true)
 
+    // Try sound on every new short unless the user explicitly muted; a browser that still
+    // blocks it falls back to muted in playCurrentSource.
+    const mutedPreference = userMutedPreferenceRef.current ?? false
     // Stop and hide the outgoing video immediately so a slow-loading next
     // video never appears to keep looping the previous one.
-    const mutedPreference = userMutedPreferenceRef.current ?? videoElement.muted
     videoElement.pause()
     videoElement.removeAttribute('src')
     videoElement.dataset.videoId = ''

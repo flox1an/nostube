@@ -32,6 +32,6 @@
     { "source": "/short/:nevent", "destination": "/api/short/:nevent" },
     { "source": "/playlist/:nip19", "destination": "/api/playlist/:nip19" },
     { "source": "/oembed", "destination": "/api/oembed" },
-    { "source": "/((?!api(?:/|$)|\\.well-known/).*)", "destination": "/index.html" }
+    { "source": "/((?!api(?:/|$)|\\.well-known/|assets/).*)", "destination": "/index.html" }
   ]
 }

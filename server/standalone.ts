@@ -38,6 +38,9 @@ app.use('/.well-known/*', async (c, next) => {
   c.header('Content-Type', 'application/json')
 })
 app.use('/*', serveStatic({ root: './dist' }))
+// A missing hashed asset is a stale or mid-deploy reference: answer 404, never the
+// SPA shell, which browsers would reject as a module (text/html MIME) or cache as JS.
+app.get('/assets/*', c => c.notFound())
 app.get('*', serveStatic({ root: './dist', path: 'index.html' }))
 
 const port = parseInt(process.env.PORT || '8080', 10)

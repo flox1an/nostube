@@ -5,38 +5,30 @@ import { checkAndClearCache } from './lib/cache-clear'
 import { migrateLocalStoragePlayPositions } from './lib/play-position-storage'
 import './i18n/config' // Initialize i18n
 
-// Auto-reload on stale chunk errors (after deployment, old cached HTML references missing JS files)
-window.addEventListener('error', (event: ErrorEvent) => {
+// A deploy replaced the JS chunks this page references: reload to pick up the new
+// build. Rate-limited rather than once per session, so a later deploy in the same
+// tab still recovers, while a genuinely broken chunk can't cause a reload loop.
+const CHUNK_RELOAD_KEY = 'nostube_chunk_reload'
+const reloadForStaleChunk = (message: string) => {
   if (
-    event.message?.includes('Failed to fetch dynamically imported module') ||
-    event.message?.includes('Failed to load module script')
+    !message.includes('Failed to fetch dynamically imported module') &&
+    !message.includes('error loading dynamically imported module') &&
+    !message.includes('Failed to load module script') &&
+    !message.includes('the server responded with a MIME type of')
   ) {
-    const reloadKey = 'nostube_chunk_reload'
-    const lastReload = sessionStorage.getItem(reloadKey)
-    // Only reload once per session to avoid infinite loops
-    if (!lastReload) {
-      sessionStorage.setItem(reloadKey, Date.now().toString())
-      window.location.reload()
-    }
+    return
   }
-})
+  const lastReload = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0)
+  if (Date.now() - lastReload < 30_000) return
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+  window.location.reload()
+}
 
-// Also catch unhandled promise rejections (dynamic import() returns promises)
-window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-  const message = event.reason?.message || String(event.reason)
-  if (
-    message.includes('Failed to fetch dynamically imported module') ||
-    message.includes('error loading dynamically imported module') ||
-    message.includes('the server responded with a MIME type of')
-  ) {
-    const reloadKey = 'nostube_chunk_reload'
-    const lastReload = sessionStorage.getItem(reloadKey)
-    if (!lastReload) {
-      sessionStorage.setItem(reloadKey, Date.now().toString())
-      window.location.reload()
-    }
-  }
-})
+window.addEventListener('error', (event: ErrorEvent) => reloadForStaleChunk(event.message ?? ''))
+// Dynamic import() rejects instead of throwing
+window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) =>
+  reloadForStaleChunk(event.reason?.message || String(event.reason))
+)
 
 // Check if cache should be cleared before starting the app
 checkAndClearCache().then(wasCleared => {

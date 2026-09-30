@@ -12,7 +12,7 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useTranslation } from 'react-i18next'
 
@@ -22,7 +22,6 @@ interface CategoryButtonBarProps {
   onRelayChange: (relay: string | null) => void
   /** Optional element rendered right after the relay dropdown */
   afterRelay?: React.ReactNode
-  tone?: 'default' | 'quiet'
 }
 
 export function CategoryButtonBar({
@@ -30,13 +29,33 @@ export function CategoryButtonBar({
   selectedRelay,
   onRelayChange,
   afterRelay,
-  tone = 'default',
 }: CategoryButtonBarProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { config, updateConfig } = useAppContext()
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const categoriesRef = useRef<HTMLDivElement>(null)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  useEffect(() => {
+    const container = categoriesRef.current
+    if (!container) return
+
+    const updateScrollHint = () =>
+      setCanScrollRight(container.scrollWidth - container.clientWidth - container.scrollLeft > 1)
+
+    updateScrollHint()
+    container.addEventListener('scroll', updateScrollHint, { passive: true })
+    const observer = new ResizeObserver(updateScrollHint)
+    observer.observe(container)
+    if (container.firstElementChild) observer.observe(container.firstElementChild)
+
+    return () => {
+      container.removeEventListener('scroll', updateScrollHint)
+      observer.disconnect()
+    }
+  }, [])
 
   // Get read relays from config
   const readRelays = config.relays.filter(r => r.tags.includes('read'))
@@ -98,25 +117,25 @@ export function CategoryButtonBar({
     !readRelays.some(r => r.url === normalizeRelayUrl(inputValue))
 
   return (
-    <div
-      className={cn(
-        'sticky top-0 z-40 flex w-full items-center backdrop-blur-md',
-        tone === 'quiet'
-          ? 'border-b bg-background/92 supports-[backdrop-filter]:bg-background/82'
-          : 'bg-background/80'
-      )}
-    >
-      <div className="min-w-0 flex-1 overflow-x-auto scroll-smooth scrollbar-hide">
-        <div className={cn('flex min-w-max gap-2', tone === 'quiet' ? 'px-4 py-3' : 'p-2')}>
+    <div className="sticky top-0 z-40 flex w-full items-center border-b bg-background/92 backdrop-blur-md supports-[backdrop-filter]:bg-background/82">
+      <div
+        ref={categoriesRef}
+        className="min-w-0 flex-1 overflow-x-auto scroll-smooth scroll-pr-6 scrollbar-hide"
+        style={{
+          maskImage: canScrollRight
+            ? 'linear-gradient(to left, transparent, black 24px)'
+            : undefined,
+        }}
+      >
+        <div className="flex min-w-max gap-2 p-2">
           <Button
-            variant={tone === 'quiet' ? 'ghost' : !activeSlug ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
             className={cn(
-              'shrink-0 rounded-full px-4',
-              tone === 'quiet' &&
-                (!activeSlug
-                  ? 'h-11 bg-foreground text-background hover:bg-foreground/90 hover:text-background'
-                  : 'h-11 border border-transparent bg-secondary/70 hover:border-border')
+              'h-10 shrink-0 rounded-full px-4',
+              !activeSlug
+                ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
+                : 'border border-transparent bg-secondary/70 hover:border-border'
             )}
             onClick={() => navigate('/')}
           >
@@ -128,14 +147,13 @@ export function CategoryButtonBar({
             return (
               <Button
                 key={category.slug}
-                variant={tone === 'quiet' ? 'ghost' : isActive ? 'default' : 'outline'}
+                variant="ghost"
                 size="sm"
                 className={cn(
-                  'shrink-0 rounded-full px-4',
-                  tone === 'quiet' &&
-                    (isActive
-                      ? 'h-11 bg-foreground text-background hover:bg-foreground/90 hover:text-background'
-                      : 'h-11 border border-transparent bg-secondary/70 hover:border-border')
+                  'h-10 shrink-0 rounded-full px-4',
+                  isActive
+                    ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
+                    : 'border border-transparent bg-secondary/70 hover:border-border'
                 )}
                 onClick={() => navigate(`/category/${category.slug}`)}
               >
@@ -158,10 +176,7 @@ export function CategoryButtonBar({
                 source: displayLabel,
                 defaultValue: 'Content source: {{source}}',
               })}
-              className={cn(
-                'shrink-0 rounded-full px-3 gap-1.5',
-                tone === 'quiet' && 'h-11 border-border/80 bg-card shadow-none'
-              )}
+              className="h-10 shrink-0 rounded-full px-3 gap-1.5 border-border/80 bg-card shadow-none"
             >
               {selectedRelay ? <Wifi className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
               <span className="max-w-32 truncate">{displayLabel}</span>

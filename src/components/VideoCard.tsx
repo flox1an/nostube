@@ -31,15 +31,17 @@ interface VideoCardProps {
   playlistParam?: string
   allVideos?: VideoEvent[] // Full list of videos for shorts navigation
   videoIndex?: number // Index of this video in the allVideos array
-  tightGridGap?: boolean // Minimal horizontal gap on mobile (shorts grids)
+  /**
+   * Card sits in a grid: below `sm` it renders edge-to-edge with square corners
+   * (horizontal: full width, vertical: ~1px gap, titles hidden). Rounded from `sm` up.
+   */
+  fullBleed?: boolean
   /**
    * Above-the-fold card: fetch the thumbnail eagerly at high priority.
    * Lazy images are only dispatched after layout, so on a busy main thread
    * the first visible row would otherwise wait for the render storm to end.
    */
   priority?: boolean
-  /** Scoped reference styling; defaults preserve existing browse surfaces. */
-  treatment?: 'default' | 'quiet-cinema'
 }
 
 export const VideoCard = React.memo(function VideoCard({
@@ -49,9 +51,8 @@ export const VideoCard = React.memo(function VideoCard({
   playlistParam,
   allVideos,
   videoIndex,
-  tightGridGap,
+  fullBleed = false,
   priority = false,
-  treatment = 'default',
 }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const metadata = useProfile({ pubkey: video.pubkey })
@@ -134,8 +135,6 @@ export const VideoCard = React.memo(function VideoCard({
       ? `/desktop/player/${video.link}${playlistParam ? `?playlist=${encodeURIComponent(playlistParam)}` : ''}`
       : undefined
 
-  const isQuietCinema = treatment === 'quiet-cinema'
-
   const handleThumbnailLoad = cascade.onLoad
 
   // Handle shorts click - populate store with video list
@@ -149,14 +148,10 @@ export const VideoCard = React.memo(function VideoCard({
   return (
     <div
       className={cn(
-        'group',
-        isQuietCinema
-          ? 'rounded-xl px-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2'
-          : 'hover:bg-accent transition-all duration-300 hover:shadow-md hover:scale-[1.02]',
-        !isQuietCinema &&
-          (tightGridGap
-            ? 'rounded-none sm:rounded-lg px-[0.5px] py-[0.5px] sm:px-2 sm:pt-2 sm:pb-4'
-            : 'rounded-lg px-2 pt-2 pb-4')
+        'group rounded-xl px-1 pb-6 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none sm:px-2',
+        fullBleed && 'rounded-none sm:rounded-xl',
+        fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
+        fullBleed && format === 'vertical' && 'p-[0.5px] sm:pt-0 sm:pb-6'
       )}
       style={{ contain: 'layout style paint' }}
     >
@@ -167,17 +162,15 @@ export const VideoCard = React.memo(function VideoCard({
           desktopCoordinator={desktopWindowCoordinator}
           desktopRoute={desktopPlayerRoute}
           className={cn(
-            isQuietCinema &&
-              'block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+            'block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            fullBleed && 'rounded-none sm:rounded-xl'
           )}
         >
           {/* Container with fixed aspect ratio ensures consistent size regardless of thumbnail state */}
           <div
             className={cn(
-              'w-full overflow-hidden relative bg-muted',
-              isQuietCinema
-                ? 'rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10'
-                : 'rounded-none sm:rounded-lg',
+              'w-full overflow-hidden relative bg-muted rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10',
+              fullBleed && 'rounded-none ring-0 shadow-none sm:rounded-xl sm:ring-1 sm:shadow-sm',
               aspectRatio
             )}
           >
@@ -220,7 +213,7 @@ export const VideoCard = React.memo(function VideoCard({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <Skeleton className="absolute inset-0 w-full h-full rounded-none sm:rounded-lg" />
+                    <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
                   ))}
                 <img
                   src={cascade.src ?? ''}
@@ -258,9 +251,8 @@ export const VideoCard = React.memo(function VideoCard({
         </DesktopVideoLink>
         <div
           className={cn(
-            'pt-3',
-            format === 'vertical' && !isQuietCinema && 'hidden sm:block',
-            isQuietCinema && 'px-1'
+            'pt-3 px-1',
+            fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-3 sm:px-1')
           )}
         >
           <div className="flex gap-3">
@@ -280,26 +272,18 @@ export const VideoCard = React.memo(function VideoCard({
                 onClick={handleShortsClick}
                 desktopCoordinator={desktopWindowCoordinator}
                 desktopRoute={desktopPlayerRoute}
-                className={cn(
-                  isQuietCinema &&
-                    'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-                )}
+                className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <h3
                   className={cn(
-                    'line-clamp-2 break-words',
-                    isQuietCinema
-                      ? cn(
-                          'font-semibold leading-5 tracking-[-0.01em]',
-                          format === 'vertical' ? 'text-sm' : 'text-[0.95rem]'
-                        )
-                      : 'font-medium'
+                    'line-clamp-2 break-words font-semibold leading-5 tracking-[-0.01em]',
+                    format === 'vertical' ? 'text-sm' : 'text-[0.95rem]'
                   )}
                 >
                   {video.title}
                 </h3>
               </DesktopVideoLink>
-              <div className={cn('flex items-center text-xs', isQuietCinema && 'mt-1')}>
+              <div className="mt-1 flex items-center text-xs">
                 {!hideAuthor && (
                   <>
                     <Link
@@ -340,42 +324,34 @@ export const VideoCard = React.memo(function VideoCard({
 
 interface VideoCardSkeletonProps {
   format: 'vertical' | 'horizontal' | 'square'
-  tightGridGap?: boolean
-  treatment?: 'default' | 'quiet-cinema'
+  fullBleed?: boolean
 }
 
 export const VideoCardSkeleton = React.memo(function VideoCardSkeleton({
   format,
-  tightGridGap,
-  treatment = 'default',
+  fullBleed = false,
 }: VideoCardSkeletonProps) {
-  const isQuietCinema = treatment === 'quiet-cinema'
   const aspectRatio =
     format == 'vertical' ? 'aspect-[2/3]' : format == 'square' ? 'aspect-[1/1]' : 'aspect-video'
   return (
     <div
       className={cn(
-        isQuietCinema
-          ? 'px-1 pb-6 sm:px-2'
-          : tightGridGap
-            ? 'px-[0.5px] py-[0.5px] sm:px-2 sm:py-2'
-            : 'px-2 py-2'
+        'px-1 pb-6 sm:px-2',
+        fullBleed && format !== 'vertical' && 'px-0 sm:px-2',
+        fullBleed && format === 'vertical' && 'p-[0.5px] sm:pt-0 sm:pb-6'
       )}
     >
       <Skeleton
         className={cn(
-          'w-full',
-          isQuietCinema
-            ? 'rounded-xl ring-1 ring-inset ring-black/10 dark:ring-white/10'
-            : 'rounded-none sm:rounded-lg',
+          'w-full rounded-xl ring-1 ring-inset ring-black/10 dark:ring-white/10',
+          fullBleed && 'rounded-none ring-0 sm:rounded-xl sm:ring-1',
           aspectRatio
         )}
       />
       <div
         className={cn(
-          'pt-3',
-          format === 'vertical' && !isQuietCinema && 'hidden sm:block',
-          isQuietCinema && 'px-1'
+          'pt-3 px-1',
+          fullBleed && (format === 'vertical' ? 'hidden sm:block' : 'px-3 sm:px-1')
         )}
       >
         <div className="flex gap-3">

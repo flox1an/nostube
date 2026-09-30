@@ -1201,7 +1201,6 @@ function AuthorPageContent() {
                         <VideoCard
                           video={video}
                           format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-                          treatment="quiet-cinema"
                         />
                       </div>
                     ))}
@@ -1223,7 +1222,7 @@ function AuthorPageContent() {
                   <div className="flex gap-2 min-w-max">
                     {videos.slice(0, 10).map(video => (
                       <div key={`latest-video-${video.id}`} className="w-80 shrink-0">
-                        <VideoCard video={video} format="horizontal" treatment="quiet-cinema" />
+                        <VideoCard video={video} format="horizontal" />
                       </div>
                     ))}
                   </div>
@@ -1241,7 +1240,7 @@ function AuthorPageContent() {
                   </Button>
                 </div>
                 <div className="w-full overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-0 sm:gap-2 min-w-max">
+                  <div className="flex gap-2 min-w-max">
                     {shorts.slice(0, 10).map((video, index) => (
                       <div key={`latest-short-${video.id}`} className="w-44 shrink-0">
                         <VideoCard
@@ -1249,8 +1248,6 @@ function AuthorPageContent() {
                           format="vertical"
                           allVideos={shorts}
                           videoIndex={index}
-                          tightGridGap
-                          treatment="quiet-cinema"
                         />
                       </div>
                     ))}
@@ -1307,7 +1304,7 @@ function AuthorPageContent() {
         )}
 
         {activeTab === 'videos' && (
-          <div className="mt-6">
+          <div className="mt-6 -mx-2 sm:mx-0">
             <VideoGrid
               videos={videos}
               isLoading={loading}
@@ -1316,7 +1313,7 @@ function AuthorPageContent() {
               emptyMessage={t('pages.author.noVideos')}
               error={phase === 'error'}
               onRetry={loadMore}
-              cardTreatment="quiet-cinema"
+              fullBleed
             />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
@@ -1332,7 +1329,7 @@ function AuthorPageContent() {
         )}
 
         {activeTab === 'shorts' && (
-          <div className="mt-6">
+          <div className="mt-6 -mx-2 sm:mx-0">
             <VideoGrid
               videos={shorts}
               isLoading={loading}
@@ -1341,7 +1338,7 @@ function AuthorPageContent() {
               emptyMessage={t('pages.author.noShorts')}
               error={phase === 'error'}
               onRetry={loadMore}
-              cardTreatment="quiet-cinema"
+              fullBleed
             />
             <InfiniteScrollTrigger
               triggerRef={loadMoreRef}
@@ -1357,13 +1354,13 @@ function AuthorPageContent() {
         )}
 
         {activeTab === 'liked' && (
-          <div className="mt-6">
+          <div className="mt-6 -mx-2 sm:mx-0">
             <VideoGrid
               videos={likedVideos}
               isLoading={loadingLikedVideos || isLoadingLiked}
               showSkeletons={true}
               layoutMode="auto"
-              cardTreatment="quiet-cinema"
+              fullBleed
             />
             {likedVideos.length === 0 && !loadingLikedVideos && !isLoadingLiked && (
               <div className="text-center py-12 text-muted-foreground">
@@ -1448,7 +1445,6 @@ function AuthorPageContent() {
                           <VideoCard
                             video={video}
                             format={video.type === 'shorts' ? 'vertical' : 'horizontal'}
-                            treatment="quiet-cinema"
                           />
                         </div>
                       ))}

@@ -705,6 +705,11 @@
       "nsfwWarning": "Avertissement - Afficher flouté avec avertissement",
       "nsfwShow": "Afficher - Toujours afficher le contenu NSFW",
       "nsfwFilterDescription": "Contrôlez comment le contenu NSFW (Not Safe For Work) est affiché dans l'application.",
+      "nsfwAgeGate": {
+        "title": "Confirmez votre âge",
+        "description": "Le contenu sensible peut inclure de la nudité, du contenu sexuel ou violent. En continuant, vous confirmez avoir au moins 18 ans et que la consultation de ce contenu est légale là où vous vous trouvez.",
+        "confirm": "J'ai 18 ans ou plus"
+      },
       "nsfwLockedInfo": "Le contenu NSFW est masqué car votre score de confiance NosTube est inférieur à 20% ou pas encore disponible. Augmentez votre score en interagissant avec la plateforme.",
       "language": "Langue",
       "selectLanguage": "Sélectionner la langue",
@@ -1346,6 +1351,12 @@
     "warning": {
       "title": "Contenu sensible",
       "play": "Lire la vidéo"
+    },
+    "hidden": {
+      "title": "Contenu non disponible",
+      "description": "Cette page est masquée par vos paramètres de contenu. Elle peut contenir du contenu sensible ou provenir d'un compte bloqué.",
+      "home": "Aller à l'accueil",
+      "settings": "Paramètres de contenu"
     }
   }
 }

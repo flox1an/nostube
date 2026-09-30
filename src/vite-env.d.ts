@@ -1,5 +1,12 @@
 /// <reference types="vite/client" />
 
+declare global {
+  interface ImportMetaEnv {
+    /** `off` disables nostube's NSFW safety for self-hosted builds; see src/lib/content-safety.ts */
+    readonly VITE_NSFW_SAFETY?: string
+  }
+}
+
 import 'react'
 
 declare module 'react' {

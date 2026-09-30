@@ -2,6 +2,7 @@ import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
+import { getEffectiveNsfwFilter } from '@/lib/content-safety'
 
 interface AppProviderProps {
   children: ReactNode
@@ -17,17 +18,15 @@ export function AppProvider(props: AppProviderProps) {
   const { children, storageKey, defaultConfig, presetRelays } = props
 
   // App configuration state with localStorage persistence
-  const [config, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
+  const [storedConfig, setConfig] = useLocalStorage<AppConfig>(storageKey, defaultConfig)
 
-  // MIGRATION: Ensure nsfwFilter has a default value (added in later version)
-  useEffect(() => {
-    if (config.nsfwFilter === undefined) {
-      setConfig(currentConfig => ({
-        ...currentConfig,
-        nsfwFilter: 'hide',
-      }))
-    }
-  }, [config.nsfwFilter, setConfig])
+  // Consumers only ever see the effective NSFW mode: an opt-in without the 18+
+  // confirmation (older configs, hand-edited storage) counts as 'hide'.
+  const nsfwFilter = getEffectiveNsfwFilter(storedConfig)
+  const config = useMemo(
+    () => (storedConfig.nsfwFilter === nsfwFilter ? storedConfig : { ...storedConfig, nsfwFilter }),
+    [storedConfig, nsfwFilter]
+  )
 
   // MIGRATION: Show YouTube content by default for existing saved configs.
   useEffect(() => {

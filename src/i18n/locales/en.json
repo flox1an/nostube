@@ -721,6 +721,11 @@
       "nsfwWarning": "Warning - Show blurred with warning",
       "nsfwShow": "Show - Always show NSFW content",
       "nsfwFilterDescription": "Control how NSFW (Not Safe For Work) content is displayed in the app.",
+      "nsfwAgeGate": {
+        "title": "Confirm your age",
+        "description": "Sensitive content can include nudity, sexual or violent material. By continuing you confirm that you are at least 18 years old and that viewing such content is legal where you are.",
+        "confirm": "I am 18 or older"
+      },
       "nsfwLockedInfo": "NSFW content is hidden because your NosTube trust score is below 20% or not yet available. Build your score by engaging with the platform.",
       "language": "Language",
       "selectLanguage": "Select language",
@@ -1364,6 +1369,12 @@
     "warning": {
       "title": "Sensitive content",
       "play": "Play video"
+    },
+    "hidden": {
+      "title": "Content not available",
+      "description": "This page is hidden by your content settings. It may contain sensitive content or come from a blocked account.",
+      "home": "Go to home page",
+      "settings": "Content settings"
     }
   }
 }

@@ -61,7 +61,7 @@ import { filterCompatibleVariants } from '@/lib/codec-compatibility'
 import { useTranslation } from 'react-i18next'
 import type { BlossomServerTag, NsfwFilter } from '@/contexts/AppContext'
 import { ContentSafetyGate, ContentSafetyRoute } from '@/components/ContentSafetyGate'
-import { getContentSafetyGate } from '@/lib/content-safety'
+import { getContentSafetyGate, getVideoPlayback } from '@/lib/content-safety'
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_URLS: string[] = []
@@ -700,7 +700,11 @@ function VideoPageContent() {
         style={portraitStyle}
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={initialPlayPos}
-        contentWarning={config.nsfwFilter === 'show' ? undefined : video.contentWarning}
+        contentWarning={
+          getVideoPlayback(video.contentWarning, config.nsfwFilter) === 'warn'
+            ? video.contentWarning
+            : undefined
+        }
         sha256={video.x}
         authorPubkey={video.pubkey}
         eventId={video.id}
@@ -744,6 +748,13 @@ function VideoPageContent() {
     navigateToNext,
     config.nsfwFilter,
   ])
+
+  // Direct links must not bypass the viewer's NSFW setting: the author-level gate
+  // above only knows preset NSFW authors, the processed video also carries
+  // explicit content-warning tags and NSFW platform attributes.
+  if (video && getVideoPlayback(video.contentWarning, config.nsfwFilter) === 'hidden') {
+    return <ContentSafetyGate state="hidden" />
+  }
 
   if (!isLoading && video?.mediaSourceStatus === 'unavailable') {
     return (

@@ -24,3 +24,40 @@ export function getContentSafetyGate(
 
   return 'visible'
 }
+
+/**
+ * Deployment switch, read at build time. Only the exact value `off` disables
+ * nostube's NSFW safety (age confirmation, embed gate) — for self-hosted
+ * builds whose operator takes responsibility. Anything else keeps it on.
+ */
+export const NSFW_SAFETY_ENABLED = import.meta.env.VITE_NSFW_SAFETY !== 'off'
+
+/**
+ * The viewer's effective NSFW mode from a stored (untrusted) app config.
+ * Opting in to `warning`/`show` only counts after the 18+ confirmation;
+ * missing, unknown or unconfirmed values mean `hide`.
+ */
+export function getEffectiveNsfwFilter(
+  stored: { nsfwFilter?: unknown; nsfwAgeConfirmed?: unknown } | null | undefined,
+  safetyEnabled = NSFW_SAFETY_ENABLED
+): NsfwFilter {
+  const filter = stored?.nsfwFilter
+  if (filter !== 'warning' && filter !== 'show') return 'hide'
+  if (safetyEnabled && stored?.nsfwAgeConfirmed !== true) return 'hide'
+  return filter
+}
+
+export type VideoPlayback = 'play' | 'warn' | 'hidden'
+
+/**
+ * Whether a single video may play. `contentWarning` comes from `processEvent`,
+ * which flags explicit `content-warning` tags, NSFW platform attributes and
+ * preset NSFW authors alike.
+ */
+export function getVideoPlayback(
+  contentWarning: string | undefined,
+  nsfwFilter: NsfwFilter | undefined
+): VideoPlayback {
+  if (!contentWarning || nsfwFilter === 'show') return 'play'
+  return nsfwFilter === 'warning' ? 'warn' : 'hidden'
+}

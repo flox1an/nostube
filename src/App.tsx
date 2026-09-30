@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
 import { Suspense, useEffect, useRef, useContext } from 'react'
 import { AppProvider } from '@/components/AppProvider'
-import { type AppConfig } from '@/contexts/AppContext'
+import { type AppConfig, APP_CONFIG_STORAGE_KEY } from '@/contexts/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
@@ -161,7 +161,7 @@ export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="nostr-tube-theme">
       <AppProvider
-        storageKey="nostr:app-config"
+        storageKey={APP_CONFIG_STORAGE_KEY}
         defaultConfig={defaultConfig}
         presetRelays={presetRelays}
       >

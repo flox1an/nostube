@@ -11,7 +11,11 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { of } from 'rxjs'
 import { switchMap, catchError, map } from 'rxjs/operators'
 import { useEffect, useMemo, useRef, useCallback, startTransition, useState } from 'react'
-import { processEvent, processEvents } from '@/utils/video-event'
+import { useTranslation } from 'react-i18next'
+import { Play } from 'lucide-react'
+import { processEvent, processEvents, type VideoEvent } from '@/utils/video-event'
+import { getVideoPlayback } from '@/lib/content-safety'
+import { ContentSafetyGate } from '@/components/ContentSafetyGate'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,6 +60,7 @@ const WHEEL_NAVIGATION_COOLDOWN_MS = 420
 
 export function ShortsVideoPage() {
   const { config } = useAppContext()
+  const { t } = useTranslation()
   const { presetContent } = useSelectedPreset()
   const { nevent } = useParams<{ nevent: string }>()
   const navigate = useNavigate()
@@ -93,6 +98,8 @@ export function ShortsVideoPage() {
   const [isBuffering, setIsBuffering] = useState(false)
   const [showBufferingSpinner, setShowBufferingSpinner] = useState(false)
   const [isMuted, setIsMuted] = useState(true)
+  // A warning-mode short only plays after the viewer revealed it (see getVideoPlayback).
+  const [revealedVideoId, setRevealedVideoId] = useState<string | null>(null)
 
   // Use centralized read relays hook
   const readRelays = useReadRelays()
@@ -231,7 +238,11 @@ export function ShortsVideoPage() {
             reportedEventIds: config.reportedEventIds,
             includeYouTube: config.showYouTubeContent ?? true,
             includeAudio: config.showAudioContent ?? true,
-          }).filter(v => v.type === 'shorts')
+          }).filter(
+            v =>
+              v.type === 'shorts' &&
+              getVideoPlayback(v.contentWarning, config.nsfwFilter) !== 'hidden'
+          )
         })
       )
       .subscribe(videos => {
@@ -315,6 +326,15 @@ export function ShortsVideoPage() {
   }, [nevent])
 
   const currentVideo = allVideos[currentVideoIndex]
+  const isPlaybackBlocked = (video: VideoEvent | null | undefined) => {
+    if (!video) return false
+    const playback = getVideoPlayback(video.contentWarning, config.nsfwFilter)
+    return playback === 'hidden' || (playback === 'warn' && revealedVideoId !== video.id)
+  }
+  const currentPlayback = currentVideo
+    ? getVideoPlayback(currentVideo.contentWarning, config.nsfwFilter)
+    : 'play'
+  const currentBlocked = isPlaybackBlocked(currentVideo)
   const isLoadingInitialEvent = !initialVideo && initialVideoEvent === undefined
 
   // Memoize proxyConfig to prevent infinite loops
@@ -347,9 +367,21 @@ export function ShortsVideoPage() {
   const nextVideo = allVideos[currentVideoIndex + 1] ?? null
   const nextNextVideo = allVideos[currentVideoIndex + 2] ?? null
   const previousVideo = allVideos[currentVideoIndex - 1] ?? null
-  useVideoPrefetch({ video: nextVideo, enabled: !!nextVideo, priority: 1 })
-  useVideoPrefetch({ video: nextNextVideo, enabled: !!nextNextVideo, priority: 2 })
-  useVideoPrefetch({ video: previousVideo, enabled: !!previousVideo, priority: 3 })
+  useVideoPrefetch({
+    video: nextVideo,
+    enabled: !!nextVideo && !isPlaybackBlocked(nextVideo),
+    priority: 1,
+  })
+  useVideoPrefetch({
+    video: nextNextVideo,
+    enabled: !!nextNextVideo && !isPlaybackBlocked(nextNextVideo),
+    priority: 2,
+  })
+  useVideoPrefetch({
+    video: previousVideo,
+    enabled: !!previousVideo && !isPlaybackBlocked(previousVideo),
+    priority: 3,
+  })
 
   useVideoViewTracking({
     video: currentVideo,
@@ -427,7 +459,20 @@ export function ShortsVideoPage() {
 
   useEffect(() => {
     const videoElement = singletonVideoRef.current
-    if (!videoElement || !currentVideo || !videoUrl) return
+    if (!videoElement || !currentVideo) return
+
+    // Flagged short not (yet) allowed: keep the singleton empty so nothing loads or plays.
+    if (currentBlocked) {
+      videoElement.pause()
+      videoElement.removeAttribute('src')
+      videoElement.dataset.videoId = ''
+      videoElement.dataset.sourceUrl = ''
+      videoElement.load()
+      setIsVideoReady(false)
+      setIsBuffering(false)
+      return
+    }
+    if (!videoUrl) return
 
     const playCurrentSource = () => {
       if (userPausedRef.current) return
@@ -504,7 +549,7 @@ export function ShortsVideoPage() {
     return () => {
       window.cancelAnimationFrame(rafId)
     }
-  }, [currentVideo, videoUrl])
+  }, [currentVideo, videoUrl, currentBlocked])
 
   const handleVideoError = useCallback(() => {
     if (hasMoreVideoUrls) {
@@ -818,6 +863,14 @@ export function ShortsVideoPage() {
   const videoTransition =
     deckPhase === 'settling' ? `transform ${SETTLE_TRANSITION_MS}ms ${SETTLE_EASING}` : 'none'
 
+  // Direct link to a short that the viewer's NSFW setting hides.
+  if (
+    initialVideo &&
+    getVideoPlayback(initialVideo.contentWarning, config.nsfwFilter) === 'hidden'
+  ) {
+    return <ContentSafetyGate state="hidden" />
+  }
+
   // Show loading state while fetching initial event OR while loading videos from relays
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
     return (
@@ -872,7 +925,11 @@ export function ShortsVideoPage() {
               }}
               onTransitionEnd={isCurrentSlide ? finishSettling : undefined}
             >
-              <ShortVideoItem video={video} isActive={isCurrentSlide} />
+              <ShortVideoItem
+                video={video}
+                isActive={isCurrentSlide}
+                blocked={isPlaybackBlocked(video)}
+              />
             </div>
           )
         })}
@@ -896,7 +953,7 @@ export function ShortsVideoPage() {
                   className={`w-full h-full cursor-pointer ${useOverscan ? 'object-cover' : 'object-contain'} ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                   loop
                   playsInline
-                  poster={videoPoster}
+                  poster={currentBlocked ? undefined : videoPoster}
                   preload="auto"
                   style={{ transition: isVideoReady ? 'opacity 100ms ease-out' : 'none' }}
                   onError={handleVideoError}
@@ -916,12 +973,45 @@ export function ShortsVideoPage() {
           </div>
         )}
 
+        {currentVideo && currentBlocked && (
+          <div
+            className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 px-6 text-center text-white"
+            style={{
+              transform: `translate3d(0, ${deckOffsetY}px, 0)`,
+              transition: videoTransition,
+            }}
+          >
+            <div className="flex flex-col items-center gap-3">
+              <div className="text-2xl font-bold drop-shadow-lg">
+                {currentPlayback === 'warn'
+                  ? t('contentSafety.warning.title')
+                  : t('contentSafety.hidden.title')}
+              </div>
+              {currentPlayback === 'warn' && (
+                <>
+                  <div className="text-base font-semibold drop-shadow-lg">
+                    {currentVideo.contentWarning}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRevealedVideoId(currentVideo.id)}
+                    className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur"
+                  >
+                    <Play className="h-4 w-4" aria-hidden="true" />
+                    {t('contentSafety.warning.play')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Interactive overlay (action icons + bottom info) for the current video.
             Rendered at z-20 — above the singleton <video> (z-10) and the slide
             thumbnail backgrounds (z-auto) — so buttons are always tappable.
             pointer-events-none on the root lets taps on transparent areas fall
             through to the <video> element for play/pause toggling. */}
-        {currentVideo && (
+        {currentVideo && currentPlayback !== 'hidden' && (
           <div
             className="absolute inset-0 z-20"
             style={{

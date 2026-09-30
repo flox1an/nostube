@@ -705,6 +705,11 @@
       "nsfwWarning": "警告 — 显示模糊并带警告",
       "nsfwShow": "显示 — 始终显示 NSFW 内容",
       "nsfwFilterDescription": "控制应用程序中 NSFW（不宜在工作场所查看）内容的显示方式。",
+      "nsfwAgeGate": {
+        "title": "确认您的年龄",
+        "description": "敏感内容可能包含裸露、色情或暴力内容。继续即表示您确认已年满 18 岁，并且在您所在地区观看此类内容是合法的。",
+        "confirm": "我已年满 18 岁"
+      },
       "nsfwLockedInfo": "NSFW 内容已被隐藏，因为您的 NosTube 信任分数低于 20% 或尚未可用。通过使用平台来建立您的分数。",
       "language": "语言",
       "selectLanguage": "选择语言",
@@ -1346,6 +1351,12 @@
     "warning": {
       "title": "敏感内容",
       "play": "播放视频"
+    },
+    "hidden": {
+      "title": "内容不可用",
+      "description": "此页面已根据您的内容设置隐藏。它可能包含敏感内容或来自被屏蔽的账户。",
+      "home": "前往首页",
+      "settings": "内容设置"
     }
   }
 }

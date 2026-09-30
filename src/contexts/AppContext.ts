@@ -9,6 +9,9 @@ export type RelayTag = 'read' | 'write'
 export type NsfwFilter = 'hide' | 'warning' | 'show'
 export type PreferredQuality = 'highest' | '720p'
 
+/** localStorage key of the persisted AppConfig (also read by the embed player). */
+export const APP_CONFIG_STORAGE_KEY = 'nostr:app-config'
+
 export interface Relay {
   url: string
   name: string
@@ -58,8 +61,10 @@ export interface AppConfig {
   blossomServers?: BlossomServer[]
   /** Media caching servers for proxying/caching video content */
   cachingServers?: CachingServer[]
-  /** NSFW content filter setting */
+  /** NSFW content filter setting. Read the effective value from context; see getEffectiveNsfwFilter. */
   nsfwFilter: NsfwFilter
+  /** Set once the viewer confirmed being 18+ when opting in to NSFW content. */
+  nsfwAgeConfirmed?: boolean
   /** Show videos whose playable media URL points to YouTube */
   showYouTubeContent?: boolean
   /** Show audio-only content such as podcast episodes */

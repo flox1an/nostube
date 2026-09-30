@@ -1,4 +1,4 @@
-import type { NostrEvent } from 'nostr-tools'
+import { matchFilter, verifyEvent, type Filter, type NostrEvent } from 'nostr-tools'
 import { EventCache } from './event-cache'
 import type { DecodedIdentifier } from './nostr-decoder'
 
@@ -361,6 +361,65 @@ export class NostrClient {
           resolve([])
         }
       }, 1000)
+    })
+  }
+
+  /**
+   * Newest signature-valid event matching `filter`, or null once every relay
+   * answered (EOSE/CLOSED/failed) or `timeoutMs` elapsed. Events a relay sends
+   * that don't match the filter or carry a bad signature are ignored, so a
+   * hostile relay cannot substitute someone else's event.
+   */
+  async fetchLatest(filter: Filter, timeoutMs: number): Promise<NostrEvent | null> {
+    const subId = `latest-${Date.now()}`
+
+    return new Promise(resolve => {
+      let latest: NostrEvent | null = null
+      let pendingRelays = this.relays.length
+      let done = false
+
+      const finish = () => {
+        if (done) return
+        done = true
+        clearTimeout(timeout)
+        this.closeSubscription(subId)
+        resolve(latest)
+      }
+      const relayAnswered = () => {
+        pendingRelays--
+        if (pendingRelays <= 0) finish()
+      }
+      const timeout = setTimeout(finish, timeoutMs)
+      if (pendingRelays === 0) finish()
+
+      this.relays.forEach(url => {
+        this.connectRelay(url)
+          .then(ws => {
+            if (done) return
+            const handleMessage = (message: MessageEvent) => {
+              if (done) return
+              try {
+                const [type, id, payload] = JSON.parse(message.data)
+                if (id !== subId) return
+                if (type === 'EVENT') {
+                  const event = payload as NostrEvent
+                  if (latest && event.created_at <= latest.created_at) return
+                  if (matchFilter(filter, event) && verifyEvent(event)) latest = event
+                } else if (type === 'EOSE' || type === 'CLOSED') {
+                  ws.removeEventListener('message', handleMessage)
+                  relayAnswered()
+                }
+              } catch {
+                // Ignore malformed relay messages
+              }
+            }
+            ws.addEventListener('message', handleMessage)
+            if (!this.subscriptions.has(subId)) this.subscriptions.set(subId, [])
+            this.subscriptions.get(subId)!.push({ ws, handler: handleMessage })
+            ws.send(JSON.stringify(['REQ', subId, filter]))
+          })
+          .catch(relayAnswered)
+      })
     })
   }
 

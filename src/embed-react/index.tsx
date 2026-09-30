@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { EmbedApp } from './EmbedApp'
+import { EmbedApp, type EmbedPlayback } from './EmbedApp'
 import { EmbedAppProvider } from './EmbedAppProvider'
 import { parseURLParams, validateParams } from './lib/url-params'
 import { decodeVideoIdentifier, buildRelayList } from './lib/nostr-decoder'
@@ -9,14 +9,71 @@ import { ProfileFetcher } from './lib/profile-fetcher'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@/contexts/AppContext'
+import { getEffectiveNsfwFilter, getVideoPlayback, NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
+import { parsePresetEvent } from '@/hooks/usePresets'
+import { getCachedPreset, LOAD_TIMEOUT } from '@/lib/preset-storage'
+import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import {
+  DEFAULT_PRESET_PUBKEY,
+  PRESET_D_TAG,
+  PRESET_EVENT_KIND,
+  type NostubePreset,
+} from '@/types/preset'
 import './embed.css'
 
 interface EmbedState {
   video: VideoEvent | null
+  /** Missing means not decided yet; rendered as 'hidden' (fail closed). */
+  playback?: EmbedPlayback
   profile: Profile | null
   error: string | null
   isLoading: boolean
   authorBlossomServers: string[]
+}
+
+/**
+ * The viewer's own nostube settings. Only readable when the embed runs on the
+ * nostube origin itself: browsers partition storage for cross-site iframes, so
+ * there this is empty and the effective mode is 'hide'. URL params never
+ * loosen this.
+ */
+function readViewerSettings(): { nsfwFilter: NsfwFilter; presetPubkey: string } {
+  let stored: {
+    nsfwFilter?: unknown
+    nsfwAgeConfirmed?: unknown
+    selectedPresetPubkey?: unknown
+  } | null = null
+  try {
+    stored = JSON.parse(localStorage.getItem(APP_CONFIG_STORAGE_KEY) ?? 'null')
+  } catch {
+    // Storage blocked or corrupt: treat as a viewer without settings
+  }
+  const selected = stored?.selectedPresetPubkey
+  return {
+    nsfwFilter: getEffectiveNsfwFilter(stored),
+    presetPubkey:
+      typeof selected === 'string' && /^[0-9a-f]{64}$/.test(selected)
+        ? selected
+        : DEFAULT_PRESET_PUBKEY,
+  }
+}
+
+/** Moderation preset (NSFW + blocked lists); null when it can't be loaded. */
+async function loadPreset(pubkey: string): Promise<NostubePreset | null> {
+  const cached = getCachedPreset(pubkey)
+  if (cached && !cached.stale) return cached.preset
+
+  const client = new NostrClient([...new Set([...presetRelays.map(r => r.url), METADATA_RELAY])])
+  try {
+    const event = await client.fetchLatest(
+      { kinds: [PRESET_EVENT_KIND], authors: [pubkey], '#d': [PRESET_D_TAG] },
+      LOAD_TIMEOUT
+    )
+    return (event && parsePresetEvent(event)) || cached?.preset || null
+  } finally {
+    client.closeAll()
+  }
 }
 
 async function initEmbed(): Promise<void> {
@@ -70,17 +127,52 @@ async function initEmbed(): Promise<void> {
     const hintRelays = identifier.type === 'event' ? identifier.data.relays : identifier.data.relays
     const relays = buildRelayList(hintRelays, params.customRelays)
 
+    // The moderation preset loads in parallel with the video event.
+    const viewer = readViewerSettings()
+    const presetPromise = loadPreset(viewer.presetPubkey)
+
     // Create Nostr client
     const client = new NostrClient(relays)
 
     // Fetch video event
-    const event = await client.fetchEvent(identifier)
-    const video = processEvent(event, relays)
+    const [event, preset] = await Promise.all([client.fetchEvent(identifier), presetPromise])
+    if (preset?.blockedPubkeys.includes(event.pubkey) || preset?.blockedEvents.includes(event.id)) {
+      client.closeAll()
+      renderApp(reactRoot, params, {
+        video: null,
+        profile: null,
+        error: 'This video is not available',
+        isLoading: false,
+        authorBlossomServers: [],
+      })
+      return
+    }
+    const video = processEvent(event, relays, undefined, preset?.nsfwPubkeys)
     if (!video) {
       renderApp(reactRoot, params, {
         video: null,
         profile: null,
         error: 'Failed to parse video event',
+        isLoading: false,
+        authorBlossomServers: [],
+      })
+      return
+    }
+
+    // Fail closed: without the preset, NSFW authors can't be recognised, so
+    // nothing plays. Self-hosted builds with VITE_NSFW_SAFETY=off skip the gate.
+    const playback: EmbedPlayback = !NSFW_SAFETY_ENABLED
+      ? 'play'
+      : !preset
+        ? 'unverified'
+        : getVideoPlayback(video.contentWarning, viewer.nsfwFilter)
+    if (playback === 'hidden' || playback === 'unverified') {
+      client.closeAll()
+      renderApp(reactRoot, params, {
+        video,
+        playback,
+        profile: null,
+        error: null,
         isLoading: false,
         authorBlossomServers: [],
       })
@@ -95,6 +187,7 @@ async function initEmbed(): Promise<void> {
     // Now render with video data and blossom servers
     renderApp(reactRoot, params, {
       video,
+      playback,
       profile: null,
       error: null,
       isLoading: false,
@@ -106,6 +199,7 @@ async function initEmbed(): Promise<void> {
     const profile = await profileFetcher.fetchProfile(video.pubkey, relays)
     renderApp(reactRoot, params, {
       video,
+      playback,
       profile,
       error: null,
       isLoading: false,
@@ -138,6 +232,7 @@ function renderApp(
           <EmbedApp
             params={params}
             video={state.video}
+            playback={state.playback ?? 'hidden'}
             profile={state.profile}
             error={state.error}
             isLoading={state.isLoading}

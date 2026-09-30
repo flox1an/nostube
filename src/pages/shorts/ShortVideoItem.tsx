@@ -18,6 +18,8 @@ import { useEventModel } from 'applesauce-react/hooks'
 export interface ShortVideoItemProps {
   video: VideoEvent
   isActive: boolean
+  /** Flagged and not allowed to play: no thumbnail, warning panel on inactive slides. */
+  blocked?: boolean
   registerIntersectionRef?: (element: HTMLDivElement | null) => void
 }
 
@@ -40,7 +42,12 @@ function maxWidthForAspectRatio(aspectRatio: number | null): string {
 
 // Memoized component to prevent re-renders when props haven't changed.
 export const ShortVideoItem = memo(
-  function ShortVideoItem({ video, isActive, registerIntersectionRef }: ShortVideoItemProps) {
+  function ShortVideoItem({
+    video,
+    isActive,
+    blocked = false,
+    registerIntersectionRef,
+  }: ShortVideoItemProps) {
     const { config } = useAppContext()
 
     // Resolve thumbnail URL — owner's Blossom servers first, then user's config servers.
@@ -94,7 +101,7 @@ export const ShortVideoItem = memo(
         <div className="relative w-full h-full flex flex-col md:flex-row items-center justify-center">
           <div className="relative w-full md:flex-1 h-full flex items-center justify-center bg-black">
             <div className="relative w-full h-full" style={useOverscan ? undefined : { maxWidth }}>
-              {video.contentWarning && !isActive && (
+              {blocked && !isActive && (
                 <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/80 rounded-lg">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-white drop-shadow-lg">
@@ -107,7 +114,7 @@ export const ShortVideoItem = memo(
                 </div>
               )}
               <div className="relative w-full h-full">
-                {thumbnailCascade.src && (
+                {thumbnailCascade.src && !blocked && (
                   <div className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center">
                     <img
                       src={thumbnailCascade.src}
@@ -128,5 +135,7 @@ export const ShortVideoItem = memo(
     )
   },
   (prevProps, nextProps) =>
-    prevProps.video.id === nextProps.video.id && prevProps.isActive === nextProps.isActive
+    prevProps.video.id === nextProps.video.id &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.blocked === nextProps.blocked
 )

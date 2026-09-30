@@ -1,5 +1,7 @@
 import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Play } from 'lucide-react'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@/utils/video-event'
@@ -1055,6 +1057,20 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   // Generate blurhash placeholder for poster LQIP (Low Quality Image Placeholder)
   const blurhashPlaceholder = useMemo(() => blurHashToDataURL(posterHash), [posterHash])
 
+  // Content warning: blur the poster until the user starts this video. Keyed by
+  // eventId because playlist mode reuses one player across videos.
+  const { t } = useTranslation()
+  const [revealedEventId, setRevealedEventId] = useState<string>()
+  const showContentWarning = !!contentWarning && revealedEventId !== (eventId ?? '')
+  useEffect(() => {
+    // Playback started another way (keyboard, media keys): drop the overlay.
+    if (playerState.isPlaying) setRevealedEventId(eventId ?? '')
+  }, [playerState.isPlaying, eventId])
+  const handleRevealAndPlay = useCallback(() => {
+    setRevealedEventId(eventId ?? '')
+    handlePlay()
+  }, [eventId, handlePlay])
+
   // Track poster loading state
   const [posterLoaded, setPosterLoaded] = useState(false)
 
@@ -1245,6 +1261,31 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         loopEnabled={loopEnabled}
         onToggleLoop={toggleLoop}
       />
+
+      {showContentWarning && (
+        <button
+          type="button"
+          onClick={handleRevealAndPlay}
+          className="absolute inset-0 z-20 flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden border-0 bg-black p-4 text-center text-white"
+        >
+          {(posterUrl || blurhashPlaceholder) && (
+            <img
+              src={posterUrl || blurhashPlaceholder}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
+            />
+          )}
+          <span className="relative text-2xl font-bold drop-shadow-lg">
+            {t('contentSafety.warning.title')}
+          </span>
+          <span className="relative text-base font-semibold drop-shadow-lg">{contentWarning}</span>
+          <span className="relative mt-2 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur">
+            <Play className="h-4 w-4" aria-hidden="true" />
+            {t('contentSafety.warning.play')}
+          </span>
+        </button>
+      )}
     </div>
   )
 })

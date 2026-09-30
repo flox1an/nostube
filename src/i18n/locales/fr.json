@@ -1345,8 +1345,7 @@
     "loading": "Chargement…",
     "warning": {
       "title": "Contenu sensible",
-      "description": "Ce profil peut contenir du contenu pour adultes ou sensible.",
-      "goHome": "Accueil"
+      "play": "Lire la vidéo"
     }
   }
 }

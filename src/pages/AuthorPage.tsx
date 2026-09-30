@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@/lib/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
@@ -1481,7 +1481,6 @@ function AuthorPageContent() {
 
 export function AuthorPage() {
   const { nprofile } = useParams<{ nprofile: string }>()
-  const navigate = useNavigate()
   const { config } = useAppContext()
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useBlockedPubkeys()
@@ -1492,7 +1491,7 @@ export function AuthorPage() {
   })
 
   return (
-    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={() => navigate('/', { replace: true })}>
+    <ContentSafetyRoute safetyGate={safetyGate}>
       <AuthorPageContent />
     </ContentSafetyRoute>
   )

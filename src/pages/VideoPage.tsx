@@ -700,7 +700,7 @@ function VideoPageContent() {
         style={portraitStyle}
         onTimeUpdate={setCurrentPlayPos}
         initialPlayPos={initialPlayPos}
-        contentWarning={video.contentWarning}
+        contentWarning={config.nsfwFilter === 'show' ? undefined : video.contentWarning}
         sha256={video.x}
         authorPubkey={video.pubkey}
         eventId={video.id}
@@ -742,6 +742,7 @@ function VideoPageContent() {
     failedVideoId,
     t,
     navigateToNext,
+    config.nsfwFilter,
   ])
 
   if (!isLoading && video?.mediaSourceStatus === 'unavailable') {
@@ -888,13 +889,11 @@ function UnresolvedVideoSafetyGate({
   nsfwFilter,
   nsfwPubkeys,
   blockedPubkeys,
-  onGoHome,
 }: {
   videoIdentifier: VideoEventIdentifier
   nsfwFilter: NsfwFilter | undefined
   nsfwPubkeys: string[]
   blockedPubkeys?: Record<string, unknown>
-  onGoHome: () => void
 }) {
   const { pool } = useAppContext()
   const eventStore = useEventStore()
@@ -975,7 +974,7 @@ function UnresolvedVideoSafetyGate({
   if (!hasResolved) return <ContentSafetyGate state="loading" />
 
   return (
-    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={onGoHome}>
+    <ContentSafetyRoute safetyGate={safetyGate}>
       <VideoPageContent />
     </ContentSafetyRoute>
   )
@@ -986,7 +985,6 @@ export function VideoPage() {
   const { presetContent } = useSelectedPreset()
   const blockedPubkeys = useBlockedPubkeys()
   const { nevent } = useParams<{ nevent: string }>()
-  const navigate = useNavigate()
   const videoIdentifier = useMemo(() => decodeVideoEventIdentifier(nevent ?? ''), [nevent])
 
   if (!videoIdentifier) return <VideoPageContent />
@@ -999,7 +997,6 @@ export function VideoPage() {
         nsfwFilter={config.nsfwFilter}
         nsfwPubkeys={presetContent.nsfwPubkeys}
         blockedPubkeys={blockedPubkeys}
-        onGoHome={() => navigate('/', { replace: true })}
       />
     )
   }
@@ -1009,7 +1006,7 @@ export function VideoPage() {
     blockedPubkeys,
   })
   return (
-    <ContentSafetyRoute safetyGate={safetyGate} onGoHome={() => navigate('/', { replace: true })}>
+    <ContentSafetyRoute safetyGate={safetyGate}>
       <VideoPageContent />
     </ContentSafetyRoute>
   )

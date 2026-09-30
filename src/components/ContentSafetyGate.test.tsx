@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ContentSafetyRoute } from './ContentSafetyGate'
 
@@ -9,7 +9,7 @@ describe('ContentSafetyRoute', () => {
     const ProtectedRoute = vi.fn(() => <div>Protected route</div>)
 
     render(
-      <ContentSafetyRoute safetyGate="hidden" onGoHome={vi.fn()}>
+      <ContentSafetyRoute safetyGate="hidden">
         <ProtectedRoute />
       </ContentSafetyRoute>
     )
@@ -17,26 +17,12 @@ describe('ContentSafetyRoute', () => {
     expect(ProtectedRoute).not.toHaveBeenCalled()
     expect(screen.queryByText('Protected route')).not.toBeInTheDocument()
   })
-  it('does not mount a protected route behind the warning and exits home', () => {
-    const onGoHome = vi.fn()
-    const ProtectedRoute = vi.fn(() => <div>Protected route</div>)
-
-    render(
-      <ContentSafetyRoute safetyGate="warning" onGoHome={onGoHome}>
-        <ProtectedRoute />
-      </ContentSafetyRoute>
-    )
-
-    expect(ProtectedRoute).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button'))
-    expect(onGoHome).toHaveBeenCalledOnce()
-  })
 
   it('mounts the protected route when visible', () => {
     const ProtectedRoute = vi.fn(() => <div>Protected route</div>)
 
     render(
-      <ContentSafetyRoute safetyGate="visible" onGoHome={vi.fn()}>
+      <ContentSafetyRoute safetyGate="visible">
         <ProtectedRoute />
       </ContentSafetyRoute>
     )

@@ -35,7 +35,7 @@ function HorizontalVideoGridSkeleton({ count = 24 }: { count?: number }) {
   return (
     <div className={HORIZONTAL_GRID}>
       {Array.from({ length: count }).map((_, i) => (
-        <VideoCardSkeleton key={i} format="horizontal" />
+        <VideoCardSkeleton key={i} format="horizontal" fullBleed />
       ))}
     </div>
   )
@@ -49,7 +49,7 @@ export function ShortsFeedPageLoader() {
       <div className="sm:p-2">
         <div className={VERTICAL_GRID}>
           {Array.from({ length: 24 }).map((_, i) => (
-            <VideoCardSkeleton key={i} format="vertical" tightGridGap />
+            <VideoCardSkeleton key={i} format="vertical" fullBleed />
           ))}
         </div>
       </div>
@@ -198,7 +198,7 @@ export function GlobalPlaylistsPageLoader() {
 /** `/playlist/:nip19` — title + sort/edit controls + 3-col grid. */
 export function SinglePlaylistPageLoader() {
   return (
-    <div className="max-w-560 mx-auto p-8 flex flex-col gap-8">
+    <div className="max-w-560 mx-auto px-4 py-6 sm:p-8 flex flex-col gap-8">
       <div className="flex items-start gap-4">
         <div className="flex-1 space-y-2">
           <Skeleton className="h-8 w-64" />

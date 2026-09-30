@@ -23,7 +23,7 @@ import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { passesTrustFilter } from '@/hooks/useTrustFilter'
-import { combineRelays } from '@/lib/utils'
+import { cn, combineRelays } from '@/lib/utils'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { type TimelessFilter } from 'applesauce-loaders'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
@@ -48,10 +48,12 @@ function formatDuration(seconds: number): string {
 
 const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
   video,
+  blurred,
 }: {
   video: VideoEvent
+  blurred: boolean
 }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
@@ -105,7 +107,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
                 src={heldThumbnail}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover absolute inset-0"
+                className={cn('w-full h-full object-cover absolute inset-0', blurred && 'blur-lg')}
               />
             ) : blurhashPlaceholder ? (
               <img
@@ -123,10 +125,15 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
+              className={cn('w-full h-full object-cover', blurred && 'blur-lg')}
               onError={cascade.onError}
               onLoad={handleThumbnailLoad}
             />
+          )}
+          {blurred && (
+            <div className="absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-semibold text-white drop-shadow-lg">
+              {t('contentSafety.warning.title')}
+            </div>
           )}
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
@@ -162,10 +169,12 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
 
 const RecommendationVideoSuggestionItem = React.memo(function RecommendationVideoSuggestionItem({
   video,
+  blurred,
 }: {
   video: RecommendationVideo
+  blurred: boolean
 }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const dateLocale = getDateLocale(i18n.language)
   const metadata = useProfile({ pubkey: video.pubkey })
   const name = metadata?.name || video.pubkey.slice(0, 8)
@@ -217,7 +226,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
                 src={heldThumbnail}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover absolute inset-0"
+                className={cn('w-full h-full object-cover absolute inset-0', blurred && 'blur-lg')}
               />
             ) : blurhashPlaceholder ? (
               <img
@@ -235,10 +244,15 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
               loading="lazy"
               alt={video.title}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
+              className={cn('w-full h-full object-cover', blurred && 'blur-lg')}
               onError={cascade.onError}
               onLoad={handleThumbnailLoad}
             />
+          )}
+          {blurred && (
+            <div className="absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-semibold text-white drop-shadow-lg">
+              {t('contentSafety.warning.title')}
+            </div>
           )}
           <PlayProgressBar videoId={video.id} duration={video.duration} />
           {video.duration > 0 && (
@@ -582,6 +596,10 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
     authorPubkey
   )
   const authorLabel = authorDisplayName || authorPubkey?.slice(0, 8) || ''
+  // 'warning' mode: blur flagged videos (explicit tag, server annotation, or preset NSFW author).
+  const isBlurred = (v: { pubkey: string; contentWarning?: string | null }) =>
+    config.nsfwFilter === 'warning' &&
+    (!!v.contentWarning || isNSFWAuthor(v.pubkey, presetContent.nsfwPubkeys))
 
   return (
     /* <ScrollArea className="h-[calc(100vh-4rem)]"> */
@@ -602,7 +620,11 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
               </SuggestionsHeading>
             )}
             {sameCreatorService.map(video => (
-              <RecommendationVideoSuggestionItem key={video.id} video={video} />
+              <RecommendationVideoSuggestionItem
+                key={video.id}
+                video={video}
+                blurred={isBlurred(video)}
+              />
             ))}
             {generalService.length > 0 && (
               <SuggestionsHeading>
@@ -610,7 +632,11 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
               </SuggestionsHeading>
             )}
             {generalService.map(video => (
-              <RecommendationVideoSuggestionItem key={video.id} video={video} />
+              <RecommendationVideoSuggestionItem
+                key={video.id}
+                video={video}
+                blurred={isBlurred(video)}
+              />
             ))}
           </>
         ) : (
@@ -638,7 +664,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
             </SuggestionsHeading>
           )}
           {sameCreatorRelay.map(video => (
-            <VideoSuggestionItem key={video.id} video={video} />
+            <VideoSuggestionItem key={video.id} video={video} blurred={isBlurred(video)} />
           ))}
           {generalRelay.length > 0 && (
             <SuggestionsHeading>
@@ -646,7 +672,7 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
             </SuggestionsHeading>
           )}
           {generalRelay.map(video => (
-            <VideoSuggestionItem key={video.id} video={video} />
+            <VideoSuggestionItem key={video.id} video={video} blurred={isBlurred(video)} />
           ))}
         </>
       ) : (

@@ -22,10 +22,14 @@ app.get('/runtime-env.js', c =>
   })
 )
 
-// Preserve Vercel's static response contract.
+// Preserve Vercel's static response contract. Only real files are immutable: a
+// 404 during a deploy must not be cached for a year under a chunk's URL.
 app.use('/assets/*', async (c, next) => {
   await next()
-  c.header('Cache-Control', 'public, max-age=31536000, immutable')
+  c.header(
+    'Cache-Control',
+    c.res.status === 200 ? 'public, max-age=31536000, immutable' : 'no-store'
+  )
 })
 app.use('/manifest.webmanifest', async (c, next) => {
   await next()

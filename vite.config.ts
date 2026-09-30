@@ -66,7 +66,9 @@ export default defineConfig({
       // Disable native modules for Vercel deployment
       external: ['@rollup/rollup-linux-x64-gnu'],
       output: {
-        chunkFileNames: 'assets/[name]-[hash].js',
+        // 10-char hashes (default 8) renamed every chunk once: the old server cached
+        // HTML fallbacks under chunk URLs as immutable, so those URLs stay poisoned.
+        chunkFileNames: 'assets/[name]-[hash:10].js',
         strictExecutionOrder: true,
         codeSplitting: {
           minSize: 20000,

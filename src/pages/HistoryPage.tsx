@@ -103,7 +103,13 @@ export function HistoryPage() {
           <Button onClick={() => navigate('/explore')}>{t('pages.history.browseButton')}</Button>
         </div>
       ) : (
-        <VideoGrid videos={videos} isLoading={false} showSkeletons={false} layoutMode="auto" />
+        <VideoGrid
+          videos={videos}
+          isLoading={false}
+          showSkeletons={false}
+          layoutMode="auto"
+          fullBleed
+        />
       )}
     </div>
   )

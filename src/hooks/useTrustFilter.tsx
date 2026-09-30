@@ -102,7 +102,7 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
           <Button
             variant="secondary"
             size="sm"
-            className={`shrink-0 rounded-full px-2.5 border ${enabled ? 'border-green-500' : 'border-transparent'}`}
+            className={`h-10 w-10 shrink-0 rounded-full border ${enabled ? 'border-green-500' : 'border-transparent'}`}
             aria-label={trustFilterLabel}
             aria-pressed={enabled}
             onClick={() => {

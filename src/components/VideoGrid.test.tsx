@@ -35,29 +35,16 @@ vi.mock('@/components/VideoCard', () => ({
   VideoCard: ({
     video,
     format,
-    treatment,
   }: {
     video: VideoEvent
     format: 'vertical' | 'horizontal' | 'square'
-    treatment?: 'default' | 'quiet-cinema'
   }) => (
-    <div
-      data-testid="video-card"
-      data-video-id={video.id}
-      data-format={format}
-      data-treatment={treatment}
-    >
+    <div data-testid="video-card" data-video-id={video.id} data-format={format}>
       {video.title}
     </div>
   ),
-  VideoCardSkeleton: ({
-    format,
-    treatment,
-  }: {
-    format: 'vertical' | 'horizontal'
-    treatment?: 'default' | 'quiet-cinema'
-  }) => (
-    <div data-testid="video-card-skeleton" data-format={format} data-treatment={treatment}>
+  VideoCardSkeleton: ({ format }: { format: 'vertical' | 'horizontal' }) => (
+    <div data-testid="video-card-skeleton" data-format={format}>
       Loading...
     </div>
   ),
@@ -136,23 +123,6 @@ describe('VideoGrid', () => {
       expect(skeletons[0]).toHaveAttribute('data-format', 'vertical')
     })
 
-    it('passes the scoped card treatment to loading skeletons', () => {
-      renderWithRouter(
-        <VideoGrid
-          videos={[]}
-          isLoading
-          showSkeletons
-          layoutMode="horizontal"
-          cardTreatment="quiet-cinema"
-        />
-      )
-
-      expect(screen.getAllByTestId('video-card-skeleton')[0]).toHaveAttribute(
-        'data-treatment',
-        'quiet-cinema'
-      )
-    })
-
     it('should not show skeletons when showSkeletons=false', () => {
       renderWithRouter(<VideoGrid videos={[]} isLoading={true} showSkeletons={false} />)
 
@@ -188,16 +158,6 @@ describe('VideoGrid', () => {
   })
 
   describe('Layout Modes', () => {
-    it('passes the scoped card treatment to rendered cards', () => {
-      const videos = [createMockVideo({ id: 'video-1', type: 'videos' })]
-
-      renderWithRouter(
-        <VideoGrid videos={videos} layoutMode="horizontal" cardTreatment="quiet-cinema" />
-      )
-
-      expect(screen.getByTestId('video-card')).toHaveAttribute('data-treatment', 'quiet-cinema')
-    })
-
     it('should use horizontal format in horizontal layout mode', () => {
       const videos = [createMockVideo({ id: 'video-1', type: 'videos' })]
 

@@ -18,7 +18,7 @@ export function PageLoader() {
             {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton
                 key={i}
-                className={cn('h-8 rounded-full shrink-0', i === 0 ? 'w-12' : 'w-20')}
+                className={cn('h-10 rounded-full shrink-0', i === 0 ? 'w-12' : 'w-20')}
               />
             ))}
           </div>
@@ -33,7 +33,7 @@ export function PageLoader() {
           )}
         >
           {Array.from({ length: 24 }).map((_, i) => (
-            <VideoCardSkeleton key={i} format="horizontal" />
+            <VideoCardSkeleton key={i} format="horizontal" fullBleed />
           ))}
         </div>
       </div>

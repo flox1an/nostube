@@ -183,7 +183,13 @@ export function LikedVideosPage() {
     <div className="max-w-560 mx-auto sm:p-4">
       <div className="text-2xl font-semibold mb-4">{t('pages.likedVideos.title')}</div>
 
-      <VideoGrid videos={videos} isLoading={isLoading} showSkeletons={true} layoutMode="auto" />
+      <VideoGrid
+        videos={videos}
+        isLoading={isLoading}
+        showSkeletons={true}
+        layoutMode="auto"
+        fullBleed
+      />
 
       {videos.length === 0 && !isLoading && (
         <div className="text-center py-12 text-muted-foreground space-y-3">

@@ -45,11 +45,18 @@ export function Header({ transparent = false }: HeaderProps) {
 
   // On mobile: hide header when scrolling down (unless at top), show when scrolling up
   const shouldHide = isMobile && scrollDirection === 'down' && !isAtTop && !isSearchExpanded
+  // Video page at the top (dark theme only): no background/border, so the player's glow
+  // shows through. Scrolled, the regular background returns so content never runs under
+  // bare text.
+  const blendWithPage = isVideoPage && isAtTop && !transparent
+  // Light theme: a very light gray tint over the page; dark theme: the page color.
+  const barBackground =
+    'bg-sidebar/90 supports-[backdrop-filter]:bg-sidebar/80 dark:bg-background/90 dark:supports-[backdrop-filter]:bg-background/80'
 
   if (isMobile && isSearchExpanded) {
     return (
       <header
-        className="sticky top-0 z-50 flex h-14 items-center gap-2 border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80"
+        className={`sticky top-0 z-50 flex h-14 items-center gap-2 border-b border-border/70 px-4 backdrop-blur-xl ${barBackground}`}
         style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}
       >
         <Button variant="ghost" size="icon" onClick={() => setIsSearchExpanded(false)}>
@@ -64,7 +71,7 @@ export function Header({ transparent = false }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b border-border/70 backdrop-blur-xl transition-transform duration-300 ${transparent ? '' : 'bg-background/90 supports-[backdrop-filter]:bg-background/80'} ${
+      className={`sticky top-0 z-50 border-b transition-[transform,background-color,border-color] duration-300 ${isAtTop ? '' : 'backdrop-blur-xl'} ${transparent ? 'border-border/70' : `border-border/70 ${barBackground}`} ${blendWithPage ? 'dark:border-transparent dark:bg-transparent dark:supports-[backdrop-filter]:bg-transparent' : ''} ${
         shouldHide ? '-translate-y-full' : 'translate-y-0'
       }`}
       style={{ paddingTop: 'env(safe-area-inset-top, 0)' }}

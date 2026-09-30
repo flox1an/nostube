@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" style="background-color: #141111">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>nostube</title>
@@ -34,16 +34,20 @@
       content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: http: https: ws: wss:; img-src 'self' data: blob: https: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; media-src 'self' https: blob: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*"
     />
     <style>
-      /* Prevent white flash on iOS PWA - loads before any CSS */
+      /* Prevent white flash on iOS PWA - loads before any CSS. Only until the app sets
+         .light/.dark on <html>; after that the theme's own background must win. */
+      html:not(.light):not(.dark),
+      html:not(.light):not(.dark) body {
+        background-color: #141111;
+      }
       html,
       body {
-        background-color: #141111;
         margin: 0;
         padding: 0;
       }
       @media (prefers-color-scheme: light) {
-        html,
-        body {
+        html:not(.light):not(.dark),
+        html:not(.light):not(.dark) body {
           background-color: #ffffff;
         }
       }

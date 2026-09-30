@@ -63,7 +63,16 @@ export function MainLayout() {
           )}
         </div>
 
-        <main className="flex-1 bg-background w-full overflow-x-hidden">
+        {/* overflow-x-hidden also clips vertically, which would cut the video page's glow off
+            at main's top edge. clip keeps horizontal overflow out without that; it is scoped
+            to video pages because it stops main being a scroll container, which would make
+            sticky bars on other pages (category bar, settings nav) start sticking. */}
+        <main
+          className={cn(
+            'flex-1 bg-background w-full',
+            isVideoPage ? 'overflow-x-clip' : 'overflow-x-hidden'
+          )}
+        >
           <Outlet />
         </main>
       </div>

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dark theme: the video page player now has a subtle glow, and while the page is scrolled to the top the header drops its background and border so the glow reaches into it. The header's backdrop blur only kicks in once the page is scrolled (on every page). Light theme: the header gets a very light gray tint (`--sidebar`) instead of the page color
 - Video page uses space more tightly: smaller title (20px on desktop) with less spacing around it, a 16px gap to the sidebar (was 24px), 12px between suggestions (was 16px), and larger 16:9 suggestion and playlist thumbnails from `xl` (192×108; 256×144 on `2xl`) with titles wrapping to three lines before truncating
 - NSFW content now needs an explicit 18+ confirmation: switching the NSFW filter from "hide" to "warning" or "show" opens a "Confirm your age" dialog, and an opt-in without that confirmation (including existing saved settings) counts as "hide" (`getEffectiveNsfwFilter`)
 - Direct links no longer bypass the NSFW filter: video pages and shorts now also honour a video's own `content-warning` tag and NSFW platform attributes, not just the preset's NSFW author list; hidden pages show a "Content not available" notice with links to the home page and content settings instead of a blank screen
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The light theme's page background was dark: the white-flash guard in `index.html` (an inline `background-color` on `<html>` plus an unlayered `body` rule) beat the theme's layered `bg-background`, which only went unnoticed because other surfaces paint their own background; the guard now only applies until the theme class is set
 - Video comments no longer stay in the skeleton state forever: `VideoComments` loaded comments through a paging `createTimelineLoader`, whose observable never completes, so `isLoadingComments` was never cleared; comments and reply lookups now use `pool.request`, which completes at relay EOSE (or the pool's idle timeout)
 - NSFW videos using HLS no longer autoplay behind the "Sensitive content" overlay in warning mode: `useHls` ignored the player's `autoPlay` flag and started playback as soon as the manifest loaded, which also dismissed the overlay
 - The shorts player no longer plays flagged shorts: in warning mode the active short waits for "Play video", and in hide mode flagged shorts are left out of the feed and a direct link shows the "Content not available" notice

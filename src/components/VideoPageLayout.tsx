@@ -68,7 +68,12 @@ export function VideoPageLayout({
       >
         {/* Left column: video player + info together */}
         <div className={cn('flex flex-col', cinemaMode && 'col-span-full')}>
-          {videoPlayer}
+          {/* Dark theme only: a soft glow so the video appears to shine (text color at low
+              opacity, i.e. dark gray on the near-black page). A box-shadow never adds
+              scrollable overflow, unlike an oversized gradient element. */}
+          <div className="md:rounded-lg dark:md:shadow-[0_0_120px_16px_color-mix(in_oklch,var(--color-foreground)_10%,transparent)]">
+            {videoPlayer}
+          </div>
           <div className={cn('pt-2', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
             {videoInfo}
           </div>

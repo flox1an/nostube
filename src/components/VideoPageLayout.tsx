@@ -63,13 +63,13 @@ export function VideoPageLayout({
       <div
         className={cn(
           'grid grid-cols-1 gap-0',
-          !cinemaMode && 'xl:grid-cols-[1fr_384px] 2xl:grid-cols-[1fr_480px] xl:gap-4'
+          !cinemaMode && 'xl:grid-cols-[1fr_384px] 2xl:grid-cols-[1fr_480px] xl:gap-2'
         )}
       >
         {/* Left column: video player + info together */}
         <div className={cn('flex flex-col', cinemaMode && 'col-span-full')}>
           {videoPlayer}
-          <div className={cn('pt-2 md:pt-3', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
+          <div className={cn('pt-2', cinemaMode && 'p-2 lg:px-4 w-full max-w-560 mx-auto')}>
             {videoInfo}
           </div>
         </div>

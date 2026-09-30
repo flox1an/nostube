@@ -98,8 +98,8 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
       desktopCoordinator={desktopWindowCoordinator}
       desktopRoute={desktopPlayerRoute}
     >
-      <div className="relative flex gap-3 rounded-xl p-2 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
-        <div className="relative w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
+      <div className="relative flex gap-3 rounded-xl px-2 py-1.5 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
+        <div className="relative w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
           {/* Placeholder while loading: last loaded image, blurhash, skeleton */}
           {!thumbnailLoaded &&
             (heldThumbnail ? (
@@ -143,7 +143,7 @@ const VideoSuggestionItem = React.memo(function VideoSuggestionItem({
           )}
         </div>
         <div className="relative min-w-0 flex-1">
-          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-2">
+          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-3">
             {video.title}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5">
@@ -218,8 +218,8 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
       desktopCoordinator={desktopWindowCoordinator}
       desktopRoute={desktopPlayerRoute}
     >
-      <div className="relative flex gap-3 rounded-xl p-2 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
-        <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
+      <div className="relative flex gap-3 rounded-xl px-2 py-1.5 motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent/55 motion-reduce:transition-none">
+        <div className="relative w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 overflow-hidden rounded-xl ring-1 ring-inset ring-black/10 shadow-sm dark:ring-white/10">
           {!thumbnailLoaded &&
             (heldThumbnail ? (
               <img
@@ -262,7 +262,7 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
           )}
         </div>
         <div className="relative min-w-0 flex-1">
-          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-2">
+          <div className="text-sm font-semibold leading-5 tracking-[-0.01em] line-clamp-3">
             {video.title}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5">
@@ -288,8 +288,8 @@ const RecommendationVideoSuggestionItem = React.memo(function RecommendationVide
 
 function VideoSuggestionItemSkeleton() {
   return (
-    <div className="flex gap-3 p-2">
-      <div className="relative w-40 h-24 2xl:w-56 2xl:h-[7.875rem] shrink-0 overflow-hidden rounded-xl">
+    <div className="flex gap-3 px-2 py-1.5">
+      <div className="relative w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 overflow-hidden rounded-xl">
         <Skeleton className="w-full h-full" />
       </div>
       <div className="space-y-2 flex-1">

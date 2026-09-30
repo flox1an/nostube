@@ -55,18 +55,18 @@ const PlaylistVideoItem = ({ item, isActive, href, desktopRoute }: PlaylistVideo
         <img
           src={cascade.src ?? ''}
           alt={item.title || 'Playlist video'}
-          className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md object-cover"
+          className="w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 rounded-md object-cover"
           referrerPolicy="no-referrer"
           onError={cascade.onError}
           onLoad={cascade.onLoad}
         />
       ) : (
-        <div className="w-40 h-24 2xl:w-64 2xl:h-38 shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">
+        <div className="w-40 xl:w-48 2xl:w-64 aspect-video shrink-0 rounded-md bg-muted text-xs text-muted-foreground flex items-center justify-center">
           No image
         </div>
       )}
       <div className="flex-1 min-w-0 space-y-1">
-        <p className="text-sm font-medium line-clamp-2">{item.title || 'Untitled Video'}</p>
+        <p className="text-sm font-medium line-clamp-3">{item.title || 'Untitled Video'}</p>
         <div className="flex items-center gap-1.5">
           <UserAvatar
             picture={authorPicture}

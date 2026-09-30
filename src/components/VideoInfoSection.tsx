@@ -359,7 +359,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
 
   return (
     <>
-      <div className="flex flex-col gap-4 px-2 md:px-0 min-w-0">
+      <div className="flex flex-col gap-3 px-2 md:px-0 min-w-0">
         {((!hideTitle && video?.title) || expirationDate) && (
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -367,7 +367,7 @@ export const VideoInfoSection = React.memo(function VideoInfoSection({
                 <h1
                   ref={titleRef}
                   className={cn(
-                    'text-xl md:text-2xl font-bold',
+                    'text-lg md:text-xl font-bold leading-snug',
                     !titleExpanded && 'line-clamp-2 md:line-clamp-none'
                   )}
                 >

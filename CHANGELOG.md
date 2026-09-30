@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Video page uses space more tightly: smaller title (20px on desktop) with less spacing around it, a 16px gap to the sidebar (was 24px), 12px between suggestions (was 16px), and larger 16:9 suggestion and playlist thumbnails from `xl` (192×108; 256×144 on `2xl`) with titles wrapping to three lines before truncating
 - NSFW content now needs an explicit 18+ confirmation: switching the NSFW filter from "hide" to "warning" or "show" opens a "Confirm your age" dialog, and an opt-in without that confirmation (including existing saved settings) counts as "hide" (`getEffectiveNsfwFilter`)
 - Direct links no longer bypass the NSFW filter: video pages and shorts now also honour a video's own `content-warning` tag and NSFW platform attributes, not just the preset's NSFW author list; hidden pages show a "Content not available" notice with links to the home page and content settings instead of a blank screen
 - The embed player applies the viewer's own NSFW setting (default "hide") and the moderation preset's NSFW/blocked lists, which load in parallel with the video; flagged videos show an "Open on nostube" notice, and nothing plays if the preset can't be verified. URL parameters can't loosen this, and cross-site iframes never see the viewer's settings (browser storage partitioning)

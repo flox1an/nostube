@@ -5,7 +5,8 @@ import type * as ReactRouterDom from 'react-router-dom'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => (typeof fallback === 'string' ? fallback : _key),
+    t: (key: string, fallback?: string) =>
+      key === 'common.beta' ? 'BETA' : typeof fallback === 'string' ? fallback : key,
   }),
 }))
 
@@ -16,7 +17,7 @@ vi.mock('@/hooks/useScrollDirection', () => ({
   useScrollDirection: () => ({ scrollDirection: 'up', isAtTop: true }),
 }))
 vi.mock('@/hooks/useIsMobile', () => ({
-  useIsMobile: () => false,
+  useIsMobile: vi.fn(() => false),
 }))
 vi.mock('@/providers/theme-provider', () => ({
   useTheme: () => ({ colorTheme: 'nostube' }),
@@ -35,6 +36,9 @@ vi.mock('react-router-dom', async importOriginal => {
 })
 
 import { Header } from './Header'
+import { useIsMobile } from '@/hooks/useIsMobile'
+
+beforeEach(() => vi.mocked(useIsMobile).mockReturnValue(false))
 
 function renderAt(path: string) {
   return render(
@@ -82,4 +86,12 @@ describe('Header back navigation on watch pages', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(mockNavigate).toHaveBeenCalledWith('/')
   })
+})
+
+it('keeps the app name and beta tag visible in the compact header', () => {
+  vi.mocked(useIsMobile).mockReturnValue(true)
+  renderAt('/')
+
+  expect(screen.getByText('nostube')).toBeVisible()
+  expect(screen.getByText('BETA')).toBeVisible()
 })

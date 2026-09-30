@@ -138,7 +138,6 @@ export function HomePage() {
           selectedRelay={relayOverride}
           onRelayChange={setRelayOverride}
           afterRelay={filterButton}
-          tone="quiet"
         />
       </div>
       <HomeShelf

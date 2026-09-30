@@ -12,6 +12,7 @@ import { GlobalSearchBar } from '@/components/GlobalSearchBar'
 import { NotificationBell } from '@/components/NotificationBell'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 
 interface HeaderProps {
   transparent?: boolean
@@ -90,16 +91,25 @@ export function Header({ transparent = false }: HeaderProps) {
               <MenuIcon />
             </Button>
           )}
-          <Link to="/" className="text-xl font-bold flex flex-row gap-2 items-center">
-            <img className="w-8" src={appTitle.imageUrl} alt="logo" />
-            {!isMobile && (
-              <span className="relative">
-                {appTitle.text}
-                <span className="absolute -top-1 -right-6 text-[0.5rem] font-semibold text-muted-foreground">
-                  {t('common.beta')}
-                </span>
-              </span>
+          <Link
+            to="/"
+            className={cn(
+              'text-xl font-bold flex flex-row gap-2 items-center',
+              transparent ? 'text-white' : 'text-foreground'
             )}
+          >
+            <img className="w-8" src={appTitle.imageUrl} alt="logo" />
+            <span className="relative">
+              {appTitle.text}
+              <span
+                className={cn(
+                  'absolute -top-1 -right-6 text-[0.5rem] font-semibold',
+                  transparent ? 'text-white/70' : 'text-muted-foreground'
+                )}
+              >
+                {t('common.beta')}
+              </span>
+            </span>
           </Link>
         </div>
 

@@ -16,6 +16,7 @@ import { Play } from 'lucide-react'
 import { processEvent, processEvents, type VideoEvent } from '@/utils/video-event'
 import { getVideoPlayback } from '@/lib/content-safety'
 import { ContentSafetyGate } from '@/components/ContentSafetyGate'
+import { getAppHeight } from '@/lib/app-height'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@/lib/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -57,6 +58,8 @@ const SWIPE_VELOCITY_THRESHOLD_PX_PER_MS = 0.45
 const SETTLE_TRANSITION_MS = 260
 const SETTLE_EASING = 'cubic-bezier(0.25, 0.8, 0.5, 1)'
 const WHEEL_NAVIGATION_COOLDOWN_MS = 420
+/** Full screen down to the bottom edge, also in the iOS PWA (see lib/app-height.ts). */
+const FULL_SCREEN_STYLE: React.CSSProperties = { height: 'var(--app-height, 100dvh)' }
 
 export function ShortsVideoPage() {
   const { config } = useAppContext()
@@ -696,7 +699,7 @@ export function ShortsVideoPage() {
       const direction = nextIndex > currentVideoIndex ? 1 : -1
       setSettlingTargetIndex(nextIndex)
       setDeckPhase('settling')
-      setDeckOffsetY(direction > 0 ? -window.innerHeight : window.innerHeight)
+      setDeckOffsetY(direction > 0 ? -getAppHeight() : getAppHeight())
     },
     [allVideos.length, currentVideoIndex, deckPhase]
   )
@@ -754,11 +757,11 @@ export function ShortsVideoPage() {
       if (shouldCommit && offset < 0 && currentVideoIndex < allVideos.length - 1) {
         setSettlingTargetIndex(currentVideoIndex + 1)
         setDeckPhase('settling')
-        setDeckOffsetY(-window.innerHeight)
+        setDeckOffsetY(-getAppHeight())
       } else if (shouldCommit && offset > 0 && currentVideoIndex > 0) {
         setSettlingTargetIndex(currentVideoIndex - 1)
         setDeckPhase('settling')
-        setDeckOffsetY(window.innerHeight)
+        setDeckOffsetY(getAppHeight())
       } else if (Math.abs(offset) > 1) {
         setSettlingTargetIndex(null)
         setDeckPhase('settling')
@@ -891,7 +894,10 @@ export function ShortsVideoPage() {
   // Show loading state while fetching initial event OR while loading videos from relays
   if (isLoadingInitialEvent || (isLoadingVideos && allVideos.length === 0)) {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
+      <div
+        className="fixed inset-x-0 top-0 bg-black flex flex-col items-center justify-center gap-4"
+        style={FULL_SCREEN_STYLE}
+      >
         <Skeleton className="w-full h-full max-w-md aspect-9/16" />
         <div className="text-white/70 text-sm">Looking for videos...</div>
       </div>
@@ -901,7 +907,10 @@ export function ShortsVideoPage() {
   // Only show "not found" after loading is complete and we have no videos
   if (!isLoadingVideos && !currentVideo && allVideos.length === 0) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center text-white">
+      <div
+        className="fixed inset-x-0 top-0 bg-black flex items-center justify-center text-white"
+        style={FULL_SCREEN_STYLE}
+      >
         <div className="text-center">
           <div className="text-xl mb-2">Video not found</div>
           <div className="text-white/70 text-sm">
@@ -918,8 +927,8 @@ export function ShortsVideoPage() {
         <Header transparent />
       </div>
       <div
-        className="fixed top-0 left-0 right-0 bottom-0 z-50 bg-black overflow-hidden touch-none select-none"
-        style={{ paddingTop: 'calc(56px + env(safe-area-inset-top, 0))' }}
+        className="fixed inset-x-0 top-0 z-50 bg-black overflow-hidden touch-none select-none"
+        style={{ ...FULL_SCREEN_STYLE, paddingTop: 'calc(56px + env(safe-area-inset-top, 0))' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -936,7 +945,7 @@ export function ShortsVideoPage() {
               key={video.id}
               className="absolute inset-0"
               style={{
-                transform: `translate3d(0, calc(${relativeIndex * 100}vh + ${deckOffsetY}px), 0)`,
+                transform: `translate3d(0, calc(${relativeIndex} * var(--app-height, 100vh) + ${deckOffsetY}px), 0)`,
                 transition: videoTransition,
                 willChange: deckPhase === 'idle' ? undefined : 'transform',
               }}

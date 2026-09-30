@@ -126,7 +126,8 @@ function AuthorBannerDisplay({ banner, pubkey }: { banner: string; pubkey: strin
   if (!cascade.src) return null
 
   return (
-    <div className="relative w-full h-32 sm:h-48 md:h-56 overflow-hidden rounded-lg">
+    // Edge to edge on mobile (the page has no padding below sm), so no rounded corners there.
+    <div className="relative w-full h-32 sm:h-48 md:h-56 overflow-hidden sm:rounded-lg">
       <img
         src={cascade.src}
         alt=""

@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RichTextContent`'s inline image rendering (comment bodies, video/note descriptions, profile bios) now threads the rendering event's author pubkey through `CollapsibleText` as the `as` hint for preset thumbnail requests — wired from the comment author, video author, current user (for own notes/drafts), or viewed profile's pubkey at each call site
 - Non-Blossom image and video URLs (arbitrary source URLs without a matching hash) now proxy through imgproxy's legacy unsigned `/insecure/f:webp/q:.../rs:.../plain/<url>` route, mirroring the same three preset output shapes (`feed-preview-v1`, `profile-avatar-v1`, `embed-card-v1`) as the Blossom-hash preset route; `useImageCascade` picks the route per source (preset for Blossom hashes, insecure directives otherwise) and falls back to the raw URL if the proxied request fails, same as the existing Blossom fallback; `VideoPlayer`'s poster and the embed player's content-warning poster now go through this same cascade instead of a one-shot preset lookup with no fallback
 
+### Fixed
+
+- Video comments no longer stay in the skeleton state forever: `VideoComments` loaded comments through a paging `createTimelineLoader`, whose observable never completes, so `isLoadingComments` was never cleared; comments and reply lookups now use `pool.request`, which completes at relay EOSE (or the pool's idle timeout)
+
 ### Added
 
 - Contribute variant flow — video pages can now re-encode an existing MP4 source in the browser, upload generated MP4 variants to selected Blossom servers, publish kind 1063 announcements, and merge discovered contributed variants into the player quality list

@@ -9,7 +9,6 @@ import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useTranslation } from 'react-i18next'
 import { map } from 'rxjs/operators'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Filter } from 'nostr-tools'
 import {
@@ -172,14 +171,12 @@ export function VideoComments({
     return baseFilters
   }, [videoId, videoAddress])
 
-  // Load comments from relays when filters change
+  // Load comments from relays when filters change.
+  // pool.request completes on relay EOSE; a createTimelineLoader would never
+  // complete (it's a paging window) and left the skeleton stuck forever.
   useEffect(() => {
     setIsLoadingComments(true)
-    const loader = createTimelineLoader(pool, readRelays, filters, {
-      limit: 50,
-      eventStore,
-    })
-    const subscription = loader().subscribe({
+    const subscription = pool.request(readRelays, filters).subscribe({
       next: e => eventStore.add(e),
       complete: () => setIsLoadingComments(false),
       error: () => setIsLoadingComments(false),
@@ -216,11 +213,7 @@ export function VideoComments({
     if (!commentIds) return
     const ids = commentIds.split(',')
     const replyFilters: Filter[] = [{ kinds: [1], '#e': ids, limit: 100 }]
-    const loader = createTimelineLoader(pool, readRelays, replyFilters, {
-      limit: 50,
-      eventStore,
-    })
-    const subscription = loader().subscribe(e => eventStore.add(e))
+    const subscription = pool.request(readRelays, replyFilters).subscribe(e => eventStore.add(e))
     return () => subscription.unsubscribe()
   }, [pool, readRelays, commentIds, eventStore])
 

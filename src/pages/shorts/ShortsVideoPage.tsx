@@ -29,11 +29,7 @@ import {
   useIsPortrait,
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import {
-  createEventLoader,
-  createAddressLoader,
-  createTimelineLoader,
-} from 'applesauce-loaders/loaders'
+import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loaders'
 import { getKindsForType } from '@/lib/video-types'
 import { Header } from '@/components/Header'
 import { PlayPauseOverlay } from '@/components/PlayPauseOverlay'
@@ -209,13 +205,8 @@ export function ShortsVideoPage() {
       limit: 50,
     }
 
-    // Load shorts from relays
-    const suggestionsLoader = createTimelineLoader(pool, readRelays, filters, {
-      eventStore,
-      limit: 50,
-    })
-
-    const subscription = suggestionsLoader().subscribe({
+    // Load shorts from relays (pool.request completes on EOSE)
+    const subscription = pool.request(readRelays, [filters]).subscribe({
       next: event => {
         eventStore.add(event)
       },

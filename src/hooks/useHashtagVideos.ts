@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useAppContext } from './useAppContext'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { getTimelineLoader } from '@/nostr/core'
 import {
   processEvent,
@@ -287,11 +286,10 @@ export function useHashtagVideos({
           },
         ]
 
-        const loader = createTimelineLoader(pool, relays, filters, { eventStore })
-
         await new Promise<void>(resolve => {
-          const subscription = loader().subscribe({
+          const subscription = pool.request(relays, filters).subscribe({
             next: (event: NostrEvent) => {
+              eventStore.add(event)
               const processed = processEvent(
                 event,
                 [],
@@ -310,9 +308,10 @@ export function useHashtagVideos({
               console.error('Error fetching labeled videos:', err)
               resolve()
             },
+            complete: resolve,
           })
 
-          // Wait for batch to complete
+          // Cap slow relays per batch
           setTimeout(() => {
             subscription.unsubscribe()
             resolve()

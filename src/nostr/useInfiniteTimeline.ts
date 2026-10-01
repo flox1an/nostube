@@ -1,4 +1,4 @@
-import { type TimelineLoader } from 'applesauce-loaders/loaders'
+import { type PageLoader } from './core'
 import { type Filter } from 'nostr-tools'
 import { useTimeline } from './useTimeline'
 
@@ -12,7 +12,7 @@ interface UseInfiniteTimelineOptions {
 }
 
 export function useInfiniteTimeline(
-  loader?: () => TimelineLoader,
+  loader?: () => PageLoader,
   readRelays: string[] = [],
   options: UseInfiniteTimelineOptions = {}
 ) {

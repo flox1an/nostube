@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import MiniSearch from 'minisearch'
 import { processEvents, getPublishDate } from '@/utils/video-event'
 import { useAppContext, useReportedPubkeys, useReadRelays } from '@/hooks'
@@ -313,7 +312,6 @@ export function useSearchVideos({
       console.log(`🔍 External search failed, fetching from relays with filters:`, filters)
     }
 
-    const loader = createTimelineLoader(relayPool, readRelays, filters, { eventStore })
     let eventCount = 0
 
     const timeoutId = setTimeout(() => {
@@ -322,7 +320,8 @@ export function useSearchVideos({
       subscriptionRef.current?.unsubscribe()
     }, 10000)
 
-    const subscription = loader().subscribe({
+    // pool.request completes on EOSE, so `complete` runs the final index search
+    const subscription = relayPool.request(readRelays, filters).subscribe({
       next: (event: NostrEvent) => {
         eventCount++
         eventStore.add(event)

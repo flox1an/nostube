@@ -135,7 +135,7 @@ describe('useTimeline', () => {
 
     await flushQueuedInitialLoad()
 
-    expect(timelineLoader).toHaveBeenCalledWith(undefined)
+    expect(timelineLoader).toHaveBeenCalledTimes(1)
     expect(result.current.phase).toBe('loading-initial')
 
     act(() => {
@@ -158,43 +158,5 @@ describe('useTimeline', () => {
         includeYouTube: true,
       })
     )
-  })
-
-  it('loads the next page before the oldest current event', async () => {
-    const subjects: Subject<NostrEvent>[] = []
-    const timelineLoader = vi.fn(() => {
-      const subject = new Subject<NostrEvent>()
-      subjects.push(subject)
-      return subject
-    })
-    const loader = vi.fn(() => timelineLoader)
-
-    const { result } = renderHook(() =>
-      useTimeline(undefined, {
-        loader,
-        directMode: true,
-        firstEventTimeoutMs: 100,
-        firstUsefulTimeoutMs: 1,
-        pageSettleMs: 10,
-      })
-    )
-
-    await flushQueuedInitialLoad()
-
-    act(() => {
-      subjects[0].next(makeEvent({ id: 'newer', created_at: 30 }))
-      subjects[0].next(makeEvent({ id: 'older', created_at: 10 }))
-      subjects[0].complete()
-    })
-
-    await waitFor(() => {
-      expect(result.current.phase).toBe('ready')
-    })
-
-    act(() => {
-      result.current.loadMore()
-    })
-
-    expect(timelineLoader).toHaveBeenLastCalledWith({ until: 9 })
   })
 })

@@ -49,7 +49,7 @@ export function ShortsPage() {
     filters: timelineFilter,
     directMode: !!relayOverride,
   })
-  const { filteredVideos, filterButton } = useTrustFilter(videos)
+  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
 
   return (
     <div className="max-w-560 mx-auto">
@@ -62,7 +62,7 @@ export function ShortsPage() {
       </div>
       <VideoTimelinePage
         videos={filteredVideos ?? []}
-        loading={loading}
+        loading={loading || trustPending}
         exhausted={exhausted}
         prefetching={isPrefetching}
         subscriptionActive={subscriptionActive}

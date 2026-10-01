@@ -375,7 +375,12 @@ export function useTimeline(
   return {
     videos,
     events,
-    loading: phase === 'loading-initial' || phase === 'loading-more',
+    // Events can arrive before the (audited) store stream renders them; an open
+    // subscription with nothing to show is still loading, not empty.
+    loading:
+      phase === 'loading-initial' ||
+      phase === 'loading-more' ||
+      (subscriptionActive && videos.length === 0),
     isInitialLoading: phase === 'loading-initial',
     isLoadingMore: phase === 'loading-more',
     isPrefetching: phase === 'prefetching',

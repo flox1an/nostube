@@ -22,7 +22,7 @@ export function HashtagPage() {
     videoKinds,
   })
 
-  const { filteredVideos, filterButton } = useTrustFilter(videos)
+  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(videos)
 
   // Update document title
   useEffect(() => {
@@ -45,7 +45,7 @@ export function HashtagPage() {
 
       <VideoTimelinePage
         videos={filteredVideos ?? []}
-        loading={loading}
+        loading={loading || trustPending}
         exhausted={exhausted}
         onLoadMore={loadMore}
         layoutMode="auto"

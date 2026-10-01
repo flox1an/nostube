@@ -159,4 +159,24 @@ describe('useTimeline', () => {
       })
     )
   })
+
+  it('keeps loading while the subscription is open and no event has reached the store yet', async () => {
+    const subject = new Subject<NostrEvent>()
+    mocks.timeline.mockReturnValue(new Subject<NostrEvent[]>())
+    const loader = vi.fn(() => () => subject)
+
+    const { result } = renderHook(() =>
+      useTimeline({ kinds: [34235] }, { loader, firstUsefulTimeoutMs: 1, pageSettleMs: 1000 })
+    )
+
+    await flushQueuedInitialLoad()
+    act(() => subject.next(makeEvent()))
+
+    expect(result.current.phase).toBe('ready')
+    expect(result.current.videos).toEqual([])
+    expect(result.current.loading).toBe(true)
+
+    act(() => subject.complete())
+    expect(result.current.loading).toBe(false)
+  })
 })

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
+import { useTrustScores, useGlobalScores, hasPendingTrustScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Shield, TriangleAlert } from 'lucide-react'
@@ -87,6 +87,10 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     )
   }, [videos, enabled, personalScores, globalScores, followedSet, user])
 
+  // Nothing passes yet but scores are still loading: callers should keep showing
+  // skeletons, otherwise the empty grid flashes and infinite scroll pages on.
+  const pending = enabled && filteredVideos?.length === 0 && hasPendingTrustScores(authorPubkeys)
+
   const trustFilterLabel = enabled
     ? t('pages.home.trustFilterOn', {
         defaultValue: 'Trust filter on — hiding low-score authors',
@@ -170,5 +174,5 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     </>
   )
 
-  return { filteredVideos, filterButton, enabled }
+  return { filteredVideos, filterButton, enabled, pending }
 }

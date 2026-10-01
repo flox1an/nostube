@@ -24,9 +24,9 @@ export interface NavigationMenu {
   mobileMoreItems: NavigationMenuItem[]
 }
 
-// Primary destinations (Home, Shorts, Following, Library) stay at the same
-// label/icon/position regardless of auth or follow state. Home is the same
-// global-first page for everyone; issue #88.
+// Primary destinations keep their label/icon/position regardless of follow
+// state (issue #88). Subscriptions only shows when signed in: guests have no
+// follow list.
 export function useNavigationMenu(): NavigationMenu {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
@@ -41,13 +41,17 @@ export function useNavigationMenu(): NavigationMenu {
         href: '/shorts',
         section: 'navigation',
       },
-      {
-        id: 'subscriptions',
-        label: t('navigation.subscriptions'),
-        icon: Users,
-        href: '/subscriptions',
-        section: 'navigation',
-      },
+      ...(user
+        ? [
+            {
+              id: 'subscriptions',
+              label: t('navigation.subscriptions'),
+              icon: Users,
+              href: '/subscriptions',
+              section: 'navigation' as const,
+            },
+          ]
+        : []),
     ]
 
     const libraryItems: NavigationMenuItem[] = [
@@ -81,12 +85,7 @@ export function useNavigationMenu(): NavigationMenu {
       },
     ]
     const compactItems = [...navigationItems, ...libraryItems, ...configurationItems]
-    const mobilePrimaryItems = [
-      navigationItems[0],
-      navigationItems[1],
-      navigationItems[2],
-      libraryItems[0],
-    ]
+    const mobilePrimaryItems = [...navigationItems, libraryItems[0]]
     const mobileMoreItems = compactItems.filter(
       item => !mobilePrimaryItems.some(primaryItem => primaryItem.id === item.id)
     )

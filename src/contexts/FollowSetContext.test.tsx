@@ -52,7 +52,7 @@ describe('FollowSetProvider', () => {
   })
 
   it('creates exactly one address loader per kind no matter how many consumers mount', () => {
-    // Mirrors the home route: OnboardingDialog, nav chrome, SmartHomePage and
+    // Mirrors the home route: OnboardingDialog, nav chrome, HomePage and
     // useTrustFilter all call useFollowSet(). Before the shared provider each
     // one ran its own effect and its own 1s-buffered address loader.
     render(

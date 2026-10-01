@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Home is now the same global-first page for everyone: category chips, "Continue watching" and "From creators you follow" shelves, then the global latest-videos feed. Logged-in users with follows no longer get the Subscriptions feed as their home page (it stays under "Subscriptions"). The separate "Explore" nav entry is gone, and `/explore` redirects to `/`
 - New users get more videos: the default read relays now include `wss://relay.nostu.be` (~15k video events from ~1.2k authors back to 2018), `wss://offchain.pub` and `wss://nostr.wine`; primal and nos.lol only hold a few dozen kind 21/34235 events each, so a fresh feed used to run dry after ~340 events. Existing users keep their saved relay list
 - Shorts start with sound where the browser allows it (desktop and Android once the user has interacted with the page, e.g. by clicking a short) and only fall back to muted playback when audible autoplay is blocked (`NotAllowedError`, e.g. iOS/Safari or a cold direct link); every new short retries sound unless the user explicitly muted
 - Dark theme: the video page player now has a subtle glow, and while the page is scrolled to the top the header drops its background and border so the glow reaches into it. The header's backdrop blur only kicks in once the page is scrolled (on every page). Light theme: the header gets a very light gray tint (`--sidebar`) instead of the page color

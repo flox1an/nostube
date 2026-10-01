@@ -28,7 +28,6 @@ describe('useNavigationMenu', () => {
       'home',
       'shorts',
       'subscriptions',
-      'explore',
       'library',
       'settings',
     ])
@@ -39,11 +38,11 @@ describe('useNavigationMenu', () => {
     ])
   })
 
-  it('keeps Home/Shorts/Following/Explore/Library stable whether or not a user is signed in', () => {
+  it('keeps Home/Shorts/Following/Library stable whether or not a user is signed in', () => {
     const guestMenu = renderMenu().result.current
     const userMenu = renderMenu({ pubkey: 'regular-pubkey' }).result.current
 
-    const stableIds = ['home', 'shorts', 'subscriptions', 'explore', 'library']
+    const stableIds = ['home', 'shorts', 'subscriptions', 'library']
     expect(guestMenu.compactItems.filter(i => stableIds.includes(i.id)).map(i => i.id)).toEqual(
       stableIds
     )
@@ -71,6 +70,6 @@ describe('useNavigationMenu', () => {
       'subscriptions',
       'library',
     ])
-    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual(['explore', 'settings'])
+    expect(result.current.mobileMoreItems.map(item => item.id)).toEqual(['settings'])
   })
 })

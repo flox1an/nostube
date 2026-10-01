@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * Loading skeleton for feed-style pages that pair a sticky
- * `CategoryButtonBar` with a horizontal video grid (`/`, `/explore`,
+ * `CategoryButtonBar` with a horizontal video grid (`/`,
  * `/category/:slug`). Page-specific loaders live in
  * `components/page-loaders.tsx`.
  */

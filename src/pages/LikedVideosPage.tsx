@@ -198,9 +198,7 @@ export function LikedVideosPage() {
           </p>
           <p className="text-sm">{t('pages.likedVideos.exploreDescription')}</p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => navigate('/explore')}>
-              {t('pages.likedVideos.exploreButton')}
-            </Button>
+            <Button onClick={() => navigate('/')}>{t('pages.likedVideos.exploreButton')}</Button>
             <Button variant="outline" onClick={() => navigate('/search')}>
               {t('pages.subscriptions.findCreators')}
             </Button>

@@ -444,6 +444,11 @@ export function useTrustScores(pubkeys: string[]): Map<string, number | null> {
   }, [pubkeyKey, version])
 }
 
+/** True while any of these pubkeys still has neither a score nor a final "no score" verdict. */
+export function hasPendingTrustScores(pubkeys: string[]): boolean {
+  return pubkeys.some(pk => !memCache.has(pk) && !confirmedMissing.has(pk))
+}
+
 /**
  * Get global NosTube scores for multiple pubkeys.
  * Like useTrustScores but returns the global (non-personalized) score.

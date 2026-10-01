@@ -125,7 +125,7 @@ export function HomePage() {
     return result.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [videos])
 
-  const { filteredVideos, filterButton } = useTrustFilter(dedupedVideos)
+  const { filteredVideos, filterButton, pending: trustPending } = useTrustFilter(dedupedVideos)
   const { videos: continueWatchingVideos } = useContinueWatching()
   const { videos: subscriptionsVideos } = useSubscriptionsVideos()
 
@@ -159,7 +159,7 @@ export function HomePage() {
       <div className="-mx-3 sm:mx-0">
         <VideoTimelinePage
           videos={filteredVideos}
-          loading={loading}
+          loading={loading || trustPending}
           exhausted={exhausted}
           prefetching={isPrefetching}
           subscriptionActive={subscriptionActive}

@@ -1,7 +1,6 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useStableRelays } from './useStableRelays'
 import { getKindsForType } from '@/lib/video-types'
 import { isUpvoteReaction } from './useEventStats'
@@ -49,46 +48,19 @@ export function useAuthorLikedVideos(pubkey: string | undefined) {
   useEffect(() => {
     if (!pubkey || loadedPubkey === pubkey) return
 
-    // Load reactions (kind 7)
-    const reactionLoader = createTimelineLoader(
-      pool,
-      relays,
-      { kinds: [7], authors: [pubkey] },
-      { eventStore, limit: 200 }
-    )
+    // Load reactions (kind 7) and zap requests (kind 9734); completes on EOSE
+    const sub = pool
+      .request(relays, [
+        { kinds: [7], authors: [pubkey], limit: 200 },
+        { kinds: [9734], authors: [pubkey], limit: 200 },
+      ])
+      .subscribe({
+        next: event => eventStore.add(event),
+        complete: () => setLoadedPubkey(pubkey),
+        error: () => setLoadedPubkey(pubkey),
+      })
 
-    // Load zap requests (kind 9734)
-    const zapLoader = createTimelineLoader(
-      pool,
-      relays,
-      { kinds: [9734], authors: [pubkey] },
-      { eventStore, limit: 200 }
-    )
-
-    let completedCount = 0
-    const checkComplete = () => {
-      completedCount++
-      if (completedCount === 2) {
-        setLoadedPubkey(pubkey)
-      }
-    }
-
-    const reactionSub = reactionLoader().subscribe({
-      next: event => eventStore.add(event),
-      complete: checkComplete,
-      error: () => checkComplete(),
-    })
-
-    const zapSub = zapLoader().subscribe({
-      next: event => eventStore.add(event),
-      complete: checkComplete,
-      error: () => checkComplete(),
-    })
-
-    return () => {
-      reactionSub.unsubscribe()
-      zapSub.unsubscribe()
-    }
+    return () => sub.unsubscribe()
   }, [pubkey, pool, relays, eventStore, loadedPubkey])
 
   // Check if an event targets a video kind

@@ -26,7 +26,6 @@ import { passesTrustFilter } from '@/hooks/useTrustFilter'
 import { cn, combineRelays } from '@/lib/utils'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { type TimelessFilter } from 'applesauce-loaders'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { logSubscriptionCreated, logSubscriptionClosed } from '@/lib/relay-debug'
 import { UserAvatar } from '@/components/UserAvatar'
 import { getDateLocale } from '@/lib/date-locale'
@@ -417,14 +416,9 @@ export const VideoSuggestions = React.memo(function VideoSuggestions({
 
     const subId = logSubscriptionCreated('VideoSuggestions', relaysToUse, filters)
 
-    const playlistLoader = createTimelineLoader(pool, relaysToUse, filters, {
-      eventStore,
-      limit: 30,
-    })
-    const sub = playlistLoader().subscribe({
-      next: () => {
-        // Event loaded successfully
-      },
+    // pool.request completes on EOSE; createTimelineLoader never completes
+    const sub = pool.request(relaysToUse, filters).subscribe({
+      next: event => eventStore.add(event),
       error: err => {
         console.error('[VideoSuggestions] Error loading events:', err)
         setIsLoadingSuggestions(false)

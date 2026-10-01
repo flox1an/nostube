@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { of, combineLatest } from 'rxjs'
 import { switchMap, map } from 'rxjs/operators'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import {
-  createAddressLoader,
-  createEventLoader,
-  createTimelineLoader,
-} from 'applesauce-loaders/loaders'
+import { createAddressLoader, createEventLoader } from 'applesauce-loaders/loaders'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event as NostrEvent } from 'nostr-tools'
 
@@ -355,18 +351,12 @@ export function usePlaylistDetails(
       })
     }
 
-    // Load regular event refs via batch timeline loader
+    // Load regular event refs in one request (completes on EOSE, so `complete` marks failures)
     if (missingEventRefs.length > 0) {
       const missingIds = missingEventRefs.map(r => r.id)
-      const batchLoader = createTimelineLoader(
-        pool,
-        batchRelays,
-        { ids: missingIds },
-        { eventStore }
-      )
 
       subscriptions.push(
-        batchLoader().subscribe({
+        pool.request(batchRelays, [{ ids: missingIds }]).subscribe({
           next: event => {
             if (!cancelled && event && missingIds.includes(event.id)) {
               eventStore.add(event)

@@ -6,8 +6,7 @@ import { isDeletedByEvent } from '@/lib/deletions'
 import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
 import { hashObjectBigInt } from '@/lib/utils'
 import { getPublishDate, processEvents, type VideoEvent } from '@/utils/video-event'
-import { getTimelineLoader } from './core'
-import { type TimelineLoader } from 'applesauce-loaders/loaders'
+import { getTimelineLoader, type PageLoader } from './core'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { type Filter, type NostrEvent } from 'nostr-tools'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
@@ -21,7 +20,7 @@ type LoadIntent = 'initial' | 'load-more' | 'prefetch'
 
 export interface UseTimelineOptions {
   relays?: string[]
-  loader?: () => TimelineLoader
+  loader?: () => PageLoader
   directMode?: boolean
   includeAudio?: boolean
   enabled?: boolean
@@ -109,7 +108,6 @@ export function useTimeline(
   const firstUsefulTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inFlightRef = useRef(false)
   const exhaustedRef = useRef(exhausted)
-  const eventsRef = useRef<NostrEvent[]>([])
   const isFirstLoadRef = useRef(true)
 
   exhaustedRef.current = exhausted
@@ -231,18 +229,10 @@ export function useTimeline(
         }, firstUsefulTimeoutMs)
       }
 
-      const currentEvents = eventsRef.current
-      const oldestCreatedAt =
-        currentEvents.length > 0
-          ? Math.min(...currentEvents.map(event => event.created_at))
-          : undefined
-      const loadWindow =
-        intent === 'initial' || oldestCreatedAt === undefined
-          ? undefined
-          : { until: oldestCreatedAt - 1 }
+      // Each call loads the next page; every relay continues from its own cursor.
       const timelineLoader = loader()
 
-      subscriptionRef.current = timelineLoader(loadWindow).subscribe({
+      subscriptionRef.current = timelineLoader().subscribe({
         next: event => {
           if (!receivedAnyEvents && safetyTimeoutRef.current) {
             clearTimeout(safetyTimeoutRef.current)
@@ -311,10 +301,6 @@ export function useTimeline(
     return fallbackEvents
   }, [directMode, directEvents, filters, storeEvents, fallbackEvents])
 
-  useEffect(() => {
-    eventsRef.current = events
-  }, [events])
-
   const videos = useMemo(() => {
     const processed = processEvents(events, relays, {
       blockPubkeys: blockedPubkeys,
@@ -347,7 +333,6 @@ export function useTimeline(
     setSubscriptionActive(false)
     setDirectEvents([])
     setFallbackEvents([])
-    eventsRef.current = []
     setExhausted(false)
     setPhase('idle')
     isFirstLoadRef.current = true

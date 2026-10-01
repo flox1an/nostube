@@ -125,7 +125,6 @@ export { useReadRelays } from './useReadRelays'
 export { useWriteRelays } from './useWriteRelays'
 export { useUserRelays } from './useUserRelays'
 export { useStableRelays } from './useStableRelays'
-export { useTimelineLoader } from './useTimelineLoader'
 
 // ============================================================================
 // UI UTILITIES

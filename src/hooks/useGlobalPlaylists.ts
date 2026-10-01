@@ -1,7 +1,6 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useAppContext } from './useAppContext'
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { useSelectedPreset } from './useSelectedPreset'
 import { type ValidationStatus, usePlaylistValidation } from './usePlaylistValidation'
 import type { Video } from './usePlaylist'
@@ -74,17 +73,12 @@ export function useGlobalPlaylists() {
   const [isLoading, setIsLoading] = useState(false)
   const hasLoadedOnceRef = useRef(false)
 
-  const loader = useMemo(
-    () => createTimelineLoader(pool, readRelays, filters, { eventStore }),
-    [pool, readRelays, filters, eventStore]
-  )
-
   useEffect(() => {
     if (hasLoadedOnceRef.current) return
     hasLoadedOnceRef.current = true
 
     const loadingTimer = setTimeout(() => setIsLoading(true), 0)
-    const load$ = loader()
+    const load$ = pool.request(readRelays, filters)
 
     const quickTimeout = setTimeout(() => setIsLoading(false), 2000)
     const safetyTimeout = setTimeout(() => setIsLoading(false), 15000)
@@ -109,7 +103,7 @@ export function useGlobalPlaylists() {
       clearTimeout(safetyTimeout)
       sub.unsubscribe()
     }
-  }, [loader, eventStore])
+  }, [pool, readRelays, filters, eventStore])
 
   // Explicit playlist warnings are decisive immediately. Every other playlist
   // is verified from its referenced videos when the filter is set to `hide` or

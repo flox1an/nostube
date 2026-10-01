@@ -1,18 +1,24 @@
 import { EventStore } from 'applesauce-core'
 import { RelayPool } from 'applesauce-relay'
-import {
-  createEventLoaderForStore,
-  loadBlocksFromFilterMap,
-  loadBlocksFromCache,
-  type TimelineLoader,
-} from 'applesauce-loaders/loaders'
+import { createEventLoaderForStore } from 'applesauce-loaders/loaders'
 import type { Filter, NostrEvent } from 'nostr-tools'
 import { openDB, getEventsForFilters, addEvents, deleteEvent, deleteReplaceable } from 'nostr-idb'
 import type { NostrIDBDatabase } from 'nostr-idb/database'
 import { presistEventsToCache } from 'applesauce-core/helpers'
 import { NostrConnectSigner } from 'applesauce-signers'
 import type { NostrSubscriptionMethod, NostrPublishMethod } from 'applesauce-signers'
-import { BehaviorSubject, Observable, merge, share, EMPTY, filter, tap } from 'rxjs'
+import {
+  Observable,
+  merge,
+  EMPTY,
+  filter,
+  tap,
+  from,
+  mergeMap,
+  catchError,
+  finalize,
+  defer,
+} from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
 import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
@@ -273,55 +279,83 @@ NostrConnectSigner.publishMethod = publishMethod
 
 // ---- loader factory ----
 //
-// Each distinct filter set gets its own loader instance (thus own cursor).
-// We share store/pool to avoid duplicate connections/subs.
+// Each call to the returned function loads the next page and COMPLETES once
+// every source answered (EOSE, idle timeout, or error). Each relay (and the
+// local cache) pages backward from its own cursor: with a shared cursor a
+// dense relay's middle window gets skipped once a sparse relay reaches far
+// back. Sources that return nothing, ignore `until`, or error are done.
 type FilterKey = string
+
+/** Loads the next page on each call; the observable completes when the page is done. */
+export type PageLoader = () => Observable<NostrEvent>
 
 export function getTimelineLoader(
   _key: FilterKey,
   baseFilters: Filter,
   relays: string[] = DEFAULT_RELAYS,
   options?: { skipCache?: boolean }
-): TimelineLoader {
-  // Build a relay map so each relay gets its own independent backward cursor.
-  // With createTimelineLoader all relays share one cursor: the global minimum
-  // across all relays. This causes a gap when Relay A returns dense recent
-  // events (shallow cursor) while Relay B has older events (deep cursor) —
-  // Relay A's middle window gets permanently skipped on subsequent pages.
-  const relayFilters = [baseFilters, ...buildDeletionFilters([baseFilters])]
-  const relayMap: Record<string, Filter[]> = Object.fromEntries(
-    relays.map(relay => [relay, relayFilters])
-  )
-
+): PageLoader {
   const limit = baseFilters.limit ?? 100
-  const window$ = new BehaviorSubject<{ since?: number; until?: number }>({})
+  const pageFilters = (until?: number) => {
+    const page: Filter =
+      until === undefined ? { ...baseFilters, limit } : { ...baseFilters, limit, until }
+    return [page, ...buildDeletionFilters([page])]
+  }
 
-  // Per-relay loading: each relay advances its own cursor independently
-  const relays$ = window$.pipe(loadBlocksFromFilterMap(relayPool, relayMap, { limit }))
-
-  // Cache loading: shared, timestamp-based (unchanged behaviour)
-  const cache$ = options?.skipCache
-    ? EMPTY
-    : window$.pipe(loadBlocksFromCache(cacheRequest, baseFilters, { limit }))
-
-  // Deduplicate via EventStore and share the subscription across all callers.
-  // This mirrors the internals of the (unexported) wrapTimelineLoader helper.
-  const singleton$ = merge(cache$, relays$).pipe(
-    tap(event => {
-      if (event.kind === 5) void cacheEvents([event])
-    }),
-    filterDuplicateEvents(eventStore),
-    share()
+  const requests: Array<(until?: number) => Observable<NostrEvent>> = relays.map(
+    relay => until => relayPool.request([relay], pageFilters(until))
   )
+  if (!options?.skipCache) {
+    requests.push(until => from(cacheRequest(pageFilters(until))).pipe(mergeMap(events => events)))
+  }
+  const cursors = requests.map(() => ({
+    until: undefined as number | undefined,
+    done: false,
+    loading: false,
+  }))
 
-  return (since?: number | { since?: number; until?: number }) =>
-    new Observable(observer => {
-      const sub = singleton$.subscribe(observer)
-      if (typeof since === 'object' && since !== undefined) {
-        window$.next(since)
-      } else {
-        window$.next({ since: since ?? -Infinity })
-      }
-      return () => sub.unsubscribe()
-    })
+  const loadPage = (index: number) => {
+    const cursor = cursors[index]
+    if (cursor.done || cursor.loading) return EMPTY
+    cursor.loading = true
+    const until = cursor.until
+    let oldest = Infinity
+    let answered = false
+    return requests[index](until).pipe(
+      tap({
+        next: event => {
+          // Deletions ride along in the same window; they must not drive the cursor.
+          if (!baseFilters.kinds || baseFilters.kinds.includes(event.kind)) {
+            oldest = Math.min(oldest, event.created_at)
+          }
+        },
+        complete: () => {
+          answered = true
+        },
+      }),
+      catchError(() => {
+        cursor.done = true
+        return EMPTY
+      }),
+      finalize(() => {
+        cursor.loading = false
+        if (oldest !== Infinity) {
+          // NIP-01 `until` is inclusive; stop if the relay ignores it.
+          if (until !== undefined && oldest > until) cursor.done = true
+          else cursor.until = oldest - 1
+        } else if (answered) {
+          cursor.done = true
+        }
+        // Unsubscribed before any event: keep the cursor and retry next page.
+      })
+    )
+  }
+
+  return () =>
+    defer(() => merge(...requests.map((_, index) => loadPage(index)))).pipe(
+      tap(event => {
+        if (event.kind === 5) void cacheEvents([event])
+      }),
+      filterDuplicateEvents(eventStore)
+    )
 }

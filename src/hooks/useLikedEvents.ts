@@ -2,7 +2,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
-import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { isUpvoteReaction } from './useEventStats'
 
 export function useLikedEvents() {
@@ -32,28 +31,21 @@ export function useLikedEvents() {
   useEffect(() => {
     if (!user?.pubkey || loadedPubkey === user.pubkey) return
 
-    const filters = {
-      kinds: [7],
-      authors: [user.pubkey],
-    }
-
-    const loader = createTimelineLoader(pool, readRelays, filters, {
-      eventStore,
-      limit: 500, // Load many reactions
-    })
-
-    const subscription = loader().subscribe({
-      next: event => {
-        eventStore.add(event)
-      },
-      complete: () => {
-        setLoadedPubkey(user.pubkey)
-      },
-      error: err => {
-        console.error('Error loading reactions:', err)
-        setLoadedPubkey(user.pubkey)
-      },
-    })
+    // Load many reactions; completes on EOSE
+    const subscription = pool
+      .request(readRelays, [{ kinds: [7], authors: [user.pubkey], limit: 500 }])
+      .subscribe({
+        next: event => {
+          eventStore.add(event)
+        },
+        complete: () => {
+          setLoadedPubkey(user.pubkey)
+        },
+        error: err => {
+          console.error('Error loading reactions:', err)
+          setLoadedPubkey(user.pubkey)
+        },
+      })
 
     return () => {
       subscription.unsubscribe()

@@ -37,9 +37,7 @@ export function SubscriptionsPage() {
             {t('pages.subscriptions.welcomeDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => navigate('/explore')}>
-              {t('pages.subscriptions.exploreButton')}
-            </Button>
+            <Button onClick={() => navigate('/')}>{t('pages.subscriptions.exploreButton')}</Button>
             <Button variant="outline" onClick={() => navigate('/search')}>
               {t('pages.subscriptions.findCreators')}
             </Button>

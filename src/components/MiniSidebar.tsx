@@ -23,7 +23,7 @@ export function MiniSidebar() {
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             )}
           >
-            <item.icon className={cn('h-6 w-6', isActive && !item.noFill && 'fill-current')} />
+            <item.icon className={cn('h-6 w-6', isActive && 'fill-current')} />
             <span className="text-[10px] font-medium text-center truncate w-full px-1">
               {item.label}
             </span>

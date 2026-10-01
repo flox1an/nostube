@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { MainLayout } from '@/components/MainLayout'
 import { PageLoader } from '@/components/PageLoader'
@@ -23,9 +23,6 @@ import {
 } from '@/components/page-loaders'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const SmartHomePage = lazy(() =>
-  import('./pages/SmartHomePage').then(m => ({ default: m.SmartHomePage }))
-)
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const ShortsPage = lazy(() => import('./pages/ShortsPage').then(m => ({ default: m.ShortsPage })))
 const ShortsVideoPage = lazy(() =>
@@ -166,18 +163,11 @@ export function AppRouter() {
             index
             element={
               <Suspense fallback={<PageLoader />}>
-                <SmartHomePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/explore"
-            element={
-              <Suspense fallback={<PageLoader />}>
                 <HomePage />
               </Suspense>
             }
           />
+          <Route path="/explore" element={<Navigate to="/" replace />} />
           <Route
             path="/shorts"
             element={

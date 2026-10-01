@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Cog, Compass, FileText, Home, Library, Play, Users } from 'lucide-react'
+import { Cog, FileText, Home, Library, Play, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks'
@@ -13,7 +13,6 @@ export interface NavigationMenuItem {
   icon: LucideIcon
   href: string
   section: NavigationSection
-  noFill?: boolean
 }
 
 export interface NavigationMenu {
@@ -25,10 +24,9 @@ export interface NavigationMenu {
   mobileMoreItems: NavigationMenuItem[]
 }
 
-// Primary destinations (Home, Shorts, Following, Explore, Library) stay at
-// the same label/icon/position regardless of auth or follow state — only the
-// content behind Home adapts (see SmartHomePage). Renaming/reordering these
-// after a user's first follow is the exact instability issue #88 fixes.
+// Primary destinations (Home, Shorts, Following, Library) stay at the same
+// label/icon/position regardless of auth or follow state. Home is the same
+// global-first page for everyone; issue #88.
 export function useNavigationMenu(): NavigationMenu {
   const { t } = useTranslation()
   const { user } = useCurrentUser()
@@ -49,14 +47,6 @@ export function useNavigationMenu(): NavigationMenu {
         icon: Users,
         href: '/subscriptions',
         section: 'navigation',
-      },
-      {
-        id: 'explore',
-        label: t('navigation.explore'),
-        icon: Compass,
-        href: '/explore',
-        section: 'navigation',
-        noFill: true,
       },
     ]
 

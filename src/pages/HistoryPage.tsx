@@ -100,7 +100,7 @@ export function HistoryPage() {
       {videos.length === 0 ? (
         <div className="text-center py-12 space-y-3">
           <p className="text-muted-foreground">{t('pages.history.emptyState')}</p>
-          <Button onClick={() => navigate('/explore')}>{t('pages.history.browseButton')}</Button>
+          <Button onClick={() => navigate('/')}>{t('pages.history.browseButton')}</Button>
         </div>
       ) : (
         <VideoGrid

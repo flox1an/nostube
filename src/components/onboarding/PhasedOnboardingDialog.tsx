@@ -84,7 +84,7 @@ export function PhasedOnboardingDialog({
   }, [onComplete, onOpenChange])
 
   const handleExplore = useCallback(() => {
-    window.location.href = '/explore'
+    window.location.href = '/'
   }, [])
 
   const handleUpload = useCallback(() => {

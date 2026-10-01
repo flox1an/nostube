@@ -14,9 +14,12 @@ import {
 export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@/lib/blossom-url'
 
 export const presetRelays: Relay[] = [
+  { url: 'wss://relay.nostu.be', name: 'relay.nostu.be', tags: ['read'] },
   { url: 'wss://relay.divine.video', name: 'relay.divine.video', tags: ['read'] },
   { url: 'wss://relay.primal.net', name: 'relay.primal.net', tags: ['read'] },
   { url: 'wss://nos.lol', name: 'nos.lol', tags: ['read'] },
+  { url: 'wss://offchain.pub', name: 'offchain.pub', tags: ['read'] },
+  { url: 'wss://nostr.wine', name: 'nostr.wine', tags: ['read'] },
 ]
 
 /**

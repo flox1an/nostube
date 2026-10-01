@@ -38,17 +38,14 @@ describe('useNavigationMenu', () => {
     ])
   })
 
-  it('keeps Home/Shorts/Following/Library stable whether or not a user is signed in', () => {
+  it('shows Subscriptions only to signed-in users, everywhere', () => {
     const guestMenu = renderMenu().result.current
     const userMenu = renderMenu({ pubkey: 'regular-pubkey' }).result.current
 
-    const stableIds = ['home', 'shorts', 'subscriptions', 'library']
-    expect(guestMenu.compactItems.filter(i => stableIds.includes(i.id)).map(i => i.id)).toEqual(
-      stableIds
-    )
-    expect(userMenu.compactItems.filter(i => stableIds.includes(i.id)).map(i => i.id)).toEqual(
-      stableIds
-    )
+    expect(guestMenu.compactItems.map(i => i.id)).not.toContain('subscriptions')
+    expect(guestMenu.mobilePrimaryItems.map(i => i.id)).toEqual(['home', 'shorts', 'library'])
+    expect(guestMenu.mobileMoreItems.map(i => i.id)).toEqual(['settings'])
+    expect(userMenu.compactItems.map(i => i.id)).toContain('subscriptions')
   })
 
   it('shows beta video notes only to the beta account in every menu projection', () => {

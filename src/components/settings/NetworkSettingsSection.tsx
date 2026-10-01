@@ -213,7 +213,7 @@ function RelaysSubSection() {
       {config.relays.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('settings.relays.noRelays')}</p>
       ) : (
-        <ScrollArea className="w-full rounded-md border p-3 max-h-48">
+        <ScrollArea className="w-full rounded-md border p-3">
           <ul className="space-y-1.5">
             {config.relays.map(relay => (
               <li key={relay.url} className="flex items-center justify-between text-sm gap-2">
@@ -363,7 +363,7 @@ function PrivateRelaysSubSection() {
       ) : relays.length === 0 ? (
         <p className="text-sm text-muted-foreground">No private relays configured.</p>
       ) : (
-        <ScrollArea className="max-h-48 w-full rounded-md border p-3">
+        <ScrollArea className="w-full rounded-md border p-3">
           <ul className="space-y-1.5">
             {relays.map(relay => (
               <li key={relay} className="flex items-center justify-between gap-2 text-sm">
@@ -534,7 +534,7 @@ function BlossomSubSection() {
       {blossomServers.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('settings.blossom.noServers')}</p>
       ) : (
-        <ScrollArea className="w-full rounded-md border p-3 max-h-48">
+        <ScrollArea className="w-full rounded-md border p-3">
           <ul className="space-y-1.5">
             {blossomServers.map(server => (
               <li key={server.url} className="flex items-center justify-between text-sm gap-2">
@@ -742,7 +742,7 @@ function CachingSubSection() {
       {cachingServers.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('settings.caching.noServers')}</p>
       ) : (
-        <ScrollArea className="w-full rounded-md border p-3 max-h-48">
+        <ScrollArea className="w-full rounded-md border p-3">
           <ul className="space-y-1.5">
             {cachingServers.map(server => (
               <li key={server.url} className="flex items-center justify-between text-sm gap-2">

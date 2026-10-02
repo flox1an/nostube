@@ -74,11 +74,9 @@ jobs:
           workspaces: |
             src-tauri
 
-      - name: Clean install dependencies
+      - name: Install dependencies
         shell: bash
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
+        run: npm ci
 
       - name: Prepare Almond sidecar
         shell: bash

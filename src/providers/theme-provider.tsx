@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react'
 import { applyTheme, getThemeById } from '@/lib/themes'
 
 type Theme = 'dark' | 'light' | 'system'
@@ -49,8 +49,8 @@ export function ThemeProvider({
     return theme as 'light' | 'dark'
   }, [theme])
 
-  // Apply theme colors when theme or colorTheme changes
-  useEffect(() => {
+  // Apply the mode and palette before the navbar's first paint or color transition.
+  useLayoutEffect(() => {
     const root = window.document.documentElement
     const mode = getEffectiveMode()
 

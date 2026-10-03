@@ -63,8 +63,8 @@ Create a public Git application with:
 - health check: `GET /health` on port `8080`
 
 The GitHub workflow joins the Tailnet as `tag:ci` and triggers the Coolify resource after pushes to
-`main`. It requires repository secrets `TS_AUTHKEY` and `COOLIFY_DEPLOY_TOKEN`, plus repository variable
-`COOLIFY_TAILNET_HOST`.
+`main`. It requires repository secrets `TS_AUTHKEY`, `COOLIFY_DEPLOY_TOKEN` and `COOLIFY_TAILNET_HOST`
+(a secret, not a variable, so the host stays masked in the public Actions log).
 
 TLS terminates at Coolify's Traefik proxy. Keep secrets out of runtime environment variables because
 everything in `runtime-env.js` is public.

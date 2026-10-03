@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      COOLIFY_TAILNET_HOST: ${{ vars.COOLIFY_TAILNET_HOST }}
+      COOLIFY_TAILNET_HOST: ${{ secrets.COOLIFY_TAILNET_HOST }}
 
     steps:
       - name: Join Tailnet as tag:ci

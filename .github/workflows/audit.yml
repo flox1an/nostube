@@ -47,7 +47,7 @@ jobs:
             echo
             echo "- [ ] \`npm audit\` reports 0 vulnerabilities, or the PR explains each remaining one (no fix released, needs a major upgrade)."
             echo "- [ ] \`npm test\` (typecheck, eslint, vitest, builds) pass."
-          } > body.md
-          truncate -s '<60000' body.md
+          } > body.full
+          head -c 60000 body.full > body.md
           gh issue create --title "Security: npm audit reports $count vulnerabilities" \
             --label dependencies --label type:maintenance --label ready-for-agent --body-file body.md

@@ -1,0 +1,53 @@
+# Daily dependency audit. When npm audit reports vulnerabilities and no `dependencies`
+# issue is open, it opens one issue labeled for the Orca issue worker. It never changes code.
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit and open issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm audit --json > audit.json || true
+          count=$(jq '.metadata.vulnerabilities.total' audit.json)
+          echo "vulnerabilities: $count"
+          if [ "$count" = null ]; then cat audit.json; exit 1; fi
+          if [ "$count" = 0 ]; then exit 0; fi
+          if [ "$(gh issue list --label dependencies --state open --json number --jq length)" != 0 ]; then
+            echo "A dependencies issue is already open."
+            exit 0
+          fi
+          {
+            echo "## Problem"
+            echo
+            echo "The daily \`npm audit\` reports $count vulnerabilities."
+            echo
+            echo '```'
+            npm audit || true
+            echo '```'
+            echo
+            echo "## Acceptance criteria"
+            echo
+            echo "- [ ] \`npm audit\` reports 0 vulnerabilities, or the PR explains each remaining one (no fix released, needs a major upgrade)."
+            echo "- [ ] \`npm test\` (typecheck, eslint, vitest, builds) pass."
+          } > body.full
+          head -c 60000 body.full > body.md
+          gh issue create --title "Security: npm audit reports $count vulnerabilities" \
+            --label dependencies --label type:maintenance --label ready-for-agent --body-file body.md

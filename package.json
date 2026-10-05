@@ -142,7 +142,7 @@
   "overrides": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "serialize-javascript": "^7.0.5",
+    "serialize-javascript": "^7.1.2",
     "ejs": "6.0.1"
   }
 }

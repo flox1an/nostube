@@ -8,7 +8,7 @@ Blossom and the relay sit at the root, not under `/blossom` or `/relay`. Request
 2. `/api/*` → the instance's own endpoints (admin, setup, login, public config, health).
 3. Blossom paths by method and path → Blossom: `GET`/`HEAD`/`DELETE /<sha256>[.ext]`, `PUT`/`HEAD`/`OPTIONS /upload`, `GET /list/<pubkey>`, `PUT /mirror`, `PUT /report`. An unknown hash gets Blossom's 404, never the app shell.
 4. `/assets/*` → static files; missing asset is 404, never the app shell.
-5. Any other `GET` → the app shell (including `GET /upload`, the app's upload page).
+5. Any other `GET` → an embedded root file of the app build if one exists (`favicon*`, `manifest.webmanifest`, `sw.js`, `registerSW.js`, `robots.txt`, `embed.html`, the embed player's worker chunks), else the app shell (including `GET /upload`, the app's upload page).
 
 The Blossom library extracted from almond covers BUD-01, BUD-02, BUD-04, BUD-06 and BUD-09, nothing else. Almond's own pages and extras (`/`, `/index.html`, `/config`, `/filter-test.html`, `/_wot`, `/filter`, `/_upstream`, `/metrics`, `/_metrics`) stay in almond's standalone binary; the instance's admin interface covers those needs. Cashu payment stays a library feature the instance builds without.
 

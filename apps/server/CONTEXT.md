@@ -32,7 +32,7 @@ The creator list whose videos the homepage shows. One entry gives a personal pag
 _Avoid_: followed creators, members
 
 **Allowed writers** (zugelassene Schreiber):
-Keys allowed to write to the instance's own relay and Blossom. Displaying a creator grants no write access.
+Keys allowed to write to the instance's own relay and Blossom; one set for both. Everyone else can read but not write. Displaying a creator grants no write access, and removing a writer deletes none of their events.
 _Avoid_: whitelist, members, admins
 
 **Locally stored media**:

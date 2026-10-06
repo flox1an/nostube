@@ -56,3 +56,17 @@ _Avoid_: setup link, invite, setup password
 **Public config**:
 The versioned JSON of non-secret instance settings the frontend loads before building loaders.
 _Avoid_: runtime env, settings file
+
+### Reachability
+
+**TLS mode**:
+How the instance gets its HTTPS: terminated by an upstream proxy, from operator-supplied certificate files, from the instance CA, or from a public CA via ACME.
+_Avoid_: certificate strategy, SSL setting
+
+**Instance CA**:
+The private certificate authority an instance runs in the local-ca TLS mode. Viewer devices trust it once.
+_Avoid_: self-signed cert, local root
+
+**Canonical origin**:
+The one origin of an instance that goes into the public config and into URLs inside published events. Every other name the instance answers to is an alias.
+_Avoid_: base URL, public URL, domain

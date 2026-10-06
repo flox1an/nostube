@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pages no longer break for good after a deploy: the stale-chunk auto-reload was limited to once per browser session, so a second deploy left lazy routes (e.g. Settings) failing with "Failed to fetch dynamically imported module"; it is now rate-limited to one reload per 30 s. The server (and the Vercel rewrite) also answers missing `/assets/*` files with 404 instead of the HTML app shell, which browsers rejected as a module script (`text/html` MIME)
 - The personal image proxy URL field could not be typed: trailing slashes were stripped on every keystroke, turning `http://…` into `http:…`; the value is now stored as typed and normalized where it is used
 
+### Removed
+
+- `/runtime-env.js` and `window.__RUNTIME_ENV__` (`RUNTIME_RELAYS`, `RUNTIME_BLOSSOM_SERVERS`, `RUNTIME_APP_TITLE`, …): no client code ever read them, so they configured nothing; instances configure the app through `/api/config` in the instance build instead. `.env.example` and the test-stack's runtime-env smoke checks are gone with them
+
 ### Added
 
 - Instance build for nostube-server (`npm run build:instance` → `dist-instance/`, `VITE_INSTANCE_BUILD=true`): loads `GET /api/config` (strict contract v1) before any relay pool or loader exists, keeps the last good config for unreachable/5xx, and stops with an error screen on 404, an invalid body or an unknown version; a changed `revision` (checked on tab focus and relay reconnect) reloads the page. The config is laid over the saved settings, never saved: video queries only go to `videoSources` and only for `creators` (also enforced in the relay pool and event store), `interactionRelays` replace the hardcoded profile/zap/indexer/publish relays, the pool connects to no other relay, uploads go only to the instance's own Blossom, `/` opens the start creator's profile, and the trust filter, preset gate, image proxy, view tracking, DVM and media discovery, hosted search and dicebear avatars are off. The nostu.be build never requests `/api/config`

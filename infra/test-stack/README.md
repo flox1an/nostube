@@ -56,7 +56,6 @@ docker compose \
 Smoke tests wait for services and verify:
 
 - HTTP health/status endpoints
-- Nostube `runtime-env.js` includes configured relay + blossom URLs
 - Almond stats endpoint responds
 - Image resizer health endpoint responds
 

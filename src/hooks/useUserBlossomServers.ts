@@ -3,6 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventModel } from 'applesauce-react/hooks'
 import { UserBlossomServersModel } from 'applesauce-common/models'
 import { isBlossomServerBlocked } from '@/constants/relays'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 // Stable empty array to prevent infinite re-renders when user is not logged in
 const EMPTY_ARRAY: URL[] = []
@@ -18,7 +19,8 @@ export function useUserBlossomServers() {
     UserBlossomServersModel,
     user?.pubkey ? [user.pubkey] : null
   )
-  const blossomServers = blossomServersRaw ?? EMPTY_ARRAY
+  // Instance build: the instance's own Blossom (overlay config) is the only media server.
+  const blossomServers = (!getInstanceConfig() && blossomServersRaw) || EMPTY_ARRAY
 
   // Convert URL objects to strings and filter out blocked servers - memoized to prevent infinite loops
   const serverUrls = useMemo(

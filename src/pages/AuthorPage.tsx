@@ -63,7 +63,12 @@ import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
 import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
 import { getContentSafetyGate } from '@/lib/content-safety'
+import { getInstanceConfig } from '@/lib/instance-config'
 import { useImageCascade } from '@/hooks/useImageCascade'
+
+// Instance build: no hosted avatar generator (api.dicebear.com).
+const avatarFallbackUrl = (pubkey: string) =>
+  getInstanceConfig() ? undefined : `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
 
 type Tabs = 'overview' | 'videos' | 'shorts' | 'playlists' | 'liked' | 'following'
 const AUTHOR_TABS: Tabs[] = ['overview', 'videos', 'shorts', 'playlists', 'liked', 'following']
@@ -199,7 +204,7 @@ function AuthorProfile({
     >
       <div className="shrink-0">
         <img
-          src={profilePicture.src || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`}
+          src={profilePicture.src || avatarFallbackUrl(pubkey)}
           alt={displayName}
           className="w-24 h-24 rounded-full ring-2 ring-background object-cover"
           onError={profilePicture.onError}
@@ -450,7 +455,7 @@ function EditProfileDialog({
     }
   }
 
-  const fallbackPicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
+  const fallbackPicture = avatarFallbackUrl(pubkey)
   const isSaving = isPending || !!uploading || isFileUploading
 
   return (

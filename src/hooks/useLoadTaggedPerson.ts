@@ -8,7 +8,7 @@ import type { RelayPool } from 'applesauce-relay'
 import { useAppContext } from './useAppContext'
 import type { TaggedPerson } from '@/types/upload-draft'
 import { DEFAULT_RELAYS } from '@/nostr/core'
-import { METADATA_RELAY } from '@/constants/relays'
+import { METADATA_RELAYS } from '@/constants/relays'
 
 /**
  * Hook to load profile data for a pubkey and return a TaggedPerson object.
@@ -57,7 +57,8 @@ export function useLoadTaggedPerson(
 
     // Profile not in store, load from relays
     // Use provided relays or fall back to default + metadata-specialized relays
-    const queryRelays = relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, METADATA_RELAY]
+    const queryRelays =
+      relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, ...METADATA_RELAYS]
     const loader = createTimelineLoader(
       pool,
       queryRelays,
@@ -143,7 +144,8 @@ export async function loadTaggedPeople(
 
       // Profile not in store, load from relays
       // Use provided relays or fall back to default + metadata-specialized relays
-      const queryRelays = relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, METADATA_RELAY]
+      const queryRelays =
+        relays && relays.length > 0 ? relays : [...DEFAULT_RELAYS, ...METADATA_RELAYS]
       const loader = createTimelineLoader(
         pool,
         queryRelays,

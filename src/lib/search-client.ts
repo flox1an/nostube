@@ -2,8 +2,16 @@ import { nip19 } from 'nostr-tools'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { getTypeForKind } from '@/lib/video-types'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
+
+/**
+ * Instance build: search is off in this cut, whatever `search.mode` says. `local` (MiniSearch
+ * over the scoped catalog) and `external` (the configured URL) are later work
+ * (nostube-server ADR 0005); until then the hosted service is never asked.
+ */
+export const isSearchOff = () => getInstanceConfig() !== null
 
 export type SearchErrorCode = 'preset_unavailable'
 
@@ -84,6 +92,7 @@ export async function fetchExternalSearchResults(
   presetPubkey: string,
   nsfwFilter: string
 ): Promise<SearchResult<VideoEvent>> {
+  if (isSearchOff()) return { ok: false }
   try {
     const url = `${serviceUrl}/api/search?q=${encodeURIComponent(query)}&limit=50&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })
@@ -107,6 +116,7 @@ export async function fetchTagResults(
   nsfwFilter: string,
   limit = 100
 ): Promise<SearchResult<VideoEvent>> {
+  if (isSearchOff()) return { ok: false }
   try {
     const url = `${serviceUrl}/api/tags?t=${encodeURIComponent(tag.toLowerCase())}&limit=${limit}&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })
@@ -144,6 +154,7 @@ export async function fetchPeopleResults(
   nsfwFilter: string,
   limit = 10
 ): Promise<SearchResult<PeopleHit>> {
+  if (isSearchOff()) return { ok: false }
   try {
     const url = `${serviceUrl}/api/people?q=${encodeURIComponent(query)}&limit=${limit}&presetPubkey=${encodeURIComponent(presetPubkey)}&nsfwFilter=${encodeURIComponent(nsfwFilter)}`
     const res = await fetch(url, { signal })

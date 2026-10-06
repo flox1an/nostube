@@ -6,12 +6,12 @@ import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
 import { Button } from '@/components/ui/button'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
-import { presetRelays } from '@/constants/relays'
-import { subscriptionMethod, publishMethod } from '@/nostr/core'
+import { DEFAULT_RELAYS, subscriptionMethod, publishMethod } from '@/nostr/core'
 import { useTranslation } from 'react-i18next'
 
-// Relays used for nostrconnect communication
-const NOSTRCONNECT_RELAYS = presetRelays.map(r => r.url)
+// Relays used for nostrconnect communication (the preset relays; the interaction relays in
+// the instance build)
+const NOSTRCONNECT_RELAYS = DEFAULT_RELAYS
 
 // Build a bunker:// URI from signer properties for persistence
 function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string): string {

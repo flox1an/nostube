@@ -1,8 +1,41 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { AppContext, type Relay, type AppConfig, type AppContextType } from '@/contexts/AppContext'
+import {
+  AppContext,
+  type Relay,
+  type RelayTag,
+  type AppConfig,
+  type AppContextType,
+} from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 import { getEffectiveNsfwFilter } from '@/lib/content-safety'
+import { getInstanceConfig, instanceRelays } from '@/lib/instance-config'
+
+const instance = getInstanceConfig()
+
+/**
+ * Instance build (nostube-server ADR 0005): laid over the saved settings on every load and
+ * never written back. Read relays = videoSources, write relays = interactionRelays, uploads
+ * go only to the instance's root-mounted Blossom (ADR 0004), no mirrors or caching servers,
+ * no view tracking, no preset. Viewer prefs (theme, quality, NSFW, video type) stay.
+ */
+const instanceOverlay: Partial<AppConfig> | null = instance && {
+  relays: instanceRelays(instance).map(url => ({
+    url,
+    name: url,
+    tags: [
+      ...(instance.videoSources.includes(url) ? ['read'] : []),
+      ...(instance.interactionRelays.includes(url) ? ['write'] : []),
+    ] as RelayTag[],
+  })),
+  blossomServers: [
+    { url: instance.origin, name: new URL(instance.origin).host, tags: ['initial upload'] },
+  ],
+  cachingServers: [],
+  selectedPresetPubkey: null,
+  viewTrackingEnabled: false,
+  viewTrackingRelays: [],
+}
 
 interface AppProviderProps {
   children: ReactNode
@@ -23,10 +56,11 @@ export function AppProvider(props: AppProviderProps) {
   // Consumers only ever see the effective NSFW mode: an opt-in without the 18+
   // confirmation (older configs, hand-edited storage) counts as 'hide'.
   const nsfwFilter = getEffectiveNsfwFilter(storedConfig)
-  const config = useMemo(
-    () => (storedConfig.nsfwFilter === nsfwFilter ? storedConfig : { ...storedConfig, nsfwFilter }),
-    [storedConfig, nsfwFilter]
-  )
+  const config = useMemo(() => {
+    const effective =
+      storedConfig.nsfwFilter === nsfwFilter ? storedConfig : { ...storedConfig, nsfwFilter }
+    return instanceOverlay ? { ...effective, ...instanceOverlay } : effective
+  }, [storedConfig, nsfwFilter])
 
   // MIGRATION: Show YouTube content by default for existing saved configs.
   useEffect(() => {

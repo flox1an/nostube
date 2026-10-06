@@ -38,6 +38,9 @@ import { DesktopAccountSync } from '@/desktop/DesktopAccountSync'
 import { DesktopActivityReporter } from '@/desktop/DesktopActivityReporter'
 import { isTauri } from '@tauri-apps/api/core'
 import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
+import { getInstanceConfig } from '@/lib/instance-config'
+
+const instance = getInstanceConfig()
 
 const defaultConfig: AppConfig = {
   theme: 'dark',
@@ -85,7 +88,8 @@ registerCommonAccountTypes(accountManager)
 const actionRunner = new ActionRunner(eventStore, accountManager.signer, (event, relays) => {
   // Actions pass the user's outbox relays. Fall back to the defaults, since
   // publishing to an empty relay list would silently drop the event.
-  publishMethod(relays?.length ? relays : DEFAULT_RELAYS, event)
+  // Instance build: always the interaction relays (DEFAULT_RELAYS), never the outbox.
+  publishMethod(!instance && relays?.length ? relays : DEFAULT_RELAYS, event)
 })
 
 /**
@@ -178,10 +182,11 @@ export function App() {
                             <DesktopActivityReporter />
                             <DesktopAccountSync />
                             <AccountRestoreInit />
-                            <UserRelaySync />
+                            {/* Instance build: the user's NIP-65 never widens the relays. */}
+                            {!instance && <UserRelaySync />}
                             <RelayPoolSync />
                             <BatchedProfileLoaderInit />
-                            <TrustScoreProviderInit />
+                            {!instance && <TrustScoreProviderInit />}
                             <LoginTimeTrackingInit />
                             <ViewEventSweeperInit />
                             <PlaylistAutoFlagInit />

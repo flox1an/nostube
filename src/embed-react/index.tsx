@@ -13,7 +13,7 @@ import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@/contexts/AppContext'
 import { getEffectiveNsfwFilter, getVideoPlayback, NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { getCachedPreset, LOAD_TIMEOUT } from '@/lib/preset-storage'
-import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import { METADATA_RELAYS, presetRelays } from '@/constants/relays'
 import {
   DEFAULT_PRESET_PUBKEY,
   PRESET_D_TAG,
@@ -64,7 +64,9 @@ async function loadPreset(pubkey: string): Promise<NostubePreset | null> {
   const cached = getCachedPreset(pubkey)
   if (cached && !cached.stale) return cached.preset
 
-  const client = new NostrClient([...new Set([...presetRelays.map(r => r.url), METADATA_RELAY])])
+  const client = new NostrClient([
+    ...new Set([...presetRelays.map(r => r.url), ...METADATA_RELAYS]),
+  ])
   try {
     const event = await client.fetchLatest(
       { kinds: [PRESET_EVENT_KIND], authors: [pubkey], '#d': [PRESET_D_TAG] },

@@ -5,7 +5,7 @@ import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from './useAppContext'
 import { useCurrentUser } from './useCurrentUser'
 import { useNostrPublish } from './useNostrPublish'
-import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import { METADATA_RELAYS, presetRelays } from '@/constants/relays'
 import {
   type NostubePreset,
   type NostubePresetContent,
@@ -53,7 +53,7 @@ export function useMyPreset() {
     const urls = new Set<string>()
     config.relays.forEach(relay => urls.add(relay.url))
     presetRelays.forEach(relay => urls.add(relay.url))
-    urls.add(METADATA_RELAY)
+    METADATA_RELAYS.forEach(url => urls.add(url))
     return Array.from(urls)
   }, [config.relays])
 
@@ -141,7 +141,7 @@ export function useMyPreset() {
       const allRelays = new Set<string>()
       config.relays.forEach(r => allRelays.add(r.url))
       presetRelays.forEach(r => allRelays.add(r.url))
-      allRelays.add(METADATA_RELAY)
+      METADATA_RELAYS.forEach(url => allRelays.add(url))
 
       const signedEvent = await publish({ event, relays: Array.from(allRelays) })
 

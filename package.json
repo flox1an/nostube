@@ -7,6 +7,7 @@
     "dev": "npm i && vite",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "build": "tsc -p tsconfig.app.json --noEmit && eslint && vite build && vite build --config vite.embed.config.ts && cp dist/index.html dist/404.html",
+    "build:instance": "tsc -p tsconfig.app.json --noEmit && eslint && VITE_INSTANCE_BUILD=true vite build --outDir dist-instance",
     "start": "vite preview --port 8080 --host ::",
     "test": "npm i && tsc -p tsconfig.app.json --noEmit && eslint && vitest run && vite build && vite build --config vite.embed.config.ts",
     "deploy": "npm run build && npx -y surge@latest dist",

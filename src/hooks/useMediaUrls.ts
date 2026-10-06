@@ -6,6 +6,7 @@ import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { INDEXER_RELAYS } from '@/constants/relays'
+import { getInstanceConfig } from '@/lib/instance-config'
 import type { VideoVariant } from '@/utils/video-event'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
@@ -118,8 +119,10 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
   if (refreshedConfigRef.current.ladder !== ladder) {
     refreshedConfigRef.current = { ladder, key: ladderConfigKey }
   }
+  // Instance build: media discovery is fixed off (nostube-server ADR 0005).
   const finalDiscoveryEnabled =
-    discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? Boolean(sha256)
+    !getInstanceConfig() &&
+    (discoveryEnabled ?? mediaConfig?.failover.discovery.enabled ?? Boolean(sha256))
   const finalDiscoveryRelays = useMemo(
     () => [
       ...new Set([

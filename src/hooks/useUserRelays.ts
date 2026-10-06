@@ -1,7 +1,7 @@
 import { type NostrEvent } from 'nostr-tools'
 import { useMemo } from 'react'
 import { useAppContext } from './useAppContext'
-import { METADATA_RELAY, presetRelays, INDEXER_RELAYS } from '@/constants/relays'
+import { METADATA_RELAYS, presetRelays, INDEXER_RELAYS } from '@/constants/relays'
 import { useNostrQueryFirst } from '@/nostr/useNostrQuery'
 
 export interface UserRelayInfo {
@@ -27,7 +27,7 @@ export function useUserRelays(pubkey: string | undefined) {
     const urls = new Set<string>()
     config.relays.forEach(relay => urls.add(relay.url))
     presetRelays.forEach(relay => urls.add(relay.url))
-    urls.add(METADATA_RELAY)
+    METADATA_RELAYS.forEach(url => urls.add(url))
     INDEXER_RELAYS.forEach(url => urls.add(url))
     return Array.from(urls)
   }, [config.relays])

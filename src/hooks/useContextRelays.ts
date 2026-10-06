@@ -4,7 +4,11 @@ import type { NostrEvent } from 'nostr-tools'
 import { combineRelays } from '@/lib/utils'
 import { useReadRelays } from './useReadRelays'
 import { useUserRelays } from './useUserRelays'
-import { presetRelays, METADATA_RELAY } from '@/constants/relays'
+import { presetRelays, METADATA_RELAYS } from '@/constants/relays'
+import { getInstanceConfig, instanceRelays } from '@/lib/instance-config'
+
+// Instance build: hints, seen relays, outbox and presets never widen the relay set.
+const instance = getInstanceConfig()
 
 interface RelayOptions {
   /** Relays from NIP-19 identifiers (nevent, naddr, nprofile) */
@@ -44,6 +48,7 @@ export function useContextRelays(options: RelayOptions = {}): string[] {
   const presetRelayUrls = useMemo(() => presetRelays.map(r => r.url), [])
 
   return useMemo(() => {
+    if (instance) return instanceRelays(instance)
     const relaySources: string[][] = []
 
     // 1. NIP-19 relays (highest priority - explicitly specified)
@@ -122,6 +127,7 @@ export function useVideoPageRelays(params: {
   const presetRelayUrls = useMemo(() => presetRelays.map(r => r.url), [])
 
   return useMemo(() => {
+    if (instance) return instanceRelays(instance)
     const relaySources: string[][] = []
 
     // 1. NIP-19 relays (nevent relays)
@@ -189,6 +195,7 @@ export function useAuthorPageRelays(params: {
   const presetRelayUrls = useMemo(() => presetRelays.map(r => r.url), [])
 
   return useMemo(() => {
+    if (instance) return instanceRelays(instance)
     const relaySources: string[][] = []
 
     // 1. NIP-19 relays (nprofile relays)
@@ -210,8 +217,8 @@ export function useAuthorPageRelays(params: {
     // 4. Preset fallback relays
     relaySources.push(presetRelayUrls)
 
-    // 5. Always include METADATA_RELAY for profile metadata and NIP-65 relay lists
-    relaySources.push([METADATA_RELAY])
+    // 5. Always include METADATA_RELAYS for profile metadata and NIP-65 relay lists
+    relaySources.push(METADATA_RELAYS)
 
     return combineRelays(relaySources)
   }, [stableNprofileRelays, authorRelays, userReadRelays, presetRelayUrls])

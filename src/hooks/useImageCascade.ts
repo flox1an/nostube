@@ -7,6 +7,7 @@ import {
   insecureThumbnailUrl,
   type PresetThumbnailPreset,
 } from '@/lib/preset-thumbnail-url'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 export type ImageCascadeVariant = 'preview' | 'inline' | 'avatar'
 
@@ -91,7 +92,9 @@ export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
   const raceEnabled = input.race ?? true
 
   // blob:/data: URLs are local-only and never reach imgproxy in either mode.
-  const isProxyable = (url: string) => !url.startsWith('blob:') && !url.startsWith('data:')
+  // Instance build: the image proxy is fixed off, so nothing is proxyable (raw images only).
+  const isProxyable = (url: string) =>
+    !getInstanceConfig() && !url.startsWith('blob:') && !url.startsWith('data:')
 
   const proxiedImage = useMemo(() => {
     if (!rawImage || !isProxyable(rawImage)) return rawImage

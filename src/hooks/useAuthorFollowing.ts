@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from './useAppContext'
-import { METADATA_RELAY } from '@/constants/relays'
+import { METADATA_RELAYS } from '@/constants/relays'
 import type { NostrEvent } from 'nostr-tools'
 
 /** NIP-51 multimedia (photos, short video) follow list */
@@ -29,7 +29,7 @@ export function useAuthorFollowing(
 
   // Combine provided relays with metadata relay
   const relaysToUse = useMemo(() => {
-    const uniqueRelays = new Set([...relays, METADATA_RELAY])
+    const uniqueRelays = new Set([...relays, ...METADATA_RELAYS])
     return Array.from(uniqueRelays)
   }, [relays])
 

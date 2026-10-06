@@ -11,6 +11,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist',
+      'dist-instance',
       'public/embed-*test*.html',
       'docs/prototypes/*.html',
       '.worktrees',

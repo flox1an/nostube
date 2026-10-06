@@ -34,6 +34,7 @@ import {
   clearAllCached,
   pruneExpired,
 } from '@/lib/trust-score-db'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (fast synchronous reads, backed by IndexedDB)
@@ -118,6 +119,11 @@ function retryPubkeys(pubkeys: string[]) {
  */
 function requestTrustScore(pubkey: string) {
   if (!pubkey || pubkey.trim() === '') return
+  // Instance build: no trust provider (ContextVM is a hosted service); never ask, no score.
+  if (getInstanceConfig()) {
+    confirmedMissing.add(pubkey)
+    return
+  }
   // Already in memory? Skip
   if (getMemCached(pubkey)) return
   // Already pending? Skip

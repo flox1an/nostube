@@ -3,6 +3,7 @@ node_modules/
 
 # Production builds
 dist/
+dist-instance/
 build/
 
 # Environment files

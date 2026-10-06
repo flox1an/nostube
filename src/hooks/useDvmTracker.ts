@@ -3,6 +3,7 @@ import { useAppContext } from './useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import { type NostrEvent } from 'nostr-tools'
 import type { TrackedDvm } from '@/lib/dvm-utils'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 /** How far back to look for DVM announcements (seconds) */
 const DVM_ACTIVITY_WINDOW_SECS = 30 * 60 // 30 minutes
@@ -279,6 +280,8 @@ export function useDvmTracker(): {
   const { config, relayOverride } = useAppContext()
 
   const dvmRelays = useMemo(() => {
+    // Instance build: DVM discovery is fixed off; no relays = no tracking, no DVM offered.
+    if (getInstanceConfig()) return []
     const readRelays = config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
     const writeRelays = config.relays.filter(r => r.tags.includes('write')).map(r => r.url)
     const combined = new Set([...readRelays, ...writeRelays, ...DEFAULT_RELAYS])

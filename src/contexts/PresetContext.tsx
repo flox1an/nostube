@@ -11,7 +11,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { map } from 'rxjs'
 import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { useAppContext } from '@/hooks/useAppContext'
-import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import { METADATA_RELAYS, presetRelays } from '@/constants/relays'
 import {
   type NostubePreset,
   type NostubePresetContent,
@@ -30,6 +30,7 @@ import {
   LOAD_TIMEOUT,
   type CacheResult,
 } from '@/lib/preset-storage'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 type PresetStatus = 'loading' | 'loaded' | 'error'
 
@@ -46,7 +47,22 @@ interface PresetProviderProps {
   children: ReactNode
 }
 
+// Instance build: no preset and no preset gate (nostube-server ADR 0005).
+const NO_PRESET: PresetContextValue = {
+  preset: null,
+  presetContent: EMPTY_PRESET_CONTENT,
+  selectedPubkey: '',
+  setSelectedPreset: () => {},
+}
+
 export function PresetProvider({ children }: PresetProviderProps) {
+  if (getInstanceConfig()) {
+    return <PresetContext.Provider value={NO_PRESET}>{children}</PresetContext.Provider>
+  }
+  return <RemotePresetProvider>{children}</RemotePresetProvider>
+}
+
+function RemotePresetProvider({ children }: PresetProviderProps) {
   const eventStore = useEventStore()
   const { pool, config, updateConfig } = useAppContext()
 
@@ -75,7 +91,7 @@ export function PresetProvider({ children }: PresetProviderProps) {
     const urls = new Set<string>()
     config.relays.forEach(relay => urls.add(relay.url))
     presetRelays.forEach(relay => urls.add(relay.url))
-    urls.add(METADATA_RELAY)
+    METADATA_RELAYS.forEach(url => urls.add(url))
     return Array.from(urls)
   }, [config.relays])
 

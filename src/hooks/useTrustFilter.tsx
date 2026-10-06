@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { VideoEvent } from '@/utils/video-event'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 /** Minimum personalized trust score (0–1) to pass the filter */
 export const MIN_PERSONAL_SCORE = 0.4
@@ -37,6 +38,8 @@ export function passesTrustFilter({
   personalScore,
   globalScore,
 }: TrustFilterInput): boolean {
+  // Instance build: the trust filter is fixed off (nostube-server ADR 0005).
+  if (getInstanceConfig()) return true
   if (currentUserPubkey && authorPubkey === currentUserPubkey) return true
   if (followedPubkeys.has(authorPubkey)) return true
   if (personalScore === null || personalScore === undefined) return false
@@ -174,5 +177,11 @@ export function useTrustFilter(videos: VideoEvent[] | null) {
     </>
   )
 
-  return { filteredVideos, filterButton, enabled, pending }
+  // Instance build: fixed off, so no toggle.
+  return {
+    filteredVideos,
+    filterButton: getInstanceConfig() ? <></> : filterButton,
+    enabled,
+    pending,
+  }
 }

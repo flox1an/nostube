@@ -1,8 +1,12 @@
-//! Build-check spike (ticket #12). Env: NSS_DATA_DIR, NSS_WRITER (hex pubkey), NSS_PORT.
+//! nostube-server: relay, Blossom (almond library), `/api/*` and the embedded Nostube
+//! instance build on one origin (ADR 0004). Usage: `nostube-server --data <dir>`;
+//! the instance config is `<dir>/config.toml`.
 
+mod config;
 mod relay;
+mod tls;
 
-use std::{env, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf};
 
 use axum::{
     body::Body,
@@ -11,8 +15,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json, Router,
 };
-use axum_server::tls_rustls::RustlsConfig;
-use nostr::prelude::PublicKey;
+use config::{Config, GIB, PER_FILE_MAX};
 use tower::ServiceExt;
 
 #[derive(rust_embed::Embed)]
@@ -23,56 +26,110 @@ struct Web;
 struct App {
     blossom: Router,
     relay: relay::Relay,
+    /// Serialized public config, built once per start (config changes need a restart).
+    public_config: axum::body::Bytes,
 }
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 #[tokio::main]
-async fn main() -> Result<(), BoxError> {
+async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
-    // The process owner installs the one provider; libraries never do.
+    // Startup failures end with one line naming the cause (#7), then exit.
+    if let Err(e) = run().await {
+        tracing::error!("startup failed: {e}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), BoxError> {
+    // The process owner installs the one provider; libraries never do (#12).
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .map_err(|_| "rustls provider already installed")?;
 
-    let data = PathBuf::from(env::var("NSS_DATA_DIR")?);
-    let port: u16 = env::var("NSS_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(8443);
-    let writer = PublicKey::parse(&env::var("NSS_WRITER")?)?;
-    std::fs::create_dir_all(&data)?;
+    let data = data_dir()?;
+    let cfg = Config::load(&data.join("config.toml"))?;
+    let config::Tls::LocalCa { router_name, https_port, http_port } = &cfg.tls;
+    let (https_port, http_port) = (*https_port, *http_port);
 
-    let mut cfg = almond::Config::defaults();
-    cfg.storage_path = data.join("blossom");
-    cfg.public_url = Some(format!("https://localhost:{port}"));
-    cfg.allowed_npubs = vec![writer];
-    cfg.homepage_enabled = false;
-    let cfg = cfg.validate()?;
-    let state = almond::build_state(&cfg).await?;
-    let _tasks = almond::spawn_background_tasks(&state, &cfg);
+    let names = tls::LocalNames::detect(router_name.clone())?;
+    let covered = names.local_name.eq_ignore_ascii_case(&cfg.origin_host)
+        || names.router_name.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
+        || cfg.origin_host.parse().is_ok_and(|ip| names.ips.contains(&ip));
+    if !covered {
+        return Err(format!(
+            "origin host {} is not one of the certificate names ({}, router name {:?}, IPs {:?})",
+            cfg.origin_host, names.local_name, names.router_name, names.ips
+        )
+        .into());
+    }
+    let ca = tls::local_ca(&data.join("tls"), &names).await?;
+
+    let mut blossom = almond::Config::defaults();
+    blossom.storage_path = data.join("blossom");
+    blossom.public_url = Some(cfg.origin.clone());
+    blossom.allowed_npubs = cfg.allowed_writers.clone();
+    blossom.homepage_enabled = false;
+    blossom.blob_max_size = PER_FILE_MAX;
+    blossom.storage_max_size = cfg.storage.quota_gib * GIB;
+    blossom.storage_min_free = cfg.storage.free_space_reserve_gib * GIB;
+    let blossom = blossom.validate()?;
+    let state = almond::build_state(&blossom).await?;
+    let _tasks = almond::spawn_background_tasks(&state, &blossom);
+
     let app = App {
         blossom: almond::create_app(state),
-        relay: relay::Relay::open(&data.join("relay.sqlite"), vec![writer])?,
+        relay: relay::Relay::open(
+            &data.join("relay.sqlite"),
+            relay::RelayConfig {
+                writers: cfg.allowed_writers.clone(),
+                name: cfg.title.clone(),
+                description: format!("Relay of the Nostube instance {}", cfg.title),
+            },
+        )?,
+        public_config: serde_json::to_vec(&cfg.public_json())?.into(),
     };
 
-    let cert = rcgen::generate_simple_self_signed(vec!["localhost".into(), "127.0.0.1".into()])?;
-    let tls = RustlsConfig::from_pem(cert.cert.pem().into_bytes(), cert.signing_key.serialize_pem().into_bytes()).await?;
-    tracing::info!("listening on https://localhost:{port}");
-    axum_server::bind_rustls(std::net::SocketAddr::from(([0, 0, 0, 0], port)), tls)
+    let http = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], http_port))).await?;
+    let onboarding = tls::onboarding_router(&ca, cfg.origin.clone());
+    tokio::spawn(async move {
+        if let Err(e) = axum::serve(http, onboarding).await {
+            tracing::error!("port {} listener stopped: {e}", http_port);
+        }
+    });
+
+    tracing::info!("serving {} (also https://{}:{https_port}, CA on http port {http_port})", cfg.origin, names.local_name);
+    axum_server::bind_rustls(SocketAddr::from(([0, 0, 0, 0], https_port)), ca.rustls.clone())
         .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
         .await?;
     Ok(())
 }
 
-/// ADR 0004 dispatch order: relay, /api, Blossom, static files, app shell.
+fn data_dir() -> Result<PathBuf, BoxError> {
+    let mut args = std::env::args().skip(1);
+    match (args.next().as_deref(), args.next(), args.next()) {
+        (Some("--data"), Some(dir), None) => Ok(dir.into()),
+        _ => Err("usage: nostube-server --data <dir>".into()),
+    }
+}
+
+/// ADR 0004 dispatch order: relay, /api, Blossom, root files, app shell.
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
         return relay::handle(app.relay, req).await;
     }
     if path.starts_with("/api/") {
-        return match path.as_str() {
-            "/api/health" => Json(serde_json::json!({ "ok": true })).into_response(),
+        return match (req.method(), path.as_str()) {
+            (&Method::GET, "/api/config") => (
+                [(header::CONTENT_TYPE, "application/json"), (header::CACHE_CONTROL, "no-store")],
+                app.public_config,
+            )
+                .into_response(),
+            (&Method::GET, "/api/health") => Json(serde_json::json!({ "ok": true })).into_response(),
             _ => StatusCode::NOT_FOUND.into_response(),
         };
     }
@@ -99,6 +156,7 @@ fn is_blossom(method: &Method, path: &str) -> bool {
     let seg = path.trim_start_matches('/');
     match *method {
         Method::PUT => matches!(seg, "upload" | "mirror" | "report"),
+        Method::PATCH => seg == "upload",
         Method::HEAD | Method::OPTIONS if matches!(seg, "upload" | "mirror" | "report") => true,
         Method::GET if seg.starts_with("list/") => true,
         Method::GET | Method::HEAD | Method::DELETE | Method::OPTIONS => is_blob_name(seg),

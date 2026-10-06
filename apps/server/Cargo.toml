@@ -4,9 +4,8 @@ version = "0.0.0"
 edition = "2021"
 publish = false
 
-# Build-check spike for ticket #12: one axum app with the almond library
-# (Blossom), a relay stub on axum ws + rusqlite, the embedded Nostube build,
-# and one rustls crypto provider. Throwaway; lives on research/build-check.
+# Tracer bullet (#16): one axum app with the almond library (Blossom), the
+# ported relay, local-ca TLS, /api/config and the embedded Nostube instance build.
 
 [dependencies]
 almond = { git = "file:///path/to/almond", rev = "aa44b87679f53706de30bc63951282c502b3c14f", default-features = false }
@@ -24,3 +23,9 @@ mime_guess = "2"
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+libc = "0.2"
+sha2 = "0.10"
+time = "0.3"
+x509-parser = "0.18"

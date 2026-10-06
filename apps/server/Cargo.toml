@@ -1,0 +1,26 @@
+[package]
+name = "nostube-server"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Build-check spike for ticket #12: one axum app with the almond library
+# (Blossom), a relay stub on axum ws + rusqlite, the embedded Nostube build,
+# and one rustls crypto provider. Throwaway; lives on research/build-check.
+
+[dependencies]
+almond = { git = "file:///path/to/almond", rev = "aa44b87679f53706de30bc63951282c502b3c14f", default-features = false }
+axum = { version = "0.8.9", features = ["ws"] }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }
+rcgen = "0.14"
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+nostr = "0.45"
+rusqlite = { version = "0.40", features = ["bundled"] }
+rust-embed = { version = "8.12", features = ["debug-embed"] }
+parking_lot = "0.12"
+mime_guess = "2"
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

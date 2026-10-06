@@ -57,6 +57,10 @@ _Avoid_: setup link, invite, setup password
 The versioned JSON of non-secret instance settings the frontend loads before building loaders.
 _Avoid_: runtime env, settings file
 
+**Instance build**:
+The Nostube app build embedded in an instance. It loads the public config before anything else and never runs on the normal app defaults.
+_Avoid_: custom build, homepage build
+
 ### Reachability
 
 **TLS mode**:

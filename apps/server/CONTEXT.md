@@ -39,6 +39,20 @@ _Avoid_: whitelist, members, admins
 Blobs actually held in the instance's storage. Removing a displayed creator deletes no media.
 _Avoid_: mirror, cache
 
+### Storage limits
+
+**Per-file maximum**:
+The size ceiling for any single uploaded file: a video output, an HLS segment, a thumbnail, or an original uploaded unchanged.
+_Avoid_: upload limit, max upload size
+
+**Storage quota**:
+The ceiling on the total size of locally stored media, output variants included.
+_Avoid_: disk limit, space limit
+
+**Free-space reserve**:
+Disk space the instance always leaves free on the host; uploads that would cut into it are refused.
+_Avoid_: min free, safety margin
+
 ### Sources and access
 
 **Video sources** (Videoquellen):

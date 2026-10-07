@@ -9,6 +9,7 @@ import { useTheme } from '@/providers/theme-provider'
 import { getThemeById } from '@/lib/themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { GlobalSearchBar } from '@/components/GlobalSearchBar'
+import { isSearchOff } from '@/lib/search-client'
 import { NotificationBell } from '@/components/NotificationBell'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
@@ -121,11 +122,11 @@ export function Header({ transparent = false }: HeaderProps) {
         </div>
 
         <div className="flex-1 max-w-2xl mx-4 hidden md:block">
-          <GlobalSearchBar />
+          {!isSearchOff() && <GlobalSearchBar />}
         </div>
 
         <div className="flex items-center gap-1 lg:gap-2">
-          {isMobile && (
+          {isMobile && !isSearchOff() && (
             <Button
               variant="ghost"
               size="icon"

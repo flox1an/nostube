@@ -2,6 +2,7 @@ import React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { cn } from '@/lib/utils'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 interface UserAvatarProps {
   /** User's profile picture URL */
@@ -33,7 +34,10 @@ export const UserAvatar = React.memo(function UserAvatar({
   const cascade = useImageCascade({ src: picture, variant: 'avatar', authorPubkey: pubkey })
 
   const fallbackSeed = pubkey || name || 'default'
-  const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackSeed}`
+  // Instance build: no hosted avatar generator; the character fallback is used instead.
+  const dicebearUrl = getInstanceConfig()
+    ? undefined
+    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackSeed}`
   const avatarSrc = cascade.src ?? dicebearUrl
 
   // Character fallback (last resort if dicebear also fails)

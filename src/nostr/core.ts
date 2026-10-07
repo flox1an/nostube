@@ -18,13 +18,25 @@ import {
   catchError,
   finalize,
   defer,
+  isObservable,
+  map,
 } from 'rxjs'
 import { filterDuplicateEvents } from 'applesauce-core/observable'
 import { presetRelays } from '@/constants/relays'
 import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
+import {
+  getInstanceConfig,
+  instanceRelays,
+  isRelayAllowed,
+  isVideoKind,
+  scopeVideoRequest,
+} from '@/lib/instance-config'
 
-// Default relays for video content - these will be overridden by user config
-export const DEFAULT_RELAYS = presetRelays.map(r => r.url)
+const instance = getInstanceConfig()
+
+// Default relays for video content - these will be overridden by user config.
+// Instance build: the interaction relays (publish fallback, lookups, wallet, DVM).
+export const DEFAULT_RELAYS = instance ? instance.interactionRelays : presetRelays.map(r => r.url)
 
 // Setup a local event
 
@@ -237,14 +249,57 @@ relayPool.request = ((relays, filters, opts) => {
   )
 }) as typeof relayPool.request
 
+if (instance) {
+  // Instance build (nostube-server ADR 0005), enforced here once for every union site:
+  // 1. the pool only connects to videoSources ∪ interactionRelays (hints, outbox, NIP-65,
+  //    presets and the hardcoded relay constants are dropped);
+  const group = relayPool.group.bind(relayPool)
+  relayPool.group = ((relays, ignoreOffline) =>
+    group(
+      Array.isArray(relays)
+        ? relays.filter(isRelayAllowed)
+        : relays.pipe(map(urls => urls.filter(isRelayAllowed))),
+      ignoreOffline
+    )) as typeof relayPool.group
+
+  // 2. video-kind requests only go to videoSources and only for creators; a request with
+  //    nothing left in scope is not sent at all;
+  for (const method of ['request', 'subscription', 'req'] as const) {
+    const original = relayPool[method].bind(relayPool) as (
+      ...args: unknown[]
+    ) => Observable<unknown>
+    relayPool[method] = ((relays: unknown, filters: unknown, opts: unknown) => {
+      // ponytail: observable/function filter inputs are not scoped (no caller uses them);
+      // they still hit the relay allowlist and the store gate below.
+      if (!Array.isArray(relays) || typeof filters === 'function' || isObservable(filters)) {
+        return original(relays, filters, opts)
+      }
+      const scoped = scopeVideoRequest(
+        instance,
+        relays as string[],
+        (Array.isArray(filters) ? filters : [filters]) as Filter[]
+      )
+      return scoped ? original(scoped.relays, scoped.filters, opts) : EMPTY
+    }) as never
+  }
+
+  // 3. video events of non-creators never enter the store (cache, by-id lookups, any path).
+  const verify = eventStore.verifyEvent
+  eventStore.verifyEvent = event =>
+    (!isVideoKind(event.kind) || instance.creators.includes(event.pubkey)) &&
+    (verify?.(event) ?? true)
+}
+
 // Configure unified event loader for all pointer types
 // Handles both EventPointer (by id) and AddressPointer (by kind/pubkey/d-tag)
 // This includes kind 10063 (blossom servers), kind 10002 (relay lists), profiles, etc.
+// Instance build: no relay hints; by-id and address lookups use the instance relays.
 createEventLoaderForStore(eventStore, relayPool, {
   cacheRequest,
-  lookupRelays: DEFAULT_RELAYS,
+  lookupRelays: instance ? instanceRelays(instance) : DEFAULT_RELAYS,
+  extraRelays: instance ? instanceRelays(instance) : undefined,
   bufferTime: 0, // Don't batch - emit first result immediately
-  followRelayHints: true,
+  followRelayHints: !instance,
 })
 
 console.log('📡 Configured unified EventStore loader with relays:', DEFAULT_RELAYS)

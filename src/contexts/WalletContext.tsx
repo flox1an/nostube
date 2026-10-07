@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { WalletConnect } from 'applesauce-wallet-connect'
+import { parseWalletConnectURI } from 'applesauce-wallet-connect/helpers'
+import { allowSignerRelays } from '@/lib/instance-config'
 import type { ActionRunner } from 'applesauce-actions'
 import { Wallet } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'
@@ -148,6 +150,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       WalletConnect.pool = relayPool
       WalletConnect.subscriptionMethod = subscriptionMethod
       WalletConnect.publishMethod = publishMethod
+
+      // NWC relays live in the URI (e.g. relay.getalby.com); the instance relay allowlist
+      // would drop them and every wallet RPC would time out.
+      allowSignerRelays(parseWalletConnectURI(connectionString).relays)
 
       const client = WalletConnect.fromConnectURI(connectionString)
 

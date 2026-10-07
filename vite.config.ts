@@ -5,6 +5,10 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Instance build (nostube-server): `npm run build:instance`. Boots through
+// src/instance-main.ts, which loads /api/config before the app; see src/lib/instance-config.ts.
+const instanceBuild = process.env.VITE_INSTANCE_BUILD === 'true'
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
@@ -14,6 +18,14 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    instanceBuild && {
+      name: 'instance-entry',
+      // 'pre': swap the entry before Vite reads the module graph from index.html.
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html: string) => html.replace('/src/main.tsx', '/src/instance-main.ts'),
+      },
+    },
     visualizer({
       open: false,
       filename: 'dist/stats.html',
@@ -26,7 +38,12 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         globIgnores: ['embed.html', 'stats.html', 'embed-*.html'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/embed/, /^\/\.well-known\//],
+        navigateFallbackDenylist: [
+          /^\/embed/,
+          /^\/\.well-known\//,
+          // The instance's own endpoints (/api/config is no-store) are never the SPA shell.
+          ...(instanceBuild ? [/^\/api\//] : []),
+        ],
         navigateFallbackAllowlist: [/^\/(?!assets\/)/],
         skipWaiting: true,
         clientsClaim: true,

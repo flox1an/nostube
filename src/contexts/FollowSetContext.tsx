@@ -4,7 +4,7 @@ import { createAddressLoader } from 'applesauce-loaders/loaders'
 import { kinds, type NostrEvent } from 'nostr-tools'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks/useAppContext'
-import { METADATA_RELAY } from '@/constants/relays'
+import { METADATA_RELAYS } from '@/constants/relays'
 
 /** NIP-51 multimedia (photos, short video) follow list */
 export const MEDIA_FOLLOWS_KIND = 10020
@@ -90,7 +90,7 @@ export function FollowSetProvider({ children }: FollowSetProviderProps) {
     const readRelays = config.relays
       .filter(relay => relay.tags.includes('read'))
       .map(relay => relay.url)
-    return [...readRelays, METADATA_RELAY]
+    return [...readRelays, ...METADATA_RELAYS]
   }, [config.relays])
 
   // Load kind 10020 media follows list (NIP-51)

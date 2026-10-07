@@ -5,6 +5,7 @@ import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-si
 import { nip19 } from 'nostr-tools'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
 import { isNip05, resolveNip05ToBunkerUri } from '@/lib/nip05-bunker'
+import { allowSignerRelays } from '@/lib/instance-config'
 import { decryptNcryptsec } from '@/lib/nip49'
 
 // NOTE: This file should not be edited except for adding new login methods.
@@ -94,6 +95,10 @@ export function useLoginActions() {
         } else {
           throw new Error('Enter a bunker:// URI or NIP-05 address (user@domain)')
         }
+
+        // Bunker relays live in the URI, not in the instance config; without this the
+        // instance relay allowlist would drop them and the login would wait forever.
+        allowSignerRelays(NostrConnectSigner.parseBunkerURI(bunkerUri).relays)
 
         const signer = await NostrConnectSigner.fromBunkerURI(bunkerUri, {
           onAuth: options?.onAuth,

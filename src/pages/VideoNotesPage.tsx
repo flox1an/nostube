@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PublishNoteDialog } from '@/components/PublishNoteDialog'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 const PAGE_SIZE = 20
 
@@ -276,9 +277,9 @@ export function VideoNotesPage() {
   const [publishedIds, setPublishedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    document.title = `${t('pages.videoNotes.title')} - nostube`
+    document.title = pageTitle(`${t('pages.videoNotes.title')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

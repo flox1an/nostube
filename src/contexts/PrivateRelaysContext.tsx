@@ -23,6 +23,7 @@ import {
   type PrivateRelayStatus,
 } from '@/nostr/private-relays'
 import { useUserRelaysContext } from './UserRelaysContext'
+import { isRelayAllowed } from '@/lib/instance-config'
 
 interface PrivateRelaysContextValue {
   relays: string[]
@@ -117,9 +118,10 @@ export function PrivateRelaysProvider({ children }: { children: ReactNode }) {
     setStatuses(Object.fromEntries(relays.map(url => [url, 'disconnected' as const])))
     if (!signer || !user?.pubkey) return
 
+    // pool.relay() bypasses the instance build's relay allowlist (src/nostr/core.ts).
     return monitorPrivateRelayAuthentication(
       pool,
-      relays,
+      relays.filter(isRelayAllowed),
       signer,
       user.pubkey,
       (url, status, authenticationError) => {

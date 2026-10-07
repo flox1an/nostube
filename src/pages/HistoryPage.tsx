@@ -5,6 +5,7 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
 import { isAudioVideo, isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
 import { Button } from '@/components/ui/button'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { Trash2 } from 'lucide-react'
 import {
   AlertDialog,
@@ -54,9 +55,9 @@ export function HistoryPage() {
 
   // Update document title
   useEffect(() => {
-    document.title = `${t('pages.history.title')} - nostube`
+    document.title = pageTitle(`${t('pages.history.title')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

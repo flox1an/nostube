@@ -18,29 +18,7 @@ docker run --rm -p 8080:8080 --name nostube nostube
 ```
 
 The container listens on port `8080`. Unknown non-file routes serve `index.html` for React Router.
-
-## Runtime configuration
-
-The container generates `/runtime-env.js` from these optional environment variables:
-
-| Variable                  | Default                                  |
-| ------------------------- | ---------------------------------------- |
-| `RUNTIME_RELAYS`          | `wss://relay.divine.video,wss://nos.lol` |
-| `RUNTIME_BLOSSOM_SERVERS` | `https://almond.slidestr.net`            |
-| `RUNTIME_APP_TITLE`       | `Nostube`                                |
-| `RUNTIME_DEBUG`           | `false`                                  |
-| `RUNTIME_CUSTOM_CONFIG`   | `null`                                   |
-
-Example:
-
-```bash
-docker run --rm -p 8080:8080 \
-  -e RUNTIME_RELAYS='wss://relay.divine.video,wss://nos.lol' \
-  -e RUNTIME_BLOSSOM_SERVERS='https://almond.slidestr.net' \
-  nostube
-```
-
-`runtime-env.js` is not cached. Hashed assets use a one-year immutable cache policy.
+Hashed assets use a one-year immutable cache policy.
 
 ## Build-time configuration
 
@@ -66,5 +44,4 @@ The GitHub workflow joins the Tailnet as `tag:ci` and triggers the Coolify resou
 `main`. It requires repository secrets `TS_AUTHKEY`, `COOLIFY_DEPLOY_TOKEN` and `COOLIFY_TAILNET_HOST`
 (a secret, not a variable, so the host stays masked in the public Actions log).
 
-TLS terminates at Coolify's Traefik proxy. Keep secrets out of runtime environment variables because
-everything in `runtime-env.js` is public.
+TLS terminates at Coolify's Traefik proxy.

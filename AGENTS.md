@@ -41,6 +41,7 @@ Key references:
 
 - `npm run dev` – installs if needed and launches Vite with HMR.
 - `npm run build` – optimized bundle plus `dist/404.html` copy for static hosts.
+- `npm run build:instance` – nostube-server instance build into `dist-instance/` (reads `/api/config` at startup; see `src/lib/instance-config.ts`).
 - `npm run test` – installs, runs `tsc --noEmit`, ESLint, Vitest, and a production build.
 - `npm run typecheck`, `npm run format`, `npm run format:check` – targeted verifications.
 - `npm run start` previews the build on port 8080; `npm run deploy` publishes via Surge.

@@ -47,6 +47,7 @@ import {
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile, useCurrentUser, usePlaylists } from '@/hooks'
 import { type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 type SortOrder = 'playlist' | 'published_at' | 'created_at'
 
@@ -262,12 +263,12 @@ export default function SinglePlaylistPage() {
 
   useEffect(() => {
     if (playlistTitle) {
-      document.title = `${playlistTitle} - nostube`
+      document.title = pageTitle(`${playlistTitle}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [playlistTitle])
 

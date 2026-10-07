@@ -22,6 +22,13 @@ import {
   VideoNotesPageLoader,
 } from '@/components/page-loaders'
 import { Skeleton } from '@/components/ui/skeleton'
+import { nip19 } from 'nostr-tools'
+import { getInstanceConfig } from '@/lib/instance-config'
+
+// Instance build: `/` is the start page (the profile of `startPage.creator`) and search is
+// off in this cut (see isSearchOff in src/lib/search-client.ts).
+const instance = getInstanceConfig()
+const startCreator = instance?.startPage?.creator
 
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const ShortsPage = lazy(() => import('./pages/ShortsPage').then(m => ({ default: m.ShortsPage })))
@@ -162,9 +169,13 @@ export function AppRouter() {
           <Route
             index
             element={
-              <Suspense fallback={<PageLoader />}>
-                <HomePage />
-              </Suspense>
+              startCreator ? (
+                <Navigate to={`/p/${nip19.npubEncode(startCreator)}`} replace />
+              ) : (
+                <Suspense fallback={<PageLoader />}>
+                  <HomePage />
+                </Suspense>
+              )
             }
           />
           <Route path="/explore" element={<Navigate to="/" replace />} />
@@ -259,9 +270,13 @@ export function AppRouter() {
           <Route
             path="/search"
             element={
-              <Suspense fallback={<SearchPageLoader />}>
-                <SearchPage />
-              </Suspense>
+              instance ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Suspense fallback={<SearchPageLoader />}>
+                  <SearchPage />
+                </Suspense>
+              )
             }
           />
           <Route

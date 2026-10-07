@@ -66,11 +66,6 @@ services:
       context: ../..
       dockerfile: Dockerfile
     restart: unless-stopped
-    environment:
-      RUNTIME_RELAYS: ${RUNTIME_RELAYS:-ws://localhost:18081}
-      RUNTIME_BLOSSOM_SERVERS: ${RUNTIME_BLOSSOM_SERVERS:-http://localhost:13000}
-      RUNTIME_APP_TITLE: ${RUNTIME_APP_TITLE:-nostube (test-stack)}
-      RUNTIME_DEBUG: ${RUNTIME_DEBUG:-true}
     ports:
       - '${NOSTUBE_PORT:-18080}:8080'
     depends_on:
@@ -106,8 +101,6 @@ services:
       DIVICO_URL: http://divico-dvm:5207
       RELAY_URL: http://relay:8080
       IMAGE_RESIZER_URL: http://image-resizer:8080
-      EXPECTED_RUNTIME_RELAYS: ${RUNTIME_RELAYS:-ws://localhost:18081}
-      EXPECTED_RUNTIME_BLOSSOM_SERVERS: ${RUNTIME_BLOSSOM_SERVERS:-http://localhost:13000}
       WAIT_TIMEOUT_SECONDS: ${SMOKE_WAIT_TIMEOUT_SECONDS:-180}
     volumes:
       - ./scripts:/scripts:ro

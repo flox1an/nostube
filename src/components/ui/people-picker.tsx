@@ -13,7 +13,7 @@ import { kinds } from 'nostr-tools'
 import { getProfileContent } from 'applesauce-core/helpers'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { DEFAULT_RELAYS } from '@/nostr/core'
-import { METADATA_RELAY } from '@/constants/relays'
+import { METADATA_RELAYS } from '@/constants/relays'
 
 export interface SelectedPerson {
   pubkey: string
@@ -107,7 +107,7 @@ export function PeoplePicker({
     pubkeysToLoad.forEach(pk => loadingPubkeysRef.current.add(pk))
 
     // Use fallback relays (including metadata-specialized relay) when person has no relay hints
-    const relays = [...DEFAULT_RELAYS, METADATA_RELAY]
+    const relays = [...DEFAULT_RELAYS, ...METADATA_RELAYS]
 
     const loader = createTimelineLoader(
       pool,

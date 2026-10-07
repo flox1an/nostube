@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { normalizeRelayUrl } from '@/lib/utils'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 function RelayListEditor({
   value,
@@ -247,9 +248,9 @@ export function AdminPage() {
 
   // Update document title
   useEffect(() => {
-    document.title = 'Admin - Manage Preset - nostube'
+    document.title = pageTitle('Admin - Manage Preset')
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [])
 

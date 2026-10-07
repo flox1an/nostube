@@ -13,6 +13,7 @@ import { getPublishDate } from '@/utils/video-event'
 import type { VideoEvent } from '@/utils/video-event'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { getKindsForType } from '@/lib/video-types'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 /** Compact horizontal shelf of videos with a heading and "View all" link. Hidden when empty. */
 function HomeShelf({
@@ -55,9 +56,9 @@ export function HomePage() {
   const { relayOverride, setRelayOverride } = useAppContext()
 
   useEffect(() => {
-    document.title = `${t('navigation.home')} - nostube`
+    document.title = pageTitle(`${t('navigation.home')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
   const relays = useStableRelays()

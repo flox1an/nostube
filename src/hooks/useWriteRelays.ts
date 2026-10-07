@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAppContext } from './useAppContext'
 import { useUserRelaysContext } from '@/contexts/UserRelaysContext'
+import { getInstanceConfig } from '@/lib/instance-config'
 
 /**
  * Returns write relays from app configuration
@@ -14,5 +15,8 @@ export function useWriteRelays(): string[] {
     [config.relays]
   )
 
-  return writeRelays && writeRelays.length > 0 ? writeRelays : configuredRelays
+  // Instance build: always the interaction relays from the overlay, never the user's NIP-65.
+  return writeRelays && writeRelays.length > 0 && !getInstanceConfig()
+    ? writeRelays
+    : configuredRelays
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAppContext } from './useAppContext'
-import { METADATA_RELAY, presetRelays } from '@/constants/relays'
+import { METADATA_RELAYS, presetRelays } from '@/constants/relays'
 import {
   type NostubePreset,
   type NostubePresetContent,
@@ -55,7 +55,7 @@ export function usePresets() {
     const urls = new Set<string>()
     config.relays.forEach(relay => urls.add(relay.url))
     presetRelays.forEach(relay => urls.add(relay.url))
-    urls.add(METADATA_RELAY)
+    METADATA_RELAYS.forEach(url => urls.add(url))
     return Array.from(urls)
   }, [config.relays])
 

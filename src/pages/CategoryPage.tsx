@@ -9,6 +9,7 @@ import { getKindsForType } from '@/lib/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 export function CategoryPage() {
   const { t } = useTranslation()
@@ -44,12 +45,12 @@ export function CategoryPage() {
   // Update document title
   useEffect(() => {
     if (category) {
-      document.title = `${category.name} - nostube`
+      document.title = pageTitle(`${category.name}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [category])
 

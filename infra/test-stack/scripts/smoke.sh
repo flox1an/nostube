@@ -26,10 +26,6 @@ echo "[smoke] waiting for service endpoints"
 "$WAIT_SCRIPT" "${IMAGE_RESIZER_URL}/health" "$WAIT_TIMEOUT_SECONDS" '^200$'
 "$WAIT_SCRIPT" "${RELAY_URL}/" "$WAIT_TIMEOUT_SECONDS" '^(101|200|204|400|404|426)$'
 
-echo "[smoke] validating nostube runtime env"
-require_body_match "${NOSTUBE_URL}/runtime-env.js" "${EXPECTED_RUNTIME_RELAYS}" "runtime relays are injected"
-require_body_match "${NOSTUBE_URL}/runtime-env.js" "${EXPECTED_RUNTIME_BLOSSOM_SERVERS}" "runtime blossom servers are injected"
-
 echo "[smoke] validating almond stats response"
 require_body_match "${ALMOND_URL}/_stats" "{" "almond stats endpoint returned JSON"
 

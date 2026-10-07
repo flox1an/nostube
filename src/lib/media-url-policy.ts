@@ -1,3 +1,5 @@
+import { getInstanceConfig } from '@/lib/instance-config'
+
 export type MediaUrlTrust = 'event' | 'configured-service'
 
 export type MediaUrlDisposition =
@@ -66,6 +68,8 @@ export function classifyMediaUrl(url: string, trust: MediaUrlTrust): MediaUrlDis
   }
   if (parsed.username || parsed.password) return 'blocked-credentials'
   if (trust === 'configured-service') return 'allowed'
+  // Instance build: the instance's own origin (its Blossom) may be a LAN/Tailscale address.
+  if (parsed.origin === getInstanceConfig()?.origin) return 'allowed'
 
   const hostname = parsed.hostname.toLowerCase()
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) return 'blocked-loopback'

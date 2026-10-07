@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAppContext } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { SEARCH_SERVICE_URL } from '@/lib/search-client'
+import { isSearchOff, SEARCH_SERVICE_URL } from '@/lib/search-client'
 import { YOUTUBE_REGEX } from '@/utils/origin-utils'
 import type { RecommendationVideo } from '@/types/recommendation'
 
@@ -29,7 +29,7 @@ export function useSearchRecommendations(params: {
   const [presetUnavailable, setPresetUnavailable] = useState(false)
 
   useEffect(() => {
-    if (!videoRef) return
+    if (!videoRef || isSearchOff()) return
 
     let cancelled = false
     const controller = new AbortController()

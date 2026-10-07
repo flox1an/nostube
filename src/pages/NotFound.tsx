@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -7,10 +8,10 @@ const NotFound = () => {
   const location = useLocation()
 
   useEffect(() => {
-    document.title = `${t('pages.notFound.title')} - nostube`
+    document.title = pageTitle(`${t('pages.notFound.title')}`)
     console.error('404 Error: User attempted to access non-existent route:', location.pathname)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [location.pathname, t])
 

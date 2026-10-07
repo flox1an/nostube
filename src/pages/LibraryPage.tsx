@@ -13,6 +13,7 @@ import {
 } from '@/hooks'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { AuthDialog } from '@/components/auth/AuthDialog'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 interface LibrarySectionProps {
   icon: React.ElementType
@@ -58,9 +59,9 @@ export function LibraryPage() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
 
   useEffect(() => {
-    document.title = `${t('navigation.library')} - nostube`
+    document.title = pageTitle(`${t('navigation.library')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

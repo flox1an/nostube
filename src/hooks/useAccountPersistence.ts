@@ -9,6 +9,7 @@ import {
 } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
+import { allowSignerRelays } from '@/lib/instance-config'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'
@@ -281,6 +282,10 @@ export async function restoreAccount(
           if (accountData.clientKey) {
             options.signer = PrivateKeySigner.fromKey(accountData.clientKey)
           }
+
+          // Restored bunker sessions use the relays stored in the URI; they must pass the
+          // instance relay allowlist or the signer would be cut off after a reload.
+          allowSignerRelays(NostrConnectSigner.parseBunkerURI(accountData.data).relays)
 
           const signer = await NostrConnectSigner.fromBunkerURI(accountData.data, options)
           const pubkey = await signer.getPublicKey()

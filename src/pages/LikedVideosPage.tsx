@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
 import { processEvents } from '@/utils/video-event'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useTranslation } from 'react-i18next'
 
 export function LikedVideosPage() {
@@ -32,9 +33,9 @@ export function LikedVideosPage() {
   const readRelays = useReadRelays()
 
   useEffect(() => {
-    document.title = `${t('pages.likedVideos.title')} - nostube`
+    document.title = pageTitle(`${t('pages.likedVideos.title')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

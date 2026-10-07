@@ -16,6 +16,7 @@ import {
   type SearchTypeFilter,
 } from '@/lib/search-filters'
 import { getKindsForType } from '@/lib/video-types'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useTranslation } from 'react-i18next'
 
 const typeFilters: SearchTypeFilter[] = ['all', 'videos', 'shorts', 'audio']
@@ -102,12 +103,12 @@ export function SearchPage() {
   // Update document title
   useEffect(() => {
     if (query) {
-      document.title = `Search: ${query} - nostube`
+      document.title = pageTitle(`Search: ${query}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [query])
 

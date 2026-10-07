@@ -2,7 +2,7 @@
  * Public instance config (contract v1, nostube-server ADR 0005).
  *
  * Only the instance build (`VITE_INSTANCE_BUILD=true`, `npm run build:instance`) loads it:
- * `src/instance-main.tsx` fetches `/api/config` before any app module (relay pool, loaders)
+ * `src/instance-main.ts` fetches `/api/config` before any app module (relay pool, loaders)
  * is evaluated and calls `setInstanceConfig`. In the normal nostu.be build
  * `getInstanceConfig()` is always null and every instance branch is inert.
  */
@@ -12,6 +12,27 @@ export const INSTANCE_BUILD = import.meta.env.VITE_INSTANCE_BUILD === 'true'
 
 export const CONTRACT_VERSION = 1
 export const LAST_GOOD_CONFIG_KEY = 'nostube:instance-config'
+
+/**
+ * Page titles: `<page> - nostube`, or `<page> - <config.title>` in the instance build.
+ * Read lazily: the instance boot script writes the last-good config right before the app
+ * module graph is evaluated, so a module-load-time constant can race that write.
+ */
+export const appTitle = (): string => {
+  if (!INSTANCE_BUILD) return 'nostube'
+  try {
+    const raw = localStorage.getItem(LAST_GOOD_CONFIG_KEY)
+    if (!raw) return 'nostube'
+    const parsed = parseInstanceConfig(JSON.parse(raw))
+    return parsed.ok ? parsed.config.title : 'nostube'
+  } catch {
+    return 'nostube'
+  }
+}
+export const pageTitle = (page: string | null | undefined) => {
+  const title = appTitle()
+  return page ? `${page} - ${title}` : title
+}
 
 export type InstanceSearch = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
 
@@ -153,6 +174,9 @@ export function decideLoad(
 
 let current: InstanceConfig | null = null
 let allowedRelays = new Set<string>()
+// NIP-46 bunker and NWC URIs carry their own relays (e.g. relay.getalby.com). The signer and
+// wallet cannot work without them, so user-initiated URIs add them to the allowlist.
+const signerRelays = new Set<string>()
 
 /** normalizeURL throws on garbage; garbage then simply matches nothing. */
 function normalizeRelay(url: string): string {
@@ -165,7 +189,7 @@ function normalizeRelay(url: string): string {
 
 export function setInstanceConfig(config: InstanceConfig) {
   current = config
-  allowedRelays = new Set(instanceRelays(config).map(normalizeRelay))
+  allowedRelays = new Set(config ? instanceRelays(config).map(normalizeRelay) : [])
 }
 
 /** The applied instance config; always null outside the instance build. */
@@ -175,7 +199,17 @@ export function getInstanceConfig(): InstanceConfig | null {
 
 /** Instance build: the only relays the app may connect to. Always true outside it. */
 export function isRelayAllowed(url: string): boolean {
-  return !current || allowedRelays.has(normalizeRelay(url))
+  return !current || allowedRelays.has(normalizeRelay(url)) || signerRelays.has(normalizeRelay(url))
+}
+
+/**
+ * Instance build: allow the relays a NIP-46 bunker:// URI (or resolved NIP-05) needs for
+ * login, and a nostr+walletconnect:// URI needs for its wallet, alongside the configured
+ * instance relays. No-op outside the instance build.
+ */
+export function allowSignerRelays(relays: readonly string[]) {
+  if (!current) return
+  relays.forEach(url => signerRelays.add(normalizeRelay(url)))
 }
 
 /** videoSources ∪ interactionRelays: replaces hint/outbox/preset unions in the instance build. */

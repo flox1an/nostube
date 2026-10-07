@@ -8,15 +8,16 @@ import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
 import { getKindsForType } from '@/lib/video-types'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 export function ShortsPage() {
   const { t } = useTranslation()
   const { relayOverride, setRelayOverride } = useAppContext()
 
   useEffect(() => {
-    document.title = `${t('navigation.shorts')} - nostube`
+    document.title = pageTitle(`${t('navigation.shorts')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
   const relays = useStableRelays()

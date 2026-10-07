@@ -64,9 +64,12 @@ import type { ReactNode } from 'react'
 import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
 import { getContentSafetyGate } from '@/lib/content-safety'
 import { getInstanceConfig } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useImageCascade } from '@/hooks/useImageCascade'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
-// Instance build: no hosted avatar generator (api.dicebear.com).
+// Instance build: no hosted avatar generator (api.dicebear.com); components fall back to
+// their character/initial fallback instead of a remote URL.
 const avatarFallbackUrl = (pubkey: string) =>
   getInstanceConfig() ? undefined : `https://api.dicebear.com/7.x/avataaars/svg?seed=${pubkey}`
 
@@ -203,13 +206,17 @@ function AuthorProfile({
       )}
     >
       <div className="shrink-0">
-        <img
-          src={profilePicture.src || avatarFallbackUrl(pubkey)}
-          alt={displayName}
-          className="w-24 h-24 rounded-full ring-2 ring-background object-cover"
-          onError={profilePicture.onError}
-          onLoad={profilePicture.onLoad}
-        />
+        <Avatar className="w-24 h-24 rounded-full ring-2 ring-background">
+          <AvatarImage
+            src={profilePicture.src ?? undefined}
+            alt={displayName}
+            referrerPolicy="no-referrer"
+            onError={profilePicture.onError}
+            onLoad={profilePicture.onLoad}
+          />
+          <AvatarImage src={avatarFallbackUrl(pubkey)} alt={displayName} />
+          <AvatarFallback>{displayName.charAt(0) || pubkey.charAt(0)}</AvatarFallback>
+        </Avatar>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
@@ -510,6 +517,11 @@ function EditProfileDialog({
                 onError={formPicture.onError}
                 onLoad={formPicture.onLoad}
               />
+              {!formPicture.src && !fallbackPicture && (
+                <span className="absolute inset-0 flex items-center justify-center text-lg font-medium">
+                  {(form.name || pubkey).charAt(0)}
+                </span>
+              )}
               <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity group-hover:opacity-100">
                 {uploading === 'picture' ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -1086,12 +1098,12 @@ function AuthorPageContent() {
 
   useEffect(() => {
     if (authorName) {
-      document.title = `${authorName} - nostube`
+      document.title = pageTitle(`${authorName}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [authorName])
 

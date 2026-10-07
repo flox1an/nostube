@@ -37,6 +37,7 @@ import { LoadingSpinner } from '@/components/player'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
 import { useVideoPrefetch, getPrefetchedVideoBlob } from '@/hooks/useVideoPrefetch'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { ShortVideoItem } from './ShortVideoItem'
 import { ShortVideoOverlay } from './ShortVideoOverlay'
 
@@ -828,12 +829,12 @@ export function ShortsVideoPage() {
 
   useEffect(() => {
     if (currentVideo?.title) {
-      document.title = `${currentVideo.title} - nostube`
+      document.title = pageTitle(`${currentVideo.title}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [currentVideo?.title])
 

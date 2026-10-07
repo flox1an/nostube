@@ -62,6 +62,7 @@ import { useTranslation } from 'react-i18next'
 import type { BlossomServerTag, NsfwFilter } from '@/contexts/AppContext'
 import { ContentSafetyGate, ContentSafetyRoute } from '@/components/ContentSafetyGate'
 import { getContentSafetyGate, getVideoPlayback } from '@/lib/content-safety'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_URLS: string[] = []
@@ -504,12 +505,12 @@ function VideoPageContent() {
   // Update document title
   useEffect(() => {
     if (video?.title) {
-      document.title = `${video.title} - nostube`
+      document.title = pageTitle(`${video.title}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [video?.title])
 

@@ -1,6 +1,7 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSubscriptionsVideos } from '@/hooks'
 import { Button } from '@/components/ui/button'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
@@ -10,9 +11,9 @@ export function SubscriptionsPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    document.title = `${t('navigation.subscriptions')} - nostube`
+    document.title = pageTitle(`${t('navigation.subscriptions')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

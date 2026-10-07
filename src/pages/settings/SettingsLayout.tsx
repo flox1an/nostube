@@ -12,6 +12,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import {
   Select,
   SelectContent,
@@ -171,14 +172,14 @@ export function SettingsLayout() {
   // Update document title — call BEFORE any early returns per Rules of Hooks
   useEffect(() => {
     if (isIndex) {
-      document.title = `${t('settings.title')} - nostube`
+      document.title = pageTitle(`${t('settings.title')}`)
     } else if (currentCategory) {
-      document.title = `${t(currentCategory.labelKey)} - nostube`
+      document.title = pageTitle(`${t(currentCategory.labelKey)}`)
     } else {
-      document.title = `${t('settings.title')} - nostube`
+      document.title = pageTitle(`${t('settings.title')}`)
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t, isIndex, currentCategory])
 

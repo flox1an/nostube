@@ -9,6 +9,7 @@ import { useGlobalPlaylists, type GlobalPlaylist } from '@/hooks'
 import { useProfile } from '@/hooks/useProfile'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { useReadRelays } from '@/hooks'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 interface GlobalPlaylistCardProps {
   playlist: GlobalPlaylist
@@ -81,9 +82,9 @@ export default function GlobalPlaylistsPage() {
   const { playlists, isLoading } = useGlobalPlaylists()
 
   useEffect(() => {
-    document.title = `${t('navigation.playlists')} - nostube`
+    document.title = pageTitle(`${t('navigation.playlists')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

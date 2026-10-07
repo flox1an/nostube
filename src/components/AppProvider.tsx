@@ -15,18 +15,19 @@ const instance = getInstanceConfig()
 
 /**
  * Instance build (nostube-server ADR 0005): laid over the saved settings on every load and
- * never written back. Read relays = videoSources, write relays = interactionRelays, uploads
- * go only to the instance's root-mounted Blossom (ADR 0004), no mirrors or caching servers,
- * no view tracking, no preset. Viewer prefs (theme, quality, NSFW, video type) stay.
+ * never written back. videoSources get read, interactionRelays get read+write (playlists,
+ * likes and notifications are published and read there; video-kind requests stay scoped to
+ * videoSources by the relay pool), uploads go only to the instance's root-mounted Blossom
+ * (nostube-server ADR 0004), no mirrors or caching servers, no view tracking, no preset.
+ * Viewer prefs (theme, quality, NSFW, video type) stay.
  */
 const instanceOverlay: Partial<AppConfig> | null = instance && {
   relays: instanceRelays(instance).map(url => ({
     url,
     name: url,
-    tags: [
-      ...(instance.videoSources.includes(url) ? ['read'] : []),
-      ...(instance.interactionRelays.includes(url) ? ['write'] : []),
-    ] as RelayTag[],
+    tags: instance.interactionRelays.includes(url)
+      ? (['read', 'write'] as RelayTag[])
+      : (['read'] as RelayTag[]),
   })),
   blossomServers: [
     { url: instance.origin, name: new URL(instance.origin).host, tags: ['initial upload'] },

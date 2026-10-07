@@ -3,6 +3,7 @@ import type { UploadDraft } from '@/types/upload-draft'
 import { VideoUpload } from '@/components/VideoUpload'
 import { DraftPicker } from '@/components/upload/DraftPicker'
 import { useToast } from '@/hooks/useToast'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -12,9 +13,9 @@ export function UploadPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
-    document.title = `${t('upload.title')} - nostube`
+    document.title = pageTitle(`${t('upload.title')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
   const { toast } = useToast()

@@ -6,6 +6,7 @@ import { useEffect, useMemo } from 'react'
 import { getKindsForType } from '@/lib/video-types'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 export function HashtagPage() {
   const { t } = useTranslation()
@@ -27,12 +28,12 @@ export function HashtagPage() {
   // Update document title
   useEffect(() => {
     if (tag) {
-      document.title = `#${tag} - nostube`
+      document.title = pageTitle(`#${tag}`)
     } else {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [tag])
 

@@ -7,6 +7,7 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PresetCard } from '@/components/presets/PresetCard'
 import { DEFAULT_PRESET_PUBKEY } from '@/types/preset'
+import { appTitle, pageTitle } from '@/lib/instance-config'
 
 export function PresetsPage() {
   const { t } = useTranslation()
@@ -16,9 +17,9 @@ export function PresetsPage() {
 
   // Update document title
   useEffect(() => {
-    document.title = `${t('settings.presets.pageTitle')} - nostube`
+    document.title = pageTitle(`${t('settings.presets.pageTitle')}`)
     return () => {
-      document.title = 'nostube'
+      document.title = appTitle()
     }
   }, [t])
 

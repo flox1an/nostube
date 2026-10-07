@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  allowSignerRelays,
   decideLoad,
+  isRelayAllowed,
   parseInstanceConfig,
   scopeVideoRequest,
+  setInstanceConfig,
   type InstanceConfig,
 } from './instance-config'
 
@@ -115,5 +118,29 @@ describe('scopeVideoRequest', () => {
   it('leaves non-video requests alone', () => {
     const relays = ['wss://anywhere']
     expect(scopeVideoRequest(good(), relays, [deletion])).toEqual({ relays, filters: [deletion] })
+  })
+})
+
+describe('allowSignerRelays', () => {
+  it('accepts bunker and wallet relays alongside the configured instance relays', () => {
+    setInstanceConfig(good())
+    try {
+      expect(isRelayAllowed('wss://relay.getalby.com')).toBe(false)
+      allowSignerRelays(['wss://relay.getalby.com', 'wss://Bunker.example'])
+      expect(isRelayAllowed('wss://relay.getalby.com')).toBe(true)
+      // normalizeURL comparison: trailing slash variants hit the same entry
+      expect(isRelayAllowed('wss://bunker.example/')).toBe(true)
+      expect(isRelayAllowed('wss://still-not-allowed.example')).toBe(false)
+      expect(isRelayAllowed(RELAY)).toBe(true)
+    } finally {
+      setInstanceConfig(null as unknown as InstanceConfig)
+    }
+  })
+
+  it('is a no-op outside the instance build', () => {
+    setInstanceConfig(null as unknown as InstanceConfig)
+    expect(isRelayAllowed('wss://anything.example')).toBe(true)
+    allowSignerRelays(['wss://relay.getalby.com'])
+    expect(isRelayAllowed('wss://anything.example')).toBe(true)
   })
 })

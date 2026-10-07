@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { MainLayout } from '@/components/MainLayout'
 import { PageLoader } from '@/components/PageLoader'
@@ -158,6 +158,14 @@ function SettingsContentLoader() {
       <Skeleton className="h-32 w-full rounded-lg" />
     </div>
   )
+}
+
+function ServerAdmin() {
+  const location = useLocation()
+  useEffect(() => {
+    window.location.replace(location.pathname + location.search + location.hash)
+  }, [location])
+  return null
 }
 
 export function AppRouter() {
@@ -403,11 +411,15 @@ export function AppRouter() {
             />
           </Route>
           <Route
-            path="/admin"
+            path={instance ? '/admin/*' : '/admin'}
             element={
-              <Suspense fallback={<AdminPageLoader />}>
-                <AdminPage />
-              </Suspense>
+              instance ? (
+                <ServerAdmin />
+              ) : (
+                <Suspense fallback={<AdminPageLoader />}>
+                  <AdminPage />
+                </Suspense>
+              )
             }
           />
           <Route

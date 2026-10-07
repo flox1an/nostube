@@ -41,8 +41,8 @@ export default defineConfig({
         navigateFallbackDenylist: [
           /^\/embed/,
           /^\/\.well-known\//,
-          // The instance's own endpoints (/api/config is no-store) are never the SPA shell.
-          ...(instanceBuild ? [/^\/api\//] : []),
+          // Server endpoints must never become the SPA shell.
+          ...(instanceBuild ? [/^\/api\//, /^\/admin(?:\/|$)/] : []),
         ],
         navigateFallbackAllowlist: [/^\/(?!assets\/)/],
         skipWaiting: true,

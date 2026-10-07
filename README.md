@@ -24,6 +24,13 @@ Install the NosTube-compatible Nostr video publishing skill:
 npx skills add https://github.com/flox1an/nostube/tree/main/.agents/skills/nostr-video-publisher
 ```
 
+## nostube-server instance build
+
+`npm run build:instance` writes `dist-instance/` for embedding in nostube-server.
+In this build `/admin` and its subpaths belong to the server: client-side navigation
+performs a full page load, and the service worker never serves the SPA shell there.
+The normal build retains the preset-editor admin page.
+
 ## Screenshots
 
 ### Homepage and User Menu

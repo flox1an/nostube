@@ -462,3 +462,25 @@ Noch konkret zu entscheiden: bevorzugter Installationshost und passender Supervi
 
 **Kerngedanke:** Autonomie entsteht durch geschlossene lokale Daten- und Kontrollwege. Browserverarbeitung und wenige Serverkomponenten vereinfachen den Betrieb; sie beweisen allein keine Unabhängigkeit von externen Defaults, Schlüsseldiensten, Zertifikaten oder Datenquellen.
 
+## 13. Implementierter Erststart
+
+Ohne vorbereitete Dateien: `nostube-server` legt im Arbeitsverzeichnis `data/` an.
+Alternativ, auch für mehrere lokale Instanzen:
+
+```sh
+cargo run -- --data tmp2 --port 9376 --http-port 0
+```
+
+- `--data <Verzeichnis>`: Daten und `config.toml`; Standard `data`.
+- `--bind <IP>`: Bindadresse beider Listener; Standard `0.0.0.0`.
+- `--port <Port>`: HTTPS für Frontend, Admin, Relay und Blossom; Standard aus der Config, beim Erststart 443.
+- `--http-port <Port>`: separater HTTP-Listener ausschließlich für CA-Onboarding und HTTPS-Weiterleitung; 0 deaktiviert ihn, Erststart-Standard 80. Ist er belegt oder nicht bindbar, läuft HTTPS mit einer Warnung weiter. HTTPS-Bindefehler nennen Adresse und Port und brechen den Start ab.
+
+Beim Erststart werden die gewählten Ports, die lokale `.local`-Origin und die eigenen Relay-URLs einschließlich HTTPS-Port gespeichert. Vorhandene Config-Dateien werden nicht überschrieben; CLI-Listener-Overrides ändern deren kanonische Origin nicht. Hinter einem Proxy muss diese weiterhin die öffentliche Adresse enthalten. Aktuell implementiert ist `local-ca`; `--http-port 0` schaltet nicht TLS ab.
+
+Solange kein Admin registriert ist, zeigt das Log einen vollständigen Setup-Link und einen Terminal-QR-Code mit demselben einmaligen Token. Der Token steht im URL-Fragment, nicht im HTTP-Query: Die Setup-Seite übernimmt ihn ins Formular und entfernt ihn aus der Adresszeile. Link und QR-Code sind Zugangsdaten; Logs nicht weitergeben. Passwort festlegen, danach Creator, zugelassene Schreiber und übrige Instanzwerte unter `/admin` eintragen. Ohne zugelassene Schreiber sind Upload und Mirror deaktiviert. Admin-Pubkey-Bindung bleibt optional.
+
+`/admin` und `/admin/*` gehören ausschließlich dem Server, auch bei Navigation aus dem Instanz-Frontend und mit aktivem Service Worker. Unbekannte Admin-Unterpfade liefern 404 statt des Frontends. Der normale Nostube-Build behält seine eigene Admin-Route.
+
+Vor Zugriff von einem anderen Gerät muss die Instanz-CA vertraut werden: über den aktivierten HTTP-Onboarding-Listener (`http://<Host>:<HTTP-Port>/ca`) oder durch Import von `<data>/tls/ca.pem`. `--bind 127.0.0.1` erlaubt nur Zugriffe auf dem Host, nicht per Handy-QR-Code. Apply beendet den Prozess; ohne Supervisor anschließend manuell neu starten.
+

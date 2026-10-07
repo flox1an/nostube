@@ -100,6 +100,7 @@ impl AdminState {
         data: &Path,
         origin_host: &str,
         covered_hosts: Vec<String>,
+        setup_origin: &str,
         boot_id: String,
         handle: Arc<axum_server::Handle<std::net::SocketAddr>>,
     ) -> Result<AdminState, BoxError> {
@@ -111,10 +112,15 @@ impl AdminState {
         if secrets.registered() {
             tracing::info!("admin area enabled");
         } else {
-            tracing::info!(
-                "admin setup: no admin registered; one-time setup token: {} (use it at /admin/setup)",
-                secrets.setup_token.as_deref().unwrap_or_default()
-            );
+            let token = secrets.setup_token.as_deref().ok_or("unregistered admin has no setup token")?;
+            // Fragments stay out of HTTP access logs and Referrer headers.
+            let link = format!("{setup_origin}/admin/setup#token={token}");
+            let code = qrcode::QrCode::new(link.as_bytes())?;
+            let qr = code.render::<qrcode::render::unicode::Dense1x2>()
+                .light_color(qrcode::render::unicode::Dense1x2::Dark)
+                .dark_color(qrcode::render::unicode::Dense1x2::Light)
+                .build();
+            tracing::info!("admin setup (one-time secret; do not share): {link}\n{qr}");
         }
         Ok(AdminState {
             data: data.to_owned(),
@@ -289,6 +295,7 @@ pub fn router(state: AdminState) -> Router {
     // Full paths: the dispatcher forwards the original request unchanged.
     Router::new()
         .route("/admin", get(index))
+        .route("/admin/", get(index))
         .route("/admin/setup", get(setup_page).post(setup_post))
         .route("/admin/login", get(login_page).post(login_post))
         .route("/admin/login/nostr", post(login_nostr))
@@ -585,7 +592,7 @@ async fn config_post(
         Ok(c) => c,
         Err(e) => return dashboard(&state, Some(e.to_string())).await.into_response(),
     };
-    if let Some(e) = preflight(&state, &next, &current.tls) {
+    if let Some(e) = preflight(&state) {
         return dashboard(&state, Some(format!("preflight failed: {e}"))).await.into_response();
     }
     let path = state.data.join("config.toml");
@@ -614,20 +621,9 @@ async fn config_post(
     .into_response()
 }
 
-/// Preflight before anything is written: ports bindable, TLS material readable,
-/// data dir writable (#7). Ports the running process already holds are skipped —
-/// they are freed by the apply restart itself.
-fn preflight(state: &AdminState, cfg: &Config, running: &config::Tls) -> Option<String> {
-    let config::Tls::LocalCa { https_port, http_port, .. } = &cfg.tls;
-    let config::Tls::LocalCa { https_port: old_https, http_port: old_http, .. } = running;
-    for port in [https_port, http_port] {
-        if port == old_https || port == old_http {
-            continue;
-        }
-        if let Err(e) = std::net::TcpListener::bind(("0.0.0.0", *port)) {
-            return Some(format!("port {port} is not free: {e}"));
-        }
-    }
+/// The web form cannot change listeners; startup validates their bind addresses.
+/// Preflight checks TLS material and writable storage before applying the form.
+fn preflight(state: &AdminState) -> Option<String> {
     for file in ["ca.pem", "ca-key.pem", "leaf.pem"] {
         let p = state.data.join("tls").join(file);
         if std::fs::File::open(&p).is_err() {
@@ -702,7 +698,14 @@ fn setup_form(error: Option<&str>) -> String {
   <label>Password <small>(at least 8 characters)</small> <input name=password type=password required></label>
   <label>Repeat password <input name=password2 type=password required></label>
   <button>Register</button>
-</form>"#
+</form>
+<script>
+const token = new URLSearchParams(location.hash.slice(1)).get('token');
+if (token) {{
+  document.querySelector('input[name=token]').value = token;
+  history.replaceState(null, '', location.pathname);
+}}
+</script>"#
     )
 }
 
@@ -799,6 +802,7 @@ mod tests {
             &dir,
             "macbook-2.local",
             vec!["macbook-2.local".into(), "192.168.0.32".into()],
+            "https://macbook-2.local",
             "boot".into(),
             Arc::new(axum_server::Handle::new()),
         )

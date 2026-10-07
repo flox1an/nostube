@@ -33,3 +33,4 @@ libc = "0.2"
 sha2 = "0.10"
 time = "0.3"
 x509-parser = "0.18"
+qrcode = { version = "0.14", default-features = false }

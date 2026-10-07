@@ -1,5 +1,5 @@
-//! Instance config: `<data>/config.toml`, written by hand until the admin area exists.
-//! Every field the public config (ADR 0005) exposes is required here too: no app defaults.
+//! Instance config: `<data>/config.toml`, created on first start and edited at `/admin`.
+//! Existing config files still require every public field (ADR 0005).
 
 use nostr::prelude::PublicKey;
 use serde::{Deserialize, Serialize};
@@ -168,6 +168,30 @@ impl Config {
         })
     }
 
+    /// First start (no `config.toml` yet): a working fully-local default the admin
+    /// can refine at `/admin` after setup — own relay as the only source, no
+    /// creators yet (startPage stays null), storage limits per #14.
+    pub fn default_for(origin_host: &str, https_port: u16, http_port: u16) -> Config {
+        let authority = if https_port == 443 {
+            origin_host.to_owned()
+        } else {
+            format!("{origin_host}:{https_port}")
+        };
+        Config {
+            revision: 1,
+            origin: format!("https://{authority}"),
+            origin_host: origin_host.to_owned(),
+            title: "My Nostube".into(),
+            creators: vec![],
+            allowed_writers: vec![],
+            video_sources: vec![format!("wss://{authority}")],
+            interaction_relays: vec![format!("wss://{authority}")],
+            search: Search::Off,
+            tls: Tls::LocalCa { router_name: None, https_port, http_port },
+            storage: Storage::default(),
+        }
+    }
+
     /// Back to the `<data>/config.toml` file format (same schema as `load` reads).
     pub fn to_toml(&self) -> Result<String, BoxError> {
         let raw = Raw {
@@ -289,6 +313,18 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(origin_host("https://192.168.1.5:8443").unwrap(), "192.168.1.5");
         assert_eq!(origin_host("https://[fd00::1]:8443").unwrap(), "fd00::1");
         assert!(origin_host("https://host:x").is_err());
+    }
+
+    #[test]
+    fn default_config_is_loadable_and_local() {
+        let cfg = Config::default_for("macbook-2.local", 9376, 0);
+        assert_eq!(cfg.public_json()["origin"], "https://macbook-2.local:9376");
+        assert_eq!(cfg.video_sources, vec!["wss://macbook-2.local:9376".to_owned()]);
+        assert!(cfg.creators.is_empty());
+        let re = Config::parse(&cfg.to_toml().unwrap()).unwrap();
+        assert_eq!(re.origin_host, "macbook-2.local");
+        assert_eq!(re.storage.free_space_reserve_gib, 5);
+        assert!(re.public_json()["startPage"].is_null());
     }
 
     #[test]

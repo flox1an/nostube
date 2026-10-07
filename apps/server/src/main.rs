@@ -41,17 +41,24 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
-    // Host-side maintenance commands (#7): no listeners, just file work.
+    // Startup failures end with one line naming the cause (#7), then exit.
+    let cli = match Cli::parse(std::env::args().skip(1)) {
+        Ok(cli) => cli,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
+    };
     match std::env::args().nth(1).as_deref() {
         Some("admin") if std::env::args().nth(2).as_deref() == Some("reset") => {
-            if let Err(e) = admin::AdminState::reset(&data_dir().expect("usage: admin reset --data <dir>")) {
+            if let Err(e) = admin::AdminState::reset(&cli.data) {
                 eprintln!("admin reset failed: {e}");
                 std::process::exit(1);
             }
             return;
         }
         Some("config") if std::env::args().nth(2).as_deref() == Some("rollback") => {
-            if let Err(e) = admin::rollback(&data_dir().expect("usage: config rollback --data <dir>")) {
+            if let Err(e) = admin::rollback(&cli.data) {
                 eprintln!("config rollback failed: {e}");
                 std::process::exit(1);
             }
@@ -59,24 +66,85 @@ async fn main() {
         }
         _ => {}
     }
-    // Startup failures end with one line naming the cause (#7), then exit.
-    if let Err(e) = run().await {
+    if let Err(e) = run(cli).await {
         tracing::error!("startup failed: {e}");
         std::process::exit(1);
     }
 }
 
-async fn run() -> Result<(), BoxError> {
+/// Listener overrides do not change an existing canonical origin.
+struct Cli {
+    data: PathBuf,
+    bind: std::net::IpAddr,
+    port: Option<u16>,
+    http_port: Option<u16>,
+}
+
+impl Cli {
+    fn parse(mut args: impl Iterator<Item = String>) -> Result<Cli, BoxError> {
+        let mut cli = Cli { data: "data".into(), bind: std::net::Ipv4Addr::UNSPECIFIED.into(), port: None, http_port: None };
+        while let Some(a) = args.next() {
+            match a.as_str() {
+                "--data" => cli.data = args.next().ok_or("--data needs a directory")?.into(),
+                "--bind" => cli.bind = args.next().ok_or("--bind needs an IP address")?.parse()
+                    .map_err(|e| format!("invalid --bind: {e}"))?,
+                "--port" => {
+                    let port = args.next().ok_or("--port needs a port")?.parse()
+                        .map_err(|e| format!("invalid --port: {e}"))?;
+                    if port == 0 { return Err("--port must be between 1 and 65535".into()); }
+                    cli.port = Some(port);
+                }
+                "--http-port" => cli.http_port = Some(args.next().ok_or("--http-port needs a port (0 = off)")?.parse()
+                    .map_err(|e| format!("invalid --http-port: {e}"))?),
+                "admin" | "reset" | "config" | "rollback" => {}
+                _ => return Err(format!("unknown argument {a}; usage: nostube-server [--data <dir>] [--bind <IP>] [--port <HTTPS port>] [--http-port <port|0>]").into()),
+            }
+        }
+        Ok(cli)
+    }
+}
+
+async fn run(cli: Cli) -> Result<(), BoxError> {
     // The process owner installs the one provider; libraries never do (#12).
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .map_err(|_| "rustls provider already installed")?;
 
-    let data = data_dir()?;
-    let cfg = Config::load(&data.join("config.toml"))?;
+    let data = cli.data;
+    std::fs::create_dir_all(&data)?;
+    // First start needs nothing: the default config is written and the admin
+    // registers at /admin/setup with the logged token, everything else is the
+    // web UI (#17 flow).
+    let config_path = data.join("config.toml");
+    let cfg = if config_path.exists() {
+        Config::load(&config_path)?
+    } else {
+        let names = tls::LocalNames::detect(None)?;
+        let cfg = Config::default_for(
+            &names.local_name,
+            cli.port.unwrap_or(443),
+            cli.http_port.unwrap_or(80),
+        );
+        std::fs::write(&config_path, cfg.to_toml()?)?;
+        tracing::info!(
+            "first start: wrote default {} (origin {}; refine at /admin after setup)",
+            config_path.display(),
+            cfg.origin
+        );
+        cfg
+    };
     let config::Tls::LocalCa { router_name, https_port, http_port } = &cfg.tls;
     let (https_port, http_port) = (*https_port, *http_port);
-
+    // Transport overrides for this run; the config file keeps its values.
+    let https_port = cli.port.unwrap_or(https_port);
+    let mut setup_origin = nostr::prelude::Url::parse(&cfg.origin)?;
+    setup_origin.set_port((https_port != 443).then_some(https_port)).map_err(|_| "invalid setup port")?;
+    // `http_port = 0` (or `--http-port 0`) disables the port-80 onboarding
+    // listener (e.g. behind a proxy that owns port 80).
+    let http_port = cli.http_port.unwrap_or(http_port);
+    if http_port != 0 && http_port == https_port {
+        return Err("HTTPS and HTTP onboarding ports must differ (use --http-port 0 to disable onboarding)".into());
+    }
     let names = tls::LocalNames::detect(router_name.clone())?;
     let covered = names.local_name.eq_ignore_ascii_case(&cfg.origin_host)
         || names.router_name.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
@@ -97,6 +165,7 @@ async fn run() -> Result<(), BoxError> {
         &data,
         &cfg.origin_host,
         tls::covered_hosts(&names),
+        &setup_origin.origin().ascii_serialization(),
         boot_id.clone(),
         handle.clone(),
     ) {
@@ -111,6 +180,11 @@ async fn run() -> Result<(), BoxError> {
     blossom.storage_path = data.join("blossom");
     blossom.public_url = Some(cfg.origin.clone());
     blossom.allowed_npubs = cfg.allowed_writers.clone();
+    // An empty instance allowlist means nobody, not Almond's public default.
+    if cfg.allowed_writers.is_empty() {
+        blossom.upload_access = almond::models::FeatureMode::Off;
+        blossom.mirror_access = almond::models::FeatureMode::Off;
+    }
     blossom.homepage_enabled = false;
     blossom.blob_max_size = PER_FILE_MAX;
     blossom.storage_max_size = cfg.storage.quota_gib * GIB;
@@ -134,16 +208,33 @@ async fn run() -> Result<(), BoxError> {
         admin,
     };
 
-    let http = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], http_port))).await?;
-    let onboarding = tls::onboarding_router(&ca, cfg.origin.clone());
-    tokio::spawn(async move {
-        if let Err(e) = axum::serve(http, onboarding).await {
-            tracing::error!("port {} listener stopped: {e}", http_port);
+    if http_port != 0 {
+        // Port 80 is a nice-to-have (CA onboarding); a busy or privileged port
+        // must not keep the instance from starting — warn and serve.
+        match tokio::net::TcpListener::bind(SocketAddr::new(cli.bind, http_port)).await {
+            Ok(http) => {
+                let onboarding = tls::onboarding_router(&ca, cfg.origin.clone());
+                tracing::info!("CA onboarding at http://{}:{http_port}/ca", names.local_name);
+                tokio::spawn(async move {
+                    if let Err(e) = axum::serve(http, onboarding).await {
+                        tracing::error!("port {} listener stopped: {e}", http_port);
+                    }
+                });
+            }
+            Err(e) => tracing::warn!(
+                "CA onboarding on http port {http_port} unavailable ({e}); serve /ca another way or change http_port"
+            ),
         }
-    });
+    } else {
+        tracing::info!("http onboarding listener disabled (http_port = 0)");
+    }
 
-    tracing::info!("serving {} (also https://{}:{https_port}, CA on http port {http_port})", cfg.origin, names.local_name);
-    axum_server::bind_rustls(SocketAddr::from(([0, 0, 0, 0], https_port)), ca.rustls.clone())
+    tracing::info!("serving {} on HTTPS {}:{https_port}", cfg.origin, cli.bind);
+    let address = SocketAddr::new(cli.bind, https_port);
+    let listener = std::net::TcpListener::bind(address)
+        .map_err(|e| format!("cannot bind HTTPS listener {address}: {e}"))?;
+    listener.set_nonblocking(true)?;
+    axum_server::from_tcp_rustls(listener, ca.rustls.clone())?
         .handle((*handle).clone())
         .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
         .await?;
@@ -152,18 +243,7 @@ async fn run() -> Result<(), BoxError> {
     Ok(())
 }
 
-fn data_dir() -> Result<PathBuf, BoxError> {
-    let mut args = std::env::args();
-    while let Some(a) = args.next() {
-        if a == "--data" {
-            let dir = args.next().ok_or("--data needs a directory")?;
-            return Ok(dir.into());
-        }
-    }
-    Err("usage: nostube-server --data <dir>\n       nostube-server admin reset --data <dir>\n       nostube-server config rollback --data <dir>".into())
-}
-
-/// ADR 0004 dispatch order: relay, /api, Blossom, root files, app shell.
+/// ADR 0004 dispatch order: relay, /admin, /api, Blossom, root files, app shell.
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {

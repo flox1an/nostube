@@ -10,7 +10,7 @@ pub const GIB: u64 = 1 << 30;
 /// Per-file maximum (#14): fixed, fits any MP4 the browser can produce.
 pub const PER_FILE_MAX: u64 = 4 * GIB;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Raw {
     revision: u64,
@@ -35,7 +35,7 @@ pub enum Search {
     External { url: String },
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, tag = "mode", rename_all = "kebab-case")]
 pub enum Tls {
     LocalCa {
@@ -54,7 +54,7 @@ fn http_port() -> u16 {
     80
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
 pub struct Storage {
     /// Storage quota in GiB; 0 = unlimited (#14 default).
@@ -67,6 +67,35 @@ impl Default for Storage {
     fn default() -> Self {
         Storage { quota_gib: 0, free_space_reserve_gib: 5 }
     }
+}
+
+/// The fields the admin may edit (#17): origin and TLS mode are fixed in the first cut.
+pub struct Edited {
+    pub title: String,
+    pub creators: Vec<String>,
+    pub allowed_writers: Vec<String>,
+    pub video_sources: Vec<String>,
+    pub interaction_relays: Vec<String>,
+    pub search: Search,
+    pub storage: Storage,
+}
+
+fn check_relays(video_sources: &[String], interaction_relays: &[String]) -> Result<(), BoxError> {
+    for url in video_sources.iter().chain(interaction_relays) {
+        if !(url.starts_with("wss://") || url.starts_with("ws://")) {
+            return Err(format!("relay URL must start with ws:// or wss://: {url}").into());
+        }
+    }
+    Ok(())
+}
+
+fn check_search(search: &Search) -> Result<(), BoxError> {
+    if let Search::External { url } = search {
+        if !url.starts_with("https://") {
+            return Err(format!("search.url must start with https://: {url}").into());
+        }
+    }
+    Ok(())
 }
 
 pub struct Config {
@@ -99,16 +128,8 @@ impl Config {
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
-        for url in raw.video_sources.iter().chain(&raw.interaction_relays) {
-            if !(url.starts_with("wss://") || url.starts_with("ws://")) {
-                return Err(format!("relay URL must start with ws:// or wss://: {url}").into());
-            }
-        }
-        if let Search::External { url } = &raw.search {
-            if !url.starts_with("https://") {
-                return Err(format!("search.url must start with https://: {url}").into());
-            }
-        }
+        check_relays(&raw.video_sources, &raw.interaction_relays)?;
+        check_search(&raw.search)?;
         Ok(Config {
             revision: raw.revision,
             origin: raw.origin,
@@ -122,6 +143,46 @@ impl Config {
             tls: raw.tls,
             storage: raw.storage,
         })
+    }
+
+    /// Admin edit: everything except origin, TLS mode and revision (which auto-bumps,
+    /// so instance builds reload on apply).
+    pub fn with_edits(&self, e: &Edited) -> Result<Config, BoxError> {
+        if e.title.trim().is_empty() {
+            return Err("title must not be empty".into());
+        }
+        check_relays(&e.video_sources, &e.interaction_relays)?;
+        check_search(&e.search)?;
+        Ok(Config {
+            revision: self.revision + 1,
+            origin: self.origin.clone(),
+            origin_host: self.origin_host.clone(),
+            title: e.title.trim().to_owned(),
+            creators: keys("creators", &e.creators)?,
+            allowed_writers: keys("allowed_writers", &e.allowed_writers)?,
+            video_sources: e.video_sources.clone(),
+            interaction_relays: e.interaction_relays.clone(),
+            search: e.search.clone(),
+            tls: self.tls.clone(),
+            storage: e.storage.clone(),
+        })
+    }
+
+    /// Back to the `<data>/config.toml` file format (same schema as `load` reads).
+    pub fn to_toml(&self) -> Result<String, BoxError> {
+        let raw = Raw {
+            revision: self.revision,
+            origin: self.origin.clone(),
+            title: self.title.clone(),
+            creators: self.creators.iter().map(PublicKey::to_hex).collect(),
+            allowed_writers: self.allowed_writers.iter().map(PublicKey::to_hex).collect(),
+            video_sources: self.video_sources.clone(),
+            interaction_relays: self.interaction_relays.clone(),
+            search: self.search.clone(),
+            tls: self.tls.clone(),
+            storage: self.storage.clone(),
+        };
+        Ok(toml::to_string_pretty(&raw)?)
     }
 
     /// Public config contract v1 (ADR 0005). Start page: the first displayed creator.
@@ -228,5 +289,42 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(origin_host("https://192.168.1.5:8443").unwrap(), "192.168.1.5");
         assert_eq!(origin_host("https://[fd00::1]:8443").unwrap(), "fd00::1");
         assert!(origin_host("https://host:x").is_err());
+    }
+
+    #[test]
+    fn to_toml_roundtrips_and_apply_bumps_revision() {
+        let cfg = Config::parse(&sample("")).unwrap();
+        let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
+        assert_eq!(again.revision, 3);
+        assert_eq!(again.creators, cfg.creators);
+        assert_eq!(again.search, cfg.search);
+        assert_eq!(again.storage.quota_gib, 0);
+        let next = cfg
+            .with_edits(&Edited {
+                title: "Renamed".into(),
+                creators: vec![PK.into()],
+                allowed_writers: vec![PK.into()],
+                video_sources: vec!["wss://flox-mac.local".into()],
+                interaction_relays: vec![],
+                search: Search::External { url: "https://search.example".into() },
+                storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
+            })
+            .unwrap();
+        assert_eq!(next.revision, 4);
+        assert_eq!(next.title, "Renamed");
+        assert_eq!(next.origin, cfg.origin);
+        let re = Config::parse(&next.to_toml().unwrap()).unwrap();
+        assert_eq!(re.search, Search::External { url: "https://search.example".into() });
+        assert!(cfg
+            .with_edits(&Edited {
+                title: "x".into(),
+                creators: vec![PK.into()],
+                allowed_writers: vec![PK.into()],
+                video_sources: vec!["https://nope".into()],
+                interaction_relays: vec![],
+                search: Search::Off,
+                storage: Storage::default(),
+            })
+            .is_err());
     }
 }

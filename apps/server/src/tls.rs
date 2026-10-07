@@ -55,6 +55,16 @@ pub struct LocalNames {
     pub ips: Vec<IpAddr>,
 }
 
+/// Every DNS name and IP the leaf certificate covers, as strings (admin NIP-98 checks).
+pub fn covered_hosts(names: &LocalNames) -> Vec<String> {
+    let mut hosts = vec![names.local_name.clone()];
+    if let Some(r) = &names.router_name {
+        hosts.push(r.clone());
+    }
+    hosts.extend(names.ips.iter().map(|ip| ip.to_string()));
+    hosts
+}
+
 impl LocalNames {
     /// The Mac's own `<LocalHostName>.local` plus the private-range IPs of all
     /// up, non-loopback interfaces.

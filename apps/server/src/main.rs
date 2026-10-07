@@ -2,11 +2,12 @@
 //! instance build on one origin (ADR 0004). Usage: `nostube-server --data <dir>`;
 //! the instance config is `<dir>/config.toml`.
 
+mod admin;
 mod config;
 mod relay;
 mod tls;
 
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
     body::Body,
@@ -28,6 +29,9 @@ struct App {
     relay: relay::Relay,
     /// Serialized public config, built once per start (config changes need a restart).
     public_config: axum::body::Bytes,
+    boot_id: String,
+    /// `/admin` router; `None` when the secrets file is broken (#7).
+    admin: Option<Router>,
 }
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -37,6 +41,24 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
+    // Host-side maintenance commands (#7): no listeners, just file work.
+    match std::env::args().nth(1).as_deref() {
+        Some("admin") if std::env::args().nth(2).as_deref() == Some("reset") => {
+            if let Err(e) = admin::AdminState::reset(&data_dir().expect("usage: admin reset --data <dir>")) {
+                eprintln!("admin reset failed: {e}");
+                std::process::exit(1);
+            }
+            return;
+        }
+        Some("config") if std::env::args().nth(2).as_deref() == Some("rollback") => {
+            if let Err(e) = admin::rollback(&data_dir().expect("usage: config rollback --data <dir>")) {
+                eprintln!("config rollback failed: {e}");
+                std::process::exit(1);
+            }
+            return;
+        }
+        _ => {}
+    }
     // Startup failures end with one line naming the cause (#7), then exit.
     if let Err(e) = run().await {
         tracing::error!("startup failed: {e}");
@@ -68,6 +90,23 @@ async fn run() -> Result<(), BoxError> {
     }
     let ca = tls::local_ca(&data.join("tls"), &names).await?;
 
+    // Broken secrets only disable the admin area, never the instance (#7).
+    let boot_id = admin::random_boot_id();
+    let handle = Arc::new(axum_server::Handle::new());
+    let admin = match admin::AdminState::open(
+        &data,
+        &cfg.origin_host,
+        tls::covered_hosts(&names),
+        boot_id.clone(),
+        handle.clone(),
+    ) {
+        Ok(a) => Some(admin::router(a)),
+        Err(e) => {
+            tracing::warn!("admin disabled: {e}");
+            None
+        }
+    };
+
     let mut blossom = almond::Config::defaults();
     blossom.storage_path = data.join("blossom");
     blossom.public_url = Some(cfg.origin.clone());
@@ -91,6 +130,8 @@ async fn run() -> Result<(), BoxError> {
             },
         )?,
         public_config: serde_json::to_vec(&cfg.public_json())?.into(),
+        boot_id,
+        admin,
     };
 
     let http = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], http_port))).await?;
@@ -103,17 +144,23 @@ async fn run() -> Result<(), BoxError> {
 
     tracing::info!("serving {} (also https://{}:{https_port}, CA on http port {http_port})", cfg.origin, names.local_name);
     axum_server::bind_rustls(SocketAddr::from(([0, 0, 0, 0], https_port)), ca.rustls.clone())
+        .handle((*handle).clone())
         .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
         .await?;
+    // A config apply brought us here: the supervisor (launchd) restarts the process.
+    tracing::info!("stopped; restart the service to run the applied config");
     Ok(())
 }
 
 fn data_dir() -> Result<PathBuf, BoxError> {
-    let mut args = std::env::args().skip(1);
-    match (args.next().as_deref(), args.next(), args.next()) {
-        (Some("--data"), Some(dir), None) => Ok(dir.into()),
-        _ => Err("usage: nostube-server --data <dir>".into()),
+    let mut args = std::env::args();
+    while let Some(a) = args.next() {
+        if a == "--data" {
+            let dir = args.next().ok_or("--data needs a directory")?;
+            return Ok(dir.into());
+        }
     }
+    Err("usage: nostube-server --data <dir>\n       nostube-server admin reset --data <dir>\n       nostube-server config rollback --data <dir>".into())
 }
 
 /// ADR 0004 dispatch order: relay, /api, Blossom, root files, app shell.
@@ -122,6 +169,12 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
         return relay::handle(app.relay, req).await;
     }
+    if path == "/admin" || path.starts_with("/admin/") {
+        return match &app.admin {
+            Some(router) => router.clone().oneshot(req).await.into_response(),
+            None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        };
+    }
     if path.starts_with("/api/") {
         return match (req.method(), path.as_str()) {
             (&Method::GET, "/api/config") => (
@@ -129,7 +182,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
                 app.public_config,
             )
                 .into_response(),
-            (&Method::GET, "/api/health") => Json(serde_json::json!({ "ok": true })).into_response(),
+            (&Method::GET, "/api/health") => {
+                Json(serde_json::json!({ "ok": true, "boot": app.boot_id })).into_response()
+            }
             _ => StatusCode::NOT_FOUND.into_response(),
         };
     }

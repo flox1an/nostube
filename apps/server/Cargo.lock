@@ -45,7 +45,7 @@ dependencies = [
 [[package]]
 name = "almond"
 version = "0.5.1"
-source = "git+https://github.com/flox1an/almond.git?rev=aa44b87679f53706de30bc63951282c502b3c14f#aa44b87679f53706de30bc63951282c502b3c14f"
+source = "git+https://github.com/flox1an/almond.git?rev=682b77d6d84d9a6babce3f8ecfb3ffd7f79ee359#682b77d6d84d9a6babce3f8ecfb3ffd7f79ee359"
 dependencies = [
  "async-stream",
  "async-trait",

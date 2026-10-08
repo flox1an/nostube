@@ -7,7 +7,7 @@ services:
 
   almond:
     build:
-      context: ../../../almond
+      context: ../../../../../almond
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
@@ -36,7 +36,7 @@ services:
 
   divico-dvm:
     build:
-      context: ../../../divico-dvm
+      context: ../../../../../divico-dvm
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:

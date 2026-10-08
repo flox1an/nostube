@@ -15,9 +15,8 @@ This stack lives in `nostube/infra/test-stack` and brings up:
 
 - Docker + Docker Compose v2
 - Local sibling repos present:
-  - `../nostube` (this repo)
-  - `../almond`
-  - `../divico-dvm`
+  - this repo (the monorepo checkout, e.g. `nostube/`)
+  - `almond` and `divico-dvm`, as siblings of the monorepo checkout (e.g. `../almond`)
 
 > Compose build contexts are relative to this folder and point at those sibling repos.
 

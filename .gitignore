@@ -1,44 +1,15 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-instance
-dist-ssr
-*.local
-
-# Editor directories and files
-.idea
+node_modules/
+target/
+dist/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.vercel
-
-# ChatGPT exports that may contain personal info
-*ChatGPT*.md
-
-# Git worktrees
-.worktrees/
-.claude/worktrees/
-
-# Tauri build artifacts
-src-tauri/target/
-src-tauri/gen/
-src-tauri/binaries/almond-*
-
-# Integration test stack local files
-infra/test-stack/.env
-infra/test-stack/data/
-
-# Nostr event dumps and trace files
-*.jsonl
-*.json.gz
+*.log
+# media never belongs in the repo
+*.mp4
+*.m4v
+*.mov
+*.mkv
+*.webm
+*.avi
+*.mp3
+*.wav
+*.flac

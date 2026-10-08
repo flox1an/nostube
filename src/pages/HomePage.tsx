@@ -28,7 +28,7 @@ function HomeShelf({
   const { t } = useTranslation()
   if (videos.length === 0) return null
   return (
-    <section className="mb-8">
+    <section className="mb-2">
       <div className="mb-3 flex items-baseline justify-between px-1 sm:px-2">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         <Button variant="ghost" size="sm" asChild>
@@ -151,7 +151,7 @@ export function HomePage() {
         viewAllTo="/subscriptions"
         videos={subscriptionsVideos.slice(0, 12)}
       />
-      <div className="mb-4 flex items-baseline justify-between px-1 pt-5 sm:mb-5 sm:px-2 sm:pt-7">
+      <div className="mb-4 flex items-baseline justify-between px-1 sm:mb-5 sm:px-2">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
           {t('pages.home.latestVideos')}
         </h1>

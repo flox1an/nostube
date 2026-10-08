@@ -16,7 +16,7 @@ const VERTICAL_GRID =
 
 function CategoryBarSkeleton() {
   return (
-    <div className="sm:px-2">
+    <div className="mb-4 sm:px-2">
       <div className="w-full overflow-x-auto scrollbar-hide sticky top-[env(safe-area-inset-top,0)] z-40 bg-background/80 backdrop-blur-md">
         <div className="flex gap-2 p-2 min-w-max">
           {Array.from({ length: 10 }).map((_, i) => (

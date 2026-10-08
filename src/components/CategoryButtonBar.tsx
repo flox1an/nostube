@@ -117,7 +117,7 @@ export function CategoryButtonBar({
     !readRelays.some(r => r.url === normalizeRelayUrl(inputValue))
 
   return (
-    <div className="sticky top-0 z-40 flex w-full items-center border-b bg-background/92 backdrop-blur-md supports-[backdrop-filter]:bg-background/82">
+    <div className="sticky top-0 z-40 mb-4 flex w-full items-center bg-background/92 backdrop-blur-md supports-[backdrop-filter]:bg-background/82">
       <div
         ref={categoriesRef}
         className="min-w-0 flex-1 overflow-x-auto scroll-smooth scroll-pr-6 scrollbar-hide"

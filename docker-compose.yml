@@ -1,0 +1,9 @@
+# Root entry point for Coolify (Docker Compose build pack, base directory "/").
+# The web stack lives in apps/web; this file only points at it.
+services:
+  web:
+    extends:
+      file: apps/web/docker-compose.yml
+      service: web
+    build:
+      context: apps/web

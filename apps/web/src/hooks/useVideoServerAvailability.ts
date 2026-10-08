@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { extractBlossomHash } from '@/utils/video-event'
 import { normalizeServerUrl } from '@/lib/blossom-utils'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 
 export type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
 

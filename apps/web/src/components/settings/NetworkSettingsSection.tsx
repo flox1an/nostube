@@ -22,7 +22,7 @@ import {
   type BlossomServer,
   type BlossomServerTag,
   type CachingServer,
-} from '@/contexts/AppContext'
+} from '@/types/app-config'
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'

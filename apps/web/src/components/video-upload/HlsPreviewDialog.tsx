@@ -7,7 +7,7 @@ import { Copy, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
-import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import type { BlossomServer, CachingServer } from '@/types/app-config'
 
 interface HlsPreviewDialogProps {
   url: string | null

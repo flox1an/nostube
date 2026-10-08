@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSegmentAvailability } from './useSegmentAvailability'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 
 const SHA_A = '1111111111111111111111111111111111111111111111111111111111111111'
 const SHA_B = '2222222222222222222222222222222222222222222222222222222222222222'

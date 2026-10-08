@@ -1,4 +1,4 @@
-import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import type { BlossomServer, CachingServer } from '@/types/app-config'
 import { extractBlossomHash } from '@/lib/blossom-url'
 import {
   generateMediaUrls,

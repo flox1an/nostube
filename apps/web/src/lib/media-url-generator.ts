@@ -5,7 +5,7 @@
  * Supports videos, images, VTT captions, and audio files.
  */
 
-import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import type { BlossomServer, CachingServer } from '@/types/app-config'
 import { normalizeServerUrl } from './blossom-utils'
 import { extractBlossomHash, isBlossomUrl } from './blossom-url'
 import {

@@ -1,5 +1,5 @@
 import { extractBlossomHash } from '@/lib/blossom-url'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 
 /**
  * Candidate URLs for a Blossom blob: the URL itself first, then the same hash

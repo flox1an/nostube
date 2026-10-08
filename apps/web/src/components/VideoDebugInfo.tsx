@@ -35,7 +35,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import type { NostrEvent } from 'nostr-tools'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVariants'
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react'

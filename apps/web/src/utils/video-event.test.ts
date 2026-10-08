@@ -12,7 +12,7 @@ import {
   UNTITLED_VIDEO_FALLBACK,
   validateVideoEvents,
 } from './video-event'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Mock dependencies

@@ -6,7 +6,7 @@ import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
 import { AccountManager } from 'applesauce-accounts'
 import { eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
-import { type AppConfig } from '@/contexts/AppContext'
+import { type AppConfig } from '@/types/app-config'
 import { SearchPage } from './SearchPage'
 import * as useSearchVideos from '@/hooks/useSearchVideos'
 

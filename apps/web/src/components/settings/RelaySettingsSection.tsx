@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useSelectedPreset } from '@/hooks'
-import { type RelayTag } from '@/contexts/AppContext'
+import { type RelayTag } from '@/types/app-config'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

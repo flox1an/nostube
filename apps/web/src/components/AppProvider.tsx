@@ -1,12 +1,7 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import {
-  AppContext,
-  type Relay,
-  type RelayTag,
-  type AppConfig,
-  type AppContextType,
-} from '@/contexts/AppContext'
+import { type Relay, type RelayTag, type AppConfig } from '@/types/app-config'
+import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 import { getEffectiveNsfwFilter } from '@/lib/content-safety'
 import { getInstanceConfig, instanceRelays } from '@/lib/instance-config'

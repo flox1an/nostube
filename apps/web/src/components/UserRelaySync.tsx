@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useUserRelaysContext } from '@/contexts/UserRelaysContext'
-import { type RelayTag } from '@/contexts/AppContext'
+import { type RelayTag } from '@/types/app-config'
 import { normalizeRelayUrl } from '@/lib/utils'
 
 /**

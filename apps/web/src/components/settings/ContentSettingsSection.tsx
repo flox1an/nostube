@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { type NsfwFilter, type PreferredQuality } from '@/contexts/AppContext'
+import { type NsfwFilter, type PreferredQuality } from '@/types/app-config'
 import { NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
 
 export function ContentSettingsSection() {

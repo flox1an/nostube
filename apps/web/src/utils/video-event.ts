@@ -1,7 +1,7 @@
 import { getTypeForKind, type VideoType } from '@/lib/video-types'
 import { blurHashToDataURL } from '@/workers/blurhashDataURL'
 import { nip19 } from 'nostr-tools'
-import type { BlossomServer } from '@/contexts/AppContext'
+import type { BlossomServer } from '@/types/app-config'
 import { YOUTUBE_REGEX } from './origin-utils'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { generateMediaUrls } from '@/lib/media-url-generator'

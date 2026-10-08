@@ -1,4 +1,4 @@
-import type { NsfwFilter } from '@/contexts/AppContext'
+import type { NsfwFilter } from '@/types/app-config'
 
 export type ContentSafetyGate = 'visible' | 'hidden'
 

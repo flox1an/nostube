@@ -1,10 +1,6 @@
 import { useMemo } from 'react'
-import {
-  AppContext,
-  type AppContextType,
-  type AppConfig,
-  type BlossomServerTag,
-} from '@/contexts/AppContext'
+import { type AppConfig, type BlossomServerTag } from '@/types/app-config'
+import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { RelayPool } from 'applesauce-relay'
 import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'

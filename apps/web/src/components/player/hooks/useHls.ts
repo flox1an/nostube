@@ -3,7 +3,7 @@ import Hls from 'hls.js'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@/lib/hls-failover-debug'
-import type { BlossomServer, CachingServer } from '@/contexts/AppContext'
+import type { BlossomServer, CachingServer } from '@/types/app-config'
 import type { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
 
 export interface HlsQualityLevel {

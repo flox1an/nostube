@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Monitor, Server, Database, ArrowRight, Sparkles } from 'lucide-react'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import type { BlossomServerTag } from '@/contexts/AppContext'
+import type { BlossomServerTag } from '@/types/app-config'
 
 const DEFAULT_ONBOARDING_SERVERS: {
   url: string

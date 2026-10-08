@@ -1,0 +1,36 @@
+[package]
+name = "nostube-server"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Tracer bullet (#16): one axum app with the almond library (Blossom), the
+# ported relay, local-ca TLS, /api/config and the embedded Nostube instance build.
+
+[dependencies]
+almond = { git = "https://github.com/flox1an/almond.git", rev = "682b77d6d84d9a6babce3f8ecfb3ffd7f79ee359", default-features = false }
+axum = { version = "0.8.9", features = ["ws"] }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }
+rcgen = "0.14"
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+nostr = "0.45"
+rusqlite = { version = "0.40", features = ["bundled"] }
+rust-embed = { version = "8.12", features = ["debug-embed"] }
+parking_lot = "0.12"
+mime_guess = "2"
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+argon2 = { version = "0.5", features = ["std"] }
+hmac = "0.12"
+rand = "0.9"
+base64 = "0.22"
+libc = "0.2"
+sha2 = "0.10"
+time = "0.3"
+x509-parser = "0.18"
+qrcode = { version = "0.14", default-features = false }

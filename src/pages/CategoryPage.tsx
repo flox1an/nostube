@@ -57,7 +57,7 @@ export function CategoryPage() {
   // Show error if category not found
   if (categorySlug && !category) {
     return (
-      <div className="max-w-560 mx-auto px-4">
+      <div className="max-w-560 mx-auto sm:px-2">
         <CategoryButtonBar
           activeSlug={categorySlug}
           selectedRelay={relayOverride}

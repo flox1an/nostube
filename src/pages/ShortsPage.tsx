@@ -74,7 +74,7 @@ export function ShortsPage() {
         loadingMessage={t('pages.shorts.loadingMore')}
         exhaustedMessage={t('pages.shorts.noMore')}
         error={phase === 'error'}
-        className="sm:p-2"
+        className="sm:px-2"
         fullBleed
       />
     </div>

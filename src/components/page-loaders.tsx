@@ -46,7 +46,7 @@ export function ShortsFeedPageLoader() {
   return (
     <div className="max-w-560 mx-auto">
       <CategoryBarSkeleton />
-      <div className="sm:p-2">
+      <div className="sm:px-2">
         <div className={VERTICAL_GRID}>
           {Array.from({ length: 24 }).map((_, i) => (
             <VideoCardSkeleton key={i} format="vertical" fullBleed />

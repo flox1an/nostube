@@ -29,7 +29,7 @@ function HomeShelf({
   if (videos.length === 0) return null
   return (
     <section className="mb-8">
-      <div className="mb-3 flex items-baseline justify-between px-1">
+      <div className="mb-3 flex items-baseline justify-between px-1 sm:px-2">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         <Button variant="ghost" size="sm" asChild>
           <Link to={viewAllTo}>{t('common.viewAll', 'View all')}</Link>
@@ -133,8 +133,8 @@ export function HomePage() {
   if (!filteredVideos) return null
 
   return (
-    <div className="mx-auto max-w-560 px-3 sm:px-4 lg:px-6">
-      <div className="-mx-3 sm:-mx-4 lg:-mx-6">
+    <div className="mx-auto max-w-560 px-3 sm:px-2">
+      <div className="-mx-3 sm:mx-0">
         <CategoryButtonBar
           selectedRelay={relayOverride}
           onRelayChange={setRelayOverride}
@@ -151,7 +151,7 @@ export function HomePage() {
         viewAllTo="/subscriptions"
         videos={subscriptionsVideos.slice(0, 12)}
       />
-      <div className="mb-4 flex items-baseline justify-between px-1 pt-5 sm:mb-5 sm:pt-7">
+      <div className="mb-4 flex items-baseline justify-between px-1 pt-5 sm:mb-5 sm:px-2 sm:pt-7">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
           {t('pages.home.latestVideos')}
         </h1>

@@ -2,6 +2,8 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
+> In this monorepo, "the repo root" in this file means `apps/server/`. The monorepo root has its own `CONTEXT-MAP.md`.
+
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root, or

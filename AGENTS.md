@@ -1,5 +1,17 @@
 # Repository Guidelines
 
+## Monorepo Layout
+
+This repository holds several apps. The sections from "Project Overview & Stack" through "Security & Configuration Tips" describe the web app in `apps/web`: their paths such as `src/`, `public/` and `eslint-rules/`, and all `npm run ...` commands, are relative to `apps/web`. Run them from there. The "Agent skills" section at the end is relative to the repository root.
+
+| Path | What it is |
+|---|---|
+| `apps/web` | The Nostube web app (nostu.be): embed player, Vercel edge functions, Tauri desktop wrapper |
+| `apps/server` | The self-hosted Rust server (relay, Blossom, admin) that embeds a web build. It has its own `CONTEXT.md`, `AGENTS.md` and `docs/adr/` |
+
+Root `docs/adr/` holds ADRs for the whole repo and for the web app; `apps/server/docs/adr/` holds the server's ADRs (their numbering is independent). Planned additions (`packages/core`, `packages/widgets`, `apps/site`, `apps/studio`) are described in ADR 0004 and do not exist yet.
+
+
 ## Project Overview & Stack
 
 nostube is a Nostr-based video platform built with React 18, TypeScript, TailwindCSS, Vite, and shadcn/ui. Applesauce (core, relay, loaders, accounts, factory, signers) provides Nostr storage, relay pools, and signing. React Router powers navigation and Observable hooks manage Applesauce streams. Keep a single `EventStore` and `RelayPool` instance (see `src/nostr`), and wrap the app with `AccountsProvider → EventStoreProvider → FactoryProvider` as shown below:
@@ -39,6 +51,8 @@ Key references:
 
 ## Build, Test & Development Commands
 
+Run from `apps/web`.
+
 - `npm run dev` – installs if needed and launches Vite with HMR.
 - `npm run build` – optimized bundle plus `dist/404.html` copy for static hosts.
 - `npm run build:instance` – nostube-server instance build into `dist-instance/` (reads `/api/config` at startup; see `src/lib/instance-config.ts`).
@@ -74,4 +88,4 @@ Uses the canonical five-label vocabulary. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Uses a single-context layout: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
+Uses a multi-context layout: see `CONTEXT-MAP.md` at the repository root (web app and server each have their own glossary), plus system-wide ADRs in `docs/adr/`. See `docs/agents/domain.md`.

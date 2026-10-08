@@ -19,7 +19,7 @@ import {
   PRESET_D_TAG,
   DEFAULT_PRESET_PUBKEY,
   EMPTY_PRESET_CONTENT,
-} from '@/types/preset'
+} from '@nostube/core'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'

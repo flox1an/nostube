@@ -11,7 +11,7 @@ import type { IEventStore } from 'applesauce-core'
 import { getTypeForKind } from '@/lib/video-types'
 import { SEARCH_SERVICE_URL, fetchExternalSearchResults } from '@/lib/search-client'
 import { isNSFWAuthor } from '@/lib/nsfw-authors'
-import type { NsfwFilter } from '@/types/app-config'
+import type { NsfwFilter } from '@nostube/core'
 
 // Search configuration
 const SEARCH_LIMIT = 1000 // Max events to load from relays

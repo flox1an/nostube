@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { type VideoType } from '@/types/app-config'
+import { type VideoType } from '@nostube/core'
 import { type VideoEvent } from '@/utils/video-event'
 import { useAppContext } from '@/hooks/useAppContext'
 import { getKindsForType } from '@/lib/video-types'

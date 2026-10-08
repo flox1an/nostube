@@ -7,7 +7,7 @@ import {
   PRESET_EVENT_KIND,
   PRESET_D_TAG,
   EMPTY_PRESET_CONTENT,
-} from '@/types/preset'
+} from '@nostube/core'
 import type { NostrEvent } from 'nostr-tools'
 import { useNostrQuery } from '@/nostr/useNostrQuery'
 

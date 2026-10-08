@@ -1,11 +1,16 @@
 # Build: dist/ (web + embed) and compiled server
 FROM node:24-alpine AS build
 WORKDIR /app
+# Build context is the repository root (npm workspaces).
 # NSFW safety (18+ confirmation, embed gate); only `off` disables it. Self-hosters only.
 ARG VITE_NSFW_SAFETY=on
 COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
+COPY apps/web/package.json apps/web/
+COPY packages/core/package.json packages/core/
+RUN npm ci --ignore-scripts
+COPY packages packages
+COPY apps/web apps/web
+WORKDIR /app/apps/web
 RUN npx vite build \
  && npx vite build --config vite.embed.config.ts \
  && cp dist/index.html dist/404.html \
@@ -18,8 +23,11 @@ FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/
+COPY packages/core/package.json packages/core/
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/server-dist ./server-dist
+WORKDIR /app/apps/web
+COPY --from=build /app/apps/web/dist ./dist
+COPY --from=build /app/apps/web/server-dist ./server-dist
 EXPOSE 8080
 CMD ["node", "server-dist/standalone.js"]

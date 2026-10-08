@@ -1,4 +1,4 @@
-import type { NsfwFilter } from '@/types/app-config'
+import type { NsfwFilter } from '@nostube/core'
 
 export type ContentSafetyGate = 'visible' | 'hidden'
 

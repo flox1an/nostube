@@ -1,4 +1,4 @@
-import type { BlossomServer, CachingServer } from '@/types/app-config'
+import type { BlossomServer, CachingServer } from '@nostube/core'
 import { extractBlossomHash } from '@/lib/blossom-url'
 import {
   generateMediaUrls,

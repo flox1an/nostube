@@ -42,7 +42,7 @@ import {
   getTotalBlobSize,
 } from '@/lib/blossom-blob-extractor'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 import type { VideoEvent, VideoVariant } from '@/utils/video-event'
 import { useTranslation } from 'react-i18next'
 

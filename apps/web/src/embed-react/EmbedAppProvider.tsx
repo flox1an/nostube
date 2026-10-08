@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type AppConfig, type BlossomServerTag } from '@/types/app-config'
+import { type AppConfig, type BlossomServerTag } from '@nostube/core'
 import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { RelayPool } from 'applesauce-relay'
 import { EventStore } from 'applesauce-core'

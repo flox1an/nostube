@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { VideoVariant, TextTrack } from '@/utils/video-event'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 import { extractBlossomHash } from '@/utils/video-event'
 import { normalizeServerUrl } from '@/lib/blossom-utils'
 

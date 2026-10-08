@@ -6,4 +6,5 @@ services:
       file: apps/web/docker-compose.yml
       service: web
     build:
-      context: apps/web
+      context: .
+      dockerfile: Dockerfile

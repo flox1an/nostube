@@ -6,7 +6,7 @@ import { usePresets } from '@/hooks/usePresets'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PresetCard } from '@/components/presets/PresetCard'
-import { DEFAULT_PRESET_PUBKEY } from '@/types/preset'
+import { DEFAULT_PRESET_PUBKEY } from '@nostube/core'
 import { appTitle, pageTitle } from '@/lib/instance-config'
 
 export function PresetsPage() {

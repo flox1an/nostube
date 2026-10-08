@@ -11,7 +11,7 @@ import {
   type NostubePresetContent,
   PRESET_EVENT_KIND,
   PRESET_D_TAG,
-} from '@/types/preset'
+} from '@nostube/core'
 import { parsePresetEvent } from './usePresets'
 import { nowInSecs } from '@/lib/utils'
 

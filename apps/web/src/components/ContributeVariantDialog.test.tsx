@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ContributeVariantDialog } from './ContributeVariantDialog'
 import type { VideoEvent } from '@/utils/video-event'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 import { AppProvider } from '@/components/AppProvider'
-import type { AppConfig } from '@/types/app-config'
+import type { AppConfig } from '@nostube/core'
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({

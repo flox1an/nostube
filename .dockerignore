@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/dist-instance
+.git
+.claude
+.worktrees
+docs
+apps/server
+**/*.test.ts
+**/*.test.tsx
+apps/web/src/test
+apps/web/src-tauri
+apps/web/eslint-rules
+apps/web/public/onboarding

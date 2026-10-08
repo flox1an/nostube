@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type VideoType } from '@/types/app-config'
+import { type VideoType } from '@nostube/core'
 import { useReadRelays } from './useReadRelays'
 import { getKindsForType } from '@/lib/video-types'
 import { hashObjectBigInt } from '@/lib/utils'

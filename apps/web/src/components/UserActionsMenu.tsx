@@ -15,7 +15,7 @@ import { useCurrentUser } from '@/hooks'
 import { useMuteUser } from '@/hooks/useMuteUser'
 import { useMyPreset, type PresetFormData } from '@/hooks/useMyPreset'
 import { usePresetBuffer } from '@/hooks/usePresetBuffer'
-import { type NostubePreset, type PresetBufferList, DEFAULT_PRESET_PUBKEY } from '@/types/preset'
+import { type NostubePreset, type PresetBufferList, DEFAULT_PRESET_PUBKEY } from '@nostube/core'
 import { cn } from '@/lib/utils'
 
 interface UserActionsMenuProps {

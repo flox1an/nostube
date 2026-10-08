@@ -79,6 +79,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
+        working-directory: .
         run: npm ci
 
       - name: Prepare Almond sidecar

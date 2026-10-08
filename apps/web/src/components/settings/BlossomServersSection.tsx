@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Cog, XIcon } from 'lucide-react'
-import { type BlossomServer, type BlossomServerTag } from '@/types/app-config'
+import { type BlossomServer, type BlossomServerTag } from '@nostube/core'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,

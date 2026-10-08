@@ -12,7 +12,7 @@ import {
   UNTITLED_VIDEO_FALLBACK,
   validateVideoEvents,
 } from './video-event'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Mock dependencies

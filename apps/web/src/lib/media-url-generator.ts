@@ -5,7 +5,7 @@
  * Supports videos, images, VTT captions, and audio files.
  */
 
-import type { BlossomServer, CachingServer } from '@/types/app-config'
+import type { BlossomServer, CachingServer } from '@nostube/core'
 import { normalizeServerUrl } from './blossom-utils'
 import { extractBlossomHash, isBlossomUrl } from './blossom-url'
 import {

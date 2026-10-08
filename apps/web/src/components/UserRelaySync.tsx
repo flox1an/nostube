@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useUserRelaysContext } from '@/contexts/UserRelaysContext'
-import { type RelayTag } from '@/types/app-config'
+import { type RelayTag } from '@nostube/core'
 import { normalizeRelayUrl } from '@/lib/utils'
 
 /**

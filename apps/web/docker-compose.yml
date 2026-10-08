@@ -2,7 +2,9 @@
 # Relay, Almond, imgproxy and the DVM already run in infra/test-stack.
 services:
   web:
-    build: .
+    build:
+      context: ../..
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       PORT: 8080

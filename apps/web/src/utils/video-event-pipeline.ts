@@ -1,5 +1,5 @@
 import type { ReportedPubkeys } from '@/hooks'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import {
   deduplicateByIdentifier,

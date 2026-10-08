@@ -36,6 +36,7 @@ docker build --build-arg VITE_NSFW_SAFETY=off -t nostube .
 Create a public Git application with:
 
 - build pack: `dockerfile`
+- base directory: `/` (the repository root; the Dockerfile builds the `apps/web` workspace)
 - Dockerfile: `/Dockerfile`
 - exposed port: `8080`
 - health check: `GET /health` on port `8080`

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { XIcon, LoaderIcon } from 'lucide-react'
-import { type CachingServer } from '@/types/app-config'
+import { type CachingServer } from '@nostube/core'
 
 type ServerStatus = 'checking' | 'online' | 'offline'
 

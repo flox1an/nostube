@@ -9,7 +9,7 @@ import { ProfileFetcher } from './lib/profile-fetcher'
 import { processEvent, type VideoEvent } from '@/utils/video-event'
 import type { Profile } from './lib/profile-fetcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@/types/app-config'
+import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@nostube/core'
 import { getEffectiveNsfwFilter, getVideoPlayback, NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { getCachedPreset, LOAD_TIMEOUT } from '@/lib/preset-storage'
@@ -19,7 +19,7 @@ import {
   PRESET_D_TAG,
   PRESET_EVENT_KIND,
   type NostubePreset,
-} from '@/types/preset'
+} from '@nostube/core'
 import './embed.css'
 
 interface EmbedState {

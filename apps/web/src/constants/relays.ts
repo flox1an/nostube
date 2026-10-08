@@ -3,7 +3,7 @@ import {
   type BlossomServer,
   type BlossomServerTag,
   type CachingServer,
-} from '@/types/app-config'
+} from '@nostube/core'
 import {
   DEFAULT_MIRROR_SERVERS,
   DEFAULT_UPLOAD_SERVERS,

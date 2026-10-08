@@ -22,7 +22,7 @@ import {
   type BlossomServer,
   type BlossomServerTag,
   type CachingServer,
-} from '@/types/app-config'
+} from '@nostube/core'
 import { DEFAULT_MIRROR_SERVERS, DEFAULT_UPLOAD_SERVERS } from '@/lib/blossom-servers'
 import { ViewTrackingSettingsSection } from './ViewTrackingSettingsSection'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'

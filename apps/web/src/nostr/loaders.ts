@@ -1,5 +1,5 @@
 import { getTimelineLoader } from './core'
-import { type VideoType } from '@/types/app-config'
+import { type VideoType } from '@nostube/core'
 import { getKindsForType } from '@/lib/video-types'
 
 // Kind 21 (videos)

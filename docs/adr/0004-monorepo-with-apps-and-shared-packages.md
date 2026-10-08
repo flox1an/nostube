@@ -11,14 +11,14 @@ The history of the web repo had also grown to 523 MB from accidentally committed
 
 ## Decision
 
-One repository, npm workspaces once the first package exists:
+One repository with npm workspaces (`apps/web`, `packages/*`; one root `package-lock.json`, `overrides` in the root `package.json`). The Docker build context is the repository root (`/Dockerfile`):
 
 ```
 apps/web       Nostube (discovery UI, nostu.be), including the embed player
 apps/server    Rust server; embeds the built site, studio and embed
 apps/site      creator homepage (videos, profile, playlists), no discovery  [planned]
 apps/studio    upload and management UI                                      [planned]
-packages/core      headless Nostr/Blossom logic, no React                    [planned]
+packages/core      headless Nostr/Blossom logic, no React                    [started: app config types]
 packages/widgets   player, video card, comments, login, shadcn/ui base       [planned]
 ```
 

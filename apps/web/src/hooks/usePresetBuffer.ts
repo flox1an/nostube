@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useAppContext } from './useAppContext'
-import { type PresetBufferList, type PresetModerationEntry } from '@/types/preset'
+import { type PresetBufferList, type PresetModerationEntry } from '@nostube/core'
 
 const EMPTY: PresetModerationEntry[] = []
 

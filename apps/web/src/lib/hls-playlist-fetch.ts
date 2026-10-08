@@ -1,5 +1,5 @@
 import { extractBlossomHash } from '@/lib/blossom-url'
-import type { BlossomServer } from '@/types/app-config'
+import type { BlossomServer } from '@nostube/core'
 
 /**
  * Candidate URLs for a Blossom blob: the URL itself first, then the same hash

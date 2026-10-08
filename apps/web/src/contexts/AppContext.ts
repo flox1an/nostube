@@ -1,6 +1,6 @@
 import { type RelayPool } from 'applesauce-relay'
 import { createContext } from 'react'
-import { type AppConfig, type Relay } from '@/types/app-config'
+import { type AppConfig, type Relay } from '@nostube/core'
 
 export interface AppContextType {
   /** Current application configuration */

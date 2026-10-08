@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { type Relay, type RelayTag, type AppConfig } from '@/types/app-config'
+import { type Relay, type RelayTag, type AppConfig } from '@nostube/core'
 import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 import { getEffectiveNsfwFilter } from '@/lib/content-safety'

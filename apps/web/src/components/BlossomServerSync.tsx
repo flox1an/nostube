@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUserBlossomServers } from '@/hooks/useUserBlossomServers'
 import { useAppContext } from '@/hooks/useAppContext'
-import { type BlossomServerTag } from '@/types/app-config'
+import { type BlossomServerTag } from '@nostube/core'
 import { isBlossomServerBlocked } from '@/constants/relays'
 
 /**

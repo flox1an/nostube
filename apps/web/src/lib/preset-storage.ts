@@ -1,4 +1,4 @@
-import { type NostubePreset } from '@/types/preset'
+import { type NostubePreset } from '@nostube/core'
 
 const CACHE_KEY = 'nostube_preset_cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour

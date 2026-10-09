@@ -103,6 +103,24 @@
       "previewVideo": "Ein Videotitel",
       "previewButton": "Hauptschaltfläche"
     },
+    "branding": {
+      "title": "Logo, Favicon und Banner",
+      "description": "Bilder für die öffentliche Seite. Sie gelten sofort, ohne Speichern.",
+      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Banner" },
+      "hints": {
+        "logo": "Im Kopf der Seite und auf Videoseiten, statt des Profilbilds. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
+        "favicon": "Das Symbol im Browser-Tab. PNG, JPEG, WebP, SVG oder ICO, höchstens {{size}}.",
+        "banner": "Ein breites Bild über den Videos auf der Startseite. PNG, JPEG, WebP oder SVG, höchstens {{size}}."
+      },
+      "none": "Keins",
+      "upload": "Hochladen",
+      "replace": "Ersetzen",
+      "remove": "Entfernen",
+      "errors": {
+        "tooBig": "Die Datei ist zu groß: höchstens {{size}}.",
+        "wrongType": "Dieser Dateityp ist hier nicht erlaubt. Siehe die Formate oben."
+      }
+    },
     "connect": {
       "neededTitle": "Verbinde deinen Nostr-Schlüssel, um zu veröffentlichen",
       "notCreatorTitle": "Dieser Schlüssel ist kein Creator der Instanz",

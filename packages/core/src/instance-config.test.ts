@@ -67,6 +67,20 @@ describe('parseInstanceConfig site', () => {
   ])('rejects an invalid %s', (_name, patch) => {
     expect(withSite({ ...good().site, ...patch }).ok).toBe(false)
   })
+
+  it('keeps the branding URLs of this server and ignores foreign or invalid ones', () => {
+    const result = withSite({
+      ...good().site,
+      logo: '/branding/logo?v=0123456789abcdef',
+      favicon: 'https://evil.example/branding/favicon',
+      banner: '/branding/logo?v=0123456789abcdef',
+    })
+    expect(result.ok && result.config.site).toEqual({
+      ...good().site,
+      logo: '/branding/logo?v=0123456789abcdef',
+    })
+    expect(withSite({ ...good().site, logo: 42, banner: '//evil.example/x' }).ok).toBe(true)
+  })
 })
 
 describe('parseInstanceConfig', () => {

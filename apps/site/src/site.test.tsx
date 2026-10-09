@@ -157,6 +157,34 @@ describe('SiteHome', () => {
     expect(screen.getByText('Fresh every week')).toBeTruthy()
   })
 
+  it('shows the instance logo instead of the creator picture, in the header and the breadcrumb', async () => {
+    const picture = 'https://media.example/alice.jpg'
+    const pictured = { ...profile, content: JSON.stringify({ name: 'Alice', picture }) }
+    const picturedClient = {
+      ...client,
+      eventStore: makeStore(),
+      relayPool: {
+        ...client.relayPool,
+        request: (_relays: string[], filters: { kinds?: number[] }[]) =>
+          of(filters[0].kinds?.includes(10063) ? serverList : pictured),
+      },
+    } as unknown as NostubeClient
+    const images = () => [...document.querySelectorAll('img')].map(img => img.getAttribute('src'))
+    const { unmount } = renderSite(picturedClient)
+    await waitFor(() => expect(images()).toContain(picture))
+    unmount()
+
+    const logo = '/branding/logo?v=1'
+    const banner = '/branding/banner?v=2'
+    renderSite(picturedClient, '/', { ...config, site: { ...config.site, logo, banner } })
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    expect(images()).toEqual(expect.arrayContaining([logo, banner]))
+    expect(images()).not.toContain(picture)
+    fireEvent.click(screen.getByText('My first upload'))
+    const crumb = await screen.findByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumb.querySelector('img')?.getAttribute('src')).toBe(logo)
+  })
+
   it('leaves out hidden videos in the grid and on their own page', async () => {
     const hidden = { ...config, site: { ...config.site, videos: { hidden: [video.id] } } }
     renderSite(client, '/', hidden)

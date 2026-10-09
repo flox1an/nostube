@@ -236,6 +236,8 @@ Auch die vorhandene Profilseite muss im Instanzmodus die Videoquellenbegrenzung 
 
 Später: eigenes Logo, Favicon, Banner und Farben aus Admin-Konfiguration. Öffentlich ausgelieferte Brandingdaten referenzieren lokale Assets, und Farben werden als validierte Themevariablen angewandt. Die Branding-Assets liegen veränderlich im persistenten Datenpfad; sie verlangen nicht für jede Änderung ein neues Binary. Das unterscheidet sich von fest eingebetteten Standardassets. Freies JavaScript, beliebige Templates und ein Theme-/Pluginmarktplatz sind daraus nicht abgeleitet. PeerTube liefert hierfür Inspiration; eigener Brandingumfang darf zunächst zurückgestellt werden.
 
+Stand (Oktober 2026): umgesetzt. Akzentfarbe und Schrift kommen aus `site.theme`; Logo, Favicon und Banner lädt der Admin im Studio (Aussehen) hoch. Sie liegen in `<data>/branding/`, werden unter `/branding/<slot>` ausgeliefert und stehen als `site.logo`, `site.favicon`, `site.banner` in der öffentlichen Config; Änderungen wirken ohne Neustart (Server-ADR 0005, Nachtrag Branding).
+
 ### Konfiguration anwenden und Neustarts vollständig im Web-Admin
 
 Nach Erstinstallation sind alle normalen Betriebsaktionen über Web-Admin verfügbar, ausdrücklich Speichern/Anwenden von Einstellungen, Modulreload, Hauptserverneustart, browserseitiger Abbruch und Uploadabbruch, Backup/Restore im unterstützten Umfang und Statusdiagnose. Kein SSH, Terminal oder Maschinenlogin gehört zur normalen Bedienung. Technische Notfallrettung bei kaputtem OS, Hardwareausfall oder unerreichbarem Netzwerk bleibt eine andere Situation.
@@ -408,7 +410,7 @@ Recherche in offizieller Dokumentation und aktuellem Entwicklungsbranch am 6. Ok
 
 | Homepage und Startansicht | Creator-Liste, Startmodus; bestehende Profilseite als mögliche Startseite | Erster Schnitt / Gestaltungsvorschlag |
 
-| Eigenes Branding | Eigenes Logo, Farben, optional Favicon/Banner | Wichtige spätere Erweiterung, zunächst zurückstellbar |
+| Eigenes Branding | Eigenes Logo, Farben, optional Favicon/Banner | Umgesetzt: Farben und Schrift (`site.theme`), Logo, Favicon und Banner (ADR 0005, Nachtrag Branding) |
 
 | Getrennte externe Suche/Remote-URI-Suche | Suchmodus ausdrücklich; keine Umgehung der Videoauswahl durch versteckte Loader | Erster Schnitt |
 

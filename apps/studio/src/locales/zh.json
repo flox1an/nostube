@@ -103,6 +103,24 @@
       "previewVideo": "视频标题",
       "previewButton": "主按钮"
     },
+    "branding": {
+      "title": "徽标、网站图标和横幅",
+      "description": "公开站点使用的图片。无需保存，立即生效。",
+      "slots": { "logo": "徽标", "favicon": "网站图标", "banner": "横幅" },
+      "hints": {
+        "logo": "显示在页眉和视频页面中，替代头像。PNG、JPEG、WebP 或 SVG，最大 {{size}}。",
+        "favicon": "浏览器标签页上的图标。PNG、JPEG、WebP、SVG 或 ICO，最大 {{size}}。",
+        "banner": "首页视频上方的宽幅图片。PNG、JPEG、WebP 或 SVG，最大 {{size}}。"
+      },
+      "none": "无",
+      "upload": "上传",
+      "replace": "替换",
+      "remove": "移除",
+      "errors": {
+        "tooBig": "文件太大：最大 {{size}}。",
+        "wrongType": "此处不允许该文件类型。请参见上方的格式。"
+      }
+    },
     "connect": {
       "neededTitle": "连接你的 Nostr 密钥以发布",
       "notCreatorTitle": "此密钥不是该实例的创作者",

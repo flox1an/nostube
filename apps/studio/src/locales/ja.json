@@ -103,6 +103,24 @@
       "previewVideo": "動画のタイトル",
       "previewButton": "メインボタン"
     },
+    "branding": {
+      "title": "ロゴ、ファビコン、バナー",
+      "description": "公開サイト用の画像です。保存しなくてもすぐに反映されます。",
+      "slots": { "logo": "ロゴ", "favicon": "ファビコン", "banner": "バナー" },
+      "hints": {
+        "logo": "ヘッダーと動画ページで、プロフィール画像の代わりに表示されます。PNG、JPEG、WebP、SVG、最大 {{size}}。",
+        "favicon": "ブラウザのタブに表示されるアイコンです。PNG、JPEG、WebP、SVG、ICO、最大 {{size}}。",
+        "banner": "トップページの動画の上に表示される横長の画像です。PNG、JPEG、WebP、SVG、最大 {{size}}。"
+      },
+      "none": "なし",
+      "upload": "アップロード",
+      "replace": "差し替え",
+      "remove": "削除",
+      "errors": {
+        "tooBig": "ファイルが大きすぎます（最大 {{size}}）。",
+        "wrongType": "このファイル形式はここでは使えません。上記の形式を確認してください。"
+      }
+    },
     "connect": {
       "neededTitle": "公開するには Nostr 鍵を接続してください",
       "notCreatorTitle": "この鍵はインスタンスのクリエイターではありません",

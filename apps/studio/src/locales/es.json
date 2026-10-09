@@ -103,6 +103,24 @@
       "previewVideo": "Un título de video",
       "previewButton": "Botón principal"
     },
+    "branding": {
+      "title": "Logotipo, favicon y banner",
+      "description": "Imágenes para el sitio público. Se aplican al instante, sin guardar.",
+      "slots": { "logo": "Logotipo", "favicon": "Favicon", "banner": "Banner" },
+      "hints": {
+        "logo": "En la cabecera y en las páginas de vídeo, en lugar de la foto de perfil. PNG, JPEG, WebP o SVG, hasta {{size}}.",
+        "favicon": "El icono de la pestaña del navegador. PNG, JPEG, WebP, SVG o ICO, hasta {{size}}.",
+        "banner": "Una imagen ancha sobre los vídeos de la página de inicio. PNG, JPEG, WebP o SVG, hasta {{size}}."
+      },
+      "none": "Ninguno",
+      "upload": "Subir",
+      "replace": "Reemplazar",
+      "remove": "Quitar",
+      "errors": {
+        "tooBig": "El archivo es demasiado grande: como máximo {{size}}.",
+        "wrongType": "Este tipo de archivo no está permitido aquí. Consulta los formatos de arriba."
+      }
+    },
     "connect": {
       "neededTitle": "Conecta tu clave Nostr para publicar",
       "notCreatorTitle": "Esta clave no es creadora de la instancia",

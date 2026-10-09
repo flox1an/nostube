@@ -22,6 +22,12 @@ export async function bootSite(): Promise<SiteBoot> {
   // Before the first render, so the page never flashes in the default look.
   applyTheme(config.site)
   document.title = config.title
+  if (config.site.favicon) {
+    const icon = document.createElement('link')
+    icon.rel = 'icon'
+    icon.href = config.site.favicon
+    document.head.append(icon)
+  }
   const client = createNostubeClient({
     defaultRelays: config.interactionRelays,
     instance: config,

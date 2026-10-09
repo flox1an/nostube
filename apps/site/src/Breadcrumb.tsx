@@ -6,10 +6,13 @@ import { ChevronRight } from 'lucide-react'
 /** `Site title › current page` at the top of a video page; the site title leads back to the grid. */
 export function Breadcrumb({
   title,
+  logo,
   picture,
   current,
 }: {
   title: string
+  /** The instance logo; the creator's picture is the fallback. */
+  logo?: string
   picture?: string
   /** Leave out on a page that is not a video (an error notice): only the site title shows. */
   current?: ReactNode
@@ -21,7 +24,11 @@ export function Breadcrumb({
       className="flex min-w-0 items-center gap-2 text-sm"
     >
       <Link to="/" className="flex shrink-0 items-center gap-2 font-medium hover:underline">
-        {picture && <img src={picture} alt="" className="h-6 w-6 rounded-full object-cover" />}
+        {logo ? (
+          <img src={logo} alt="" className="h-6 w-auto max-w-24 object-contain" />
+        ) : (
+          picture && <img src={picture} alt="" className="h-6 w-6 rounded-full object-cover" />
+        )}
         {title}
       </Link>
       {current !== undefined && (

@@ -1,4 +1,4 @@
-import type { InstanceSite } from '@nostube/core/instance-config'
+import type { BrandingSlot, InstanceSite } from '@nostube/core/instance-config'
 import i18n from './i18n'
 
 export type SearchConfig = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
@@ -24,6 +24,60 @@ export interface AdminState {
   bootId: string
   nostrPubkey: string | null
   config: AdminConfig
+  /** The uploaded logo, favicon and banner (their URLs), null where none is set. */
+  branding: Record<BrandingSlot, string | null>
+}
+
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+
+/** What the server takes per branding slot (`apps/server/src/branding.rs`). */
+export const BRANDING_LIMITS: Record<
+  BrandingSlot,
+  { bytes: number; size: string; types: string[] }
+> = {
+  logo: { bytes: 512 * 1024, size: '512 KB', types: IMAGE_TYPES },
+  favicon: {
+    bytes: 512 * 1024,
+    size: '512 KB',
+    types: [...IMAGE_TYPES, 'image/x-icon', 'image/vnd.microsoft.icon'],
+  },
+  banner: { bytes: 2048 * 1024, size: '2 MB', types: IMAGE_TYPES },
+}
+
+/** Why the server would refuse the file (checked here first), or null. */
+export function brandingProblem(slot: BrandingSlot, file: File): string | null {
+  const limit = BRANDING_LIMITS[slot]
+  if (!limit.types.includes(file.type)) return i18n.t('studio.branding.errors.wrongType')
+  if (file.size > limit.bytes) return i18n.t('studio.branding.errors.tooBig', { size: limit.size })
+  return null
+}
+
+/** Replaces the slot's image; it shows on the site at once. Answers the new URL. */
+export async function uploadBranding(slot: BrandingSlot, file: File): Promise<string> {
+  const res = await fetch(`/api/admin/branding/${slot}`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  // The server checks the bytes, not the name: a renamed file is refused here.
+  if (res.status === 413)
+    throw new Error(i18n.t('studio.branding.errors.tooBig', { size: BRANDING_LIMITS[slot].size }))
+  if (res.status === 415) throw new Error(i18n.t('studio.branding.errors.wrongType'))
+  if (!res.ok) throw new Error(await errorMessage(res))
+  const body: unknown = await res.json()
+  if (body && typeof body === 'object' && 'url' in body && typeof body.url === 'string')
+    return body.url
+  throw new Error(i18n.t('studio.errors.serverStatus', { status: res.status }))
+}
+
+export async function deleteBranding(slot: BrandingSlot): Promise<void> {
+  const res = await fetch(`/api/admin/branding/${slot}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) throw new Error(await errorMessage(res))
 }
 
 async function errorMessage(res: Response): Promise<string> {

@@ -63,6 +63,7 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
       links: DEFAULT_SITE_LINKS,
     },
   },
+  branding: { logo: null, favicon: null, banner: null },
 })
 
 async function renderPage(state: AdminState) {

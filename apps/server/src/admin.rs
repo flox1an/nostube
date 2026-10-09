@@ -88,11 +88,14 @@ impl Secrets {
     }
 }
 
-/// The running relay and Blossom, read (never changed) by the stats endpoint.
+/// The running relay and Blossom, read (never changed) by the stats endpoint, and the branding
+/// the studio replaces while the instance runs.
 pub struct Stores {
     pub relay: Relay,
     /// Its `public_url` is the canonical origin (`main` sets it so).
     pub blossom: almond::AppState,
+    /// Shared with `main`, which serves the images and the public config from it.
+    pub branding: Arc<crate::branding::Branding>,
 }
 
 /// Admin state shared with the axum router.
@@ -354,6 +357,7 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/signer", get(signer_get).post(signer_create))
         .route("/api/admin/signer/sign", post(signer_sign))
         .route("/api/admin/signer/export", post(signer_export))
+        .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
         .with_state(state)
 }
 
@@ -548,14 +552,20 @@ fn json_error(status: StatusCode, message: &str) -> Response {
 /// The gate of every studio write: a live session, and a JSON body (a cross-site form post cannot
 /// send that; the session cookie is SameSite=Strict as well). `Some` is the refusal.
 fn refuse_write(state: &AdminState, headers: &HeaderMap) -> Option<Response> {
+    refuse_write_as(state, headers, "application/json")
+}
+
+/// `refuse_write` for a body of another type (`image/*`: any image type). A cross-site form can
+/// only send form and text types, so these keep the same guarantee.
+fn refuse_write_as(state: &AdminState, headers: &HeaderMap, content_type: &str) -> Option<Response> {
     if !is_authed(state, headers) {
         return Some(json_error(StatusCode::UNAUTHORIZED, "not logged in"));
     }
-    let is_json = headers
+    let accepted = headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.starts_with("application/json"));
-    (!is_json).then(|| json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "content-type must be application/json"))
+        .is_some_and(|v| v.starts_with(content_type.trim_end_matches('*')));
+    (!accepted).then(|| json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &format!("content-type must be {content_type}")))
 }
 
 /// Everything the studio edits, in the camelCase shape of the public contract.
@@ -653,6 +663,7 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         "bootId": state.boot_id,
         "nostrPubkey": nostr,
         "config": editable_json(&cfg),
+        "branding": state.stores.branding.urls(),
     }))
     .into_response()
 }
@@ -758,6 +769,67 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e);
     }
     Json(serde_json::json!({ "ok": true, "revision": next.revision })).into_response()
+}
+
+// ── Branding ────────────────────────────────────────────────────────────────
+
+/// Replaces the logo, favicon or banner (`PUT /api/admin/branding/<slot>`, the image as the raw
+/// body). Takes effect at once: the public config is rebuilt, nothing restarts.
+async fn branding_put(
+    State(state): State<Arc<AdminState>>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+    headers: HeaderMap,
+    body: axum::body::Body,
+) -> Response {
+    use crate::branding::{Kind, Slot};
+    if let Some(refusal) = refuse_write_as(&state, &headers, "image/*") {
+        return refusal;
+    }
+    let Some(slot) = Slot::parse(&name) else {
+        return json_error(StatusCode::NOT_FOUND, "no such branding slot");
+    };
+    let max = slot.max_bytes();
+    let too_big = || json_error(StatusCode::PAYLOAD_TOO_LARGE, &format!("the {} may be at most {} KiB", slot.name(), max / 1024));
+    let declared = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse::<usize>().ok());
+    if declared.is_some_and(|n| n > max) {
+        return too_big();
+    }
+    // Stops reading at the limit. A broken connection also lands here; nobody reads that answer.
+    let Ok(bytes) = axum::body::to_bytes(body, max).await else {
+        return too_big();
+    };
+    let Some(kind) = Kind::sniff(&bytes).filter(|k| slot.accepts(*k)) else {
+        let message = format!("the {} must be a {} image", slot.name(), slot.types());
+        return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, &message);
+    };
+    match state.stores.branding.store(slot, kind, bytes) {
+        Ok(url) => {
+            tracing::info!("branding: {} replaced", slot.name());
+            Json(serde_json::json!({ "url": url })).into_response()
+        }
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot store the {}: {e}", slot.name())),
+    }
+}
+
+/// Empties a slot (`DELETE /api/admin/branding/<slot>`); the site falls back to its defaults.
+async fn branding_delete(
+    State(state): State<Arc<AdminState>>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let Some(slot) = crate::branding::Slot::parse(&name) else {
+        return json_error(StatusCode::NOT_FOUND, "no such branding slot");
+    };
+    match state.stores.branding.remove(slot) {
+        Ok(()) => {
+            tracing::info!("branding: {} removed", slot.name());
+            Json(serde_json::json!({ "ok": true })).into_response()
+        }
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot remove the {}: {e}", slot.name())),
+    }
 }
 
 // ── Managed signer (ADR 0007) ───────────────────────────────────────────────
@@ -1169,7 +1241,7 @@ mod tests {
 
     const PK: &str = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d";
 
-    /// Relay and Blossom in `dir`, opened like `main` does (quota 7 GiB, reserve 2 GiB).
+    /// Relay, Blossom and branding in `dir`, opened like `main` does (quota 7 GiB, reserve 2 GiB).
     async fn stores(dir: &Path) -> Stores {
         let mut cfg = almond::Config::defaults();
         cfg.storage_path = dir.join("blossom");
@@ -1179,7 +1251,9 @@ mod tests {
         cfg.storage_min_free = 2 * config::GIB;
         let blossom = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
         let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into() };
-        Stores { relay: Relay::open(&dir.join("relay.sqlite"), relay).unwrap(), blossom }
+        let public = Config::load(&dir.join("config.toml")).map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
+        let branding = Arc::new(crate::branding::Branding::open(dir, public));
+        Stores { relay: Relay::open(&dir.join("relay.sqlite"), relay).unwrap(), blossom, branding }
     }
 
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
@@ -1190,12 +1264,15 @@ mod tests {
 
     /// `tls` is the TOML value of `tls`; `tls_files` writes the placeholder CA files.
     async fn studio_fixture_for(tls: &str, tls_files: bool) -> (Router, PathBuf, String) {
-        let (app, dir, cookie, _) = studio_fixture_with_blossom(tls, tls_files).await;
+        let (app, dir, cookie, _, _) = studio_fixture_with_stores(tls, tls_files).await;
         (app, dir, cookie)
     }
 
-    /// Also hands back the live Blossom state the router reads.
-    async fn studio_fixture_with_blossom(tls: &str, tls_files: bool) -> (Router, PathBuf, String, almond::AppState) {
+    /// Also hands back the live Blossom state and the branding the router reads.
+    async fn studio_fixture_with_stores(
+        tls: &str,
+        tls_files: bool,
+    ) -> (Router, PathBuf, String, almond::AppState, Arc<crate::branding::Branding>) {
         let dir = std::env::temp_dir().join(format!("nss-studio-test-{}", random_hex(4)));
         std::fs::create_dir_all(dir.join("tls")).unwrap();
         if tls_files {
@@ -1217,6 +1294,7 @@ mod tests {
         let secret = s.session_secret.clone();
         let stores = stores(&dir).await;
         let blossom = stores.blossom.clone();
+        let branding = stores.branding.clone();
         let state = AdminState::open(
             &dir,
             "flox-mac.local",
@@ -1228,7 +1306,7 @@ mod tests {
         )
         .unwrap();
         let cookie = session_cookie(&secret).split(';').next().unwrap().to_owned();
-        (router(state), dir, cookie, blossom)
+        (router(state), dir, cookie, blossom, branding)
     }
 
     async fn call(app: &Router, method: &str, cookie: Option<&str>, content_type: Option<&str>, body: &str) -> (StatusCode, serde_json::Value) {
@@ -1402,7 +1480,7 @@ mod tests {
 
     #[tokio::test]
     async fn stats_report_the_live_relay_and_blossom() {
-        let (app, dir, cookie, blossom) = studio_fixture_with_blossom("{ mode = \"local-ca\" }", true).await;
+        let (app, dir, cookie, blossom, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
         let (status, body) = get_stats(&app, Some(&cookie)).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["relay"]["url"], "wss://flox-mac.local");
@@ -1689,6 +1767,98 @@ mod tests {
         assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
         assert!(headers.get(header::RETRY_AFTER).is_some());
         assert_eq!(try_login(&app, "correct%20horse").await.0, StatusCode::TOO_MANY_REQUESTS);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
+
+    async fn branding_call(app: &Router, method: &str, slot: &str, cookie: Option<&str>, content_type: Option<&str>, body: Vec<u8>) -> (StatusCode, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().method(method).uri(format!("/api/admin/branding/{slot}"));
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        if let Some(t) = content_type {
+            req = req.header(header::CONTENT_TYPE, t);
+        }
+        let res = app.clone().oneshot(req.body(axum::body::Body::from(body)).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    }
+
+    fn public_site(branding: &crate::branding::Branding) -> serde_json::Value {
+        serde_json::from_slice::<serde_json::Value>(&branding.public_config()).unwrap()["site"].clone()
+    }
+
+    #[tokio::test]
+    async fn branding_uploads_need_a_session_and_a_real_image_within_the_limit() {
+        use tower::ServiceExt;
+        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let c = Some(cookie.as_str());
+        let png = Some("image/png");
+        assert_eq!(branding_call(&app, "PUT", "logo", None, png, PNG.to_vec()).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(branding_call(&app, "PUT", "logo", Some("admin_session=forged"), png, PNG.to_vec()).await.0, StatusCode::UNAUTHORIZED);
+        // A cross-site form can send text/plain; only image types are taken.
+        assert_eq!(branding_call(&app, "PUT", "logo", c, Some("text/plain"), PNG.to_vec()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // An HTML page renamed to .png: the bytes decide, not the declared type.
+        let html = b"<!doctype html><script>alert(1)</script>".to_vec();
+        let (status, body) = branding_call(&app, "PUT", "logo", c, png, html).await;
+        assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
+        assert_eq!(body["error"], "the logo must be a PNG, JPEG, WebP or SVG image");
+        // ICO is for the favicon only.
+        let ico = vec![0, 0, 1, 0, 1, 0];
+        assert_eq!(branding_call(&app, "PUT", "logo", c, Some("image/x-icon"), ico.clone()).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(branding_call(&app, "PUT", "favicon", c, Some("image/x-icon"), ico).await.0, StatusCode::OK);
+        // One byte over the limit: read up to the limit (no length announced) ...
+        let mut big = PNG.to_vec();
+        big.resize(512 * 1024 + 1, 0);
+        let (status, body) = branding_call(&app, "PUT", "logo", c, png, big.clone()).await;
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE, "{body}");
+        // ... or refused before reading when the announced length is too large.
+        let req = axum::http::Request::builder()
+            .method("PUT")
+            .uri("/api/admin/branding/logo")
+            .header(header::COOKIE, &cookie)
+            .header(header::CONTENT_TYPE, "image/png")
+            .header(header::CONTENT_LENGTH, big.len())
+            .body(axum::body::Body::from(big.clone()))
+            .unwrap();
+        assert_eq!(app.clone().oneshot(req).await.unwrap().status(), StatusCode::PAYLOAD_TOO_LARGE);
+        // The banner may be larger.
+        assert_eq!(branding_call(&app, "PUT", "banner", c, png, big).await.0, StatusCode::OK);
+        assert_eq!(branding_call(&app, "PUT", "nope", c, png, PNG.to_vec()).await.0, StatusCode::NOT_FOUND);
+        let site = public_site(&branding);
+        assert!(site["logo"].is_null(), "{site}");
+        assert!(site["favicon"].as_str().is_some_and(|u| u.starts_with("/branding/favicon?v=")));
+        assert!(!dir.join("branding").join("logo.png").exists());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn an_upload_shows_in_the_public_config_at_once_and_a_delete_takes_it_out() {
+        let (app, dir, cookie, _, branding) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let c = Some(cookie.as_str());
+        assert!(public_site(&branding)["logo"].is_null());
+        let (status, body) = branding_call(&app, "PUT", "logo", c, Some("image/png"), PNG.to_vec()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let url = body["url"].as_str().unwrap().to_owned();
+        assert!(url.starts_with("/branding/logo?v="), "{url}");
+        // Same process, no restart: the public config and the studio already have it.
+        let site = public_site(&branding);
+        assert_eq!(site["logo"], url.as_str());
+        assert_eq!(site["tagline"], "", "the rest of the site config stays: {site}");
+        assert_eq!(call(&app, "GET", c, None, "").await.1["branding"]["logo"], url.as_str());
+        assert_eq!(std::fs::read(dir.join("branding").join("logo.png")).unwrap(), PNG);
+
+        // Deleting is a write like the others: a session and JSON.
+        assert_eq!(branding_call(&app, "DELETE", "logo", c, None, vec![]).await.0, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(branding_call(&app, "DELETE", "logo", None, Some("application/json"), vec![]).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(branding_call(&app, "DELETE", "logo", c, Some("application/json"), vec![]).await.0, StatusCode::OK);
+        let site = public_site(&branding);
+        assert!(site.get("logo").is_none(), "{site}");
+        assert!(!dir.join("branding").join("logo.png").exists());
+        assert!(call(&app, "GET", c, None, "").await.1["branding"]["logo"].is_null());
         std::fs::remove_dir_all(&dir).ok();
     }
 }

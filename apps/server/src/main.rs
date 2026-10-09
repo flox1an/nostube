@@ -3,6 +3,7 @@
 //! the instance config is `<dir>/config.toml`.
 
 mod admin;
+mod branding;
 mod config;
 mod data_lock;
 mod login_guard;
@@ -30,8 +31,8 @@ struct Web;
 struct App {
     blossom: Router,
     relay: relay::Relay,
-    /// Serialized public config, built once per start (config changes need a restart).
-    public_config: axum::body::Bytes,
+    /// The public config and the branding images; uploads replace both while running.
+    branding: Arc<branding::Branding>,
     boot_id: String,
     /// `/admin` router; `None` when the secrets file is broken (#7).
     admin: Option<Router>,
@@ -304,6 +305,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         },
     )?;
 
+    let branding = Arc::new(branding::Branding::open(&data, cfg.public_json()));
     // Broken secrets only disable the admin area, never the instance (#7).
     let admin = match admin::AdminState::open(
         &data,
@@ -312,7 +314,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         &setup_origin,
         boot_id.clone(),
         handle.clone(),
-        admin::Stores { relay: relay.clone(), blossom: state.clone() },
+        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone() },
     ) {
         Ok(a) => Some(admin::router(a)),
         Err(e) => {
@@ -324,7 +326,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     let app = App {
         blossom: almond::create_app(state),
         relay,
-        public_config: serde_json::to_vec(&cfg.public_json())?.into(),
+        branding,
         boot_id,
         admin,
     };
@@ -388,7 +390,7 @@ fn revision(value: Option<String>) -> Option<String> {
 }
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
-/// Blossom, the studio (`/studio/*`), root files, app shell.
+/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), root files, app shell.
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
@@ -410,7 +412,7 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return match (req.method(), path.as_str()) {
             (&Method::GET, "/api/config") => (
                 [(header::CONTENT_TYPE, "application/json"), (header::CACHE_CONTROL, "no-store")],
-                app.public_config,
+                app.branding.public_config(),
             )
                 .into_response(),
             (&Method::GET, "/api/health") => Json(serde_json::json!({
@@ -429,6 +431,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return StatusCode::METHOD_NOT_ALLOWED.into_response();
     }
     let file = path.trim_start_matches('/');
+    if let Some(slot) = file.strip_prefix("branding/") {
+        return app.branding.serve(slot, req.uri().query(), req.headers());
+    }
     if file == "studio" || file.starts_with("studio/") {
         return studio_asset(file);
     }

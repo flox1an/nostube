@@ -133,6 +133,8 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   const { t } = useTranslation()
   const [draft, setDraft] = useState<Draft>(() => toDraft(state.config))
   const [saving, setSaving] = useState<Saving>(null)
+  // Branding uploads apply at once; kept here so the page shows them after navigating away.
+  const [branding, setBranding] = useState(state.branding)
   const [saveError, setSaveError] = useState<string | null>(null)
   const saved = useMemo(() => toDraft(state.config), [state.config])
   const result = fromDraft(draft)
@@ -198,7 +200,14 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           <UploadPage state={state} banner={banner} />
         </Suspense>
       )}
-      {page === 'appearance' && <AppearancePage draft={draft} update={update} />}
+      {page === 'appearance' && (
+        <AppearancePage
+          draft={draft}
+          update={update}
+          branding={branding}
+          onBranding={(slot, url) => setBranding(b => ({ ...b, [slot]: url }))}
+        />
+      )}
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
       {page === 'overview' && <OverviewPage />}

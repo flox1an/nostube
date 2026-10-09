@@ -52,7 +52,21 @@ export interface InstanceSite {
    * naddr, nevent or note identifier goes.
    */
   links: { profile: string; video: string; note: string }
+  /**
+   * Images the admin uploaded (`/branding/<slot>?v=<hash>`, same origin); absent when the slot
+   * is empty. Not part of the studio's config edit: the server adds them to the public config.
+   */
+  logo?: string
+  favicon?: string
+  banner?: string
 }
+
+export const BRANDING_SLOTS = ['logo', 'favicon', 'banner'] as const
+export type BrandingSlot = (typeof BRANDING_SLOTS)[number]
+
+/** The URL the server gives a branding slot; anything else (another host, a path) is not used. */
+export const isBrandingUrl = (slot: BrandingSlot, v: unknown): v is string =>
+  typeof v === 'string' && new RegExp(`^/branding/${slot}\\?v=[0-9a-f]{1,64}$`).test(v)
 
 export const SITE_LINK_KEYS = ['profile', 'video', 'note'] as const
 export type SiteLinkKey = (typeof SITE_LINK_KEYS)[number]
@@ -220,6 +234,10 @@ export function parseInstanceConfig(json: unknown): ParseResult {
           video: site.links.video,
           note: site.links.note,
         },
+        // Optional: a field that is not a branding URL of this server is left out, the rest stays.
+        ...Object.fromEntries(
+          BRANDING_SLOTS.filter(s => isBrandingUrl(s, site[s])).map(s => [s, site[s]])
+        ),
       },
     },
   }

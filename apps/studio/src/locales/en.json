@@ -103,6 +103,24 @@
       "previewVideo": "A video title",
       "previewButton": "Primary button"
     },
+    "branding": {
+      "title": "Logo, favicon and banner",
+      "description": "Images for the public site. They apply right away, without saving.",
+      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Banner" },
+      "hints": {
+        "logo": "In the header and on video pages, instead of the profile picture. PNG, JPEG, WebP or SVG, up to {{size}}.",
+        "favicon": "The icon in the browser tab. PNG, JPEG, WebP, SVG or ICO, up to {{size}}.",
+        "banner": "A wide image above the videos on the start page. PNG, JPEG, WebP or SVG, up to {{size}}."
+      },
+      "none": "None",
+      "upload": "Upload",
+      "replace": "Replace",
+      "remove": "Remove",
+      "errors": {
+        "tooBig": "The file is too big: at most {{size}}.",
+        "wrongType": "This file type is not allowed here. See the formats above."
+      }
+    },
     "connect": {
       "neededTitle": "Connect your Nostr key to publish",
       "notCreatorTitle": "This key is not a creator of the instance",

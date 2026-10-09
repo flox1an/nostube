@@ -11,6 +11,7 @@ import {
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
 import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
+import { BrandingCard, type BrandingProps } from './BrandingCard'
 import { LINK_PRESETS, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
 
@@ -29,8 +30,8 @@ export interface PageProps {
   update: (patch: Partial<Draft>) => void
 }
 
-/** Title, tagline, accent colour, font and where links to other Nostr content go. */
-export function AppearancePage({ draft, update }: PageProps) {
+/** Title, tagline, logo, favicon, banner, accent colour, font and where links to other Nostr content go. */
+export function AppearancePage({ draft, update, branding, onBranding }: PageProps & BrandingProps) {
   const { t } = useTranslation()
   const preview = useRef<HTMLDivElement>(null)
   const lowContrast = lowContrastModes(draft.accent)
@@ -69,6 +70,8 @@ export function AppearancePage({ draft, update }: PageProps) {
             </Field>
           </CardContent>
         </Card>
+
+        <BrandingCard branding={branding} onBranding={onBranding} />
 
         <Card>
           <CardHeader>

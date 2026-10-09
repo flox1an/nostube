@@ -41,10 +41,10 @@ enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
 
 ## What you have to set
 
-| What               | How                                                            | Why                                                                                                                                                                                                                                |
-| ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database, the stored videos                                                                      |
-| The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ) |
+| What               | How                                                            | Why                                                                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database, the stored videos, and `branding/` with the logo, favicon and banner uploaded in the studio |
+| The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ)      |
 
 Everything else is optional: `NOSTUBE_PORT` (default 8080), `NOSTUBE_BIND` (the image binds all
 interfaces, the binary alone binds loopback in proxy mode), `NOSTUBE_DATA` (`/data` in the image).

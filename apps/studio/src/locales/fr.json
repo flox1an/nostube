@@ -103,6 +103,24 @@
       "previewVideo": "Un titre de vidéo",
       "previewButton": "Bouton principal"
     },
+    "branding": {
+      "title": "Logo, favicon et bannière",
+      "description": "Images du site public. Elles s'appliquent immédiatement, sans enregistrer.",
+      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Bannière" },
+      "hints": {
+        "logo": "Dans l'en-tête et sur les pages vidéo, à la place de la photo de profil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
+        "favicon": "L'icône de l'onglet du navigateur. PNG, JPEG, WebP, SVG ou ICO, jusqu'à {{size}}.",
+        "banner": "Une image large au-dessus des vidéos de la page d'accueil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}."
+      },
+      "none": "Aucun",
+      "upload": "Téléverser",
+      "replace": "Remplacer",
+      "remove": "Retirer",
+      "errors": {
+        "tooBig": "Le fichier est trop volumineux : {{size}} au maximum.",
+        "wrongType": "Ce type de fichier n'est pas autorisé ici. Voir les formats ci-dessus."
+      }
+    },
     "connect": {
       "neededTitle": "Connectez votre clé Nostr pour publier",
       "notCreatorTitle": "Cette clé n'est pas un créateur de l'instance",

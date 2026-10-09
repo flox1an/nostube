@@ -61,7 +61,7 @@ export function VideoView({
   }, [video, config.title])
 
   const crumb = (current?: ReactNode) => (
-    <Breadcrumb title={config.title} picture={picture} current={current} />
+    <Breadcrumb title={config.title} logo={config.site.logo} picture={picture} current={current} />
   )
   const notice = (message: string) => (
     <div className="space-y-2">

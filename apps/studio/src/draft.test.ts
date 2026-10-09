@@ -2,7 +2,16 @@ import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
-import { LINK_PRESETS, fromDraft, isRefHidden, linkPresetOf, setRefHidden, toDraft } from './draft'
+import {
+  LINK_PRESETS,
+  addKeyToConfig,
+  fromDraft,
+  isKeyConnected,
+  isRefHidden,
+  linkPresetOf,
+  setRefHidden,
+  toDraft,
+} from './draft'
 
 const PK = 'a'.repeat(64)
 const config: AdminConfig = {
@@ -93,5 +102,29 @@ describe('link presets', () => {
     expect(linkPresetOf({ ...DEFAULT_SITE_LINKS, video: 'https://example.org/v/{nip19}' })).toBe(
       'custom'
     )
+  })
+})
+
+describe('connecting a key', () => {
+  const empty: AdminConfig = { ...config, creators: [], allowedWriters: [] }
+  const KEY = 'b'.repeat(64)
+
+  it('makes the key creator and writer of an empty instance', () => {
+    const next = addKeyToConfig(empty, KEY)
+    expect(next.creators).toEqual([KEY])
+    expect(next.allowedWriters).toEqual([KEY])
+    expect(isKeyConnected(next, KEY)).toBe(true)
+  })
+
+  it('adds a key once and keeps the first creator first', () => {
+    const next = addKeyToConfig(addKeyToConfig(config, KEY), KEY)
+    expect(next.creators).toEqual([PK, KEY])
+    expect(next.allowedWriters).toEqual([PK, KEY])
+  })
+
+  it('knows when a key still has to be connected', () => {
+    expect(isKeyConnected(empty, KEY)).toBe(false)
+    expect(isKeyConnected(config, null)).toBe(false)
+    expect(isKeyConnected({ ...config, allowedWriters: [] }, PK)).toBe(false)
   })
 })

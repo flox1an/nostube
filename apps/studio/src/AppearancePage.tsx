@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { SITE_FONTS, type SiteFont } from '@nostube/core/instance-config'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -9,8 +9,6 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
-import { Skeleton } from '@nostube/widgets/components/skeleton'
-import { Textarea } from '@nostube/widgets/components/textarea'
 import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
 import { LINK_PRESETS, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
@@ -20,8 +18,6 @@ const FONT_LABELS: Record<SiteFont, string> = {
   serif: 'Serif',
   mono: 'Monospace',
 }
-
-const HiddenVideosPicker = lazy(() => import('./HiddenVideosPicker'))
 
 const ACCENT = /^#[0-9a-fA-F]{6}$/
 
@@ -38,7 +34,7 @@ export interface PageProps {
   update: (patch: Partial<Draft>) => void
 }
 
-/** Title, tagline, accent colour, font and the videos the public site does not show. */
+/** Title, tagline, accent colour, font and where links to other Nostr content go. */
 export function AppearancePage({ draft, update }: PageProps) {
   const preview = useRef<HTMLDivElement>(null)
 
@@ -194,43 +190,6 @@ export function AppearancePage({ draft, update }: PageProps) {
                     />
                   </Field>
                 ))}
-              </div>
-            </details>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Hidden videos</CardTitle>
-            <CardDescription>
-              The site shows every video of your creators except these. New uploads appear on their
-              own.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-              <HiddenVideosPicker
-                hiddenText={draft.hiddenText}
-                onChange={hiddenText => update({ hiddenText })}
-              />
-            </Suspense>
-            <details className="text-sm">
-              <summary className="cursor-pointer text-muted-foreground">Edit as text</summary>
-              <div className="pt-3">
-                <Field
-                  id="hidden"
-                  label="One video per line"
-                  hint="Paste the link of its page on your site (…/v/naddr1…), or an naddr / nevent / note."
-                >
-                  <Textarea
-                    id="hidden"
-                    rows={4}
-                    value={draft.hiddenText}
-                    onChange={e => update({ hiddenText: e.target.value })}
-                    className="font-mono text-xs"
-                    spellCheck={false}
-                  />
-                </Field>
               </div>
             </details>
           </CardContent>

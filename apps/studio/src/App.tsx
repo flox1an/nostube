@@ -4,16 +4,14 @@ import { Button } from '@nostube/widgets/components/button'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AccountPage } from './AccountPage'
 import { AppearancePage } from './AppearancePage'
+import { ConnectKey } from './ConnectKey'
 import { InstancePage } from './InstancePage'
-import { loadAdmin, saveConfig, waitForRestart, type AdminState } from './api'
-import { fromDraft, toDraft, type Draft } from './draft'
-
-type Section = 'appearance' | 'instance' | 'account'
-const SECTIONS: { id: Section; label: string }[] = [
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'instance', label: 'Instance' },
-  { id: 'account', label: 'Account' },
-]
+import { Nav } from './Nav'
+import { VideosPage } from './VideosPage'
+import { loadAdmin, saveConfig, waitForRestart, type AdminConfig, type AdminState } from './api'
+import { addKeyToConfig, fromDraft, toDraft, type Draft } from './draft'
+import { PAGES, useRoute } from './route'
+import { SignerProvider } from './signer-context'
 
 type Phase =
   | { name: 'loading' }
@@ -67,7 +65,11 @@ export function App() {
       </Shell>
     )
   }
-  return <Studio state={phase.state} reload={load} />
+  return (
+    <SignerProvider>
+      <Studio state={phase.state} reload={load} />
+    </SignerProvider>
+  )
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -82,22 +84,23 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Studio({ state, reload }: { state: AdminState; reload: () => Promise<void> }) {
-  const [section, setSection] = useState<Section>('appearance')
+  const [page, navigate] = useRoute()
   const [draft, setDraft] = useState<Draft>(() => toDraft(state.config))
   const [saving, setSaving] = useState<Saving>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const saved = useMemo(() => toDraft(state.config), [state.config])
   const result = useMemo(() => fromDraft(draft), [draft])
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
+  const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
 
   const update = (patch: Partial<Draft>) => setDraft(d => ({ ...d, ...patch }))
 
-  const save = async () => {
-    if (!result.config) return
+  /** Saves a whole config: the server checks it, keeps the old one, restarts, and we wait for it. */
+  const apply = async (config: AdminConfig) => {
     setSaveError(null)
     setSaving('saving')
     try {
-      await saveConfig(result.config)
+      await saveConfig(config)
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e))
       setSaving(null)
@@ -105,33 +108,28 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
     }
     setSaving('restarting')
     if (await waitForRestart(state.bootId)) {
-      setSaving(null)
-      await reload()
-      setDraft(toDraft(result.config))
+      // A fresh page: the admin data, the draft and the public config the video list was built
+      // on all come from the new revision (the address, and with it the page, stays).
+      location.reload()
     } else {
       setSaving('stalled')
     }
   }
 
+  const save = () => (result.config ? apply(result.config) : Promise.resolve())
+
+  // Pending edits go along (this is a save like any other, with one more entry in two lists);
+  // if they do not validate, only the key is added to what is saved.
+  const connectKey = (pubkey: string) =>
+    apply(addKeyToConfig(result.config ?? state.config, pubkey))
+
+  const banner = (
+    <ConnectKey config={state.config} onConnected={connectKey} busy={saving !== null} />
+  )
+
   return (
     <Shell>
-      <nav className="flex gap-1 border-b border-border" aria-label="Sections">
-        {SECTIONS.map(s => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setSection(s.id)}
-            aria-current={section === s.id ? 'page' : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              section === s.id
-                ? 'border-primary font-medium'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </nav>
+      <Nav page={page} onNavigate={navigate} />
 
       {saving === 'stalled' && (
         <Alert variant="destructive">
@@ -149,11 +147,12 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
         </Alert>
       )}
 
-      {section === 'appearance' && <AppearancePage draft={draft} update={update} />}
-      {section === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
-      {section === 'account' && <AccountPage state={state} reload={() => void reload()} />}
+      {page === 'videos' && <VideosPage draft={draft} update={update} banner={banner} />}
+      {page === 'appearance' && <AppearancePage draft={draft} update={update} />}
+      {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
+      {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
 
-      {section !== 'account' && (
+      {editsConfig && (
         <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
           {result.errors.length > 0 && (
             <ul className="list-disc pl-5 text-sm text-destructive">

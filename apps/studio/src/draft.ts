@@ -192,3 +192,20 @@ export function linkPresetOf(links: InstanceSite['links']): string {
     )?.id ?? 'custom'
   )
 }
+
+/**
+ * The config with this public key added as creator and as an allowed writer (once each). On a new
+ * instance both lists are empty, which switches upload and mirror off: this is the one step that
+ * lets the owner publish. The first creator is the start page, so an existing one stays first.
+ */
+export function addKeyToConfig(config: AdminConfig, pubkey: string): AdminConfig {
+  const add = (list: string[]) => (list.includes(pubkey) ? list : [...list, pubkey])
+  return { ...config, creators: add(config.creators), allowedWriters: add(config.allowedWriters) }
+}
+
+/** True when the key is a creator and may write: nothing is left to connect. */
+export function isKeyConnected(config: AdminConfig, pubkey: string | null): boolean {
+  return (
+    pubkey !== null && config.creators.includes(pubkey) && config.allowedWriters.includes(pubkey)
+  )
+}

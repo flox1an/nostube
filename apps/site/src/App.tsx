@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter } from 'react-router-dom'
 import type { SiteBoot } from './boot'
 import { SiteHome } from './SiteHome'
 
@@ -27,5 +28,9 @@ export function App({ boot }: { boot: Promise<SiteBoot> }) {
   if (state.status === 'error') {
     return <p className="p-8 text-center text-red-600">{state.message}</p>
   }
-  return <SiteHome client={state.client} config={state.config} />
+  return (
+    <BrowserRouter>
+      <SiteHome client={state.client} config={state.config} />
+    </BrowserRouter>
+  )
 }

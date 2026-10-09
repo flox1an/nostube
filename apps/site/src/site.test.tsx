@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
+import { nip19 } from 'nostr-tools'
+import { MemoryRouter } from 'react-router-dom'
 import { of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
@@ -61,6 +63,14 @@ describe('loadSiteConfig', () => {
   })
 })
 
+function renderSite(client: NostubeClient, path = '/') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <SiteHome client={client} config={config} />
+    </MemoryRouter>
+  )
+}
+
 describe('SiteHome', () => {
   const video = {
     id: 'e'.repeat(64),
@@ -102,9 +112,34 @@ describe('SiteHome', () => {
   } as unknown as NostubeClient
 
   it('shows the creator and the creator videos', async () => {
-    render(<SiteHome client={client} config={config} />)
+    renderSite(client)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'Alice' })).toBeTruthy()
+  })
+
+  it('opens a video at its own URL and opens it directly from a link', async () => {
+    renderSite(client)
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+    expect(screen.getByRole('heading', { name: 'My first upload' })).toBeTruthy()
+    fireEvent.click(screen.getByText('← All videos'))
+    await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
+  })
+
+  it('reports a video link that is not valid', async () => {
+    renderSite(client, '/v/not-a-link')
+    await waitFor(() => expect(screen.getByText('This video link is not valid.')).toBeTruthy())
+  })
+
+  it('does not open a link to a video of someone else', async () => {
+    const foreignAddress = nip19.naddrEncode({
+      kind: 34235,
+      pubkey: 'b'.repeat(64),
+      identifier: 'x',
+    })
+    renderSite(client, `/v/${foreignAddress}`)
+    await waitFor(() => expect(screen.getByText('This video link is not valid.')).toBeTruthy())
   })
 
   describe('age gate', () => {
@@ -132,7 +167,7 @@ describe('SiteHome', () => {
     afterEach(() => vi.unstubAllGlobals())
 
     it('locks a video with a content warning until 18+ is confirmed', async () => {
-      render(<SiteHome client={gatedClient} config={config} />)
+      renderSite(gatedClient)
       await waitFor(() => expect(screen.getByText('Content warning')).toBeTruthy())
       expect(screen.queryByText('My first upload')).toBeTruthy()
 
@@ -143,12 +178,21 @@ describe('SiteHome', () => {
       fireEvent.click(screen.getByText('I am 18 or older'))
       expect(localStorage.getItem('nostube-site:age-confirmed')).toBe('true')
       // The player still gets the warning, so it asks before it plays.
+      await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
       expect(screen.getByTestId('player').getAttribute('data-warning')).toBe('nudity')
-      expect(screen.queryByText('Content warning')).toBeNull()
+    })
+
+    it('asks for 18+ on a direct link to a locked video', async () => {
+      const link = nip19.neventEncode({ id: nsfw.id, author: creator })
+      renderSite(gatedClient, `/v/${link}`)
+      await waitFor(() => expect(screen.getByRole('alertdialog')).toBeTruthy())
+      expect(screen.queryByTestId('player')).toBeNull()
+      fireEvent.click(screen.getByText('I am 18 or older'))
+      await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
     })
 
     it('keeps the video locked when the viewer cancels', async () => {
-      render(<SiteHome client={gatedClient} config={config} />)
+      renderSite(gatedClient)
       await waitFor(() => expect(screen.getByText('Content warning')).toBeTruthy())
       fireEvent.click(screen.getByText('My first upload'))
       fireEvent.click(screen.getByText('Cancel'))
@@ -159,10 +203,11 @@ describe('SiteHome', () => {
 
     it('does not ask again once confirmed in this browser', async () => {
       localStorage.setItem('nostube-site:age-confirmed', 'true')
-      render(<SiteHome client={gatedClient} config={config} />)
+      renderSite(gatedClient)
       await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
       fireEvent.click(screen.getByText('My first upload'))
       expect(screen.queryByRole('alertdialog')).toBeNull()
+      await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
       expect(screen.getByTestId('player').getAttribute('data-warning')).toBe('nudity')
     })
   })

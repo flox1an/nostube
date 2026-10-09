@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { EventStoreProvider } from 'applesauce-react/providers'
 import type { Relay } from '@nostube/core'
 import type { NostubeClient } from '@nostube/core/client'
@@ -10,10 +11,11 @@ import { VideoPlayer } from '@nostube/widgets/player'
 import { TimelineProvider, type TimelineContextValue } from '@nostube/widgets/timeline'
 import { VideoGrid } from '@nostube/widgets'
 import { AgeConfirm } from './AgeConfirm'
-import { useAgeGate } from './use-age-gate'
+import { useAgeGate, type AgeGate } from './use-age-gate'
 import { useCreatorBlossomServers } from './use-creator-blossom-servers'
 import { useCreatorProfile } from './use-creator-profile'
 import { useCreatorVideos } from './use-creator-videos'
+import { useVideoById } from './use-video-by-id'
 
 export interface SiteHomeProps {
   client: NostubeClient
@@ -58,7 +60,7 @@ export function SiteHome({ client, config }: SiteHomeProps) {
       <NostubeHostProvider value={host}>
         <TooltipProvider>
           <TimelineProvider value={timeline}>
-            <Homepage client={client} config={config} />
+            <Site client={client} config={config} />
           </TimelineProvider>
         </TooltipProvider>
       </NostubeHostProvider>
@@ -66,64 +68,56 @@ export function SiteHome({ client, config }: SiteHomeProps) {
   )
 }
 
-function Homepage({ client, config }: SiteHomeProps) {
+/** Links to a video page; `link` is the video's naddr/nevent. */
+const videoPath = (video: VideoEvent) => `/v/${video.link}`
+
+function Site({ client, config }: SiteHomeProps) {
   const profile = useCreatorProfile(client, config)
-  const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
-  const [selected, setSelected] = useState<VideoEvent | null>(null)
-  const [pending, setPending] = useState<VideoEvent | null>(null)
   const gate = useAgeGate()
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+      <header>
+        <Link to="/" className="flex items-center gap-4">
+          {profile?.picture && (
+            <img src={profile.picture} alt="" className="h-16 w-16 rounded-full object-cover" />
+          )}
+          <div>
+            <h1 className="text-2xl font-semibold">{profile?.name ?? config.title}</h1>
+            {profile?.about && <p className="text-sm text-muted-foreground">{profile.about}</p>}
+          </div>
+        </Link>
+      </header>
+      <Routes>
+        <Route path="/" element={<VideoList config={config} gate={gate} />} />
+        <Route
+          path="/v/:id"
+          element={<VideoPage config={config} gate={gate} authorName={profile?.name} />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  )
+}
+
+/** The grid of the creator's videos; a locked video asks for 18+ before its page opens. */
+function VideoList({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
+  const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
+  const [pending, setPending] = useState<VideoEvent | null>(null)
+  const navigate = useNavigate()
 
   const select = (video: VideoEvent) => {
     if (gate.isLocked(video)) setPending(video)
-    else setSelected(video)
+    else navigate(videoPath(video))
   }
   const confirmAge = () => {
     gate.confirm()
-    setSelected(pending)
+    if (pending) navigate(videoPath(pending))
     setPending(null)
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <header className="flex items-center gap-4">
-        {profile?.picture && (
-          <img src={profile.picture} alt="" className="h-16 w-16 rounded-full object-cover" />
-        )}
-        <div>
-          <h1 className="text-2xl font-semibold">{profile?.name ?? config.title}</h1>
-          {profile?.about && <p className="text-sm text-muted-foreground">{profile.about}</p>}
-        </div>
-      </header>
-
+    <>
       {pending && <AgeConfirm onConfirm={confirmAge} onCancel={() => setPending(null)} />}
-
-      {selected && !gate.isLocked(selected) && (
-        <section className="space-y-2">
-          <VideoPlayer
-            key={selected.id}
-            urls={selected.urls}
-            textTracks={selected.textTracks}
-            mime={selected.mimeType ?? ''}
-            mediaType={selected.mediaType}
-            poster={selected.images[0] ?? ''}
-            posterHash={selected.thumbnailVariants[0]?.hash}
-            sha256={selected.x}
-            authorPubkey={selected.pubkey}
-            eventId={selected.id}
-            videoVariants={selected.videoVariants}
-            contentWarning={gate.warningFor(selected)}
-            title={selected.title}
-            authorName={profile?.name}
-          />
-          <h2 className="text-lg font-medium">{selected.title}</h2>
-          {selected.description && (
-            <p className="whitespace-pre-line text-sm text-muted-foreground">
-              {selected.description}
-            </p>
-          )}
-        </section>
-      )}
-
       {error && <p className="text-red-600">Could not load videos.</p>}
       {loading ? (
         <p className="py-12 text-center text-muted-foreground">Loading videos…</p>
@@ -142,6 +136,87 @@ function Homepage({ client, config }: SiteHomeProps) {
             </div>
           )}
         </>
+      )}
+    </>
+  )
+}
+
+/** One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. */
+function VideoPage({
+  config,
+  gate,
+  authorName,
+}: {
+  config: InstanceConfig
+  gate: AgeGate
+  authorName?: string
+}) {
+  const { id } = useParams()
+  const lookup = useVideoById(id, config)
+  const navigate = useNavigate()
+
+  const back = (
+    <Link to="/" className="text-sm text-muted-foreground hover:underline">
+      ← All videos
+    </Link>
+  )
+
+  if (lookup.status === 'invalid') {
+    return (
+      <div className="space-y-2">
+        {back}
+        <p className="py-12 text-center text-muted-foreground">This video link is not valid.</p>
+      </div>
+    )
+  }
+  if (lookup.status === 'loading') {
+    return (
+      <div className="space-y-2">
+        {back}
+        <p className="py-12 text-center text-muted-foreground">Loading video…</p>
+      </div>
+    )
+  }
+  if (lookup.status === 'not-found') {
+    return (
+      <div className="space-y-2">
+        {back}
+        <p className="py-12 text-center text-muted-foreground">Video not found.</p>
+      </div>
+    )
+  }
+
+  const selected = lookup.video
+  return (
+    <div className="space-y-4">
+      {back}
+      {gate.isLocked(selected) ? (
+        <AgeConfirm onConfirm={gate.confirm} onCancel={() => navigate('/')} />
+      ) : (
+        <section className="space-y-2">
+          <VideoPlayer
+            key={selected.id}
+            urls={selected.urls}
+            textTracks={selected.textTracks}
+            mime={selected.mimeType ?? ''}
+            mediaType={selected.mediaType}
+            poster={selected.images[0] ?? ''}
+            posterHash={selected.thumbnailVariants[0]?.hash}
+            sha256={selected.x}
+            authorPubkey={selected.pubkey}
+            eventId={selected.id}
+            videoVariants={selected.videoVariants}
+            contentWarning={gate.warningFor(selected)}
+            title={selected.title}
+            authorName={authorName}
+          />
+          <h2 className="text-lg font-medium">{selected.title}</h2>
+          {selected.description && (
+            <p className="whitespace-pre-line text-sm text-muted-foreground">
+              {selected.description}
+            </p>
+          )}
+        </section>
       )}
     </div>
   )

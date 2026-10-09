@@ -10,7 +10,7 @@ import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools'
 import type { Subscription } from 'rxjs'
 import type { RelayPool } from 'applesauce-relay'
-import { nowInSecs } from '@/lib/utils'
+import { nowInSecs } from '@/lib/common-utils'
 import {
   parseDvmBid,
   parseDvmResultContent,

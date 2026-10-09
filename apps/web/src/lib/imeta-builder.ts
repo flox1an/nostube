@@ -1,6 +1,6 @@
 import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { normalizeVideoVariantPlacement, type VideoVariant } from '@/lib/video-processing'
-import { buildAdvancedMimeType } from '@/lib/utils'
+import { buildAdvancedMimeType } from '@/lib/common-utils'
 import { generateQualityLabel } from '@/lib/video-processing'
 
 /**

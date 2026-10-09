@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 
-import { useReports, type ProcessedReportEvent } from './useReports'
+import { useReports } from './useReports'
+import type { ProcessedReportEvent, ReportedPubkeys } from '@/types/reports'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useMutedPubkeys } from './useMutedPubkeys'
 
-export type ReportedPubkeys = Record<string, ProcessedReportEvent | boolean>
+export type { ReportedPubkeys }
 
 /**
  * Accounts the app blocks outright: blocked by the active preset, or reported

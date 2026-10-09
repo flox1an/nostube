@@ -9,7 +9,7 @@ import { isNSFWAuthor } from '@/lib/nsfw-authors'
 import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
 import { getExplicitContentWarning, hasNsfwPlatformAttributes } from '@/lib/nsfw-platform-detection'
 import { filterCompatibleVariants } from '@/lib/codec-compatibility'
-import { sanitizeRelayUrl } from '@/lib/utils'
+import { sanitizeRelayUrl } from '@/lib/common-utils'
 
 // Define a simple Event interface that matches what we need
 export interface Event {

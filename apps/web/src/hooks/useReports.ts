@@ -1,16 +1,9 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
 import type { Filter } from 'nostr-tools'
+import type { ProcessedReportEvent } from '@/types/reports'
 
-export interface ProcessedReportEvent {
-  justification: string
-  pubkey?: string
-  pubkeyReason?: string
-  eventId?: string
-  eventReason?: string
-  hash?: string
-  hashReason?: string
-}
+export type { ProcessedReportEvent }
 
 interface UseReportsParams {
   p?: string // pubkey

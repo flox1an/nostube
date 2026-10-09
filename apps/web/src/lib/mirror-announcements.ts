@@ -9,7 +9,7 @@
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import { relayPool } from '@/nostr/core'
-import { nowInSecs, buildAdvancedMimeType } from '@/lib/utils'
+import { nowInSecs, buildAdvancedMimeType } from '@/lib/common-utils'
 import type { BlossomBlob } from '@/lib/blossom-blob-extractor'
 import type { VideoVariant as ProcessingVideoVariant } from '@/lib/video-processing'
 

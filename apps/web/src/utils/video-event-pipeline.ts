@@ -1,4 +1,4 @@
-import type { ReportedPubkeys } from '@/hooks'
+import type { ReportedPubkeys } from '@/types/reports'
 import type { BlossomServer } from '@nostube/core'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import {

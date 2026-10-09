@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
-import { VideoGrid } from '@nostube/widgets'
+import { VideoGrid, VideoGridSkeleton } from '@nostube/widgets'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
+import { Button } from '@nostube/widgets/components/button'
 import { AgeConfirm } from './AgeConfirm'
 import type { AgeGate } from './use-age-gate'
 import { useCreatorVideos } from './use-creator-videos'
@@ -27,21 +29,24 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
   return (
     <>
       {pending && <AgeConfirm onConfirm={confirmAge} onCancel={() => setPending(null)} />}
-      {error && <p className="text-red-600">Could not load videos.</p>}
+      {error && (
+        <Alert variant="destructive" className="flex items-center justify-between gap-4">
+          <AlertDescription>The videos could not be loaded.</AlertDescription>
+          <Button type="button" variant="outline" size="sm" onClick={() => location.reload()}>
+            Try again
+          </Button>
+        </Alert>
+      )}
       {loading ? (
-        <p className="py-12 text-center text-muted-foreground">Loading videos…</p>
+        <VideoGridSkeleton />
       ) : (
         <>
           <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
           {hasMore && (
             <div className="text-center">
-              <button
-                type="button"
-                onClick={loadMore}
-                className="rounded-md border border-border px-4 py-2 text-sm"
-              >
+              <Button type="button" variant="outline" onClick={loadMore}>
                 Load more
-              </button>
+              </Button>
             </div>
           )}
         </>

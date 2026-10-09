@@ -37,7 +37,7 @@ packages/widgets   player, video card, comments, login, shadcn/ui base       [pl
 - The Docker build context is the repository root (`/Dockerfile`, Coolify base directory `/`); every workspace manifest must be copied before `npm ci`. Vercel is no longer used.
 - The `@/` alias resolves to `apps/web/src`; files moved into a package need rewritten imports (subpath imports, see above). `components.json` aliases must be updated when web moves onto the widgets.
 - ESLint (`no-restricted-imports`) keeps core free of React and `@/`, and widgets free of `@/` and app code.
-- The instance build in `apps/web` stays until `apps/site` can replace it; then ADR 0005 of the server is superseded.
+- `apps/server` now embeds the site, not the instance build: `scripts/build-server-web.sh` builds `apps/site` and the embed player (`embed.html`) into `apps/server/web/dist`, which RustEmbed bakes in at compile time. Run it before `cargo build`/`cargo check`; the `Server` workflow does the same. The instance build in `apps/web` (`build:instance`) is no longer used by the server and stays only until the site is verified in production; then it is removed and ADR 0005 of the server is superseded.
 
 ## Status of the first slice
 

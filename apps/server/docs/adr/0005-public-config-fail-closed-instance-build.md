@@ -1,5 +1,7 @@
 # Public config: a fail-closed v1 contract read by an instance build
 
+> **Status:** the server now embeds `apps/site` (see root ADR 0004); the config contract below stays valid and is read by the site. The instance build in `apps/web` is no longer embedded and is removed later.
+
 The Nostube app embedded in the instance is an **instance build**: it is built with a flag that makes it fetch `GET /api/config` before it builds any loader, and it never runs on the normal app defaults. The nostu.be build never makes that request. The response is `Cache-Control: no-store`; the service worker leaves `/api/` alone.
 
 Contract version 1 has exactly these fields, all required:

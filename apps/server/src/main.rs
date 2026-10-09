@@ -1,5 +1,5 @@
-//! nostube-server: relay, Blossom (almond library), `/api/*` and the embedded Nostube
-//! instance build on one origin (ADR 0004). Usage: `nostube-server --data <dir>`;
+//! nostube-server: relay, Blossom (almond library), `/api/*` and the embedded Nostube site
+//! on one origin (ADR 0004). Usage: `nostube-server --data <dir>`;
 //! the instance config is `<dir>/config.toml`.
 
 mod admin;

@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 # Tracer bullet (#16): one axum app with the almond library (Blossom), the
-# ported relay, local-ca TLS, /api/config and the embedded Nostube instance build.
+# ported relay, local-ca TLS, /api/config and the embedded Nostube site (apps/site) and embed player.
 
 [dependencies]
 almond = { git = "https://github.com/flox1an/almond.git", rev = "682b77d6d84d9a6babce3f8ecfb3ffd7f79ee359", default-features = false }

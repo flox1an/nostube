@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { delay, from, lastValueFrom, throwError, toArray } from 'rxjs'
 import type { Filter, NostrEvent } from 'nostr-tools'
-import { eventStore, getTimelineLoader, relayPool, type PageLoader } from './core'
+import { createNostubeClient, type PageLoader } from './client'
+import { setInstanceConfig, type InstanceConfig } from './instance-config'
+
+const { eventStore, getTimelineLoader, relayPool } = createNostubeClient({
+  defaultRelays: [],
+  cache: false,
+})
 
 /** `content` carries the test label; ids are unique per label. */
 function makeEvent(label: string, created_at: number, kind = 21): NostrEvent {
@@ -111,5 +117,53 @@ describe('getTimelineLoader', () => {
     await loadPage(loader) // no videos left, only deletions
     expect(await loadPage(loader)).toEqual([])
     expect(request).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('instance scoping', () => {
+  const creator = 'c'.repeat(64)
+  const stranger = 'd'.repeat(64)
+  const instance: InstanceConfig = {
+    version: 1,
+    revision: 1,
+    origin: 'https://example.org',
+    title: 'Test',
+    creators: [creator],
+    startPage: { kind: 'creator-profile', creator },
+    videoSources: ['wss://videos.example'],
+    interactionRelays: ['wss://interact.example'],
+    search: { mode: 'off' },
+  }
+
+  afterEach(() => {
+    setInstanceConfig(null as unknown as InstanceConfig)
+  })
+
+  it('refuses an instance that was not registered with setInstanceConfig', () => {
+    expect(() => createNostubeClient({ defaultRelays: [], cache: false, instance })).toThrow(
+      /setInstanceConfig/
+    )
+  })
+
+  it('does not send video requests for authors that are not creators', async () => {
+    setInstanceConfig(instance)
+    const client = createNostubeClient({ defaultRelays: [], cache: false, instance })
+
+    const events = await lastValueFrom(
+      client.relayPool
+        .request(['wss://videos.example'], [{ kinds: [21], authors: [stranger] }])
+        .pipe(toArray())
+    )
+
+    expect(events).toEqual([])
+    expect(client.relayPool.relays.size).toBe(0)
+  })
+
+  it('keeps video events of non-creators out of the event store', () => {
+    setInstanceConfig(instance)
+    const client = createNostubeClient({ defaultRelays: [], cache: false, instance })
+    const event = { ...makeEvent('stranger-video', 10), pubkey: stranger }
+
+    expect(client.eventStore.verifyEvent?.(event)).toBe(false)
   })
 })

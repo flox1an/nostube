@@ -23,9 +23,18 @@ import { CommentSkeleton } from '@nostube/widgets/components/comments/CommentSke
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { RichTextContent, type RichTextLinks } from '@nostube/widgets/components/RichTextContent'
 import { AuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
+import { useTimelineContext } from '@nostube/widgets/timeline'
 import { formatDate } from '@nostube/widgets'
+import { useVisitorProfile } from './use-visitor-profile'
 
 const RELAY_HINT = ''
+
+/** The signed-in visitor, shown beside the comment and reply inputs. */
+interface Viewer {
+  pubkey: string
+  name?: string
+  picture?: string
+}
 
 /** The video's comment section: visitors read anonymously and sign in to comment or reply. */
 export function Comments({
@@ -41,6 +50,11 @@ export function Comments({
   const { pool } = useNostubeHost()
   const eventStore = useEventStore()
   const account = useActiveAccount()
+  const { client } = useTimelineContext()
+  const visitor = useVisitorProfile(client, account?.pubkey)
+  const viewer: Viewer | undefined = account
+    ? { pubkey: account.pubkey, name: visitor?.name, picture: visitor?.picture }
+    : undefined
   const [authOpen, setAuthOpen] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
@@ -199,6 +213,9 @@ export function Comments({
             if (newComment.trim()) void submit(newComment, null)
           }}
           disabled={busy}
+          userAvatar={viewer?.picture}
+          userName={viewer?.name}
+          userPubkey={viewer?.pubkey}
         />
       ) : (
         <div>
@@ -226,6 +243,7 @@ export function Comments({
               links={links}
               signedIn={!!account}
               ownPubkey={account?.pubkey}
+              viewer={viewer}
               replyingTo={replyTo}
               replyContent={replyContent}
               busy={busy}
@@ -253,6 +271,7 @@ function SiteComment({
   links,
   signedIn,
   ownPubkey,
+  viewer,
   replyingTo,
   replyContent,
   busy,
@@ -266,6 +285,7 @@ function SiteComment({
   links: RichTextLinks
   signedIn: boolean
   ownPubkey?: string
+  viewer?: Viewer
   replyingTo: Comment | null
   replyContent: string
   busy: boolean
@@ -336,6 +356,9 @@ function SiteComment({
               }}
               onCancel={onCancelReply}
               disabled={busy}
+              userAvatar={viewer?.picture}
+              userName={viewer?.name}
+              userPubkey={viewer?.pubkey}
               autoFocus
             />
           </div>
@@ -349,6 +372,7 @@ function SiteComment({
                 links={links}
                 signedIn={signedIn}
                 ownPubkey={ownPubkey}
+                viewer={viewer}
                 replyingTo={replyingTo}
                 replyContent={replyContent}
                 busy={busy}

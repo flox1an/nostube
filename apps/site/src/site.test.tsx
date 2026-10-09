@@ -9,6 +9,7 @@ import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-con
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
+import { applyTheme, readableOn } from './theme'
 
 // The real player needs a browser; the gate tests only need to see what it is given.
 vi.mock('@nostube/widgets/player', () => ({
@@ -28,6 +29,7 @@ const config: InstanceConfig = {
   videoSources: ['wss://videos.example'],
   interactionRelays: ['wss://interact.example'],
   search: { mode: 'off' },
+  site: { tagline: '', theme: { accent: '#6d28d9', font: 'sans' }, videos: { hidden: [] } },
 }
 
 // The fake events carry no valid signature, so the store must not verify them.
@@ -63,10 +65,10 @@ describe('loadSiteConfig', () => {
   })
 })
 
-function renderSite(client: NostubeClient, path = '/') {
+function renderSite(client: NostubeClient, path = '/', siteConfig: InstanceConfig = config) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <SiteHome client={client} config={config} />
+      <SiteHome client={client} config={siteConfig} />
     </MemoryRouter>
   )
 }
@@ -111,10 +113,31 @@ describe('SiteHome', () => {
     },
   } as unknown as NostubeClient
 
-  it('shows the creator and the creator videos', async () => {
+  it('shows the site title and the creator videos', async () => {
     renderSite(client)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
-    expect(screen.getByRole('heading', { name: 'Alice' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
+  })
+
+  it('shows the configured title and tagline, not the profile name', async () => {
+    renderSite(client, '/', { ...config, site: { ...config.site, tagline: 'Fresh every week' } })
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
+    expect(screen.getByText('Fresh every week')).toBeTruthy()
+  })
+
+  it('leaves out hidden videos in the grid and on their own page', async () => {
+    const hidden = { ...config, site: { ...config.site, videos: { hidden: [video.id] } } }
+    renderSite(client, '/', hidden)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy())
+    expect(screen.queryByText('My first upload')).toBeNull()
+  })
+
+  it('does not open a hidden video from a direct link either', async () => {
+    const hidden = { ...config, site: { ...config.site, videos: { hidden: [video.id] } } }
+    renderSite(client, `/v/${nip19.neventEncode({ id: video.id, author: creator })}`, hidden)
+    await waitFor(() => expect(screen.getByText('Video not found.')).toBeTruthy())
+    expect(screen.queryByTestId('player')).toBeNull()
   })
 
   it('opens a video at its own URL and opens it directly from a link', async () => {
@@ -210,5 +233,28 @@ describe('SiteHome', () => {
       await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
       expect(screen.getByTestId('player').getAttribute('data-warning')).toBe('nudity')
     })
+  })
+})
+
+describe('theme', () => {
+  it('sets the accent, a readable text colour and the font on the root', () => {
+    const root = document.createElement('div')
+    applyTheme(
+      { tagline: '', theme: { accent: '#ffcc00', font: 'serif' }, videos: { hidden: [] } },
+      root
+    )
+    expect(root.style.getPropertyValue('--primary')).toBe('#ffcc00')
+    expect(root.style.getPropertyValue('--primary-foreground')).toBe('#111111')
+    expect(root.style.getPropertyValue('--accent')).toBe('')
+    expect(root.style.fontFamily).toContain('Georgia')
+  })
+
+  it('picks white text on dark colours and dark text on light ones', () => {
+    expect(readableOn('#1a1a8c')).toBe('#ffffff')
+    expect(readableOn('#f5f5dc')).toBe('#111111')
+    // Mid tones read better with dark text (white on #00aa55 would be about 3:1).
+    expect(readableOn('#00aa55')).toBe('#111111')
+    expect(readableOn('#f97316')).toBe('#111111')
+    expect(readableOn('#e11d48')).toBe('#ffffff')
   })
 })

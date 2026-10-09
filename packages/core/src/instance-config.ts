@@ -1,7 +1,8 @@
 /**
  * Public instance config (contract v1, nostube-server ADR 0005).
  *
- * Only the instance build (`VITE_INSTANCE_BUILD=true`, `npm run build:instance`) loads it:
+ * The site (`apps/site`) and the instance build (`VITE_INSTANCE_BUILD=true`, `npm run build:instance`)
+ * load it. The instance build:
  * `src/instance-main.ts` fetches `/api/config` before any app module (relay pool, loaders)
  * is evaluated and calls `setInstanceConfig`. In the normal nostu.be build
  * `getInstanceConfig()` is always null and every instance branch is inert.
@@ -36,6 +37,17 @@ export const pageTitle = (page: string | null | undefined) => {
 
 export type InstanceSearch = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
 
+export const SITE_FONTS = ['sans', 'serif', 'mono'] as const
+export type SiteFont = (typeof SITE_FONTS)[number]
+
+/** How the instance's site looks and which videos it shows (the viewer's light/dark follows the system). */
+export interface InstanceSite {
+  tagline: string
+  theme: { accent: string; font: SiteFont }
+  /** Everything of the creators is shown except these: `<kind>:<pubkey>:<d>` or an event id. */
+  videos: { hidden: string[] }
+}
+
 export interface InstanceConfig {
   version: 1
   revision: number
@@ -46,6 +58,7 @@ export interface InstanceConfig {
   videoSources: string[]
   interactionRelays: string[]
   search: InstanceSearch
+  site: InstanceSite
 }
 
 export type ParseResult =
@@ -62,8 +75,11 @@ const REQUIRED = [
   'videoSources',
   'interactionRelays',
   'search',
+  'site',
 ] as const
 const HEX64 = /^[0-9a-f]{64}$/
+const ACCENT = /^#[0-9a-fA-F]{6}$/
+const HIDDEN_VIDEO = /^(?:[0-9a-f]{64}|\d+:[0-9a-f]{64}:.+)$/
 const isWs = (u: unknown) => typeof u === 'string' && /^wss?:\/\/[^/\s]+\/?$/.test(u)
 const isOrigin = (u: unknown) => typeof u === 'string' && /^https:\/\/[^/\s]+$/.test(u)
 
@@ -101,6 +117,31 @@ export function parseInstanceConfig(json: unknown): ParseResult {
     else if (s.mode === 'external' && !(typeof s.url === 'string' && /^https:\/\/\S+$/.test(s.url)))
       e.push('search.url must be an https URL for external search')
   }
+  if ('site' in c) {
+    const site = c.site as {
+      tagline?: unknown
+      theme?: { accent?: unknown; font?: unknown } | null
+      videos?: { hidden?: unknown } | null
+    } | null
+    if (!site || typeof site !== 'object') e.push('site must be an object')
+    else {
+      if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
+      const theme = site.theme
+      if (!theme || typeof theme !== 'object') e.push('site.theme must be an object')
+      else {
+        if (typeof theme.accent !== 'string' || !ACCENT.test(theme.accent))
+          e.push('site.theme.accent must be #rrggbb')
+        if (!SITE_FONTS.includes(theme.font as SiteFont))
+          e.push(`site.theme.font must be one of ${SITE_FONTS.join(', ')}`)
+      }
+      const hidden = site.videos?.hidden
+      if (
+        !Array.isArray(hidden) ||
+        !hidden.every(v => typeof v === 'string' && HIDDEN_VIDEO.test(v))
+      )
+        e.push('site.videos.hidden must be a list of <kind>:<pubkey>:<d> or event ids')
+    }
+  }
   if ('startPage' in c && creatorsOk) {
     const creators = c.creators as string[]
     const sp = c.startPage as { kind?: unknown; creator?: unknown } | null
@@ -121,6 +162,7 @@ export function parseInstanceConfig(json: unknown): ParseResult {
     videoSources,
     interactionRelays,
     search,
+    site,
   } = c as unknown as InstanceConfig
   return {
     ok: true,
@@ -134,6 +176,11 @@ export function parseInstanceConfig(json: unknown): ParseResult {
       videoSources,
       interactionRelays,
       search,
+      site: {
+        tagline: site.tagline,
+        theme: { accent: site.theme.accent, font: site.theme.font },
+        videos: { hidden: site.videos.hidden },
+      },
     },
   }
 }

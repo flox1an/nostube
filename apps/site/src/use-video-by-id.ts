@@ -3,6 +3,7 @@ import type { Filter } from 'nostr-tools'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
 import type { VideoEvent } from '@nostube/core/video-event'
+import { isHiddenVideo } from './hidden-videos'
 import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
 
 export type VideoLookup =
@@ -34,7 +35,9 @@ export function useVideoById(id: string | undefined, config: InstanceConfig): Vi
   })
 
   if (!filters) return { status: 'invalid' }
-  const video = videos.find(v => config.creators.includes(v.pubkey))
+  const video = videos.find(
+    v => config.creators.includes(v.pubkey) && !isHiddenVideo(v, config.site.videos.hidden)
+  )
   if (video) return { status: 'found', video }
   if (isInitialLoading || phase === 'idle') return { status: 'loading' }
   return { status: 'not-found' }

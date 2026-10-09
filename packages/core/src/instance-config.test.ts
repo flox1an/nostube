@@ -23,6 +23,36 @@ const good = (): InstanceConfig => ({
   videoSources: [RELAY],
   interactionRelays: [RELAY],
   search: { mode: 'local' },
+  site: {
+    tagline: 'Hello',
+    theme: { accent: '#ff8800', font: 'serif' },
+    videos: { hidden: [] },
+  },
+})
+
+describe('parseInstanceConfig site', () => {
+  const withSite = (site: unknown) => parseInstanceConfig({ ...good(), site })
+
+  it('requires the site object', () => {
+    const { site: _site, ...body } = good()
+    const result = parseInstanceConfig(body)
+    expect(!result.ok && result.errors).toContain('site is missing')
+  })
+
+  it('accepts hidden addresses and event ids', () => {
+    const hidden = [`34235:${CREATOR}:intro`, 'c'.repeat(64)]
+    expect(withSite({ ...good().site, videos: { hidden } }).ok).toBe(true)
+  })
+
+  it.each([
+    ['accent', { theme: { accent: 'red', font: 'sans' } }],
+    ['font', { theme: { accent: '#112233', font: 'comic' } }],
+    ['tagline', { tagline: 3 }],
+    ['hidden', { videos: { hidden: ['nope'] } }],
+    ['hidden missing', { videos: {} }],
+  ])('rejects an invalid %s', (_name, patch) => {
+    expect(withSite({ ...good().site, ...patch }).ok).toBe(false)
+  })
 })
 
 describe('parseInstanceConfig', () => {

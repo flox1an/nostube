@@ -24,6 +24,8 @@ struct Raw {
     tls: Tls,
     #[serde(default)]
     storage: Storage,
+    #[serde(default)]
+    site: Site,
 }
 
 /// Same shape in TOML and in the public config JSON.
@@ -69,6 +71,59 @@ impl Default for Storage {
     }
 }
 
+/// How the public site looks and which videos it shows. Not part of `Edited`: the admin form
+/// does not edit it yet (the studio will), and every edit keeps the current value.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct Site {
+    /// Line under the site title; may be empty.
+    pub tagline: String,
+    /// Accent (primary) colour, `#rrggbb`.
+    pub accent: String,
+    pub font: Font,
+    /// Videos the site does not show: `<kind>:<pubkey hex>:<d>` for addressable events,
+    /// or the event id (64 hex) for the others. Everything else of the creators is shown.
+    pub hidden_videos: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Font {
+    Sans,
+    Serif,
+    Mono,
+}
+
+impl Default for Site {
+    fn default() -> Self {
+        Site { tagline: String::new(), accent: "#6d28d9".into(), font: Font::Sans, hidden_videos: vec![] }
+    }
+}
+
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+fn check_site(site: &Site) -> Result<(), BoxError> {
+    let a = site.accent.as_bytes();
+    if !(a.len() == 7 && a[0] == b'#' && a[1..].iter().all(u8::is_ascii_hexdigit)) {
+        return Err(format!("site.accent must be #rrggbb: {}", site.accent).into());
+    }
+    for v in &site.hidden_videos {
+        let ok = is_hex64(v)
+            || matches!(v.splitn(3, ':').collect::<Vec<_>>().as_slice(),
+                [kind, pubkey, d] if !kind.is_empty()
+                    && kind.bytes().all(|b| b.is_ascii_digit())
+                    && is_hex64(pubkey)
+                    && !d.is_empty()
+                    && !d.chars().any(char::is_control));
+        if !ok {
+            return Err(format!("site.hidden_videos entry must be <kind>:<pubkey>:<d> or an event id: {v}").into());
+        }
+    }
+    Ok(())
+}
+
 /// The fields the admin may edit (#17): origin and TLS mode are fixed in the first cut.
 pub struct Edited {
     pub title: String,
@@ -111,6 +166,7 @@ pub struct Config {
     pub search: Search,
     pub tls: Tls,
     pub storage: Storage,
+    pub site: Site,
 }
 
 impl Config {
@@ -130,6 +186,7 @@ impl Config {
         }
         check_relays(&raw.video_sources, &raw.interaction_relays)?;
         check_search(&raw.search)?;
+        check_site(&raw.site)?;
         Ok(Config {
             revision: raw.revision,
             origin: raw.origin,
@@ -142,6 +199,7 @@ impl Config {
             search: raw.search,
             tls: raw.tls,
             storage: raw.storage,
+            site: raw.site,
         })
     }
 
@@ -165,6 +223,7 @@ impl Config {
             search: e.search.clone(),
             tls: self.tls.clone(),
             storage: e.storage.clone(),
+            site: self.site.clone(),
         })
     }
 
@@ -189,6 +248,7 @@ impl Config {
             search: Search::Off,
             tls: Tls::LocalCa { router_name: None, https_port, http_port },
             storage: Storage::default(),
+            site: Site::default(),
         }
     }
 
@@ -205,6 +265,7 @@ impl Config {
             search: self.search.clone(),
             tls: self.tls.clone(),
             storage: self.storage.clone(),
+            site: self.site.clone(),
         };
         Ok(toml::to_string_pretty(&raw)?)
     }
@@ -225,6 +286,11 @@ impl Config {
             "videoSources": self.video_sources,
             "interactionRelays": self.interaction_relays,
             "search": self.search,
+            "site": {
+                "tagline": self.site.tagline,
+                "theme": { "accent": self.site.accent, "font": self.site.font },
+                "videos": { "hidden": self.site.hidden_videos },
+            },
         })
     }
 }
@@ -285,7 +351,9 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
         assert_eq!(json["interactionRelays"], serde_json::json!([]));
-        assert_eq!(json.as_object().unwrap().len(), 9);
+        assert_eq!(json.as_object().unwrap().len(), 10);
+        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#6d28d9", "font": "sans" }));
+        assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
 
     #[test]
@@ -362,5 +430,53 @@ tls = {{ mode = "local-ca" }}
                 storage: Storage::default(),
             })
             .is_err());
+    }
+
+    #[test]
+    fn site_settings_reach_the_public_contract() {
+        let hidden = format!("34235:{PK}:intro");
+        let cfg = Config::parse(&sample(&format!(
+            "[site]\ntagline = \"Hello\"\naccent = \"#ff8800\"\nfont = \"serif\"\nhidden_videos = [\"{hidden}\", \"{}\"]\n",
+            "a".repeat(64)
+        )))
+        .unwrap();
+        let json = cfg.public_json();
+        assert_eq!(json["site"]["tagline"], "Hello");
+        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#ff8800", "font": "serif" }));
+        assert_eq!(json["site"]["videos"]["hidden"][0], hidden.as_str());
+    }
+
+    #[test]
+    fn rejects_bad_site_values() {
+        for extra in [
+            "[site]\naccent = \"red\"\n",
+            "[site]\naccent = \"#12345\"\n",
+            "[site]\nfont = \"comic\"\n",
+            "[site]\nhidden_videos = [\"not-a-video\"]\n",
+            "[site]\nhidden_videos = [\"34235:abc:d\"]\n",
+            &format!("[site]\nhidden_videos = [\"+34235:{PK}:d\"]\n"),
+            &format!("[site]\nhidden_videos = [\"34235:{PK}:a\\nb\"]\n"),
+            "[site]\nunknown = 1\n",
+        ] {
+            assert!(Config::parse(&sample(extra)).is_err(), "{extra}");
+        }
+    }
+
+    #[test]
+    fn site_survives_admin_edits_and_the_toml_round_trip() {
+        let cfg = Config::parse(&sample("[site]\ntagline = \"Keep me\"\naccent = \"#00aa55\"\nfont = \"mono\"\n")).unwrap();
+        let edited = Edited {
+            title: "Renamed".into(),
+            creators: vec![PK.into()],
+            allowed_writers: vec![PK.into()],
+            video_sources: vec!["wss://flox-mac.local".into()],
+            interaction_relays: vec![],
+            search: Search::Off,
+            storage: Storage::default(),
+        };
+        let next = cfg.with_edits(&edited).unwrap();
+        assert_eq!(next.site, cfg.site);
+        let reloaded = Config::parse(&next.to_toml().unwrap()).unwrap();
+        assert_eq!(reloaded.site, cfg.site);
     }
 }

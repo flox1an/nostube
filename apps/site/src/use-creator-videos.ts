@@ -3,6 +3,7 @@ import type { Filter } from 'nostr-tools'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getKindsForType } from '@nostube/core/video-types'
+import { isHiddenVideo } from './hidden-videos'
 import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
 
 export interface CreatorVideos {
@@ -27,8 +28,10 @@ export function useCreatorVideos(config: InstanceConfig): CreatorVideos {
     relays: config.videoSources,
     enabled: Boolean(creator),
   })
+  const hidden = config.site.videos.hidden
+  const shown = useMemo(() => videos.filter(v => !isHiddenVideo(v, hidden)), [videos, hidden])
   return {
-    videos,
+    videos: shown,
     loading: isInitialLoading,
     error: phase === 'error',
     hasMore,

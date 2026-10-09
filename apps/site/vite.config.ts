@@ -46,6 +46,11 @@ function devConfig(env: NodeJS.ProcessEnv): Plugin {
             videoSources: relays,
             interactionRelays: relays,
             search: { mode: 'off' },
+            site: {
+              tagline: '',
+              theme: { accent: '#6d28d9', font: 'sans' },
+              videos: { hidden: [] },
+            },
           })
         )
       })

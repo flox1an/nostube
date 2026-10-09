@@ -42,7 +42,7 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
    - Kommentare der eigenen Videos durchsehen (aus den `interactionRelays`).
    - Autoren und einzelne Events stummschalten. Das Studio pflegt die **Mute-Liste des Owners** (NIP-51, Kind 10000: `p`-Tags für Autoren, `e`-Tags für einzelne Events) und veröffentlicht sie über den Signer.
    - Die Site liest die Liste des Owners (Pubkey aus `/api/config`) und blendet die Einträge aus. Die Site braucht dafür nur einen Filter, keine Moderationslogik.
-4. **Einstellungen**: Titel, Creators, Relays, Suche, Speicher-Limits. Das ist die heutige Config-Bearbeitung unter `/admin`; das Studio wird dafür die Oberfläche.
+4. **Einstellungen**: Titel, Creators, Relays, Suche, Speicher-Limits sowie das Aussehen der Site (Untertitel, Akzentfarbe, Schrift) und welche Videos ausgeblendet sind (`site` im Config-Vertrag, Server-ADR 0005; alle Videos der Creators sind sichtbar, außer den ausgeblendeten). Das ist die heutige Config-Bearbeitung unter `/admin`; das Studio wird dafür die Oberfläche.
 
 ## Grenzen der Moderation per Mute-Liste
 

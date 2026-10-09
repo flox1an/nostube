@@ -133,6 +133,7 @@ describe('instance scoping', () => {
     videoSources: ['wss://videos.example'],
     interactionRelays: ['wss://interact.example'],
     search: { mode: 'off' },
+    site: { tagline: '', theme: { accent: '#6d28d9', font: 'sans' }, videos: { hidden: [] } },
   }
 
   afterEach(() => {

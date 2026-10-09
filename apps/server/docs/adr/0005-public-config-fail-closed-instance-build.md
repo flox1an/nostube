@@ -18,6 +18,17 @@ Contract version 1 has exactly these fields, all required:
 | `interactionRelays` | `ws(s)://` relays that replace the hardcoded profile/zap/indexer/publish relays; may be `[]` |
 | `search` | `{ "mode": "off" }`, `{ "mode": "local" }`, or `{ "mode": "external", "url": "https://…" }` |
 
+**Addendum: `site` (still version 1).** The contract gains one required field, `site`, for the creator's public site (`apps/site`). Nothing was deployed against version 1 yet, so it is extended in place instead of bumping the version; from the first deployment on, a new required field bumps `version` again. Two readers share the parser: the site and the instance build in `apps/web` (which ignores the field).
+
+| field | value |
+|---|---|
+| `site.tagline` | string, may be empty; shown under the title |
+| `site.theme.accent` | `#rrggbb`, replaces the primary colour and the focus ring |
+| `site.theme.font` | `sans`, `serif` or `mono` (system font stacks, no web fonts) |
+| `site.videos.hidden` | videos not shown: `<kind>:<pubkey>:<d>` (addressable events) or an event id (64 hex); everything else of the `creators` is shown. May be `[]` |
+
+This changes the earlier rule that the theme stays with the viewer: the creator sets accent and font, while light or dark still follows the viewer's system. In `config.toml` the section is `[site]` (`tagline`, `accent`, `font`, `hidden_videos`) and may be left out: the server fills the defaults, and the wire format always carries explicit values. The admin form does not edit `site` yet; saving there keeps it unchanged.
+
 **Missing, off and empty stay apart.** A missing field rejects the whole config. Off is written explicitly. An empty list means "none on purpose". No value, missing or empty, ever selects an app default. The client ignores unknown fields, and a breaking change bumps `version`.
 
 **Load outcomes in an instance build.** A valid config starts the app and is kept in the browser as the last good config. If the server is unreachable or returns 5xx, the app runs on the last good config, or stops with a retry screen when there is none. A 404, an invalid body or an unknown `version` stops the app with an error screen.

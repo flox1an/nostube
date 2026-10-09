@@ -12,6 +12,20 @@ describe('formatDuration', () => {
   })
 })
 
+describe('locked cards', () => {
+  it('shows a placeholder instead of the thumbnail and still reports the selection', () => {
+    const onSelect = vi.fn()
+    const video = makeVideo({ title: 'Locked', images: ['https://media.example/t.jpg'] })
+    const { container } = render(
+      <VideoGrid videos={[video]} onSelect={onSelect} isLocked={() => true} />
+    )
+    expect(container.querySelector('img')).toBeNull()
+    expect(screen.getByText('Content warning')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button'))
+    expect(onSelect).toHaveBeenCalledWith(video)
+  })
+})
+
 describe('VideoGrid', () => {
   it('renders one card per video with title and duration', () => {
     render(

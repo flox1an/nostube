@@ -7,10 +7,18 @@ export interface VideoCardProps {
   video: VideoEvent
   /** Called when the card is activated. The app decides what happens (route, inline player). */
   onSelect?: (video: VideoEvent) => void
+  /** Show a placeholder instead of the thumbnail (content the viewer has not unlocked yet). */
+  locked?: boolean
+  lockedLabel?: string
 }
 
 /** Thumbnail, title, duration and date of one video. Styling is Tailwind utilities only. */
-export function VideoCard({ video, onSelect }: VideoCardProps) {
+export function VideoCard({
+  video,
+  onSelect,
+  locked = false,
+  lockedLabel = 'Content warning',
+}: VideoCardProps) {
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
   return (
@@ -20,7 +28,12 @@ export function VideoCard({ video, onSelect }: VideoCardProps) {
       className="group flex flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
     >
       <span className="relative block aspect-video overflow-hidden rounded-lg bg-neutral-200 dark:bg-neutral-800">
-        {thumbnail && !thumbnailFailed && (
+        {locked && (
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-neutral-400">
+            {lockedLabel}
+          </span>
+        )}
+        {!locked && thumbnail && !thumbnailFailed && (
           <img
             src={thumbnail}
             onError={() => setThumbnailFailed(true)}

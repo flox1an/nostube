@@ -8,6 +8,8 @@ import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { NostubeHostProvider, useNostubeHostValue } from '@nostube/widgets/host'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { VideoGrid } from '@nostube/widgets'
+import { AgeConfirm } from './AgeConfirm'
+import { useAgeGate } from './use-age-gate'
 import { useCreatorBlossomServers } from './use-creator-blossom-servers'
 import { useCreatorProfile } from './use-creator-profile'
 import { useCreatorVideos } from './use-creator-videos'
@@ -56,6 +58,18 @@ function Homepage({ client, config }: SiteHomeProps) {
   const profile = useCreatorProfile(client, config)
   const { videos, loading, error } = useCreatorVideos(client, config)
   const [selected, setSelected] = useState<VideoEvent | null>(null)
+  const [pending, setPending] = useState<VideoEvent | null>(null)
+  const gate = useAgeGate()
+
+  const select = (video: VideoEvent) => {
+    if (gate.isLocked(video)) setPending(video)
+    else setSelected(video)
+  }
+  const confirmAge = () => {
+    gate.confirm()
+    setSelected(pending)
+    setPending(null)
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
@@ -69,7 +83,9 @@ function Homepage({ client, config }: SiteHomeProps) {
         </div>
       </header>
 
-      {selected && (
+      {pending && <AgeConfirm onConfirm={confirmAge} onCancel={() => setPending(null)} />}
+
+      {selected && !gate.isLocked(selected) && (
         <section className="space-y-2">
           <VideoPlayer
             key={selected.id}
@@ -83,6 +99,7 @@ function Homepage({ client, config }: SiteHomeProps) {
             authorPubkey={selected.pubkey}
             eventId={selected.id}
             videoVariants={selected.videoVariants}
+            contentWarning={gate.warningFor(selected)}
             title={selected.title}
             authorName={profile?.name}
           />
@@ -99,7 +116,7 @@ function Homepage({ client, config }: SiteHomeProps) {
       {loading ? (
         <p className="py-12 text-center text-muted-foreground">Loading videos…</p>
       ) : (
-        <VideoGrid videos={videos} onSelect={setSelected} />
+        <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
       )}
     </div>
   )

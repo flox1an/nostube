@@ -1,12 +1,19 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { of } from 'rxjs'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
 import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
+
+// The real player needs a browser; the gate tests only need to see what it is given.
+vi.mock('@nostube/widgets/player', () => ({
+  VideoPlayer: (props: { contentWarning?: string }) => (
+    <div data-testid="player" data-warning={props.contentWarning ?? ''} />
+  ),
+}))
 
 const creator = 'c'.repeat(64)
 const config: InstanceConfig = {
@@ -91,5 +98,65 @@ describe('SiteHome', () => {
     render(<SiteHome client={client} config={config} />)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'Alice' })).toBeTruthy()
+  })
+
+  describe('age gate', () => {
+    const nsfw = {
+      ...video,
+      id: 'd'.repeat(64),
+      tags: [...video.tags, ['content-warning', 'nudity']],
+    }
+    const gatedClient = {
+      eventStore: new EventStore(),
+      getTimelineLoader: () => () => of(nsfw),
+      relayPool: { request: () => of(profile) },
+    } as unknown as NostubeClient
+
+    // Node's experimental global localStorage shadows jsdom's; use a plain in-memory store.
+    beforeEach(() => {
+      const store = new Map<string, string>()
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+        removeItem: (key: string) => void store.delete(key),
+        clear: () => store.clear(),
+      })
+    })
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('locks a video with a content warning until 18+ is confirmed', async () => {
+      render(<SiteHome client={gatedClient} config={config} />)
+      await waitFor(() => expect(screen.getByText('Content warning')).toBeTruthy())
+      expect(screen.queryByText('My first upload')).toBeTruthy()
+
+      fireEvent.click(screen.getByText('My first upload'))
+      expect(screen.getByRole('alertdialog')).toBeTruthy()
+      expect(screen.queryByTestId('player')).toBeNull()
+
+      fireEvent.click(screen.getByText('I am 18 or older'))
+      expect(localStorage.getItem('nostube-site:age-confirmed')).toBe('true')
+      // The player still gets the warning, so it asks before it plays.
+      expect(screen.getByTestId('player').getAttribute('data-warning')).toBe('nudity')
+      expect(screen.queryByText('Content warning')).toBeNull()
+    })
+
+    it('keeps the video locked when the viewer cancels', async () => {
+      render(<SiteHome client={gatedClient} config={config} />)
+      await waitFor(() => expect(screen.getByText('Content warning')).toBeTruthy())
+      fireEvent.click(screen.getByText('My first upload'))
+      fireEvent.click(screen.getByText('Cancel'))
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+      expect(screen.queryByTestId('player')).toBeNull()
+      expect(localStorage.getItem('nostube-site:age-confirmed')).toBeNull()
+    })
+
+    it('does not ask again once confirmed in this browser', async () => {
+      localStorage.setItem('nostube-site:age-confirmed', 'true')
+      render(<SiteHome client={gatedClient} config={config} />)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      fireEvent.click(screen.getByText('My first upload'))
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+      expect(screen.getByTestId('player').getAttribute('data-warning')).toBe('nudity')
+    })
   })
 })

@@ -210,6 +210,7 @@ function VideoDetails({
         }}
         links={links}
         relays={config.interactionRelays}
+        creators={config.creators}
       />
     </article>
   )

@@ -30,6 +30,7 @@
       "pages": {
         "videos": "Videos",
         "upload": "Subir",
+        "moderation": "Moderación",
         "appearance": "Apariencia",
         "instance": "Instancia",
         "account": "Cuenta",
@@ -188,6 +189,26 @@
       "start": "Subir y publicar",
       "approveHint": "Tu firmante te pedirá aprobar la subida y la publicación."
     },
+    "moderation": {
+      "title": "Moderación",
+      "description": "Comentarios en tus vídeos. Lo que silencias solo se oculta en este sitio: silenciar no borra nada, los comentarios siguen en los relays y otras apps de Nostr pueden seguir mostrándolos.",
+      "connectFirst": "Conecta tu clave de Nostr para ver los comentarios en tus vídeos y editar tu lista de silenciados.",
+      "loadFailed": "No se pudieron cargar los comentarios ni la lista de silenciados ({{message}}).",
+      "listOf": "Lista de silenciados de {{npub}}",
+      "listNote": "Tu lista pública de silenciados de Nostr (NIP-51), guardada en los relays de interacción de esta instancia. Cualquiera puede leerla y otras apps de Nostr también pueden aplicarla.",
+      "privateKept": "La lista también tiene entradas privadas (cifradas). Se conservan tal cual y no se muestran aquí.",
+      "comments": "Comentarios en tus vídeos",
+      "noComments": "Todavía no hay comentarios en tus vídeos.",
+      "onVideo": "en {{title}}",
+      "hidden": "oculto en el sitio",
+      "muteAuthor": "Silenciar autor",
+      "unmuteAuthor": "Dejar de silenciar autor",
+      "muteComment": "Silenciar este comentario",
+      "unmuteComment": "Dejar de silenciar comentario",
+      "muteList": "Silenciados",
+      "emptyList": "No hay nada ni nadie silenciado.",
+      "unknownComment": "Comentario {{id}}"
+    },
     "overview": {
       "description": "Lo que contienen ahora el relay integrado y el servidor Blossom. Aquí no se cambia nada.",
       "refresh": "Actualizar",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "Ningún relay aceptó el video. {{reasons}}",
       "relayRejected": "rechazado",
       "noRelayAnswered": "Ningún relay respondió.",
+      "listNotAccepted": "Ningún relay aceptó la lista de silenciados. {{reasons}}",
       "titleEmpty": "El título no puede estar vacío.",
       "notVideoLink": "Videos ocultos: «{{line}}» no es un enlace de video.",
       "notKey": "{{label}}: «{{line}}» no es una clave hex ni npub.",

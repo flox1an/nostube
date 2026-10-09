@@ -15,6 +15,7 @@ import {
   type Comment,
   type CommentTarget,
 } from '@nostube/core/comments'
+import { isMuted, MUTE_LIST_KIND, mutedOf } from '@nostube/core/mute-list'
 import { useNostubeHost } from '@nostube/widgets/host'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { Button } from '@nostube/widgets/components/button'
@@ -36,15 +37,20 @@ interface Viewer {
   picture?: string
 }
 
-/** The video's comment section: visitors read anonymously and sign in to comment or reply. */
+/**
+ * The video's comment section: visitors read anonymously and sign in to comment or reply.
+ * What the creators muted (their NIP-51 mute lists, all of them together) is not shown.
+ */
 export function Comments({
   target,
   links,
   relays,
+  creators,
 }: {
   target: CommentTarget
   links: RichTextLinks
   relays: string[]
+  creators: string[]
 }) {
   const { t } = useTranslation()
   const { pool } = useNostubeHost()
@@ -66,6 +72,24 @@ export function Comments({
 
   const filters = useMemo(() => buildCommentFilters(target), [target])
   const { videoId } = target
+
+  // The creators' mute lists, from the same relays as the comments. Comments wait for them
+  // (relay EOSE), so a muted one does not flash up first.
+  const muteFilter = useMemo(() => ({ kinds: [MUTE_LIST_KIND], authors: creators }), [creators])
+  const [mutesLoading, setMutesLoading] = useState(creators.length > 0)
+  useEffect(() => {
+    if (creators.length === 0) return
+    const subscription = pool.request(relays, [muteFilter]).subscribe({
+      next: e => eventStore.add(e),
+      complete: () => setMutesLoading(false),
+      error: () => setMutesLoading(false),
+    })
+    return () => subscription.unsubscribe()
+  }, [pool, relays, creators, muteFilter, eventStore])
+  const muted = use$(
+    () => eventStore.timeline(muteFilter).pipe(map(mutedOf)),
+    [eventStore, muteFilter]
+  )
 
   // Load comments; the request completes on relay EOSE.
   useEffect(() => {
@@ -185,22 +209,24 @@ export function Comments({
     }
   }
 
+  // A muted comment goes with its replies; a muted author's replies elsewhere go too.
   const visible = useMemo(() => {
+    if (mutesLoading || !muted) return []
     const drop = (comments: Comment[]): Comment[] =>
       comments
-        .filter(comment => !removed.has(comment.id))
+        .filter(comment => !removed.has(comment.id) && !isMuted(comment, muted))
         .map(comment => ({
           ...comment,
           replies: comment.replies ? drop(comment.replies) : undefined,
         }))
     return drop(threaded ?? [])
-  }, [threaded, removed])
+  }, [threaded, removed, muted, mutesLoading])
 
   return (
     <section className="space-y-4" aria-label={t('site.comments.title')}>
       <h3 className="text-sm font-semibold">
-        {threaded?.length
-          ? t('site.comments.count', { count: threaded.length })
+        {visible.length
+          ? t('site.comments.count', { count: visible.length })
           : t('site.comments.title')}
       </h3>
 
@@ -233,7 +259,7 @@ export function Comments({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {isLoading && threaded?.length === 0 && <CommentSkeleton />}
+      {(isLoading || mutesLoading) && visible.length === 0 && <CommentSkeleton />}
 
       <ul className="space-y-2">
         {visible.map(comment => (

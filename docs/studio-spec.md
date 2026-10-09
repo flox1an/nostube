@@ -1,6 +1,6 @@
 # apps/studio: Spec (Entwurf)
 
-Stand: 9. Oktober 2026. Der erste Schnitt ist umgesetzt: Gerüst unter `/studio/`, Passwort-Login über den serverseitigen Login, die Bereiche Aussehen, Instanz und Konto sowie `GET/PUT /api/admin/config`. Das Studio ist die **einzige** Admin-Oberfläche; das alte serverseitige Dashboard ist entfernt (`/admin` leitet auf `/studio/` um, nur Einrichtung und Login bleiben serverseitig). Noch offen: Signer, Moderation, Videos und Upload.
+Stand: 10. Oktober 2026. Der erste Schnitt ist umgesetzt: Gerüst unter `/studio/`, Passwort-Login über den serverseitigen Login, die Bereiche Aussehen, Instanz und Konto sowie `GET/PUT /api/admin/config`. Das Studio ist die **einzige** Admin-Oberfläche; das alte serverseitige Dashboard ist entfernt (`/admin` leitet auf `/studio/` um, nur Einrichtung und Login bleiben serverseitig). Die Moderation per Mute-Liste ist umgesetzt, ebenso der Signer (Managed und NIP-07, Onboarding mit beiden Optionen). Noch offen: Bunker (NIP-46), Videos und Upload.
 
 ## Ziel
 
@@ -47,10 +47,11 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 
 1. **Anmeldung und Übersicht**: Login des Admins, Einrichtung des Signers (siehe Identität und Signer), Startseite mit Zustand der Instanz (Speicher, Relays, letzte Uploads).
 2. **Videos** (Upload umgesetzt: MP4/WebM, ohne Transcodierung, in Teilen per `PATCH /upload`, Veröffentlichung nur an die Relays der Instanz): Tags, Dateiauswahl, Inhaltswarnung, Thumbnail-Auswahl/-Import und Untertitel-Upload verwenden dieselben Widgets wie `apps/web`. VTT/SRT-Dateien bekommen eine auswählbare Sprache; SRT wird vor dem Upload in WebVTT umgewandelt. Metadaten, Thumbnail und Untertitel bleiben bis „Upload and publish“ lokal; Wiederholungen nutzen abgeschlossene Uploads weiter. Noch offen: Transcoding im Browser (ADR 0002), Metadaten bearbeiten, Videos löschen. Geteilte UI liegt in `@nostube/widgets`, Untertitel-Helfer und Event-Tags in `@nostube/core`; Signer und Upload-Ablauf bleiben app-seitig.
-3. **Moderation**:
-   - Kommentare der eigenen Videos durchsehen (aus den `interactionRelays`).
-   - Autoren und einzelne Events stummschalten. Das Studio pflegt die **Mute-Liste des Owners** (NIP-51, Kind 10000: `p`-Tags für Autoren, `e`-Tags für einzelne Events) und veröffentlicht sie über den Signer.
-   - Die Site liest die Liste des Owners (Pubkey aus `/api/config`) und blendet die Einträge aus. Die Site braucht dafür nur einen Filter, keine Moderationslogik.
+3. **Moderation** (umgesetzt, Seite „Moderation“ unter Inhalte):
+   - Kommentare der eigenen Videos durchsehen: das Studio lädt die (bis zu 100 neuesten) Videos des verbundenen Keys aus den `videoSources` und deren Kommentare (Kind 1111 per `E`/`A`, Kind 1 per `e`/`a`, je bis zu 500) aus den `interactionRelays`, mit Autor (Name, Avatar) und Video. Antworten, die nur den Elternkommentar referenzieren, fehlen dort; Paging gibt es noch nicht.
+   - Autoren und einzelne Kommentare stummschalten und wieder freigeben, sowohl am Kommentar als auch in der Liste der Einträge. Das Studio pflegt die **Mute-Liste des verbundenen Keys** (NIP-51, Kind 10000: `p`-Tags für Autoren, `e`-Tags für einzelne Events) und veröffentlicht sie über den Signer (`useSigner`) an die `interactionRelays`. Kind 10000 ist ersetzbar: jede Änderung baut auf der zuletzt gelesenen Liste auf (erst nach EOSE, sonst ist keine Änderung möglich), lässt alle anderen Tags und den verschlüsselten `content` unverändert, ändert nur den einen öffentlichen Eintrag und datiert das Event nach dem bisherigen (`@nostube/core/mute-list`). Die Seite nennt den Key (npub) und dass Stummschalten nur auf der Site ausblendet.
+   - Die Site liest die Listen **aller** Creators (Pubkeys aus `/api/config`) aus den `interactionRelays` und blendet die **Vereinigung** aller Einträge aus: stummgeschaltete Kommentare samt ihrer Antworten, und Kommentare stummgeschalteter Autoren überall im Thread. Sie zählen nicht in der Kommentarzahl; bis die Listen geladen sind (EOSE), zeigt die Site keine Kommentare. Die Site braucht dafür nur einen Filter, keine Moderationslogik.
+   - Der Relay der Instanz nimmt Kind 10000 von den `allowed_writers` an und liefert es jedem Leser aus (Lesen ist offen); der Key braucht also wie beim Upload Creator- und Writer-Rechte.
 4. **Einstellungen** (erledigt): Titel, Creators, Relays, Suche, Speicher-Limits sowie das Aussehen der Site (Untertitel, Akzentfarbe, Schrift) und welche Videos ausgeblendet sind (`site` im Config-Vertrag, Server-ADR 0005; alle Videos der Creators sind sichtbar, außer den ausgeblendeten). Das ist die heutige Config-Bearbeitung unter `/admin`; das Studio wird dafür die Oberfläche.
 
 ## Grenzen der Moderation per Mute-Liste
@@ -69,13 +70,13 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 
 1. **Vorsignierte Events halten:** Hält der Server vorsignierte Events dauerhaft (Datenbank, überlebt Neustarts) oder lädt sie das Studio nur bei Bedarf hoch? Und wie verhindert man Konflikte, wenn ein Video nach dem Vorsignieren noch bearbeitet wird (addressable Event mit gleichem `d`-Tag)?
 2. **Studio und `/admin`:** Entschieden: Das Studio ersetzt das Dashboard. Einrichtung (`/admin/setup`) und Login (`/admin/login`) bleiben serverseitig, weil sie ohne Studio-Bundle funktionieren müssen. Offen: ein Notfall-Zugang, falls das Studio-Bundle fehlt (heute `nostube-server admin reset` und `config rollback` auf der Kommandozeile).
-3. **Mehrere Creators:** Die Config kennt `creators` als Liste. Wessen Mute-Liste gilt, wenn es mehrere gibt (nur der erste, alle zusammen)?
+3. **Mehrere Creators:** Entschieden: Die Site wendet die Mute-Listen aller Creators zusammen an (Vereinigung). Das Studio bearbeitet die Liste des verbundenen Keys.
 4. **Upload-Code:** Wie viel vom Wizard und vom Transcoding wandert nach `packages/widgets`, und wie viel bleibt in `apps/web`? Das hängt von der Größe des Bausteins ab und sollte beim ersten Upload-Slice entschieden werden.
 5. **Berechtigungen bei Uploads:** Schreibrechte laufen heute über `allowed_writers` in der Config. Das Studio muss konsistent damit sein (der eingeloggte Owner muss dort stehen).
 
 ## Reihenfolge (Vorschlag für den ersten Schnitt)
 
-1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, Bereiche Aussehen, Instanz, Konto (**erledigt**). Noch offen in diesem Schritt: `Signer`-Interface mit Managed und NIP-07, Onboarding mit beiden Optionen.
-2. Mute-Liste: Anzeige und Bearbeitung, Site liest sie.
+1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, Bereiche Aussehen, Instanz, Konto (**erledigt**), dazu das `Signer`-Interface mit Managed und NIP-07 und das Onboarding mit beiden Optionen (**erledigt**; Bunker noch offen).
+2. Mute-Liste: Anzeige und Bearbeitung, Site liest sie (**erledigt**).
 3. Einstellungen (Config).
 4. Videos und Upload.

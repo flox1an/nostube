@@ -30,6 +30,7 @@
       "pages": {
         "videos": "Vidéos",
         "upload": "Mise en ligne",
+        "moderation": "Modération",
         "appearance": "Apparence",
         "instance": "Instance",
         "account": "Compte",
@@ -188,6 +189,26 @@
       "start": "Mettre en ligne et publier",
       "approveHint": "Votre signataire vous demande d'approuver la mise en ligne et la publication."
     },
+    "moderation": {
+      "title": "Modération",
+      "description": "Les commentaires sur tes vidéos. Ce que tu mets en sourdine est seulement masqué sur ce site : rien n'est supprimé, les commentaires restent sur les relais et d'autres applis Nostr peuvent encore les afficher.",
+      "connectFirst": "Connecte ta clé Nostr pour voir les commentaires sur tes vidéos et modifier ta liste de mise en sourdine.",
+      "loadFailed": "Les commentaires et la liste de mise en sourdine n'ont pas pu être chargés ({{message}}).",
+      "listOf": "Liste de mise en sourdine de {{npub}}",
+      "listNote": "Ta liste publique de mise en sourdine Nostr (NIP-51), enregistrée sur les relais d'interaction de cette instance. Tout le monde peut la lire et d'autres applis Nostr peuvent aussi l'appliquer.",
+      "privateKept": "La liste contient aussi des entrées privées (chiffrées). Elles restent telles quelles et ne sont pas affichées ici.",
+      "comments": "Commentaires sur tes vidéos",
+      "noComments": "Pas encore de commentaires sur tes vidéos.",
+      "onVideo": "sur {{title}}",
+      "hidden": "masqué sur le site",
+      "muteAuthor": "Mettre l'auteur en sourdine",
+      "unmuteAuthor": "Rétablir l'auteur",
+      "muteComment": "Mettre ce commentaire en sourdine",
+      "unmuteComment": "Rétablir le commentaire",
+      "muteList": "En sourdine",
+      "emptyList": "Personne ni rien n'est en sourdine.",
+      "unknownComment": "Commentaire {{id}}"
+    },
     "overview": {
       "description": "Ce que contiennent actuellement le relais intégré et le serveur Blossom. Rien n’est modifié ici.",
       "refresh": "Actualiser",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "Aucun relais n'a accepté la vidéo. {{reasons}}",
       "relayRejected": "refusée",
       "noRelayAnswered": "Aucun relais n'a répondu.",
+      "listNotAccepted": "Aucun relais n'a accepté la liste de mise en sourdine. {{reasons}}",
       "titleEmpty": "Le titre ne doit pas être vide.",
       "notVideoLink": "Vidéos masquées : « {{line}} » n'est pas un lien vidéo.",
       "notKey": "{{label}} : « {{line}} » n'est pas une clé hex ou npub.",

@@ -30,6 +30,7 @@
       "pages": {
         "videos": "動画",
         "upload": "アップロード",
+        "moderation": "モデレーション",
         "appearance": "外観",
         "instance": "インスタンス",
         "account": "アカウント",
@@ -188,6 +189,26 @@
       "start": "アップロードして公開",
       "approveHint": "署名ツールがアップロードと公開の承認を求めます。"
     },
+    "moderation": {
+      "title": "モデレーション",
+      "description": "あなたの動画へのコメントです。ミュートしたものはこのサイトで非表示になるだけです。何も削除されず、コメントはリレーに残り、他の Nostr アプリでは引き続き表示されることがあります。",
+      "connectFirst": "Nostr キーを接続すると、動画へのコメントを表示してミュートリストを編集できます。",
+      "loadFailed": "コメントとミュートリストを読み込めませんでした（{{message}}）。",
+      "listOf": "{{npub}} のミュートリスト",
+      "listNote": "あなたの公開 Nostr ミュートリスト（NIP-51）で、このインスタンスのインタラクション用リレーに保存されます。誰でも読むことができ、他の Nostr アプリにも適用されることがあります。",
+      "privateKept": "このリストには非公開（暗号化された）項目もあります。そのまま保持され、ここには表示されません。",
+      "comments": "あなたの動画へのコメント",
+      "noComments": "まだ動画へのコメントはありません。",
+      "onVideo": "{{title}} へ",
+      "hidden": "サイトで非表示",
+      "muteAuthor": "投稿者をミュート",
+      "unmuteAuthor": "投稿者のミュートを解除",
+      "muteComment": "このコメントをミュート",
+      "unmuteComment": "コメントのミュートを解除",
+      "muteList": "ミュート中",
+      "emptyList": "ミュートしているものはありません。",
+      "unknownComment": "コメント {{id}}"
+    },
     "overview": {
       "description": "内蔵リレーと Blossom サーバーに現在保存されている内容です。ここでは何も変更されません。",
       "refresh": "更新",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "どのリレーも動画を受け付けませんでした。{{reasons}}",
       "relayRejected": "拒否されました",
       "noRelayAnswered": "どのリレーも応答しませんでした。",
+      "listNotAccepted": "ミュートリストを受け付けたリレーはありません。{{reasons}}",
       "titleEmpty": "タイトルを空にすることはできません。",
       "notVideoLink": "非表示の動画：「{{line}}」は動画のリンクではありません。",
       "notKey": "{{label}}：「{{line}}」は hex または npub 鍵ではありません。",

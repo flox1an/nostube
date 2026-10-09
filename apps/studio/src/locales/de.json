@@ -30,6 +30,7 @@
       "pages": {
         "videos": "Videos",
         "upload": "Hochladen",
+        "moderation": "Moderation",
         "appearance": "Aussehen",
         "instance": "Instanz",
         "account": "Konto",
@@ -188,6 +189,26 @@
       "start": "Hochladen und veröffentlichen",
       "approveHint": "Dein Signer bittet dich, den Upload und die Veröffentlichung zu bestätigen."
     },
+    "moderation": {
+      "title": "Moderation",
+      "description": "Kommentare zu deinen Videos. Was du stummschaltest, wird nur auf dieser Website ausgeblendet: Stummschalten löscht nichts, die Kommentare bleiben auf den Relays und andere Nostr-Apps können sie weiter zeigen.",
+      "connectFirst": "Verbinde deinen Nostr-Schlüssel, um die Kommentare zu deinen Videos zu sehen und deine Stummschaltliste zu bearbeiten.",
+      "loadFailed": "Die Kommentare und die Stummschaltliste konnten nicht geladen werden ({{message}}).",
+      "listOf": "Stummschaltliste von {{npub}}",
+      "listNote": "Deine öffentliche Nostr-Stummschaltliste (NIP-51), gespeichert auf den Interaktions-Relays dieser Instanz. Jeder kann sie lesen, und andere Nostr-Apps können sie ebenfalls anwenden.",
+      "privateKept": "Die Liste hat auch private (verschlüsselte) Einträge. Sie bleiben, wie sie sind, und werden hier nicht gezeigt.",
+      "comments": "Kommentare zu deinen Videos",
+      "noComments": "Noch keine Kommentare zu deinen Videos.",
+      "onVideo": "zu {{title}}",
+      "hidden": "auf der Website ausgeblendet",
+      "muteAuthor": "Autor stummschalten",
+      "unmuteAuthor": "Autor nicht mehr stummschalten",
+      "muteComment": "Diesen Kommentar stummschalten",
+      "unmuteComment": "Kommentar nicht mehr stummschalten",
+      "muteList": "Stummgeschaltet",
+      "emptyList": "Niemand und nichts ist stummgeschaltet.",
+      "unknownComment": "Kommentar {{id}}"
+    },
     "overview": {
       "description": "Was das eingebaute Relay und der Blossom-Server gerade enthalten. Hier wird nichts verändert.",
       "refresh": "Aktualisieren",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "Kein Relay hat das Video angenommen. {{reasons}}",
       "relayRejected": "abgelehnt",
       "noRelayAnswered": "Kein Relay hat geantwortet.",
+      "listNotAccepted": "Kein Relay hat die Stummschaltliste angenommen. {{reasons}}",
       "titleEmpty": "Der Titel darf nicht leer sein.",
       "notVideoLink": "Ausgeblendete Videos: „{{line}}“ ist kein Videolink.",
       "notKey": "{{label}}: „{{line}}“ ist kein Hex- oder npub-Schlüssel.",

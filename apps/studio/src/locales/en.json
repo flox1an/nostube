@@ -30,6 +30,7 @@
       "pages": {
         "videos": "Videos",
         "upload": "Upload",
+        "moderation": "Moderation",
         "appearance": "Appearance",
         "instance": "Instance",
         "account": "Account",
@@ -188,6 +189,26 @@
       "start": "Upload and publish",
       "approveHint": "Your signer asks you to approve the upload and the publication."
     },
+    "moderation": {
+      "title": "Moderation",
+      "description": "Comments on your videos. What you mute is hidden on this site only: muting deletes nothing, the comments stay on the relays and other Nostr apps may still show them.",
+      "connectFirst": "Connect your Nostr key to see the comments on your videos and edit your mute list.",
+      "loadFailed": "The comments and the mute list could not be loaded ({{message}}).",
+      "listOf": "Mute list of {{npub}}",
+      "listNote": "Your public Nostr mute list (NIP-51), saved on the interaction relays of this instance. Anyone can read it, and other Nostr apps may apply it too.",
+      "privateKept": "The list also has private (encrypted) entries. They stay as they are and are not shown here.",
+      "comments": "Comments on your videos",
+      "noComments": "No comments on your videos yet.",
+      "onVideo": "on {{title}}",
+      "hidden": "hidden on the site",
+      "muteAuthor": "Mute author",
+      "unmuteAuthor": "Unmute author",
+      "muteComment": "Mute this comment",
+      "unmuteComment": "Unmute comment",
+      "muteList": "Muted",
+      "emptyList": "Nobody and nothing is muted.",
+      "unknownComment": "Comment {{id}}"
+    },
     "overview": {
       "description": "What the built-in relay and Blossom server hold right now. Nothing here changes anything.",
       "refresh": "Refresh",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "No relay accepted the video. {{reasons}}",
       "relayRejected": "rejected",
       "noRelayAnswered": "No relay answered.",
+      "listNotAccepted": "No relay accepted the mute list. {{reasons}}",
       "titleEmpty": "The title must not be empty.",
       "notVideoLink": "Hidden videos: \"{{line}}\" is not a video link.",
       "notKey": "{{label}}: \"{{line}}\" is not a hex or npub key.",

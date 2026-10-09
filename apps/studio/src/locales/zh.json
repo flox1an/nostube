@@ -30,6 +30,7 @@
       "pages": {
         "videos": "视频",
         "upload": "上传",
+        "moderation": "审核",
         "appearance": "外观",
         "instance": "实例",
         "account": "账户",
@@ -188,6 +189,26 @@
       "start": "上传并发布",
       "approveHint": "你的签名器会请你批准上传和发布。"
     },
+    "moderation": {
+      "title": "审核",
+      "description": "你的视频下的评论。你静音的内容只会在本站隐藏：静音不会删除任何内容，评论仍保留在中继上，其他 Nostr 应用可能仍会显示它们。",
+      "connectFirst": "连接你的 Nostr 密钥，即可查看你视频下的评论并编辑静音列表。",
+      "loadFailed": "无法加载评论和静音列表（{{message}}）。",
+      "listOf": "{{npub}} 的静音列表",
+      "listNote": "你的公开 Nostr 静音列表（NIP-51），保存在本实例的互动中继上。任何人都可以读取，其他 Nostr 应用也可能会应用它。",
+      "privateKept": "该列表还有私密（加密）条目。它们保持不变，不在此显示。",
+      "comments": "你视频下的评论",
+      "noComments": "你的视频还没有评论。",
+      "onVideo": "在《{{title}}》下",
+      "hidden": "已在本站隐藏",
+      "muteAuthor": "静音作者",
+      "unmuteAuthor": "取消静音作者",
+      "muteComment": "静音此评论",
+      "unmuteComment": "取消静音评论",
+      "muteList": "已静音",
+      "emptyList": "没有静音任何人或内容。",
+      "unknownComment": "评论 {{id}}"
+    },
     "overview": {
       "description": "内置中继和 Blossom 服务器当前存储的内容。此处不会更改任何内容。",
       "refresh": "刷新",
@@ -252,6 +273,7 @@
       "noRelayAccepted": "没有中继接受该视频。{{reasons}}",
       "relayRejected": "已拒绝",
       "noRelayAnswered": "没有中继响应。",
+      "listNotAccepted": "没有中继接受静音列表。{{reasons}}",
       "titleEmpty": "标题不能为空。",
       "notVideoLink": "隐藏的视频：“{{line}}”不是视频链接。",
       "notKey": "{{label}}：“{{line}}”不是 hex 或 npub 密钥。",

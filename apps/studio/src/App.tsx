@@ -13,6 +13,7 @@ import { OverviewPage } from './OverviewPage'
 import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
+const ModerationPage = lazy(() => import('./ModerationPage'))
 import {
   loadAdmin,
   saveConfig,
@@ -201,6 +202,11 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
       {page === 'overview' && <OverviewPage />}
+      {page === 'moderation' && (
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <ModerationPage state={state} banner={banner} />
+        </Suspense>
+      )}
 
       {editsConfig && (
         <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">

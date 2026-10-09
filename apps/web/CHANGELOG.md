@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Site and Studio now support the same seven interface languages as Nostube (English, German, French, Spanish, Russian, Chinese and Japanese), including shared player controls, authentication and upload widgets. Site follows the browser language without a visitor setting; Studio offers a browser-local operator language preference. Site video descriptions start collapsed with localized More/Less controls.
+- Site video actions now include timestamped share links/embeds, parsed description chapters, signed likes with relay-acknowledged counts, and Lightning zaps with invoice QR, external-wallet and WebLN payment options. Zap totals validate provider receipts. Escape closes dialogs without leaving the video page.
+- Site loads the signed-in visitor's profile from public profile indexers and their NIP-65 write relays, displays `display_name` before `name`, and uses the shared avatar fallback. Video and interaction relay scopes remain unchanged.
+- Studio's browser-local operator language selector is now under Server → Instance instead of the header.
+- Studio adds a read-only Server → Overview dashboard with authenticated live Relay/Blossom statistics: event-kind bars, SQLite size, file/storage/quota/free-disk figures and process-local upload/download/traffic counters.
+- Site authentication uses a localized, brand-neutral welcome heading at every login entry point; nostu.be keeps its own branding.
 - Home is now the same global-first page for everyone: category chips, "Continue watching" and "From creators you follow" shelves, then the global latest-videos feed. Logged-in users with follows no longer get the Subscriptions feed as their home page (it stays under "Subscriptions"). The separate "Explore" nav entry is gone, and `/explore` redirects to `/`
 - "Subscriptions" is hidden from the sidebar, mini sidebar and mobile bottom bar while logged out; guests have no follow list. The mobile bar shows Home · Shorts · Library · More for guests
 - New users get more videos: the default read relays now include `wss://relay.nostu.be` (~15k video events from ~1.2k authors back to 2018), `wss://offchain.pub` and `wss://nostr.wine`; primal and nos.lol only hold a few dozen kind 21/34235 events each, so a fresh feed used to run dry after ~340 events. Existing users keep their saved relay list

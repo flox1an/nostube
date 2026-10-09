@@ -1,4 +1,5 @@
 import type { InstanceSite } from '@nostube/core/instance-config'
+import i18n from './i18n'
 
 export type SearchConfig = { mode: 'off' } | { mode: 'local' } | { mode: 'external'; url: string }
 
@@ -32,7 +33,7 @@ async function errorMessage(res: Response): Promise<string> {
   } catch {
     // not JSON
   }
-  return `The server answered ${res.status}.`
+  return i18n.t('studio.errors.serverStatus', { status: res.status })
 }
 
 /** `null` means the admin is not logged in. */
@@ -53,6 +54,38 @@ export async function saveConfig(config: AdminConfig): Promise<{ revision: numbe
   })
   if (!res.ok) throw new Error(await errorMessage(res))
   return (await res.json()) as { revision: number }
+}
+
+/** What the built-in relay and Blossom server hold (`GET /api/admin/stats`), read-only. */
+export interface AdminStats {
+  relay: {
+    url: string
+    /** Stored, unexpired events; the sum of `eventsByKind`. */
+    totalEvents: number
+    /** Ascending by kind. */
+    eventsByKind: { kind: number; count: number }[]
+    /** The SQLite database with its write-ahead log. */
+    databaseBytes: number
+  }
+  blossom: {
+    url: string
+    files: number
+    storageBytes: number
+    /** 0: no quota. */
+    quotaBytes: number
+    freeDiskBytes: number
+    freeSpaceReserveBytes: number
+    /** Counters since the server process started. */
+    uploads: number
+    downloads: number
+    servedBytes: number
+  }
+}
+
+export async function loadStats(): Promise<AdminStats> {
+  const res = await fetch('/api/admin/stats', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as AdminStats
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -88,7 +121,7 @@ export const nip07 = (): Nip07 | undefined => (window as unknown as { nostr?: Ni
 /** Binds (or logs in with) the browser's NIP-07 key through a NIP-98 event for `path`. */
 export async function nostrPost(path: string): Promise<void> {
   const signer = nip07()
-  if (!signer) throw new Error('No NIP-07 signer found in this browser.')
+  if (!signer) throw new Error(i18n.t('studio.errors.noNip07'))
   const event = await signer.signEvent({
     kind: 27235,
     created_at: Math.floor(Date.now() / 1000),

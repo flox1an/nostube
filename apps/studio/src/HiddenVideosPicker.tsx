@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { videoRef } from '@nostube/core/hidden-videos'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getPublishDate } from '@nostube/core/video-event'
@@ -18,6 +19,7 @@ interface PickerProps {
 
 /** The creator's videos with a switch each: what is switched on is hidden on the public site. */
 export default function HiddenVideosPicker(props: PickerProps) {
+  const { t } = useTranslation()
   const [booted, setBooted] = useState<InstanceClient | Error | null>(null)
   useEffect(() => {
     bootInstanceClient().then(setBooted, e =>
@@ -29,7 +31,7 @@ export default function HiddenVideosPicker(props: PickerProps) {
   if (booted instanceof Error) {
     return (
       <p className="text-sm text-muted-foreground">
-        The videos could not be loaded ({booted.message}).
+        {t('studio.videos.loadFailedWith', { message: booted.message })}
       </p>
     )
   }
@@ -45,15 +47,16 @@ function VideoList({
   hiddenText,
   onChange,
 }: PickerProps & { config: InstanceClient['config'] }) {
+  const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
 
   if (!config.startPage) {
-    return <p className="text-sm text-muted-foreground">Add a creator first to see their videos.</p>
+    return <p className="text-sm text-muted-foreground">{t('studio.videos.addCreator')}</p>
   }
   if (loading) return <Skeleton className="h-40 w-full" />
-  if (error) return <p className="text-sm text-destructive">The videos could not be loaded.</p>
+  if (error) return <p className="text-sm text-destructive">{t('studio.videos.loadFailed')}</p>
   if (videos.length === 0) {
-    return <p className="text-sm text-muted-foreground">No videos found yet.</p>
+    return <p className="text-sm text-muted-foreground">{t('studio.videos.none')}</p>
   }
 
   return (
@@ -70,7 +73,7 @@ function VideoList({
       </ul>
       {hasMore && (
         <Button type="button" variant="outline" size="sm" onClick={loadMore}>
-          Load more
+          {t('studio.videos.loadMore')}
         </Button>
       )}
     </div>
@@ -86,6 +89,7 @@ function Row({
   hidden: boolean
   onToggle: (hidden: boolean) => void
 }) {
+  const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   return (
     <li className="flex items-center gap-3 p-2">
@@ -101,13 +105,17 @@ function Row({
           {video.title}
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatDate(getPublishDate(video))}
-          {video.contentWarning ? ' · content warning' : ''}
+          {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
+          {video.contentWarning ? ` · ${t('studio.videos.contentWarning')}` : ''}
         </p>
       </div>
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
-        Hidden
-        <Switch checked={hidden} onCheckedChange={onToggle} aria-label={`Hide ${video.title}`} />
+        {t('studio.videos.hidden')}
+        <Switch
+          checked={hidden}
+          onCheckedChange={onToggle}
+          aria-label={t('studio.videos.hide', { title: video.title })}
+        />
       </label>
     </li>
   )

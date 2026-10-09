@@ -1,3 +1,5 @@
+import i18n from './i18n'
+
 /** An event the signer is asked to sign (NIP-01 without id, pubkey and signature). */
 export interface UnsignedEvent {
   kind: number
@@ -38,7 +40,7 @@ export function nip07Signer(win: Nip07Window = window as unknown as Nip07Window)
     async getPublicKey() {
       const key = await nostr.getPublicKey()
       if (typeof key !== 'string' || !HEX64.test(key)) {
-        throw new Error('The signer returned something that is not a public key.')
+        throw new Error(i18n.t('studio.errors.notPubkey'))
       }
       return key
     },

@@ -1,18 +1,20 @@
 import type { EventTemplate } from 'nostr-tools'
 import { buildVideoEvent, type UploadedBlob } from '@nostube/core/video-publish'
 import { prepareSubtitleFile } from '@nostube/core/subtitle-utils'
+import i18n from '../i18n'
 import type { VideoProbe } from './probe-video'
 
 export type StepId = 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
 export type StepStatus = 'pending' | 'running' | 'done' | 'error'
 
-export const STEPS: { id: StepId; label: string }[] = [
-  { id: 'check', label: 'Check the video' },
-  { id: 'hash', label: 'Fingerprint the file' },
-  { id: 'video', label: 'Upload the video' },
-  { id: 'thumbnail', label: 'Upload the thumbnail' },
-  { id: 'subtitles', label: 'Upload the subtitles' },
-  { id: 'publish', label: 'Publish' },
+/** In order; the names shown are translated at render (`studio.upload.steps.*`). */
+export const STEPS: { id: StepId }[] = [
+  { id: 'check' },
+  { id: 'hash' },
+  { id: 'video' },
+  { id: 'thumbnail' },
+  { id: 'subtitles' },
+  { id: 'publish' },
 ]
 
 export interface UploadInput {
@@ -216,8 +218,7 @@ export async function runUpload(
         current.input.thumbnail === undefined ? current.probe!.thumbnail : current.input.thumbnail
       if (!blob) return
       const type = blob.type
-      if (!type.startsWith('image/'))
-        throw new Error('The thumbnail must be an image with a MIME type.')
+      if (!type.startsWith('image/')) throw new Error(i18n.t('studio.errors.thumbnailType'))
       const extension = type === 'image/jpeg' ? 'jpg' : type.split('/')[1]
       const sha256 = await deps.hash(blob, () => {})
       const thumbnail = await deps.upload({
@@ -235,7 +236,8 @@ export async function runUpload(
   if (
     !(await step('subtitles', async () => {
       for (const subtitle of current.input.subtitles ?? []) {
-        if (!subtitle.lang) throw new Error(`Select a language for ${subtitle.file.name}.`)
+        if (!subtitle.lang)
+          throw new Error(i18n.t('studio.errors.subtitleLanguage', { name: subtitle.file.name }))
         if (current.subtitles?.[subtitle.id]) continue
         const blob = await prepareSubtitleFile(subtitle.file)
         const sha256 = await deps.hash(blob, () => {})

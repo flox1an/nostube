@@ -1,5 +1,34 @@
 {
   "player": {
+    "qualityNumber": "Quality {{number}}",
+    "currentQuality": "Currently {{quality}}",
+    "play": "Play",
+    "pause": "Pause",
+    "playAudio": "Play audio",
+    "pauseAudio": "Pause audio",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "showElapsed": "Click to show elapsed time",
+    "showRemaining": "Click to show remaining time",
+    "pictureInPicture": "Picture in Picture",
+    "enableCaptions": "Enable captions",
+    "disableCaptions": "Disable captions",
+    "showSidebar": "Show sidebar",
+    "hideSidebar": "Hide sidebar",
+    "theater": "Theater mode",
+    "exitTheater": "Exit theater mode",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "settings": "Settings",
+    "quality": "Quality",
+    "playbackSpeed": "Playback speed",
+    "normalSpeed": "Normal",
+    "subtitles": "Subtitles",
+    "loop": "Loop",
+    "auto": "Auto",
+    "unknown": "Unknown",
+    "off": "Off",
     "nextChapter": "Skip to: {{title}}"
   },
   "contentSafety": {
@@ -9,6 +38,11 @@
     }
   },
   "video": {
+    "grid": {
+      "empty": "No videos yet.",
+      "loading": "Loading videos",
+      "contentWarning": "Content warning"
+    },
     "share": {
       "title": "Share this video",
       "description": "Share this video on your favorite platform or copy the link.",
@@ -31,6 +65,7 @@
     }
   },
   "common": {
+    "interfaceLanguage": "Language",
     "copy": "Copy",
     "back": "Back",
     "cancel": "Cancel",

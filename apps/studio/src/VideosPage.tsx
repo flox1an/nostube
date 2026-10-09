@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Card,
   CardContent,
@@ -21,16 +22,14 @@ export function VideosPage({
   update: (patch: Partial<Draft>) => void
   banner: ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-6">
       {banner}
       <Card>
         <CardHeader>
-          <CardTitle>Videos</CardTitle>
-          <CardDescription>
-            The site shows every video of your creators except the ones you switch off here. New
-            uploads appear on their own.
-          </CardDescription>
+          <CardTitle>{t('studio.videos.title')}</CardTitle>
+          <CardDescription>{t('studio.videos.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>

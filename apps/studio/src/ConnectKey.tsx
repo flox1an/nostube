@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import type { AdminConfig } from './api'
@@ -19,6 +20,7 @@ export function ConnectKey({
   onConnected: (pubkey: string) => Promise<void>
   busy: boolean
 }) {
+  const { t } = useTranslation()
   const { status, pubkey, connect } = useSigner()
   const [error, setError] = useState<string | null>(null)
 
@@ -37,23 +39,14 @@ export function ConnectKey({
   return (
     <Alert>
       <AlertTitle>
-        {needed ? 'Connect your Nostr key to publish' : 'This key is not a creator of the instance'}
+        {needed ? t('studio.connect.neededTitle') : t('studio.connect.notCreatorTitle')}
       </AlertTitle>
       <AlertDescription className="space-y-3">
-        <p>
-          {needed
-            ? 'The instance has no creator and no one allowed to upload yet. Connect the key of your Nostr signer to become both.'
-            : 'The key of your signer is not yet a creator and uploader here. Add it to publish with it.'}
-        </p>
-        {status === 'none' && (
-          <p>
-            No Nostr signer was found in this browser. Install a NIP-07 extension (nos2x, Alby, …)
-            and reload this page.
-          </p>
-        )}
+        <p>{needed ? t('studio.connect.neededBody') : t('studio.connect.notCreatorBody')}</p>
+        {status === 'none' && <p>{t('studio.connect.noSigner')}</p>}
         {error && <p className="text-destructive">{error}</p>}
         <Button type="button" onClick={connectNow} disabled={status !== 'ready' || busy}>
-          {busy ? 'Saving…' : 'Connect my key'}
+          {busy ? t('studio.app.saving') : t('studio.connect.connect')}
         </Button>
       </AlertDescription>
     </Alert>

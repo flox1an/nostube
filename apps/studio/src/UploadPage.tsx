@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -32,10 +33,17 @@ import {
   type UploadJob,
 } from './upload/run-upload'
 
-const sizeText = (bytes: number) =>
+const sizeText = (bytes: number, locale?: string) =>
   bytes >= 1024 ** 3
-    ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
-    : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`
+    ? new Intl.NumberFormat(locale, {
+        style: 'unit',
+        unit: 'gigabyte',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(bytes / 1024 ** 3)
+    : new Intl.NumberFormat(locale, { style: 'unit', unit: 'megabyte' }).format(
+        Math.max(1, Math.round(bytes / 1024 ** 2))
+      )
 
 /** `my_holiday-clip.mp4` to `my holiday clip`. */
 const titleFromName = (name: string) =>
@@ -46,6 +54,8 @@ const titleFromName = (name: string) =>
 
 /** Choose a video, describe it, and publish it to this instance. */
 export default function UploadPage({ state, banner }: { state: AdminState; banner: ReactNode }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage
   const { signer, pubkey, connect } = useSigner()
   const [file, setFile] = useState<File | null>(null)
   const [probe, setProbe] = useState<VideoProbe | null>(null)
@@ -120,11 +130,9 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
         return setNotice(e instanceof Error ? e.message : String(e))
       }
       if (!isKeyConnected(state.config, who)) {
-        return setNotice(
-          'Your key is not yet a creator and uploader of this instance: connect it first.'
-        )
+        return setNotice(t('studio.upload.notConnected'))
       }
-      if (!signer) return setNotice('No Nostr signer found in this browser.')
+      if (!signer) return setNotice(t('studio.errors.noSigner'))
       // Use the just-connected key rather than the render behind it.
       const deps = makeUploadDeps({ signer, pubkey: who, title })
       const input = {
@@ -161,10 +169,9 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Published</CardTitle>
+          <CardTitle>{t('studio.upload.publishedTitle')}</CardTitle>
           <CardDescription>
-            The video went to this instance&apos;s relay only ({published.accepted.join(', ')}); it
-            is not sent to other relays.
+            {t('studio.upload.publishedDescription', { relays: published.accepted.join(', ') })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -181,11 +188,11 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
           <div className="flex gap-2">
             <Button asChild>
               <a href={address} target="_blank" rel="noopener noreferrer">
-                View on the site
+                {t('studio.upload.view')}
               </a>
             </Button>
             <Button type="button" variant="outline" onClick={reset}>
-              Upload another
+              {t('studio.upload.another')}
             </Button>
           </div>
         </CardContent>
@@ -202,14 +209,11 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
       {banner}
       <Card>
         <CardHeader>
-          <CardTitle>Upload a video</CardTitle>
-          <CardDescription>
-            MP4 or WebM that your browser can play. It is stored on this instance and published to
-            its relay; other formats and several quality levels are planned.
-          </CardDescription>
+          <CardTitle>{t('studio.upload.title')}</CardTitle>
+          <CardDescription>{t('studio.upload.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field id="file" label="Video file">
+          <Field id="file" label={t('studio.upload.file')}>
             <FileDropzone
               id="file"
               accept={{ 'video/mp4': ['.mp4'], 'video/webm': ['.webm'] }}
@@ -219,7 +223,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
             />
           </Field>
           {file && !probeError && !probe && (
-            <p className="text-sm text-muted-foreground">Reading the video…</p>
+            <p className="text-sm text-muted-foreground">{t('studio.upload.reading')}</p>
           )}
           {probeError && (
             <Alert variant="destructive">
@@ -229,13 +233,15 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
           {probe && file && (
             <div className="flex gap-4">
               <p className="text-sm text-muted-foreground">
-                {file.name} · {sizeText(file.size)} · {probe.width}×{probe.height} ·{' '}
-                {Math.round(probe.duration)} s
-                {probe.height > probe.width ? ' · vertical (published as a short)' : ''}
+                {file.name} · {sizeText(file.size, locale)} · {probe.width}×{probe.height} ·{' '}
+                {new Intl.NumberFormat(locale, { style: 'unit', unit: 'second' }).format(
+                  Math.round(probe.duration)
+                )}
+                {probe.height > probe.width ? ` · ${t('studio.upload.vertical')}` : ''}
               </p>
             </div>
           )}
-          <Field id="video-title" label="Title">
+          <Field id="video-title" label={t('studio.upload.videoTitle')}>
             <Input
               id="video-title"
               value={title}
@@ -245,8 +251,8 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
           </Field>
           <Field
             id="video-description"
-            label="Description"
-            hint="Optional. Links and #tags work here."
+            label={t('studio.upload.videoDescription')}
+            hint={t('studio.upload.videoDescriptionHint')}
           >
             <Textarea
               id="video-description"
@@ -256,11 +262,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
               onChange={e => setDescription(e.target.value)}
             />
           </Field>
-          <Field
-            id="video-tags"
-            label="Tags"
-            hint="Press Enter to add tags. Separate multiple tags with spaces or commas."
-          >
+          <Field id="video-tags" label={t('studio.upload.tags')} hint={t('studio.upload.tagsHint')}>
             <TagInput id="video-tags" tags={tags} onTagsChange={setTags} disabled={running} />
           </Field>
           <ContentWarning
@@ -330,22 +332,25 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
       {job && (
         <Card>
           <CardContent className="space-y-3 pt-6">
-            <ol className="space-y-2" aria-label="Upload progress">
+            <ol className="space-y-2" aria-label={t('studio.upload.progress')}>
               {STEPS.map(step => {
                 const s = job.steps[step.id]
                 return (
                   <li key={step.id} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className={s.status === 'pending' ? 'text-muted-foreground' : ''}>
-                        {step.label}
+                        {t(`studio.upload.steps.${step.id}`)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {s.status === 'done'
-                          ? 'done'
+                          ? t('studio.upload.done')
                           : s.status === 'error'
-                            ? 'failed'
+                            ? t('studio.upload.failed')
                             : s.status === 'running'
-                              ? `${Math.round((s.progress ?? 0) * 100)} %`
+                              ? new Intl.NumberFormat(locale, {
+                                  style: 'percent',
+                                  maximumFractionDigits: 0,
+                                }).format(s.progress ?? 0)
                               : ''}
                       </span>
                     </div>
@@ -363,19 +368,21 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
 
       {notice && (
         <Alert variant="destructive">
-          <AlertTitle>Not started</AlertTitle>
+          <AlertTitle>{t('studio.upload.notStarted')}</AlertTitle>
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
 
       <div className="flex items-center gap-3">
         <Button type="button" onClick={start} disabled={!canStart || (key !== null && !mayPublish)}>
-          {running ? 'Uploading…' : failed ? 'Try again' : 'Upload and publish'}
+          {running
+            ? t('studio.upload.uploading')
+            : failed
+              ? t('studio.upload.retry')
+              : t('studio.upload.start')}
         </Button>
         {!running && (
-          <p className="text-xs text-muted-foreground">
-            Your signer asks you to approve the upload and the publication.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('studio.upload.approveHint')}</p>
         )}
       </div>
     </div>

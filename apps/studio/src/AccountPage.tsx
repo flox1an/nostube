@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -12,6 +13,7 @@ import { nip07, nostrPost, unbindNostr, type AdminState } from './api'
 
 /** Who can log in: the password always, optionally the key of a NIP-07 signer. */
 export function AccountPage({ state, reload }: { state: AdminState; reload: () => void }) {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const run = async (action: () => Promise<void>) => {
     setError(null)
@@ -32,19 +34,18 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
       )}
       <Card>
         <CardHeader>
-          <CardTitle>Login with a Nostr key</CardTitle>
-          <CardDescription>
-            Your password always works. A bound NIP-07 key lets you log in with your signer too.
-          </CardDescription>
+          <CardTitle>{t('studio.account.title')}</CardTitle>
+          <CardDescription>{t('studio.account.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm">
             {state.nostrPubkey ? (
               <>
-                Bound key: <code className="break-all">{state.nostrPubkey}</code>
+                {t('studio.account.boundKey')}{' '}
+                <code className="break-all">{state.nostrPubkey}</code>
               </>
             ) : (
-              'No key is bound.'
+              t('studio.account.noKey')
             )}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -54,18 +55,16 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
                 variant="outline"
                 onClick={() => run(() => nostrPost('/admin/bind-nostr'))}
               >
-                Bind this browser&apos;s key
+                {t('studio.account.bind')}
               </Button>
             )}
             {state.nostrPubkey && (
               <Button type="button" variant="outline" onClick={() => run(unbindNostr)}>
-                Unbind
+                {t('studio.account.unbind')}
               </Button>
             )}
             {!nip07() && !state.nostrPubkey && (
-              <p className="text-sm text-muted-foreground">
-                Install a NIP-07 signer extension to bind a key.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('studio.account.installSigner')}</p>
             )}
           </div>
         </CardContent>
@@ -74,14 +73,12 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
       {state.tlsMode === 'local-ca' && (
         <Card>
           <CardHeader>
-            <CardTitle>This device</CardTitle>
-            <CardDescription>
-              Devices that open this instance need to trust its certificate authority once.
-            </CardDescription>
+            <CardTitle>{t('studio.account.deviceTitle')}</CardTitle>
+            <CardDescription>{t('studio.account.deviceDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline">
-              <a href="/ca.pem">Download the instance CA</a>
+              <a href="/ca.pem">{t('studio.account.downloadCa')}</a>
             </Button>
           </CardContent>
         </Card>

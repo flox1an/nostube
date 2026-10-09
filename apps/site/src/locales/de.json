@@ -1,0 +1,95 @@
+{
+  "auth": {
+    "entry": {
+      "title": "Willkommen"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "Wird geladen…",
+      "loadFailed": "Diese Seite konnte nicht geladen werden."
+    },
+    "auth": {
+      "signIn": "Anmelden",
+      "signOut": "Abmelden"
+    },
+    "breadcrumb": {
+      "label": "Brotkrumennavigation"
+    },
+    "ageGate": {
+      "title": "Dieses Video hat eine Inhaltswarnung",
+      "body": "Es kann Inhalte enthalten, die nicht für alle geeignet sind. Bestätige, dass du mindestens 18 Jahre alt bist, um fortzufahren. Deine Bestätigung wird in diesem Browser gespeichert.",
+      "confirm": "Ich bin 18 oder älter",
+      "cancel": "Abbrechen"
+    },
+    "grid": {
+      "loadFailed": "Die Videos konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "loadMore": "Mehr laden"
+    },
+    "video": {
+      "invalidLink": "Dieser Videolink ist ungültig.",
+      "notFound": "Video nicht gefunden.",
+      "loading": "Video wird geladen",
+      "tags": "Schlagwörter",
+      "more": "Mehr",
+      "less": "Weniger"
+    },
+    "comments": {
+      "title": "Kommentare",
+      "count_one": "{{count}} Kommentar",
+      "count_other": "{{count}} Kommentare",
+      "signInToComment": "Zum Kommentieren anmelden",
+      "reply": "Antworten",
+      "delete": "Löschen",
+      "signInFirst": "Bitte melde dich zuerst an.",
+      "refused": "abgelehnt",
+      "postFailed": "Der Kommentar konnte nicht veröffentlicht werden: {{reason}}",
+      "deleteFailed": "Der Kommentar konnte nicht gelöscht werden: {{reason}}"
+    },
+    "reactions": {
+      "label_one": "Gefällt mir ({{count}} Like)",
+      "label_other": "Gefällt mir ({{count}} Likes)",
+      "liking": "Wird geliked…",
+      "signInToLike": "Zum Liken anmelden",
+      "refused": "abgelehnt",
+      "noRelays": "kein Relay hat es bestätigt",
+      "failed": "Das Like konnte nicht veröffentlicht werden: {{reason}}"
+    },
+    "zap": {
+      "button": "Zap",
+      "totalTitle": "Gezappte Sats: {{sats}}",
+      "signIn": "Anmelden zum Zappen",
+      "title": "Lightning-Zap senden",
+      "description": "Dein Zap wird über Lightning bezahlt und als signierter Nostr-Zap für dieses Video veröffentlicht.",
+      "amount": "Betrag (Sats)",
+      "comment": "Kommentar (optional)",
+      "includeTimestamp": "Zap bei {{time}}",
+      "createInvoice": "Rechnung erstellen",
+      "creating": "Rechnung wird erstellt…",
+      "invoiceHint": "Scanne die Rechnung mit einer Lightning-Wallet oder öffne sie in deiner Wallet-App. Sie bleibt offen, bis die Zahlung bestätigt ist.",
+      "waiting": "Warte auf Zahlung…",
+      "copy": "Rechnung kopieren",
+      "copied": "Kopiert",
+      "openWallet": "In Wallet öffnen",
+      "payWebln": "Mit Browser-Wallet bezahlen",
+      "paying": "Zahlung läuft…",
+      "paid": "Zap gesendet. Danke!",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "retry": "Erneut versuchen",
+      "errors": {
+        "providerFailed": "Der Lightning-Anbieter des Creators ist nicht erreichbar: {{reason}}",
+        "providerNoNostr": "Der Lightning-Anbieter des Creators unterstützt keine Nostr-Zaps.",
+        "providerInvalid": "Der Lightning-Anbieter des Creators hat ungültige Daten gesendet.",
+        "invalidAmount": "Gib eine ganze Zahl an Sats zwischen {{min}} und {{max}} ein.",
+        "videoUnavailable": "Das Nostr-Event dieses Videos ist nicht geladen, daher kann es noch nicht gezappt werden.",
+        "signFailed": "Die Zap-Anfrage konnte nicht signiert werden: {{reason}}",
+        "invoiceFailed": "Es konnte keine Rechnung erstellt werden: {{reason}}",
+        "invoiceMismatch": "Der Anbieter hat eine Rechnung geliefert, die nicht zum angefragten Betrag passt. Sie wird nicht angezeigt.",
+        "paymentFailed": "Die Zahlung ist fehlgeschlagen: {{reason}}",
+        "copyFailed": "Die Rechnung konnte nicht kopiert werden."
+      }
+    }
+  }
+}

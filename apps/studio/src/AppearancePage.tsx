@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { SITE_FONTS, type SiteFont } from '@nostube/core/instance-config'
+import { useTranslation } from 'react-i18next'
+import { SITE_FONTS } from '@nostube/core/instance-config'
 import { Button } from '@nostube/widgets/components/button'
 import {
   Card,
@@ -12,12 +13,6 @@ import { Input } from '@nostube/widgets/components/input'
 import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
 import { LINK_PRESETS, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
-
-const FONT_LABELS: Record<SiteFont, string> = {
-  sans: 'Sans-serif',
-  serif: 'Serif',
-  mono: 'Monospace',
-}
 
 const ACCENT = /^#[0-9a-fA-F]{6}$/
 
@@ -36,7 +31,9 @@ export interface PageProps {
 
 /** Title, tagline, accent colour, font and where links to other Nostr content go. */
 export function AppearancePage({ draft, update }: PageProps) {
+  const { t } = useTranslation()
   const preview = useRef<HTMLDivElement>(null)
+  const lowContrast = lowContrastModes(draft.accent)
 
   useEffect(() => {
     if (!preview.current || !ACCENT.test(draft.accent)) return
@@ -48,18 +45,22 @@ export function AppearancePage({ draft, update }: PageProps) {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Your site</CardTitle>
-            <CardDescription>The heading and the line below it on the public page.</CardDescription>
+            <CardTitle>{t('studio.appearance.siteTitle')}</CardTitle>
+            <CardDescription>{t('studio.appearance.siteDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Field id="title" label="Title">
+            <Field id="title" label={t('studio.appearance.title')}>
               <Input
                 id="title"
                 value={draft.title}
                 onChange={e => update({ title: e.target.value })}
               />
             </Field>
-            <Field id="tagline" label="Tagline" hint="Optional.">
+            <Field
+              id="tagline"
+              label={t('studio.appearance.tagline')}
+              hint={t('studio.appearance.optional')}
+            >
               <Input
                 id="tagline"
                 value={draft.tagline}
@@ -71,30 +72,29 @@ export function AppearancePage({ draft, update }: PageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Look</CardTitle>
-            <CardDescription>
-              Visitors see light or dark mode following their system; the colour and font are yours.
-            </CardDescription>
+            <CardTitle>{t('studio.appearance.lookTitle')}</CardTitle>
+            <CardDescription>{t('studio.appearance.lookDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Field
               id="accent"
-              label="Accent colour"
+              label={t('studio.appearance.accent')}
               hint={
-                lowContrastModes(draft.accent).length > 0 ? (
+                lowContrast.length > 0 ? (
                   <span className="text-amber-600 dark:text-amber-400">
-                    Little contrast against the {lowContrastModes(draft.accent).join(' and ')} page
-                    background: buttons and links may be hard to see for some visitors.
+                    {t(
+                      `studio.appearance.lowContrast.${lowContrast.length > 1 ? 'both' : lowContrast[0]}`
+                    )}
                   </span>
                 ) : (
-                  'Buttons, links and the focus ring.'
+                  t('studio.appearance.accentHint')
                 )
               }
             >
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  aria-label="Pick the accent colour"
+                  aria-label={t('studio.appearance.accentPick')}
                   value={ACCENT.test(draft.accent) ? draft.accent : '#000000'}
                   onChange={e => update({ accent: e.target.value })}
                   className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
@@ -109,7 +109,7 @@ export function AppearancePage({ draft, update }: PageProps) {
               </div>
             </Field>
             <fieldset className="space-y-1.5">
-              <legend className="text-sm font-medium">Font</legend>
+              <legend className="text-sm font-medium">{t('studio.appearance.font')}</legend>
               <div className="flex flex-wrap gap-2">
                 {SITE_FONTS.map(font => (
                   <label
@@ -126,7 +126,7 @@ export function AppearancePage({ draft, update }: PageProps) {
                       onChange={() => update({ font })}
                       className="sr-only"
                     />
-                    {FONT_LABELS[font]}
+                    {t(`studio.appearance.fonts.${font}`)}
                   </label>
                 ))}
               </div>
@@ -136,14 +136,11 @@ export function AppearancePage({ draft, update }: PageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Links to other Nostr content</CardTitle>
-            <CardDescription>
-              A description can mention people, videos of other creators and notes. Your site opens
-              your own videos itself; everything else goes to the viewer you choose here.
-            </CardDescription>
+            <CardTitle>{t('studio.appearance.linksTitle')}</CardTitle>
+            <CardDescription>{t('studio.appearance.linksDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Field id="link-preset" label="Open them on">
+            <Field id="link-preset" label={t('studio.appearance.openOn')}>
               <select
                 id="link-preset"
                 value={linkPresetOf(draft.links)}
@@ -155,31 +152,25 @@ export function AppearancePage({ draft, update }: PageProps) {
               >
                 {LINK_PRESETS.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.label}
+                    {t(`studio.appearance.presets.${p.id}`)}
                   </option>
                 ))}
-                {linkPresetOf(draft.links) === 'custom' && <option value="custom">Custom</option>}
+                {linkPresetOf(draft.links) === 'custom' && (
+                  <option value="custom">{t('studio.appearance.presets.custom')}</option>
+                )}
               </select>
             </Field>
             <details className="text-sm">
-              <summary className="cursor-pointer text-muted-foreground">Edit the addresses</summary>
+              <summary className="cursor-pointer text-muted-foreground">
+                {t('studio.appearance.editAddresses')}
+              </summary>
               <div className="space-y-3 pt-3">
-                {(
-                  [
-                    ['profile', 'People'],
-                    ['video', 'Videos'],
-                    ['note', 'Notes'],
-                  ] as const
-                ).map(([key, label]) => (
+                {(['profile', 'video', 'note'] as const).map(key => (
                   <Field
                     key={key}
                     id={`link-${key}`}
-                    label={label}
-                    hint={
-                      key === 'profile'
-                        ? 'An https:// address with {nip19} where the identifier goes.'
-                        : undefined
-                    }
+                    label={t(`studio.appearance.linkKinds.${key}`)}
+                    hint={key === 'profile' ? t('studio.appearance.profileHint') : undefined}
                   >
                     <Input
                       id={`link-${key}`}
@@ -197,19 +188,21 @@ export function AppearancePage({ draft, update }: PageProps) {
       </div>
 
       <aside>
-        <p className="mb-2 text-sm font-medium">Preview</p>
+        <p className="mb-2 text-sm font-medium">{t('studio.appearance.preview')}</p>
         <div
           ref={preview}
           className="space-y-3 rounded-lg border border-border bg-background p-4 text-foreground"
         >
           <div>
-            <p className="text-2xl font-semibold">{draft.title || 'Your title'}</p>
+            <p className="text-2xl font-semibold">
+              {draft.title || t('studio.appearance.previewTitle')}
+            </p>
             {draft.tagline && <p className="text-sm text-muted-foreground">{draft.tagline}</p>}
           </div>
           <div className="aspect-video rounded-md bg-muted" />
-          <p className="text-sm font-medium">A video title</p>
+          <p className="text-sm font-medium">{t('studio.appearance.previewVideo')}</p>
           <Button type="button" size="sm">
-            Primary button
+            {t('studio.appearance.previewButton')}
           </Button>
         </div>
       </aside>

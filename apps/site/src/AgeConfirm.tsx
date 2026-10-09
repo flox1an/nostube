@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 export interface AgeConfirmProps {
   onConfirm: () => void
   onCancel: () => void
@@ -5,6 +7,7 @@ export interface AgeConfirmProps {
 
 /** Asked once when the viewer opens a video with a content warning. */
 export function AgeConfirm({ onConfirm, onCancel }: AgeConfirmProps) {
+  const { t } = useTranslation()
   return (
     <section
       role="alertdialog"
@@ -12,26 +15,23 @@ export function AgeConfirm({ onConfirm, onCancel }: AgeConfirmProps) {
       className="space-y-3 rounded-lg border border-border bg-card p-4"
     >
       <h2 id="age-confirm-title" className="text-lg font-medium">
-        This video has a content warning
+        {t('site.ageGate.title')}
       </h2>
-      <p className="text-sm text-muted-foreground">
-        It may contain content that is not suitable for everyone. Confirm that you are 18 or older
-        to continue. Your confirmation is stored in this browser.
-      </p>
+      <p className="text-sm text-muted-foreground">{t('site.ageGate.body')}</p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={onConfirm}
           className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
         >
-          I am 18 or older
+          {t('site.ageGate.confirm')}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="rounded-md border border-border px-3 py-1.5 text-sm"
         >
-          Cancel
+          {t('site.ageGate.cancel')}
         </button>
       </div>
     </section>

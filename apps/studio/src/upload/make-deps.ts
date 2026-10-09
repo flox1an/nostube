@@ -1,5 +1,6 @@
 import { generateEventLink } from '@nostube/core/video-event'
 import { bootInstanceClient } from '../instance-client'
+import i18n from '../i18n'
 import type { Signer } from '../signer'
 import { uploadBlob } from './blossom-upload'
 import { probeVideo } from './probe-video'
@@ -55,8 +56,14 @@ export function makeUploadDeps({
       const accepted = responses.filter(r => r.ok).map(r => r.from)
       // "Sent" is not enough: a relay that says no (not a writer, blocked) must be reported.
       if (accepted.length === 0) {
-        const why = responses.map(r => `${r.from}: ${r.message || 'rejected'}`).join('; ')
-        throw new Error(`No relay accepted the video. ${why || 'No relay answered.'}`)
+        const why = responses
+          .map(r => `${r.from}: ${r.message || i18n.t('studio.errors.relayRejected')}`)
+          .join('; ')
+        throw new Error(
+          i18n.t('studio.errors.noRelayAccepted', {
+            reasons: why || i18n.t('studio.errors.noRelayAnswered'),
+          })
+        )
       }
       const identifier = template.tags.find(t => t[0] === 'd')?.[1] ?? ''
       return {

@@ -203,7 +203,7 @@ export const ControlBar = memo(function ControlBar({
             <ControlButton
               onClick={onTogglePip}
               icon={<PictureInPicture2 className="w-5 h-5" />}
-              label="Picture in Picture"
+              label={t('player.pictureInPicture')}
               shortcut="P"
             />
           )}
@@ -215,7 +215,7 @@ export const ControlBar = memo(function ControlBar({
             <ControlButton
               onClick={onToggleCaptions}
               icon={<Subtitles className="w-6 h-6" />}
-              label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
+              label={captionsEnabled ? t('player.disableCaptions') : t('player.enableCaptions')}
               shortcut="C"
               active={captionsEnabled}
             />
@@ -240,7 +240,7 @@ export const ControlBar = memo(function ControlBar({
             <ControlButton
               onClick={onToggleSidebar}
               icon={<PanelRight className="w-5 h-5" />}
-              label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              label={isSidebarOpen ? t('player.hideSidebar') : t('player.showSidebar')}
               shortcut="T"
               active={isSidebarOpen}
             />
@@ -251,7 +251,7 @@ export const ControlBar = memo(function ControlBar({
               <ControlButton
                 onClick={onToggleCinemaMode}
                 icon={<MoveHorizontal className="w-5 h-5" />}
-                label={cinemaMode ? 'Exit theater mode' : 'Theater mode'}
+                label={cinemaMode ? t('player.exitTheater') : t('player.theater')}
                 shortcut="T"
                 active={cinemaMode}
               />
@@ -264,7 +264,7 @@ export const ControlBar = memo(function ControlBar({
             icon={
               isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />
             }
-            label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            label={isFullscreen ? t('player.exitFullscreen') : t('player.fullscreen')}
             shortcut="F"
           />
         </div>

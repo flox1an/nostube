@@ -1,0 +1,93 @@
+{
+  "auth": {
+    "entry": {
+      "title": "欢迎"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "加载中…",
+      "loadFailed": "无法加载此网站。"
+    },
+    "auth": {
+      "signIn": "登录",
+      "signOut": "退出登录"
+    },
+    "breadcrumb": {
+      "label": "面包屑导航"
+    },
+    "ageGate": {
+      "title": "此视频带有内容警告",
+      "body": "其中可能包含不适合所有人观看的内容。请确认你已年满 18 岁后继续。你的确认会保存在此浏览器中。",
+      "confirm": "我已年满 18 岁",
+      "cancel": "取消"
+    },
+    "grid": {
+      "loadFailed": "无法加载视频。",
+      "retry": "重试",
+      "loadMore": "加载更多"
+    },
+    "video": {
+      "invalidLink": "此视频链接无效。",
+      "notFound": "未找到视频。",
+      "loading": "正在加载视频",
+      "tags": "标签",
+      "more": "展开",
+      "less": "收起"
+    },
+    "comments": {
+      "title": "评论",
+      "count_other": "{{count}} 条评论",
+      "signInToComment": "登录后评论",
+      "reply": "回复",
+      "delete": "删除",
+      "signInFirst": "请先登录。",
+      "refused": "已拒绝",
+      "postFailed": "无法发布评论：{{reason}}",
+      "deleteFailed": "无法删除评论：{{reason}}"
+    },
+    "reactions": {
+      "label_other": "点赞（{{count}} 个赞）",
+      "liking": "正在点赞…",
+      "signInToLike": "登录后点赞",
+      "refused": "已拒绝",
+      "noRelays": "没有中继确认",
+      "failed": "无法发布点赞：{{reason}}"
+    },
+    "zap": {
+      "button": "打赏",
+      "totalTitle": "已打赏 sats：{{sats}}",
+      "signIn": "登录后打赏",
+      "title": "发送闪电打赏",
+      "description": "你的打赏通过闪电网络支付，并作为已签名的 Nostr 打赏发布到此视频。",
+      "amount": "金额（sats）",
+      "comment": "留言（可选）",
+      "includeTimestamp": "在 {{time}} 打赏",
+      "createInvoice": "生成发票",
+      "creating": "正在生成发票…",
+      "invoiceHint": "用闪电钱包扫描发票，或在钱包应用中打开。在付款确认之前，它将保持待付状态。",
+      "waiting": "等待付款…",
+      "copy": "复制发票",
+      "copied": "已复制",
+      "openWallet": "在钱包中打开",
+      "payWebln": "使用浏览器钱包付款",
+      "paying": "正在付款…",
+      "paid": "打赏已发送，谢谢！",
+      "cancel": "取消",
+      "close": "关闭",
+      "retry": "重试",
+      "errors": {
+        "providerFailed": "无法连接创作者的闪电服务商：{{reason}}",
+        "providerNoNostr": "创作者的闪电服务商不支持 Nostr 打赏。",
+        "providerInvalid": "创作者的闪电服务商返回了无效数据。",
+        "invalidAmount": "请输入 {{min}} 到 {{max}} 之间的整数 sats。",
+        "videoUnavailable": "此视频的 Nostr 事件尚未加载，暂时无法打赏。",
+        "signFailed": "无法签名打赏请求：{{reason}}",
+        "invoiceFailed": "无法生成发票：{{reason}}",
+        "invoiceMismatch": "服务商返回的发票与请求金额不符，因此未显示。",
+        "paymentFailed": "付款失败：{{reason}}",
+        "copyFailed": "无法复制发票。"
+      }
+    }
+  }
+}

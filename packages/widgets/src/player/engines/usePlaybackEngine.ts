@@ -1,4 +1,5 @@
 import { useMemo, type RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VideoVariant } from '@nostube/core/video-event'
 import type { PlaybackUrlLadder } from '@nostube/core/playback-url-ladder'
 import { useHls } from '../hooks/useHls'
@@ -28,14 +29,15 @@ function useNativeEngine(
   selectedVariantIndex: number,
   handleVariantChange: (index: number) => void
 ): PlaybackEngine {
+  const { t } = useTranslation()
   const qualityOptions = useMemo(
     () =>
       (videoVariants ?? []).map((variant, index) => ({
         id: index,
-        label: qualityLabelFromVariant(variant, `Quality ${index + 1}`),
+        label: qualityLabelFromVariant(variant, t('player.qualityNumber', { number: index + 1 })),
         contributorPubkey: variant.contributorPubkey,
       })),
-    [videoVariants]
+    [videoVariants, t]
   )
 
   return {
@@ -65,6 +67,7 @@ function useHlsEngine(
   eventId: string | undefined,
   autoPlay: boolean
 ): PlaybackEngine {
+  const { t } = useTranslation()
   const { levels, currentLevel, activeLevel, setLevel, isLoading, error } = useHls(
     videoRef,
     videoUrl,
@@ -88,12 +91,14 @@ function useHlsEngine(
     () => [
       {
         id: -1,
-        label: 'Auto',
-        description: activeQualityLabel ? `Currently ${activeQualityLabel}` : undefined,
+        label: t('player.auto'),
+        description: activeQualityLabel
+          ? t('player.currentQuality', { quality: activeQualityLabel })
+          : undefined,
       },
       ...levels.map(level => ({ id: level.index, label: level.label })),
     ],
-    [levels, activeQualityLabel]
+    [levels, activeQualityLabel, t]
   )
 
   return {

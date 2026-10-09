@@ -66,7 +66,7 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
               )}
             </div>
           </Link>
-          <AuthArea relays={config.interactionRelays} />
+          <AuthArea client={client} relays={config.interactionRelays} />
         </header>
       )}
       <Routes>

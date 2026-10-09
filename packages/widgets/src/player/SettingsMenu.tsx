@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, memo, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Settings,
   ChevronRight,
@@ -72,6 +73,7 @@ export const SettingsMenu = memo(function SettingsMenu({
   loopEnabled = false,
   onToggleLoop,
 }: SettingsMenuProps) {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [currentView, setCurrentView] = useState<MenuView>('main')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -85,8 +87,8 @@ export const SettingsMenu = memo(function SettingsMenu({
   const currentQualityLabel =
     selectedQuality === -1
       ? activeQualityLabel
-        ? `Auto (${activeQualityLabel})`
-        : 'Auto'
+        ? `${t('player.auto')} (${activeQualityLabel})`
+        : t('player.auto')
       : selectedQualityOption
         ? selectedQualityOption.contributorPubkey
           ? `${selectedQualityOption.label} (${contributorDisplayName(
@@ -94,10 +96,12 @@ export const SettingsMenu = memo(function SettingsMenu({
               selectedQualityOption.contributorPubkey
             )})`
           : selectedQualityOption.label
-        : 'Unknown'
+        : t('player.unknown')
 
   const currentSpeedLabel =
-    PLAYBACK_SPEEDS.find(s => s.value === playbackRate)?.label || `${playbackRate}x`
+    playbackRate === 1
+      ? t('player.normalSpeed')
+      : PLAYBACK_SPEEDS.find(s => s.value === playbackRate)?.label || `${playbackRate}x`
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -176,7 +180,9 @@ export const SettingsMenu = memo(function SettingsMenu({
   const hasSubtitles = textTracks.length > 0
 
   // Build subtitle label
-  const currentSubtitleLabel = selectedSubtitleLang ? getLanguageLabel(selectedSubtitleLang) : 'Off'
+  const currentSubtitleLabel = selectedSubtitleLang
+    ? getLanguageLabel(selectedSubtitleLang)
+    : t('player.off')
 
   return (
     <div className="relative" ref={containerRef}>
@@ -185,7 +191,7 @@ export const SettingsMenu = memo(function SettingsMenu({
         type="button"
         onClick={handleToggle}
         className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-black/40"
-        aria-label="Settings"
+        aria-label={t('player.settings')}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
@@ -268,11 +274,12 @@ const MainMenu = memo(function MainMenu({
   onSubtitlesClick,
   onLoopClick,
 }: MainMenuProps) {
+  const { t } = useTranslation()
   return (
     <div role="menu">
       {hasQualityOptions && (
         <MenuItem
-          label="Quality"
+          label={t('player.quality')}
           value={currentQualityLabel}
           onClick={onQualityClick}
           hasSubmenu
@@ -280,7 +287,7 @@ const MainMenu = memo(function MainMenu({
         />
       )}
       <MenuItem
-        label="Playback speed"
+        label={t('player.playbackSpeed')}
         value={currentSpeedLabel}
         onClick={onSpeedClick}
         hasSubmenu
@@ -288,7 +295,7 @@ const MainMenu = memo(function MainMenu({
       />
       {hasSubtitles && (
         <MenuItem
-          label="Subtitles"
+          label={t('player.subtitles')}
           value={currentSubtitleLabel}
           onClick={onSubtitlesClick}
           hasSubmenu
@@ -296,7 +303,7 @@ const MainMenu = memo(function MainMenu({
         />
       )}
       <ToggleMenuItem
-        label="Loop"
+        label={t('player.loop')}
         enabled={loopEnabled}
         onClick={onLoopClick}
         icon={<Repeat className="w-4 h-4" />}
@@ -318,9 +325,10 @@ const QualitySubmenu = memo(function QualitySubmenu({
   onSelect,
   onBack,
 }: QualitySubmenuProps) {
+  const { t } = useTranslation()
   return (
     <div role="menu">
-      <SubmenuHeader title="Quality" onBack={onBack} />
+      <SubmenuHeader title={t('player.quality')} onBack={onBack} />
       {options.map(option => (
         <QualitySelectableItem
           key={option.id}
@@ -342,6 +350,7 @@ const QualitySelectableItem = memo(function QualitySelectableItem({
   isSelected: boolean
   onClick: () => void
 }) {
+  const { t } = useTranslation()
   const contributorProfile = useProfile(
     option.contributorPubkey ? { pubkey: option.contributorPubkey } : undefined
   )
@@ -362,6 +371,8 @@ const QualitySelectableItem = memo(function QualitySelectableItem({
         </span>
         <span className="truncate">{contributorName})</span>
       </span>
+    ) : option.id === -1 ? (
+      t('player.auto')
     ) : (
       option.label
     )
@@ -387,13 +398,14 @@ const SpeedSubmenu = memo(function SpeedSubmenu({
   onSelect,
   onBack,
 }: SpeedSubmenuProps) {
+  const { t } = useTranslation()
   return (
     <div role="menu">
-      <SubmenuHeader title="Playback speed" onBack={onBack} />
+      <SubmenuHeader title={t('player.playbackSpeed')} onBack={onBack} />
       {PLAYBACK_SPEEDS.map(speed => (
         <SelectableItem
           key={speed.value}
-          label={speed.label}
+          label={speed.value === 1 ? t('player.normalSpeed') : speed.label}
           isSelected={speed.value === currentValue}
           onClick={() => onSelect(speed.value)}
         />
@@ -415,10 +427,15 @@ const SubtitlesSubmenu = memo(function SubtitlesSubmenu({
   onSelect,
   onBack,
 }: SubtitlesSubmenuProps) {
+  const { t } = useTranslation()
   return (
     <div role="menu">
-      <SubmenuHeader title="Subtitles" onBack={onBack} />
-      <SelectableItem label="Off" isSelected={selectedLang === ''} onClick={() => onSelect('')} />
+      <SubmenuHeader title={t('player.subtitles')} onBack={onBack} />
+      <SelectableItem
+        label={t('player.off')}
+        isSelected={selectedLang === ''}
+        onClick={() => onSelect('')}
+      />
       {textTracks.map(track => (
         <SelectableItem
           key={track.lang}

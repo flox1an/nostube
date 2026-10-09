@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getPublishDate } from '@nostube/core/video-event'
 import { formatDate, formatDuration } from './format'
@@ -13,12 +14,8 @@ export interface VideoCardProps {
 }
 
 /** Thumbnail, title, duration and date of one video. Styling is Tailwind utilities only. */
-export function VideoCard({
-  video,
-  onSelect,
-  locked = false,
-  lockedLabel = 'Content warning',
-}: VideoCardProps) {
+export function VideoCard({ video, onSelect, locked = false, lockedLabel }: VideoCardProps) {
+  const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
   return (
@@ -30,7 +27,7 @@ export function VideoCard({
       <span className="relative block aspect-video overflow-hidden bg-neutral-200 sm:rounded-lg dark:bg-neutral-800">
         {locked && (
           <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-neutral-400">
-            {lockedLabel}
+            {lockedLabel ?? t('video.grid.contentWarning')}
           </span>
         )}
         {!locked && thumbnail && !thumbnailFailed && (
@@ -50,7 +47,7 @@ export function VideoCard({
       </span>
       <span className="line-clamp-2 px-4 text-sm font-medium sm:px-0">{video.title}</span>
       <span className="px-4 text-xs text-neutral-500 sm:px-0">
-        {formatDate(getPublishDate(video))}
+        {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
       </span>
     </button>
   )

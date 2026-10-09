@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import type { VideoEvent } from '@nostube/core/video-event'
@@ -12,6 +13,7 @@ import { videoPath } from './video-path'
 
 /** The grid of the creator's videos; a locked video asks for 18+ before its page opens. */
 export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGate }) {
+  const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
   const [pending, setPending] = useState<VideoEvent | null>(null)
   const navigate = useNavigate()
@@ -31,9 +33,9 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
       {pending && <AgeConfirm onConfirm={confirmAge} onCancel={() => setPending(null)} />}
       {error && (
         <Alert variant="destructive" className="flex items-center justify-between gap-4">
-          <AlertDescription>The videos could not be loaded.</AlertDescription>
+          <AlertDescription>{t('site.grid.loadFailed')}</AlertDescription>
           <Button type="button" variant="outline" size="sm" onClick={() => location.reload()}>
-            Try again
+            {t('site.grid.retry')}
           </Button>
         </Alert>
       )}
@@ -50,7 +52,7 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
           {hasMore && (
             <div className="text-center">
               <Button type="button" variant="outline" onClick={loadMore}>
-                Load more
+                {t('site.grid.loadMore')}
               </Button>
             </div>
           )}

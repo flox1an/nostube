@@ -278,22 +278,6 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         ),
     };
 
-    // Broken secrets only disable the admin area, never the instance (#7).
-    let admin = match admin::AdminState::open(
-        &data,
-        &cfg.origin_host,
-        covered_hosts,
-        &setup_origin,
-        boot_id.clone(),
-        handle.clone(),
-    ) {
-        Ok(a) => Some(admin::router(a)),
-        Err(e) => {
-            tracing::warn!("admin disabled: {e}");
-            None
-        }
-    };
-
     let mut blossom = almond::Config::defaults();
     blossom.storage_path = data.join("blossom");
     blossom.public_url = Some(cfg.origin.clone());
@@ -310,17 +294,35 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     let blossom = blossom.validate()?;
     let state = almond::build_state(&blossom).await?;
     let _tasks = almond::spawn_background_tasks(&state, &blossom);
+    let relay = relay::Relay::open(
+        &data.join("relay.sqlite"),
+        relay::RelayConfig {
+            writers: cfg.allowed_writers.clone(),
+            name: cfg.title.clone(),
+            description: format!("Relay of {}", cfg.title),
+        },
+    )?;
+
+    // Broken secrets only disable the admin area, never the instance (#7).
+    let admin = match admin::AdminState::open(
+        &data,
+        &cfg.origin_host,
+        covered_hosts,
+        &setup_origin,
+        boot_id.clone(),
+        handle.clone(),
+        admin::Stores { relay: relay.clone(), blossom: state.clone() },
+    ) {
+        Ok(a) => Some(admin::router(a)),
+        Err(e) => {
+            tracing::warn!("admin disabled: {e}");
+            None
+        }
+    };
 
     let app = App {
         blossom: almond::create_app(state),
-        relay: relay::Relay::open(
-            &data.join("relay.sqlite"),
-            relay::RelayConfig {
-                writers: cfg.allowed_writers.clone(),
-                name: cfg.title.clone(),
-                description: format!("Relay of {}", cfg.title),
-            },
-        )?,
+        relay,
         public_config: serde_json::to_vec(&cfg.public_json())?.into(),
         boot_id,
         admin,

@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Play, Pause } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/tooltip'
 import { Kbd } from '../components/kbd'
@@ -12,7 +13,8 @@ interface PlayButtonProps {
  * Play/Pause button for video controls
  */
 export const PlayButton = memo(function PlayButton({ isPlaying, onClick }: PlayButtonProps) {
-  const label = isPlaying ? 'Pause' : 'Play'
+  const { t } = useTranslation()
+  const label = isPlaying ? t('player.pause') : t('player.play')
 
   return (
     <Tooltip delayDuration={0}>

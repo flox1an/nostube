@@ -1,0 +1,97 @@
+{
+  "auth": {
+    "entry": {
+      "title": "Bienvenue"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "Chargement…",
+      "loadFailed": "Ce site n’a pas pu être chargé."
+    },
+    "auth": {
+      "signIn": "Se connecter",
+      "signOut": "Se déconnecter"
+    },
+    "breadcrumb": {
+      "label": "Fil d’Ariane"
+    },
+    "ageGate": {
+      "title": "Cette vidéo comporte un avertissement de contenu",
+      "body": "Elle peut contenir des contenus qui ne conviennent pas à tout le monde. Confirmez que vous avez 18 ans ou plus pour continuer. Votre confirmation est enregistrée dans ce navigateur.",
+      "confirm": "J’ai 18 ans ou plus",
+      "cancel": "Annuler"
+    },
+    "grid": {
+      "loadFailed": "Les vidéos n’ont pas pu être chargées.",
+      "retry": "Réessayer",
+      "loadMore": "Charger plus"
+    },
+    "video": {
+      "invalidLink": "Ce lien vidéo n’est pas valide.",
+      "notFound": "Vidéo introuvable.",
+      "loading": "Chargement de la vidéo",
+      "tags": "Mots-clés",
+      "more": "Plus",
+      "less": "Moins"
+    },
+    "comments": {
+      "title": "Commentaires",
+      "count_one": "{{count}} commentaire",
+      "count_many": "{{count}} commentaires",
+      "count_other": "{{count}} commentaires",
+      "signInToComment": "Se connecter pour commenter",
+      "reply": "Répondre",
+      "delete": "Supprimer",
+      "signInFirst": "Connectez-vous d’abord.",
+      "refused": "refusé",
+      "postFailed": "Le commentaire n’a pas pu être publié : {{reason}}",
+      "deleteFailed": "Le commentaire n’a pas pu être supprimé : {{reason}}"
+    },
+    "reactions": {
+      "label_one": "J’aime ({{count}} j’aime)",
+      "label_many": "J’aime ({{count}} j’aime)",
+      "label_other": "J’aime ({{count}} j’aime)",
+      "liking": "Envoi du j’aime…",
+      "signInToLike": "Se connecter pour aimer",
+      "refused": "refusé",
+      "noRelays": "aucun relais ne l’a confirmé",
+      "failed": "Le j’aime n’a pas pu être publié : {{reason}}"
+    },
+    "zap": {
+      "button": "Zap",
+      "totalTitle": "Sats zappés : {{sats}}",
+      "signIn": "Se connecter pour zapper",
+      "title": "Envoyer un zap Lightning",
+      "description": "Votre zap est payé via Lightning et publié comme zap Nostr signé pour cette vidéo.",
+      "amount": "Montant (sats)",
+      "comment": "Commentaire (facultatif)",
+      "includeTimestamp": "Zapper à {{time}}",
+      "createInvoice": "Créer la facture",
+      "creating": "Création de la facture…",
+      "invoiceHint": "Scannez la facture avec un portefeuille Lightning ou ouvrez-la dans votre application de portefeuille. Elle reste en attente jusqu'à la confirmation du paiement.",
+      "waiting": "En attente du paiement…",
+      "copy": "Copier la facture",
+      "copied": "Copié",
+      "openWallet": "Ouvrir dans le portefeuille",
+      "payWebln": "Payer avec le portefeuille du navigateur",
+      "paying": "Paiement en cours…",
+      "paid": "Zap envoyé. Merci !",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "retry": "Réessayer",
+      "errors": {
+        "providerFailed": "Le fournisseur Lightning du créateur est injoignable : {{reason}}",
+        "providerNoNostr": "Le fournisseur Lightning du créateur ne prend pas en charge les zaps Nostr.",
+        "providerInvalid": "Le fournisseur Lightning du créateur a envoyé des données invalides.",
+        "invalidAmount": "Saisissez un nombre entier de sats entre {{min}} et {{max}}.",
+        "videoUnavailable": "L'événement Nostr de cette vidéo n'est pas chargé ; elle ne peut pas encore être zappée.",
+        "signFailed": "La demande de zap n'a pas pu être signée : {{reason}}",
+        "invoiceFailed": "Aucune facture n'a pu être créée : {{reason}}",
+        "invoiceMismatch": "Le fournisseur a renvoyé une facture qui ne correspond pas au montant demandé. Elle n'a pas été affichée.",
+        "paymentFailed": "Le paiement a échoué : {{reason}}",
+        "copyFailed": "La facture n'a pas pu être copiée."
+      }
+    }
+  }
+}

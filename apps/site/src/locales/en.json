@@ -1,0 +1,95 @@
+{
+  "auth": {
+    "entry": {
+      "title": "Welcome"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "Loading…",
+      "loadFailed": "This site could not be loaded."
+    },
+    "auth": {
+      "signIn": "Sign in",
+      "signOut": "Sign out"
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb"
+    },
+    "ageGate": {
+      "title": "This video has a content warning",
+      "body": "It may contain content that is not suitable for everyone. Confirm that you are 18 or older to continue. Your confirmation is stored in this browser.",
+      "confirm": "I am 18 or older",
+      "cancel": "Cancel"
+    },
+    "grid": {
+      "loadFailed": "The videos could not be loaded.",
+      "retry": "Try again",
+      "loadMore": "Load more"
+    },
+    "video": {
+      "invalidLink": "This video link is not valid.",
+      "notFound": "Video not found.",
+      "loading": "Loading video",
+      "tags": "Tags",
+      "more": "More",
+      "less": "Less"
+    },
+    "comments": {
+      "title": "Comments",
+      "count_one": "{{count}} comment",
+      "count_other": "{{count}} comments",
+      "signInToComment": "Sign in to comment",
+      "reply": "Reply",
+      "delete": "Delete",
+      "signInFirst": "Sign in first.",
+      "refused": "refused",
+      "postFailed": "The comment could not be posted: {{reason}}",
+      "deleteFailed": "The comment could not be deleted: {{reason}}"
+    },
+    "reactions": {
+      "label_one": "Like ({{count}} like)",
+      "label_other": "Like ({{count}} likes)",
+      "liking": "Liking…",
+      "signInToLike": "Sign in to like",
+      "refused": "refused",
+      "noRelays": "no relay confirmed it",
+      "failed": "The like could not be published: {{reason}}"
+    },
+    "zap": {
+      "button": "Zap",
+      "totalTitle": "Sats zapped: {{sats}}",
+      "signIn": "Sign in to zap",
+      "title": "Send a Lightning Zap",
+      "description": "Your zap is paid over Lightning and published as a signed Nostr zap for this video.",
+      "amount": "Amount (sats)",
+      "comment": "Comment (optional)",
+      "includeTimestamp": "Zap at {{time}}",
+      "createInvoice": "Create invoice",
+      "creating": "Creating invoice…",
+      "invoiceHint": "Scan the invoice with a Lightning wallet or open it in your wallet app. It stays pending until the payment is confirmed.",
+      "waiting": "Waiting for payment…",
+      "copy": "Copy invoice",
+      "copied": "Copied",
+      "openWallet": "Open in wallet",
+      "payWebln": "Pay with browser wallet",
+      "paying": "Paying…",
+      "paid": "Zap sent. Thank you!",
+      "cancel": "Cancel",
+      "close": "Close",
+      "retry": "Try again",
+      "errors": {
+        "providerFailed": "The creator's Lightning provider could not be reached: {{reason}}",
+        "providerNoNostr": "The creator's Lightning provider does not support Nostr zaps.",
+        "providerInvalid": "The creator's Lightning provider sent invalid data.",
+        "invalidAmount": "Enter a whole number of sats between {{min}} and {{max}}.",
+        "videoUnavailable": "This video's Nostr event is not loaded, so it cannot be zapped yet.",
+        "signFailed": "The zap request could not be signed: {{reason}}",
+        "invoiceFailed": "No invoice could be created: {{reason}}",
+        "invoiceMismatch": "The provider returned an invoice that does not match the requested amount. It was not shown.",
+        "paymentFailed": "The payment failed: {{reason}}",
+        "copyFailed": "The invoice could not be copied."
+      }
+    }
+  }
+}

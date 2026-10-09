@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 /** What the page learns from a video file before it is uploaded. */
 export interface VideoProbe {
   width: number
@@ -27,7 +29,7 @@ export function fitWithin(width: number, height: number, maxWidth: number): [num
 function once(target: HTMLVideoElement, event: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error('The video took too long to load.')),
+      () => reject(new Error(i18n.t('studio.errors.loadTimeout'))),
       STEP_TIMEOUT_MS
     )
     target.addEventListener(
@@ -42,7 +44,7 @@ function once(target: HTMLVideoElement, event: string): Promise<void> {
       'error',
       () => {
         clearTimeout(timer)
-        reject(new Error('This browser cannot play the file.'))
+        reject(new Error(i18n.t('studio.errors.cannotPlay')))
       },
       { once: true }
     )
@@ -57,7 +59,9 @@ function once(target: HTMLVideoElement, event: string): Promise<void> {
 export async function probeVideo(file: File): Promise<VideoProbe> {
   if (!SUPPORTED_TYPES.includes(file.type)) {
     throw new Error(
-      `Only MP4 and WebM files can be published for now (this one is ${file.type || 'of an unknown type'}). Converting other formats is planned.`
+      file.type
+        ? i18n.t('studio.errors.unsupportedType', { type: file.type })
+        : i18n.t('studio.errors.unknownType')
     )
   }
   const url = URL.createObjectURL(file)
@@ -70,7 +74,7 @@ export async function probeVideo(file: File): Promise<VideoProbe> {
     video.src = url
     await loaded
     if (!video.videoWidth || !video.videoHeight || !Number.isFinite(video.duration)) {
-      throw new Error('This browser cannot play the file.')
+      throw new Error(i18n.t('studio.errors.cannotPlay'))
     }
     const { videoWidth: width, videoHeight: height, duration } = video
     const seeked = once(video, 'seeked')
@@ -83,7 +87,7 @@ export async function probeVideo(file: File): Promise<VideoProbe> {
     canvas.getContext('2d')!.drawImage(video, 0, 0, w, h)
     const thumbnail = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
-        blob => (blob ? resolve(blob) : reject(new Error('No still could be taken.'))),
+        blob => (blob ? resolve(blob) : reject(new Error(i18n.t('studio.errors.noStill')))),
         'image/jpeg',
         0.85
       )

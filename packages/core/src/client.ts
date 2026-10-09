@@ -226,6 +226,23 @@ export function createNostubeClient(config: NostubeClientConfig) {
   // Initialize EventStore
   const eventStore = new EventStore()
   const relayPool = new RelayPool()
+  // The visitor identity is the only instance lookup allowed outside the configured relay set.
+  const identityGroup = relayPool.group.bind(relayPool)
+  function requestVisitorIdentity(pubkey: string, relays: string[]) {
+    if (!/^[a-f0-9]{64}$/.test(pubkey)) throw new Error('Invalid visitor public key')
+    return identityGroup(relays)
+      .request([
+        { kinds: [0], authors: [pubkey], limit: 1 },
+        { kinds: [10002], authors: [pubkey], limit: 1 },
+      ])
+      .pipe(
+        filter(
+          (event: NostrEvent) =>
+            event.pubkey === pubkey && (event.kind === 0 || event.kind === 10002)
+        ),
+        filterDuplicateEvents(eventStore)
+      )
+  }
   const originalRequest = relayPool.request.bind(relayPool)
 
   relayPool.request = ((relays, filters, opts) => {
@@ -440,6 +457,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
     cacheEvents,
     cacheRequest,
     getTimelineLoader,
+    requestVisitorIdentity,
     subscriptionMethod,
     publishMethod,
     reset,

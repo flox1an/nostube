@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { Skeleton } from './components/skeleton'
 import { VideoCard } from './VideoCard'
@@ -11,14 +12,12 @@ export interface VideoGridProps {
   emptyMessage?: string
 }
 
-export function VideoGrid({
-  videos,
-  onSelect,
-  isLocked,
-  emptyMessage = 'No videos yet.',
-}: VideoGridProps) {
+export function VideoGrid({ videos, onSelect, isLocked, emptyMessage }: VideoGridProps) {
+  const { t } = useTranslation()
   if (videos.length === 0) {
-    return <p className="py-12 text-center text-neutral-500">{emptyMessage}</p>
+    return (
+      <p className="py-12 text-center text-neutral-500">{emptyMessage ?? t('video.grid.empty')}</p>
+    )
   }
   return (
     <ul className={GRID_CLASSES}>
@@ -38,8 +37,9 @@ const GRID_CLASSES = 'grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-co
  * cards, they are meant to run edge to edge on a phone: the page lets the grid bleed (`-mx-4`).
  */
 export function VideoGridSkeleton({ count = 8 }: { count?: number }) {
+  const { t } = useTranslation()
   return (
-    <ul className={GRID_CLASSES} aria-busy="true" aria-label="Loading videos">
+    <ul className={GRID_CLASSES} aria-busy="true" aria-label={t('video.grid.loading')}>
       {Array.from({ length: count }, (_, i) => (
         <li key={i} className="flex flex-col gap-2">
           <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />

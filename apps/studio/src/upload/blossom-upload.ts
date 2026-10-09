@@ -1,6 +1,7 @@
 import type { EventTemplate } from 'nostr-tools'
 import { blossomAuthorization, buildUploadAuth, uploadAuthTtl } from '@nostube/core/blossom-auth'
 import type { UploadedBlob } from '@nostube/core/video-publish'
+import i18n from '../i18n'
 import type { SignedEvent } from '../signer'
 
 /** One piece of a large file: well inside the server's 60 s limit per request, far below its chunk cap. */
@@ -45,7 +46,9 @@ async function reason(response: Response): Promise<string> {
   const header = response.headers.get('X-Reason')
   if (header) return header
   const text = await response.text().catch(() => '')
-  return text.trim().slice(0, 200) || `The server answered ${response.status}.`
+  return (
+    text.trim().slice(0, 200) || i18n.t('studio.errors.serverStatus', { status: response.status })
+  )
 }
 
 /** 5xx, 408 and network trouble may pass; a 4xx is the server saying no. */
@@ -70,13 +73,10 @@ async function withRetries<T>(
 function toDescriptor(body: unknown, expected: { sha256: string }): UploadedBlob {
   const d = body as Partial<UploadedBlob> | null
   if (!d || typeof d.url !== 'string' || typeof d.sha256 !== 'string') {
-    throw new UploadError('The server did not answer with a blob description.', false)
+    throw new UploadError(i18n.t('studio.errors.noDescriptor'), false)
   }
   if (d.sha256 !== expected.sha256) {
-    throw new UploadError(
-      'The server stored a different file than the one sent (the hashes differ).',
-      false
-    )
+    throw new UploadError(i18n.t('studio.errors.hashMismatch'), false)
   }
   return {
     url: d.url,
@@ -113,7 +113,7 @@ export async function uploadBlob(options: UploadOptions): Promise<UploadedBlob> 
       response = await fetchImpl(`${base}${path}`, { ...init, signal })
     } catch (error) {
       if (signal?.aborted) throw error
-      throw new UploadError('The connection to the server failed.', true)
+      throw new UploadError(i18n.t('studio.errors.connectionFailed'), true)
     }
     if (!response.ok) {
       throw new UploadError(await reason(response), transient(response.status), response.status)
@@ -172,7 +172,7 @@ export async function uploadBlob(options: UploadOptions): Promise<UploadedBlob> 
   if (!last || last.status !== 200) {
     // The server does not have all of it (it restarted, or the session ran out): begin again.
     options.onOffset?.(0)
-    throw new UploadError('The server did not finish the upload after the last piece.', true)
+    throw new UploadError(i18n.t('studio.errors.unfinished'), true)
   }
   return toDescriptor(await last.json(), { sha256 })
 }

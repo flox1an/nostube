@@ -135,6 +135,23 @@ struct Inner {
     live: broadcast::Sender<Arc<Event>>,
 }
 
+impl Inner {
+    /// An idle read connection, or a new one.
+    fn reader(&self) -> rusqlite::Result<Connection> {
+        match self.readers.lock().pop() {
+            Some(c) => Ok(c),
+            None => connect(&self.path),
+        }
+    }
+
+    fn release(&self, conn: Connection) {
+        let mut idle = self.readers.lock();
+        if idle.len() < IDLE_READERS {
+            idle.push(conn);
+        }
+    }
+}
+
 /// What `persist` did with an event.
 #[derive(Debug, PartialEq)]
 enum Saved {
@@ -144,6 +161,15 @@ enum Saved {
     Superseded,
     /// Its author deleted it (NIP-09).
     Deleted,
+}
+
+/// What the studio overview shows of the relay.
+pub struct RelayStats {
+    /// Stored, unexpired events per kind, ascending by kind. Superseded and deleted events are
+    /// gone from the table (`persist` deletes them), so they are not counted.
+    pub by_kind: Vec<(u16, u64)>,
+    /// The SQLite database file plus its write-ahead log (`-wal`); the `-shm` index is left out.
+    pub database_bytes: u64,
 }
 
 impl Relay {
@@ -213,23 +239,36 @@ impl Relay {
         let prefix = format!("[\"EVENT\",{},", serde_json::Value::from(sub.as_str()));
         let inner = self.0.clone();
         tokio::task::spawn_blocking(move || {
-            let conn = match inner.readers.lock().pop() {
-                Some(c) => c,
-                None => match connect(&inner.path) {
-                    Ok(c) => c,
-                    Err(e) => return tracing::warn!("relay: opening read connection: {e}"),
-                },
+            let conn = match inner.reader() {
+                Ok(c) => c,
+                Err(e) => return tracing::warn!("relay: opening read connection: {e}"),
             };
             let now = Timestamp::now().as_secs() as i64;
             if let Err(e) = run_query(&conn, &filters, now, |content| tx.blocking_send(format!("{prefix}{content}]")).is_ok()) {
                 tracing::warn!("relay: query failed: {e}");
             }
-            let mut idle = inner.readers.lock();
-            if idle.len() < IDLE_READERS {
-                idle.push(conn);
-            }
+            inner.release(conn);
         });
         rx
+    }
+
+    /// Event counts and database size for the admin overview, read on a read connection.
+    pub async fn stats(&self) -> Result<RelayStats, BoxError> {
+        let inner = self.0.clone();
+        tokio::task::spawn_blocking(move || -> Result<RelayStats, BoxError> {
+            let conn = inner.reader()?;
+            let by_kind = count_by_kind(&conn, Timestamp::now().as_secs() as i64);
+            inner.release(conn);
+            let mut wal = inner.path.clone().into_os_string();
+            wal.push("-wal");
+            let wal = match std::fs::metadata(wal) {
+                Ok(m) => m.len(),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => 0,
+                Err(e) => return Err(e.into()),
+            };
+            Ok(RelayStats { by_kind: by_kind?, database_bytes: std::fs::metadata(&inner.path)?.len() + wal })
+        })
+        .await?
     }
 
     async fn session(self, mut ws: WebSocket) {
@@ -292,6 +331,15 @@ fn connect(path: &Path) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
     conn.execute_batch(STARTUP)?;
     Ok(conn)
+}
+
+/// Stored events per kind that are not expired at `now` (same rule as `filter_sql`).
+fn count_by_kind(conn: &Connection, now: i64) -> rusqlite::Result<Vec<(u16, u64)>> {
+    let mut stmt = conn.prepare(
+        "SELECT kind, COUNT(*) FROM event WHERE expires_at IS NULL OR expires_at >= ? GROUP BY kind ORDER BY kind",
+    )?;
+    let rows = stmt.query_map([now], |r| Ok((r.get(0)?, r.get::<_, i64>(1)? as u64)))?;
+    rows.collect()
 }
 
 /// NIP-01 replaceable kinds. Not `Kind::is_replaceable`: that also counts kind 41 (NIP-28),
@@ -1337,5 +1385,33 @@ mod tests {
         assert!(!queried(&relay).await.iter().any(|e| e.id == old.id));
         assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &new.id.to_hex()]])).await).0);
         assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "-", &[&["a", &address], &["e", &old_id]])).await).0);
+    }
+
+    #[tokio::test]
+    async fn stats_count_only_live_rows_per_kind() {
+        let relay = open(vec![]);
+        let a = Keys::generate();
+        let now = Timestamp::now().as_secs();
+        let past = (now - 1).to_string();
+        let doomed = ev(&a, 1, now, "deleted", &[]);
+        for e in [
+            ev(&a, 0, now - 20, "old profile", &[]),
+            ev(&a, 0, now - 10, "profile", &[]),
+            ev(&a, 34235, now - 20, "v1", &[&["d", "clip"]]),
+            ev(&a, 34235, now - 10, "v2", &[&["d", "clip"]]),
+            ev(&a, 34235, now - 10, "other", &[&["d", "other"]]),
+            ev(&a, 1, now, "kept", &[]),
+            ev(&a, 1, now, "kept too", &[]),
+            ev(&a, 1, now, "expired", &[&["expiration", &past]]),
+            doomed.clone(),
+            ev(&a, 5, now, "", &[&["e", &doomed.id.to_hex()]]),
+        ] {
+            put(&relay, &e);
+        }
+        let stats = relay.stats().await.unwrap();
+        // Superseded, deleted and expired rows are not counted; kinds ascend.
+        assert_eq!(stats.by_kind, vec![(0, 1), (1, 2), (5, 1), (34235, 2)]);
+        assert!(stats.database_bytes >= std::fs::metadata(&relay.0.path).unwrap().len());
+        assert!(stats.database_bytes > 0);
     }
 }

@@ -1,4 +1,5 @@
 import { useState, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatTimestamp } from '@nostube/core/format-utils'
 
 interface TimeDisplayProps {
@@ -11,6 +12,7 @@ interface TimeDisplayProps {
  * Click to toggle between elapsed and remaining time
  */
 export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: TimeDisplayProps) {
+  const { t } = useTranslation()
   const [showRemaining, setShowRemaining] = useState(false)
 
   const toggleMode = () => setShowRemaining(prev => !prev)
@@ -24,7 +26,7 @@ export const TimeDisplay = memo(function TimeDisplay({ currentTime, duration }: 
       type="button"
       onClick={toggleMode}
       className="flex items-center text-white text-sm font-medium tabular-nums whitespace-nowrap p-2 rounded-full cursor-pointer transition-all hover:bg-black/40"
-      title={showRemaining ? 'Click to show elapsed time' : 'Click to show remaining time'}
+      title={showRemaining ? t('player.showElapsed') : t('player.showRemaining')}
     >
       <span>
         {prefix}

@@ -13,7 +13,9 @@ export function useEscapeToHome() {
       const target = event.target
       if (
         target instanceof Element &&
-        target.closest('input, textarea, select, [contenteditable="true"]')
+        target.closest(
+          'input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"]'
+        )
       )
         return
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return

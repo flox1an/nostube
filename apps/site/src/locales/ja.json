@@ -1,0 +1,93 @@
+{
+  "auth": {
+    "entry": {
+      "title": "ようこそ"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "読み込み中…",
+      "loadFailed": "このサイトを読み込めませんでした。"
+    },
+    "auth": {
+      "signIn": "ログイン",
+      "signOut": "ログアウト"
+    },
+    "breadcrumb": {
+      "label": "パンくずリスト"
+    },
+    "ageGate": {
+      "title": "この動画にはコンテンツ警告があります",
+      "body": "すべての人に適しているとは限らない内容が含まれている可能性があります。続行するには18歳以上であることを確認してください。確認内容はこのブラウザーに保存されます。",
+      "confirm": "18歳以上です",
+      "cancel": "キャンセル"
+    },
+    "grid": {
+      "loadFailed": "動画を読み込めませんでした。",
+      "retry": "再試行",
+      "loadMore": "さらに読み込む"
+    },
+    "video": {
+      "invalidLink": "この動画リンクは無効です。",
+      "notFound": "動画が見つかりません。",
+      "loading": "動画を読み込み中",
+      "tags": "タグ",
+      "more": "もっと見る",
+      "less": "閉じる"
+    },
+    "comments": {
+      "title": "コメント",
+      "count_other": "{{count}} 件のコメント",
+      "signInToComment": "ログインしてコメント",
+      "reply": "返信",
+      "delete": "削除",
+      "signInFirst": "先にログインしてください。",
+      "refused": "拒否されました",
+      "postFailed": "コメントを投稿できませんでした：{{reason}}",
+      "deleteFailed": "コメントを削除できませんでした：{{reason}}"
+    },
+    "reactions": {
+      "label_other": "いいね（{{count}} 件）",
+      "liking": "いいね中…",
+      "signInToLike": "ログインしていいね",
+      "refused": "拒否されました",
+      "noRelays": "どのリレーも確認しませんでした",
+      "failed": "いいねを公開できませんでした：{{reason}}"
+    },
+    "zap": {
+      "button": "Zap",
+      "totalTitle": "Zap された sats：{{sats}}",
+      "signIn": "ログインして Zap",
+      "title": "Lightning Zap を送る",
+      "description": "Zap は Lightning で支払われ、この動画への署名付き Nostr Zap として公開されます。",
+      "amount": "金額（sats）",
+      "comment": "コメント（任意）",
+      "includeTimestamp": "{{time}} の時点で Zap",
+      "createInvoice": "請求書を作成",
+      "creating": "請求書を作成中…",
+      "invoiceHint": "Lightning ウォレットで請求書をスキャンするか、ウォレットアプリで開いてください。支払いが確認されるまで保留中のままです。",
+      "waiting": "支払いを待っています…",
+      "copy": "請求書をコピー",
+      "copied": "コピーしました",
+      "openWallet": "ウォレットで開く",
+      "payWebln": "ブラウザのウォレットで支払う",
+      "paying": "支払い中…",
+      "paid": "Zap を送りました。ありがとうございます！",
+      "cancel": "キャンセル",
+      "close": "閉じる",
+      "retry": "再試行",
+      "errors": {
+        "providerFailed": "クリエイターの Lightning プロバイダーに接続できません：{{reason}}",
+        "providerNoNostr": "クリエイターの Lightning プロバイダーは Nostr Zap に対応していません。",
+        "providerInvalid": "クリエイターの Lightning プロバイダーから無効なデータが返されました。",
+        "invalidAmount": "{{min}}〜{{max}} の整数の sats を入力してください。",
+        "videoUnavailable": "この動画の Nostr イベントが読み込まれていないため、まだ Zap できません。",
+        "signFailed": "Zap リクエストに署名できませんでした：{{reason}}",
+        "invoiceFailed": "請求書を作成できませんでした：{{reason}}",
+        "invoiceMismatch": "プロバイダーが要求金額と一致しない請求書を返したため、表示しませんでした。",
+        "paymentFailed": "支払いに失敗しました：{{reason}}",
+        "copyFailed": "請求書をコピーできませんでした。"
+      }
+    }
+  }
+}

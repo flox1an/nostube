@@ -1,4 +1,5 @@
 import { verifyEvent, type EventTemplate } from 'nostr-tools'
+import i18n from '../i18n'
 import type { SignedEvent, Signer } from '../signer'
 
 /**
@@ -15,8 +16,8 @@ export async function signChecked(
   // from a signer must be checked afresh.
   const signed = JSON.parse(JSON.stringify(await signer.signEvent(template))) as SignedEvent
   if (signed.pubkey !== expectedPubkey) {
-    throw new Error('The signer signed with a different key than the one connected here.')
+    throw new Error(i18n.t('studio.errors.differentKey'))
   }
-  if (!verifyEvent(signed)) throw new Error('The signer returned an invalid signature.')
+  if (!verifyEvent(signed)) throw new Error(i18n.t('studio.errors.invalidSignature'))
   return signed
 }

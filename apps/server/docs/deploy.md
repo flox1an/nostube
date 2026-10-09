@@ -16,6 +16,29 @@ docker compose logs nostube                         # the admin setup link is pr
 Open the setup link, choose the admin password, and continue in the studio at `/studio/`.
 Caddy gets and renews the certificate by itself (ports 80 and 443 have to be reachable).
 
+Site and Studio support English, German, French, Spanish, Russian, Chinese and Japanese.
+The public Site uses the first supported browser language, falling back to English; it has no
+language selector and ignores saved language preferences. Studio offers its operator language
+selector under **Server → Instance**, remembered in that browser (`i18nextLng`), not in the instance configuration.
+Creator titles, descriptions and other published content are not translated. Long descriptions
+on the Site's video page start collapsed to three lines and can be expanded with More/Less.
+Video sharing can include the play position, and description timestamps are parsed as player
+chapters. Signed-in visitors can like videos and send Lightning zaps through the creator's
+LNURL-pay provider (QR/external wallet or an injected WebLN wallet). Like publishing needs an
+accepting interaction relay; zap totals include only validated provider receipts.
+
+The signed-in visitor's name and avatar are discovered through public profile indexers and
+their NIP-65 write relays. This identity lookup does not widen the site's video sources or
+the relays used to publish interactions.
+The Site's first login dialog uses a translated, brand-neutral “Welcome” heading.
+
+**Server → Overview** in Studio shows the built-in relay's live event count and distribution
+by kind, SQLite size (including WAL), and Blossom's file count, used storage, configured
+quota and free disk space. A refresh button reloads the numbers. Upload/download counts
+and bytes served are process-local counters and reset on restart. The quota bar is hidden
+when storage is unlimited. `GET /api/admin/stats` requires the admin session; it does not
+enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
+
 ## What you have to set
 
 | What               | How                                                            | Why                                                                                                                                                                                                                                |

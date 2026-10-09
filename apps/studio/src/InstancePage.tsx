@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next'
 import {
   Card,
   CardContent,
@@ -6,6 +7,7 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
+import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import type { AdminState } from './api'
 import { Field } from './fields'
@@ -15,20 +17,29 @@ const lines = 'font-mono text-xs'
 
 /** Whose videos the site shows, where they come from, who may write, search and storage. */
 export function InstancePage({ draft, update, state }: PageProps & { state: AdminState }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Creators and relays</CardTitle>
-          <CardDescription>
-            Whose videos the site shows, and where they are read from.
-          </CardDescription>
+          <CardTitle>{t('common.interfaceLanguage')}</CardTitle>
+          <CardDescription>{t('studio.instance.languageHint')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InterfaceLanguageSelect />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.instance.creatorsTitle')}</CardTitle>
+          <CardDescription>{t('studio.instance.creatorsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Field
             id="creators"
-            label="Displayed creators"
-            hint="One hex or npub key per line. The first one is the start page."
+            label={t('studio.instance.creators')}
+            hint={t('studio.instance.creatorsHint')}
           >
             <Textarea
               id="creators"
@@ -41,8 +52,8 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
           </Field>
           <Field
             id="writers"
-            label="Allowed writers"
-            hint="One key per line. These keys may publish to your relay and upload to your storage."
+            label={t('studio.instance.writers')}
+            hint={t('studio.instance.writersHint')}
           >
             <Textarea
               id="writers"
@@ -55,8 +66,8 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
           </Field>
           <Field
             id="video-sources"
-            label="Video sources"
-            hint="One ws:// or wss:// relay per line."
+            label={t('studio.instance.videoSources')}
+            hint={t('studio.instance.videoSourcesHint')}
           >
             <Textarea
               id="video-sources"
@@ -69,8 +80,8 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
           </Field>
           <Field
             id="interaction-relays"
-            label="Interaction relays"
-            hint="One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps."
+            label={t('studio.instance.interactionRelays')}
+            hint={t('studio.instance.interactionRelaysHint')}
           >
             <Textarea
               id="interaction-relays"
@@ -86,23 +97,27 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
 
       <Card>
         <CardHeader>
-          <CardTitle>Search</CardTitle>
+          <CardTitle>{t('studio.instance.search')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field id="search-mode" label="Search">
+          <Field id="search-mode" label={t('studio.instance.search')}>
             <select
               id="search-mode"
               value={draft.searchMode}
               onChange={e => update({ searchMode: e.target.value as typeof draft.searchMode })}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="off">Off</option>
-              <option value="local">Local</option>
-              <option value="external">External</option>
+              <option value="off">{t('studio.instance.searchModes.off')}</option>
+              <option value="local">{t('studio.instance.searchModes.local')}</option>
+              <option value="external">{t('studio.instance.searchModes.external')}</option>
             </select>
           </Field>
           {draft.searchMode === 'external' && (
-            <Field id="search-url" label="Search instance" hint="An https:// URL.">
+            <Field
+              id="search-url"
+              label={t('studio.instance.searchUrl')}
+              hint={t('studio.instance.searchUrlHint')}
+            >
               <Input
                 id="search-url"
                 value={draft.searchUrl}
@@ -116,10 +131,14 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
 
       <Card>
         <CardHeader>
-          <CardTitle>Storage</CardTitle>
+          <CardTitle>{t('studio.instance.storage')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field id="quota" label="Quota (GiB)" hint="0 means unlimited.">
+          <Field
+            id="quota"
+            label={t('studio.instance.quota')}
+            hint={t('studio.instance.quotaHint')}
+          >
             <Input
               id="quota"
               type="number"
@@ -128,7 +147,7 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
               onChange={e => update({ quota: e.target.value })}
             />
           </Field>
-          <Field id="reserve" label="Free-space reserve (GiB)">
+          <Field id="reserve" label={t('studio.instance.reserve')}>
             <Input
               id="reserve"
               type="number"
@@ -141,7 +160,11 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Origin <code>{state.origin}</code> and TLS ({state.tls}) are fixed here.
+        <Trans
+          i18nKey="studio.instance.fixed"
+          values={{ origin: state.origin, tls: state.tls }}
+          components={{ code: <code /> }}
+        />
       </p>
     </div>
   )

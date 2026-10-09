@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
@@ -8,6 +9,7 @@ import { AppearancePage } from './AppearancePage'
 import { ConnectKey } from './ConnectKey'
 import { InstancePage } from './InstancePage'
 import { Nav } from './Nav'
+import { OverviewPage } from './OverviewPage'
 import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
@@ -33,6 +35,7 @@ type Saving = null | 'saving' | 'restarting' | 'stalled'
 
 export function App() {
   const [phase, setPhase] = useState<Phase>({ name: 'loading' })
+  const { t } = useTranslation()
 
   const load = useCallback(async () => {
     try {
@@ -57,10 +60,10 @@ export function App() {
     return (
       <Shell>
         <div className="space-y-3 py-12 text-center">
-          <p className="text-lg font-medium">You are logged out</p>
-          <p className="text-sm text-muted-foreground">Log in to manage this instance.</p>
+          <p className="text-lg font-medium">{t('studio.app.loggedOut')}</p>
+          <p className="text-sm text-muted-foreground">{t('studio.app.logInHint')}</p>
           <Button asChild>
-            <a href="/admin/login">Log in</a>
+            <a href="/admin/login">{t('studio.app.logIn')}</a>
           </Button>
         </div>
       </Shell>
@@ -70,7 +73,7 @@ export function App() {
     return (
       <Shell>
         <Alert variant="destructive">
-          <AlertTitle>The studio could not load</AlertTitle>
+          <AlertTitle>{t('studio.app.loadFailed')}</AlertTitle>
           <AlertDescription>{phase.message}</AlertDescription>
         </Alert>
       </Shell>
@@ -94,26 +97,27 @@ export function Shell({
   children: React.ReactNode
   onLogout?: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
           <img src={`${import.meta.env.BASE_URL}nostube.svg`} alt="" className="h-9 w-9" />
-          Nostube Studio
+          {t('studio.shell.title')}
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
           >
-            View site
+            {t('studio.shell.viewSite')}
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
           {onLogout && (
             <Button type="button" variant="outline" size="sm" onClick={onLogout}>
-              Log out
+              {t('studio.shell.logOut')}
             </Button>
           )}
         </div>
@@ -125,11 +129,12 @@ export function Shell({
 
 function Studio({ state, reload }: { state: AdminState; reload: () => Promise<void> }) {
   const [page, navigate] = useRoute()
+  const { t } = useTranslation()
   const [draft, setDraft] = useState<Draft>(() => toDraft(state.config))
   const [saving, setSaving] = useState<Saving>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const saved = useMemo(() => toDraft(state.config), [state.config])
-  const result = useMemo(() => fromDraft(draft), [draft])
+  const result = fromDraft(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
 
@@ -173,16 +178,15 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
 
       {saving === 'stalled' && (
         <Alert variant="destructive">
-          <AlertTitle>The server did not come back</AlertTitle>
+          <AlertTitle>{t('studio.app.stalledTitle')}</AlertTitle>
           <AlertDescription>
-            The new settings are saved, but nothing restarted the server. Start it again, or run{' '}
-            <code>nostube-server config rollback</code> to return to the previous settings.
+            <Trans i18nKey="studio.app.stalledBody" components={{ code: <code /> }} />
           </AlertDescription>
         </Alert>
       )}
       {saveError && (
         <Alert variant="destructive">
-          <AlertTitle>Not saved</AlertTitle>
+          <AlertTitle>{t('studio.app.notSaved')}</AlertTitle>
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       )}
@@ -196,6 +200,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       {page === 'appearance' && <AppearancePage draft={draft} update={update} />}
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
+      {page === 'overview' && <OverviewPage />}
 
       {editsConfig && (
         <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
@@ -206,17 +211,17 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
               ))}
             </ul>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               onClick={save}
               disabled={!dirty || !result.config || saving !== null}
             >
               {saving === 'saving'
-                ? 'Saving…'
+                ? t('studio.app.saving')
                 : saving === 'restarting'
-                  ? 'Restarting the server…'
-                  : 'Save and apply'}
+                  ? t('studio.app.restarting')
+                  : t('studio.app.save')}
             </Button>
             <Button
               type="button"
@@ -224,11 +229,9 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
               disabled={!dirty || saving !== null}
               onClick={() => setDraft(saved)}
             >
-              Discard changes
+              {t('studio.app.discard')}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Saving restarts the server for a few seconds. The previous settings are kept.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('studio.app.saveHint')}</p>
           </div>
         </div>
       )}

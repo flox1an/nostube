@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 
@@ -13,8 +14,12 @@ export function Breadcrumb({
   /** Leave out on a page that is not a video (an error notice): only the site title shows. */
   current?: ReactNode
 }) {
+  const { t } = useTranslation()
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+    <nav
+      aria-label={t('site.breadcrumb.label')}
+      className="flex min-w-0 items-center gap-2 text-sm"
+    >
       <Link to="/" className="flex shrink-0 items-center gap-2 font-medium hover:underline">
         {picture && <img src={picture} alt="" className="h-6 w-6 rounded-full object-cover" />}
         {title}

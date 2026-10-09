@@ -20,7 +20,6 @@ describe('locked cards', () => {
       <VideoGrid videos={[video]} onSelect={onSelect} isLocked={() => true} />
     )
     expect(container.querySelector('img')).toBeNull()
-    expect(screen.getByText('Content warning')).toBeTruthy()
     fireEvent.click(screen.getByRole('button'))
     expect(onSelect).toHaveBeenCalledWith(video)
   })

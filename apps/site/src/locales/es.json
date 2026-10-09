@@ -1,0 +1,97 @@
+{
+  "auth": {
+    "entry": {
+      "title": "Bienvenido"
+    }
+  },
+  "site": {
+    "app": {
+      "loading": "Cargando…",
+      "loadFailed": "No se pudo cargar este sitio."
+    },
+    "auth": {
+      "signIn": "Iniciar sesión",
+      "signOut": "Cerrar sesión"
+    },
+    "breadcrumb": {
+      "label": "Ruta de navegación"
+    },
+    "ageGate": {
+      "title": "Este vídeo tiene una advertencia de contenido",
+      "body": "Puede contener contenido que no es apto para todo el mundo. Confirma que tienes 18 años o más para continuar. Tu confirmación se guarda en este navegador.",
+      "confirm": "Tengo 18 años o más",
+      "cancel": "Cancelar"
+    },
+    "grid": {
+      "loadFailed": "No se pudieron cargar los vídeos.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más"
+    },
+    "video": {
+      "invalidLink": "Este enlace de vídeo no es válido.",
+      "notFound": "Vídeo no encontrado.",
+      "loading": "Cargando vídeo",
+      "tags": "Etiquetas",
+      "more": "Más",
+      "less": "Menos"
+    },
+    "comments": {
+      "title": "Comentarios",
+      "count_one": "{{count}} comentario",
+      "count_many": "{{count}} comentarios",
+      "count_other": "{{count}} comentarios",
+      "signInToComment": "Inicia sesión para comentar",
+      "reply": "Responder",
+      "delete": "Eliminar",
+      "signInFirst": "Inicia sesión primero.",
+      "refused": "rechazado",
+      "postFailed": "No se pudo publicar el comentario: {{reason}}",
+      "deleteFailed": "No se pudo eliminar el comentario: {{reason}}"
+    },
+    "reactions": {
+      "label_one": "Me gusta ({{count}} me gusta)",
+      "label_many": "Me gusta ({{count}} me gusta)",
+      "label_other": "Me gusta ({{count}} me gusta)",
+      "liking": "Enviando me gusta…",
+      "signInToLike": "Inicia sesión para dar me gusta",
+      "refused": "rechazado",
+      "noRelays": "ningún relé lo confirmó",
+      "failed": "No se pudo publicar el me gusta: {{reason}}"
+    },
+    "zap": {
+      "button": "Zap",
+      "totalTitle": "Sats enviados: {{sats}}",
+      "signIn": "Inicia sesión para hacer zap",
+      "title": "Enviar un zap de Lightning",
+      "description": "Tu zap se paga por Lightning y se publica como un zap de Nostr firmado para este video.",
+      "amount": "Cantidad (sats)",
+      "comment": "Comentario (opcional)",
+      "includeTimestamp": "Zap en {{time}}",
+      "createInvoice": "Crear factura",
+      "creating": "Creando factura…",
+      "invoiceHint": "Escanea la factura con una billetera Lightning o ábrela en tu app de billetera. Queda pendiente hasta que se confirme el pago.",
+      "waiting": "Esperando el pago…",
+      "copy": "Copiar factura",
+      "copied": "Copiado",
+      "openWallet": "Abrir en la billetera",
+      "payWebln": "Pagar con la billetera del navegador",
+      "paying": "Pagando…",
+      "paid": "Zap enviado. ¡Gracias!",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "retry": "Reintentar",
+      "errors": {
+        "providerFailed": "No se pudo contactar con el proveedor Lightning del creador: {{reason}}",
+        "providerNoNostr": "El proveedor Lightning del creador no admite zaps de Nostr.",
+        "providerInvalid": "El proveedor Lightning del creador envió datos no válidos.",
+        "invalidAmount": "Introduce un número entero de sats entre {{min}} y {{max}}.",
+        "videoUnavailable": "El evento Nostr de este video no está cargado, así que aún no se le puede hacer zap.",
+        "signFailed": "No se pudo firmar la solicitud de zap: {{reason}}",
+        "invoiceFailed": "No se pudo crear ninguna factura: {{reason}}",
+        "invoiceMismatch": "El proveedor devolvió una factura que no coincide con la cantidad solicitada. No se ha mostrado.",
+        "paymentFailed": "El pago falló: {{reason}}",
+        "copyFailed": "No se pudo copiar la factura."
+      }
+    }
+  }
+}

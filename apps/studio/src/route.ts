@@ -1,28 +1,25 @@
 import { useEffect, useState } from 'react'
 
-export type PageId = 'videos' | 'upload' | 'appearance' | 'instance' | 'account'
+export type PageId = 'videos' | 'upload' | 'appearance' | 'instance' | 'account' | 'overview'
 export type GroupId = 'content' | 'site' | 'server'
 
+/** Stable ids only: the names shown are translated at render (`studio.nav.*`). */
 export interface PageDef {
   id: PageId
-  label: string
   group: GroupId
   /** The page edits the config draft, so the save bar belongs under it. */
   editsConfig: boolean
 }
 
-export const GROUPS: { id: GroupId; label: string }[] = [
-  { id: 'content', label: 'Content' },
-  { id: 'site', label: 'Site' },
-  { id: 'server', label: 'Server' },
-]
+export const GROUPS: { id: GroupId }[] = [{ id: 'content' }, { id: 'site' }, { id: 'server' }]
 
 export const PAGES: PageDef[] = [
-  { id: 'videos', label: 'Videos', group: 'content', editsConfig: true },
-  { id: 'upload', label: 'Upload', group: 'content', editsConfig: false },
-  { id: 'appearance', label: 'Appearance', group: 'site', editsConfig: true },
-  { id: 'instance', label: 'Instance', group: 'server', editsConfig: true },
-  { id: 'account', label: 'Account', group: 'server', editsConfig: false },
+  { id: 'videos', group: 'content', editsConfig: true },
+  { id: 'upload', group: 'content', editsConfig: false },
+  { id: 'appearance', group: 'site', editsConfig: true },
+  { id: 'instance', group: 'server', editsConfig: true },
+  { id: 'account', group: 'server', editsConfig: false },
+  { id: 'overview', group: 'server', editsConfig: false },
 ]
 
 export const DEFAULT_PAGE: PageId = 'videos'

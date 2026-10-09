@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import i18n from './i18n'
 import { findSigner, type Signer } from './signer'
 
 export interface SignerState {
@@ -40,7 +41,7 @@ export function SignerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const connect = useCallback(async () => {
-    if (!signer) throw new Error('No Nostr signer found in this browser.')
+    if (!signer) throw new Error(i18n.t('studio.errors.noSigner'))
     const key = await signer.getPublicKey()
     setPubkey(key)
     return key

@@ -1,7 +1,8 @@
 import { DEFAULT_SITE_LINKS } from './instance-config'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { delay, from, lastValueFrom, throwError, toArray } from 'rxjs'
-import type { Filter, NostrEvent } from 'nostr-tools'
+import { RelayGroup } from 'applesauce-relay'
+import { finalizeEvent, verifyEvent, type Filter, type NostrEvent } from 'nostr-tools'
 import { createNostubeClient, type PageLoader } from './client'
 import { setInstanceConfig, type InstanceConfig } from './instance-config'
 
@@ -164,6 +165,48 @@ describe('instance scoping', () => {
 
     expect(events).toEqual([])
     expect(client.relayPool.relays.size).toBe(0)
+  })
+
+  it('loads only the visitor identity from external relays without opening video requests', async () => {
+    setInstanceConfig(instance)
+    const client = createNostubeClient({ defaultRelays: [], cache: false, instance })
+    // The root verifier handles jsdom's cross-realm TextEncoder bytes.
+    client.eventStore.verifyEvent = verifyEvent
+    const secret = new Uint8Array(32).fill(3)
+    const profile = finalizeEvent(
+      { kind: 0, content: '{"display_name":"Visitor"}', tags: [], created_at: 10 },
+      secret
+    )
+    const list = finalizeEvent({ kind: 10002, content: '', tags: [], created_at: 10 }, secret)
+    const video = finalizeEvent({ kind: 21, content: '', tags: [], created_at: 10 }, secret)
+    const anotherProfile = finalizeEvent(
+      { kind: 0, content: '{"display_name":"Stranger"}', tags: [], created_at: 10 },
+      new Uint8Array(32).fill(4)
+    )
+    const request = vi
+      .spyOn(RelayGroup.prototype, 'request')
+      .mockReturnValue(from([profile, list, video, anotherProfile]))
+    try {
+      expect(
+        await lastValueFrom(
+          client.requestVisitorIdentity(profile.pubkey, ['wss://personal.test']).pipe(toArray())
+        )
+      ).toEqual([profile, list])
+      expect(client.eventStore.getEvent(profile.id)).toEqual(profile)
+      expect(client.eventStore.getEvent(video.id)).toBeUndefined()
+      expect(client.eventStore.getEvent(anotherProfile.id)).toBeUndefined()
+      expect(
+        await lastValueFrom(
+          client.relayPool
+            .request(['wss://personal.test'], [{ kinds: [21], authors: [creator] }])
+            .pipe(toArray())
+        )
+      ).toEqual([])
+      expect(client.relayPool.group(['wss://personal.test']).relays).toEqual([])
+    } finally {
+      request.mockRestore()
+      client.reset()
+    }
   })
 
   it('keeps video events of non-creators out of the event store', () => {

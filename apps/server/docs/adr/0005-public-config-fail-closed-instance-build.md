@@ -6,27 +6,27 @@ The Nostube app embedded in the instance is an **instance build**: it is built w
 
 Contract version 1 has exactly these fields, all required:
 
-| field | value |
-|---|---|
-| `version` | `1` |
-| `revision` | positive integer, the applied config revision |
-| `origin` | canonical origin, `https://host` with no path (ADR 0003) |
-| `title` | non-empty string |
-| `creators` | displayed creators as hex pubkeys; may be `[]` |
-| `startPage` | `{ "kind": "creator-profile", "creator": <one of creators> }`, or `null` while `creators` is empty |
-| `videoSources` | `ws(s)://` relays for video catalog queries; may be `[]` |
-| `interactionRelays` | `ws(s)://` relays that replace the hardcoded profile/zap/indexer/publish relays; may be `[]` |
-| `search` | `{ "mode": "off" }`, `{ "mode": "local" }`, or `{ "mode": "external", "url": "https://…" }` |
+| field               | value                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `version`           | `1`                                                                                                |
+| `revision`          | positive integer, the applied config revision                                                      |
+| `origin`            | canonical origin, `https://host` with no path (ADR 0003)                                           |
+| `title`             | non-empty string                                                                                   |
+| `creators`          | displayed creators as hex pubkeys; may be `[]`                                                     |
+| `startPage`         | `{ "kind": "creator-profile", "creator": <one of creators> }`, or `null` while `creators` is empty |
+| `videoSources`      | `ws(s)://` relays for video catalog queries; may be `[]`                                           |
+| `interactionRelays` | `ws(s)://` relays that replace the hardcoded profile/zap/indexer/publish relays; may be `[]`       |
+| `search`            | `{ "mode": "off" }`, `{ "mode": "local" }`, or `{ "mode": "external", "url": "https://…" }`        |
 
 **Addendum: `site` (still version 1).** The contract gains one required field, `site`, for the creator's public site (`apps/site`). Nothing was deployed against version 1 yet, so it is extended in place instead of bumping the version; from the first deployment on, a new required field bumps `version` again. Two readers share the parser: the site and the instance build in `apps/web` (which ignores the field).
 
-| field | value |
-|---|---|
-| `site.tagline` | string, may be empty; shown under the title |
-| `site.theme.accent` | `#rrggbb`, replaces the primary colour and the focus ring |
-| `site.theme.font` | `sans`, `serif` or `mono` (system font stacks, no web fonts) |
+| field                                   | value                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `site.tagline`                          | string, may be empty; shown under the title                                                                                                                                                                                                                                                                                                               |
+| `site.theme.accent`                     | `#rrggbb`, replaces the primary colour and the focus ring                                                                                                                                                                                                                                                                                                 |
+| `site.theme.font`                       | `sans`, `serif` or `mono` (system font stacks, no web fonts)                                                                                                                                                                                                                                                                                              |
 | `site.links.profile`, `.video`, `.note` | https URL templates with `{nip19}` for the npub, nprofile, naddr, nevent or note identifier: where the site sends links to Nostr content outside the site (a mention of someone else, a video of another creator, a note). The creator's own videos and the creator open on the site itself. Defaults: njump.me for people and notes, nostu.be for videos |
-| `site.videos.hidden` | videos not shown: `<kind>:<pubkey>:<d>` (addressable events) or an event id (64 hex); everything else of the `creators` is shown. May be `[]` |
+| `site.videos.hidden`                    | videos not shown: `<kind>:<pubkey>:<d>` (addressable events) or an event id (64 hex); everything else of the `creators` is shown. May be `[]`                                                                                                                                                                                                             |
 
 This changes the earlier rule that the theme stays with the viewer: the creator sets accent and font, while light or dark still follows the viewer's system. In `config.toml` the section is `[site]` (`tagline`, `accent`, `font`, `hidden_videos`, and `[site.links]` with `profile`, `video`, `note`) and may be left out: the server fills the defaults, and the wire format always carries explicit values. The studio edits `site` together with the other editable fields through `GET/PUT /api/admin/config` (session cookie required, JSON body, validated as a whole, `config.prev` kept, then restart). The old server-rendered admin form was removed; `/admin` redirects to `/studio/`, and only setup and login stay server-rendered.
 
@@ -39,6 +39,17 @@ This changes the earlier rule that the theme stays with the viewer: the creator 
 **Fixed by the instance build, not fields:** the trust filter, preset gate, image proxy, view tracking, DVM discovery and media discovery are all off. A field gets added only once an admin can actually choose the value.
 
 **Video catalog queries** use only `videoSources` and only `creators`. Relay hints, preset relays, outbox relays and the user's NIP-65 never widen them. The author page of a non-creator still opens (no route restriction), but it sends no video request. Video-by-id lookups are also restricted to `creators`.
+
+**Signed-in visitor identity (Site).** The visitor's own profile is an explicit exception to
+interaction-relay isolation: `apps/site` discovers that key's NIP-65 list (kind 10002) through
+the instance relays plus `purplepag.es` and `index.hzrd149.com`, then loads its profile
+(kind 0) from the listed write relays and those discovery relays. Read-only NIP-65 relays
+are not used for the visitor's published profile. This never widens video catalog, creator
+metadata, comment/reaction publishing or zap-receipt routes, and adds no public relay for guests.
+The exception uses `NostubeClient.requestVisitorIdentity` on the same relay pool, bypassing
+only the group allowlist for two fixed kinds (0 and 10002) and one exact public key.
+Responses for other authors or kinds are discarded before verified store ingestion.
+Ordinary pool queries and publishing retain their original restrictions.
 
 **Config changes.** The app checks `/api/config` again on tab focus and relay reconnect. When `revision` differs it reloads the page, which ends running queries and rebuilds every loader from the new scope.
 

@@ -1135,7 +1135,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
               type="button"
               className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
               onClick={handleTogglePlay}
-              aria-label={playerState.isPlaying ? 'Pause audio' : 'Play audio'}
+              aria-label={playerState.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
             >
               <img src={posterUrl} alt="" className="h-full w-full object-contain" />
             </button>
@@ -1145,7 +1145,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
               type="button"
               className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-black p-0"
               onClick={handleTogglePlay}
-              aria-label={playerState.isPlaying ? 'Pause audio' : 'Play audio'}
+              aria-label={playerState.isPlaying ? t('player.pauseAudio') : t('player.playAudio')}
             >
               <img src={audioFallback} alt="" className="h-full w-full object-contain" />
             </button>

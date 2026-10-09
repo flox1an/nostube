@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { useActiveAccount } from 'applesauce-react/hooks'
 import { map } from 'rxjs/operators'
@@ -36,6 +37,7 @@ export function Comments({
   links: RichTextLinks
   relays: string[]
 }) {
+  const { t } = useTranslation()
   const { pool } = useNostubeHost()
   const eventStore = useEventStore()
   const account = useActiveAccount()
@@ -98,7 +100,7 @@ export function Comments({
   )
 
   const publish = async (draft: { kind: number; content: string; tags: string[][] }) => {
-    if (!account) throw new Error('Sign in first')
+    if (!account) throw new Error(t('site.comments.signInFirst'))
     const signed = await account.signer.signEvent({
       kind: draft.kind,
       content: draft.content,
@@ -109,7 +111,10 @@ export function Comments({
     const results = await pool.publish(relays, signed as unknown as NostrEvent)
     const refused = results.filter(r => !r.ok)
     if (results.length > 0 && refused.length === results.length) {
-      throw new Error(refused.map(r => `${r.from}: ${r.message ?? 'refused'}`).join('; '))
+      // Relay messages are the relays' own words; only the missing-reason fallback is ours.
+      throw new Error(
+        refused.map(r => `${r.from}: ${r.message ?? t('site.comments.refused')}`).join('; ')
+      )
     }
     eventStore.add(signed as unknown as NostrEvent)
     return signed
@@ -139,7 +144,8 @@ export function Comments({
         setNewComment('')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const reason = err instanceof Error ? err.message : String(err)
+      setError(t('site.comments.postFailed', { reason }))
     } finally {
       setBusy(false)
     }
@@ -158,7 +164,8 @@ export function Comments({
       // relay query, so hide it right away.
       setRemoved(previous => new Set(previous).add(comment.id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const reason = err instanceof Error ? err.message : String(err)
+      setError(t('site.comments.deleteFailed', { reason }))
     } finally {
       setBusy(false)
     }
@@ -176,11 +183,11 @@ export function Comments({
   }, [threaded, removed])
 
   return (
-    <section className="space-y-4" aria-label="Comments">
+    <section className="space-y-4" aria-label={t('site.comments.title')}>
       <h3 className="text-sm font-semibold">
         {threaded?.length
-          ? `${threaded.length} ${threaded.length === 1 ? 'comment' : 'comments'}`
-          : 'Comments'}
+          ? t('site.comments.count', { count: threaded.length })
+          : t('site.comments.title')}
       </h3>
 
       {account ? (
@@ -196,7 +203,7 @@ export function Comments({
       ) : (
         <div>
           <Button variant="outline" size="sm" onClick={() => setAuthOpen(true)}>
-            Sign in to comment
+            {t('site.comments.signInToComment')}
           </Button>
           <AuthDialog
             isOpen={authOpen}
@@ -268,6 +275,7 @@ function SiteComment({
   onCancelReply: () => void
   onDeleteRequest: (comment: Comment) => void
 }) {
+  const { t, i18n } = useTranslation()
   const profile = useProfile({ pubkey: comment.pubkey })
   const name = profile?.name || comment.pubkey.slice(0, 8)
   const isOwn = ownPubkey === comment.pubkey
@@ -284,7 +292,9 @@ function SiteComment({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{name}</span>
-          <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
+          <span className="text-xs text-muted-foreground">
+            {formatDate(comment.created_at, i18n.resolvedLanguage)}
+          </span>
           {signedIn && (
             <>
               <Button
@@ -293,7 +303,7 @@ function SiteComment({
                 className="h-6 px-2 text-xs"
                 onClick={() => onReplyRequest(comment)}
               >
-                Reply
+                {t('site.comments.reply')}
               </Button>
               {isOwn && (
                 <Button
@@ -303,7 +313,7 @@ function SiteComment({
                   disabled={busy}
                   onClick={() => onDeleteRequest(comment)}
                 >
-                  Delete
+                  {t('site.comments.delete')}
                 </Button>
               )}
             </>

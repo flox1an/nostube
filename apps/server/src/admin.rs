@@ -28,6 +28,7 @@ use sha2::Sha256;
 
 use crate::config::{self, Config, Edited, Search, Storage};
 use crate::login_guard::{self, LoginGuard};
+use crate::relay::Relay;
 
 const SESSION_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
 /// Freshness window for NIP-98 login/bind events (clock skew included).
@@ -83,6 +84,13 @@ impl Secrets {
     }
 }
 
+/// The running relay and Blossom, read (never changed) by the stats endpoint.
+pub struct Stores {
+    pub relay: Relay,
+    /// Its `public_url` is the canonical origin (`main` sets it so).
+    pub blossom: almond::AppState,
+}
+
 /// Admin state shared with the axum router.
 pub struct AdminState {
     data: PathBuf,
@@ -94,6 +102,7 @@ pub struct AdminState {
     handle: Arc<axum_server::Handle<std::net::SocketAddr>>,
     /// Slows down password guessing; one count for the whole instance (see `login_guard`).
     login_guard: Mutex<LoginGuard>,
+    stores: Stores,
 }
 
 impl AdminState {
@@ -106,6 +115,7 @@ impl AdminState {
         setup_origin: &str,
         boot_id: String,
         handle: Arc<axum_server::Handle<std::net::SocketAddr>>,
+        stores: Stores,
     ) -> Result<AdminState, BoxError> {
         let secrets = if Secrets::path(data).exists() {
             Secrets::load(data)?
@@ -133,6 +143,7 @@ impl AdminState {
             boot_id,
             handle,
             login_guard: Mutex::new(LoginGuard::default()),
+            stores,
         })
     }
 
@@ -307,6 +318,7 @@ pub fn router(state: AdminState) -> Router {
         .route("/admin/unbind-nostr", post(unbind_nostr))
         .route("/admin/logout", post(logout))
         .route("/api/admin/config", get(config_get).put(config_put))
+        .route("/api/admin/stats", get(stats_get))
         .with_state(state)
 }
 
@@ -595,6 +607,61 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
         "config": editable_json(&cfg),
     }))
     .into_response()
+}
+
+/// What the relay and Blossom hold, for the studio overview. Admin only: no public diagnostics.
+/// Failures answer 500 rather than zeros. Blossom's upload/download/served counters come from
+/// Almond's metrics and count since this process started.
+async fn stats_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    let relay = match state.stores.relay.stats().await {
+        Ok(r) => r,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("relay stats: {e}")),
+    };
+    let blossom = &state.stores.blossom;
+    let free = match free_disk_bytes(&blossom.storage.root) {
+        Ok(f) => f,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("free disk space: {e}")),
+    };
+    let index = blossom.file_index.stats().await;
+    let metrics = &blossom.metrics;
+    let origin = &blossom.public_url;
+    Json(serde_json::json!({
+        "relay": {
+            "url": origin.replacen("https://", "wss://", 1),
+            "totalEvents": relay.by_kind.iter().map(|(_, n)| n).sum::<u64>(),
+            "eventsByKind": relay.by_kind.iter().map(|(kind, count)| serde_json::json!({ "kind": kind, "count": count })).collect::<Vec<_>>(),
+            "databaseBytes": relay.database_bytes,
+        },
+        "blossom": {
+            "url": origin,
+            "files": index.count,
+            "storageBytes": index.total_bytes,
+            "quotaBytes": blossom.max_total_size,
+            "freeDiskBytes": free,
+            "freeSpaceReserveBytes": blossom.min_free_disk_bytes,
+            "uploads": metrics.files_uploaded.get(),
+            "downloads": metrics.files_downloaded.get(),
+            "servedBytes": metrics.served_bytes.get(),
+        },
+    }))
+    .into_response()
+}
+
+/// Space available to unprivileged writers on the filesystem holding `path`: the figure Almond
+/// checks the free-space reserve against (`fs4::available_space`, also statvfs).
+fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
+    use std::os::unix::ffi::OsStrExt;
+    let path = std::ffi::CString::new(path.as_os_str().as_bytes())?;
+    // SAFETY: statvfs only writes into the zeroed struct we own; `path` is a valid C string.
+    let mut s: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(path.as_ptr(), &mut s) } != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // `as`: the field types differ per platform (u32 blocks on macOS, u64 on Linux).
+    Ok(s.f_bavail as u64 * s.f_frsize as u64)
 }
 
 /// Saves the edited config: validates everything, keeps `config.prev`, restarts the instance.
@@ -896,8 +963,8 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    #[test]
-    fn nip98_events_must_match_instance_path_and_host() {
+    #[tokio::test]
+    async fn nip98_events_must_match_instance_path_and_host() {
         use nostr::prelude::*;
         let dir = std::env::temp_dir().join(format!("nss-admin-test-{}", random_hex(4)));
         std::fs::create_dir_all(&dir).unwrap();
@@ -908,6 +975,7 @@ mod tests {
             "https://macbook-2.local",
             "boot".into(),
             Arc::new(axum_server::Handle::new()),
+            stores(&dir).await,
         )
         .unwrap();
         let keys = Keys::generate();
@@ -938,14 +1006,33 @@ mod tests {
 
     const PK: &str = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d";
 
+    /// Relay and Blossom in `dir`, opened like `main` does (quota 7 GiB, reserve 2 GiB).
+    async fn stores(dir: &Path) -> Stores {
+        let mut cfg = almond::Config::defaults();
+        cfg.storage_path = dir.join("blossom");
+        cfg.public_url = Some("https://flox-mac.local".into());
+        cfg.homepage_enabled = false;
+        cfg.storage_max_size = 7 * config::GIB;
+        cfg.storage_min_free = 2 * config::GIB;
+        let blossom = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
+        let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into() };
+        Stores { relay: Relay::open(&dir.join("relay.sqlite"), relay).unwrap(), blossom }
+    }
+
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
     /// router and a valid session cookie.
-    fn studio_fixture() -> (Router, PathBuf, String) {
-        studio_fixture_for("{ mode = \"local-ca\" }", true)
+    async fn studio_fixture() -> (Router, PathBuf, String) {
+        studio_fixture_for("{ mode = \"local-ca\" }", true).await
     }
 
     /// `tls` is the TOML value of `tls`; `tls_files` writes the placeholder CA files.
-    fn studio_fixture_for(tls: &str, tls_files: bool) -> (Router, PathBuf, String) {
+    async fn studio_fixture_for(tls: &str, tls_files: bool) -> (Router, PathBuf, String) {
+        let (app, dir, cookie, _) = studio_fixture_with_blossom(tls, tls_files).await;
+        (app, dir, cookie)
+    }
+
+    /// Also hands back the live Blossom state the router reads.
+    async fn studio_fixture_with_blossom(tls: &str, tls_files: bool) -> (Router, PathBuf, String, almond::AppState) {
         let dir = std::env::temp_dir().join(format!("nss-studio-test-{}", random_hex(4)));
         std::fs::create_dir_all(dir.join("tls")).unwrap();
         if tls_files {
@@ -965,6 +1052,8 @@ mod tests {
         s.setup_token = None;
         s.save(&dir).unwrap();
         let secret = s.session_secret.clone();
+        let stores = stores(&dir).await;
+        let blossom = stores.blossom.clone();
         let state = AdminState::open(
             &dir,
             "flox-mac.local",
@@ -972,10 +1061,11 @@ mod tests {
             "https://flox-mac.local",
             "boot".into(),
             Arc::new(axum_server::Handle::new()),
+            stores,
         )
         .unwrap();
         let cookie = session_cookie(&secret).split(';').next().unwrap().to_owned();
-        (router(state), dir, cookie)
+        (router(state), dir, cookie, blossom)
     }
 
     async fn call(app: &Router, method: &str, cookie: Option<&str>, content_type: Option<&str>, body: &str) -> (StatusCode, serde_json::Value) {
@@ -1012,7 +1102,7 @@ mod tests {
 
     #[tokio::test]
     async fn studio_api_needs_a_session_and_answers_json() {
-        let (app, dir, _cookie) = studio_fixture();
+        let (app, dir, _cookie) = studio_fixture().await;
         let (status, body) = call(&app, "GET", None, None, "").await;
         assert_eq!(status, StatusCode::UNAUTHORIZED);
         assert_eq!(body["error"], "not logged in");
@@ -1023,7 +1113,7 @@ mod tests {
 
     #[tokio::test]
     async fn studio_api_reads_the_site_settings() {
-        let (app, dir, cookie) = studio_fixture();
+        let (app, dir, cookie) = studio_fixture().await;
         let (status, body) = call(&app, "GET", Some(&cookie), None, "").await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(body["revision"], 4);
@@ -1042,7 +1132,7 @@ mod tests {
 
     #[tokio::test]
     async fn studio_api_rejects_bad_requests_without_touching_the_config() {
-        let (app, dir, cookie) = studio_fixture();
+        let (app, dir, cookie) = studio_fixture().await;
         let before = std::fs::read(dir.join("config.toml")).unwrap();
         let json = Some("application/json");
         for (ct, body) in [
@@ -1079,7 +1169,7 @@ mod tests {
 
     #[tokio::test]
     async fn studio_api_applies_the_edit_and_keeps_origin_and_tls() {
-        let (app, dir, cookie) = studio_fixture();
+        let (app, dir, cookie) = studio_fixture().await;
         let before = Config::load(&dir.join("config.toml")).unwrap();
         let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
@@ -1102,7 +1192,7 @@ mod tests {
 
     #[tokio::test]
     async fn behind_a_proxy_saving_needs_no_tls_files() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false);
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false).await;
         assert!(!dir.join("tls").join("ca.pem").exists());
         let (status, body) = call(&app, "GET", Some(&cookie), None, "").await;
         assert_eq!(status, StatusCode::OK);
@@ -1118,9 +1208,69 @@ mod tests {
 
     #[tokio::test]
     async fn with_a_local_ca_missing_tls_files_still_block_saving() {
-        let (app, dir, cookie) = studio_fixture_for("{ mode = \"local-ca\" }", false);
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"local-ca\" }", false).await;
         let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    async fn get_stats(app: &Router, cookie: Option<&str>) -> (StatusCode, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().uri("/api/admin/stats");
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        let res = app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    }
+
+    #[tokio::test]
+    async fn stats_need_a_session_and_leak_nothing_without_one() {
+        let (app, dir, cookie) = studio_fixture().await;
+        for c in [None, Some("admin_session=forged"), Some(&cookie[..cookie.len() - 1])] {
+            let (status, body) = get_stats(&app, c).await;
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{c:?}");
+            assert_eq!(body, serde_json::json!({ "error": "not logged in" }));
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn stats_report_the_live_relay_and_blossom() {
+        let (app, dir, cookie, blossom) = studio_fixture_with_blossom("{ mode = \"local-ca\" }", true).await;
+        let (status, body) = get_stats(&app, Some(&cookie)).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["relay"]["url"], "wss://flox-mac.local");
+        assert_eq!(body["relay"]["totalEvents"], 0);
+        assert_eq!(body["relay"]["eventsByKind"], serde_json::json!([]));
+        assert!(body["relay"]["databaseBytes"].as_u64().unwrap() > 0);
+        assert_eq!(body["blossom"]["url"], "https://flox-mac.local");
+        assert_eq!(body["blossom"]["files"], 0);
+        assert_eq!(body["blossom"]["storageBytes"], 0);
+        assert_eq!(body["blossom"]["quotaBytes"], 7 * config::GIB);
+        assert_eq!(body["blossom"]["freeSpaceReserveBytes"], 2 * config::GIB);
+        assert!(body["blossom"]["freeDiskBytes"].as_u64().unwrap() > 0);
+        // A blob entering the live index and a served download show on the next read.
+        let blob = almond::models::FileMetadata {
+            location: almond::models::FileLocation::Local(dir.join("blossom").join("x")),
+            extension: None,
+            mime_type: None,
+            size: 1234,
+            created_at: 0,
+            pubkey: None,
+            expiration: None,
+            origin: Default::default(),
+        };
+        blossom.file_index.insert("ab".repeat(32), blob).await;
+        blossom.metrics.track_download(1234);
+        let (_, body) = get_stats(&app, Some(&cookie)).await;
+        assert_eq!(body["blossom"]["files"], 1);
+        assert_eq!(body["blossom"]["storageBytes"], 1234);
+        assert_eq!(body["blossom"]["uploads"], 0);
+        assert_eq!(body["blossom"]["downloads"], 1);
+        assert_eq!(body["blossom"]["servedBytes"], 1234);
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -1172,7 +1322,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_few_wrong_passwords_are_free_and_a_right_one_resets_the_count() {
-        let (app, dir, _) = studio_fixture();
+        let (app, dir, _) = studio_fixture().await;
         for _ in 0..2 {
             let (status, _, body) = try_login(&app, "wrong").await;
             assert_eq!(status, StatusCode::OK);
@@ -1192,7 +1342,7 @@ mod tests {
 
     #[tokio::test]
     async fn after_three_wrong_passwords_even_the_right_one_has_to_wait() {
-        let (app, dir, _) = studio_fixture();
+        let (app, dir, _) = studio_fixture().await;
         for _ in 0..3 {
             try_login(&app, "wrong").await;
         }
@@ -1221,7 +1371,7 @@ mod tests {
     /// Real parallel requests (own tasks on several threads), not one after the other.
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn a_burst_of_parallel_guesses_is_counted_one_by_one() {
-        let (app, dir, _) = studio_fixture();
+        let (app, dir, _) = studio_fixture().await;
         let tasks: Vec<_> = (0..12)
             .map(|_| {
                 let app = app.clone();

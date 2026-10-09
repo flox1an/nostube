@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { GROUPS, PAGES, type PageId } from './route'
 
 /** Two levels: the group on top, the pages of the current group below (when it has several). */
 export function Nav({ page, onNavigate }: { page: PageId; onNavigate: (page: PageId) => void }) {
+  const { t } = useTranslation()
   const current = PAGES.find(p => p.id === page)!
   const siblings = PAGES.filter(p => p.group === current.group)
 
@@ -14,7 +16,7 @@ export function Nav({ page, onNavigate }: { page: PageId; onNavigate: (page: Pag
 
   return (
     <div className="space-y-2">
-      <nav className="flex gap-1 border-b border-border" aria-label="Sections">
+      <nav className="flex gap-1 border-b border-border" aria-label={t('studio.nav.sections')}>
         {GROUPS.map(group => {
           const first = PAGES.find(p => p.group === group.id)!
           const active = group.id === current.group
@@ -26,13 +28,18 @@ export function Nav({ page, onNavigate }: { page: PageId; onNavigate: (page: Pag
               aria-current={active ? 'page' : undefined}
               className={tab(active)}
             >
-              {group.label}
+              {t(`studio.nav.groups.${group.id}`)}
             </button>
           )
         })}
       </nav>
       {siblings.length > 1 && (
-        <nav className="flex gap-1" aria-label={`${current.group} pages`}>
+        <nav
+          className="flex gap-1"
+          aria-label={t('studio.nav.groupPages', {
+            group: t(`studio.nav.groups.${current.group}`),
+          })}
+        >
           {siblings.map(p => (
             <button
               key={p.id}
@@ -45,7 +52,7 @@ export function Nav({ page, onNavigate }: { page: PageId; onNavigate: (page: Pag
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {p.label}
+              {t(`studio.nav.pages.${p.id}`)}
             </button>
           ))}
         </nav>

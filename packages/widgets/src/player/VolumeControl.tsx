@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Volume2, Volume1, VolumeX } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/tooltip'
 import { Kbd } from '../components/kbd'
@@ -19,6 +20,7 @@ export const VolumeControl = memo(function VolumeControl({
   onVolumeChange,
   onToggleMute,
 }: VolumeControlProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const sliderRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -180,13 +182,13 @@ export const VolumeControl = memo(function VolumeControl({
             type="button"
             onClick={onToggleMute}
             className="flex items-center justify-center w-10 h-10 text-white rounded-full cursor-pointer transition-all hover:bg-black/40"
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
+            aria-label={isMuted ? t('player.unmute') : t('player.mute')}
           >
             <VolumeIcon className="w-6 h-6" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="flex items-center gap-2">
-          <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+          <span>{isMuted ? t('player.unmute') : t('player.mute')}</span>
           <Kbd>M</Kbd>
         </TooltipContent>
       </Tooltip>
@@ -201,7 +203,7 @@ export const VolumeControl = memo(function VolumeControl({
           ref={sliderRef}
           role="slider"
           tabIndex={0}
-          aria-label="Volume"
+          aria-label={t('player.volume')}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(displayVolume * 100)}

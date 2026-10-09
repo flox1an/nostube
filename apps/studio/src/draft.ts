@@ -8,6 +8,7 @@ import {
   type SiteFont,
 } from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
+import i18n from './i18n'
 
 /** The form's own shape: lists as one entry per line, numbers as typed. */
 export interface Draft {
@@ -68,7 +69,7 @@ function toHexKey(input: string): string | null {
 function keys(label: string, text: string, errors: string[]): string[] {
   return toLines(text).flatMap(line => {
     const hex = toHexKey(line)
-    if (!hex) errors.push(`${label}: "${line}" is not a hex or npub key.`)
+    if (!hex) errors.push(i18n.t('studio.errors.notKey', { label, line }))
     return hex ? [hex] : []
   })
 }
@@ -76,7 +77,7 @@ function keys(label: string, text: string, errors: string[]): string[] {
 function relays(label: string, text: string, errors: string[]): string[] {
   return toLines(text).filter(line => {
     const ok = /^wss?:\/\/[^/\s]+\/?$/.test(line)
-    if (!ok) errors.push(`${label}: "${line}" must be a ws:// or wss:// relay URL.`)
+    if (!ok) errors.push(i18n.t('studio.errors.notRelay', { label, line }))
     return ok
   })
 }
@@ -84,7 +85,7 @@ function relays(label: string, text: string, errors: string[]): string[] {
 function count(label: string, text: string, errors: string[]): number {
   const n = Number(text)
   if (text.trim() === '' || !Number.isInteger(n) || n < 0)
-    errors.push(`${label} must be a whole number, 0 or more.`)
+    errors.push(i18n.t('studio.errors.notCount', { label }))
   return n
 }
 
@@ -93,10 +94,10 @@ export type DraftResult = { config: AdminConfig; errors: [] } | { config: null; 
 /** Checks the draft with the same rules as the server and builds what gets saved. */
 export function fromDraft(d: Draft): DraftResult {
   const errors: string[] = []
-  if (!d.title.trim()) errors.push('The title must not be empty.')
+  if (!d.title.trim()) errors.push(i18n.t('studio.errors.titleEmpty'))
   const hidden = toLines(d.hiddenText).flatMap(line => {
     const ref = toHiddenVideoRef(line)
-    if (!ref) errors.push(`Hidden videos: "${line}" is not a video link.`)
+    if (!ref) errors.push(i18n.t('studio.errors.notVideoLink', { line }))
     return ref ? [ref] : []
   })
   const site = {
@@ -109,24 +110,34 @@ export function fromDraft(d: Draft): DraftResult {
       note: d.links.note.trim(),
     },
   }
+  // The core names the field that is wrong (`site.theme.accent`, `site.links.note`); the message
+  // shown is ours. The form cannot produce its other errors (the hidden list is checked above).
   errors.push(
     ...validateSite(site)
       .filter(e => !e.includes('hidden'))
-      .map(e => (e.startsWith('site.links.') ? `Links: ${e.slice('site.links.'.length)}` : e))
+      .map(e => {
+        const link = /^site\.links\.(profile|video|note)\b/.exec(e)?.[1]
+        if (link) {
+          return i18n.t('studio.errors.link', {
+            kind: i18n.t(`studio.appearance.linkKinds.${link}`),
+          })
+        }
+        return e.startsWith('site.theme.accent') ? i18n.t('studio.errors.accent') : e
+      })
   )
-  if (!SITE_FONTS.includes(d.font)) errors.push('Choose one of the fonts.')
-  const creators = keys('Creators', d.creatorsText, errors)
-  const allowedWriters = keys('Allowed writers', d.writersText, errors)
-  const videoSources = relays('Video sources', d.videoSourcesText, errors)
-  const interactionRelays = relays('Interaction relays', d.interactionRelaysText, errors)
-  const quotaGib = count('Storage quota', d.quota, errors)
-  const freeSpaceReserveGib = count('Free-space reserve', d.reserve, errors)
+  if (!SITE_FONTS.includes(d.font)) errors.push(i18n.t('studio.errors.font'))
+  const label = (key: string) => i18n.t(`studio.errors.labels.${key}`)
+  const creators = keys(label('creators'), d.creatorsText, errors)
+  const allowedWriters = keys(label('writers'), d.writersText, errors)
+  const videoSources = relays(label('videoSources'), d.videoSourcesText, errors)
+  const interactionRelays = relays(label('interactionRelays'), d.interactionRelaysText, errors)
+  const quotaGib = count(label('quota'), d.quota, errors)
+  const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
   let search: AdminConfig['search'] = { mode: 'off' }
   if (d.searchMode === 'local') search = { mode: 'local' }
   if (d.searchMode === 'external') {
     const url = d.searchUrl.trim()
-    if (!/^https:\/\/\S+$/.test(url))
-      errors.push('Search: the external search needs an https:// URL.')
+    if (!/^https:\/\/\S+$/.test(url)) errors.push(i18n.t('studio.errors.searchUrl'))
     search = { mode: 'external', url }
   }
   if (errors.length) return { config: null, errors }
@@ -163,16 +174,11 @@ export function setRefHidden(hiddenText: string, refs: string | string[], hidden
   return (hidden ? [...kept, all[0]] : kept).join('\n')
 }
 
-/** Ready-made choices for where links to other Nostr content go. */
-export const LINK_PRESETS: { id: string; label: string; links: InstanceSite['links'] }[] = [
-  {
-    id: 'default',
-    label: 'nostu.be for videos, njump.me for people and notes',
-    links: DEFAULT_SITE_LINKS,
-  },
+/** Ready-made choices for where links to other Nostr content go (named in `studio.appearance.presets`). */
+export const LINK_PRESETS: { id: string; links: InstanceSite['links'] }[] = [
+  { id: 'default', links: DEFAULT_SITE_LINKS },
   {
     id: 'njump',
-    label: 'njump.me for everything',
     links: {
       profile: 'https://njump.me/{nip19}',
       video: 'https://njump.me/{nip19}',

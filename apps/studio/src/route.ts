@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type PageId = 'videos' | 'appearance' | 'instance' | 'account'
+export type PageId = 'videos' | 'upload' | 'appearance' | 'instance' | 'account'
 export type GroupId = 'content' | 'site' | 'server'
 
 export interface PageDef {
@@ -19,6 +19,7 @@ export const GROUPS: { id: GroupId; label: string }[] = [
 
 export const PAGES: PageDef[] = [
   { id: 'videos', label: 'Videos', group: 'content', editsConfig: true },
+  { id: 'upload', label: 'Upload', group: 'content', editsConfig: false },
   { id: 'appearance', label: 'Appearance', group: 'site', editsConfig: true },
   { id: 'instance', label: 'Instance', group: 'server', editsConfig: true },
   { id: 'account', label: 'Account', group: 'server', editsConfig: false },

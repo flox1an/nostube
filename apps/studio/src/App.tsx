@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
@@ -8,6 +9,8 @@ import { ConnectKey } from './ConnectKey'
 import { InstancePage } from './InstancePage'
 import { Nav } from './Nav'
 import { VideosPage } from './VideosPage'
+
+const UploadPage = lazy(() => import('./UploadPage'))
 import { loadAdmin, saveConfig, waitForRestart, type AdminConfig, type AdminState } from './api'
 import { addKeyToConfig, fromDraft, toDraft, type Draft } from './draft'
 import { PAGES, useRoute } from './route'
@@ -72,11 +75,21 @@ export function App() {
   )
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+/** The frame of every studio screen: the title, and a way over to the public site. */
+export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-      <header>
+      <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Studio</h1>
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          View site
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        </a>
       </header>
       {children}
     </div>
@@ -148,6 +161,11 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
       )}
 
       {page === 'videos' && <VideosPage draft={draft} update={update} banner={banner} />}
+      {page === 'upload' && (
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <UploadPage state={state} banner={banner} />
+        </Suspense>
+      )}
       {page === 'appearance' && <AppearancePage draft={draft} update={update} />}
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}

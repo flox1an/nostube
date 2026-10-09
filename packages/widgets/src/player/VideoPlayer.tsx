@@ -2,13 +2,11 @@ import * as React from 'react'
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Play } from 'lucide-react'
-import { isTauri } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@nostube/core/video-event'
-import audioFallback from '@/assets/audio-fallback.webp'
-import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
-import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
-import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
+import audioFallback from '../assets/audio-fallback.webp'
+import { useMediaUrls } from '../hooks/useMediaUrls'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { useImageCascade } from '../hooks/useImageCascade'
 import type { PresetThumbnailPreset } from '@nostube/core/preset-thumbnail-url'
 import {
   usePlayerState,
@@ -24,9 +22,9 @@ import { ControlBar } from './ControlBar'
 import { LoadingSpinner } from './LoadingSpinner'
 import { TouchOverlay } from './TouchOverlay'
 import { SeekIndicator } from './SeekIndicator'
-import { PlayPauseOverlay } from '@nostube/widgets/components/PlayPauseOverlay'
+import { PlayPauseOverlay } from '../components/PlayPauseOverlay'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
-import { useDesktopPlayerControls } from '@/desktop/DesktopPlayerControlsContext'
+import { useDesktopPlayerControls, usePlatform } from '../platform'
 import type { VideoChapter } from '@nostube/core/video-chapters'
 // import { BulletComments } from './BulletComments' // disabled for now
 
@@ -131,6 +129,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   const userInitiatedRef = useRef(false)
   const isMobile = useIsMobile()
   const desktopPlayerControls = useDesktopPlayerControls()
+  const { nativeWindow } = usePlatform()
   const baseMime = mime.split(';')[0]?.trim().toLowerCase() ?? ''
   const isAudioOnly = mediaType === 'audio' || baseMime.startsWith('audio/')
   const effectiveCinemaMode = isAudioOnly ? false : cinemaMode
@@ -699,9 +698,9 @@ export const VideoPlayer = React.memo(function VideoPlayer({
   }, [])
 
   const enterFullscreen = useCallback(async () => {
-    if (isTauri()) {
+    if (nativeWindow) {
       try {
-        await getCurrentWindow().setFullscreen(true)
+        await nativeWindow.setFullscreen(true)
         setIsFullscreen(true)
       } catch (err) {
         if (import.meta.env.DEV) {
@@ -738,12 +737,12 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         console.log('Fullscreen error:', err)
       }
     }
-  }, [])
+  }, [nativeWindow])
 
   const exitFullscreen = useCallback(async () => {
-    if (isTauri()) {
+    if (nativeWindow) {
       try {
-        await getCurrentWindow().setFullscreen(false)
+        await nativeWindow.setFullscreen(false)
         setIsFullscreen(false)
       } catch (err) {
         if (import.meta.env.DEV) {
@@ -770,11 +769,11 @@ export const VideoPlayer = React.memo(function VideoPlayer({
         console.log('Exit fullscreen error:', err)
       }
     }
-  }, [])
+  }, [nativeWindow])
 
   const toggleFullscreen = useCallback(async () => {
-    if (isTauri()) {
-      if (await getCurrentWindow().isFullscreen()) {
+    if (nativeWindow) {
+      if (await nativeWindow.isFullscreen()) {
         await exitFullscreen()
       } else {
         await enterFullscreen()
@@ -790,7 +789,7 @@ export const VideoPlayer = React.memo(function VideoPlayer({
     } else {
       await enterFullscreen()
     }
-  }, [enterFullscreen, exitFullscreen])
+  }, [enterFullscreen, exitFullscreen, nativeWindow])
 
   // Auto-fullscreen on orientation change (mobile only)
   useEffect(() => {

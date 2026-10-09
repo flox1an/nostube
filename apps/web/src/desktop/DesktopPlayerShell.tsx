@@ -6,7 +6,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 import { cn } from '@/lib/utils'
-import { DesktopPlayerControlsContext } from './DesktopPlayerControlsContext'
+import { DesktopPlayerControlsContext } from '@nostube/widgets/platform'
 import {
   DESKTOP_PLAYER_TITLEBAR_HEIGHT_CLASS,
   DESKTOP_TRAFFIC_LIGHT_SAFE_AREA_CLASS,

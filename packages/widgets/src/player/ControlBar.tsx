@@ -16,7 +16,7 @@ import { SettingsMenu } from './SettingsMenu'
 import { ControlButton } from './ControlButton'
 import { type QualityOption } from './engines'
 import { type TextTrack } from '@nostube/core/video-event'
-import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useTranslation } from 'react-i18next'
 import type { VideoChapter } from '@nostube/core/video-chapters'
 

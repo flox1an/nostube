@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import Hls from 'hls.js'
-import { useNostubeHostSafe } from '@nostube/widgets/host'
+import { useNostubeHostSafe } from '../../host'
 import { createBlossomHlsLoader } from '@nostube/core/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@nostube/core/hls-failover-debug'
 import type { BlossomServer, CachingServer } from '@nostube/core'

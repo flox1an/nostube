@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNostubeHostSafe } from '@nostube/widgets/host'
+import { useNostubeHostSafe } from '../host'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
 import {

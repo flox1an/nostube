@@ -1,0 +1,11 @@
+{
+  "player": {
+    "nextChapter": "跳到：{{title}}"
+  },
+  "contentSafety": {
+    "warning": {
+      "title": "敏感内容",
+      "play": "播放视频"
+    }
+  }
+}

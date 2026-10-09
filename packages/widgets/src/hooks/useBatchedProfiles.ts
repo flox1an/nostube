@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { kinds } from 'nostr-tools'
-import { useNostubeHost } from '@nostube/widgets/host'
+import { useNostubeHost } from '../host'
 
 /**
  * Batched profile loader

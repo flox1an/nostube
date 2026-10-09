@@ -1,0 +1,11 @@
+{
+  "player": {
+    "nextChapter": "スキップ: {{title}}"
+  },
+  "contentSafety": {
+    "warning": {
+      "title": "センシティブなコンテンツ",
+      "play": "動画を再生"
+    }
+  }
+}

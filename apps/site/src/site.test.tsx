@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { EventStore } from 'applesauce-core'
 import { of } from 'rxjs'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
@@ -78,6 +79,7 @@ describe('SiteHome', () => {
     tags: [['server', 'https://blossom.example/']],
   }
   const client = {
+    eventStore: new EventStore(),
     getTimelineLoader: () => () => of(video),
     relayPool: {
       request: (_relays: string[], filters: { kinds?: number[] }[]) =>

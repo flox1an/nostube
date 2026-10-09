@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect, memo } from 'react'
 import { Volume2, Volume1, VolumeX } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
-import { Kbd } from '@nostube/widgets/components/kbd'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/tooltip'
+import { Kbd } from '../components/kbd'
 
 interface VolumeControlProps {
   volume: number

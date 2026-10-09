@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { type TextTrack } from '@nostube/core/video-event'
 import { findValidUrl } from '@nostube/core/url-validator'
-import { useNostubeHostSafe } from '@nostube/widgets/host'
+import { useNostubeHostSafe } from '../../host'
 
 interface ValidatedTextTrack extends TextTrack {
   validatedUrl: string

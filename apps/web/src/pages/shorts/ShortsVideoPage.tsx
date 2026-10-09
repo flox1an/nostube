@@ -33,7 +33,7 @@ import { createEventLoader, createAddressLoader } from 'applesauce-loaders/loade
 import { getKindsForType } from '@nostube/core/video-types'
 import { Header } from '@/components/Header'
 import { PlayPauseOverlay } from '@nostube/widgets/components/PlayPauseOverlay'
-import { LoadingSpinner } from '@/components/player'
+import { LoadingSpinner } from '@nostube/widgets/player'
 import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
 import { useVideoPrefetch, getPrefetchedVideoBlob } from '@/hooks/useVideoPrefetch'
 import { useShortsFeedStore } from '@/stores/shortsFeedStore'

@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, type RefObject } from 'react'
 import type { VideoVariant } from '@nostube/core/video-event'
-import { useNostubeHost } from '@nostube/widgets/host'
+import { useNostubeHost } from '../../host'
 
 interface UseVideoVariantSelectorOptions {
   videoRef: RefObject<HTMLMediaElement | null>

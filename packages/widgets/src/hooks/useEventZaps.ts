@@ -1,7 +1,7 @@
 import { useMemo, useEffect } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getInvoiceAmount } from '@nostube/core/zap-utils'
-import { useNostubeHost } from '@nostube/widgets/host'
+import { useNostubeHost } from '../host'
 import { getReplacedEventIds } from '@nostube/core/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 

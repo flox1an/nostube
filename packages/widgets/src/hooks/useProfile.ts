@@ -5,7 +5,7 @@ import { type ProfilePointer } from 'nostr-tools/nip19'
 import { type Model } from 'applesauce-core'
 import { defer, EMPTY, merge, of } from 'rxjs'
 import { requestProfile } from './useBatchedProfiles'
-import { useNostubeHost } from '@nostube/widgets/host'
+import { useNostubeHost } from '../host'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { type RelayPool } from 'applesauce-relay'
 

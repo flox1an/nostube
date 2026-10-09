@@ -4,7 +4,7 @@ import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@nostube/core/
 import { discoverUrlsWithCache } from '@nostube/core/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@nostube/core/url-validator'
 import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
-import { useNostubeHostSafe } from '@nostube/widgets/host'
+import { useNostubeHostSafe } from '../host'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import type { VideoVariant } from '@nostube/core/video-event'
 

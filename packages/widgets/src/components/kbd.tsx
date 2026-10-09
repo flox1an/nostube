@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { cn } from '@nostube/widgets/cn'
+import { cn } from '../cn'
 
 export type KbdProps = React.HTMLAttributes<HTMLElement>
 

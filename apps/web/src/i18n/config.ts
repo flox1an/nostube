@@ -9,6 +9,7 @@ import es from './locales/es.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 import ja from './locales/ja.json'
+import { registerWidgetTranslations } from '@nostube/widgets/i18n'
 
 i18n
   .use(LanguageDetector)
@@ -34,5 +35,8 @@ i18n
       lookupLocalStorage: 'i18nextLng',
     },
   })
+
+// The shared widgets bring their own strings; keys defined above win.
+registerWidgetTranslations(i18n)
 
 export default i18n

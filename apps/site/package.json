@@ -14,8 +14,11 @@
   "dependencies": {
     "@nostube/core": "*",
     "@nostube/widgets": "*",
+    "applesauce-react": "^6.0.0",
+    "i18next": "^26.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.12",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {

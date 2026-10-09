@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { VideoPlayer } from '@/components/player/VideoPlayer'
+import { VideoPlayer } from '@nostube/widgets/player/VideoPlayer'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import type { VideoPlayback } from '@nostube/core/content-safety'
 import { buildVideoPath } from '@/utils/video-utils'

@@ -1,0 +1,11 @@
+{
+  "player": {
+    "nextChapter": "Перейти к: {{title}}"
+  },
+  "contentSafety": {
+    "warning": {
+      "title": "Контент деликатного характера",
+      "play": "Воспроизвести видео"
+    }
+  }
+}

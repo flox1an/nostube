@@ -11,9 +11,9 @@ import {
 } from 'lucide-react'
 import { type QualityOption } from './engines'
 import { type TextTrack } from '@nostube/core/video-event'
-import { useProfile } from '@nostube/widgets/hooks/useProfile'
-import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
-import { getLanguageLabel } from '@/lib/utils'
+import { useProfile } from '../hooks/useProfile'
+import { UserAvatar } from '../components/UserAvatar'
+import { getLanguageLabel } from '@nostube/core/common-utils'
 
 type MenuView = 'main' | 'quality' | 'speed' | 'subtitles'
 

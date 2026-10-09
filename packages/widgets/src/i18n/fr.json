@@ -1,0 +1,11 @@
+{
+  "player": {
+    "nextChapter": "Aller à : {{title}}"
+  },
+  "contentSafety": {
+    "warning": {
+      "title": "Contenu sensible",
+      "play": "Lire la vidéo"
+    }
+  }
+}

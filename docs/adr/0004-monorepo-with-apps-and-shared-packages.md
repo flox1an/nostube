@@ -19,7 +19,7 @@ apps/server    Rust server; embeds the built site, studio and embed
 apps/site      creator homepage (videos, profile, playlists), no discovery  [skeleton: profile + video grid + player]
 apps/studio    upload and management UI                                      [planned]
 packages/core      headless Nostr/Blossom logic, no React                    [started: media URL, HLS, video event, instance config]
-packages/widgets   player, video card, comments, login, shadcn/ui base       [skeleton: VideoCard, VideoGrid, VideoPlayer]
+packages/widgets   player, video card, comments, login, shadcn/ui base       [player, hooks, UI primitives, VideoCard, VideoGrid]
 ```
 
 - **Extract on demand.** The web app moves unchanged into `apps/web`. Packages start empty and take a file only when `site`, `studio` or the embed needs it; `tsc` and lint confirm each move. `site` is built first as a thin slice (one creator, a grid, the player).
@@ -42,10 +42,10 @@ packages/widgets   player, video card, comments, login, shadcn/ui base       [sk
 ## Status of the first slice
 
 - `apps/site` is a skeleton: it loads `/api/config` (contract v1), registers it with `setInstanceConfig`, builds a client with `createNostubeClient` and shows the start creator's profile and videos with the widgets. It is not wired into the Rust server or the Docker image yet.
-- The widgets are new, small components. `apps/web` has its own card and player and does not share them yet; moving web onto the widgets is a separate step.
+- `VideoCard` and `VideoGrid` are new, small components; `apps/web` keeps its own card. The player is the one from `apps/web`.
 - Widgets use Tailwind utility classes, like web (Tailwind v4). An app that consumes them adds `@source '../../../packages/widgets/src'` to its CSS.
 - **Config injection is half done.** `createNostubeClient(config)` exists and web uses it. The preset, trust and missing-video logic is still imported directly by `apps/web/src/nostr/useTimeline.ts`; turning it into an injected policy is the next step, and `useTimeline` cannot move into core before that.
 - **The site has no content-warning or 18+ gate.** Web's NSFW safety is on by default. The site is not deployed yet; the gate must exist before it is.
-- **The widgets `VideoPlayer` is a placeholder** (native `<video>`, hls.js, the core `PlaybackUrlLadder` with the creator's Blossom servers). It is deleted once the player of `apps/web` moves into `packages/widgets`; the site then uses that one, so both apps play videos the same way. The same applies to `createPlaybackLadder`.
-- **Host context.** `@nostube/widgets/host` defines `NostubeHost` (config subset, relay pool, lookup relays) with `NostubeHostProvider`, `useNostubeHost` (throws without a provider) and `useNostubeHostSafe`. The shared hooks (`useProfile`, `useBatchedProfiles`, `useEventZaps`, `useMediaUrls`, `useImageCascade`, `useIsMobile`) live in `@nostube/widgets/hooks/*` and read it. `apps/web` fills it from `AppContext` in `NostubeHostBridge` (app and embed); `apps/site` will fill it from the instance config. `url-discovery` in core takes the pool as an argument.
+- **The player lives in `@nostube/widgets/player`** (moved from `apps/web`, with its hooks and engines), together with the UI primitives it needs (`components/*`), the host context, the platform context (`NativeWindow` for the desktop shell, `DesktopPlayerControlsContext`), the theme tokens (`theme.css`, imported by every app) and its translations (`i18n`, three keys per language, merged with `registerWidgetTranslations`). Web and the site play videos the same way. A host that renders it needs: `EventStoreProvider`, `NostubeHostProvider`, `TooltipProvider`, i18next with the widget translations, and the theme CSS.
+- **Host context.** `@nostube/widgets/host` defines `NostubeHost` (config subset, relay pool, lookup relays) with `NostubeHostProvider`, `useNostubeHost` (throws without a provider) and `useNostubeHostSafe`. The shared hooks (`useProfile`, `useBatchedProfiles`, `useEventZaps`, `useMediaUrls`, `useImageCascade`, `useIsMobile`) live in `@nostube/widgets/hooks/*` and read it. `apps/web` fills it from `AppContext` in `NostubeHostBridge` (app and embed); `apps/site` fills it from the instance config and the creator's Blossom server list. `url-discovery` in core takes the pool as an argument.
 - **The embed no longer bundles `nostr/core`** (it used the web singleton for URL discovery): `embed.html` shrank from 3.27 MB to 2.47 MB. Discovery now runs on the embed's own relay pool.

@@ -7,20 +7,18 @@ const nativeWindow = vi.hoisted(() => ({
   setFullscreen: vi.fn(),
 }))
 
-vi.mock('@tauri-apps/api/core', () => ({
-  isTauri: () => true,
+// The desktop shell: the player gets the native window from the platform context.
+vi.mock('../platform', () => ({
+  usePlatform: () => ({ nativeWindow }),
+  useDesktopPlayerControls: () => undefined,
 }))
 
-vi.mock('@tauri-apps/api/window', () => ({
-  getCurrentWindow: () => nativeWindow,
-}))
-
-vi.mock('@nostube/widgets/host', () => ({
+vi.mock('../host', () => ({
   useNostubeHost: () => ({ config: {} }),
   useNostubeHostSafe: () => undefined,
 }))
 
-vi.mock('@nostube/widgets/hooks/useMediaUrls', () => ({
+vi.mock('../hooks/useMediaUrls', () => ({
   useMediaUrls: ({ urls }: { urls: string[] }) => ({
     ladder: {
       currentUrl: urls[0] ?? null,
@@ -36,7 +34,7 @@ vi.mock('@nostube/core/blurhashDataURL', () => ({
   blurHashToDataURL: () => null,
 }))
 
-vi.mock('@nostube/widgets/components/PlayPauseOverlay', () => ({
+vi.mock('../components/PlayPauseOverlay', () => ({
   PlayPauseOverlay: () => null,
 }))
 

@@ -24,11 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check core (lint, typecheck, test)
+      - name: Check core, widgets and site (lint, typecheck, test)
         run: |
-          npm run lint --workspace @nostube/core
-          npm run typecheck --workspace @nostube/core
-          npm run test --workspace @nostube/core
+          npm run lint --workspace @nostube/core --workspace @nostube/widgets --workspace @nostube/site
+          npm run typecheck --workspace @nostube/core --workspace @nostube/widgets --workspace @nostube/site
+          npm run test --workspace @nostube/core --workspace @nostube/widgets --workspace @nostube/site
+
+      - name: Build site
+        run: npm run build --workspace @nostube/site
 
       - name: Run tests
         working-directory: apps/web

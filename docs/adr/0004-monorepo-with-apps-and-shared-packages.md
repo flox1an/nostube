@@ -16,10 +16,10 @@ One repository with npm workspaces (`apps/web`, `packages/*`; one root `package-
 ```
 apps/web       Nostube (discovery UI, nostu.be), including the embed player
 apps/server    Rust server; embeds the built site, studio and embed
-apps/site      creator homepage (videos, profile, playlists), no discovery  [planned]
+apps/site      creator homepage (videos, profile, playlists), no discovery  [skeleton: profile + video grid + player]
 apps/studio    upload and management UI                                      [planned]
 packages/core      headless Nostr/Blossom logic, no React                    [started: media URL, HLS, video event, instance config]
-packages/widgets   player, video card, comments, login, shadcn/ui base       [planned]
+packages/widgets   player, video card, comments, login, shadcn/ui base       [skeleton: VideoCard, VideoGrid, VideoPlayer]
 ```
 
 - **Extract on demand.** The web app moves unchanged into `apps/web`. Packages start empty and take a file only when `site`, `studio` or the embed needs it; `tsc` and lint confirm each move. `site` is built first as a thin slice (one creator, a grid, the player).
@@ -34,8 +34,16 @@ packages/widgets   player, video card, comments, login, shadcn/ui base       [pl
 
 ## Consequences
 
-- Deploy targets must point at `apps/web` (Vercel Root Directory, Coolify base directory, workflow `working-directory`).
-- The `@/` alias resolves to `apps/web/src`; files moved into a package need rewritten imports. Tailwind needs the widgets sources added to its content globs, and `components.json` aliases must be updated.
-- A lint rule (`no-restricted-imports`) must keep core free of `react` and `@/components`.
-- The AppContext types (`BlossomServer`, `NsfwFilter`, `VideoType`, `CachingServer`) move out of the React context file first; they block extraction of about seven `lib` files.
+- The Docker build context is the repository root (`/Dockerfile`, Coolify base directory `/`); every workspace manifest must be copied before `npm ci`. Vercel is no longer used.
+- The `@/` alias resolves to `apps/web/src`; files moved into a package need rewritten imports (subpath imports, see above). `components.json` aliases must be updated when web moves onto the widgets.
+- ESLint (`no-restricted-imports`) keeps core free of React and `@/`, and widgets free of `@/` and app code.
 - The instance build in `apps/web` stays until `apps/site` can replace it; then ADR 0005 of the server is superseded.
+
+## Status of the first slice
+
+- `apps/site` is a skeleton: it loads `/api/config` (contract v1), registers it with `setInstanceConfig`, builds a client with `createNostubeClient` and shows the start creator's profile and videos with the widgets. It is not wired into the Rust server or the Docker image yet.
+- The widgets are new, small components. `apps/web` has its own card and player and does not share them yet; moving web onto the widgets is a separate step.
+- Widgets use Tailwind utility classes, like web (Tailwind v4). An app that consumes them adds `@source '../../../packages/widgets/src'` to its CSS.
+- **Config injection is half done.** `createNostubeClient(config)` exists and web uses it. The preset, trust and missing-video logic is still imported directly by `apps/web/src/nostr/useTimeline.ts`; turning it into an injected policy is the next step, and `useTimeline` cannot move into core before that.
+- **The site has no content-warning or 18+ gate.** Web's NSFW safety is on by default. The site is not deployed yet; the gate must exist before it is.
+- **The widgets `VideoPlayer` is a placeholder** (native `<video>`, hls.js, the core `PlaybackUrlLadder` with the creator's Blossom servers). It is deleted once the player of `apps/web` moves into `packages/widgets`; the site then uses that one, so both apps play videos the same way. The same applies to `createPlaybackLadder`.

@@ -6,8 +6,10 @@ Monorepo for Nostube.
 |---|---|
 | `apps/web` | The Nostube web app (nostu.be), including the embed player and the Tauri desktop wrapper |
 | `apps/server` | The self-hosted Rust server (relay, Blossom, admin) |
-| `packages/core` | Shared types and logic without React (`@nostube/core`, internal, not published) |
+| `apps/site` | Skeleton of the self-hosted creator homepage (static Vite app, reads the server's `/api/config`) |
+| `packages/core` | Shared logic without React: Nostr client, media URL ladder, HLS loader, instance config (`@nostube/core`, internal, not published) |
+| `packages/widgets` | Shared React components for the apps (`@nostube/widgets`, internal) |
 
-More packages and apps (`widgets`, `site`, `studio`) follow; see `docs/adr/`.
+More apps (`studio`) follow; see `docs/adr/`.
 
 Dependencies are installed once at the repository root (npm workspaces): `npm ci`, then `cd apps/web && npm run build`.

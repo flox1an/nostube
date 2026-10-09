@@ -6,7 +6,9 @@ WORKDIR /app
 ARG VITE_NSFW_SAFETY=on
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
+COPY apps/site/package.json apps/site/
 COPY packages/core/package.json packages/core/
+COPY packages/widgets/package.json packages/widgets/
 RUN npm ci --ignore-scripts
 COPY packages packages
 COPY apps/web apps/web
@@ -24,7 +26,9 @@ WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
+COPY apps/site/package.json apps/site/
 COPY packages/core/package.json packages/core/
+COPY packages/widgets/package.json packages/widgets/
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 WORKDIR /app/apps/web
 COPY --from=build /app/apps/web/dist ./dist

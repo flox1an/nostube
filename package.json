@@ -4,6 +4,7 @@
   "type": "module",
   "workspaces": [
     "apps/web",
+    "apps/site",
     "packages/*"
   ],
   "scripts": {

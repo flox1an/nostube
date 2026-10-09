@@ -11,7 +11,14 @@ import { Nav } from './Nav'
 import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
-import { loadAdmin, saveConfig, waitForRestart, type AdminConfig, type AdminState } from './api'
+import {
+  loadAdmin,
+  saveConfig,
+  signOut,
+  waitForRestart,
+  type AdminConfig,
+  type AdminState,
+} from './api'
 import { addKeyToConfig, fromDraft, toDraft, type Draft } from './draft'
 import { PAGES, useRoute } from './route'
 import { SignerProvider } from './signer-context'
@@ -50,7 +57,8 @@ export function App() {
     return (
       <Shell>
         <div className="space-y-3 py-12 text-center">
-          <p>You need to log in to use the studio.</p>
+          <p className="text-lg font-medium">You are logged out</p>
+          <p className="text-sm text-muted-foreground">Log in to manage this instance.</p>
           <Button asChild>
             <a href="/admin/login">Log in</a>
           </Button>
@@ -75,21 +83,40 @@ export function App() {
   )
 }
 
-/** The frame of every studio screen: the title, and a way over to the public site. */
-export function Shell({ children }: { children: React.ReactNode }) {
+/**
+ * The frame of every studio screen: the title, a way over to the public site and, once logged in,
+ * a way out.
+ */
+export function Shell({
+  children,
+  onLogout,
+}: {
+  children: React.ReactNode
+  onLogout?: () => void
+}) {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Studio</h1>
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
-        >
-          View site
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        </a>
+        <h1 className="flex items-center gap-3 text-2xl font-semibold">
+          <img src={`${import.meta.env.BASE_URL}nostube.svg`} alt="" className="h-9 w-9" />
+          Nostube Studio
+        </h1>
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
+            View site
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+          {onLogout && (
+            <Button type="button" variant="outline" size="sm" onClick={onLogout}>
+              Log out
+            </Button>
+          )}
+        </div>
       </header>
       {children}
     </div>
@@ -141,7 +168,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   )
 
   return (
-    <Shell>
+    <Shell onLogout={() => void signOut()}>
       <Nav page={page} onNavigate={navigate} />
 
       {saving === 'stalled' && (

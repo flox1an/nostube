@@ -114,3 +114,9 @@ export async function unbindNostr(): Promise<void> {
 export async function logout(): Promise<void> {
   await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin', redirect: 'manual' })
 }
+
+/** Ends the session and leads to the login page. */
+export async function signOut(): Promise<void> {
+  await logout()
+  location.href = '/admin/login'
+}

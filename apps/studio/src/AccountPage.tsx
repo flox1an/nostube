@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@nostube/widgets/components/card'
-import { logout, nip07, nostrPost, unbindNostr, type AdminState } from './api'
+import { nip07, nostrPost, unbindNostr, type AdminState } from './api'
 
 /** Who can log in: the password always, optionally the key of a NIP-07 signer. */
 export function AccountPage({ state, reload }: { state: AdminState; reload: () => void }) {
@@ -70,29 +70,22 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>This device</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          {/* Only an instance with its own CA has one to install; behind a proxy TLS is public. */}
-          {state.tlsMode === 'local-ca' && (
+      {/* Only an instance with its own CA has one to install; behind a proxy TLS is public. */}
+      {state.tlsMode === 'local-ca' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>This device</CardTitle>
+            <CardDescription>
+              Devices that open this instance need to trust its certificate authority once.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <Button asChild variant="outline">
               <a href="/ca.pem">Download the instance CA</a>
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={async () => {
-              await logout()
-              location.href = '/admin/login'
-            }}
-          >
-            Log out
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

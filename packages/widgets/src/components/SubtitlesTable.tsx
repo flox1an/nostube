@@ -1,4 +1,4 @@
-import type { SubtitleVariant } from '@/types/upload-draft'
+import type { SubtitleVariant } from './SubtitleSection'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@nostube/widgets/components/button'
 import { Trash2, LucideBookUp, Copy } from 'lucide-react'
@@ -23,15 +23,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@nostube/widgets/components/tooltip'
-import { LANGUAGES } from '@/lib/languages'
+import { LANGUAGES } from '../languages'
 
 interface SubtitlesTableProps {
   subtitles: SubtitleVariant[]
   onRemove: (id: string) => void
   onLanguageChange: (id: string, lang: string) => void
+  disabled?: boolean
 }
 
-export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: SubtitlesTableProps) {
+export function SubtitlesTable({
+  subtitles,
+  onRemove,
+  onLanguageChange,
+  disabled,
+}: SubtitlesTableProps) {
   const { t } = useTranslation()
 
   if (subtitles.length === 0) {
@@ -63,6 +69,7 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
               <TableCell>
                 <Select
                   value={subtitle.lang || 'none'}
+                  disabled={disabled}
                   onValueChange={value =>
                     onLanguageChange(subtitle.id, value === 'none' ? '' : value)
                   }
@@ -163,6 +170,7 @@ export function SubtitlesTable({ subtitles, onRemove, onLanguageChange }: Subtit
                 <Button
                   type="button"
                   variant="ghost"
+                  disabled={disabled}
                   size="sm"
                   onClick={() => onRemove(subtitle.id)}
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"

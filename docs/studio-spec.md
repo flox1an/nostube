@@ -37,7 +37,7 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 ## Funktionen (grobe Reihenfolge)
 
 1. **Anmeldung und Übersicht**: Login des Admins, Einrichtung des Signers (siehe Identität und Signer), Startseite mit Zustand der Instanz (Speicher, Relays, letzte Uploads).
-2. **Videos** (Upload v1 erledigt: MP4/WebM, ohne Transcodierung, in Teilen per `PATCH /upload`, Veröffentlichung nur an die Relays der Instanz): Hochladen (Wizard wie in `apps/web`, inklusive Transcoding im Browser, ADR 0002), Metadaten bearbeiten, Videos löschen oder ausblenden. Wiederverwendung der Upload-Bausteine aus `apps/web` über `packages/*`.
+2. **Videos** (Upload umgesetzt: MP4/WebM, ohne Transcodierung, in Teilen per `PATCH /upload`, Veröffentlichung nur an die Relays der Instanz): Tags, Dateiauswahl, Inhaltswarnung, Thumbnail-Auswahl/-Import und Untertitel-Upload verwenden dieselben Widgets wie `apps/web`. VTT/SRT-Dateien bekommen eine auswählbare Sprache; SRT wird vor dem Upload in WebVTT umgewandelt. Metadaten, Thumbnail und Untertitel bleiben bis „Upload and publish“ lokal; Wiederholungen nutzen abgeschlossene Uploads weiter. Noch offen: Transcoding im Browser (ADR 0002), Metadaten bearbeiten, Videos löschen. Geteilte UI liegt in `@nostube/widgets`, Untertitel-Helfer und Event-Tags in `@nostube/core`; Signer und Upload-Ablauf bleiben app-seitig.
 3. **Moderation**:
    - Kommentare der eigenen Videos durchsehen (aus den `interactionRelays`).
    - Autoren und einzelne Events stummschalten. Das Studio pflegt die **Mute-Liste des Owners** (NIP-51, Kind 10000: `p`-Tags für Autoren, `e`-Tags für einzelne Events) und veröffentlicht sie über den Signer.

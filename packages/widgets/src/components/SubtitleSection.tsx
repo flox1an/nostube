@@ -1,8 +1,15 @@
 import { useDropzone } from 'react-dropzone'
 import { FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { SubtitleVariant } from '@/types/upload-draft'
 import { SubtitlesTable } from './SubtitlesTable'
+
+export interface SubtitleVariant {
+  id: string
+  filename: string
+  lang: string
+  uploadedBlobs: { url: string }[]
+  mirroredBlobs: { url: string }[]
+}
 
 interface SubtitleSectionProps {
   subtitles: SubtitleVariant[]
@@ -10,6 +17,7 @@ interface SubtitleSectionProps {
   onRemove: (id: string) => void
   onLanguageChange: (id: string, lang: string) => void
   isUploading?: boolean
+  disabled?: boolean
 }
 
 export function SubtitleSection({
@@ -18,6 +26,7 @@ export function SubtitleSection({
   onRemove,
   onLanguageChange,
   isUploading = false,
+  disabled = false,
 }: SubtitleSectionProps) {
   const { t } = useTranslation()
 
@@ -29,7 +38,7 @@ export function SubtitleSection({
       'text/plain': ['.vtt', '.srt'],
     },
     multiple: true,
-    disabled: isUploading,
+    disabled: disabled || isUploading,
   })
 
   return (
@@ -40,6 +49,7 @@ export function SubtitleSection({
           subtitles={subtitles}
           onRemove={onRemove}
           onLanguageChange={onLanguageChange}
+          disabled={disabled}
         />
       )}
 
@@ -51,10 +61,10 @@ export function SubtitleSection({
           (isDragActive
             ? 'border-primary bg-muted'
             : 'border-gray-300 bg-background hover:bg-muted') +
-          (isUploading ? ' opacity-50 cursor-not-allowed' : '')
+          (disabled || isUploading ? ' opacity-50 cursor-not-allowed' : '')
         }
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps({ 'aria-label': t('upload.subtitles.dragDrop') })} />
         <FileText className="w-8 h-8 text-muted-foreground mb-2" />
         <span className="text-base text-muted-foreground text-center">
           {isDragActive

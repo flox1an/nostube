@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from '@nostube/widgets/components/select'
 
-import { LANGUAGES } from '@/lib/languages'
+import { LANGUAGES } from '../languages'
 
 // Sentinel value for "no language selected" (Radix Select doesn't allow empty string values)
 const NONE_VALUE = '__none__'
@@ -18,6 +18,7 @@ interface LanguageSelectProps {
   id?: string
   allowNone?: boolean
   noneLabel?: string
+  disabled?: boolean
 }
 
 export function LanguageSelect({
@@ -27,6 +28,7 @@ export function LanguageSelect({
   id,
   allowNone = false,
   noneLabel = 'None',
+  disabled,
 }: LanguageSelectProps) {
   // Convert empty string to sentinel value for Radix Select
   const selectValue = value === '' ? NONE_VALUE : value
@@ -37,7 +39,7 @@ export function LanguageSelect({
   }
 
   return (
-    <Select value={selectValue} onValueChange={handleValueChange}>
+    <Select value={selectValue} onValueChange={handleValueChange} disabled={disabled}>
       <SelectTrigger id={id}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

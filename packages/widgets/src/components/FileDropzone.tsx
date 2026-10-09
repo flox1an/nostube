@@ -9,6 +9,7 @@ interface FileDropzoneProps {
   selectedFile?: File | null
   className?: string
   style?: React.CSSProperties
+  id?: string
 }
 
 export function FileDropzone({
@@ -18,6 +19,7 @@ export function FileDropzone({
   selectedFile,
   className = '',
   style,
+  id,
 }: FileDropzoneProps) {
   const { t } = useTranslation()
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -40,7 +42,7 @@ export function FileDropzone({
         ` ${className}`
       }
     >
-      <input {...getInputProps()} />
+      <input {...getInputProps({ id, 'aria-label': t('upload.dropzone.dragDrop') })} />
       <File className="w-8 h-8 text-muted-foreground mb-2" />
       <span className="text-base text-muted-foreground">
         {isDragActive ? t('upload.dropzone.dropHere') : t('upload.dropzone.dragDrop')}

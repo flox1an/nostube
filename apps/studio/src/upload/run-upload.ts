@@ -1,8 +1,9 @@
 import type { EventTemplate } from 'nostr-tools'
 import { buildVideoEvent, type UploadedBlob } from '@nostube/core/video-publish'
+import { prepareSubtitleFile } from '@nostube/core/subtitle-utils'
 import type { VideoProbe } from './probe-video'
 
-export type StepId = 'check' | 'hash' | 'video' | 'thumbnail' | 'publish'
+export type StepId = 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
 export type StepStatus = 'pending' | 'running' | 'done' | 'error'
 
 export const STEPS: { id: StepId; label: string }[] = [
@@ -10,6 +11,7 @@ export const STEPS: { id: StepId; label: string }[] = [
   { id: 'hash', label: 'Fingerprint the file' },
   { id: 'video', label: 'Upload the video' },
   { id: 'thumbnail', label: 'Upload the thumbnail' },
+  { id: 'subtitles', label: 'Upload the subtitles' },
   { id: 'publish', label: 'Publish' },
 ]
 
@@ -20,6 +22,9 @@ export interface UploadInput {
   tags: string[]
   /** A content warning's reason (empty: NSFW); undefined for none. */
   contentWarning?: string
+  /** Undefined uses the probed frame; null deliberately omits a thumbnail. */
+  thumbnail?: Blob | null
+  subtitles?: { id: string; file: File; lang: string }[]
 }
 
 export interface StepState {
@@ -48,6 +53,9 @@ export interface UploadJob {
   /** How many bytes of the video the server has (a chunked upload that failed halfway). */
   videoOffset?: number
   thumbnail?: UploadedBlob
+  /** Successful files survive retries independently of the remaining subtitle files. */
+  subtitles?: Record<string, UploadedBlob>
+  subtitleOffsets?: Record<string, number>
   published?: PublishedVideo
 }
 
@@ -85,10 +93,57 @@ export function newJob(
       hash: pending(),
       video: pending(),
       thumbnail: pending(),
+      subtitles: pending(),
       publish: pending(),
     },
     probe,
   }
+}
+
+/** Update an interrupted job, retaining only uploads that still match the selected files. */
+export function updateJobInput(job: UploadJob, input: UploadInput): UploadJob {
+  const steps = { ...job.steps, publish: pending() }
+  const changed: UploadJob = { ...job, input, steps, published: undefined }
+  if (input.file !== job.input.file) {
+    changed.probe = undefined
+    changed.sha256 = undefined
+    changed.video = undefined
+    changed.videoOffset = undefined
+    steps.check = pending()
+    steps.hash = pending()
+    steps.video = pending()
+  }
+  if (input.file !== job.input.file || input.thumbnail !== job.input.thumbnail) {
+    changed.thumbnail = undefined
+    steps.thumbnail = pending()
+  }
+  const subtitles = input.subtitles ?? []
+  const oldSubtitles = job.input.subtitles ?? []
+  if (
+    subtitles.length !== oldSubtitles.length ||
+    subtitles.some(
+      (subtitle, index) =>
+        subtitle.id !== oldSubtitles[index]?.id || subtitle.file !== oldSubtitles[index]?.file
+    )
+  ) {
+    const retained = subtitles.filter(subtitle =>
+      oldSubtitles.some(old => old.id === subtitle.id && old.file === subtitle.file)
+    )
+    changed.subtitles = Object.fromEntries(
+      retained.flatMap(subtitle =>
+        job.subtitles?.[subtitle.id] ? [[subtitle.id, job.subtitles[subtitle.id]]] : []
+      )
+    )
+    changed.subtitleOffsets = Object.fromEntries(
+      retained.flatMap(subtitle =>
+        job.subtitleOffsets?.[subtitle.id] === undefined
+          ? []
+          : [[subtitle.id, job.subtitleOffsets[subtitle.id]]]
+      )
+    )
+    steps.subtitles = pending()
+  }
+  return changed
 }
 
 /** True once the video is published. */
@@ -157,16 +212,45 @@ export async function runUpload(
   }
   if (
     !(await step('thumbnail', async () => {
-      const blob = current.probe!.thumbnail
+      const blob =
+        current.input.thumbnail === undefined ? current.probe!.thumbnail : current.input.thumbnail
+      if (!blob) return
+      const type = blob.type
+      if (!type.startsWith('image/'))
+        throw new Error('The thumbnail must be an image with a MIME type.')
+      const extension = type === 'image/jpeg' ? 'jpg' : type.split('/')[1]
       const sha256 = await deps.hash(blob, () => {})
       const thumbnail = await deps.upload({
         blob,
-        name: 'thumbnail.jpg',
-        type: 'image/jpeg',
+        name: blob instanceof File ? blob.name : `thumbnail.${extension}`,
+        type,
         sha256,
         onProgress: progress('thumbnail'),
       })
       update({ thumbnail })
+    }))
+  ) {
+    return current
+  }
+  if (
+    !(await step('subtitles', async () => {
+      for (const subtitle of current.input.subtitles ?? []) {
+        if (!subtitle.lang) throw new Error(`Select a language for ${subtitle.file.name}.`)
+        if (current.subtitles?.[subtitle.id]) continue
+        const blob = await prepareSubtitleFile(subtitle.file)
+        const sha256 = await deps.hash(blob, () => {})
+        const uploaded = await deps.upload({
+          blob,
+          name: blob.name,
+          type: 'text/vtt',
+          sha256,
+          onProgress: progress('subtitles'),
+          resumeFrom: current.subtitleOffsets?.[subtitle.id],
+          onOffset: offset =>
+            update({ subtitleOffsets: { ...current.subtitleOffsets, [subtitle.id]: offset } }),
+        })
+        update({ subtitles: { ...current.subtitles, [subtitle.id]: uploaded } })
+      }
     }))
   ) {
     return current
@@ -189,6 +273,10 @@ export async function runUpload(
         duration: probe!.duration,
       },
       thumbnail,
+      subtitles: (input.subtitles ?? []).map(subtitle => ({
+        url: current.subtitles![subtitle.id].url,
+        lang: subtitle.lang,
+      })),
     })
     update({ published: await deps.publish(template) })
   })

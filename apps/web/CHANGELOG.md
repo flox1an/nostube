@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Web and Studio now share upload widgets for tag entry, file selection, content warnings, language selection, thumbnails, and subtitles. Studio supports custom/frame/URL thumbnails and multiple caption files through its existing instance-only upload pipeline; both apps convert SRT to native-playable WebVTT before publishing caption tags.
+
 - Instance build for nostube-server (`npm run build:instance` → `dist-instance/`, `VITE_INSTANCE_BUILD=true`): loads `GET /api/config` (strict contract v1) before any relay pool or loader exists, keeps the last good config for unreachable/5xx, and stops with an error screen on 404, an invalid body or an unknown version; a changed `revision` (checked on tab focus and relay reconnect) reloads the page. The config is laid over the saved settings, never saved: video queries only go to `videoSources` and only for `creators` (also enforced in the relay pool and event store), `interactionRelays` replace the hardcoded profile/zap/indexer/publish relays, the pool connects to no other relay, uploads go only to the instance's own Blossom, `/` opens the start creator's profile, and the trust filter, preset gate, image proxy, view tracking, DVM and media discovery, hosted search and dicebear avatars are off. The nostu.be build never requests `/api/config`
 - Settings → Network → "Service endpoints" with the search service URL and personal image proxy URL fields; both lived only in the unused `GeneralSettingsSection`, which was never rendered and has been removed
 - `VITE_NSFW_SAFETY` build-time switch (`off` disables the 18+ confirmation and the embed's NSFW gate) for self-hosted deployments; nostube's own deployment keeps it on

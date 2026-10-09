@@ -32,5 +32,57 @@
   "richText": {
     "video": "Видео",
     "note": "Заметка"
+  },
+  "upload": {
+    "dropzone": {
+      "dropHere": "Перетащите файл сюда...",
+      "dragDrop": "Перетащите файл сюда или нажмите для выбора",
+      "selected": "Выбрано"
+    },
+    "subtitles": {
+      "dropHere": "Перетащите файлы субтитров сюда...",
+      "dragDrop": "Перетащите файлы VTT или SRT сюда или нажмите для выбора",
+      "optional": "(Необязательно)",
+      "helperText": "Добавьте файлы субтитров, чтобы сделать ваше видео доступным на нескольких языках. Язык определяется автоматически по имени файла (например, video_en.vtt).",
+      "noLanguageWarning": "Для некоторых субтитров не выбран язык. Пожалуйста, выберите язык для каждого субтитра.",
+      "language": "Язык",
+      "filename": "Имя файла",
+      "status": "Статус",
+      "actions": "Действия",
+      "selectLanguage": "Выбрать...",
+      "pending": "В ожидании",
+      "remove": "Удалить"
+    },
+    "contentWarning": {
+      "title": "Пометить как NSFW / добавить предупреждение о содержании",
+      "reason": "Причина (необязательно)",
+      "placeholder": "например, нагота, насилие и т.д."
+    },
+    "thumbnail": {
+      "uploaded": "Thumbnail",
+      "generate": "Generate from video",
+      "enterUrl": "Enter URL",
+      "urlError": "Error fetching image",
+      "urlErrorDesc": "Could not load image from the provided URL. Please try another URL or upload a file.",
+      "uploading": "Uploading thumbnail...",
+      "fetch": "Import",
+      "urlHint": "Paste a direct link to an image file.",
+      "noVideoFile": "No video file available",
+      "title": "Миниатюра",
+      "useGenerated": "Использовать сгенерированную миниатюру",
+      "uploadCustom": "Загрузить пользовательскую миниатюру",
+      "generated": "Сгенерированная миниатюра",
+      "thumbnailPreview": "Предпросмотр миниатюры",
+      "selectFrame": "Перетащите ползунок для просмотра видео и выбора кадра",
+      "setAsThumbnail": "Установить как миниатюру",
+      "currentThumbnail": "Текущая миниатюра",
+      "uploadingThumbnail": "Загрузка миниатюры...",
+      "thumbnailSet": "Миниатюра обновлена!",
+      "autoCaptured": "Автоматически создано из видео — замените при желании"
+    },
+    "videoTable": {
+      "uploadedTo": "Загружено на",
+      "mirroredTo": "Зеркалировано на"
+    }
   }
 }

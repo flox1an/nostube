@@ -387,25 +387,6 @@
     "videoUrl": "Video URL",
     "videoUrlPlaceholder": "https://example.com/video.mp4",
     "process": "Process",
-    "dropzone": {
-      "dropHere": "Drop the file here...",
-      "dragDrop": "Drag & drop a file here, or click to select",
-      "selected": "Selected"
-    },
-    "subtitles": {
-      "dropHere": "Drop subtitle files here...",
-      "dragDrop": "Drag & drop VTT or SRT files here, or click to select",
-      "optional": "(Optional)",
-      "helperText": "Add subtitle files to make your video accessible in multiple languages. Language is auto-detected from filename (e.g., video_en.vtt).",
-      "noLanguageWarning": "Some subtitles have no language selected. Please select a language for each subtitle.",
-      "language": "Language",
-      "filename": "Filename",
-      "status": "Status",
-      "actions": "Actions",
-      "selectLanguage": "Select...",
-      "pending": "Pending",
-      "remove": "Remove"
-    },
     "publishDate": {
       "title": "Publish Date",
       "now": "Use current date",
@@ -436,24 +417,6 @@
       "infoH265hvc1": "Info: H.265/HEVC (hvc1) is widely supported. Only some de-googled Linux browsers may have issues.",
       "successH264": "Great: H.264/AVC (avc1) is the most widely supported video codec and will play on all browsers and devices."
     },
-    "contentWarning": {
-      "title": "Mark as NSFW / add content warning",
-      "reason": "Reason (optional)",
-      "placeholder": "e.g. nudity, violence, etc."
-    },
-    "thumbnail": {
-      "title": "Thumbnail",
-      "useGenerated": "Use generated thumbnail",
-      "uploadCustom": "Upload custom thumbnail",
-      "generated": "Generated thumbnail",
-      "thumbnailPreview": "Thumbnail Preview",
-      "selectFrame": "Drag the slider to browse through your video and select a frame",
-      "setAsThumbnail": "Set as Thumbnail",
-      "currentThumbnail": "Current Thumbnail",
-      "uploadingThumbnail": "Uploading thumbnail...",
-      "thumbnailSet": "Thumbnail updated!",
-      "autoCaptured": "Auto-generated from video — replace if you like"
-    },
     "videoTable": {
       "quality": "Quality",
       "dimensions": "Dimensions",
@@ -466,8 +429,6 @@
       "remove": "Remove",
       "previewTitle": "Preview: {{quality}}",
       "closePreview": "Close",
-      "uploadedTo": "Uploaded to",
-      "mirroredTo": "Mirrored to",
       "servers": "server(s)",
       "qualities": "qualities",
       "uploaded": "uploaded",

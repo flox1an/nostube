@@ -41,40 +41,6 @@ const LANGUAGE_PATTERNS: Record<string, string> = {
 }
 
 /**
- * Common languages for the dropdown selector
- */
-export const COMMON_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ar', name: 'Arabic' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'pl', name: 'Polish' },
-  { code: 'sv', name: 'Swedish' },
-  { code: 'no', name: 'Norwegian' },
-  { code: 'da', name: 'Danish' },
-  { code: 'fi', name: 'Finnish' },
-  { code: 'tr', name: 'Turkish' },
-  { code: 'el', name: 'Greek' },
-  { code: 'he', name: 'Hebrew' },
-  { code: 'th', name: 'Thai' },
-  { code: 'vi', name: 'Vietnamese' },
-  { code: 'id', name: 'Indonesian' },
-  { code: 'cs', name: 'Czech' },
-  { code: 'hu', name: 'Hungarian' },
-  { code: 'ro', name: 'Romanian' },
-  { code: 'uk', name: 'Ukrainian' },
-]
-
-/**
  * Detect language code from a subtitle filename
  * Supports patterns like:
  * - video_en.vtt -> en
@@ -122,26 +88,35 @@ export function detectLanguageFromFilename(filename: string): string {
 }
 
 /**
- * Get language name from code
- */
-export function getLanguageName(code: string): string {
-  if (!code) return ''
-  const found = COMMON_LANGUAGES.find(l => l.code === code)
-  if (found) return found.name
-
-  // Fall back to langs library
-  const entry =
-    langs.where('1', code) ||
-    langs.where('2', code) ||
-    langs.where('2T', code) ||
-    langs.where('2B', code) ||
-    langs.where('3', code)
-  return entry?.name || code
-}
-
-/**
  * Generate a unique ID for a subtitle
  */
 export function generateSubtitleId(): string {
   return `sub_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+}
+
+/** Native players consume WebVTT; preserve VTT files and convert only SRT cue timing lines. */
+export async function prepareSubtitleFile(file: File): Promise<File> {
+  if (!/\.srt$/i.test(file.name)) return file
+  const source = (await file.text()).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
+  const timing =
+    /^(\d{2,}:[0-5]\d:[0-5]\d)[,.](\d{3})([ \t]+-->[ \t]+)(\d{2,}:[0-5]\d:[0-5]\d)[,.](\d{3})[ \t]*$/m
+  const blocks = source.trim().split(/\n[ \t]*\n/)
+  if (!timing.test(source)) throw new Error('No SRT subtitle cues found')
+  for (const block of blocks) {
+    const lines = block.split('\n')
+    if (/^\d+$/.test(lines[0])) lines.shift()
+    const match = lines[0]?.match(timing)
+    if (!match || lines.length < 2) throw new Error('Malformed SRT subtitle cue')
+    const start =
+      match[1].split(':').reduce((seconds, part) => seconds * 60 + Number(part), 0) +
+      Number(match[2]) / 1000
+    const end =
+      match[4].split(':').reduce((seconds, part) => seconds * 60 + Number(part), 0) +
+      Number(match[5]) / 1000
+    if (end <= start) throw new Error('Malformed SRT subtitle cue timing')
+  }
+  const body = source.replace(new RegExp(timing.source, 'gm'), '$1.$2$3$4.$5')
+  return new File([`WEBVTT\n\n${body}`], file.name.replace(/\.srt$/i, '.vtt'), {
+    type: 'text/vtt',
+  })
 }

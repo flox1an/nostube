@@ -1,9 +1,10 @@
 import { Input } from '@nostube/widgets/components/input'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import { Label } from '@nostube/widgets/components/label'
-import { LanguageSelect } from '@/components/ui/language-select'
-import { TagInput } from '@/components/ui/tag-input'
+import { LanguageSelect } from '@nostube/widgets/components/language-select'
+import { TagInput } from '@nostube/widgets/components/tag-input'
 import { useTranslation } from 'react-i18next'
+import { useTagIndex } from '@/hooks'
 
 interface FormFieldsProps {
   title: string
@@ -34,6 +35,7 @@ export function FormFields({
   onLanguageChange,
 }: FormFieldsProps) {
   const { t } = useTranslation()
+  const { searchTags } = useTagIndex()
 
   return (
     <>
@@ -76,6 +78,7 @@ export function FormFields({
           id="tags"
           tags={tags}
           onTagsChange={onTagsChange}
+          search={searchTags}
           placeholder={t('upload.form.tagsHint')}
         />
       </div>

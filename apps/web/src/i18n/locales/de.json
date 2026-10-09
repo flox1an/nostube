@@ -371,25 +371,6 @@
     "videoUrl": "Video-URL",
     "videoUrlPlaceholder": "https://beispiel.de/video.mp4",
     "process": "Verarbeiten",
-    "dropzone": {
-      "dropHere": "Datei hier ablegen...",
-      "dragDrop": "Datei hierher ziehen oder klicken zum Auswählen",
-      "selected": "Ausgewählt"
-    },
-    "subtitles": {
-      "dropHere": "Untertiteldateien hier ablegen...",
-      "dragDrop": "VTT- oder SRT-Dateien hierher ziehen oder klicken zum Auswählen",
-      "optional": "(Optional)",
-      "helperText": "Füge Untertiteldateien hinzu, um dein Video in mehreren Sprachen zugänglich zu machen. Sprache wird automatisch aus dem Dateinamen erkannt (z.B. video_de.vtt).",
-      "noLanguageWarning": "Einige Untertitel haben keine Sprache ausgewählt. Bitte wähle eine Sprache für jeden Untertitel.",
-      "language": "Sprache",
-      "filename": "Dateiname",
-      "status": "Status",
-      "actions": "Aktionen",
-      "selectLanguage": "Auswählen...",
-      "pending": "Ausstehend",
-      "remove": "Entfernen"
-    },
     "publishDate": {
       "title": "Veröffentlichungsdatum",
       "now": "Aktuelles Datum verwenden",
@@ -420,24 +401,6 @@
       "infoH265hvc1": "Info: H.265/HEVC (hvc1) wird weitgehend unterstützt. Nur einige entgoogelte Linux-Browser können Probleme haben.",
       "successH264": "Großartig: H.264/AVC (avc1) ist der am weitesten verbreitete Video-Codec und läuft auf allen Browsern und Geräten."
     },
-    "contentWarning": {
-      "title": "Als NSFW markieren / Inhaltswarnung hinzufügen",
-      "reason": "Grund (optional)",
-      "placeholder": "z.B. Nacktheit, Gewalt, etc."
-    },
-    "thumbnail": {
-      "title": "Vorschaubild",
-      "useGenerated": "Generiertes Vorschaubild verwenden",
-      "uploadCustom": "Eigenes Vorschaubild hochladen",
-      "generated": "Generiertes Vorschaubild",
-      "thumbnailPreview": "Vorschaubild-Vorschau",
-      "selectFrame": "Ziehen Sie den Schieberegler, um durch Ihr Video zu navigieren und ein Bild auszuwählen",
-      "setAsThumbnail": "Als Vorschaubild festlegen",
-      "currentThumbnail": "Aktuelles Vorschaubild",
-      "uploadingThumbnail": "Vorschaubild wird hochgeladen...",
-      "thumbnailSet": "Vorschaubild aktualisiert!",
-      "autoCaptured": "Automatisch aus Video generiert — bei Bedarf ersetzen"
-    },
     "videoTable": {
       "quality": "Qualität",
       "dimensions": "Abmessungen",
@@ -450,8 +413,6 @@
       "remove": "Entfernen",
       "previewTitle": "Vorschau: {{quality}}",
       "closePreview": "Schließen",
-      "uploadedTo": "Hochgeladen auf",
-      "mirroredTo": "Gespiegelt auf",
       "servers": "Server",
       "qualities": "Qualitäten",
       "uploaded": "hochgeladen",

@@ -32,5 +32,57 @@
   "richText": {
     "video": "Video",
     "note": "Note"
+  },
+  "upload": {
+    "dropzone": {
+      "dropHere": "Drop the file here...",
+      "dragDrop": "Drag & drop a file here, or click to select",
+      "selected": "Selected"
+    },
+    "subtitles": {
+      "dropHere": "Drop subtitle files here...",
+      "dragDrop": "Drag & drop VTT or SRT files here, or click to select",
+      "optional": "(Optional)",
+      "helperText": "Add subtitle files to make your video accessible in multiple languages. Language is auto-detected from filename (e.g., video_en.vtt).",
+      "noLanguageWarning": "Some subtitles have no language selected. Please select a language for each subtitle.",
+      "language": "Language",
+      "filename": "Filename",
+      "status": "Status",
+      "actions": "Actions",
+      "selectLanguage": "Select...",
+      "pending": "Pending",
+      "remove": "Remove"
+    },
+    "contentWarning": {
+      "title": "Mark as NSFW / add content warning",
+      "reason": "Reason (optional)",
+      "placeholder": "e.g. nudity, violence, etc."
+    },
+    "thumbnail": {
+      "uploaded": "Thumbnail",
+      "generate": "Generate from video",
+      "enterUrl": "Enter URL",
+      "urlError": "Error fetching image",
+      "urlErrorDesc": "Could not load image from the provided URL. Please try another URL or upload a file.",
+      "uploading": "Uploading thumbnail...",
+      "fetch": "Import",
+      "urlHint": "Paste a direct link to an image file.",
+      "noVideoFile": "No video file available",
+      "title": "Thumbnail",
+      "useGenerated": "Use generated thumbnail",
+      "uploadCustom": "Upload custom thumbnail",
+      "generated": "Generated thumbnail",
+      "thumbnailPreview": "Thumbnail Preview",
+      "selectFrame": "Drag the slider to browse through your video and select a frame",
+      "setAsThumbnail": "Set as Thumbnail",
+      "currentThumbnail": "Current Thumbnail",
+      "uploadingThumbnail": "Uploading thumbnail...",
+      "thumbnailSet": "Thumbnail updated!",
+      "autoCaptured": "Auto-generated from video — replace if you like"
+    },
+    "videoTable": {
+      "uploadedTo": "Uploaded to",
+      "mirroredTo": "Mirrored to"
+    }
   }
 }

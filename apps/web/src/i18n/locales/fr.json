@@ -371,25 +371,6 @@
     "videoUrl": "URL de la vidéo",
     "videoUrlPlaceholder": "https://exemple.com/video.mp4",
     "process": "Traiter",
-    "dropzone": {
-      "dropHere": "Déposez le fichier ici...",
-      "dragDrop": "Glissez-déposez un fichier ici, ou cliquez pour sélectionner",
-      "selected": "Sélectionné"
-    },
-    "subtitles": {
-      "dropHere": "Déposez les fichiers de sous-titres ici...",
-      "dragDrop": "Glissez-déposez des fichiers VTT ou SRT ici, ou cliquez pour sélectionner",
-      "optional": "(Optionnel)",
-      "helperText": "Ajoutez des fichiers de sous-titres pour rendre votre vidéo accessible en plusieurs langues. La langue est détectée automatiquement à partir du nom de fichier (ex : video_fr.vtt).",
-      "noLanguageWarning": "Certains sous-titres n'ont pas de langue sélectionnée. Veuillez sélectionner une langue pour chaque sous-titre.",
-      "language": "Langue",
-      "filename": "Nom de fichier",
-      "status": "Statut",
-      "actions": "Actions",
-      "selectLanguage": "Sélectionner...",
-      "pending": "En attente",
-      "remove": "Supprimer"
-    },
     "publishDate": {
       "title": "Date de publication",
       "now": "Utiliser la date actuelle",
@@ -420,24 +401,6 @@
       "infoH265hvc1": "Info : Le H.265/HEVC (hvc1) est largement pris en charge. Seuls certains navigateurs Linux dé-googlisés peuvent rencontrer des problèmes.",
       "successH264": "Excellent : Le H.264/AVC (avc1) est le codec vidéo le plus largement pris en charge et sera lu sur tous les navigateurs et appareils."
     },
-    "contentWarning": {
-      "title": "Marquer comme NSFW / ajouter un avertissement de contenu",
-      "reason": "Raison (optionnel)",
-      "placeholder": "par ex. nudité, violence, etc."
-    },
-    "thumbnail": {
-      "title": "Miniature",
-      "useGenerated": "Utiliser la miniature générée",
-      "uploadCustom": "Télécharger une miniature personnalisée",
-      "generated": "Miniature générée",
-      "thumbnailPreview": "Aperçu de la miniature",
-      "selectFrame": "Faites glisser le curseur pour parcourir votre vidéo et sélectionner une image",
-      "setAsThumbnail": "Définir comme miniature",
-      "currentThumbnail": "Miniature actuelle",
-      "uploadingThumbnail": "Téléchargement de la miniature...",
-      "thumbnailSet": "Miniature mise à jour !",
-      "autoCaptured": "Généré automatiquement à partir de la vidéo — remplacez-le si vous le souhaitez"
-    },
     "videoTable": {
       "quality": "Qualité",
       "dimensions": "Dimensions",
@@ -450,8 +413,6 @@
       "remove": "Supprimer",
       "previewTitle": "Aperçu : {{quality}}",
       "closePreview": "Fermer",
-      "uploadedTo": "Téléchargé sur",
-      "mirroredTo": "Mis en miroir sur",
       "servers": "serveur(s)",
       "qualities": "qualités",
       "uploaded": "téléchargé",

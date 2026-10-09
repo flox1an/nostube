@@ -19,6 +19,7 @@ export interface VideoPublishInput {
   contentWarning?: string
   video: UploadedBlob & { width: number; height: number; duration: number }
   thumbnail?: UploadedBlob
+  subtitles?: { url: string; lang: string }[]
   /** Seconds; shown as the publish date. */
   publishedAt?: number
 }
@@ -58,6 +59,7 @@ export function buildVideoEvent(input: VideoPublishInput): EventTemplate {
         ? []
         : [['content-warning', input.contentWarning.trim() || 'NSFW']]),
       ...input.tags.map(tag => ['t', tag]),
+      ...(input.subtitles ?? []).map(track => ['text-track', track.url, track.lang]),
       ['client', 'nostube-studio'],
     ],
   }

@@ -32,5 +32,57 @@
   "richText": {
     "video": "视频",
     "note": "笔记"
+  },
+  "upload": {
+    "dropzone": {
+      "dropHere": "将文件拖放到此处...",
+      "dragDrop": "将文件拖放到此处，或点击选择",
+      "selected": "已选择"
+    },
+    "subtitles": {
+      "dropHere": "将字幕文件拖放到此处...",
+      "dragDrop": "将 VTT 或 SRT 文件拖放到此处，或点击选择",
+      "optional": "（可选）",
+      "helperText": "添加字幕文件以使您的视频支持多种语言。语言将从文件名自动检测（例如 video_zh.vtt）。",
+      "noLanguageWarning": "部分字幕未选择语言。请为每个字幕选择语言。",
+      "language": "语言",
+      "filename": "文件名",
+      "status": "状态",
+      "actions": "操作",
+      "selectLanguage": "选择...",
+      "pending": "待处理",
+      "remove": "移除"
+    },
+    "contentWarning": {
+      "title": "标记为 NSFW / 添加内容警告",
+      "reason": "原因（可选）",
+      "placeholder": "例如：裸露、暴力等。"
+    },
+    "thumbnail": {
+      "uploaded": "Thumbnail",
+      "generate": "Generate from video",
+      "enterUrl": "Enter URL",
+      "urlError": "Error fetching image",
+      "urlErrorDesc": "Could not load image from the provided URL. Please try another URL or upload a file.",
+      "uploading": "Uploading thumbnail...",
+      "fetch": "Import",
+      "urlHint": "Paste a direct link to an image file.",
+      "noVideoFile": "No video file available",
+      "title": "缩略图",
+      "useGenerated": "使用生成的缩略图",
+      "uploadCustom": "上传自定义缩略图",
+      "generated": "生成的缩略图",
+      "thumbnailPreview": "缩略图预览",
+      "selectFrame": "拖动滑块浏览视频并选择一帧",
+      "setAsThumbnail": "设为缩略图",
+      "currentThumbnail": "当前缩略图",
+      "uploadingThumbnail": "正在上传缩略图...",
+      "thumbnailSet": "缩略图已更新！",
+      "autoCaptured": "从视频自动生成 — 可按需替换"
+    },
+    "videoTable": {
+      "uploadedTo": "已上传到",
+      "mirroredTo": "已镜像到"
+    }
   }
 }

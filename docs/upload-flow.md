@@ -2,6 +2,26 @@
 
 This describes how the current upload experience works for viewers/uploader decisions, how Blossom servers and relays are configured, and the code-level conditions that run from dropping a file/URL until the video event is published.
 
+## Shared Upload Widgets
+
+Web and Studio use the same `@nostube/widgets/components/*` implementations:
+`TagInput` (`tag-input`), `FileDropzone`, `ContentWarning`, `ThumbnailSection`,
+`SubtitleSection`, `SubtitlesTable`, and `LanguageSelect` (`language-select`).
+The language list is available through `@nostube/widgets/languages`; upload
+translations are registered with `registerWidgetTranslations`.
+
+- `TagInput` accepts controlled tags and an optional autocomplete search callback.
+  Web supplies its event-store tag index; Studio needs no event-store provider for tags.
+- `ThumbnailSection` selects a video frame, image file, or imported image URL.
+  Uploads remain app-owned: Web supplies its server-status display and toast handler;
+  Studio retains the selected image locally until “Upload and publish”.
+- `SubtitleSection` supports multiple VTT/SRT files, language selection, and removal.
+  Both apps use `@nostube/core/subtitle-utils` to infer languages and convert SRT to
+  WebVTT before upload. Published captions use `text-track` tags with a URL and language.
+- Studio keeps its signer and creator/writer checks, instance-only Blossom uploads,
+  and sequential retryable job. Completed video and unchanged subtitle uploads
+  survive a retry; changed thumbnail or subtitle files invalidate their own results.
+
 ## User-Facing Flow and Choices
 
 - **Pre-reqs:** User must be logged in; otherwise the upload UI is replaced with a login prompt (`src/components/VideoUpload.tsx:665`).
@@ -9,10 +29,10 @@ This describes how the current upload experience works for viewers/uploader deci
 - **Configure servers:** Settings → Blossom Servers lets users add/remove servers and toggle tags `mirror`, `initial upload`, `proxy` (`src/components/settings/BlossomServersSection.tsx:1-140`). Defaults come from `presetBlossomServers` (currently an initial-upload+proxy server) (`src/constants/relays.ts:17-21`).
 - **Relays for publish:** Video events are sent only to relays tagged `write` in Settings → Relays.
 - **Pick source:** On the upload page users choose “Upload File” vs. “From URL” (`src/components/video-upload/InputMethodSelector.tsx:7-34`).
-- **Provide media:** File dropzone accepts one video; URL mode takes a direct video URL and has a “Process” action (`src/components/video-upload/FileDropzone.tsx:10-49`, `src/components/video-upload/UrlInputSection.tsx:7-44`).
+- **Provide media:** File dropzone accepts one video; URL mode takes a direct video URL and has a “Process” action (`packages/widgets/src/components/FileDropzone.tsx`, `apps/web/src/components/video-upload/UrlInputSection.tsx`).
 - **Preview & metadata:** After processing, the video element and extracted dimensions/duration/codecs are shown (`src/components/video-upload/VideoPreview.tsx:11-54`).
-- **Thumbnail:** Users can keep the generated thumbnail or upload a custom image; custom uploads show their own upload/mirror statuses (`src/components/video-upload/ThumbnailSection.tsx:9-86`).
-- **Details:** Title, description, language, tags, and optional content warning are filled after an upload/URL is processed (`src/components/video-upload/FormFields.tsx:32-96`, `src/components/video-upload/ContentWarning.tsx:9-42`).
+- **Thumbnail:** Users can keep the generated thumbnail, select another video frame, upload a custom image, or import an image URL (`packages/widgets/src/components/ThumbnailSection.tsx`).
+- **Details:** Title, description, language, tags, and optional content warning are filled after an upload/URL is processed (`apps/web/src/components/video-upload/FormFields.tsx`, `packages/widgets/src/components/ContentWarning.tsx`).
 - **Publish action:** “Publish video” becomes enabled once a video source, thumbnail, and title are set; clicking publishes the Nostr video event.
 
 ## Configuration Requirements
@@ -39,7 +59,7 @@ This describes how the current upload experience works for viewers/uploader deci
 
 ## Publishing the Video Event
 
-- **Event kind:** Determined by aspect ratio—landscape → kind 21, portrait → kind 22 (`src/components/VideoUpload.tsx:126-129`).
+- **Event kind:** Determined by aspect ratio—landscape → kind 34235, portrait → kind 34236 (addressable NIP-71 video events).
 - **IMeta construction:** Includes dimensions, primary URL (uploaded blob or provided URL), hash/mime for uploaded files, bitrate (if present), thumbnail URLs (uploaded + mirrored), and fallback URLs for additional uploads/mirrors (file mode only) (`src/components/VideoUpload.tsx:130-166`).
 - **Tags:** Adds title, alt (description), published_at, duration, optional `content-warning`, user tags (`t`), language tags (`L` with scheme and `l` with language), and client tag (`src/components/VideoUpload.tsx:168-185`).
 - **Relays:** Published via `useNostrPublish`, which signs with the user signer and sends to relays tagged `write` (or all if none filtered) (`src/hooks/useNostrPublish.ts:9-53`, `src/components/VideoUpload.tsx:205-208`).
@@ -51,4 +71,4 @@ This describes how the current upload experience works for viewers/uploader deci
 2. Chooses file or URL. File path requires at least one `initial upload` server.
 3. System uploads (or processes URL), extracts metadata, mirrors when possible, generates thumbnail.
 4. User fills title/description/tags/language, picks/adjusts thumbnail, optional content warning.
-5. On Publish, thumbnail is ensured uploaded, IMeta/fallbacks are built, NIP-71 event (kind 21/22) is signed and sent to write relays, then UI resets.
+5. On Publish, thumbnail is ensured uploaded, IMeta/fallbacks and caption tags are built, the NIP-71 event (kind 34235/34236) is signed and sent to write relays, then UI resets.

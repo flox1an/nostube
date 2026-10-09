@@ -10,10 +10,10 @@ import {
 } from '@nostube/widgets/components/dialog'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import { Label } from '@nostube/widgets/components/label'
-import { LanguageSelect } from '@/components/ui/language-select'
-import { TagInput } from '@/components/ui/tag-input'
+import { LanguageSelect } from '@nostube/widgets/components/language-select'
+import { TagInput } from '@nostube/widgets/components/tag-input'
 import { Tag, Loader2 } from 'lucide-react'
-import { useNostrPublish } from '@/hooks'
+import { useNostrPublish, useTagIndex } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +33,7 @@ export function LabelVideoDialog({
   const { t } = useTranslation()
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
+  const { searchTags } = useTagIndex()
 
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -119,6 +120,7 @@ export function LabelVideoDialog({
                 id="hashtags"
                 tags={hashtags}
                 onTagsChange={setHashtags}
+                search={searchTags}
                 placeholder={t('labelVideo.hashtagsPlaceholder')}
               />
             </div>

@@ -13,12 +13,12 @@ import { Textarea } from '@nostube/widgets/components/textarea'
 import { Label } from '@nostube/widgets/components/label'
 import { Checkbox } from '@nostube/widgets/components/checkbox'
 import { Separator } from '@nostube/widgets/components/separator'
-import { TagInput } from '@/components/ui/tag-input'
+import { TagInput } from '@nostube/widgets/components/tag-input'
 import { Pencil, Loader2 } from 'lucide-react'
-import { LanguageSelect } from '@/components/ui/language-select'
+import { LanguageSelect } from '@nostube/widgets/components/language-select'
 import { VideoVariantsList } from '@/components/edit-video/VideoVariantsList'
 import { EventPreviewDiff } from '@/components/edit-video/EventPreviewDiff'
-import { useNostrPublish } from '@/hooks'
+import { useNostrPublish, useTagIndex } from '@/hooks'
 import { useCurrentUser } from '@/hooks'
 import { useAppContext } from '@/hooks'
 import { parseImetaTag, type ParsedImeta } from '@/lib/imeta-builder'
@@ -47,6 +47,7 @@ export function EditVideoDialog({
   const { user } = useCurrentUser()
   const { publish } = useNostrPublish()
   const { config } = useAppContext()
+  const { searchTags } = useTagIndex()
 
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -338,6 +339,7 @@ export function EditVideoDialog({
                   id="edit-tags"
                   tags={tags}
                   onTagsChange={setTags}
+                  search={searchTags}
                   placeholder={t('editVideo.tagsPlaceholder')}
                 />
               </div>

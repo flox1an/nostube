@@ -15,6 +15,7 @@ export default defineConfig({
         proxy: {
           '/api': proxied,
           '/admin': proxied,
+          '/upload': proxied,
           '/ca.pem': proxied,
           '/studio/ca.pem': proxied,
         },

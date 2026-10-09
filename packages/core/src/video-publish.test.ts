@@ -96,6 +96,16 @@ describe('a built video event, read the way the site reads it', () => {
     expect(bare.contentWarning).toBe('NSFW')
   })
 
+  it('publishes subtitle tracks the player can read', () => {
+    const subtitles = [
+      { url: `${ORIGIN}/${'d'.repeat(64)}.vtt`, lang: 'en' },
+      { url: `${ORIGIN}/${'f'.repeat(64)}.vtt`, lang: 'de' },
+    ]
+    const event = buildVideoEvent(input({ subtitles }))
+    expect(event.tags).toContainEqual(['text-track', subtitles[0].url, 'en'])
+    expect(processEvent(asReceived(event), [])!.textTracks).toEqual(subtitles)
+  })
+
   it('works without a thumbnail and without a description', () => {
     const video = processEvent(
       asReceived(buildVideoEvent(input({ thumbnail: undefined, description: '', tags: [] }))),

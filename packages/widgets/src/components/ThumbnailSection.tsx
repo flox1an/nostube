@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button } from '@nostube/widgets/components/button'
 import { FileDropzone } from './FileDropzone'
-import { UploadServer } from '../UploadServer'
-import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { useTranslation } from 'react-i18next'
 import { Trash2, Check, Link as LinkIcon, Upload as UploadIcon, Film, Loader2 } from 'lucide-react'
 import { Slider } from '@nostube/widgets/components/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 import { Input } from '@nostube/widgets/components/input'
-import { useToast } from '@/hooks/useToast'
 
 interface ThumbnailSectionProps {
   thumbnailSource: 'generated' | 'upload'
@@ -16,18 +13,20 @@ interface ThumbnailSectionProps {
   thumbnailBlob: Blob | null
   onThumbnailDrop: (files: File[]) => void
   onDeleteThumbnail: () => Promise<void>
-  isThumbDragActive: boolean
   thumbnailUploadInfo: {
-    uploadedBlobs: BlobDescriptor[]
-    mirroredBlobs: BlobDescriptor[]
+    uploadedBlobs: { url: string }[]
     uploading: boolean
     error?: string
   }
   videoUrl?: string
   onAutoCapture?: (blob: Blob) => void
+  serverStatus?: ReactNode
+  onUrlFetchError?: (message: { title: string; description: string }) => void
+  disabled?: boolean
 }
 
 export function ThumbnailSection({
+  thumbnailSource,
   onThumbnailSourceChange,
   thumbnailBlob,
   onThumbnailDrop,
@@ -35,9 +34,11 @@ export function ThumbnailSection({
   thumbnailUploadInfo,
   videoUrl,
   onAutoCapture,
+  serverStatus,
+  onUrlFetchError,
+  disabled = false,
 }: ThumbnailSectionProps) {
   const { t } = useTranslation()
-  const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isImageLoaded, setIsImageLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -127,13 +128,12 @@ export function ThumbnailSection({
       setUrlInput('')
     } catch (error) {
       console.error('Error fetching thumbnail URL:', error)
-      toast({
+      onUrlFetchError?.({
         title: t('upload.thumbnail.urlError', { defaultValue: 'Error fetching image' }),
         description: t('upload.thumbnail.urlErrorDesc', {
           defaultValue:
             'Could not load image from the provided URL. Please try another URL or upload a file.',
         }),
-        variant: 'destructive',
       })
     } finally {
       setIsProcessingUrl(false)
@@ -175,7 +175,7 @@ export function ThumbnailSection({
   }
 
   const handleSeeked = () => {
-    if (!hasAutoCapturedRef.current && onAutoCapture) {
+    if (!disabled && !hasAutoCapturedRef.current && onAutoCapture) {
       hasAutoCapturedRef.current = true
       captureCurrentFrame(onAutoCapture)
       return
@@ -227,7 +227,8 @@ export function ThumbnailSection({
                 size="icon"
                 className="absolute top-2 right-2 shadow-sm"
                 onClick={handleDelete}
-                disabled={isDeleting}
+                aria-label={t('upload.subtitles.remove', { defaultValue: 'Remove' })}
+                disabled={disabled || isDeleting}
               >
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -237,7 +238,7 @@ export function ThumbnailSection({
               </Button>
             )}
           </div>
-          {thumbnailBlob && !hasUploadedThumbnail && (
+          {thumbnailSource === 'generated' && thumbnailBlob && !hasUploadedThumbnail && (
             <p className="mt-2 text-xs text-muted-foreground">
               {t('upload.thumbnail.autoCaptured', {
                 defaultValue: 'Auto-generated from video — replace if you like',
@@ -246,16 +247,7 @@ export function ThumbnailSection({
           )}
 
           {/* Show upload server status for the existing thumbnail */}
-          {hasUploadedThumbnail && (
-            <UploadServer
-              inputMethod="file"
-              uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
-              uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
-              mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
-              hasInitialUploadServers={true}
-              forceShow={true}
-            />
-          )}
+          {hasUploadedThumbnail && serverStatus}
         </div>
       </div>
     )
@@ -268,19 +260,19 @@ export function ThumbnailSection({
       </div>
       <Tabs defaultValue="generated" onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="generated" className="flex gap-2" disabled={!videoUrl}>
+          <TabsTrigger value="generated" className="flex gap-2" disabled={disabled || !videoUrl}>
             <Film className="h-4 w-4 shrink-0" />
             <span className="hidden md:inline">
               {t('upload.thumbnail.generate', { defaultValue: 'Generate from video' })}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="upload" className="flex gap-2">
+          <TabsTrigger value="upload" className="flex gap-2" disabled={disabled}>
             <UploadIcon className="h-4 w-4 shrink-0" />
             <span className="hidden md:inline">
               {t('upload.thumbnail.uploadCustom', { defaultValue: 'Upload' })}
             </span>
           </TabsTrigger>
-          <TabsTrigger value="url" className="flex gap-2">
+          <TabsTrigger value="url" className="flex gap-2" disabled={disabled}>
             <LinkIcon className="h-4 w-4 shrink-0" />
             <span className="hidden md:inline">
               {t('upload.thumbnail.enterUrl', { defaultValue: 'Enter URL' })}
@@ -290,7 +282,12 @@ export function ThumbnailSection({
 
         <TabsContent value="upload" className="mt-0">
           <div className="space-y-4">
-            <FileDropzone onDrop={onThumbnailDrop} accept={{ 'image/*': [] }} className="h-32" />
+            <FileDropzone
+              onDrop={onThumbnailDrop}
+              accept={{ 'image/*': [] }}
+              className="h-32"
+              disabled={disabled}
+            />
             {thumbnailUploadInfo.uploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -308,6 +305,7 @@ export function ThumbnailSection({
             <Input
               placeholder="https://example.com/image.jpg"
               value={urlInput}
+              disabled={disabled}
               onChange={e => setUrlInput(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
@@ -316,7 +314,11 @@ export function ThumbnailSection({
                 }
               }}
             />
-            <Button type="button" onClick={handleUrlSubmit} disabled={!urlInput || isProcessingUrl}>
+            <Button
+              type="button"
+              onClick={handleUrlSubmit}
+              disabled={disabled || !urlInput || isProcessingUrl}
+            >
               {isProcessingUrl ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -352,6 +354,7 @@ export function ThumbnailSection({
               <div className="space-y-1 pt-2">
                 <Slider
                   value={[currentVideoTime]}
+                  disabled={disabled}
                   max={videoDuration}
                   step={0.1}
                   onValueChange={handleSliderChange}
@@ -366,7 +369,7 @@ export function ThumbnailSection({
               <Button
                 type="button"
                 onClick={handleSetThumbnail}
-                disabled={!previewBlob || thumbnailUploadInfo.uploading}
+                disabled={disabled || !previewBlob || thumbnailUploadInfo.uploading}
               >
                 {thumbnailUploadInfo.uploading ? (
                   <>

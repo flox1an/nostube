@@ -8,6 +8,7 @@ interface ContentWarningProps {
   reason: string
   onEnabledChange: (enabled: boolean) => void
   onReasonChange: (reason: string) => void
+  disabled?: boolean
 }
 
 export function ContentWarning({
@@ -15,6 +16,7 @@ export function ContentWarning({
   reason,
   onEnabledChange,
   onReasonChange,
+  disabled,
 }: ContentWarningProps) {
   const { t } = useTranslation()
 
@@ -26,6 +28,7 @@ export function ContentWarning({
           defaultChecked={false}
           required={false}
           checked={enabled}
+          disabled={disabled}
           onCheckedChange={e => onEnabledChange(e as boolean)}
         />
         <Label htmlFor="content-warning">{t('upload.contentWarning.title')}</Label>
@@ -36,6 +39,7 @@ export function ContentWarning({
           <Input
             id="content-warning-reason"
             value={reason}
+            disabled={disabled}
             onChange={e => onReasonChange(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter') e.preventDefault()

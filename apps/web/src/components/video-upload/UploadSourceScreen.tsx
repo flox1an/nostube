@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { FileDropzone } from './FileDropzone'
+import { FileDropzone } from '@nostube/widgets/components/FileDropzone'
 import { InputMethodSelector } from './InputMethodSelector'
 import { UrlInputSection } from './UrlInputSection'
 import { BrowserTranscodeStep } from './BrowserTranscodeStep'

@@ -1,11 +1,10 @@
 import * as React from 'react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '../cn'
 import { Input } from '@nostube/widgets/components/input'
 import { Badge } from '@nostube/widgets/components/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
-import { useTagIndex, type TagIndexEntry } from '@/hooks'
 
 interface TagInputProps {
   tags: string[]
@@ -13,6 +12,8 @@ interface TagInputProps {
   placeholder?: string
   id?: string
   className?: string
+  search?: (query: string, limit?: number) => { tag: string; count: number }[]
+  disabled?: boolean
 }
 
 /**
@@ -38,6 +39,8 @@ export function TagInput({
   placeholder = 'Add tags...',
   id,
   className,
+  search,
+  disabled = false,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [isOpen, setIsOpen] = useState(false)
@@ -45,15 +48,13 @@ export function TagInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const { searchTags } = useTagIndex()
-
   // Get suggestions based on current input
   const suggestions = React.useMemo(() => {
-    if (!inputValue.trim()) return []
-    const results = searchTags(inputValue, 8)
+    if (disabled || !search || !inputValue.trim()) return []
+    const results = search(inputValue, 8)
     // Filter out tags that are already added
     return results.filter(entry => !tags.includes(entry.tag))
-  }, [inputValue, searchTags, tags])
+  }, [inputValue, search, tags, disabled])
 
   // Reset highlight when suggestions change
   useEffect(() => {
@@ -78,6 +79,7 @@ export function TagInput({
 
   const addTag = useCallback(
     (tag: string) => {
+      if (disabled) return
       const normalized = normalizeTag(tag)
       if (normalized && !tags.includes(normalized)) {
         onTagsChange([...tags, normalized])
@@ -85,11 +87,12 @@ export function TagInput({
       setInputValue('')
       setIsOpen(false)
     },
-    [tags, onTagsChange]
+    [tags, onTagsChange, disabled]
   )
 
   const addTagsFromInput = useCallback(
     (input: string) => {
+      if (disabled) return
       const newTags = parseTagsFromInput(input)
       const uniqueNew = [...new Set(newTags)].filter(t => !tags.includes(t))
       if (uniqueNew.length > 0) {
@@ -98,14 +101,15 @@ export function TagInput({
       setInputValue('')
       setIsOpen(false)
     },
-    [tags, onTagsChange]
+    [tags, onTagsChange, disabled]
   )
 
   const removeTag = useCallback(
     (tagToRemove: string) => {
+      if (disabled) return
       onTagsChange(tags.filter(t => t !== tagToRemove))
     },
-    [tags, onTagsChange]
+    [tags, onTagsChange, disabled]
   )
 
   const handleKeyDown = useCallback(
@@ -186,6 +190,7 @@ export function TagInput({
               onBlur={handleBlur}
               placeholder={placeholder}
               autoComplete="off"
+              disabled={disabled}
             />
           </div>
         </PopoverTrigger>
@@ -218,6 +223,8 @@ export function TagInput({
               {tag}
               <button
                 type="button"
+                aria-label={`Remove #${tag}`}
+                disabled={disabled}
                 onClick={() => removeTag(tag)}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -232,7 +239,7 @@ export function TagInput({
 }
 
 interface SuggestionItemProps {
-  entry: TagIndexEntry
+  entry: { tag: string; count: number }
   isHighlighted: boolean
   onClick: () => void
   onMouseEnter: () => void

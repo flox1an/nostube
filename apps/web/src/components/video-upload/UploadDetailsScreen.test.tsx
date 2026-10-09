@@ -15,10 +15,12 @@ vi.mock('./BrowserTranscodeStep', () => ({
   ),
 }))
 vi.mock('./FormFields', () => ({ FormFields: () => <div data-testid="form-fields" /> }))
-vi.mock('./ThumbnailSection', () => ({ ThumbnailSection: () => <div data-testid="thumbnail" /> }))
-vi.mock('./SubtitleSection', () => ({ SubtitleSection: () => null }))
+vi.mock('@nostube/widgets/components/ThumbnailSection', () => ({
+  ThumbnailSection: () => <div data-testid="thumbnail" />,
+}))
+vi.mock('@nostube/widgets/components/SubtitleSection', () => ({ SubtitleSection: () => null }))
 vi.mock('./PublishDateSection', () => ({ PublishDateSection: () => null }))
-vi.mock('./ContentWarning', () => ({ ContentWarning: () => null }))
+vi.mock('@nostube/widgets/components/ContentWarning', () => ({ ContentWarning: () => null }))
 vi.mock('./ExpirationSection', () => ({ ExpirationSection: () => null }))
 vi.mock('./PeoplePickerSection', () => ({ PeoplePickerSection: () => null }))
 vi.mock('./OriginManager', () => ({ OriginManager: () => null }))

@@ -34,7 +34,11 @@ import {
 } from '@/lib/browser-transcode-upload-manager'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
-import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
+import {
+  detectLanguageFromFilename,
+  generateSubtitleId,
+  prepareSubtitleFile,
+} from '@nostube/core/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
 import {
   publishMirrorAnnouncements,
@@ -910,7 +914,8 @@ export function useVideoUpload(
         setSubtitles(prev => [...prev, newSubtitle])
 
         try {
-          const result = await fileUpload.upload(file)
+          const uploadFile = await prepareSubtitleFile(file)
+          const result = await fileUpload.upload(uploadFile)
 
           // Update subtitle with uploaded blobs
           setSubtitles(prev =>

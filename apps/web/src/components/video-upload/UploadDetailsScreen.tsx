@@ -14,16 +14,18 @@ import type { ChunkedUploadProgress } from '@/lib/blossom-upload'
 import type { ThumbnailUploadInfo, UploadInfo } from '@/hooks/useVideoUpload'
 import type { SelectedPerson } from '@/components/ui/people-picker'
 import { FormFields } from './FormFields'
-import { ThumbnailSection } from './ThumbnailSection'
-import { SubtitleSection } from './SubtitleSection'
+import { ThumbnailSection } from '@nostube/widgets/components/ThumbnailSection'
+import { SubtitleSection } from '@nostube/widgets/components/SubtitleSection'
 import { PublishDateSection } from './PublishDateSection'
-import { ContentWarning } from './ContentWarning'
+import { ContentWarning } from '@nostube/widgets/components/ContentWarning'
 import { ExpirationSection } from './ExpirationSection'
 import { PeoplePickerSection } from './PeoplePickerSection'
 import { OriginManager } from './OriginManager'
 import { ProcessingRail } from './ProcessingRail'
 import { BrowserTranscodeStep } from './BrowserTranscodeStep'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
+import { UploadServer } from '../UploadServer'
+import { useToast } from '@/hooks/useToast'
 
 export interface UploadDetailsScreenProps {
   // Form fields
@@ -148,6 +150,7 @@ export function UploadDetailsScreen({
   onBrowserTranscodeSkip,
 }: UploadDetailsScreenProps) {
   const { t } = useTranslation()
+  const { toast } = useToast()
 
   // Compute video URL for thumbnail generator, revoke object URL on cleanup
   const videoUrlForThumb = useMemo(() => {
@@ -231,10 +234,20 @@ export function UploadDetailsScreen({
         thumbnailBlob={thumbnailBlob}
         onThumbnailDrop={onThumbnailDrop}
         onDeleteThumbnail={onDeleteThumbnail}
-        isThumbDragActive={false}
         thumbnailUploadInfo={thumbnailUploadInfo}
         videoUrl={videoUrlForThumb}
         onAutoCapture={onAutoThumbnailCapture}
+        onUrlFetchError={message => toast({ ...message, variant: 'destructive' })}
+        serverStatus={
+          <UploadServer
+            inputMethod="file"
+            uploadState={thumbnailUploadInfo.uploading ? 'uploading' : 'finished'}
+            uploadedBlobs={thumbnailUploadInfo.uploadedBlobs}
+            mirroredBlobs={thumbnailUploadInfo.mirroredBlobs}
+            hasInitialUploadServers={true}
+            forceShow={true}
+          />
+        }
       />
 
       {/* Collapsible sections */}

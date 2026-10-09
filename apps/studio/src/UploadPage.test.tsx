@@ -7,6 +7,7 @@ import { bootInstanceClient } from './instance-client'
 import { SignerProvider } from './signer-context'
 import UploadPage from './UploadPage'
 import { uploadBlob } from './upload/blossom-upload'
+import './i18n'
 
 // The browser parts (decoding a video, hashing, the network) are replaced; the page, the signer
 // and the pipeline between them are the real ones.
@@ -16,7 +17,7 @@ vi.mock('./upload/probe-video', async importOriginal => ({
     width: 640,
     height: 360,
     duration: 3,
-    thumbnail: new Blob(['jpeg']),
+    thumbnail: new Blob(['jpeg'], { type: 'image/jpeg' }),
   })),
 }))
 vi.mock('./upload/sha256-file', () => ({ sha256File: vi.fn(async () => 'a'.repeat(64)) }))
@@ -92,6 +93,15 @@ afterEach(() => {
 })
 
 describe('UploadPage', () => {
+  it('does not upload or sign while selecting a video', async () => {
+    const signEvent = vi.fn(async (template: EventTemplate) => finalizeEvent(template, secret))
+    // jsdom's Window has no NIP-07 extension declaration; install the test extension explicitly.
+    const extensionWindow = window as unknown as { nostr: object }
+    extensionWindow.nostr = { getPublicKey: async () => pubkey, signEvent }
+    await renderPage(stateFor([pubkey], [pubkey]))
+    expect(uploadBlob).not.toHaveBeenCalled()
+    expect(signEvent).not.toHaveBeenCalled()
+  })
   it('publishes on the very first click, before the page has seen the key', async () => {
     await renderPage(stateFor([pubkey], [pubkey]))
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('my clip')

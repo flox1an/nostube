@@ -32,5 +32,57 @@
   "richText": {
     "video": "動画",
     "note": "ノート"
+  },
+  "upload": {
+    "dropzone": {
+      "dropHere": "ファイルをここにドロップ...",
+      "dragDrop": "ファイルをここにドラッグ＆ドロップ、またはクリックして選択",
+      "selected": "選択済み"
+    },
+    "subtitles": {
+      "dropHere": "字幕ファイルをここにドロップ...",
+      "dragDrop": "VTT または SRT ファイルをここにドラッグ＆ドロップ、またはクリックして選択",
+      "optional": "（任意）",
+      "helperText": "字幕ファイルを追加して、動画を複数の言語でアクセシブルにします。言語はファイル名から自動検出されます（例：video_ja.vtt）。",
+      "noLanguageWarning": "一部の字幕に言語が選択されていません。各字幕に言語を選択してください。",
+      "language": "言語",
+      "filename": "ファイル名",
+      "status": "ステータス",
+      "actions": "アクション",
+      "selectLanguage": "選択...",
+      "pending": "保留中",
+      "remove": "削除"
+    },
+    "contentWarning": {
+      "title": "NSFW としてマーク / コンテンツ警告を追加",
+      "reason": "理由（任意）",
+      "placeholder": "例：ヌード、暴力など"
+    },
+    "thumbnail": {
+      "uploaded": "Thumbnail",
+      "generate": "Generate from video",
+      "enterUrl": "Enter URL",
+      "urlError": "Error fetching image",
+      "urlErrorDesc": "Could not load image from the provided URL. Please try another URL or upload a file.",
+      "uploading": "Uploading thumbnail...",
+      "fetch": "Import",
+      "urlHint": "Paste a direct link to an image file.",
+      "noVideoFile": "No video file available",
+      "title": "サムネイル",
+      "useGenerated": "生成されたサムネイルを使用",
+      "uploadCustom": "カスタムサムネイルをアップロード",
+      "generated": "生成されたサムネイル",
+      "thumbnailPreview": "サムネイルプレビュー",
+      "selectFrame": "スライダーをドラッグして動画をブラウズし、フレームを選択",
+      "setAsThumbnail": "サムネイルに設定",
+      "currentThumbnail": "現在のサムネイル",
+      "uploadingThumbnail": "サムネイルをアップロード中...",
+      "thumbnailSet": "サムネイルを更新しました！",
+      "autoCaptured": "動画から自動生成 — 必要に応じて変更可能"
+    },
+    "videoTable": {
+      "uploadedTo": "アップロード先",
+      "mirroredTo": "ミラー先"
+    }
   }
 }

@@ -1,6 +1,15 @@
+// @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import type { VideoProbe } from './probe-video'
-import { isDone, newJob, runUpload, STEPS, type UploadDeps, type UploadJob } from './run-upload'
+import {
+  isDone,
+  newJob,
+  runUpload,
+  updateJobInput,
+  STEPS,
+  type UploadDeps,
+  type UploadJob,
+} from './run-upload'
 
 const HASH = 'a'.repeat(64)
 const THUMB_HASH = 'b'.repeat(64)
@@ -8,7 +17,7 @@ const probe: VideoProbe = {
   width: 1920,
   height: 1080,
   duration: 61.2,
-  thumbnail: new Blob(['jpeg']),
+  thumbnail: new Blob(['jpeg'], { type: 'image/jpeg' }),
 }
 const file = new File(['video-bytes'], 'clip.mp4', { type: 'video/mp4' })
 const input = { file, title: 'A clip', description: 'About it', tags: ['travel'] }
@@ -77,6 +86,103 @@ describe('runUpload', () => {
     })
   })
 
+  it('uploads the selected thumbnail with its real MIME type', async () => {
+    const { d } = deps()
+    const thumbnail = new File(['png'], 'custom.png', { type: 'image/png' })
+    await run(newJob({ ...input, thumbnail }, d, probe), d)
+    expect(vi.mocked(d.upload).mock.calls[1][0]).toMatchObject({
+      blob: thumbnail,
+      name: 'custom.png',
+      type: 'image/png',
+    })
+  })
+
+  it('retries only unfinished subtitle files and publishes WebVTT tracks', async () => {
+    const subtitles = [
+      { id: 'en', file: new File(['WEBVTT\n'], 'clip_en.vtt', { type: 'text/vtt' }), lang: 'en' },
+      {
+        id: 'de',
+        file: new File(['1\n00:00:00,000 --> 00:00:01,000\nHallo\n'], 'clip_de.srt'),
+        lang: 'de',
+      },
+    ]
+    const uploads: string[] = []
+    let failed = false
+    const { d } = deps({
+      upload: vi.fn(async ({ name, sha256, type, blob }) => {
+        uploads.push(name)
+        if (name === 'clip_de.vtt' && !failed) {
+          failed = true
+          throw new Error('offline')
+        }
+        if (name === 'clip_de.vtt')
+          expect(await blob.text()).toContain('00:00:00.000 --> 00:00:01.000')
+        return { url: `https://x.example/${name}`, sha256, size: blob.size, type }
+      }),
+    })
+    const first = await run(newJob({ ...input, subtitles }, d, probe), d)
+    expect(first.steps.subtitles.status).toBe('error')
+    expect(first.subtitles?.en.url).toBe('https://x.example/clip_en.vtt')
+    expect(d.publish).not.toHaveBeenCalled()
+    const second = await run(updateJobInput(first, first.input), d)
+    expect(isDone(second)).toBe(true)
+    expect(uploads).toEqual([
+      'clip.mp4',
+      'thumbnail.jpg',
+      'clip_en.vtt',
+      'clip_de.vtt',
+      'clip_de.vtt',
+    ])
+    expect(vi.mocked(d.publish).mock.calls[0][0].tags).toContainEqual([
+      'text-track',
+      'https://x.example/clip_de.vtt',
+      'de',
+    ])
+  })
+
+  it('invalidates edited assets after failure but keeps finished video and unchanged subtitles', async () => {
+    const kept = { id: 'en', file: new File(['WEBVTT\n'], 'en.vtt'), lang: 'en' }
+    const removed = { id: 'fr', file: new File(['WEBVTT\n'], 'fr.vtt'), lang: 'fr' }
+    const replaced = { id: 'de', file: new File(['WEBVTT\n'], 'old_de.vtt'), lang: 'de' }
+    const { d } = deps({
+      publish: vi.fn(async () => {
+        throw new Error('offline')
+      }),
+    })
+    const first = await run(newJob({ ...input, subtitles: [kept, removed, replaced] }, d, probe), d)
+    const languageOnly = updateJobInput(first, {
+      ...first.input,
+      subtitles: [{ ...kept, lang: 'es' }, removed, replaced],
+    })
+    expect(languageOnly.steps.subtitles.status).toBe('done')
+    expect(languageOnly.subtitles).toBe(first.subtitles)
+    const changed = updateJobInput(first, {
+      ...input,
+      thumbnail: new File(['webp'], 'new.webp', { type: 'image/webp' }),
+      subtitles: [
+        { ...kept, lang: 'es' },
+        { ...replaced, file: new File(['WEBVTT\nnew'], 'new_de.vtt') },
+      ],
+    })
+    expect(changed.video).toBe(first.video)
+    expect(changed.thumbnail).toBeUndefined()
+    expect(Object.keys(changed.subtitles!)).toEqual(['en'])
+    await run(changed, d)
+    const uploads = vi.mocked(d.upload).mock.calls.map(c => c[0].name)
+    expect(uploads).toEqual([
+      'clip.mp4',
+      'thumbnail.jpg',
+      'en.vtt',
+      'fr.vtt',
+      'old_de.vtt',
+      'new.webp',
+      'new_de.vtt',
+    ])
+    const tags = vi.mocked(d.publish).mock.calls[1][0].tags
+    expect(tags).toContainEqual(['text-track', `https://x.example/${HASH}`, 'es'])
+    expect(tags.filter((tag: string[]) => tag[0] === 'text-track')).toHaveLength(2)
+  })
+
   it('stops at the first failing step with its message and leaves the later ones pending', async () => {
     const { d } = deps({
       probe: vi.fn(async () => Promise.reject(new Error('This browser cannot play the file.'))),
@@ -102,7 +208,7 @@ describe('runUpload', () => {
     expect(first.steps.publish).toMatchObject({ status: 'error', error: 'blocked: not a writer' })
     expect((d.upload as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2)
 
-    const second = await run(first, d)
+    const second = await run(updateJobInput(first, first.input), d)
     expect(isDone(second)).toBe(true)
     // The probe, the hashing and both uploads were not repeated.
     expect(d.probe).toHaveBeenCalledTimes(1)

@@ -32,5 +32,57 @@
   "richText": {
     "video": "Video",
     "note": "Notiz"
+  },
+  "upload": {
+    "dropzone": {
+      "dropHere": "Datei hier ablegen...",
+      "dragDrop": "Datei hierher ziehen oder klicken zum Auswählen",
+      "selected": "Ausgewählt"
+    },
+    "subtitles": {
+      "dropHere": "Untertiteldateien hier ablegen...",
+      "dragDrop": "VTT- oder SRT-Dateien hierher ziehen oder klicken zum Auswählen",
+      "optional": "(Optional)",
+      "helperText": "Füge Untertiteldateien hinzu, um dein Video in mehreren Sprachen zugänglich zu machen. Sprache wird automatisch aus dem Dateinamen erkannt (z.B. video_de.vtt).",
+      "noLanguageWarning": "Einige Untertitel haben keine Sprache ausgewählt. Bitte wähle eine Sprache für jeden Untertitel.",
+      "language": "Sprache",
+      "filename": "Dateiname",
+      "status": "Status",
+      "actions": "Aktionen",
+      "selectLanguage": "Auswählen...",
+      "pending": "Ausstehend",
+      "remove": "Entfernen"
+    },
+    "contentWarning": {
+      "title": "Als NSFW markieren / Inhaltswarnung hinzufügen",
+      "reason": "Grund (optional)",
+      "placeholder": "z.B. Nacktheit, Gewalt, etc."
+    },
+    "thumbnail": {
+      "uploaded": "Thumbnail",
+      "generate": "Generate from video",
+      "enterUrl": "Enter URL",
+      "urlError": "Error fetching image",
+      "urlErrorDesc": "Could not load image from the provided URL. Please try another URL or upload a file.",
+      "uploading": "Uploading thumbnail...",
+      "fetch": "Import",
+      "urlHint": "Paste a direct link to an image file.",
+      "noVideoFile": "No video file available",
+      "title": "Vorschaubild",
+      "useGenerated": "Generiertes Vorschaubild verwenden",
+      "uploadCustom": "Eigenes Vorschaubild hochladen",
+      "generated": "Generiertes Vorschaubild",
+      "thumbnailPreview": "Vorschaubild-Vorschau",
+      "selectFrame": "Ziehen Sie den Schieberegler, um durch Ihr Video zu navigieren und ein Bild auszuwählen",
+      "setAsThumbnail": "Als Vorschaubild festlegen",
+      "currentThumbnail": "Aktuelles Vorschaubild",
+      "uploadingThumbnail": "Vorschaubild wird hochgeladen...",
+      "thumbnailSet": "Vorschaubild aktualisiert!",
+      "autoCaptured": "Automatisch aus Video generiert — bei Bedarf ersetzen"
+    },
+    "videoTable": {
+      "uploadedTo": "Hochgeladen auf",
+      "mirroredTo": "Gespiegelt auf"
+    }
   }
 }

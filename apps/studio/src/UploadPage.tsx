@@ -8,7 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@nostube/widgets/components/card'
-import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { TagInput } from '@nostube/widgets/components/tag-input'
+import { ContentWarning } from '@nostube/widgets/components/ContentWarning'
+import { FileDropzone } from '@nostube/widgets/components/FileDropzone'
+import { ThumbnailSection } from '@nostube/widgets/components/ThumbnailSection'
+import { SubtitleSection } from '@nostube/widgets/components/SubtitleSection'
+import { detectLanguageFromFilename, generateSubtitleId } from '@nostube/core/subtitle-utils'
 import { Input } from '@nostube/widgets/components/input'
 import { Progress } from '@nostube/widgets/components/progress'
 import { Textarea } from '@nostube/widgets/components/textarea'
@@ -16,10 +21,16 @@ import type { AdminState } from './api'
 import { isKeyConnected } from './draft'
 import { Field } from './fields'
 import { useSigner } from './signer-context'
-import { probeVideo, SUPPORTED_TYPES, type VideoProbe } from './upload/probe-video'
+import { probeVideo, type VideoProbe } from './upload/probe-video'
 import { makeUploadDeps } from './upload/make-deps'
-import { parseTags } from './upload/tags'
-import { isDone, newJob, runUpload, STEPS, type UploadJob } from './upload/run-upload'
+import {
+  isDone,
+  newJob,
+  runUpload,
+  updateJobInput,
+  STEPS,
+  type UploadJob,
+} from './upload/run-upload'
 
 const sizeText = (bytes: number) =>
   bytes >= 1024 ** 3
@@ -41,21 +52,25 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   const [probeError, setProbeError] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [tagsText, setTagsText] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [warning, setWarning] = useState(false)
   const [reason, setReason] = useState('')
   const [job, setJob] = useState<UploadJob | null>(null)
   const [running, setRunning] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const preview = useRef<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const busy = useRef(false)
+  const selection = useRef(0)
+  const [videoUrl, setVideoUrl] = useState<string>()
+  const [thumbnail, setThumbnail] = useState<Blob | null>(null)
+  const [thumbnailSource, setThumbnailSource] = useState<'generated' | 'upload'>('generated')
+  const [subtitles, setSubtitles] = useState<{ id: string; file: File; lang: string }[]>([])
 
-  useEffect(
-    () => () => {
-      if (preview.current) URL.revokeObjectURL(preview.current)
-    },
-    []
-  )
+  useEffect(() => {
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setVideoUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
 
   // Do not lose a running upload to a closed tab without asking.
   useEffect(() => {
@@ -66,23 +81,26 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   }, [running])
 
   const choose = async (chosen: File | undefined) => {
+    if (busy.current) return
+    const version = ++selection.current
     setJob(null)
     setNotice(null)
     setProbe(null)
     setProbeError(null)
-    if (preview.current) URL.revokeObjectURL(preview.current)
-    preview.current = null
-    setPreviewUrl(null)
+    setThumbnail(null)
+    setThumbnailSource('generated')
+    setSubtitles([])
+    setVideoUrl(undefined)
     if (!chosen) return setFile(null)
     setFile(chosen)
     setTitle(titleFromName(chosen.name))
     try {
       const probed = await probeVideo(chosen)
-      preview.current = URL.createObjectURL(probed.thumbnail)
-      setPreviewUrl(preview.current)
+      if (version !== selection.current) return
+      setThumbnail(probed.thumbnail)
       setProbe(probed)
     } catch (e) {
-      setProbeError(e instanceof Error ? e.message : String(e))
+      if (version === selection.current) setProbeError(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -90,37 +108,41 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   const mayPublish = key !== null && isKeyConnected(state.config, key)
 
   const start = async () => {
-    if (!file || !probe) return
-    setNotice(null)
-    let who = key
-    try {
-      who ??= await connect()
-    } catch (e) {
-      return setNotice(e instanceof Error ? e.message : String(e))
-    }
-    if (!isKeyConnected(state.config, who)) {
-      return setNotice(
-        'Your key is not yet a creator and uploader of this instance: connect it first.'
-      )
-    }
-    if (!signer) return setNotice('No Nostr signer found in this browser.')
-    // From the key just connected, not from the page's state: that is one render behind.
-    const deps = makeUploadDeps({ signer, pubkey: who, title })
-    const input = {
-      file,
-      title: title.trim(),
-      description,
-      tags: parseTags(tagsText),
-      contentWarning: warning ? reason : undefined,
-    }
+    if (!file || !probe || busy.current) return
+    busy.current = true
     setRunning(true)
+    setNotice(null)
     try {
+      let who = key
+      try {
+        who ??= await connect()
+      } catch (e) {
+        return setNotice(e instanceof Error ? e.message : String(e))
+      }
+      if (!isKeyConnected(state.config, who)) {
+        return setNotice(
+          'Your key is not yet a creator and uploader of this instance: connect it first.'
+        )
+      }
+      if (!signer) return setNotice('No Nostr signer found in this browser.')
+      // Use the just-connected key rather than the render behind it.
+      const deps = makeUploadDeps({ signer, pubkey: who, title })
+      const input = {
+        file,
+        title: title.trim(),
+        description,
+        tags,
+        contentWarning: warning ? reason : undefined,
+        thumbnail,
+        subtitles,
+      }
       await runUpload(
-        job && !isDone(job) ? { ...job, input } : newJob(input, deps, probe),
+        job && !isDone(job) ? updateJobInput(job, input) : newJob(input, deps, probe),
         deps,
         setJob
       )
     } finally {
+      busy.current = false
       setRunning(false)
     }
   }
@@ -128,7 +150,7 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   const reset = () => {
     void choose(undefined)
     setDescription('')
-    setTagsText('')
+    setTags([])
     setWarning(false)
     setReason('')
   }
@@ -172,7 +194,8 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
   }
 
   const failed = job && STEPS.find(s => job.steps[s.id].status === 'error')
-  const canStart = !!file && !!probe && title.trim() !== '' && !running
+  const canStart =
+    !!file && !!probe && title.trim() !== '' && !running && subtitles.every(s => s.lang)
 
   return (
     <div className="space-y-6">
@@ -187,13 +210,12 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
         </CardHeader>
         <CardContent className="space-y-4">
           <Field id="file" label="Video file">
-            <input
+            <FileDropzone
               id="file"
-              type="file"
-              accept={SUPPORTED_TYPES.join(',')}
+              accept={{ 'video/mp4': ['.mp4'], 'video/webm': ['.webm'] }}
               disabled={running}
-              onChange={e => void choose(e.target.files?.[0])}
-              className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1.5 file:text-sm"
+              selectedFile={file}
+              onDrop={files => void choose(files[0])}
             />
           </Field>
           {file && !probeError && !probe && (
@@ -206,9 +228,6 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
           )}
           {probe && file && (
             <div className="flex gap-4">
-              {previewUrl && (
-                <img src={previewUrl} alt="" className="h-24 rounded-md border border-border" />
-              )}
               <p className="text-sm text-muted-foreground">
                 {file.name} · {sizeText(file.size)} · {probe.width}×{probe.height} ·{' '}
                 {Math.round(probe.duration)} s
@@ -237,34 +256,74 @@ export default function UploadPage({ state, banner }: { state: AdminState; banne
               onChange={e => setDescription(e.target.value)}
             />
           </Field>
-          <Field id="video-tags" label="Tags" hint="Separated by spaces or commas.">
-            <Input
-              id="video-tags"
-              value={tagsText}
-              disabled={running}
-              onChange={e => setTagsText(e.target.value)}
-              placeholder="travel, berlin"
-            />
+          <Field
+            id="video-tags"
+            label="Tags"
+            hint="Press Enter to add tags. Separate multiple tags with spaces or commas."
+          >
+            <TagInput id="video-tags" tags={tags} onTagsChange={setTags} disabled={running} />
           </Field>
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={warning}
-                disabled={running}
-                onCheckedChange={checked => setWarning(checked === true)}
-              />
-              Add a content warning (viewers confirm they are 18 or older)
-            </label>
-            {warning && (
-              <Input
-                aria-label="Reason for the content warning"
-                value={reason}
-                disabled={running}
-                onChange={e => setReason(e.target.value)}
-                placeholder="Reason (optional), e.g. nudity"
-              />
-            )}
-          </div>
+          <ContentWarning
+            enabled={warning}
+            reason={reason}
+            onEnabledChange={setWarning}
+            onReasonChange={setReason}
+            disabled={running}
+          />
+          {probe && (
+            <ThumbnailSection
+              key={videoUrl}
+              thumbnailSource={thumbnailSource}
+              onThumbnailSourceChange={setThumbnailSource}
+              thumbnailBlob={thumbnail}
+              onThumbnailDrop={files => {
+                if (!busy.current && files[0]) setThumbnail(files[0])
+              }}
+              onDeleteThumbnail={async () => {
+                if (!busy.current) setThumbnail(null)
+              }}
+              thumbnailUploadInfo={{
+                uploadedBlobs:
+                  job && job.input.thumbnail === thumbnail && job.thumbnail ? [job.thumbnail] : [],
+                uploading: running && job?.steps.thumbnail.status === 'running',
+                error: job?.steps.thumbnail.error,
+              }}
+              videoUrl={videoUrl}
+              onUrlFetchError={message => setNotice(`${message.title}: ${message.description}`)}
+              disabled={running}
+            />
+          )}
+          <SubtitleSection
+            subtitles={subtitles.map(subtitle => ({
+              id: subtitle.id,
+              filename: subtitle.file.name,
+              lang: subtitle.lang,
+              uploadedBlobs: job?.subtitles?.[subtitle.id] ? [job.subtitles[subtitle.id]] : [],
+              mirroredBlobs: [],
+            }))}
+            onDrop={files => {
+              if (busy.current) return
+              setSubtitles(current => [
+                ...current,
+                ...files.map(file => ({
+                  id: generateSubtitleId(),
+                  file,
+                  lang: detectLanguageFromFilename(file.name),
+                })),
+              ])
+            }}
+            onRemove={id => {
+              if (!busy.current)
+                setSubtitles(current => current.filter(subtitle => subtitle.id !== id))
+            }}
+            onLanguageChange={(id, lang) => {
+              if (!busy.current)
+                setSubtitles(current =>
+                  current.map(subtitle => (subtitle.id === id ? { ...subtitle, lang } : subtitle))
+                )
+            }}
+            disabled={running}
+          />
         </CardContent>
       </Card>
 

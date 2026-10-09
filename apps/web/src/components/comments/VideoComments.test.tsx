@@ -92,6 +92,18 @@ describe('VideoComments loading', () => {
     expect(screen.getByText('Slow relay comment')).toBeInTheDocument()
   })
 
+  it('keeps the resolved state when the parent passes an equal relay list again', () => {
+    const { rerender, container } = renderComments(baseProps)
+    act(() => requests[0].forEach(source => source.complete()))
+    rerender(
+      <EventStoreProvider eventStore={eventStore}>
+        <VideoComments {...baseProps} relays={[...relays]} />
+      </EventStoreProvider>
+    )
+    expect(requests).toHaveLength(1)
+    expect(container.querySelector('.animate-pulse')).toBeNull()
+  })
+
   it('ignores the previous request after switching videos', () => {
     const { rerender, container } = renderComments(baseProps)
     const oldRequest = requests[0]

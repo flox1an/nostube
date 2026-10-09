@@ -131,13 +131,15 @@ export function VideoComments({
     return seenRelays ? Array.from(seenRelays) : []
   }, [eventStore, videoId])
 
-  // Use provided relays or fallback to app config read relays
-  const readRelays = useMemo(() => {
-    if (relays && relays.length > 0) {
-      return relays
-    }
-    return config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
-  }, [relays, config.relays])
+  // Use provided relays or fallback to app config read relays. Keyed by content: callers hand
+  // in a new array whenever relay sources re-emit, and each new identity restarts the request
+  // (and flashes the skeleton) for an unchanged relay set.
+  const relayKey = (
+    relays && relays.length > 0
+      ? relays
+      : config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
+  ).join(',')
+  const readRelays = useMemo(() => (relayKey ? relayKey.split(',') : []), [relayKey])
 
   const videoAddress = useMemo(
     () => videoAddressOf({ videoId, authorPubkey, videoKind, identifier }),

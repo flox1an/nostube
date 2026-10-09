@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { EmbedApp, type EmbedPlayback } from './EmbedApp'
 import { EmbedAppProvider } from './EmbedAppProvider'
 import { parseURLParams, validateParams } from './lib/url-params'
+import { withInstanceAccent } from './lib/instance-accent'
 import { decodeVideoIdentifier, buildRelayList } from './lib/nostr-decoder'
 import { NostrClient } from './lib/nostr-client'
 import { ProfileFetcher } from './lib/profile-fetcher'
@@ -91,8 +92,8 @@ async function initEmbed(): Promise<void> {
 
   const reactRoot = createRoot(root)
 
-  // Parse URL params
-  const params = parseURLParams()
+  // Parse URL params; on a nostube-server instance the creator's accent is the default colour
+  const params = await withInstanceAccent(parseURLParams())
   const validation = validateParams(params)
 
   if (!validation.valid) {

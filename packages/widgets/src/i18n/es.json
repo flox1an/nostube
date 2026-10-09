@@ -28,5 +28,9 @@
   },
   "common": {
     "copy": "Copiar"
+  },
+  "richText": {
+    "video": "Vídeo",
+    "note": "Nota"
   }
 }

@@ -28,5 +28,9 @@
   },
   "common": {
     "copy": "コピー"
+  },
+  "richText": {
+    "video": "動画",
+    "note": "ノート"
   }
 }

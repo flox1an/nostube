@@ -28,5 +28,9 @@
   },
   "common": {
     "copy": "复制"
+  },
+  "richText": {
+    "video": "视频",
+    "note": "笔记"
   }
 }

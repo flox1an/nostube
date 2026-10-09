@@ -1,0 +1,608 @@
+import React, { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { YoutubeIcon, InstagramIcon, TwitterIcon, FacebookIcon } from './brand-icons'
+import { Badge } from './badge'
+import { nip19 } from 'nostr-tools'
+import { useProfile } from '../hooks/useProfile'
+import { genUserName } from '@nostube/core/gen-user-name'
+import { useImageCascade } from '../hooks/useImageCascade'
+import { useEventStore } from 'applesauce-react/hooks'
+import { getSeenRelays } from 'applesauce-core/helpers/relays'
+
+/** Where a link inside rich text points: a route of the app (`to`) or another site (`href`). */
+export type LinkTarget = { to: string } | { href: string }
+
+/** A reference to a Nostr event found in the text (`nostr:nevent1…`, `naddr1…`, `note1…`). */
+export interface EventReference {
+  /** The NIP-19 string as written (without `nostr:`). */
+  nip19: string
+  id?: string
+  kind?: number
+  pubkey?: string
+  identifier?: string
+  relays: string[]
+}
+
+/**
+ * Where the links in a text go. The app decides: nostube points into its own routes, an instance
+ * site points into the creator's pages and, for everything else, out to another client.
+ */
+export interface RichTextLinks {
+  /** An `@mention`. `relays` are the hints from the text or where the profile was seen. */
+  profile: (pointer: { pubkey: string; relays: string[] }) => LinkTarget
+  /** A `#tag`; null renders it as plain text. */
+  hashtag: (tag: string) => LinkTarget | null
+  /** A `1:23` timestamp in the description of the video `videoLink`. */
+  timestamp: (videoLink: string, seconds: number) => LinkTarget
+  /** A `nostr:nevent1…`, `naddr1…` or `note1…`; null or missing leaves the text as it is. */
+  event?: (ref: EventReference) => LinkTarget | null
+}
+
+function TargetLink({
+  target,
+  className,
+  children,
+  title,
+  onClick,
+}: {
+  target: LinkTarget
+  className?: string
+  children: React.ReactNode
+  title?: string
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>
+}) {
+  if ('to' in target) {
+    return (
+      <Link to={target.to} className={className} title={title} onClick={onClick}>
+        {children}
+      </Link>
+    )
+  }
+  return (
+    <a
+      href={target.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      title={title}
+      onClick={onClick}
+    >
+      {children}
+    </a>
+  )
+}
+
+const VIDEO_KINDS = new Set([21, 22, 34235, 34236])
+
+function EventLink({ reference, target }: { reference: EventReference; target: LinkTarget }) {
+  const { t } = useTranslation()
+  const isVideo = reference.kind !== undefined && VIDEO_KINDS.has(reference.kind)
+  return (
+    <TargetLink target={target} className="font-medium text-accent-foreground hover:underline">
+      {isVideo ? t('richText.video', 'Video') : t('richText.note', 'Note')}
+    </TargetLink>
+  )
+}
+
+interface SocialMediaPlatform {
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+  patterns: RegExp[]
+  extractTitle: (url: string) => string
+}
+
+// Define social media platforms
+const socialMediaPlatforms: SocialMediaPlatform[] = [
+  {
+    name: 'YouTube',
+    icon: YoutubeIcon,
+    patterns: [/youtube\.com/, /youtu\.be/],
+    extractTitle: (url: string) => {
+      const channelIdMatch = url.match(/youtube\.com\/channel\/([^/?]+)/)
+      if (channelIdMatch) return channelIdMatch[1]
+
+      // Handle channel links like youtube.com/@username
+      const handleMatch = url.match(/youtube\.com\/@([^/?]+)\/?/)
+      if (handleMatch) return `@${handleMatch[1]}`
+
+      // Handle video links (watch, shorts, youtu.be)
+      const videoMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?/]+)/)
+      return videoMatch ? videoMatch[1] : 'Video'
+    },
+  },
+  {
+    name: 'Instagram',
+    icon: InstagramIcon,
+    patterns: [/instagram\.com/, /instagr\.am/],
+    extractTitle: (url: string) => {
+      // Handle both profile links and post/reel links
+      const postMatch = url.match(/instagram\.com\/(?:p|reel|tv)\/([^/?]+)/)
+      if (postMatch) return postMatch[1]
+
+      // Handle profile links like instagram.com/username or instagram.com/username/
+      const profileMatch = url.match(/instagram\.com\/([^/?]+)\/?/)
+      return profileMatch ? `@${profileMatch[1]}` : 'Post'
+    },
+  },
+  {
+    name: 'X',
+    icon: TwitterIcon,
+    patterns: [/twitter\.com/, /x\.com/],
+    extractTitle: (url: string) => {
+      const match = url.match(/(?:twitter|x)\.com\/([^/]+)\/status\/([^/?]+)/)
+      if (match) return `@${match[1]}`
+      const userMatch = url.match(/(?:twitter|x)\.com\/([^/?]+)\/?/)
+      return userMatch ? `@${userMatch[1]}` : 'Tweet'
+    },
+  },
+  {
+    name: 'Facebook',
+    icon: FacebookIcon,
+    patterns: [/facebook\.com/, /fb\.com/],
+    extractTitle: (url: string) => {
+      const match = url.match(/facebook\.com\/([^/?]+)\/?/)
+      return match ? match[1] : 'Post'
+    },
+  },
+  {
+    name: 'TikTok',
+    icon: () => (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+      </svg>
+    ),
+    patterns: [/tiktok\.com/],
+    extractTitle: (url: string) => {
+      const match = url.match(/tiktok\.com\/@([^/?]+)\/?/)
+      return match ? `@${match[1]}` : 'Video'
+    },
+  },
+  {
+    name: 'SoundCloud',
+    icon: () => (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.255-2.154c-.009-.057-.049-.1-.099-.1m-.899.828c-.051 0-.091.04-.099.092L0 14.479l.176 1.434c.008.056.048.091.099.091.051 0 .091-.035.102-.091l.21-1.434-.21-2.334c-.011-.052-.051-.092-.102-.092m1.793-.777c-.05 0-.089.039-.098.092l-.255 2.103.255 2.154c.009.05.048.09.098.09.051 0 .094-.04.102-.09l.291-2.154-.291-2.103c-.008-.053-.051-.092-.102-.092m.899-.551c-.05 0-.09.04-.099.098l-.255 2.653.255 2.154c.009.056.049.099.099.099.05 0 .09-.043.099-.099l.291-2.154-.291-2.653c-.009-.058-.049-.098-.099-.098m.898-.54c-.05 0-.089.035-.098.094l-.255 3.194.255 2.161c.009.058.048.097.098.097.05 0 .09-.039.099-.097l.291-2.161-.291-3.194c-.009-.059-.049-.094-.099-.094m.899.001c-.051 0-.091.035-.102.09l-.253 3.192.253 2.162c.011.058.051.09.102.09.05 0 .089-.032.099-.09l.329-2.162-.329-3.192c-.01-.055-.049-.09-.099-.09m.891.106c-.051 0-.089.035-.097.098l-.29 3.086.29 2.162c.008.062.046.099.097.099.053 0 .095-.037.104-.099l.329-2.162-.329-3.086c-.009-.063-.051-.098-.104-.098m.899-.106c-.051 0-.091.042-.099.098l-.255 3.192.255 2.154c.008.056.048.099.099.099.051 0 .09-.043.102-.099l.364-2.154-.364-3.192c-.012-.056-.051-.098-.102-.098m1.793.654c-.053 0-.093.039-.102.099l-.255 2.538.255 2.154c.009.06.049.099.102.099.051 0 .09-.039.102-.099l.401-2.154-.401-2.538c-.012-.06-.051-.099-.102-.099m.899.106c-.052 0-.095.041-.102.1l-.218 2.432.218 2.162c.007.06.05.1.102.1.052 0 .094-.04.104-.1l.437-2.162-.437-2.432c-.01-.059-.052-.1-.104-.1m.898.001c-.05 0-.089.035-.097.099l-.255 2.431.255 2.162c.008.062.047.1.097.1.053 0 .095-.038.104-.1l.473-2.162-.473-2.431c-.009-.064-.051-.099-.104-.099m.899.106c-.053 0-.095.042-.104.104l-.255 2.325.255 2.162c.009.062.051.104.104.104.051 0 .09-.042.099-.104l.509-2.162-.509-2.325c-.009-.062-.048-.104-.099-.104m.898-.106c-.051 0-.089.035-.099.104l-.255 2.431.255 2.162c.01.062.048.1.099.1.053 0 .095-.038.104-.1l.545-2.162-.545-2.431c-.009-.069-.051-.104-.104-.104m1.793.654c-.051 0-.09.042-.102.104l-.218 1.777.218 2.162c.012.062.051.104.102.104.053 0 .094-.042.104-.104l.582-2.162-.582-1.777c-.01-.062-.051-.104-.104-.104m.898.001c-.053 0-.095.042-.104.104l-.255 1.776.255 2.161c.009.063.051.104.104.104.051 0 .09-.041.099-.104l.618-2.161-.618-1.776c-.009-.062-.048-.104-.099-.104m.899.106c-.052 0-.094.041-.103.104l-.255 1.67.255 2.162c.009.062.051.104.103.104.052 0 .094-.042.104-.104l.654-2.162-.654-1.67c-.01-.063-.052-.104-.104-.104m.899-.001c-.053 0-.095.042-.104.105l-.255 1.669.255 2.161c.009.063.051.105.104.105.052 0 .094-.042.103-.105l.691-2.161-.691-1.669c-.009-.063-.051-.105-.103-.105m.898.001c-.051 0-.089.042-.102.105l-.255 1.668.255 2.162c.013.063.051.105.102.105.053 0 .095-.042.104-.105l.727-2.162-.727-1.668c-.009-.063-.051-.105-.104-.105m1.799.654c-.053 0-.095.042-.104.105l-.218 1.014.218 2.162c.009.062.051.104.104.104.052 0 .094-.042.104-.104l.763-2.162-.763-1.014c-.01-.063-.052-.105-.104-.105m.898.001c-.053 0-.095.042-.103.105l-.256 1.013.256 2.161c.008.063.05.105.103.105.052 0 .094-.042.103-.105l.8-2.161-.8-1.013c-.009-.063-.051-.105-.103-.105m.898.106c-.051 0-.089.042-.097.105l-.255.907.255 2.162c.008.063.046.105.097.105.053 0 .095-.042.104-.105l.836-2.162-.836-.907c-.009-.063-.051-.105-.104-.105" />
+      </svg>
+    ),
+    patterns: [/soundcloud\.com/],
+    extractTitle: (url: string) => {
+      // Handle track links like soundcloud.com/artist/track
+      const trackMatch = url.match(/soundcloud\.com\/([^/?]+)\/([^/?]+)\/?/)
+      if (trackMatch) return `${trackMatch[1]} / ${trackMatch[2]}`
+
+      // Handle artist/user links like soundcloud.com/artist
+      const artistMatch = url.match(/soundcloud\.com\/([^/?]+)\/?/)
+      return artistMatch ? artistMatch[1] : 'Track'
+    },
+  },
+  {
+    name: 'VK',
+    icon: () => (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2zm3.6 14.1h-1.45c-.65 0-.85-.52-2.01-1.68-1.02-1-1.47-1.13-1.73-1.13-.35 0-.45.1-.45.59v1.53c0 .41-.13.66-1.22.66-1.82 0-3.84-.95-5.26-2.72C4.87 10.5 4.38 8.17 4.38 7.74c0-.26.1-.5.59-.5h1.45c.44 0 .6.2.77.67.87 2.48 2.33 4.66 2.93 4.66.23 0 .33-.11.33-.7V9.96c-.07-1.13-.66-1.23-.66-1.63 0-.21.17-.42.44-.42h2.28c.37 0 .51.2.51.64v3.43c0 .37.17.51.27.51.23 0 .42-.14.85-.56 1.31-1.47 2.25-3.74 2.25-3.74.12-.26.32-.5.76-.5h1.45c.53 0 .65.27.53.64-.19.92-2.17 3.8-2.17 3.8-.19.31-.26.44 0 .78.19.26.82.8 1.24 1.29.77.88 1.37 1.62 1.53 2.13.15.51-.08.77-.59.77z" />
+      </svg>
+    ),
+    patterns: [/vk\.com/],
+    extractTitle: (url: string) => {
+      // Handle video links like vk.com/video-12345_67890
+      const videoMatch = url.match(/vk\.com\/video(-?\d+_\d+)/)
+      if (videoMatch) return `video ${videoMatch[1]}`
+
+      // Handle user/group links like vk.com/username or vk.com/id123456
+      const userMatch = url.match(/vk\.com\/([^/?]+)\/?/)
+      return userMatch ? userMatch[1] : 'Page'
+    },
+  },
+]
+
+// Detect if URL is from a social media platform
+const detectSocialMedia = (url: string): SocialMediaPlatform | null => {
+  for (const platform of socialMediaPlatforms) {
+    if (platform.patterns.some(pattern => pattern.test(url))) {
+      return platform
+    }
+  }
+  return null
+}
+
+// Shorten long URLs for display while keeping them readable
+// Shows first 20 chars + "..." + last 4 chars for URLs longer than 30 chars
+const shortenUrl = (url: string, maxLength = 20, tailLength = 4): string => {
+  const threshold = maxLength + tailLength + 3 // 3 for "..."
+  if (url.length <= threshold) {
+    return url
+  }
+  return `${url.slice(0, maxLength)}...${url.slice(-tailLength)}`
+}
+
+const trimTrailingUrlPunctuation = (url: string): string => url.replace(/[.,!?;:]+$/, '')
+
+// Helper component to display user mentions
+function NostrMention({
+  profilePointer,
+  links,
+}: {
+  profilePointer: { pubkey: string; relays?: string[] }
+  links: RichTextLinks
+}) {
+  // Stabilize the pointer by value so useProfile's use$() doesn't restart on
+  // every parent render (RichTextContent creates a new object each render).
+  const relayKey = profilePointer.relays?.join(',') ?? ''
+  const stablePointer = useMemo(
+    () => profilePointer,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profilePointer.pubkey, relayKey]
+  )
+
+  const author = useProfile(stablePointer)
+  const eventStore = useEventStore()
+  const displayName = author?.display_name || author?.name || genUserName(stablePointer.pubkey)
+
+  // The relays the text names, else the ones the profile was seen on
+  const target = useMemo(() => {
+    const profileEvent = eventStore.getReplaceable(0, stablePointer.pubkey)
+    const seenRelaysSet = profileEvent ? getSeenRelays(profileEvent) : undefined
+    const seenRelays = seenRelaysSet ? Array.from(seenRelaysSet) : []
+    const relays = stablePointer.relays?.length ? stablePointer.relays : seenRelays
+    return links.profile({ pubkey: stablePointer.pubkey, relays })
+  }, [eventStore, stablePointer, links])
+
+  return (
+    <TargetLink target={target} className="font-medium hover:underline text-accent-foreground">
+      @{displayName}
+    </TargetLink>
+  )
+}
+
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|avif|svg)(\?[^#]*)?$/i
+
+const isImageUrl = (url: string): boolean => IMAGE_EXTENSIONS.test(url)
+
+function InlineImage({ url, authorPubkey }: { url: string; authorPubkey?: string }) {
+  const cascade = useImageCascade({ src: url, variant: 'inline', authorPubkey })
+  if (!cascade.src) return null
+  return (
+    <img
+      src={cascade.src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      className="max-w-full rounded-md"
+      onError={cascade.onError}
+      onLoad={cascade.onLoad}
+    />
+  )
+}
+export interface RichTextContentProps {
+  /**
+   * The text content to render with rich formatting
+   */
+  content: string
+  /** Where mentions, tags, timestamps and event references link to. */
+  links: RichTextLinks
+  /**
+   * Optional className to apply to the root element
+   */
+  className?: string
+  /**
+   * Optional video link for timestamp linking (e.g., "nevent1...")
+   * If provided, timestamps like "1:23" will be rendered as clickable links
+   */
+  videoLink?: string
+  /**
+   * Pubkey of the Nostr event this content was rendered from (comment author,
+   * video/note author, profile owner, etc). Sent to imgproxy as the `as=` hint
+   * for any inline image URLs found in the content.
+   */
+  authorPubkey?: string
+}
+
+/**
+ * Renders text content with rich formatting:
+ * - Clickable URLs with social media badge styling
+ * - Nostr profile mentions (npub/nprofile)
+ * - Hashtags
+ * - Clickable timestamps (if videoLink is provided)
+ * - Preserves line breaks (newlines are rendered as <br> tags)
+ */
+export function RichTextContent({
+  content,
+  links,
+  className,
+  videoLink,
+  authorPubkey,
+}: RichTextContentProps) {
+  const renderContent = () => {
+    const parts: React.ReactNode[] = []
+
+    // Combined regex to match URLs, nostr profile references, and hashtags
+    const combinedRegex =
+      /(\()?(https?:\/\/[^\s)]+)(\))?|nostr:(npub1|nprofile1|nevent1|naddr1|note1)([023456789acdefghjklmnpqrstuvwxyz]+)|(#\w+)/g
+
+    const matches: Array<{
+      start: number
+      end: number
+      type: 'url' | 'npub' | 'nprofile' | 'event' | 'hashtag'
+      data: string | { pubkey: string; relays?: string[] } | EventReference
+    }> = []
+    let match: RegExpExecArray | null
+
+    while ((match = combinedRegex.exec(content)) !== null) {
+      const [fullMatch, openParen, url, _closeParen, nostrPrefix, nostrData, hashtag] = match
+
+      if (url) {
+        const trimmedUrl = trimTrailingUrlPunctuation(url)
+        const start = match.index + (openParen ? openParen.length : 0)
+
+        matches.push({
+          start,
+          end: start + trimmedUrl.length,
+          type: 'url',
+          data: trimmedUrl,
+        })
+      } else if (nostrPrefix && nostrData) {
+        const nostrId = `${nostrPrefix}${nostrData}`
+        try {
+          const decoded = nip19.decode(nostrId)
+          if (decoded.type === 'npub') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'npub',
+              data: { pubkey: decoded.data },
+            })
+          } else if (decoded.type === 'nprofile') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'nprofile',
+              data: { pubkey: decoded.data.pubkey, relays: decoded.data.relays },
+            })
+          } else if (decoded.type === 'nevent') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'event',
+              data: {
+                nip19: nostrId,
+                id: decoded.data.id,
+                kind: decoded.data.kind,
+                pubkey: decoded.data.author,
+                relays: decoded.data.relays ?? [],
+              },
+            })
+          } else if (decoded.type === 'note') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'event',
+              data: { nip19: nostrId, id: decoded.data, relays: [] },
+            })
+          } else if (decoded.type === 'naddr') {
+            matches.push({
+              start: match.index,
+              end: match.index + fullMatch.length,
+              type: 'event',
+              data: {
+                nip19: nostrId,
+                kind: decoded.data.kind,
+                pubkey: decoded.data.pubkey,
+                identifier: decoded.data.identifier,
+                relays: decoded.data.relays ?? [],
+              },
+            })
+          }
+        } catch {
+          // If decoding fails, skip this match
+        }
+      } else if (hashtag) {
+        matches.push({
+          start: match.index,
+          end: match.index + fullMatch.length,
+          type: 'hashtag',
+          data: hashtag.slice(1), // Remove the # prefix
+        })
+      }
+    }
+
+    // Process text segments between matches
+    for (let i = 0; i <= matches.length; i++) {
+      const isLastSegment = i === matches.length
+      const segmentStart = i === 0 ? 0 : matches[i - 1].end
+      const segmentEnd = isLastSegment ? content.length : matches[i].start
+
+      if (segmentEnd > segmentStart) {
+        const segment = content.substring(segmentStart, segmentEnd)
+
+        // If videoLink is provided, look for timestamps in this segment
+        if (videoLink) {
+          const timestampParts = renderTimestamps(segment, videoLink, segmentStart, links)
+          parts.push(...timestampParts)
+        } else {
+          // Split by newlines and add <br> tags
+          const lines = segment.split('\n')
+          lines.forEach((line, idx) => {
+            parts.push(line)
+            if (idx < lines.length - 1) {
+              parts.push(<br key={`br-${segmentStart}-${idx}`} />)
+            }
+          })
+        }
+      }
+
+      // Add the matched item if not the last segment
+      if (!isLastSegment) {
+        const item = matches[i]
+
+        if (item.type === 'url') {
+          const url = item.data as string
+          const platform = detectSocialMedia(url)
+
+          if (platform) {
+            const Icon = platform.icon
+            const title = platform.extractTitle(url)
+
+            parts.push(
+              <a
+                key={`url-${item.start}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center"
+              >
+                <Badge
+                  variant="outline"
+                  className="inline-flex items-center gap-2 py-1 px-2 hover:bg-primary/80"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="font-medium">{platform.name}</span>
+                  <span className="text-muted-foreground">/ {title}</span>
+                </Badge>
+              </a>
+            )
+          } else if (isImageUrl(url)) {
+            parts.push(
+              <a
+                key={`url-${item.start}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-1"
+              >
+                <InlineImage url={url} authorPubkey={authorPubkey} />
+              </a>
+            )
+          } else {
+            parts.push(
+              <a
+                key={`url-${item.start}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-foreground hover:underline break-all"
+                title={url}
+              >
+                {shortenUrl(url)}
+              </a>
+            )
+          }
+        } else if (item.type === 'npub' || item.type === 'nprofile') {
+          parts.push(
+            <NostrMention
+              key={`mention-${item.start}`}
+              profilePointer={item.data as { pubkey: string; relays?: string[] }}
+              links={links}
+            />
+          )
+        } else if (item.type === 'event') {
+          const reference = item.data as EventReference
+          const target = links.event?.(reference) ?? null
+          // Without a place to send it, the reference stays the text it was.
+          parts.push(
+            target ? (
+              <EventLink key={`event-${item.start}`} reference={reference} target={target} />
+            ) : (
+              `nostr:${reference.nip19}`
+            )
+          )
+        } else if (item.type === 'hashtag') {
+          const tag = item.data as string
+          const target = links.hashtag(tag)
+          parts.push(
+            target ? (
+              <TargetLink
+                key={`hashtag-${item.start}`}
+                target={target}
+                className="text-accent-foreground hover:underline"
+              >
+                #{tag}
+              </TargetLink>
+            ) : (
+              <span key={`hashtag-${item.start}`}>#{tag}</span>
+            )
+          )
+        }
+      }
+    }
+
+    return parts
+  }
+
+  return <div className={className}>{renderContent()}</div>
+}
+
+// Helper to render timestamps as clickable links
+function renderTimestamps(
+  text: string,
+  videoLink: string,
+  baseOffset: number,
+  links: RichTextLinks
+): React.ReactNode[] {
+  const parts: React.ReactNode[] = []
+  const timestampRegex = /\b(?:(\d+):)?(\d{1,2}):(\d{2})\b/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = timestampRegex.exec(text)) !== null) {
+    const [full, h, m, s] = match
+    const start = match.index
+    const end = start + full.length
+
+    // Push preceding text with line breaks preserved
+    if (start > lastIndex) {
+      const precedingText = text.slice(lastIndex, start)
+      const lines = precedingText.split('\n')
+      lines.forEach((line, idx) => {
+        parts.push(line)
+        if (idx < lines.length - 1) {
+          parts.push(<br key={`br-${baseOffset + lastIndex}-${idx}`} />)
+        }
+      })
+    }
+
+    // Calculate seconds
+    const hours = h ? parseInt(h, 10) : 0
+    const minutes = parseInt(m, 10)
+    const seconds = parseInt(s, 10)
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds
+    const target = links.timestamp(videoLink, totalSeconds)
+    const targetUrl = 'to' in target ? target.to : null
+
+    // Push link
+    parts.push(
+      <TargetLink
+        key={`ts-${baseOffset + start}`}
+        target={target}
+        className="text-accent-foreground hover:underline cursor-pointer"
+        onClick={event => {
+          if (typeof window === 'undefined') return
+          const currentPath = `${window.location.pathname}${window.location.search}`
+          if (targetUrl !== null && currentPath === targetUrl) {
+            event.preventDefault()
+          }
+          window.dispatchEvent(
+            new CustomEvent('nostube:seek-to', { detail: { time: totalSeconds } })
+          )
+        }}
+      >
+        {full}
+      </TargetLink>
+    )
+    lastIndex = end
+  }
+
+  // Push any remaining text with line breaks preserved
+  if (lastIndex < text.length) {
+    const remainingText = text.slice(lastIndex)
+    const lines = remainingText.split('\n')
+    lines.forEach((line, idx) => {
+      parts.push(line)
+      if (idx < lines.length - 1) {
+        parts.push(<br key={`br-${baseOffset + lastIndex}-end-${idx}`} />)
+      }
+    })
+  }
+
+  return parts
+}

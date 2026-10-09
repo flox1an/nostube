@@ -22,7 +22,7 @@ use axum::{
     Json, Router,
 };
 use hmac::{Hmac, Mac};
-use nostr::prelude::{Event, PublicKey};
+use nostr::prelude::{Event, Keys, PublicKey};
 use serde::Deserialize;
 use sha2::Sha256;
 
@@ -51,6 +51,10 @@ struct Secrets {
     /// One-time token; exists only while no admin is registered.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     setup_token: Option<String>,
+    /// The managed signer's key as a NIP-49 `ncryptsec` (ADR 0007); its password is in
+    /// `signer.key`. An admin reset keeps it: the identity outlives a forgotten password.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    managed_key: Option<String>,
 }
 
 impl Secrets {
@@ -103,6 +107,8 @@ pub struct AdminState {
     /// Slows down password guessing; one count for the whole instance (see `login_guard`).
     login_guard: Mutex<LoginGuard>,
     stores: Stores,
+    /// The unlocked managed key; `Err` when `secrets.toml` has one that cannot be unlocked.
+    managed: parking_lot::Mutex<Option<Result<Keys, String>>>,
 }
 
 impl AdminState {
@@ -122,6 +128,14 @@ impl AdminState {
         } else {
             Secrets::create(data)?
         };
+        let managed = secrets.managed_key.as_deref().map(|ncryptsec| {
+            let keys = signer_password(data, false).and_then(|pw| crate::signer::decrypt(ncryptsec, &pw));
+            if let Err(e) = &keys {
+                // Signing and the export fail with this; everything else keeps working.
+                tracing::error!("managed signer: {e}");
+            }
+            keys
+        });
         if secrets.registered() {
             tracing::info!("admin area enabled");
         } else {
@@ -144,6 +158,7 @@ impl AdminState {
             handle,
             login_guard: Mutex::new(LoginGuard::default()),
             stores,
+            managed: parking_lot::Mutex::new(managed),
         })
     }
 
@@ -220,6 +235,23 @@ fn write_private(path: &Path, text: &str) -> Result<(), BoxError> {
         std::fs::OpenOptions::new().create(true).truncate(true).write(true).mode(0o600).open(path)?;
     f.write_all(text.as_bytes())?;
     Ok(())
+}
+
+/// The password of the managed key's ncryptsec: 256 random bits in `<data>/signer.key`, kept
+/// apart from `secrets.toml` so that a copy of that file alone does not hold the identity
+/// (ADR 0007). `create` makes the file when there is none.
+fn signer_password(data: &Path, create: bool) -> Result<String, String> {
+    let path = data.join("signer.key");
+    match std::fs::read_to_string(&path) {
+        Ok(text) if !text.trim().is_empty() => Ok(text.trim().to_owned()),
+        Ok(_) => Err(format!("{} is empty", path.display())),
+        Err(e) if create && e.kind() == std::io::ErrorKind::NotFound => {
+            let password = random_hex(32);
+            write_private(&path, &password).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+            Ok(password)
+        }
+        Err(e) => Err(format!("cannot read {}: {e}", path.display())),
+    }
 }
 
 // ── Auth helpers ────────────────────────────────────────────────────────────
@@ -319,6 +351,9 @@ pub fn router(state: AdminState) -> Router {
         .route("/admin/logout", post(logout))
         .route("/api/admin/config", get(config_get).put(config_put))
         .route("/api/admin/stats", get(stats_get))
+        .route("/api/admin/signer", get(signer_get).post(signer_create))
+        .route("/api/admin/signer/sign", post(signer_sign))
+        .route("/api/admin/signer/export", post(signer_export))
         .with_state(state)
 }
 
@@ -510,6 +545,19 @@ fn json_error(status: StatusCode, message: &str) -> Response {
     (status, Json(serde_json::json!({ "error": message }))).into_response()
 }
 
+/// The gate of every studio write: a live session, and a JSON body (a cross-site form post cannot
+/// send that; the session cookie is SameSite=Strict as well). `Some` is the refusal.
+fn refuse_write(state: &AdminState, headers: &HeaderMap) -> Option<Response> {
+    if !is_authed(state, headers) {
+        return Some(json_error(StatusCode::UNAUTHORIZED, "not logged in"));
+    }
+    let is_json = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("application/json"));
+    (!is_json).then(|| json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "content-type must be application/json"))
+}
+
 /// Everything the studio edits, in the camelCase shape of the public contract.
 fn editable_json(cfg: &Config) -> serde_json::Value {
     let keys = |v: &[nostr::prelude::PublicKey]| v.iter().map(|k| k.to_hex()).collect::<Vec<_>>();
@@ -665,18 +713,10 @@ fn free_disk_bytes(path: &Path) -> std::io::Result<u64> {
 }
 
 /// Saves the edited config: validates everything, keeps `config.prev`, restarts the instance.
-/// The body must be JSON (a cross-site form post cannot send that), and the session cookie is
-/// SameSite=Strict. Origin, TLS and the revision are not editable.
+/// The body must be JSON (see `refuse_write`). Origin, TLS and the revision are not editable.
 async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
-    if !is_authed(&state, &headers) {
-        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
-    }
-    let is_json = headers
-        .get(header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.starts_with("application/json"));
-    if !is_json {
-        return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "content-type must be application/json");
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
     }
     let put: ConfigPut = match serde_json::from_slice(&body) {
         Ok(p) => p,
@@ -718,6 +758,129 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e);
     }
     Json(serde_json::json!({ "ok": true, "revision": next.revision })).into_response()
+}
+
+// ── Managed signer (ADR 0007) ───────────────────────────────────────────────
+
+/// The managed key, `Ok(None)` when there is none, `Err` when it cannot be unlocked.
+fn managed_keys(state: &AdminState) -> Result<Option<Keys>, String> {
+    state.managed.lock().clone().transpose()
+}
+
+/// The key the server holds (`managed`, or the error when it cannot be unlocked), else `none` or
+/// `own`. `own`: the instance has creators and the server holds none of their keys, so they sign
+/// themselves (NIP-07); the server cannot tell which of them is the owner, so no pubkey.
+async fn signer_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    match managed_keys(&state) {
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+        Ok(Some(keys)) => managed_json(&keys),
+        Ok(None) => match Config::load(&state.data.join("config.toml")) {
+            Ok(cfg) => {
+                let mode = if cfg.creators.is_empty() { "none" } else { "own" };
+                Json(serde_json::json!({ "mode": mode, "pubkey": null })).into_response()
+            }
+            Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+        },
+    }
+}
+
+fn managed_json(keys: &Keys) -> Response {
+    Json(serde_json::json!({ "mode": "managed", "pubkey": keys.public_key().to_hex() })).into_response()
+}
+
+/// Generates the managed key and stores it encrypted. Once only: replacing it would throw away
+/// the identity (switching keys is not part of the first cut, see the studio spec). Adding the
+/// key to `creators` and `allowed_writers` is the studio's config save, as for a NIP-07 key.
+async fn signer_create(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    // Under the secrets lock, so two parallel requests cannot both create a key.
+    let mut secrets = state.secrets.lock().unwrap();
+    if secrets.managed_key.is_some() {
+        return json_error(StatusCode::CONFLICT, "the managed key already exists");
+    }
+    let keys = Keys::generate();
+    let ncryptsec = match signer_password(&state.data, true).and_then(|pw| crate::signer::encrypt(keys.secret_key(), &pw)) {
+        Ok(n) => n,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    };
+    secrets.managed_key = Some(ncryptsec);
+    if let Err(e) = secrets.save(&state.data) {
+        secrets.managed_key = None;
+        return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
+    }
+    *state.managed.lock() = Some(Ok(keys.clone()));
+    drop(secrets);
+    tracing::info!("managed signer: key {} created", keys.public_key().to_hex());
+    managed_json(&keys)
+}
+
+/// Signs `{kind, created_at, tags, content}` with the managed key and answers the signed event.
+async fn signer_sign(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let keys = match managed_keys(&state) {
+        Ok(Some(k)) => k,
+        Ok(None) => return json_error(StatusCode::CONFLICT, "there is no managed key"),
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    };
+    match crate::signer::sign(&keys, &body) {
+        Ok(event) => Json(event).into_response(),
+        Err(e) => json_error(StatusCode::BAD_REQUEST, &e),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExportBody {
+    password: String,
+}
+
+/// The managed key as `nsec`, only with the admin password. Wrong passwords count towards the
+/// login throttle (ADR 0002 addendum): the export is as good a place to guess as the login.
+async fn signer_export(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    use nostr::prelude::ToBech32;
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let password = match serde_json::from_slice::<ExportBody>(&body) {
+        Ok(b) => b.password,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
+    };
+    let keys = match managed_keys(&state) {
+        Ok(Some(k)) => k,
+        Ok(None) => return json_error(StatusCode::CONFLICT, "there is no managed key"),
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    };
+    // Check, verify and count in one step, as `login_post` does.
+    let mut guard = state.login_guard.lock().unwrap();
+    let now = Instant::now();
+    if let Err(wait) = guard.check(now) {
+        let message = format!("Too many wrong passwords. Try again in {}.", login_guard::describe(wait));
+        let retry = [(header::RETRY_AFTER, wait.as_secs_f64().ceil().to_string())];
+        return (retry, json_error(StatusCode::TOO_MANY_REQUESTS, &message)).into_response();
+    }
+    let ok = state.secrets.lock().unwrap().password_hash.as_deref().is_some_and(|h| password_ok(h, &password));
+    if !ok {
+        guard.record_failure(now);
+        let failures = guard.failures();
+        drop(guard);
+        tracing::warn!("managed key export: wrong password ({failures} in a row)");
+        return json_error(StatusCode::FORBIDDEN, "Wrong password.");
+    }
+    guard.record_success();
+    drop(guard);
+    tracing::warn!("managed key exported");
+    let nsec = match keys.secret_key().to_bech32() {
+        Ok(n) => n,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    ([(header::CACHE_CONTROL, "no-store")], Json(serde_json::json!({ "nsec": nsec }))).into_response()
 }
 
 // ── Config apply ────────────────────────────────────────────────────────────
@@ -1391,6 +1554,141 @@ mod tests {
         // three free tries and the one that earned the wait, the rest are refused unseen.
         assert_eq!(answered, 4, "three free tries and the one that earned the wait");
         assert_eq!(refused, 8);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    // ── managed signer ──
+
+    /// A JSON request to `uri`; answers status, headers and the JSON body (Null if none).
+    async fn send(app: &Router, uri: &str, cookie: Option<&str>, body: Option<&str>) -> (StatusCode, HeaderMap, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().method(if body.is_some() { "POST" } else { "GET" }).uri(uri);
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        if body.is_some() {
+            req = req.header(header::CONTENT_TYPE, "application/json");
+        }
+        let body = axum::body::Body::from(body.unwrap_or_default().to_owned());
+        let res = app.clone().oneshot(req.body(body).unwrap()).await.unwrap();
+        let (status, headers) = (res.status(), res.headers().clone());
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, headers, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    }
+
+    /// The router of a second process on the same data dir (a restart).
+    async fn reopen(dir: &Path) -> Router {
+        let state = AdminState::open(
+            dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "boot2".into(),
+            Arc::new(axum_server::Handle::new()),
+            stores(dir).await,
+        )
+        .unwrap();
+        router(state)
+    }
+
+    #[tokio::test]
+    async fn the_managed_signer_signs_with_the_key_it_reports_and_survives_a_restart() {
+        let (app, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        // The fixture has a creator and no managed key: the owner signs with an own key.
+        let (status, _, state) = send(&app, "/api/admin/signer", c, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(state, serde_json::json!({ "mode": "own", "pubkey": null }));
+
+        // Session and JSON body required, as for every studio write.
+        assert_eq!(send(&app, "/api/admin/signer", None, Some("{}")).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(call_raw(&app, "/api/admin/signer", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        // Nothing to sign with yet.
+        let event = r#"{"kind":1,"created_at":1700000000,"tags":[["t","x"]],"content":"hello"}"#;
+        assert_eq!(send(&app, "/api/admin/signer/sign", c, Some(event)).await.0, StatusCode::CONFLICT);
+
+        let (status, _, created) = send(&app, "/api/admin/signer", c, Some("{}")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(created["mode"], "managed");
+        let pubkey = created["pubkey"].as_str().unwrap().to_owned();
+        assert_eq!(send(&app, "/api/admin/signer", c, None).await.2, created);
+        // Once only: a second key would replace the identity.
+        assert_eq!(send(&app, "/api/admin/signer", c, Some("{}")).await.0, StatusCode::CONFLICT);
+
+        // Signing needs the session and refuses a body that is not an unsigned event.
+        assert_eq!(send(&app, "/api/admin/signer/sign", None, Some(event)).await.0, StatusCode::UNAUTHORIZED);
+        let (status, _, error) = send(&app, "/api/admin/signer/sign", c, Some(r#"{"kind":1,"tags":[]}"#)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(error["error"].as_str().unwrap().contains("invalid event"), "{error}");
+
+        let (status, _, signed) = send(&app, "/api/admin/signer/sign", c, Some(event)).await;
+        assert_eq!(status, StatusCode::OK);
+        let signed = Event::from_json(signed.to_string()).unwrap();
+        signed.verify().unwrap();
+        assert_eq!(signed.pubkey.to_hex(), pubkey);
+        assert_eq!(signed.content, "hello");
+
+        // At rest: an ncryptsec in secrets.toml, its password apart and private.
+        let secrets = std::fs::read_to_string(dir.join("secrets.toml")).unwrap();
+        assert!(secrets.contains("managed_key = \"ncryptsec1"), "{secrets}");
+        assert!(!secrets.contains("nsec1"));
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(dir.join("signer.key")).unwrap().permissions().mode() & 0o777, 0o600);
+
+        // A restart unlocks the same key.
+        let app = reopen(&dir).await;
+        let (status, _, signed) = send(&app, "/api/admin/signer/sign", c, Some(event)).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(signed["pubkey"], pubkey.as_str());
+
+        // Without its password the key stays locked: signing fails loudly, the rest still works.
+        std::fs::remove_file(dir.join("signer.key")).unwrap();
+        let app = reopen(&dir).await;
+        assert_eq!(send(&app, "/api/admin/signer", c, None).await.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(send(&app, "/api/admin/signer/sign", c, Some(event)).await.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(call(&app, "GET", c, None, "").await.0, StatusCode::OK);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// A POST without a content type (what a cross-site form could send, minus its type).
+    async fn call_raw(app: &Router, uri: &str, cookie: Option<&str>) -> StatusCode {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().method("POST").uri(uri);
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        app.clone().oneshot(req.body(axum::body::Body::empty()).unwrap()).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn exporting_the_managed_key_needs_the_admin_password() {
+        use nostr::prelude::{FromBech32, Keys, SecretKey};
+        let (app, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        let export = |pw: &str| serde_json::json!({ "password": pw }).to_string();
+        assert_eq!(send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await.0, StatusCode::CONFLICT);
+        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"].as_str().unwrap().to_owned();
+
+        assert_eq!(send(&app, "/api/admin/signer/export", None, Some(&export("correct horse"))).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(send(&app, "/api/admin/signer/export", c, Some("{}")).await.0, StatusCode::BAD_REQUEST);
+        let (status, _, body) = send(&app, "/api/admin/signer/export", c, Some(&export("wrong"))).await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert!(body.get("nsec").is_none());
+
+        let (status, headers, body) = send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(headers[header::CACHE_CONTROL], "no-store");
+        let secret = SecretKey::from_bech32(body["nsec"].as_str().unwrap()).unwrap();
+        assert_eq!(Keys::new(secret).public_key().to_hex(), pubkey);
+
+        // Wrong export passwords count towards the login throttle, and the other way round.
+        for _ in 0..4 {
+            send(&app, "/api/admin/signer/export", c, Some(&export("wrong"))).await;
+        }
+        let (status, headers, _) = send(&app, "/api/admin/signer/export", c, Some(&export("correct horse"))).await;
+        assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+        assert!(headers.get(header::RETRY_AFTER).is_some());
+        assert_eq!(try_login(&app, "correct%20horse").await.0, StatusCode::TOO_MANY_REQUESTS);
         std::fs::remove_dir_all(&dir).ok();
     }
 }

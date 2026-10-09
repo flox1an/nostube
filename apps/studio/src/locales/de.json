@@ -46,7 +46,19 @@
       "installSigner": "Installiere eine NIP-07-Signer-Erweiterung, um einen Schlüssel zu verknüpfen.",
       "deviceTitle": "Dieses Gerät",
       "deviceDescription": "Geräte, die diese Instanz öffnen, müssen ihrer Zertifizierungsstelle einmalig vertrauen.",
-      "downloadCa": "Zertifizierungsstelle der Instanz herunterladen"
+      "downloadCa": "Zertifizierungsstelle der Instanz herunterladen",
+      "signerTitle": "Signaturschlüssel",
+      "signerModes": {
+        "managed": "Verwalteter Schlüssel: Dieser Server speichert deinen Schlüssel verschlüsselt und signiert für dich. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls.",
+        "own": "Eigener Schlüssel: Die Signer-Erweiterung deines Browsers (NIP-07) signiert. Der Server sieht den Schlüssel nie.",
+        "none": "Es ist noch kein Signaturschlüssel eingerichtet. Die Seiten Videos und Hochladen bieten die Wahl an."
+      },
+      "signerKey": "Öffentlicher Schlüssel:",
+      "exportPassword": "Admin-Passwort",
+      "exportHint": "Der Export zeigt deinen geheimen Schlüssel (nsec). Bestätige mit deinem Admin-Passwort.",
+      "exportNsec": "nsec exportieren",
+      "nsecWarning": "Wer diesen Schlüssel hat, kann als du veröffentlichen. Bewahre ihn sicher auf, etwa in einem Passwort-Manager, und gib ihn nie weiter.",
+      "hideNsec": "Ausblenden"
     },
     "appearance": {
       "siteTitle": "Deine Website",
@@ -96,7 +108,14 @@
       "neededBody": "Die Instanz hat noch keinen Creator und niemanden, der hochladen darf. Verbinde den Schlüssel deines Nostr-Signers, um beides zu werden.",
       "notCreatorBody": "Der Schlüssel deines Signers ist hier noch kein Creator und Uploader. Füge ihn hinzu, um damit zu veröffentlichen.",
       "noSigner": "In diesem Browser wurde kein Nostr-Signer gefunden. Installiere eine NIP-07-Erweiterung (nos2x, Alby, …) und lade diese Seite neu.",
-      "connect": "Meinen Schlüssel verbinden"
+      "connect": "Meinen Schlüssel verbinden",
+      "chooseTitle": "Wähle, wie deine Videos signiert werden",
+      "chooseBody": "Jedes Video wird mit einem Schlüssel signiert, deiner Identität auf Nostr. Lass diesen Server einen für dich verwahren oder nutze einen Schlüssel, den du schon hast. Du wählst einmal; ein späterer Wechsel ist noch nicht möglich.",
+      "managedTitle": "Verwalteter Schlüssel (Standard)",
+      "managedBody": "Dieser Server erzeugt einen Schlüssel, speichert ihn verschlüsselt und signiert für dich: Du brauchst nur dein Passwort. Wer den Server übernimmt, bekommt den Schlüssel ebenfalls. Unter Konto kannst du ihn jederzeit exportieren.",
+      "createManaged": "Verwalteten Schlüssel erstellen",
+      "ownTitle": "Eigenen Schlüssel verwenden (NIP-07)",
+      "ownBody": "Die Signer-Erweiterung deines Browsers signiert. Der Server sieht deinen Schlüssel nie."
     },
     "videos": {
       "title": "Videos",

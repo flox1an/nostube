@@ -7,6 +7,7 @@ mod config;
 mod data_lock;
 mod login_guard;
 mod relay;
+mod signer;
 mod tls;
 
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};

@@ -46,7 +46,19 @@
       "installSigner": "安装 NIP-07 签名器扩展以绑定密钥。",
       "deviceTitle": "此设备",
       "deviceDescription": "打开此实例的设备需要信任其证书颁发机构一次。",
-      "downloadCa": "下载实例证书颁发机构"
+      "downloadCa": "下载实例证书颁发机构",
+      "signerTitle": "签名密钥",
+      "signerModes": {
+        "managed": "托管密钥：此服务器加密保存你的密钥并替你签名。控制了服务器的人也会得到这个密钥。",
+        "own": "自己的密钥：由浏览器的签名扩展（NIP-07）签名。服务器永远看不到密钥。",
+        "none": "尚未设置签名密钥。“视频”和“上传”页面提供选择。"
+      },
+      "signerKey": "公钥：",
+      "exportPassword": "管理员密码",
+      "exportHint": "导出会显示你的私钥（nsec）。请输入管理员密码确认。",
+      "exportNsec": "导出 nsec",
+      "nsecWarning": "任何拥有此密钥的人都可以以你的身份发布。请把它保存在安全的地方（例如密码管理器），切勿分享。",
+      "hideNsec": "隐藏"
     },
     "appearance": {
       "siteTitle": "你的网站",
@@ -96,7 +108,14 @@
       "neededBody": "该实例还没有创作者，也没有人被允许上传。连接你的 Nostr 签名器密钥，即可同时成为两者。",
       "notCreatorBody": "你的签名器密钥在这里还不是创作者和上传者。添加它以便用它发布。",
       "noSigner": "此浏览器中未找到 Nostr 签名器。请安装 NIP-07 扩展（nos2x、Alby 等）并重新加载此页面。",
-      "connect": "连接我的密钥"
+      "connect": "连接我的密钥",
+      "chooseTitle": "选择视频的签名方式",
+      "chooseBody": "每个视频都用一个密钥签名，它就是你在 Nostr 上的身份。可以让此服务器为你保管密钥，也可以使用你已有的密钥。只需选择一次；目前还不能在之后切换。",
+      "managedTitle": "托管密钥（默认）",
+      "managedBody": "此服务器生成密钥，加密保存并替你签名：你只需要密码。控制了服务器的人也会得到这个密钥。你可以随时在“账户”中导出它。",
+      "createManaged": "创建托管密钥",
+      "ownTitle": "使用我自己的密钥（NIP-07）",
+      "ownBody": "由浏览器的签名扩展签名。服务器永远看不到你的密钥。"
     },
     "videos": {
       "title": "视频",

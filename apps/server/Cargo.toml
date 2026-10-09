@@ -15,7 +15,9 @@ rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", 
 rcgen = "0.14"
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.5", features = ["util"] }
-nostr = "0.45"
+# nip49: the managed signer keeps its key as an ncryptsec (ADR 0007). nostr 0.45.5 does not
+# compile with nip49 alone (its error helper is gated on nip46/nip59), hence nip59.
+nostr = { version = "0.45", features = ["nip49", "nip59"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 rust-embed = { version = "8.12", features = ["debug-embed"] }
 parking_lot = "0.12"

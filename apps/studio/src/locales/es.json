@@ -46,7 +46,19 @@
       "installSigner": "Instala una extensión de firma NIP-07 para vincular una clave.",
       "deviceTitle": "Este dispositivo",
       "deviceDescription": "Los dispositivos que abren esta instancia deben confiar una vez en su autoridad de certificación.",
-      "downloadCa": "Descargar la autoridad de certificación de la instancia"
+      "downloadCa": "Descargar la autoridad de certificación de la instancia",
+      "signerTitle": "Clave de firma",
+      "signerModes": {
+        "managed": "Clave gestionada: este servidor guarda tu clave cifrada y firma por ti. Quien se apodere del servidor también obtiene la clave.",
+        "own": "Clave propia: firma la extensión de firma de tu navegador (NIP-07). El servidor nunca ve la clave.",
+        "none": "Todavía no hay ninguna clave de firma. Las páginas Videos y Subir ofrecen la elección."
+      },
+      "signerKey": "Clave pública:",
+      "exportPassword": "Contraseña de administración",
+      "exportHint": "Exportar muestra tu clave secreta (nsec). Introduce tu contraseña de administración para confirmar.",
+      "exportNsec": "Exportar nsec",
+      "nsecWarning": "Quien tenga esta clave puede publicar en tu nombre. Guárdala en un lugar seguro, como un gestor de contraseñas, y no la compartas nunca.",
+      "hideNsec": "Ocultar"
     },
     "appearance": {
       "siteTitle": "Tu sitio",
@@ -96,7 +108,14 @@
       "neededBody": "La instancia aún no tiene creador ni nadie con permiso para subir. Conecta la clave de tu firmante Nostr para ser ambas cosas.",
       "notCreatorBody": "La clave de tu firmante aún no es creadora ni puede subir aquí. Añádela para publicar con ella.",
       "noSigner": "No se encontró ningún firmante Nostr en este navegador. Instala una extensión NIP-07 (nos2x, Alby, …) y recarga esta página.",
-      "connect": "Conectar mi clave"
+      "connect": "Conectar mi clave",
+      "chooseTitle": "Elige cómo se firman tus videos",
+      "chooseBody": "Cada video se firma con una clave, tu identidad en Nostr. Deja que este servidor guarde una por ti o usa una clave que ya tengas. Eliges una vez; todavía no se puede cambiar después.",
+      "managedTitle": "Clave gestionada (predeterminada)",
+      "managedBody": "Este servidor crea una clave, la guarda cifrada y firma por ti: solo necesitas tu contraseña. Quien se apodere del servidor también obtiene la clave. Puedes exportarla en cualquier momento en Cuenta.",
+      "createManaged": "Crear una clave gestionada",
+      "ownTitle": "Usar mi propia clave (NIP-07)",
+      "ownBody": "Firma la extensión de firma de tu navegador. El servidor nunca ve tu clave."
     },
     "videos": {
       "title": "Videos",

@@ -86,9 +86,15 @@ beforeEach(() => {
   }
   URL.createObjectURL = vi.fn(() => 'blob:preview')
   URL.revokeObjectURL = vi.fn()
+  // The server reports an own key, so the provider signs with the extension above.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(JSON.stringify({ mode: 'own', pubkey: null })))
+  )
 })
 afterEach(() => {
   delete (window as unknown as { nostr?: object }).nostr
+  vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
 

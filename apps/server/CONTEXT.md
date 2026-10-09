@@ -67,6 +67,10 @@ _Avoid_: creator login, owner key
 The one-time secret, issued while the instance has no admin, that lets its holder register the admin. Consumed by registration.
 _Avoid_: setup link, invite, setup password
 
+**Managed key**:
+The creator key the instance generates, keeps encrypted and signs with for the studio (ADR 0007). Only the admin session can have it sign; it is a creator and allowed writer only through the config, like any other key, and gives no admin rights.
+_Avoid_: server key, instance key, admin key
+
 **Public config**:
 The versioned JSON of non-secret instance settings the frontend loads before building loaders.
 _Avoid_: runtime env, settings file

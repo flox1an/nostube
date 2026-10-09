@@ -44,13 +44,13 @@ type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 // Request limits are fixed constants, not settings (#11).
 /// Max bytes per WebSocket message and frame, which also bounds one event (#11: 128 KiB).
-const MAX_MESSAGE_BYTES: usize = 128 * 1024;
+pub(crate) const MAX_MESSAGE_BYTES: usize = 128 * 1024;
 /// Max open subscriptions per connection (#11).
 const MAX_SUBSCRIPTIONS: usize = 32;
 /// Max subscription id length in characters (#11).
 const MAX_SUBID_LEN: usize = 256;
 /// Events whose `created_at` is more than this far in the future are rejected (#11).
-const MAX_FUTURE_SECS: u64 = 1800;
+pub(crate) const MAX_FUTURE_SECS: u64 = 1800;
 /// NIP-40 purge interval (upstream `repo/sqlite.rs` runs `cleanup_expired` every 600 s).
 const EXPIRY_PURGE_EVERY: Duration = Duration::from_secs(600);
 /// Idle read connections kept for reuse.

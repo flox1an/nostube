@@ -1,3 +1,4 @@
+import { postJson } from './api'
 import i18n from './i18n'
 
 /** An event the signer is asked to sign (NIP-01 without id, pubkey and signature). */
@@ -15,12 +16,24 @@ export interface SignedEvent extends UnsignedEvent {
 }
 
 /**
- * Whoever signs for the creator. The studio only talks to this interface, so a signer that holds
- * the key on the server can take the place of the browser extension later (docs/studio-spec.md).
+ * Whoever signs for the creator: the server (managed key) or the browser's extension (own key).
+ * The studio only talks to this interface (docs/studio-spec.md); a NIP-46 bunker would be one more.
  */
 export interface Signer {
   getPublicKey(): Promise<string>
   signEvent(event: UnsignedEvent): Promise<SignedEvent>
+}
+
+/**
+ * The key the server holds (managed mode): it signs through `POST /api/admin/signer/sign`, with
+ * the admin session. Only the four fields go along; the server refuses anything else.
+ */
+export function managedSigner(pubkey: string): Signer {
+  return {
+    getPublicKey: async () => pubkey,
+    signEvent: ({ kind, created_at, tags, content }) =>
+      postJson<SignedEvent>('/api/admin/signer/sign', { kind, created_at, tags, content }),
+  }
 }
 
 interface Nip07Window {

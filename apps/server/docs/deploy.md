@@ -43,7 +43,7 @@ enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
 
 | What               | How                                                            | Why                                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml`, the relay database, the stored videos                                                                                                                    |
+| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database, the stored videos                                                                      |
 | The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ) |
 
 Everything else is optional: `NOSTUBE_PORT` (default 8080), `NOSTUBE_BIND` (the image binds all
@@ -142,7 +142,8 @@ unprivileged user). `docker exec` runs as root and leaves `secrets.toml` owned b
 use it, add `-u 10001`.
 
 **Backup:** stop the container and copy the data folder (or snapshot the volume). It holds the
-secrets, so treat the copy accordingly.
+secrets, so treat the copy accordingly. With a managed key (ADR 0007) the copy holds the creator
+identity: `secrets.toml` and `signer.key` together unlock it, and one without the other cannot.
 
 **Update:** `docker compose pull && docker compose up -d`. Tags: `main` (latest build of the
 main branch), `sha-<commit>`, and `<version>` for releases (`server-v<version>` git tags).

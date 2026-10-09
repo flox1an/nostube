@@ -46,7 +46,19 @@
       "installSigner": "Installez une extension de signature NIP-07 pour associer une clé.",
       "deviceTitle": "Cet appareil",
       "deviceDescription": "Les appareils qui ouvrent cette instance doivent faire confiance une fois à son autorité de certification.",
-      "downloadCa": "Télécharger l'autorité de certification de l'instance"
+      "downloadCa": "Télécharger l'autorité de certification de l'instance",
+      "signerTitle": "Clé de signature",
+      "signerModes": {
+        "managed": "Clé gérée : ce serveur garde votre clé chiffrée et signe pour vous. Quiconque prend le contrôle du serveur obtient aussi la clé.",
+        "own": "Votre propre clé : l'extension de signature de votre navigateur (NIP-07) signe. Le serveur ne voit jamais la clé.",
+        "none": "Aucune clé de signature n'est encore configurée. Les pages Vidéos et Mise en ligne proposent le choix."
+      },
+      "signerKey": "Clé publique :",
+      "exportPassword": "Mot de passe d'administration",
+      "exportHint": "L'export affiche votre clé secrète (nsec). Saisissez votre mot de passe d'administration pour confirmer.",
+      "exportNsec": "Exporter le nsec",
+      "nsecWarning": "Quiconque possède cette clé peut publier en votre nom. Conservez-la en lieu sûr, par exemple dans un gestionnaire de mots de passe, et ne la partagez jamais.",
+      "hideNsec": "Masquer"
     },
     "appearance": {
       "siteTitle": "Votre site",
@@ -96,7 +108,14 @@
       "neededBody": "L'instance n'a encore aucun créateur ni personne autorisée à mettre en ligne. Connectez la clé de votre signataire Nostr pour devenir les deux.",
       "notCreatorBody": "La clé de votre signataire n'est pas encore créateur et auteur de mises en ligne ici. Ajoutez-la pour publier avec elle.",
       "noSigner": "Aucun signataire Nostr n'a été trouvé dans ce navigateur. Installez une extension NIP-07 (nos2x, Alby, …) et rechargez cette page.",
-      "connect": "Connecter ma clé"
+      "connect": "Connecter ma clé",
+      "chooseTitle": "Choisissez comment vos vidéos sont signées",
+      "chooseBody": "Chaque vidéo est signée avec une clé, votre identité sur Nostr. Laissez ce serveur en garder une pour vous, ou utilisez une clé que vous avez déjà. Vous choisissez une fois ; changer plus tard n'est pas encore possible.",
+      "managedTitle": "Clé gérée (par défaut)",
+      "managedBody": "Ce serveur crée une clé, la garde chiffrée et signe pour vous : votre mot de passe suffit. Quiconque prend le contrôle du serveur obtient aussi la clé. Vous pouvez l'exporter à tout moment dans Compte.",
+      "createManaged": "Créer une clé gérée",
+      "ownTitle": "Utiliser ma propre clé (NIP-07)",
+      "ownBody": "L'extension de signature de votre navigateur signe. Le serveur ne voit jamais votre clé."
     },
     "videos": {
       "title": "Vidéos",

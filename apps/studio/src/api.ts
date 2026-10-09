@@ -56,6 +56,42 @@ export async function saveConfig(config: AdminConfig): Promise<{ revision: numbe
   return (await res.json()) as { revision: number }
 }
 
+/** A studio write the server only accepts as JSON (`POST`); answers the JSON reply. */
+export async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as T
+}
+
+/**
+ * Where the creator's key lives (`/api/admin/signer`): `managed` on this server (with its
+ * public key), `own` in the owner's signer (the instance has creators the server holds no key
+ * of), `none` before onboarding.
+ */
+export interface SignerInfo {
+  mode: 'none' | 'managed' | 'own'
+  pubkey: string | null
+}
+
+export async function loadSigner(): Promise<SignerInfo> {
+  const res = await fetch('/api/admin/signer', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as SignerInfo
+}
+
+/** Has the server create the managed key (once); it is not a creator until the config says so. */
+export const createManagedKey = () => postJson<SignerInfo>('/api/admin/signer', {})
+
+/** The managed key as `nsec`; the server wants the admin password again. */
+export async function exportNsec(password: string): Promise<string> {
+  return (await postJson<{ nsec: string }>('/api/admin/signer/export', { password })).nsec
+}
+
 /** What the built-in relay and Blossom server hold (`GET /api/admin/stats`), read-only. */
 export interface AdminStats {
   relay: {

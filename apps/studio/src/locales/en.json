@@ -46,7 +46,19 @@
       "installSigner": "Install a NIP-07 signer extension to bind a key.",
       "deviceTitle": "This device",
       "deviceDescription": "Devices that open this instance need to trust its certificate authority once.",
-      "downloadCa": "Download the instance CA"
+      "downloadCa": "Download the instance CA",
+      "signerTitle": "Signing key",
+      "signerModes": {
+        "managed": "Managed key: this server keeps your key encrypted and signs for you. Whoever takes over the server gets the key too.",
+        "own": "Your own key: your browser's signer extension (NIP-07) signs. The server never sees the key.",
+        "none": "No signing key is set up yet. The Videos and Upload pages offer the choice."
+      },
+      "signerKey": "Public key:",
+      "exportPassword": "Admin password",
+      "exportHint": "Exporting shows your secret key (nsec). Enter your admin password to confirm.",
+      "exportNsec": "Export nsec",
+      "nsecWarning": "Anyone who has this key can publish as you. Keep it somewhere safe, such as a password manager, and never share it.",
+      "hideNsec": "Hide"
     },
     "appearance": {
       "siteTitle": "Your site",
@@ -96,7 +108,14 @@
       "neededBody": "The instance has no creator and no one allowed to upload yet. Connect the key of your Nostr signer to become both.",
       "notCreatorBody": "The key of your signer is not yet a creator and uploader here. Add it to publish with it.",
       "noSigner": "No Nostr signer was found in this browser. Install a NIP-07 extension (nos2x, Alby, …) and reload this page.",
-      "connect": "Connect my key"
+      "connect": "Connect my key",
+      "chooseTitle": "Choose how your videos are signed",
+      "chooseBody": "Every video is signed with a key, your identity on Nostr. Let this server keep one for you, or use a key you already have. You choose once; switching later is not possible yet.",
+      "managedTitle": "Managed key (default)",
+      "managedBody": "This server creates a key, keeps it encrypted and signs for you: your password is all you need. Whoever takes over the server gets the key too. You can export it at any time under Account.",
+      "createManaged": "Create a managed key",
+      "ownTitle": "Use my own key (NIP-07)",
+      "ownBody": "Your browser's signer extension signs. The server never sees your key."
     },
     "videos": {
       "title": "Videos",

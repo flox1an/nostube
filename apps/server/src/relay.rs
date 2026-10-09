@@ -1,5 +1,11 @@
 //! The instance's own Nostr relay (ADR 0001, tickets #4 and #11): NIP-01, NIP-09 (`e` tags),
-//! NIP-11, NIP-40. Writes only from the allowed writers, reads open.
+//! NIP-11, NIP-40. Writes from the allowed writers, reads open. Visitors may not publish
+//! arbitrary events, but the relay acts as an interaction inbox for its own videos: NIP-22
+//! comments (kind 1111, replies included), NIP-10 legacy replies (kind 1), NIP-25 reactions
+//! (kind 7) and NIP-09 deletions of a visitor's own interactions are accepted when they
+//! reference a locally stored video whose author is a current allowed writer. A `p`/`P`/`a`
+//! tag is a claim, never proof: every target is resolved against this database, and unknown,
+//! foreign or non-video targets are rejected.
 //!
 //! Ported from nostr-rs-relay (https://github.com/scsibug/nostr-rs-relay),
 //! Copyright (c) 2021 Greg Heartsfield, MIT License. The schema, the persist rules
@@ -25,6 +31,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use nostr::{
+    event::EventId,
     filter::MatchEventOptions,
     nips::nip11::{Limitation, RelayInformationDocument},
     prelude::{ClientMessage, Event, Filter, PublicKey, RelayMessage, SubscriptionId, Timestamp},
@@ -80,6 +87,24 @@ CREATE TABLE IF NOT EXISTS tag (
 CREATE INDEX IF NOT EXISTS tag_val_index ON tag(value);
 CREATE INDEX IF NOT EXISTS tag_composite_index ON tag(event_id, name, value);
 CREATE INDEX IF NOT EXISTS tag_covering_index ON tag(name, kind, value, created_at, event_id);
+-- Every locally stored version of a video event, so comments/reactions that reference a
+-- superseded video id (the id the commenter saw) still resolve to the same video. The
+-- current row lives in `event`; this table keeps the historical ids. Rows are recorded on
+-- insert and removed when their video is deleted. Versions superseded before this table
+-- existed cannot be recovered and stay unresolvable.
+CREATE TABLE IF NOT EXISTS video_version (
+  event_hash BLOB PRIMARY KEY,
+  author BLOB NOT NULL,
+  kind INTEGER NOT NULL,
+  d_tag TEXT
+);
+-- Events the relay accepted from a visitor (comment/reply/reaction), so a NIP-09 deletion
+-- can prove its targets were the sender's own accepted interactions, and so a repeated
+-- deletion stays a harmless no-op after the target row is gone.
+CREATE TABLE IF NOT EXISTS visitor_event (
+  event_hash BLOB PRIMARY KEY,
+  author BLOB NOT NULL
+);
 ";
 
 /// Per-connection pragmas (upstream `STARTUP_SQL`).
@@ -144,7 +169,7 @@ impl Relay {
         if ev.verify().is_err() {
             return RelayMessage::ok(id, false, "invalid: bad event id or signature");
         }
-        if !self.0.writers.contains(&ev.pubkey) {
+        if !self.0.writers.contains(&ev.pubkey) && visitor_scope(&ev).is_none() {
             return RelayMessage::ok(id, false, "restricted: only this instance's allowed writers may publish");
         }
         if ev.created_at.as_secs() > Timestamp::now().as_secs() + MAX_FUTURE_SECS {
@@ -157,14 +182,22 @@ impl Relay {
         if !ev.kind.is_ephemeral() {
             let inner = self.0.clone();
             let row = ev.clone();
-            let saved = tokio::task::spawn_blocking(move || persist(&mut inner.writer.lock(), &row)).await;
+            let saved = tokio::task::spawn_blocking(move || {
+                admit(&mut inner.writer.lock(), &inner.writers, &row)
+            })
+            .await;
             match saved {
-                Ok(Ok(Saved::Stored)) => {}
-                Ok(Ok(Saved::Duplicate)) => return RelayMessage::ok(id, true, "duplicate: already have this event"),
-                Ok(Ok(Saved::Superseded)) => {
+                Ok(Ok(Ok(Saved::Stored))) => {}
+                Ok(Ok(Ok(Saved::Duplicate))) => {
+                    return RelayMessage::ok(id, true, "duplicate: already have this event")
+                }
+                Ok(Ok(Ok(Saved::Superseded))) => {
                     return RelayMessage::ok(id, true, "duplicate: a newer version of this event is stored")
                 }
-                Ok(Ok(Saved::Deleted)) => return RelayMessage::ok(id, false, "blocked: this event was deleted by its author"),
+                Ok(Ok(Ok(Saved::Deleted))) => {
+                    return RelayMessage::ok(id, false, "blocked: this event was deleted by its author")
+                }
+                Ok(Ok(Err(refusal))) => return RelayMessage::ok(id, false, refusal.to_owned()),
                 Ok(Err(e)) => return RelayMessage::ok(id, false, format!("error: {e}")),
                 Err(e) => return RelayMessage::ok(id, false, format!("error: {e}")),
             }
@@ -267,6 +300,473 @@ fn is_replaceable(kind: u16) -> bool {
     kind == 0 || kind == 3 || (10000..20000).contains(&kind)
 }
 
+/// Video kinds a visitor interaction may target (NIP-71).
+fn is_video_kind(kind: u16) -> bool {
+    matches!(kind, 21 | 22 | 34235 | 34236)
+}
+
+/// What a non-writer event wants to be. `None` = no visitor scope, plain rejection.
+#[derive(Clone, Copy, PartialEq)]
+enum VisitorScope {
+    /// NIP-22 comment (kind 1111), replies to comments included.
+    Comment,
+    /// NIP-10 legacy reply (kind 1) rooted at a video: only the marker form the web app sends.
+    LegacyReply,
+    /// NIP-25 reaction (kind 7).
+    Reaction,
+    /// NIP-09 deletion of the sender's own accepted interactions (kind 5).
+    Deletion,
+}
+
+/// The visitor scope an event claims, if any.
+fn visitor_scope(ev: &Event) -> Option<VisitorScope> {
+    match ev.kind.as_u16() {
+        1111 => Some(VisitorScope::Comment),
+        1 => Some(VisitorScope::LegacyReply),
+        7 => Some(VisitorScope::Reaction),
+        5 => Some(VisitorScope::Deletion),
+        _ => None,
+    }
+}
+
+/// All tags of `ev` as string vectors. Parsed from the event's canonical JSON so the policy
+/// does not depend on how the nostr crate models uppercase NIP-22 tags (`A`/`E`/`K`/`P`).
+fn tag_list(ev: &Event) -> Vec<Vec<String>> {
+    serde_json::from_str::<serde_json::Value>(&ev.as_json())
+        .ok()
+        .and_then(|v| serde_json::from_value(v.get("tags").cloned().unwrap_or_default()).ok())
+        .unwrap_or_default()
+}
+
+/// All tags of a stored event's JSON (same shape as [`tag_list`]).
+fn stored_tags(content: &str) -> Vec<Vec<String>> {
+    serde_json::from_str::<serde_json::Value>(content)
+        .ok()
+        .and_then(|v| serde_json::from_value(v.get("tags").cloned().unwrap_or_default()).ok())
+        .unwrap_or_default()
+}
+
+fn tags_named<'a>(tags: &'a [Vec<String>], name: &'a str) -> impl Iterator<Item = &'a [String]> {
+    tags.iter()
+        .filter(move |t| t.len() >= 2 && t[0] == name)
+        .map(|t| t.as_slice())
+}
+
+/// A locally known video: the current row or a recorded historical version.
+#[derive(Debug)]
+struct VideoRef {
+    author: Vec<u8>,
+    kind: u16,
+    d_tag: Option<String>,
+}
+
+fn video_is_allowed(writers: &[PublicKey], video: &VideoRef) -> bool {
+    let Ok(author) = PublicKey::from_slice(&video.author) else {
+        return false;
+    };
+    writers.contains(&author) && is_video_kind(video.kind)
+}
+
+/// Resolves a video event id against the current rows and the historical version table.
+fn video_by_id(conn: &Connection, id: &EventId) -> Option<VideoRef> {
+    let id = id.as_bytes().as_slice();
+    if let Ok((author, kind, d_tag)) = conn.query_row(
+        "SELECT author, kind, d_tag FROM event WHERE event_hash = ?",
+        params![id],
+        |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?, r.get::<_, Option<String>>(2)?)),
+    ) {
+        return Some(VideoRef { author, kind, d_tag });
+    }
+    conn.query_row(
+        "SELECT author, kind, d_tag FROM video_version WHERE event_hash = ?",
+        params![id],
+        |r| Ok(VideoRef { author: r.get(0)?, kind: r.get(1)?, d_tag: r.get(2)? }),
+    )
+    .optional()
+    .ok()
+    .flatten()
+}
+
+/// Resolves a video coordinate (`kind:pubkey:d`) against the current row only: an update
+/// keeps the coordinate, so the newest version is the video.
+fn video_by_coordinate(conn: &Connection, value: &str) -> Option<VideoRef> {
+    let mut parts = value.splitn(3, ':');
+    let kind = parts.next()?.parse::<u16>().ok()?;
+    let author = PublicKey::from_hex(parts.next()?).ok()?;
+    let d_tag = parts.next()?;
+    if d_tag.is_empty() || !is_video_kind(kind) {
+        return None;
+    }
+    let row = conn
+        .query_row(
+            "SELECT author FROM event WHERE author = ? AND kind = ? AND d_tag = ?",
+            params![author.as_bytes().as_slice(), kind, d_tag],
+            |r| r.get::<_, Vec<u8>>(0),
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    Some(VideoRef { author: row, kind, d_tag: Some(d_tag.to_owned()) })
+}
+
+/// Root video of a comment/reaction id already stored here: kind 1111 resolves via its
+/// uppercase `A`/`E` root, a legacy kind-1 reply via its `root`-marked `e`. Reactions and
+/// anything else are not valid interaction targets.
+fn interaction_root_video(
+    conn: &Connection,
+    writers: &[PublicKey],
+    id: &EventId,
+) -> Option<VideoRef> {
+    let (kind, content) = conn
+        .query_row(
+            "SELECT kind, content FROM event WHERE event_hash = ?",
+            params![id.as_bytes().as_slice()],
+            |r| Ok((r.get::<_, u16>(0)?, r.get::<_, String>(1)?)),
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    let tags = stored_tags(&content);
+    match kind {
+        1111 => {
+            let root = tags_named(&tags, "A").next().or_else(|| tags_named(&tags, "E").next())?;
+            let video = match root[0].as_str() {
+                "A" => video_by_coordinate(conn, &root[1])?,
+                _ => video_by_id(conn, &EventId::from_hex(&root[1]).ok()?)?,
+            };
+            video_is_allowed(writers, &video).then_some(video)
+        }
+        1 => {
+            let root = tags_named(&tags, "e")
+                .find(|t| t.len() >= 4 && t[3] == "root")?;
+            let video = video_by_id(conn, &EventId::from_hex(&root[1]).ok()?)?;
+            video_is_allowed(writers, &video).then_some(video)
+        }
+        _ => None,
+    }
+}
+
+fn same_video(a: &VideoRef, b: &VideoRef) -> bool {
+    a.author == b.author && a.kind == b.kind && a.d_tag == b.d_tag
+}
+
+/// Rejects a visitor event that is outside the interaction inbox policy. `Ok(())` means the
+/// event may be persisted. Every target is resolved locally; nothing is fetched.
+fn check_visitor(
+    conn: &Connection,
+    writers: &[PublicKey],
+    ev: &Event,
+    scope: VisitorScope,
+) -> Result<(), &'static str> {
+    match scope {
+        VisitorScope::Deletion => check_visitor_deletion(conn, ev),
+        VisitorScope::Reaction => check_visitor_reaction(conn, writers, ev),
+        VisitorScope::Comment | VisitorScope::LegacyReply => {
+            check_visitor_comment(conn, writers, ev, scope)
+        }
+    }
+}
+
+/// NIP-22 comment (top-level or reply) rooted at a local video of an allowed writer, or a
+/// NIP-10 legacy reply of the exact marker form. Root and parent references must be
+/// consistent; unknown or conflicting references are refused.
+fn check_visitor_comment(
+    conn: &Connection,
+    writers: &[PublicKey],
+    ev: &Event,
+    scope: VisitorScope,
+) -> Result<(), &'static str> {
+    let tags = tag_list(ev);
+
+    if scope == VisitorScope::LegacyReply {
+        return check_legacy_reply(conn, writers, &tags);
+    }
+
+    // Root scope: the A coordinate wins; an additional E must be the same video.
+    let a_roots: Vec<_> = tags_named(&tags, "A").collect();
+    let e_roots: Vec<_> = tags_named(&tags, "E").collect();
+    if a_roots.len() + e_roots.len() != 1 || (!a_roots.is_empty() && !e_roots.is_empty()) {
+        return Err("restricted: comments need exactly one A or E video root");
+    }
+    let video = if let Some(root) = a_roots.first() {
+        video_by_coordinate(conn, &root[1]).filter(|v| video_is_allowed(writers, v))
+    } else {
+        let root = e_roots.first().expect("exactly one root");
+        let id = EventId::from_hex(&root[1]).map_err(|_| "restricted: invalid comment root")?;
+        video_by_id(conn, &id).filter(|v| video_is_allowed(writers, v))
+    }
+    .ok_or("restricted: comments may only reference videos of this instance's allowed writers")?;
+
+    // K is mandatory and names the root kind; P must be the root author.
+    let kinds: Vec<_> = tags_named(&tags, "K").collect();
+    if kinds.len() != 1 || kinds[0][1] != video.kind.to_string() {
+        return Err("restricted: comment K tag must name the referenced video kind");
+    }
+    if tags_named(&tags, "P").any(|p| p[1] != PublicKey::from_slice(&video.author).expect("stored key").to_hex()) {
+        return Err("restricted: comment P tag does not match the video author");
+    }
+
+    // Parent refs: video versions (top-level self-refs) plus at most one stored comment,
+    // whose own root must be this video.
+    let mut parent: Option<(EventId, Vec<u8>)> = None;
+    for e in tags_named(&tags, "e") {
+        let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid comment parent")?;
+        if video_by_id(conn, &id).is_some_and(|v| same_video(&v, &video)) {
+            continue;
+        }
+        if parent.is_some() {
+            return Err("restricted: comment has more than one parent reference");
+        }
+        let author = stored_interaction_author(conn, &id, &video, writers)?
+            .ok_or("restricted: comment parent is not a known interaction on this video")?;
+        parent = Some((id, author));
+    }
+    for a in tags_named(&tags, "a") {
+        video_by_coordinate(conn, &a[1])
+            .filter(|v| same_video(&v, &video))
+            .ok_or("restricted: comment a tag does not match the referenced video")?;
+    }
+    let expected_parent = match &parent {
+        Some((_, author)) => author.clone(),
+        None => video.author.clone(),
+    };
+    let expected = PublicKey::from_slice(&expected_parent).expect("stored key").to_hex();
+    if tags_named(&tags, "p").any(|p| p[1] != expected) {
+        return Err("restricted: comment p tag does not match its parent author");
+    }
+    Ok(())
+}
+
+/// Author of a stored kind-1111/kind-1 interaction on `video`, if it is a valid parent.
+fn stored_interaction_author(
+    conn: &Connection,
+    id: &EventId,
+    video: &VideoRef,
+    writers: &[PublicKey],
+) -> Result<Option<Vec<u8>>, &'static str> {
+    let row = conn
+        .query_row(
+            "SELECT author, kind FROM event WHERE event_hash = ?",
+            params![id.as_bytes().as_slice()],
+            |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, u16>(1)?)),
+        )
+        .optional()
+        .map_err(|_| "error: lookup failed")?;
+    let Some((author, kind)) = row else { return Ok(None) };
+    match kind {
+        1111 | 1 => {
+            let root = interaction_root_video(conn, writers, id)
+                .ok_or("restricted: comment parent is not rooted at an allowed video")?;
+            if same_video(&root, video) { Ok(Some(author)) } else { Ok(None) }
+        }
+        _ => Ok(None),
+    }
+}
+
+/// Legacy kind-1 note threaded onto a video: exactly one `root`-marked e (the video) and at
+/// most one `reply`-marked e (a stored interaction on that video); no other e references.
+fn check_legacy_reply(
+    conn: &Connection,
+    writers: &[PublicKey],
+    tags: &[Vec<String>],
+) -> Result<(), &'static str> {
+    let mut root: Option<(&[String], VideoRef)> = None;
+    for e in tags_named(tags, "e") {
+        if e.len() >= 4 && e[3] == "root" {
+            if root.is_some() {
+                return Err("restricted: reply has more than one root marker");
+            }
+            let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid reply root")?;
+            let video = video_by_id(conn, &id)
+                .filter(|v| video_is_allowed(writers, v))
+                .ok_or("restricted: replies may only reference videos of this instance's allowed writers")?;
+            root = Some((e, video));
+        }
+    }
+    let (_, video) = root.ok_or("restricted: legacy replies need a root-marked video")?;
+
+    let mut reply: Option<Vec<u8>> = None;
+    for e in tags_named(tags, "e") {
+        if e.len() >= 4 && e[3] == "reply" {
+            if reply.is_some() {
+                return Err("restricted: reply has more than one reply marker");
+            }
+            let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid reply target")?;
+            let author = stored_interaction_author(conn, &id, &video, writers)?
+                .ok_or("restricted: reply target is not a known interaction on this video")?;
+            reply = Some(author);
+        } else if e.len() < 4 || (e[3] != "root" && e[3] != "reply") {
+            let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid reply reference")?;
+            if video_by_id(conn, &id).map_or(true, |v| !same_video(&v, &video)) {
+                return Err("restricted: reply references something other than its video");
+            }
+        }
+    }
+
+    let video_author = PublicKey::from_slice(&video.author).expect("stored key").to_hex();
+    let parent_author = reply
+        .map(|a| PublicKey::from_slice(&a).expect("stored key").to_hex())
+        .unwrap_or_default();
+    if tags_named(tags, "p").any(|p| p[1] != video_author && p[1] != parent_author) {
+        return Err("restricted: reply p tag matches neither the video nor the parent author");
+    }
+    Ok(())
+}
+
+/// NIP-25 reaction: the target is the last `e` (or the `a` coordinate), and it must be the
+/// video or a stored interaction under it; every other `e` must stay inside that video's
+/// scope. No reaction-on-reaction chains.
+fn check_visitor_reaction(
+    conn: &Connection,
+    writers: &[PublicKey],
+    ev: &Event,
+) -> Result<(), &'static str> {
+    let tags = tag_list(ev);
+    let es: Vec<&[String]> = tags_named(&tags, "e").collect();
+    if es.is_empty() {
+        return Err("restricted: reactions need an e target");
+    }
+    let target_id =
+        EventId::from_hex(&es[es.len() - 1][1]).map_err(|_| "restricted: invalid reaction target")?;
+
+    let row = conn
+        .query_row(
+            "SELECT author, kind, d_tag FROM event WHERE event_hash = ?",
+            params![target_id.as_bytes().as_slice()],
+            |r| {
+                Ok((
+                    r.get::<_, Vec<u8>>(0)?,
+                    r.get::<_, u16>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|_| "error: lookup failed")?
+        .or_else(|| {
+            // The target may be a superseded video version; the mapping only holds videos.
+            conn.query_row(
+                "SELECT author, kind, d_tag FROM video_version WHERE event_hash = ?",
+                params![target_id.as_bytes().as_slice()],
+                |r| {
+                    Ok((
+                        r.get::<_, Vec<u8>>(0)?,
+                        r.get::<_, u16>(1)?,
+                        r.get::<_, Option<String>>(2)?,
+                    ))
+                },
+            )
+            .optional()
+            .ok()
+            .flatten()
+        });
+    let Some((target_author, target_kind, target_d_tag)) = row else {
+        return Err("restricted: reaction target is not stored here");
+    };
+
+    let video = match target_kind {
+        k if is_video_kind(k) => VideoRef {
+            author: target_author.clone(),
+            kind: k,
+            d_tag: target_d_tag,
+        },
+        1111 | 1 => {
+            interaction_root_video(conn, writers, &target_id)
+                .ok_or("restricted: reaction target is not rooted at an allowed video")?
+        }
+        _ => return Err("restricted: reactions may only target videos or their comments"),
+    };
+    if !video_is_allowed(writers, &video) {
+        return Err("restricted: reactions may only target videos of this instance's allowed writers");
+    }
+
+    // Every e reference must belong to this video: the video itself (any version) or a
+    // stored interaction on it. Unknown ids cannot smuggle another scope in.
+    for e in &es {
+        let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid reaction reference")?;
+        if video_by_id(conn, &id).is_some_and(|v| same_video(&v, &video)) {
+            continue;
+        }
+        let in_scope = stored_interaction_author(conn, &id, &video, writers)?
+            .is_some();
+        if !in_scope {
+            return Err("restricted: reaction references something outside the target video");
+        }
+    }
+
+    let target_author_hex =
+        PublicKey::from_slice(&target_author).expect("stored key").to_hex();
+    if tags_named(&tags, "p").any(|p| p[1] != target_author_hex) {
+        return Err("restricted: reaction p tag does not match the target author");
+    }
+    if tags_named(&tags, "k").any(|k| k[1] != target_kind.to_string()) {
+        return Err("restricted: reaction k tag does not match the target kind");
+    }
+    for a in tags_named(&tags, "a") {
+        let coord = video_by_coordinate(conn, &a[1])
+            .filter(|v| video_is_allowed(writers, v))
+            .ok_or("restricted: reaction a tag is not an allowed video")?;
+        if !same_video(&coord, &video) {
+            return Err("restricted: reaction a tag does not match its target");
+        }
+    }
+    Ok(())
+}
+
+/// NIP-09 deletion of the sender's own accepted interactions; nothing else.
+fn check_visitor_deletion(conn: &Connection, ev: &Event) -> Result<(), &'static str> {
+    let tags = tag_list(ev);
+    if tags_named(&tags, "a").next().is_some() {
+        return Err("restricted: visitors may not delete by address");
+    }
+    let targets: Vec<_> = tags_named(&tags, "e").collect();
+    if targets.is_empty() {
+        return Err("restricted: deletions need at least one e target");
+    }
+    let author = ev.pubkey.as_bytes().as_slice();
+    for e in targets {
+        let id = EventId::from_hex(&e[1]).map_err(|_| "restricted: invalid deletion target")?;
+        let owner: Option<Vec<u8>> = conn
+            .query_row(
+                "SELECT author FROM visitor_event WHERE event_hash = ?",
+                params![id.as_bytes().as_slice()],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(|_| "error: lookup failed")?;
+        if owner.as_deref() != Some(author) {
+            return Err("restricted: you may only delete your own interactions");
+        }
+    }
+    Ok(())
+}
+
+/// Validates visitor events and records/persists them; writer events pass straight through.
+fn admit(
+    conn: &mut Connection,
+    writers: &[PublicKey],
+    ev: &Event,
+) -> rusqlite::Result<Result<Saved, &'static str>> {
+    if writers.contains(&ev.pubkey) {
+        return persist(conn, ev).map(Ok);
+    }
+    let Some(scope) = visitor_scope(ev) else {
+        return Ok(Err("restricted: only this instance's allowed writers may publish"));
+    };
+    if let Err(refusal) = check_visitor(conn, writers, ev, scope) {
+        return Ok(Err(refusal));
+    }
+    let saved = persist(conn, ev)?;
+    if matches!(saved, Saved::Stored | Saved::Duplicate) && ev.kind.as_u16() != 5 {
+        conn.execute(
+            "INSERT OR IGNORE INTO visitor_event (event_hash, author) VALUES (?, ?)",
+            params![ev.id.as_bytes().as_slice(), ev.pubkey.as_bytes().as_slice()],
+        )?;
+    }
+    Ok(Ok(saved))
+}
+
+
 /// Upstream `persist_event`, minus NIP-26 and with deletion as real deletes: keeps only the
 /// newest replaceable/addressable version (tie: lowest id), applies kind-5 `e` deletions of
 /// the same author, and refuses events their author already deleted.
@@ -326,6 +826,15 @@ fn persist(conn: &mut Connection, ev: &Event) -> rusqlite::Result<Saved> {
     }
     let row = tx.last_insert_rowid();
 
+    // Remember this video version so interactions referencing its id keep resolving after a
+    // newer version replaces it.
+    if is_video_kind(kind) {
+        tx.execute(
+            "INSERT OR IGNORE INTO video_version (event_hash, author, kind, d_tag) VALUES (?, ?, ?, ?)",
+            params![id, author, kind, d_tag],
+        )?;
+    }
+
     {
         let mut add_tag =
             tx.prepare_cached("INSERT INTO tag (event_id, name, value, kind, created_at) VALUES (?, ?, ?, ?, ?)")?;
@@ -348,6 +857,11 @@ fn persist(conn: &mut Connection, ev: &Event) -> rusqlite::Result<Saved> {
         let mut delete = tx.prepare_cached("DELETE FROM event WHERE event_hash = ? AND author = ? AND kind != 5")?;
         for target in ev.tags.event_ids() {
             delete.execute(params![target.as_bytes().as_slice(), author])?;
+            // A deleted video stops being a valid interaction target, even by historical id.
+            tx.execute(
+                "DELETE FROM video_version WHERE event_hash = ?",
+                params![target.as_bytes().as_slice()],
+            )?;
         }
     }
 
@@ -678,5 +1192,150 @@ mod tests {
         assert!(!ok_status(relay.ingest(ev(&stranger, 22236, now, "", &[])).await).0);
         assert!(ok_status(relay.ingest(ev(&writer, 1, now, "hi", &[])).await).0);
         assert!(get(&relay, &[filter("{}")], 0).iter().all(|e| e.pubkey == writer.public_key()));
+    }
+
+    async fn queried(relay: &Relay) -> Vec<Event> {
+        let mut rx = relay.query(&SubscriptionId::new("test"), vec![Filter::new()]);
+        let mut events = Vec::new();
+        while let Some(json) = rx.recv().await {
+            let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+            events.push(Event::from_json(value[2].to_string()).unwrap());
+        }
+        events
+    }
+
+    #[tokio::test]
+    async fn visitors_interact_only_with_known_owned_video_threads() {
+        let (writer, visitor, other) = (Keys::generate(), Keys::generate(), Keys::generate());
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let video = ev(&writer, 21, now, "video", &[]);
+        let id = video.id.to_hex();
+        let author = writer.public_key().to_hex();
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        let comment = ev(&visitor, 1111, now, "comment", &[
+            &["E", &id, "", &author], &["K", "21"], &["P", &author],
+            &["e", &id, "", &author], &["k", "21"], &["p", &author],
+        ]);
+        assert!(ok_status(relay.ingest(comment.clone()).await).0);
+        let cid = comment.id.to_hex();
+        let cauthor = visitor.public_key().to_hex();
+        let reply = ev(&other, 1111, now, "reply", &[
+            &["E", &id], &["K", "21"], &["P", &author],
+            &["e", &cid, "", &cauthor], &["k", "1111"], &["p", &cauthor],
+        ]);
+        assert!(ok_status(relay.ingest(reply.clone()).await).0);
+        let reaction = ev(&visitor, 7, now, "+", &[
+            &["e", &id], &["e", &reply.id.to_hex()], &["k", "1111"],
+            &["p", &other.public_key().to_hex()],
+        ]);
+        assert!(ok_status(relay.ingest(reaction.clone()).await).0);
+        let legacy = ev(&visitor, 1, now, "legacy", &[&["e", &id, "", "root"]]);
+        assert!(ok_status(relay.ingest(legacy.clone()).await).0);
+        let legacy_reply = ev(&other, 1, now, "legacy reply", &[
+            &["e", &id, "", "root"], &["e", &legacy.id.to_hex(), "", "reply"],
+        ]);
+        assert!(ok_status(relay.ingest(legacy_reply.clone()).await).0);
+        assert_eq!(queried(&relay).await.len(), 6);
+
+        let deletion = ev(&visitor, 5, now, "", &[
+            &["e", &cid], &["e", &reaction.id.to_hex()], &["e", &legacy.id.to_hex()],
+        ]);
+        assert!(ok_status(relay.ingest(deletion.clone()).await).0);
+        assert!(ok_status(relay.ingest(deletion).await).0, "duplicate deletion");
+        assert!(ok_status(relay.ingest(ev(&visitor, 5, now + 1, "again", &[&["e", &cid]])).await).0);
+        assert!(!ok_status(relay.ingest(comment).await).0, "deleted event cannot return");
+        let remaining = queried(&relay).await;
+        assert!(remaining.iter().any(|e| e.id == video.id));
+        assert!(!remaining.iter().any(|e| e.id == reaction.id || e.id == legacy.id));
+        assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &reply.id.to_hex()]])).await).0);
+        assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["e", &id]])).await).0);
+        assert!(!ok_status(relay.ingest(ev(&visitor, 5, now, "", &[&["a", &format!("34235:{author}:fake")]])).await).0);
+    }
+
+    #[tokio::test]
+    async fn visitor_roots_targets_and_ancestors_cannot_be_spoofed() {
+        let (writer, foreign, visitor) = (Keys::generate(), Keys::generate(), Keys::generate());
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let video = ev(&writer, 22, now, "video", &[]);
+        let other_video = ev(&writer, 21, now, "other", &[]);
+        let note = ev(&writer, 1, now, "not video", &[]);
+        let foreign_video = ev(&foreign, 21, now, "foreign", &[]);
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        assert!(ok_status(relay.ingest(other_video.clone()).await).0);
+        assert!(ok_status(relay.ingest(note.clone()).await).0);
+        // Public writer policy permits an event before the writer is removed.
+        let prior = open(vec![writer.public_key(), foreign.public_key()]);
+        assert!(ok_status(prior.ingest(foreign_video.clone()).await).0);
+        let relay_foreign = Relay::open(&prior.0.path, RelayConfig {
+            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(),
+        }).unwrap();
+        let id = video.id.to_hex();
+        let author = writer.public_key().to_hex();
+        let unknown = "00".repeat(32);
+        let bad = [
+            ev(&visitor, 1111, now, "", &[&["E", &unknown], &["K", "22"], &["P", &author], &["e", &unknown], &["k", "22"]]),
+            ev(&visitor, 1111, now, "", &[&["E", &note.id.to_hex()], &["K", "1"], &["P", &author], &["e", &note.id.to_hex()], &["k", "1"]]),
+            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "21"], &["P", &author], &["e", &id], &["k", "22"]]),
+            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "22"], &["P", &foreign.public_key().to_hex()], &["e", &id], &["k", "22"]]),
+            ev(&visitor, 1111, now, "", &[&["E", &id], &["E", &other_video.id.to_hex()], &["K", "22"], &["P", &author], &["e", &id], &["k", "22"]]),
+            ev(&visitor, 1111, now, "", &[&["E", &id], &["K", "22"], &["P", &author], &["e", &other_video.id.to_hex()], &["k", "21"]]),
+            ev(&visitor, 7, now, "+", &[&["e", &id], &["e", &unknown]]),
+            ev(&visitor, 7, now, "+", &[&["e", &id], &["p", &foreign.public_key().to_hex()]]),
+            ev(&visitor, 7, now, "+", &[&["e", &id], &["k", "21"]]),
+            ev(&visitor, 7, now, "+", &[&["e", &unknown], &["e", &id]]),
+            ev(&visitor, 1, now, "", &[&["e", &id, "", "root"], &["e", &note.id.to_hex(), "", "reply"]]),
+            ev(&visitor, 1, now, "", &[&["e", &id, "", "root"], &["e", &other_video.id.to_hex(), "", "root"]]),
+            ev(&visitor, 1063, now, "", &[&["e", &id]]),
+            ev(&visitor, 24242, now, "", &[]),
+        ];
+        for event in bad {
+            assert!(!ok_status(relay.ingest(event).await).0);
+        }
+        let forged = ev(&visitor, 1111, now, "", &[
+            &["E", &foreign_video.id.to_hex()], &["K", "21"], &["P", &author],
+            &["e", &foreign_video.id.to_hex()], &["k", "21"],
+        ]);
+        assert!(!ok_status(relay_foreign.ingest(forged).await).0);
+        let mut invalid = ev(&visitor, 7, now, "+", &[&["e", &id]]);
+        invalid.content = "-".into();
+        let (_, message) = ok_status(relay.ingest(invalid).await);
+        assert!(message.starts_with("invalid:"));
+        assert_eq!(queried(&relay).await.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn addressable_video_versions_remain_authenticated_after_updates() {
+        let (writer, visitor) = (Keys::generate(), Keys::generate());
+        let relay = open(vec![writer.public_key()]);
+        let now = Timestamp::now().as_secs();
+        let author = writer.public_key().to_hex();
+        let address = format!("34235:{author}:clip");
+        let old = ev(&writer, 34235, now - 1, "old", &[&["d", "clip"]]);
+        let new = ev(&writer, 34235, now, "new", &[&["d", "clip"]]);
+        assert!(ok_status(relay.ingest(old.clone()).await).0);
+        assert!(ok_status(relay.ingest(new.clone()).await).0);
+        let old_id = old.id.to_hex();
+        let comment = ev(&visitor, 1111, now, "on old", &[
+            &["A", &address], &["K", "34235"], &["P", &author],
+            &["a", &address], &["e", &old_id], &["k", "34235"], &["p", &author],
+        ]);
+        assert!(ok_status(relay.ingest(comment.clone()).await).0);
+        assert!(ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[
+            &["a", &address], &["e", &old_id], &["k", "34235"], &["p", &author],
+        ])).await).0);
+        assert!(ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[&["e", &comment.id.to_hex()]])).await).0);
+        for target in ["00".repeat(32), new.id.to_hex()] {
+            let addr = if target == new.id.to_hex() { format!("34235:{author}:invented") } else { address.clone() };
+            assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "+", &[&["a", &addr], &["e", &target]])).await).0);
+            assert!(!ok_status(relay.ingest(ev(&visitor, 1111, now, "", &[
+                &["A", &addr], &["K", "34235"], &["P", &author],
+                &["a", &addr], &["e", &target], &["k", "34235"],
+            ])).await).0);
+        }
+        assert!(!queried(&relay).await.iter().any(|e| e.id == old.id));
+        assert!(ok_status(relay.ingest(ev(&writer, 5, now, "", &[&["e", &new.id.to_hex()]])).await).0);
+        assert!(!ok_status(relay.ingest(ev(&visitor, 7, now, "-", &[&["a", &address], &["e", &old_id]])).await).0);
     }
 }

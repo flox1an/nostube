@@ -1,0 +1,5 @@
+# The relay accepts visitor interactions with locally known videos
+
+The own relay accepted writes only from allowed writers (ADR 0001), so visitor comments, replies and reactions could not be stored on the instance — the site had nothing to accept them with. Visitors now get a narrow inbox instead of write access: a non-writer event is accepted only when it is a NIP-22 comment (kind 1111, replies included), a NIP-10 legacy reply (kind 1, marker form), a NIP-25 reaction (kind 7) or a NIP-09 deletion of the sender's own accepted interactions, and every referenced target resolves against locally stored data to a video whose author is a current allowed writer. A `p`/`P`/`a` tag is a claim, never proof: unknown, foreign or non-video targets are refused, and `video_version` keeps superseded video ids resolvable so comments survive video edits.
+
+Visitors still gain no allowed-writer rights — not on the relay, not on Blossom — and the deletion right covers only interactions the relay accepted from the same key. Zaps, rate limiting, trust scores and moderation (approval, white-/blacklists) are explicitly out of scope; spam prevention stays open.

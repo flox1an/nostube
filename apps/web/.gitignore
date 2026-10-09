@@ -21,7 +21,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.vercel
 
 # ChatGPT exports that may contain personal info
 *ChatGPT*.md

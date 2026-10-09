@@ -27,7 +27,7 @@ packages/widgets   player, video card, comments, login, shadcn/ui base       [pl
 - **Core means "no React", not "no browser".** It keeps using IndexedDB (nostr-idb) and Web Workers and does not run in Node.
 - **Config is injected.** Core builds its client from a passed-in config (`createNostubeClient(config)`). Site and studio get the config from the server and cannot override it from `localStorage`. Preset, trust and missing-video logic is injected policy, not an import of the timeline.
 - **The embed player** is built as a single `embed.html` plus a transcode worker and one chunk; the server must serve these side by side with relative paths and must not send a CSP that blocks its inline scripts. The server hosts it on the instance's own origin.
-- **SEO and link previews** stay a later stage. The web app keeps its Vercel edge functions; the server gets a static SPA first, and meta-tag injection later in Rust if needed.
+- **SEO and link previews** stay a later stage. The web app is deployed from its Dockerfile (no Vercel); the server gets a static SPA first, and meta-tag injection later in Rust if needed.
 - ADRs and domain glossaries stay per app. Root `docs/adr/` is for the web app and for decisions that span apps.
 
 ## Consequences

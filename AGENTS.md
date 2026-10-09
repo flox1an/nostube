@@ -6,7 +6,7 @@ This repository holds several apps. The sections from "Project Overview & Stack"
 
 | Path | What it is |
 |---|---|
-| `apps/web` | The Nostube web app (nostu.be): embed player, Vercel edge functions, Tauri desktop wrapper |
+| `apps/web` | The Nostube web app (nostu.be): embed player, Node server for the oEmbed/playlist APIs, Tauri desktop wrapper |
 | `apps/server` | The self-hosted Rust server (relay, Blossom, admin) that embeds a web build. It has its own `CONTEXT.md`, `AGENTS.md` and `docs/adr/` |
 
 Root `docs/adr/` holds ADRs for the whole repo and for the web app; `apps/server/docs/adr/` holds the server's ADRs (their numbering is independent). `packages/core` (`@nostube/core`, TypeScript source, no build step) holds the shared app config types; it must not import React or `apps/web` code. Planned additions (`packages/widgets`, `apps/site`, `apps/studio`) are described in ADR 0004 and do not exist yet. Install dependencies once at the root with `npm ci` (npm workspaces, one root `package-lock.json`); `overrides` live in the root `package.json`.

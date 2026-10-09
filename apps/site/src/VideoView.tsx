@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { buildShareLinks } from '@nostube/core/share-links'
 import { getPublishDate, type VideoEvent } from '@nostube/core/video-event'
@@ -8,39 +8,29 @@ import ShareButton from '@nostube/widgets/components/ShareButton'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { AgeConfirm } from './AgeConfirm'
+import { Breadcrumb } from './Breadcrumb'
 import type { AgeGate } from './use-age-gate'
+import { useEscapeToHome } from './use-escape-to-home'
 import { useVideoById } from './use-video-by-id'
 import { videoPath } from './video-path'
-
-const BackLink = () => (
-  <Link to="/" className="text-sm text-muted-foreground hover:underline">
-    ← All videos
-  </Link>
-)
-
-function Notice({ children }: { children: ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <BackLink />
-      <p className="py-12 text-center text-muted-foreground">{children}</p>
-    </div>
-  )
-}
 
 /** One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. */
 export function VideoView({
   config,
   gate,
   authorName,
+  picture,
 }: {
   config: InstanceConfig
   gate: AgeGate
   authorName?: string
+  picture?: string
 }) {
   const { id } = useParams()
   const lookup = useVideoById(id, config)
   const navigate = useNavigate()
   const video = lookup.status === 'found' ? lookup.video : null
+  useEscapeToHome()
 
   useEffect(() => {
     if (video) document.title = `${video.title} – ${config.title}`
@@ -49,12 +39,22 @@ export function VideoView({
     }
   }, [video, config.title])
 
-  if (lookup.status === 'invalid') return <Notice>This video link is not valid.</Notice>
-  if (lookup.status === 'not-found') return <Notice>Video not found.</Notice>
+  const crumb = (current?: ReactNode) => (
+    <Breadcrumb title={config.title} picture={picture} current={current} />
+  )
+  const notice = (message: string) => (
+    <div className="space-y-2">
+      {crumb()}
+      <p className="py-12 text-center text-muted-foreground">{message}</p>
+    </div>
+  )
+
+  if (lookup.status === 'invalid') return notice('This video link is not valid.')
+  if (lookup.status === 'not-found') return notice('Video not found.')
   if (!video) {
     return (
       <div className="space-y-4" aria-busy="true" aria-label="Loading video">
-        <BackLink />
+        {crumb(<Skeleton className="inline-block h-4 w-40 align-middle" />)}
         <Skeleton className="aspect-video w-full rounded-lg" />
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="h-4 w-1/4" />
@@ -64,7 +64,7 @@ export function VideoView({
 
   return (
     <div className="space-y-4">
-      <BackLink />
+      {crumb(video.title)}
       {gate.isLocked(video) ? (
         <AgeConfirm onConfirm={gate.confirm} onCancel={() => navigate('/')} />
       ) : (

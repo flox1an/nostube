@@ -147,7 +147,7 @@ describe('SiteHome', () => {
     fireEvent.click(screen.getByText('My first upload'))
     await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'My first upload' })).toBeTruthy()
-    fireEvent.click(screen.getByText('← All videos'))
+    fireEvent.click(screen.getByRole('link', { name: 'Site title' }))
     await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
   })
 
@@ -179,6 +179,30 @@ describe('SiteHome', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Share this video' }))
     const link = await screen.findByDisplayValue(/^https:\/\/site\.example\/v\/nevent1/)
     expect(link).toBeTruthy()
+  })
+
+  it('shows a breadcrumb on a video page and leaves it with Esc', async () => {
+    renderSite(client)
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    const crumb = await screen.findByRole('navigation', { name: 'Breadcrumb' })
+    expect(crumb.textContent).toContain('Site title')
+    await waitFor(() => expect(crumb.textContent).toContain('My first upload'))
+    expect(screen.queryByRole('heading', { name: 'Site title' })).toBeNull()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
+    expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
+  })
+
+  it('does not leave the video page with Esc while typing in a field', async () => {
+    renderSite(client)
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+    const input = document.body.appendChild(document.createElement('input'))
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.getByTestId('player')).toBeTruthy()
+    input.remove()
   })
 
   it('reports a video link that is not valid', async () => {

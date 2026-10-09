@@ -7,7 +7,7 @@
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use argon2::{
@@ -27,6 +27,7 @@ use serde::Deserialize;
 use sha2::Sha256;
 
 use crate::config::{self, Config, Edited, Search, Storage};
+use crate::login_guard::{self, LoginGuard};
 
 const SESSION_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
 /// Freshness window for NIP-98 login/bind events (clock skew included).
@@ -91,6 +92,8 @@ pub struct AdminState {
     covered_hosts: Vec<String>,
     boot_id: String,
     handle: Arc<axum_server::Handle<std::net::SocketAddr>>,
+    /// Slows down password guessing; one count for the whole instance (see `login_guard`).
+    login_guard: Mutex<LoginGuard>,
 }
 
 impl AdminState {
@@ -129,6 +132,7 @@ impl AdminState {
             covered_hosts,
             boot_id,
             handle,
+            login_guard: Mutex::new(LoginGuard::default()),
         })
     }
 
@@ -380,16 +384,52 @@ struct LoginForm {
 }
 
 async fn login_post(State(state): State<Arc<AdminState>>, Form(f): Form<LoginForm>) -> Response {
+    // One attempt at a time, from the check to the bookkeeping: if the check and the count were
+    // separate steps, a burst of parallel requests would all pass the check before the first
+    // wrong password was counted. Nothing in here waits (no `.await`), so the lock is short.
+    let mut guard = state.login_guard.lock().unwrap();
+    let now = Instant::now();
+    if let Err(wait) = guard.check(now) {
+        let nostr = state.secrets.lock().unwrap().nostr_pubkey.is_some();
+        drop(guard);
+        return too_many_attempts(wait, nostr);
+    }
     let secrets = state.secrets.lock().unwrap();
     let ok = secrets.password_hash.as_deref().is_some_and(|h| password_ok(h, &f.password));
     if !ok {
+        let nostr = secrets.nostr_pubkey.is_some();
         drop(secrets);
+        let wait = guard.record_failure(now);
+        let failures = guard.failures();
+        drop(guard);
+        tracing::warn!("admin login: wrong password ({failures} in a row)");
         // Same page for wrong passwords; no detail for guessing.
-        return page("Log in", &login_form(Some("Wrong password."), false)).into_response();
+        let message = match wait {
+            Some(wait) => format!("Wrong password. Wait {} before the next try.", login_guard::describe(wait)),
+            None => "Wrong password.".to_owned(),
+        };
+        return page("Log in", &login_form(Some(&message), nostr)).into_response();
     }
+    guard.record_success();
+    drop(guard);
     let secret = secrets.session_secret.clone();
     drop(secrets);
     set_cookie_redirect(&secret, "/admin").into_response()
+}
+
+/// 429 with `Retry-After`; the password was not looked at.
+fn too_many_attempts(wait: std::time::Duration, nostr: bool) -> Response {
+    let message = format!(
+        "Too many wrong passwords. Try again in {}.{}",
+        login_guard::describe(wait),
+        if nostr { " Logging in with your Nostr key still works." } else { "" }
+    );
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        [(header::RETRY_AFTER, wait.as_secs_f64().ceil().to_string())],
+        page("Log in", &login_form(Some(&message), nostr)),
+    )
+        .into_response()
 }
 
 /// NIP-07 login: the page JS signs a NIP-98 event and sends its Authorization header.
@@ -692,29 +732,61 @@ fn esc(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
+/// The stylesheet of the pages the server renders itself (setup and login). It follows the
+/// system's light or dark setting and uses the colours of the studio's theme (`theme.css` of
+/// `@nostube/widgets`), so a visitor does not leave one look for another.
+const PAGE_CSS: &str = r#"
+:root{color-scheme:light dark;
+--background:oklch(0.982 0.002 286);--foreground:oklch(0.205 0.006 286);--card:oklch(1 0 0);
+--muted:oklch(0.49 0.012 286);--border:oklch(0.89 0.006 286);--input:oklch(0.89 0.006 286);
+--primary:oklch(0.48 0.2 293);--primary-foreground:oklch(0.969 0.016 293.756);--ring:oklch(0.55 0.17 293);
+--destructive:oklch(0.577 0.245 27.325);--code:oklch(0.952 0.004 286)}
+@media (prefers-color-scheme:dark){:root{
+--background:oklch(0.16 0.006 286);--foreground:oklch(0.96 0.003 286);--card:oklch(0.205 0.007 286);
+--muted:oklch(0.7 0.01 286);--border:oklch(1 0 0/12%);--input:oklch(1 0 0/16%);
+--ring:oklch(0.68 0.16 293);--destructive:oklch(0.704 0.191 22.216);--code:oklch(0.245 0.008 286)}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;
+font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+background:var(--background);color:var(--foreground)}
+main{width:100%;max-width:26rem;background:var(--card);border:1px solid var(--border);
+border-radius:.75rem;padding:1.75rem}
+.brand{display:flex;align-items:center;gap:.6rem;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 .75rem}
+.brand img{display:block}
+h1{font-size:1.4rem;line-height:1.3;margin:0 0 .75rem}
+p{margin:.5rem 0;color:var(--muted)} p.error{color:var(--destructive);background:color-mix(in oklab,var(--destructive) 10%,transparent);
+border:1px solid color-mix(in oklab,var(--destructive) 40%,transparent);border-radius:.5rem;padding:.6rem .75rem}
+label{display:block;margin:1rem 0 0;font-size:.875rem;font-weight:500}
+label small{font-weight:400;color:var(--muted)}
+input{display:block;width:100%;height:2.5rem;margin-top:.35rem;padding:.5rem .75rem;font:inherit;
+color:var(--foreground);background:transparent;border:1px solid var(--input);border-radius:.5rem}
+input:focus-visible,button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+button{display:block;width:100%;height:2.5rem;margin-top:1.25rem;padding:0 1rem;font:inherit;font-weight:500;
+cursor:pointer;border:0;border-radius:.5rem;background:var(--primary);color:var(--primary-foreground)}
+button:hover{filter:brightness(1.1)} button.secondary{margin-top:.75rem;background:transparent;color:var(--foreground);border:1px solid var(--input)}
+code{background:var(--code);padding:.1rem .3rem;border-radius:.25rem;font-size:.85em}
+.or{text-align:center;margin:1rem 0 0;font-size:.875rem}
+"#;
+
 fn page(title: &str, body: &str) -> Html<String> {
     Html(format!(
         r#"<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>{title} · nostube admin</title><style>
-body{{font:16px/1.5 system-ui,sans-serif;margin:2rem auto;max-width:44rem;padding:0 1rem;color:#111}}
-h1,h2{{font-size:1.25rem}} h2{{margin-top:2rem}}
-label{{display:block;margin:1rem 0}} input,textarea,select{{display:block;width:100%;max-width:28rem;margin-top:.25rem;padding:.4rem;font:inherit;border:1px solid #bbb;border-radius:4px}}
-button{{padding:.45rem 1rem;font:inherit;border:1px solid #333;border-radius:6px;background:#4f46e5;color:#fff;cursor:pointer}}
-code{{background:#f3f3f3;padding:.1rem .3rem;border-radius:3px}} .error{{color:#b91c1c}}
-</style></head><body>{body}</body></html>"#,
+<meta name=color-scheme content="light dark"><meta name=robots content=noindex>
+<title>{title} · Nostube Studio</title><style>{css}</style></head><body><main><p class=brand><img src="/studio/nostube.svg" alt="" width=28 height=28>Nostube Studio</p>{body}</main></body></html>"#,
         title = esc(title),
+        css = PAGE_CSS,
     ))
 }
 
 fn setup_form(error: Option<&str>) -> String {
-    let error = error.map(|e| format!("<p class=error>{}</p>", esc(e))).unwrap_or_default();
+    let error = error.map(|e| format!("<p class=error role=alert>{}</p>", esc(e))).unwrap_or_default();
     format!(
-        r#"{error}<h1>Register the admin</h1>
+        r#"<h1>Register the admin</h1>{error}
 <p>One-time setup. The token is in the instance log (or came from <code>nostube-server admin reset</code>).</p>
 <form method=post action=/admin/setup>
-  <label>Setup token <input name=token required></label>
-  <label>Password <small>(at least 8 characters)</small> <input name=password type=password required></label>
-  <label>Repeat password <input name=password2 type=password required></label>
+  <label>Setup token <input name=token autocomplete=off required></label>
+  <label>Password <small>(at least 8 characters)</small> <input name=password type=password autocomplete=new-password required></label>
+  <label>Repeat password <input name=password2 type=password autocomplete=new-password required></label>
   <button>Register</button>
 </form>
 <script>
@@ -727,26 +799,39 @@ if (token) {{
     )
 }
 
+/// `nostr`: a Nostr key is bound, so the page also offers the NIP-07 login.
 fn login_form(error: Option<&str>, nostr: bool) -> String {
-    let error = error.map(|e| format!("<p class=error>{}</p>", esc(e))).unwrap_or_default();
+    let error = error.map(|e| format!("<p class=error role=alert>{}</p>", esc(e))).unwrap_or_default();
+    // Not a format string: these are single braces on purpose (they are only inserted below).
     let nostr = if nostr {
-        r#"<p>or <button onclick="bindNostr('/admin/login/nostr')">Log in with NIP-07</button></p>
+        r#"<p class=or>or</p>
+<button type=button class=secondary id=nostr-login hidden>Log in with a Nostr key</button>
 <script>
-async function bindNostr(path) {{
-  const ev = await window.nostr.signEvent({{
-    kind: 27235, created_at: Math.floor(Date.now() / 1000), tags: [['u', location.origin + path], ['method', 'POST']], content: '',
-  }});
-  const res = await fetch(path, {{ method: 'POST', headers: {{ Authorization: 'Nostr ' + btoa(JSON.stringify(ev)) }} }});
-  if (res.ok) location.href = '/admin'; else alert(await res.text());
-}}
+const nostrButton = document.getElementById('nostr-login');
+// Extensions inject window.nostr a moment after the page loads: wait up to 2 s for it.
+let waited = 0;
+const lookForSigner = setInterval(() => {
+  if (window.nostr) { nostrButton.hidden = false; clearInterval(lookForSigner); }
+  else if ((waited += 100) >= 2000) clearInterval(lookForSigner);
+}, 100);
+nostrButton.addEventListener('click', async () => {
+  const path = '/admin/login/nostr';
+  try {
+    const ev = await window.nostr.signEvent({
+      kind: 27235, created_at: Math.floor(Date.now() / 1000), tags: [['u', location.origin + path], ['method', 'POST']], content: '',
+    });
+    const res = await fetch(path, { method: 'POST', headers: { Authorization: 'Nostr ' + btoa(JSON.stringify(ev)) } });
+    if (res.ok) location.href = '/admin'; else alert(await res.text());
+  } catch (e) { alert(e && e.message ? e.message : String(e)); }
+});
 </script>"#
     } else {
         ""
     };
     format!(
-        r#"{error}<h1>Admin log in</h1>
+        r#"<h1>Log in</h1>{error}
 <form method=post action=/admin/login>
-  <label>Password <input name=password type=password required></label>
+  <label>Password <input name=password type=password autocomplete=current-password autofocus required></label>
   <button>Log in</button>
 </form>{nostr}"#
     )
@@ -1036,6 +1121,126 @@ mod tests {
         let (app, dir, cookie) = studio_fixture_for("{ mode = \"local-ca\" }", false);
         let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn the_server_rendered_pages_follow_the_system_theme() {
+        for html in [page("Log in", &login_form(None, false)).0, page("Setup", &setup_form(None)).0] {
+            assert!(html.contains("color-scheme:light dark"));
+            assert!(html.contains("prefers-color-scheme:dark"));
+            assert!(html.contains("name=viewport"));
+            assert!(html.contains("Nostube Studio"));
+            assert!(html.contains("/studio/nostube.svg"));
+        }
+    }
+
+    #[test]
+    fn the_login_page_offers_the_nostr_login_only_when_a_key_is_bound_and_its_script_is_valid() {
+        assert!(!login_form(None, false).contains("nostr-login"));
+        let with_key = login_form(None, true);
+        assert!(with_key.contains("nostr-login"));
+        // The script is inserted as it is, so it must not carry format escapes.
+        assert!(with_key.contains("addEventListener('click', async () => {"));
+        // It waits for an extension that injects its signer after the page loaded.
+        assert!(with_key.contains("setInterval") && with_key.contains("window.nostr"));
+        assert!(!with_key.contains("{{") && !with_key.contains("}}"));
+    }
+
+    #[test]
+    fn errors_are_announced_and_escaped() {
+        let html = login_form(Some("<b>Wrong</b>"), false);
+        assert!(html.contains("role=alert"));
+        assert!(html.contains("&lt;b&gt;Wrong&lt;/b&gt;"));
+    }
+
+    // ── login rate limit ──
+
+    async fn try_login(app: &Router, password: &str) -> (StatusCode, HeaderMap, String) {
+        use tower::ServiceExt;
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/admin/login")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(axum::body::Body::from(format!("password={password}")))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        let (status, headers) = (res.status(), res.headers().clone());
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, headers, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    #[tokio::test]
+    async fn a_few_wrong_passwords_are_free_and_a_right_one_resets_the_count() {
+        let (app, dir, _) = studio_fixture();
+        for _ in 0..2 {
+            let (status, _, body) = try_login(&app, "wrong").await;
+            assert_eq!(status, StatusCode::OK);
+            assert!(body.contains("Wrong password."));
+        }
+        let (status, headers, _) = try_login(&app, "correct%20horse").await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+        assert!(headers.get(header::SET_COOKIE).is_some());
+        // After the success the three free tries are back.
+        for _ in 0..3 {
+            let (status, _, body) = try_login(&app, "wrong").await;
+            assert_eq!(status, StatusCode::OK);
+            assert!(!body.contains("Wait"));
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn after_three_wrong_passwords_even_the_right_one_has_to_wait() {
+        let (app, dir, _) = studio_fixture();
+        for _ in 0..3 {
+            try_login(&app, "wrong").await;
+        }
+        // The fourth wrong one is answered, with the wait it earned.
+        let (status, _, body) = try_login(&app, "wrong").await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("Wait 2 seconds"), "{body}");
+        // Within that wait nothing is checked: the right password gets a 429 and no session.
+        let (status, headers, body) = try_login(&app, "correct%20horse").await;
+        assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+        assert!(headers.get(header::SET_COOKIE).is_none());
+        let retry: u64 = headers.get(header::RETRY_AFTER).unwrap().to_str().unwrap().parse().unwrap();
+        assert!((1..=2).contains(&retry), "{retry}");
+        assert!(body.contains("Too many wrong passwords"));
+        // The page itself and everything else keep working.
+        use tower::ServiceExt;
+        let page = app
+            .clone()
+            .oneshot(axum::http::Request::builder().uri("/admin/login").body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(page.status(), StatusCode::OK);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Real parallel requests (own tasks on several threads), not one after the other.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_burst_of_parallel_guesses_is_counted_one_by_one() {
+        let (app, dir, _) = studio_fixture();
+        let tasks: Vec<_> = (0..12)
+            .map(|_| {
+                let app = app.clone();
+                tokio::spawn(async move { try_login(&app, "wrong").await })
+            })
+            .collect();
+        let mut answered = 0;
+        let mut refused = 0;
+        for task in tasks {
+            match task.await.unwrap().0 {
+                StatusCode::OK => answered += 1,
+                StatusCode::TOO_MANY_REQUESTS => refused += 1,
+                other => panic!("unexpected {other}"),
+            }
+        }
+        // Parallel requests do not all slip through before the first failure is counted: past the
+        // three free tries and the one that earned the wait, the rest are refused unseen.
+        assert_eq!(answered, 4, "three free tries and the one that earned the wait");
+        assert_eq!(refused, 8);
         std::fs::remove_dir_all(&dir).ok();
     }
 }

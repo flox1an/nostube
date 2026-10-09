@@ -50,6 +50,15 @@ waits up to 90 s for the new start and says so when nothing came back.
 A SIGTERM (`docker stop`, a redeploy) stops it the same way: no new connections, running
 requests get up to 30 s, exit status 0. Use `stop_grace_period: 40s` if you upload large files.
 
+## Login protection
+
+After three wrong admin passwords in a row, each further one makes the next try wait twice as long
+(2 s, 4 s, … up to 15 minutes), and during the wait even the right password is refused. The count is
+for the whole instance, not per visitor, because the server reads no forwarded headers: someone who
+keeps guessing also makes you wait. Logging in with a bound Nostr key (Studio → Server → Account)
+is not throttled, and restarting the container clears the count. Put a rate limit in the proxy
+(Caddy, nginx) too if the admin address is public.
+
 ## Operating it
 
 ```sh

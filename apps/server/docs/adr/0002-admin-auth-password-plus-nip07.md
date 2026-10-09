@@ -8,3 +8,7 @@ The single admin always has a password (argon2id), set at registration through t
 - **Nostr-only admin**: rejected. No fallback without a signer, and a leaked creator key would also take the instance.
 - **NIP-98 bearer token per request**: rejected. Signer prompts on every call, a 60 s validity window, and a second CSRF model next to the cookie session.
 - **nsec / NIP-49 or bunker for admin login**: rejected. Typing a raw key into the admin page puts it next to instance control; a bunker adds a moving part offline.
+
+## Addendum: slowing down password guessing
+
+Wrong passwords are throttled (`src/login_guard.rs`): three in a row are free, then each further one doubles the wait before the next try (2 s, 4 s, 8 s, up to 15 minutes). While the wait runs the password is not checked at all, the answer is `429` with `Retry-After`, so the right guess is refused too. A success clears the count, and so does an hour without a wrong password; someone who tries again the moment each wait ends never gets cleared. The check, the verification and the count are one step under one lock, so parallel requests cannot all pass the check first. The count is for the whole instance, not per address: the server reads no forwarded headers (ADR 0003), so behind a proxy every request has the proxy's address. The cost is that a stranger who keeps guessing makes the real admin wait as well; the Nostr key login (a signature, nothing to guess) is not throttled and still works, and a restart clears the count. The count is kept in memory only.

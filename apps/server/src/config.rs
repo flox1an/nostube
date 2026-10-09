@@ -295,7 +295,7 @@ impl Config {
             revision: 1,
             origin: format!("https://{authority}"),
             origin_host: origin_host.to_owned(),
-            title: "My Nostube".into(),
+            title: "My videos".into(),
             creators: vec![],
             allowed_writers: vec![],
             video_sources: vec![format!("wss://{authority}")],

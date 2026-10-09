@@ -4,6 +4,7 @@
 
 mod admin;
 mod config;
+mod login_guard;
 mod relay;
 mod tls;
 
@@ -313,7 +314,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             relay::RelayConfig {
                 writers: cfg.allowed_writers.clone(),
                 name: cfg.title.clone(),
-                description: format!("Relay of the Nostube instance {}", cfg.title),
+                description: format!("Relay of {}", cfg.title),
             },
         )?,
         public_config: serde_json::to_vec(&cfg.public_json())?.into(),

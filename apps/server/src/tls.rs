@@ -407,7 +407,7 @@ fn mobileconfig(ca: &LocalCa, origin: &str) -> String {
     <dict>
       <key>PayloadCertificateFileName</key><string>nostube-ca.cer</string>
       <key>PayloadContent</key><data>{b64}</data>
-      <key>PayloadDescription</key><string>Root certificate of this Nostube instance (limited to .local, .home.arpa, .lan and private IPs)</string>
+      <key>PayloadDescription</key><string>Root certificate of this server (limited to .local, .home.arpa, .lan and private IPs)</string>
       <key>PayloadDisplayName</key><string>{name}</string>
       <key>PayloadIdentifier</key><string>nostube.ca.{id}.cert</string>
       <key>PayloadType</key><string>com.apple.security.root</string>
@@ -435,10 +435,10 @@ fn ca_page(fingerprint: &str, origin: &str) -> String {
     format!(
         r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trust this Nostube instance</title>
+<title>Trust this server</title>
 <style>body{{font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}}code{{word-break:break-all}}h2{{margin-top:2rem}}</style>
 </head><body>
-<h1>Trust this Nostube instance</h1>
+<h1>Trust this server</h1>
 <p>This instance uses its own certificate authority (CA) for HTTPS on your local network. Each device needs to trust it once. Afterwards open <a href="{origin}/">{origin}</a>.</p>
 <p>The CA can only vouch for names ending in <code>.local</code>, <code>.home.arpa</code> or <code>.lan</code> and for private IP addresses, never for public websites.</p>
 <p><a href="/ca.pem">Download the CA certificate</a> · <a href="/ca.mobileconfig">iPhone/iPad profile</a></p>

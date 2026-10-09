@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo, memo, lazy, Suspense } from 'react'
-import { formatTimestamp } from '@/lib/format-utils'
+import { formatTimestamp } from '@nostube/core/format-utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import type { VideoChapter } from '@/lib/video-chapters'
+import type { VideoChapter } from '@nostube/core/video-chapters'
 
 const TimelineMarkersLoader = lazy(() =>
   import('./TimelineMarkersLoader').then(module => ({ default: module.TimelineMarkersLoader }))

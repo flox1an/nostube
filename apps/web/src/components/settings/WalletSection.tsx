@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useWalletContext } from '@/contexts/WalletContext'
-import { formatSats } from '@/lib/zap-utils'
+import { formatSats } from '@nostube/core/zap-utils'
 import { useCurrentUser } from '@/hooks'
 import {
   Loader2,

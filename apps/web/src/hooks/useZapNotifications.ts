@@ -8,7 +8,7 @@ import {
   cleanupOldZapNotifications,
 } from '../lib/notification-storage'
 import { generateEventLink } from '../lib/nostr'
-import { getInvoiceAmount } from '../lib/zap-utils'
+import { getInvoiceAmount } from '@nostube/core/zap-utils'
 import { useCurrentUser } from './useCurrentUser'
 import { useEventStore } from 'applesauce-react/hooks'
 import { relayPool } from '@/nostr/core'

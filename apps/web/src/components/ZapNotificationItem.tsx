@@ -5,7 +5,7 @@ import type { ZapNotification } from '../types/notification'
 import { UserAvatar } from './UserAvatar'
 import { getDateLocale } from '../lib/date-locale'
 import { useProfile } from '../hooks/useProfile'
-import { formatSats } from '../lib/zap-utils'
+import { formatSats } from '@nostube/core/zap-utils'
 
 interface ZapNotificationItemProps {
   notification: ZapNotification

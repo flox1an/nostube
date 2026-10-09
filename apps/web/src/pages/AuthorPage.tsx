@@ -43,7 +43,7 @@ import {
   useProfilePublish,
   useUserBlossomServers,
 } from '@/hooks'
-import { hasLightningAddress } from '@/lib/zap-utils'
+import { hasLightningAddress } from '@nostube/core/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'

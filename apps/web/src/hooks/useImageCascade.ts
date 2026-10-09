@@ -6,7 +6,7 @@ import {
   presetThumbnailUrl,
   insecureThumbnailUrl,
   type PresetThumbnailPreset,
-} from '@/lib/preset-thumbnail-url'
+} from '@nostube/core/preset-thumbnail-url'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 
 export type ImageCascadeVariant = 'preview' | 'inline' | 'avatar'

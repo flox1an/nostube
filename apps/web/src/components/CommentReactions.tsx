@@ -17,7 +17,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ThumbsUp, ThumbsDown, Zap, Loader2, Heart } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { formatSats } from '@/lib/zap-utils'
+import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
 import { UserAvatar } from './UserAvatar'
 

@@ -4,7 +4,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useCurrentUser, useAppContext } from '@/hooks'
 import { useWalletContext as useWallet } from '@/contexts/WalletContext'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { getRecipientZapEndpoint, createZapRequest, requestInvoice } from '@/lib/zap-utils'
+import { getRecipientZapEndpoint, createZapRequest, requestInvoice } from '@nostube/core/zap-utils'
 import { toast } from 'sonner'
 
 interface UseZapOptions {

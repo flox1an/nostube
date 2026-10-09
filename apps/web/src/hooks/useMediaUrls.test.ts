@@ -17,7 +17,7 @@ vi.mock('@/lib/url-discovery', () => ({
   discoverUrlsWithCache: vi.fn().mockResolvedValue([]),
 }))
 
-vi.mock('@/lib/url-validator', () => ({
+vi.mock('@nostube/core/url-validator', () => ({
   validateMediaUrl: vi.fn().mockResolvedValue(true),
 }))
 

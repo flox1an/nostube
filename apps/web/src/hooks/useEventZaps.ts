@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
-import { getInvoiceAmount } from '@/lib/zap-utils'
+import { getInvoiceAmount } from '@nostube/core/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'
 import { getReplacedEventIds } from '@/lib/replaced-events'
 import type { NostrEvent } from 'nostr-tools'

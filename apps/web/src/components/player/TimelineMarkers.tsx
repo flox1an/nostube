@@ -1,8 +1,8 @@
 import { useMemo, useState, memo, useRef, useEffect, useCallback } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { useProfile } from '@/hooks'
+import { useProfile } from '@/hooks/useProfile'
 import { useImageCascade } from '@/hooks/useImageCascade'
-import { getInvoiceAmount } from '@/lib/zap-utils'
+import { getInvoiceAmount } from '@nostube/core/zap-utils'
 import type { NostrEvent } from 'nostr-tools'
 import { Zap } from 'lucide-react'
 

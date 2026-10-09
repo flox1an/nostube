@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
 import type { TranscodeSourceMeta } from '@/lib/video-transcode'
-import { formatDuration } from '@/lib/formatDuration'
+import { formatDuration } from '@nostube/core/formatDuration'
 import {
   BROWSER_TRANSCODE_AUDIO_BITRATE,
   assignMp4ResolutionCodecs,

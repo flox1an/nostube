@@ -7,9 +7,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@nostube/core/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
 import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { useIsMobile } from '@/hooks'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useImageCascade } from '@/hooks/useImageCascade'
-import type { PresetThumbnailPreset } from '@/lib/preset-thumbnail-url'
+import type { PresetThumbnailPreset } from '@nostube/core/preset-thumbnail-url'
 import {
   usePlayerState,
   useControlsVisibility,
@@ -27,7 +27,7 @@ import { SeekIndicator } from './SeekIndicator'
 import { PlayPauseOverlay } from '../PlayPauseOverlay'
 import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
 import { useDesktopPlayerControls } from '@/desktop/DesktopPlayerControlsContext'
-import type { VideoChapter } from '@/lib/video-chapters'
+import type { VideoChapter } from '@nostube/core/video-chapters'
 // import { BulletComments } from './BulletComments' // disabled for now
 
 interface VideoPlayerProps {

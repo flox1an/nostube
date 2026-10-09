@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useProfile } from '@/hooks/useProfile'
-import { formatDateTime } from '@/lib/format-utils'
+import { formatDateTime } from '@nostube/core/format-utils'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { isDownvoteReaction } from '@/hooks/useEventStats'
 

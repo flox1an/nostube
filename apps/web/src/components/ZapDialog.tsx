@@ -18,7 +18,7 @@ import { EmojiPicker } from '@/components/EmojiPicker'
 import { useProfile, useEventZaps } from '@/hooks'
 import { Loader2, Zap, Copy, Check, Settings, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatTimestamp } from '@/lib/format-utils'
+import { formatTimestamp } from '@nostube/core/format-utils'
 import { ZAP_PRESET_AMOUNTS } from '@/constants'
 import { toast } from 'sonner'
 

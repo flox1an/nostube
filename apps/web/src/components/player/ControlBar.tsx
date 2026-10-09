@@ -16,9 +16,9 @@ import { SettingsMenu } from './SettingsMenu'
 import { ControlButton } from './ControlButton'
 import { type QualityOption } from './engines'
 import { type TextTrack } from '@nostube/core/video-event'
-import { useIsMobile } from '@/hooks'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTranslation } from 'react-i18next'
-import type { VideoChapter } from '@/lib/video-chapters'
+import type { VideoChapter } from '@nostube/core/video-chapters'
 
 interface ControlBarProps {
   // Visibility

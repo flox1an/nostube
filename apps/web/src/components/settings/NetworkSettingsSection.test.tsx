@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AppConfig } from '@nostube/core'
-import { getImgproxyBaseUrl } from '@/lib/imgproxy-config'
+import { getImgproxyBaseUrl } from '@nostube/core/imgproxy-config'
 import { ServiceEndpointsSubSection } from './NetworkSettingsSection'
 
 const store = vi.hoisted(() => ({

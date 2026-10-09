@@ -42,7 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { formatDateSimple } from '@/lib/format-utils'
+import { formatDateSimple } from '@nostube/core/format-utils'
 
 interface PlaylistVideoItemProps {
   video: Video

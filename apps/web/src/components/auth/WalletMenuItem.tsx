@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Wallet, Zap, Radio, Coins } from 'lucide-react'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useWalletContext } from '@/contexts/WalletContext'
-import { formatSats } from '@/lib/zap-utils'
+import { formatSats } from '@nostube/core/zap-utils'
 import { useTranslation } from 'react-i18next'
 import {
   Dialog,

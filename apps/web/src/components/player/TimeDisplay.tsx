@@ -1,5 +1,5 @@
 import { useState, memo } from 'react'
-import { formatTimestamp } from '@/lib/format-utils'
+import { formatTimestamp } from '@nostube/core/format-utils'
 
 interface TimeDisplayProps {
   currentTime: number

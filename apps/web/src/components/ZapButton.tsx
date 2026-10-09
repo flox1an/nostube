@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { useEventZaps, useCurrentUser } from '@/hooks'
 import { useZap } from '@/hooks/useZap'
 import { useWalletContext as useWallet } from '@/contexts/WalletContext'
-import { formatSats } from '@/lib/zap-utils'
+import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 

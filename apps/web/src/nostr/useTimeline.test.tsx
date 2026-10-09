@@ -2,6 +2,9 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { Subject } from 'rxjs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostrEvent } from 'nostr-tools'
+import type { ReactNode } from 'react'
+import type { NostubeClient } from '@nostube/core/client'
+import { TimelineProvider, type TimelinePolicy } from '@nostube/widgets/timeline'
 import { useTimeline } from './useTimeline'
 
 const mocks = vi.hoisted(() => ({
@@ -10,33 +13,6 @@ const mocks = vi.hoisted(() => ({
   processEvents: vi.fn(),
   getPublishDate: vi.fn(),
   getTimelineLoader: vi.fn(),
-}))
-
-vi.mock('@/hooks/useReportedPubkeys', () => ({
-  useReportedPubkeys: () => ({}),
-}))
-
-vi.mock('@/hooks/useAppContext', () => ({
-  useAppContext: () => ({
-    config: {
-      blossomServers: [],
-      reportedEventIds: [],
-      showYouTubeContent: true,
-      showAudioContent: true,
-    },
-  }),
-}))
-
-vi.mock('@/hooks/useMissingVideos', () => ({
-  useMissingVideos: () => ({
-    getAllMissingVideos: () => ({}),
-  }),
-}))
-
-vi.mock('@/hooks/useSelectedPreset', () => ({
-  useSelectedPreset: () => ({
-    presetContent: { nsfwPubkeys: [] },
-  }),
 }))
 
 vi.mock('applesauce-react/hooks', () => ({
@@ -50,14 +26,33 @@ vi.mock('applesauce-react/hooks', () => ({
   },
 }))
 
-vi.mock('./core', () => ({
-  getTimelineLoader: (...args: unknown[]) => mocks.getTimelineLoader(...args),
-}))
-
 vi.mock('@nostube/core/video-event', () => ({
   processEvents: (...args: unknown[]) => mocks.processEvents(...args),
   getPublishDate: (...args: unknown[]) => mocks.getPublishDate(...args),
 }))
+
+const client = {
+  getTimelineLoader: (...args: unknown[]) => mocks.getTimelineLoader(...args),
+} as unknown as NostubeClient
+
+const defaultPolicy: TimelinePolicy = {
+  blockedPubkeys: {},
+  blossomServers: [],
+  nsfwPubkeys: [],
+  reportedEventIds: [],
+  showYouTubeContent: true,
+  showAudioContent: true,
+  getAllMissingVideos: () => ({}),
+}
+
+/** renderHook inside a TimelineProvider carrying the given policy. */
+function renderTimeline<T>(callback: () => T, policy: TimelinePolicy = defaultPolicy) {
+  const value = { client, policy }
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <TimelineProvider value={value}>{children}</TimelineProvider>
+  )
+  return renderHook(callback, { wrapper })
+}
 
 function makeEvent(overrides: Partial<NostrEvent> = {}): NostrEvent {
   return {
@@ -96,7 +91,7 @@ describe('useTimeline', () => {
     const timelineLoader = vi.fn(() => new Subject<NostrEvent>())
     const loader = vi.fn(() => timelineLoader)
 
-    const { result } = renderHook(() =>
+    const { result } = renderTimeline(() =>
       useTimeline(undefined, {
         loader,
         directMode: true,
@@ -122,7 +117,7 @@ describe('useTimeline', () => {
     })
     const loader = vi.fn(() => timelineLoader)
 
-    const { result } = renderHook(() =>
+    const { result } = renderTimeline(() =>
       useTimeline(undefined, {
         loader,
         directMode: true,
@@ -165,7 +160,7 @@ describe('useTimeline', () => {
     mocks.timeline.mockReturnValue(new Subject<NostrEvent[]>())
     const loader = vi.fn(() => () => subject)
 
-    const { result } = renderHook(() =>
+    const { result } = renderTimeline(() =>
       useTimeline({ kinds: [34235] }, { loader, firstUsefulTimeoutMs: 1, pageSettleMs: 1000 })
     )
 
@@ -178,5 +173,32 @@ describe('useTimeline', () => {
 
     act(() => subject.complete())
     expect(result.current.loading).toBe(false)
+  })
+
+  it('hands the host policy to processEvents', async () => {
+    const policy: TimelinePolicy = {
+      ...defaultPolicy,
+      blockedPubkeys: { blocked: true },
+      nsfwPubkeys: ['nsfw-author'],
+      reportedEventIds: ['reported'],
+      showYouTubeContent: false,
+      showAudioContent: false,
+    }
+    const { result } = renderTimeline(
+      () => useTimeline(undefined, { enabled: false, relays: ['wss://relay.example'] }),
+      policy
+    )
+    expect(result.current.phase).toBe('idle')
+    expect(mocks.processEvents).toHaveBeenLastCalledWith(
+      expect.anything(),
+      ['wss://relay.example'],
+      expect.objectContaining({
+        blockPubkeys: { blocked: true },
+        nsfwPubkeys: ['nsfw-author'],
+        reportedEventIds: ['reported'],
+        includeYouTube: false,
+        includeAudio: false,
+      })
+    )
   })
 })

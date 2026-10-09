@@ -2,6 +2,7 @@ import { ThemeProvider } from '@/providers/theme-provider'
 import { AppRouter } from './AppRouter'
 import { Suspense, useEffect, useRef, useContext } from 'react'
 import { AppProvider } from '@/components/AppProvider'
+import { TimelineBridge } from '@/components/TimelineBridge'
 import { type AppConfig, APP_CONFIG_STORAGE_KEY } from '@nostube/core'
 import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { Toaster } from '@/components/ui/toaster'
@@ -192,9 +193,11 @@ export function App() {
                             <PlaylistAutoFlagInit />
                             <BlossomServerSync />
                             <OnboardingDialog />
-                            <Suspense>
-                              <AppRouter />
-                            </Suspense>
+                            <TimelineBridge>
+                              <Suspense>
+                                <AppRouter />
+                              </Suspense>
+                            </TimelineBridge>
                             {/* Toast viewports: without them every toast() call is a no-op. */}
                             <Toaster />
                             <SonnerToaster />

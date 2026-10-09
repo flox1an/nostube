@@ -1,11 +1,15 @@
 import { BrowserRouter } from 'react-router-dom'
 import { AccountsProvider, EventStoreProvider } from 'applesauce-react'
 import { AccountManager } from 'applesauce-accounts'
-import { eventStore } from '@/nostr/core'
+import { client, eventStore } from '@/nostr/core'
 import { AppProvider } from '@/components/AppProvider'
 import { type AppConfig } from '@nostube/core'
 import { PrivateRelaysProvider } from '@/contexts/PrivateRelaysContext'
 import { UserRelaysProvider } from '@/contexts/UserRelaysContext'
+import { TimelineProvider } from '@nostube/widgets/timeline'
+
+// Tests need no viewer-specific filtering.
+const timeline = { client, policy: { getAllMissingVideos: () => ({}) } }
 
 interface TestAppProps {
   children: React.ReactNode
@@ -27,7 +31,9 @@ export function TestApp({ children }: TestAppProps) {
         <AccountsProvider manager={accountManager}>
           <EventStoreProvider eventStore={eventStore}>
             <UserRelaysProvider>
-              <PrivateRelaysProvider>{children}</PrivateRelaysProvider>
+              <PrivateRelaysProvider>
+                <TimelineProvider value={timeline}>{children}</TimelineProvider>
+              </PrivateRelaysProvider>
             </UserRelaysProvider>
           </EventStoreProvider>
         </AccountsProvider>

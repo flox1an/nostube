@@ -1,4 +1,4 @@
-import { type PageLoader } from './core'
+import { type PageLoader } from '@nostube/core/client'
 import { type Filter } from 'nostr-tools'
 import { useTimeline } from './useTimeline'
 

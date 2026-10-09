@@ -1,12 +1,9 @@
-import { useAppContext } from '@/hooks/useAppContext'
-import { useMissingVideos } from '@/hooks/useMissingVideos'
-import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
-import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { isDeletedByEvent } from '@/lib/deletions'
-import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
+import { isDeletedByEvent } from '@nostube/core/deletions'
+import { lastLoadedTimestamp } from '@nostube/core/video-timeline-cache'
 import { hashObjectBigInt } from '@/lib/utils'
 import { getPublishDate, processEvents, type VideoEvent } from '@nostube/core/video-event'
-import { getTimelineLoader, type PageLoader } from './core'
+import type { PageLoader } from '@nostube/core/client'
+import { useTimelineContext } from '@nostube/widgets/timeline'
 import { use$, useEventStore } from 'applesauce-react/hooks'
 import { type Filter, type NostrEvent } from 'nostr-tools'
 import { insertEventIntoDescendingList } from 'nostr-tools/utils'
@@ -60,10 +57,16 @@ export function useTimeline(
   filters?: Filter | Filter[],
   options: UseTimelineOptions = {}
 ): UseTimelineResult {
-  const blockedPubkeys = useReportedPubkeys()
-  const { config } = useAppContext()
-  const { getAllMissingVideos } = useMissingVideos()
-  const { presetContent } = useSelectedPreset()
+  const { client, policy } = useTimelineContext()
+  const {
+    blockedPubkeys,
+    blossomServers,
+    nsfwPubkeys,
+    reportedEventIds,
+    showYouTubeContent,
+    showAudioContent,
+    getAllMissingVideos,
+  } = policy
   const eventStore = useEventStore()
   const {
     relays = [],
@@ -84,9 +87,9 @@ export function useTimeline(
 
     const key =
       cacheKey ?? String(hashObjectBigInt({ filters, relays: [...relays].sort(), skipCache }))
-    const timelineLoader = getTimelineLoader(key, filters, relays, { skipCache })
+    const timelineLoader = client.getTimelineLoader(key, filters, relays, { skipCache })
     return () => timelineLoader
-  }, [cacheKey, filters, providedLoader, relays, skipCache])
+  }, [cacheKey, client, filters, providedLoader, relays, skipCache])
 
   const loader = providedLoader ?? generatedLoader
 
@@ -304,24 +307,24 @@ export function useTimeline(
   const videos = useMemo(() => {
     const processed = processEvents(events, relays, {
       blockPubkeys: blockedPubkeys,
-      blossomServers: config.blossomServers,
+      blossomServers,
       missingVideoIds,
-      nsfwPubkeys: presetContent.nsfwPubkeys,
-      reportedEventIds: config.reportedEventIds,
-      includeYouTube: config.showYouTubeContent ?? true,
-      includeAudio: includeAudio ?? config.showAudioContent ?? true,
+      nsfwPubkeys,
+      reportedEventIds,
+      includeYouTube: showYouTubeContent ?? true,
+      includeAudio: includeAudio ?? showAudioContent ?? true,
     })
     return processed.sort((a, b) => getPublishDate(b) - getPublishDate(a))
   }, [
     events,
     relays,
     blockedPubkeys,
-    config.blossomServers,
+    blossomServers,
     missingVideoIds,
-    presetContent.nsfwPubkeys,
-    config.reportedEventIds,
-    config.showYouTubeContent,
-    config.showAudioContent,
+    nsfwPubkeys,
+    reportedEventIds,
+    showYouTubeContent,
+    showAudioContent,
     includeAudio,
   ])
 

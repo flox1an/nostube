@@ -2,7 +2,7 @@ import { NostrConnectSigner } from 'applesauce-signers'
 import { createNostubeClient, type PageLoader } from '@nostube/core/client'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import { presetRelays } from '@/constants/relays'
-import { lastLoadedTimestamp } from '@/lib/video-timeline-cache'
+import { lastLoadedTimestamp } from '@nostube/core/video-timeline-cache'
 
 export type { PageLoader }
 
@@ -12,7 +12,7 @@ const instance = getInstanceConfig()
 // Instance build: the interaction relays (publish fallback, lookups, wallet, DVM).
 export const DEFAULT_RELAYS = instance ? instance.interactionRelays : presetRelays.map(r => r.url)
 
-const client = createNostubeClient({
+export const client = createNostubeClient({
   defaultRelays: DEFAULT_RELAYS,
   instance,
   debug: import.meta.env.DEV,

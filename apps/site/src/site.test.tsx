@@ -2,11 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { nip19 } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
-import { of } from 'rxjs'
+import { NEVER, of } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostubeClient } from '@nostube/core/client'
 import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
 import type { InstanceConfig } from '@nostube/core/instance-config'
+import './i18n'
 import { loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
 import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
@@ -148,6 +149,36 @@ describe('SiteHome', () => {
     expect(screen.getByRole('heading', { name: 'My first upload' })).toBeTruthy()
     fireEvent.click(screen.getByText('← All videos'))
     await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
+  })
+
+  it('shows placeholders while the videos load', async () => {
+    const pending = {
+      eventStore: makeStore(),
+      getTimelineLoader: () => () => NEVER,
+      relayPool: { request: () => NEVER },
+    } as unknown as NostubeClient
+    renderSite(pending)
+    const placeholders = await screen.findByLabelText('Loading videos')
+    expect(placeholders.getAttribute('aria-busy')).toBe('true')
+  })
+
+  it('shows date, tags and a share dialog with the canonical link on a video page', async () => {
+    const tagged = {
+      ...video,
+      tags: [...video.tags, ['t', 'travel']],
+    }
+    const taggedClient = {
+      eventStore: makeStore(),
+      getTimelineLoader: () => () => of(tagged),
+      relayPool: { request: () => of(profile) },
+    } as unknown as NostubeClient
+    renderSite(taggedClient)
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    await waitFor(() => expect(screen.getByText('#travel')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: 'Share this video' }))
+    const link = await screen.findByDisplayValue(/^https:\/\/site\.example\/v\/nevent1/)
+    expect(link).toBeTruthy()
   })
 
   it('reports a video link that is not valid', async () => {

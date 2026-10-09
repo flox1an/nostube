@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
-import { fromDraft, toDraft } from './draft'
+import { fromDraft, isRefHidden, setRefHidden, toDraft } from './draft'
 
 const PK = 'a'.repeat(64)
 const config: AdminConfig = {
@@ -45,5 +45,33 @@ describe('draft', () => {
     const result = fromDraft({ ...toDraft(config), ...patch })
     expect(result.config).toBeNull()
     expect(result.errors.length).toBeGreaterThan(0)
+  })
+})
+
+describe('hidden video lines', () => {
+  const ref = `34235:${PK}:intro`
+  const naddr = nip19.naddrEncode({ kind: 34235, pubkey: PK, identifier: 'intro' })
+
+  it('finds a video however its line was written', () => {
+    expect(isRefHidden(ref, ref)).toBe(true)
+    expect(isRefHidden(`https://site.example/v/${naddr}`, ref)).toBe(true)
+    expect(isRefHidden('', ref)).toBe(false)
+    expect(isRefHidden(`34235:${PK}:other`, ref)).toBe(false)
+  })
+
+  it('switches a video off that was hidden by its event id', () => {
+    const id = 'e'.repeat(64)
+    const text = `${id}\nsomething else`
+    expect(isRefHidden(text, id)).toBe(true)
+    const off = setRefHidden(text, [ref, id], false)
+    expect(isRefHidden(off, ref)).toBe(false)
+    expect(isRefHidden(off, id)).toBe(false)
+    expect(off).toBe('something else')
+  })
+
+  it('adds a video once and removes every spelling of it', () => {
+    expect(setRefHidden('', ref, true)).toBe(ref)
+    expect(setRefHidden(ref, ref, true)).toBe(ref)
+    expect(setRefHidden(`${naddr}\nsomething else`, ref, false)).toBe('something else')
   })
 })

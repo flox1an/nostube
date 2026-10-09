@@ -1,5 +1,6 @@
 import { decodeNip19 } from './nip19'
 import { isHiddenVideoRef } from './instance-config'
+import type { VideoEvent } from './video-event'
 
 /**
  * Turns what a creator pastes into the stored form of a hidden video: `<kind>:<pubkey>:<d>` for
@@ -22,4 +23,19 @@ export function toHiddenVideoRef(input: string): string | null {
   if (decoded.type === 'nevent') return decoded.data.id
   if (decoded.type === 'note') return decoded.data
   return null
+}
+
+/** How a video is listed in `site.videos.hidden`: `<kind>:<pubkey>:<d>` or, without a `d`, its id. */
+export function videoRef(video: Pick<VideoEvent, 'id' | 'kind' | 'pubkey' | 'identifier'>): string {
+  return video.identifier !== undefined
+    ? `${video.kind}:${video.pubkey}:${video.identifier}`
+    : video.id
+}
+
+/** True for a video the creator hid. */
+export function isHiddenVideo(
+  video: Pick<VideoEvent, 'id' | 'kind' | 'pubkey' | 'identifier'>,
+  hidden: readonly string[]
+): boolean {
+  return hidden.length > 0 && (hidden.includes(video.id) || hidden.includes(videoRef(video)))
 }

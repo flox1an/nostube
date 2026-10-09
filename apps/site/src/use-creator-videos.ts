@@ -1,40 +1,18 @@
 import { useMemo } from 'react'
-import type { Filter } from 'nostr-tools'
 import type { InstanceConfig } from '@nostube/core/instance-config'
-import type { VideoEvent } from '@nostube/core/video-event'
-import { getKindsForType } from '@nostube/core/video-types'
-import { isHiddenVideo } from './hidden-videos'
-import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
+import { isHiddenVideo } from '@nostube/core/hidden-videos'
+import {
+  useCreatorVideos as useAllCreatorVideos,
+  type CreatorVideos,
+} from '@nostube/widgets/hooks/useCreatorVideos'
 
-export interface CreatorVideos {
-  videos: VideoEvent[]
-  loading: boolean
-  error: boolean
-  hasMore: boolean
-  loadMore: () => void
-}
-
-/**
- * The start creator's videos, newest first, from the configured video sources: the same timeline
- * hook as nostube, with paging, de-duplication and kind-5 deletions. Needs a TimelineProvider.
- */
+/** The creator's videos without the ones the creator hid in the studio. */
 export function useCreatorVideos(config: InstanceConfig): CreatorVideos {
-  const creator = config.startPage?.creator
-  const filters = useMemo<Filter | undefined>(
-    () => (creator ? { kinds: getKindsForType('all'), authors: [creator], limit: 50 } : undefined),
-    [creator]
-  )
-  const { videos, isInitialLoading, phase, hasMore, loadMore } = useTimeline(filters, {
-    relays: config.videoSources,
-    enabled: Boolean(creator),
-  })
+  const all = useAllCreatorVideos(config)
   const hidden = config.site.videos.hidden
-  const shown = useMemo(() => videos.filter(v => !isHiddenVideo(v, hidden)), [videos, hidden])
-  return {
-    videos: shown,
-    loading: isInitialLoading,
-    error: phase === 'error',
-    hasMore,
-    loadMore,
-  }
+  const videos = useMemo(
+    () => all.videos.filter(v => !isHiddenVideo(v, hidden)),
+    [all.videos, hidden]
+  )
+  return { ...all, videos }
 }

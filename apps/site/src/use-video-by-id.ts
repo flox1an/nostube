@@ -3,7 +3,7 @@ import type { Filter } from 'nostr-tools'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
 import type { VideoEvent } from '@nostube/core/video-event'
-import { isHiddenVideo } from './hidden-videos'
+import { isHiddenVideo } from '@nostube/core/hidden-videos'
 import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
 
 export type VideoLookup =

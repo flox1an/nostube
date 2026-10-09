@@ -127,3 +127,21 @@ export function fromDraft(d: Draft): DraftResult {
     errors: [],
   }
 }
+
+const refOf = (line: string) => toHiddenVideoRef(line) ?? line
+
+/** True when `ref` (see `videoRef`) is among the hidden lines, however each line was written. */
+export function isRefHidden(hiddenText: string, ref: string): boolean {
+  return toLines(hiddenText).some(line => refOf(line) === ref)
+}
+
+/**
+ * Adds or removes a video in the hidden lines and leaves every other line as it is. A video may
+ * be listed by its coordinate or by its id (another client's nevent): pass both, and switching it
+ * off removes either spelling, switching it on adds the first one.
+ */
+export function setRefHidden(hiddenText: string, refs: string | string[], hidden: boolean): string {
+  const all = Array.isArray(refs) ? refs : [refs]
+  const kept = toLines(hiddenText).filter(line => !all.includes(refOf(line)))
+  return (hidden ? [...kept, all[0]] : kept).join('\n')
+}

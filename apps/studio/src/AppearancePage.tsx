@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { SITE_FONTS, type SiteFont } from '@nostube/core/instance-config'
 import { Button } from '@nostube/widgets/components/button'
 import {
@@ -9,8 +9,9 @@ import {
   CardTitle,
 } from '@nostube/widgets/components/card'
 import { Input } from '@nostube/widgets/components/input'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { Textarea } from '@nostube/widgets/components/textarea'
-import { applyTheme } from '@nostube/widgets/site-theme'
+import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
 import type { Draft } from './draft'
 import { Field } from './fields'
 
@@ -20,7 +21,17 @@ const FONT_LABELS: Record<SiteFont, string> = {
   mono: 'Monospace',
 }
 
+const HiddenVideosPicker = lazy(() => import('./HiddenVideosPicker'))
+
 const ACCENT = /^#[0-9a-fA-F]{6}$/
+
+/** Where the accent is hard to see: the page background it sits on, in light or dark mode. */
+function lowContrastModes(accent: string): string[] {
+  if (!ACCENT.test(accent)) return []
+  return (['light', 'dark'] as const).filter(
+    mode => contrastRatio(accent, THEME_BACKGROUNDS[mode]) < 3
+  )
+}
 
 export interface PageProps {
   draft: Draft
@@ -77,7 +88,20 @@ export function AppearancePage({ draft, update }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Field id="accent" label="Accent colour" hint="Buttons, links and the focus ring.">
+            <Field
+              id="accent"
+              label="Accent colour"
+              hint={
+                lowContrastModes(draft.accent).length > 0 ? (
+                  <span className="text-amber-600 dark:text-amber-400">
+                    Little contrast against the {lowContrastModes(draft.accent).join(' and ')} page
+                    background: buttons and links may be hard to see for some visitors.
+                  </span>
+                ) : (
+                  'Buttons, links and the focus ring.'
+                )
+              }
+            >
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -129,21 +153,32 @@ export function AppearancePage({ draft, update }: PageProps) {
               own.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Field
-              id="hidden"
-              label="One video per line"
-              hint="Paste the link of its page on your site (…/v/naddr1…), or an naddr / nevent / note."
-            >
-              <Textarea
-                id="hidden"
-                rows={4}
-                value={draft.hiddenText}
-                onChange={e => update({ hiddenText: e.target.value })}
-                className="font-mono text-xs"
-                spellCheck={false}
+          <CardContent className="space-y-4">
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <HiddenVideosPicker
+                hiddenText={draft.hiddenText}
+                onChange={hiddenText => update({ hiddenText })}
               />
-            </Field>
+            </Suspense>
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted-foreground">Edit as text</summary>
+              <div className="pt-3">
+                <Field
+                  id="hidden"
+                  label="One video per line"
+                  hint="Paste the link of its page on your site (…/v/naddr1…), or an naddr / nevent / note."
+                >
+                  <Textarea
+                    id="hidden"
+                    rows={4}
+                    value={draft.hiddenText}
+                    onChange={e => update({ hiddenText: e.target.value })}
+                    className="font-mono text-xs"
+                    spellCheck={false}
+                  />
+                </Field>
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>

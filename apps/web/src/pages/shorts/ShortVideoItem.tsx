@@ -10,7 +10,7 @@
 import { memo, useMemo, useCallback } from 'react'
 import { type VideoEvent } from '@nostube/core/video-event'
 import { useAppContext, useIsPortrait } from '@/hooks'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { useValidUrl } from '@/hooks/useValidUrl'
 import { UserBlossomServersModel } from 'applesauce-common/models'
 import { useEventModel } from 'applesauce-react/hooks'

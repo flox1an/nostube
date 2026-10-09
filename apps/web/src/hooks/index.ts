@@ -31,7 +31,7 @@ export type { Account } from './useLoggedInAccounts'
 // ============================================================================
 // PROFILE & SOCIAL
 // ============================================================================
-export { useProfile } from './useProfile'
+export { useProfile } from '@nostube/widgets/hooks/useProfile'
 export { useHasProfile } from './useHasProfile'
 export { useProfilePublish } from './useProfilePublish'
 export { useMutedPubkeys } from './useMutedPubkeys'
@@ -40,7 +40,7 @@ export { useFollowedAuthors } from './useFollowedAuthors'
 export { useSubscriptionsVideos } from './useSubscriptionsVideos'
 export { useFollowSet } from './useFollowSet'
 export { useAuthorFollowing } from './useAuthorFollowing'
-export { useBatchedProfileLoader, requestProfile } from './useBatchedProfiles'
+export { useBatchedProfileLoader, requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 export { useLikedEvents } from './useLikedEvents'
 export { useAuthorLikedVideos } from './useAuthorLikedVideos'
 export { useCommentCount } from './useCommentCount'
@@ -95,7 +95,7 @@ export { usePlaylistNavigation } from './usePlaylistNavigation'
 // ============================================================================
 // export { useWallet } from './useWallet';
 export { useZap } from './useZap'
-export { useEventZaps, useVideoZaps } from './useEventZaps'
+export { useEventZaps, useVideoZaps } from '@nostube/widgets/hooks/useEventZaps'
 export { useZappedEvents } from './useZappedEvents'
 
 // ============================================================================
@@ -139,6 +139,6 @@ export { useToast, toast } from './useToast'
 export { useInfiniteScroll } from './useInfiniteScroll'
 export { useScrollDirection } from './useScrollDirection'
 export { useWindowWidth } from './useWindowWidth'
-export { useIsMobile } from './useIsMobile'
+export { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 export { useIsPortrait } from './useIsPortrait'
 export { useAsyncAction } from './useAsyncAction'

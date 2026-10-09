@@ -1,4 +1,4 @@
-import { useMediaUrls } from './useMediaUrls'
+import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
 import type { MediaType } from '@nostube/core/media-url-generator'
 
 interface UseValidUrlOptions {

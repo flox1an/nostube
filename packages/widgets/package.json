@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./hooks/*": "./src/hooks/*.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {
@@ -14,7 +15,13 @@
   },
   "dependencies": {
     "@nostube/core": "*",
-    "hls.js": "^1.7.1"
+    "applesauce-core": "^6.2.0",
+    "applesauce-loaders": "^6.2.0",
+    "applesauce-react": "^6.0.0",
+    "applesauce-relay": "^6.2.1",
+    "hls.js": "^1.7.1",
+    "nostr-tools": "^2.25.0",
+    "rxjs": "^7.8.2"
   },
   "peerDependencies": {
     "react": "^19.2.8",

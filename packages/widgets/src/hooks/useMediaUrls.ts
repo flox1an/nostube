@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { MediaUrlOptions, MediaType } from '@nostube/core/media-url-generator'
 import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@nostube/core/playback-url-ladder'
-import { discoverUrlsWithCache } from '@/lib/url-discovery'
+import { discoverUrlsWithCache } from '@nostube/core/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@nostube/core/url-validator'
 import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
-import { useAppContextSafe } from '@/hooks/useAppContext'
-import { INDEXER_RELAYS } from '@/constants/relays'
+import { useNostubeHostSafe } from '@nostube/widgets/host'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import type { VideoVariant } from '@nostube/core/video-event'
 
@@ -48,8 +47,9 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     preValidate,
     validationOptions,
   } = options
-  const appContext = useAppContextSafe()
-  const config = appContext?.config
+  const host = useNostubeHostSafe()
+  const config = host?.config
+  const pool = host?.pool
   const blossomServers = useMemo(() => config?.blossomServers ?? [], [config?.blossomServers])
   const cachingServers = useMemo(() => config?.cachingServers ?? [], [config?.cachingServers])
   const mediaConfig = config?.media
@@ -127,10 +127,10 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     () => [
       ...new Set([
         ...(discoveryRelays ?? config?.relays.map(relay => relay.url) ?? []),
-        ...INDEXER_RELAYS,
+        ...(host?.relays.indexer ?? []),
       ]),
     ],
-    [config?.relays, discoveryRelays]
+    [config?.relays, discoveryRelays, host?.relays.indexer]
   )
   const finalDiscoveryTimeout =
     discoveryTimeout ?? mediaConfig?.failover.discovery.timeout ?? 10_000
@@ -151,11 +151,14 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
 
   useEffect(() => {
     if (!enabled || !finalDiscoveryEnabled || !sha256 || finalDiscoveryRelays.length === 0) return
+    // Discovery runs on the host's relay pool; without a host there is nothing to search on.
+    if (!pool) return
 
     let cancelled = false
     setIsDiscovering(true)
 
     void discoverUrlsWithCache({
+      pool,
       sha256,
       relays: finalDiscoveryRelays,
       timeout: finalDiscoveryTimeout,
@@ -175,7 +178,15 @@ export function useMediaUrls(options: UseMediaUrlsOptions): MediaUrlsResult {
     return () => {
       cancelled = true
     }
-  }, [enabled, finalDiscoveryEnabled, finalDiscoveryRelays, finalDiscoveryTimeout, ladder, sha256])
+  }, [
+    enabled,
+    finalDiscoveryEnabled,
+    finalDiscoveryRelays,
+    finalDiscoveryTimeout,
+    ladder,
+    pool,
+    sha256,
+  ])
 
   useEffect(() => {
     if (!enabled || !finalPreValidate || ladder.urls.length === 0) return

@@ -5,11 +5,13 @@
  * on relays. These events contain file metadata including URLs where the file is hosted.
  */
 
-import { relayPool } from '@/nostr/core'
+import type { RelayPool } from 'applesauce-relay'
 import type { NostrEvent } from 'nostr-tools'
 import { filter as rxFilter } from 'rxjs'
 
 export interface DiscoveryOptions {
+  /** Relay pool the search runs on. */
+  pool: Pick<RelayPool, 'subscription'>
   sha256: string // File hash (x tag)
   relays: string[] // Relays to search
   timeout?: number // Search timeout (default 10s)
@@ -69,7 +71,7 @@ function extractServerUrl(url: string): string | null {
  * Note: URL validation is NOT done here - that's handled by the url-validator
  */
 export async function discoverUrls(options: DiscoveryOptions): Promise<DiscoveredUrl[]> {
-  const { sha256, relays, timeout = 10000, maxResults = 20 } = options
+  const { pool, sha256, relays, timeout = 10000, maxResults = 20 } = options
 
   if (!sha256 || relays.length === 0) {
     return []
@@ -80,7 +82,7 @@ export async function discoverUrls(options: DiscoveryOptions): Promise<Discovere
     const seenUrls = new Set<string>()
 
     // Create subscription to search for kind 1063 events
-    const subscription = relayPool
+    const subscription = pool
       .subscription(relays, [
         {
           kinds: [1063], // NIP-94 File Metadata events

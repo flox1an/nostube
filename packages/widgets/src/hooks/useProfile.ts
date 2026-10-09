@@ -5,7 +5,7 @@ import { type ProfilePointer } from 'nostr-tools/nip19'
 import { type Model } from 'applesauce-core'
 import { defer, EMPTY, merge, of } from 'rxjs'
 import { requestProfile } from './useBatchedProfiles'
-import { useAppContext } from './useAppContext'
+import { useNostubeHost } from '@nostube/widgets/host'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { type RelayPool } from 'applesauce-relay'
 
@@ -67,7 +67,7 @@ ProfileQuery.getKey = (_pool: RelayPool, pubkey?: string, relays?: string[]) =>
 
 export function useProfile(user?: ProfilePointer): ProfileContent | undefined {
   const eventStore = useEventStore()
-  const { pool } = useAppContext()
+  const { pool } = useNostubeHost()
 
   const pubkey = user?.pubkey && user.pubkey.trim() !== '' ? user.pubkey : undefined
   // Callers pass inline pointer literals, so depend on primitives only —

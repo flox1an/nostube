@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { SettingsMenu } from './SettingsMenu'
 import type { QualityOption } from './engines'
 
-vi.mock('@/hooks/useProfile', () => ({
+vi.mock('@nostube/widgets/hooks/useProfile', () => ({
   useProfile: (user?: { pubkey: string }) => {
     if (user?.pubkey === 'alice-pubkey') {
       return { display_name: 'Alice', picture: 'https://images.example.com/alice.jpg' }

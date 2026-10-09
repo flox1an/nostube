@@ -1,7 +1,7 @@
 import { useActiveAccount, useAccountManager } from 'applesauce-react/hooks'
 import { ExtensionAccount, SimpleAccount, NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { ExtensionSigner, SimpleSigner, NostrConnectSigner } from 'applesauce-signers'
-import { useProfile } from './useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { saveAccountToStorage, saveActiveAccount } from './useAccountPersistence'
 
 export function useCurrentUser() {

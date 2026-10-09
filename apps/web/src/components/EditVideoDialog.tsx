@@ -25,7 +25,7 @@ import { parseImetaTag, type ParsedImeta } from '@/lib/imeta-builder'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { nowInSecs } from '@/lib/utils'
-import { trackReplacedEventId } from '@/lib/replaced-events'
+import { trackReplacedEventId } from '@nostube/core/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
 interface EditVideoDialogProps {

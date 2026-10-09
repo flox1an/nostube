@@ -6,7 +6,7 @@ import { nip19, kinds } from 'nostr-tools'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { genUserName } from '@/lib/genUserName'
 import { useAppContext } from '@/hooks/useAppContext'
-import { requestProfile } from '@/hooks/useBatchedProfiles'
+import { requestProfile } from '@nostube/widgets/hooks/useBatchedProfiles'
 import type { VideoNote } from '@/hooks/useVideoNotes'
 
 interface Mention {

@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense } from 'react'
-import { useEventZaps } from '@/hooks/useEventZaps'
+import { useEventZaps } from '@nostube/widgets/hooks/useEventZaps'
 
 const TimelineMarkers = lazy(() =>
   import('./TimelineMarkers').then(module => ({ default: module.TimelineMarkers }))

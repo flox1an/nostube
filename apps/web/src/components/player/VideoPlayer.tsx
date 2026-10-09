@@ -6,9 +6,9 @@ import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { type TextTrack, type VideoVariant } from '@nostube/core/video-event'
 import audioFallback from '@/assets/audio-fallback.webp'
-import { useMediaUrls } from '@/hooks/useMediaUrls'
-import { useIsMobile } from '@/hooks/useIsMobile'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
+import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import type { PresetThumbnailPreset } from '@nostube/core/preset-thumbnail-url'
 import {
   usePlayerState,

@@ -1,6 +1,6 @@
 import { forwardRef, useCallback } from 'react'
 import { type TextTrack } from '@nostube/core/video-event'
-import { useMediaUrls } from '@/hooks/useMediaUrls'
+import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
 import { getLanguageLabel } from '@/lib/utils'
 
 interface VideoElementProps {

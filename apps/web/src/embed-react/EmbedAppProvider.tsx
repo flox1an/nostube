@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { type AppConfig, type BlossomServerTag } from '@nostube/core'
+import { NostubeHostBridge } from '@/components/NostubeHostBridge'
 import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { RelayPool } from 'applesauce-relay'
 import { EventStore } from 'applesauce-core'
@@ -76,7 +77,9 @@ export function EmbedAppProvider({ children, authorBlossomServers = [] }: EmbedA
   return (
     <AccountsProvider manager={embedAccountManager}>
       <EventStoreProvider eventStore={embedEventStore}>
-        <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+        <AppContext.Provider value={contextValue}>
+          <NostubeHostBridge>{children}</NostubeHostBridge>
+        </AppContext.Provider>
       </EventStoreProvider>
     </AccountsProvider>
   )

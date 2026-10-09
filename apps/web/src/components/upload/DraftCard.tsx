@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { UploadDraft } from '@/types/upload-draft'
 import { getSmartStatus, getVideoQualityInfo, getRelativeTime } from '@/lib/upload-draft-utils'
 import { ensureFileExtension } from '@/lib/utils'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 interface DraftCardProps {

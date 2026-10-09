@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 import { UserAvatar } from '@/components/UserAvatar'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { type NostubePreset } from '@nostube/core'
 import { cn } from '@/lib/utils'
 

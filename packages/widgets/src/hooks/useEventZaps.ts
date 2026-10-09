@@ -1,11 +1,9 @@
 import { useMemo, useEffect } from 'react'
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { getInvoiceAmount } from '@nostube/core/zap-utils'
-import { useAppContext } from '@/hooks/useAppContext'
-import { getReplacedEventIds } from '@/lib/replaced-events'
+import { useNostubeHost } from '@nostube/widgets/host'
+import { getReplacedEventIds } from '@nostube/core/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
-
-import { ZAP_RELAYS } from '@/constants/relays'
 
 const ZAP_CACHE_KEY = 'zap-totals-cache'
 const CACHE_TTL = 1000 * 60 * 60 // 1 hour
@@ -86,7 +84,7 @@ export function useEventZaps({
   identifier,
 }: UseEventZapsOptions): UseEventZapsReturn {
   const eventStore = useEventStore()
-  const { pool } = useAppContext()
+  const { pool, relays: hostRelays } = useNostubeHost()
 
   // Build address for addressable events (kinds 34235, 34236)
   const isAddressable = kind === 34235 || kind === 34236
@@ -127,7 +125,7 @@ export function useEventZaps({
     }
 
     // Use subscription to keep listening for new zap receipts
-    const sub = pool.subscription(ZAP_RELAYS, filters).subscribe({
+    const sub = pool.subscription(hostRelays.zap, filters).subscribe({
       next: event => {
         if (typeof event !== 'string' && 'kind' in event) {
           eventStore.add(event)
@@ -137,7 +135,7 @@ export function useEventZaps({
     })
 
     return () => sub.unsubscribe()
-  }, [eventId, allEventIds, videoAddress, pool, eventStore])
+  }, [eventId, allEventIds, videoAddress, pool, eventStore, hostRelays.zap])
 
   // Subscribe to zap receipts from store
   // Query by both #e and #a for addressable events

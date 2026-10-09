@@ -1,7 +1,7 @@
 import { kinds } from 'nostr-tools'
 import { useEventStore } from 'applesauce-react/hooks'
 import { useCurrentUser } from './useCurrentUser'
-import { useProfile } from './useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 
 export function useHasProfile(): { hasProfile: boolean; loaded: boolean } {
   const { user } = useCurrentUser()

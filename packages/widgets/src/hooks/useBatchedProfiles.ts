@@ -2,9 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 import { kinds } from 'nostr-tools'
-import { useAppContext } from './useAppContext'
-import { useReadRelays } from './useReadRelays'
-import { METADATA_RELAYS } from '@/constants/relays'
+import { useNostubeHost } from '@nostube/widgets/host'
 
 /**
  * Batched profile loader
@@ -17,8 +15,8 @@ const pendingPubkeys = new Set<string>()
 
 export function useBatchedProfileLoader() {
   const eventStore = useEventStore()
-  const { pool } = useAppContext()
-  const readRelays = useReadRelays()
+  const { pool, relays: hostRelays } = useNostubeHost()
+  const readRelays = hostRelays.read
   const hasInitialized = useRef(false)
 
   useEffect(() => {
@@ -40,7 +38,7 @@ export function useBatchedProfileLoader() {
       // Load all profiles in a single request
       const loader = createTimelineLoader(
         pool,
-        [...readRelays, ...METADATA_RELAYS, 'wss://index.hzrd149.com'],
+        [...readRelays, ...hostRelays.metadata, 'wss://index.hzrd149.com'],
         {
           kinds: [kinds.Metadata],
           authors: pubkeysToLoad,
@@ -87,7 +85,7 @@ export function useBatchedProfileLoader() {
       }
       hasInitialized.current = false
     }
-  }, [eventStore, pool, readRelays])
+  }, [eventStore, pool, readRelays, hostRelays.metadata])
 }
 
 /**

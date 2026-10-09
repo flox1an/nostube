@@ -6,7 +6,7 @@ import { getInvoiceAmount } from '@nostube/core/zap-utils'
 import { useAppContext } from '@/hooks/useAppContext'
 import { createReactionsLoader } from 'applesauce-loaders/loaders'
 import { combineRelays } from '@/lib/utils'
-import { getReplacedEventIds } from '@/lib/replaced-events'
+import { getReplacedEventIds } from '@nostube/core/replaced-events'
 import type { NostrEvent } from 'nostr-tools'
 
 import { ZAP_RELAYS } from '@/constants/relays'

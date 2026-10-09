@@ -20,7 +20,7 @@ vi.mock('@/hooks', () => ({
   useIsMobile: () => false,
 }))
 
-vi.mock('@/hooks/useMediaUrls', () => ({
+vi.mock('@nostube/widgets/hooks/useMediaUrls', () => ({
   useMediaUrls: ({ urls }: { urls: string[] }) => ({
     ladder: {
       currentUrl: urls[0] ?? null,

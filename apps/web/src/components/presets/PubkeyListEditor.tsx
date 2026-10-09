@@ -4,7 +4,7 @@ import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserAvatar } from '@/components/UserAvatar'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { cn } from '@/lib/utils'
 
 interface PubkeyItemProps {

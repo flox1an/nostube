@@ -16,7 +16,7 @@ vi.mock('@/hooks/useAppContext', () => ({
 vi.mock('@/hooks/useScrollDirection', () => ({
   useScrollDirection: () => ({ scrollDirection: 'up', isAtTop: true }),
 }))
-vi.mock('@/hooks/useIsMobile', () => ({
+vi.mock('@nostube/widgets/hooks/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }))
 vi.mock('@/providers/theme-provider', () => ({
@@ -36,7 +36,7 @@ vi.mock('react-router-dom', async importOriginal => {
 })
 
 import { Header } from './Header'
-import { useIsMobile } from '@/hooks/useIsMobile'
+import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 
 beforeEach(() => vi.mocked(useIsMobile).mockReturnValue(false))
 

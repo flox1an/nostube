@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { VideoNotification } from '../types/notification'
 import { UserAvatar } from './UserAvatar'
 import { getDateLocale } from '../lib/date-locale'
-import { useProfile } from '../hooks/useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 
 interface NotificationItemProps {
   notification: VideoNotification

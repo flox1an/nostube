@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { nip19 } from 'nostr-tools'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { genUserName } from '@/lib/genUserName'
 import { cn } from '@/lib/utils'
 import { useEventStore } from 'applesauce-react/hooks'

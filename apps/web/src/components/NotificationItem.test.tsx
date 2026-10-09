@@ -4,7 +4,7 @@ import { NotificationItem } from './NotificationItem'
 import type { VideoNotification } from '../types/notification'
 
 // Mock the hooks
-vi.mock('../hooks/useProfile', () => ({
+vi.mock('@nostube/widgets/hooks/useProfile', () => ({
   useProfile: vi.fn(() => ({
     displayName: 'Test User',
     picture: 'https://example.com/avatar.jpg',
@@ -100,7 +100,7 @@ describe('NotificationItem', () => {
   })
 
   it('should show fallback name when profile has no displayName', async () => {
-    const { useProfile } = await import('../hooks/useProfile')
+    const { useProfile } = await import('@nostube/widgets/hooks/useProfile')
     vi.mocked(useProfile).mockReturnValue(undefined)
 
     render(<NotificationItem notification={mockNotification} onClick={vi.fn()} />)

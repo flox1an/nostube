@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { buildDesktopPlayerUrl, buildVideoUrl } from '@/utils/video-utils'
 import { useProfile } from '@/hooks'
 

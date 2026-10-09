@@ -1,6 +1,6 @@
 import React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { cn } from '@/lib/utils'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 

@@ -18,7 +18,7 @@
  * resolves a URL and registers/cancels interest.
  */
 import { useEffect } from 'react'
-import { useMediaUrls } from './useMediaUrls'
+import { useMediaUrls } from '@nostube/widgets/hooks/useMediaUrls'
 import { requestPrefetch, cancelPrefetch } from '@/lib/video-prefetch-cache'
 import type { VideoEvent } from '@nostube/core/video-event'
 

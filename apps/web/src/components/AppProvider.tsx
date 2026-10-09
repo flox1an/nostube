@@ -1,6 +1,7 @@
 import { type ReactNode, useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { type Relay, type RelayTag, type AppConfig } from '@nostube/core'
+import { NostubeHostBridge } from '@/components/NostubeHostBridge'
 import { AppContext, type AppContextType } from '@/contexts/AppContext'
 import { relayPool } from '@/nostr/core'
 import { getEffectiveNsfwFilter } from '@nostube/core/content-safety'
@@ -159,5 +160,9 @@ export function AppProvider(props: AppProviderProps) {
     [config, updateConfig, presetRelays, isSidebarOpen, toggleSidebar, relayOverride]
   )
 
-  return <AppContext.Provider value={appContextValue}>{children}</AppContext.Provider>
+  return (
+    <AppContext.Provider value={appContextValue}>
+      <NostubeHostBridge>{children}</NostubeHostBridge>
+    </AppContext.Provider>
+  )
 }

@@ -18,7 +18,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useToast } from '@/hooks/useToast'
 import { nowInSecs } from '@/lib/utils'
 import type { VideoNote } from '@/hooks/useVideoNotes'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 
 interface PublishNoteDialogProps {
   note: VideoNote | null

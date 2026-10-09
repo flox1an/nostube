@@ -13,7 +13,7 @@ vi.mock('@nostube/core/media-url-generator', () => ({
   generateMediaUrls,
 }))
 
-vi.mock('@/lib/url-discovery', () => ({
+vi.mock('@nostube/core/url-discovery', () => ({
   discoverUrlsWithCache: vi.fn().mockResolvedValue([]),
 }))
 

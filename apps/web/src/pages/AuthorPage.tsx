@@ -65,7 +65,7 @@ import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
 import { getContentSafetyGate } from '@nostube/core/content-safety'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
-import { useImageCascade } from '@/hooks/useImageCascade'
+import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 // Instance build: no hosted avatar generator (api.dicebear.com); components fall back to

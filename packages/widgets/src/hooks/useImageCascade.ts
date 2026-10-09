@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAppContextSafe } from '@/hooks/useAppContext'
+import { useNostubeHostSafe } from '@nostube/widgets/host'
 import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
 import {
@@ -68,7 +68,7 @@ const RAW_RACE_TIMEOUT_MS = 900
  * 4. the caller's placeholder.
  */
 export function useImageCascade(input: ImageCascadeInput): ImageCascadeResult {
-  const imgproxyBaseUrl = useAppContextSafe()?.config.imgproxyBaseUrl
+  const imgproxyBaseUrl = useNostubeHostSafe()?.config.imgproxyBaseUrl
   const variant = input.variant ?? 'preview'
   const preset: PresetThumbnailPreset =
     input.preset ?? (variant === 'avatar' ? 'profile-avatar-v1' : 'feed-preview-v1')

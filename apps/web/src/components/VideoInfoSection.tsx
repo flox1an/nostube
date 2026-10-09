@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { TrustBadge } from '@/components/TrustBadge'
-import { useIsMobile } from '@/hooks/useIsMobile'
+import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 import { Link } from 'react-router-dom'
 import { type NostrEvent } from 'nostr-tools'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'

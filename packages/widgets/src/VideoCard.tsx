@@ -25,7 +25,7 @@ export function VideoCard({
     <button
       type="button"
       onClick={() => onSelect?.(video)}
-      className="group flex flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+      className="group flex w-full flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
     >
       <span className="relative block aspect-video overflow-hidden rounded-lg bg-neutral-200 dark:bg-neutral-800">
         {locked && (

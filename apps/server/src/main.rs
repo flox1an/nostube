@@ -4,6 +4,7 @@
 
 mod admin;
 mod config;
+mod data_lock;
 mod login_guard;
 mod relay;
 mod tls;
@@ -190,6 +191,9 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
 
     let data = cli.data.clone();
     std::fs::create_dir_all(&data)?;
+    // One instance per data folder: a deploy that starts the new process before the old one has
+    // stopped waits here. Held until the process exits.
+    let _data_lock = data_lock::acquire(&data, std::time::Duration::from_secs(90)).await?;
     // First start needs nothing but, behind a proxy, the public origin: the default config is
     // written and the admin registers at /admin/setup with the logged token, everything else is
     // the studio (#17 flow).
@@ -374,6 +378,12 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     Ok(())
 }
 
+/// The commit this build was made from (the container image sets `NOSTUBE_REVISION`), so a
+/// deploy can be checked against what it was meant to roll out. `None` when it is not set.
+fn revision(value: Option<String>) -> Option<String> {
+    value.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty() && v != "unknown")
+}
+
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
 /// Blossom, the studio (`/studio/*`), root files, app shell.
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
@@ -400,9 +410,12 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
                 app.public_config,
             )
                 .into_response(),
-            (&Method::GET, "/api/health") => {
-                Json(serde_json::json!({ "ok": true, "boot": app.boot_id })).into_response()
-            }
+            (&Method::GET, "/api/health") => Json(serde_json::json!({
+                "ok": true,
+                "boot": app.boot_id,
+                "revision": revision(std::env::var("NOSTUBE_REVISION").ok()),
+            }))
+            .into_response(),
             _ => StatusCode::NOT_FOUND.into_response(),
         };
     }
@@ -531,5 +544,13 @@ mod tests {
         let cli = parse(&["--tls", "local-ca", "--origin", "https://x.example"], &[]).unwrap();
         assert_eq!(cli.first_start_kind(), TlsKind::LocalCa);
         assert_eq!(parse(&["--tls", "proxy"], &[]).unwrap().first_start_kind(), TlsKind::Proxy);
+    }
+
+    #[test]
+    fn the_revision_is_reported_only_when_the_build_knows_it() {
+        assert_eq!(revision(Some(" 5f96a79\n".into())).as_deref(), Some("5f96a79"));
+        assert_eq!(revision(Some("unknown".into())), None);
+        assert_eq!(revision(Some("  ".into())), None);
+        assert_eq!(revision(None), None);
     }
 }

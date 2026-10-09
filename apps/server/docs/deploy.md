@@ -50,6 +50,33 @@ waits up to 90 s for the new start and says so when nothing came back.
 A SIGTERM (`docker stop`, a redeploy) stops it the same way: no new connections, running
 requests get up to 30 s, exit status 0. Use `stop_grace_period: 40s` if you upload large files.
 
+## Coolify
+
+The same image runs as a Coolify "Docker Image" application; Coolify's proxy provides HTTPS. What
+matters in the application:
+
+| Setting               | Value                                                              | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Image                 | `ghcr.io/<owner>/nostube-server:main`                              | Coolify pulls it on every deploy (the package has to be public, or Coolify needs a registry login)                                                                                                                                                                                                                                                                                                                                                                |
+| Port                  | `8080`                                                             | the instance speaks plain HTTP                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Domain                | `https://<your name>`                                              | also the value of `NOSTUBE_ORIGIN`                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Environment           | `NOSTUBE_ORIGIN=https://<your name>`                               | read on the first start only (see above)                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Persistent storage    | a volume on `/data`                                                | everything the instance keeps; **not** covered by Coolify's own backups, so back it up yourself                                                                                                                                                                                                                                                                                                                                                                   |
+| Health check          | **off**                                                            | Coolify starts the new container before it stops the old one (measured: about two seconds apart, also with its health check off). The server therefore locks its data folder, and the new process waits until the old one has exited. With the health check on, Coolify waits for the new container to be healthy before it stops the old one, and the two would wait for each other until the deploy times out. Expect a gap of a few seconds (`503`) per deploy |
+| Resource limits       | for example `2g` memory and the same swap value                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Custom Docker options | `--cap-drop=ALL --cap-add=CHOWN --cap-add=SETUID --cap-add=SETGID` | the entrypoint needs these three only to take over the data volume; the server itself then runs as uid 10001 with no capabilities at all (Coolify cuts a value at its first hyphen, these have none)                                                                                                                                                                                                                                                              |
+
+Coolify's default restart policy (`unless-stopped`) restarts the container after the clean exit that
+saving in the studio causes.
+
+**Rolling it out from CI.** `server-image.yml` can deploy after it pushed the image from `main`: it
+joins the private network the Coolify host is on and calls Coolify's deploy endpoint. It needs the
+repository secrets `TS_AUTHKEY`, `COOLIFY_TAILNET_HOST`, `COOLIFY_DEPLOY_TOKEN`,
+`COOLIFY_SERVER_UUID` (the application's id) and, optionally, `NOSTUBE_SERVER_URL` (its public
+address). Without the first four the deploy steps are skipped. With the last one the workflow then
+waits until the running instance reports exactly the commit that was built: `/api/health` carries a
+`revision`, because a green deploy alone does not prove that the new image is the one running.
+
 ## Login protection
 
 After three wrong admin passwords in a row, each further one makes the next try wait twice as long
@@ -58,6 +85,16 @@ for the whole instance, not per visitor, because the server reads no forwarded h
 keeps guessing also makes you wait. Logging in with a bound Nostr key (Studio → Server → Account)
 is not throttled, and restarting the container clears the count. Put a rate limit in the proxy
 (Caddy, nginx) too if the admin address is public.
+
+## One instance per data folder
+
+The server takes an exclusive lock on `<data>/.instance.lock` when it starts and waits (up to 90 s,
+with a line in the log) while another process holds it. The operating system releases the lock when
+that process exits, however it exits. That makes a deploy that starts the new container before
+stopping the old one safe: two processes never have the SQLite file, the stored videos and the
+secrets open at the same time. It also stops a second `docker run` on the same volume from doing
+damage. (`admin reset` and `config rollback` are file edits for a stopped instance and do not take
+the lock.)
 
 ## Operating it
 

@@ -3,6 +3,12 @@
 # server ends up as PID 1 and handles SIGTERM itself (docker stop).
 set -e
 
+# What /api/health reports as the revision of this build.
+if [ -z "${NOSTUBE_REVISION:-}" ] && [ -r /etc/nostube-revision ]; then
+  NOSTUBE_REVISION="$(cat /etc/nostube-revision)"
+  export NOSTUBE_REVISION
+fi
+
 if [ "$(id -u)" = "0" ]; then
   data="${NOSTUBE_DATA:-/data}"
   mkdir -p "$data"

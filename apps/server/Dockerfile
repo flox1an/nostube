@@ -47,6 +47,10 @@ RUN apt-get update \
  && mkdir /data && chown nostube:nostube /data
 COPY --from=server /src/target/release/nostube-server /usr/local/bin/nostube-server
 COPY apps/server/docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# The commit the image was built from (a build argument of the last layer only, so it does not
+# invalidate the compiled binary): the server reports it in /api/health.
+ARG REVISION=unknown
+RUN echo "$REVISION" > /etc/nostube-revision
 
 # Behind a proxy, on plain HTTP. The only thing the first start needs is NOSTUBE_ORIGIN, the public
 # address (https://videos.example.org); after that the config lives in /data/config.toml.

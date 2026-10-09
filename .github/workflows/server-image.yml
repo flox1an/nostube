@@ -38,6 +38,10 @@ jobs:
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # The deploy steps run only on main, and only where a deployment is set up (secrets).
+      HAS_DEPLOY: ${{ secrets.COOLIFY_SERVER_UUID != '' && secrets.COOLIFY_TAILNET_HOST != '' && secrets.TS_AUTHKEY != '' }}
+      HAS_SERVER_URL: ${{ secrets.NOSTUBE_SERVER_URL != '' }}
 
     steps:
       - name: Checkout repository
@@ -65,6 +69,7 @@ jobs:
         with:
           context: .
           file: apps/server/Dockerfile
+          build-args: REVISION=${{ github.sha }}
           load: true
           tags: nostube-server:ci
           labels: ${{ steps.meta.outputs.labels }}
@@ -80,6 +85,8 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:8080/api/health
+          # The image reports the commit it was built from (the deploy check below relies on it).
+          curl -fsS http://127.0.0.1:8080/api/health | grep -q "\"revision\":\"${GITHUB_SHA}\""
           # The site, the studio, the embed player and the public config are all served.
           for path in / /studio/ /embed.html /api/config; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080$path")
@@ -112,7 +119,46 @@ jobs:
         with:
           context: .
           file: apps/server/Dockerfile
+          build-args: REVISION=${{ github.sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
+
+      # A deployment of this image (a Coolify application that pulls ghcr.io/<owner>/nostube-server:main).
+      # Every address and id comes from secrets, none of them is written down in this public repository.
+      - name: Join the private network
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_DEPLOY == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Deploy the new image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_DEPLOY == 'true'
+        env:
+          COOLIFY_TAILNET_HOST: ${{ secrets.COOLIFY_TAILNET_HOST }}
+          COOLIFY_SERVER_UUID: ${{ secrets.COOLIFY_SERVER_UUID }}
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: |
+          curl --fail --show-error --connect-timeout 10 "http://${COOLIFY_TAILNET_HOST}:8000/api/health"
+          curl --fail --show-error --request POST \
+            "http://${COOLIFY_TAILNET_HOST}:8000/api/v1/deploy?uuid=${COOLIFY_SERVER_UUID}" \
+            --header "Authorization: Bearer ${COOLIFY_DEPLOY_TOKEN}"
+
+      # A green deploy proves nothing (the old image can keep running): wait until the running
+      # instance reports exactly the commit that was just built.
+      - name: Wait for the new revision
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_DEPLOY == 'true' && env.HAS_SERVER_URL == 'true'
+        env:
+          SERVER_URL: ${{ secrets.NOSTUBE_SERVER_URL }}
+        run: |
+          for i in $(seq 1 60); do
+            revision=$(curl -fsS --max-time 10 "${SERVER_URL}/api/health" 2>/dev/null | sed -n 's/.*"revision":"\([^"]*\)".*/\1/p')
+            if [ "$revision" = "$GITHUB_SHA" ]; then
+              echo "the instance runs $revision"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "the instance still reports '${revision:-nothing}', expected $GITHUB_SHA" >&2
+          exit 1

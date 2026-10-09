@@ -1,3 +1,5 @@
+import type { InstanceConfig } from '@nostube/core/instance-config'
+
 /**
  * Embed URL parameters configuration
  */
@@ -14,6 +16,8 @@ export interface EmbedParams {
   preferredQuality: string
   customRelays: string[]
   accentColor: string
+  /** The config of the instance serving this embed, once read; null on nostube. */
+  instance: InstanceConfig | null
 }
 
 /**
@@ -40,6 +44,7 @@ export function parseURLParams(): EmbedParams {
           .map(r => r.trim())
       : [],
     accentColor: params.get('color') || '8b5cf6',
+    instance: null,
   }
 }
 

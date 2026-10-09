@@ -1,13 +1,13 @@
 import type { Profile } from '../lib/profile-fetcher'
-import { buildVideoPath } from '@/utils/video-utils'
-import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
 interface TitleOverlayProps {
   title: string
   author: Profile | null
   authorPubkey: string
   visible: boolean
-  videoId: string
+  /** Where the title and the author lead (see `embedLinks`). */
+  watchUrl: string
+  profileUrl: string
   onOpenVideo?: () => void
 }
 
@@ -16,12 +16,11 @@ export function TitleOverlay({
   author,
   authorPubkey,
   visible,
-  videoId,
+  watchUrl,
+  profileUrl,
   onOpenVideo,
 }: TitleOverlayProps) {
   const displayName = author?.displayName || author?.name || authorPubkey.slice(0, 8) + '...'
-  const watchUrl = `https://nostu.be${buildVideoPath(videoId, 'video')}`
-  const profileUrl = `https://nostu.be${buildProfileUrlFromPubkey(authorPubkey)}`
 
   const handleClick = () => {
     onOpenVideo?.()

@@ -6,8 +6,10 @@ interface ContentWarningProps {
   poster?: string
   /** Warning mode: reveal the player in place. */
   onAccept?: () => void
-  /** Hidden/unverified: send the viewer to nostube, where their own settings apply. */
+  /** Hidden/unverified: send the viewer to the video's page, where their own settings apply. */
   watchUrl?: string
+  /** The label of that button. */
+  watchLabel?: string
 }
 
 export function ContentWarning({
@@ -17,6 +19,7 @@ export function ContentWarning({
   poster,
   onAccept,
   watchUrl,
+  watchLabel = 'Open on nostube',
 }: ContentWarningProps) {
   const buttonClass = 'inline-block px-6 py-2 rounded-lg font-medium text-white transition-colors'
   return (
@@ -51,7 +54,7 @@ export function ContentWarning({
             className={buttonClass}
             style={{ backgroundColor: `#${color}` }}
           >
-            Open on nostube
+            {watchLabel}
           </a>
         )}
       </div>

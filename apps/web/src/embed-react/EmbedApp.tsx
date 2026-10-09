@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { VideoPlayer } from '@nostube/widgets/player/VideoPlayer'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import type { VideoPlayback } from '@nostube/core/content-safety'
-import { buildVideoPath } from '@/utils/video-utils'
 import type { EmbedParams } from './lib/url-params'
 import type { VideoEvent } from '@nostube/core/video-event'
 import type { Profile } from './lib/profile-fetcher'
@@ -11,6 +10,7 @@ import { TitleOverlay } from './components/TitleOverlay'
 import { ContentWarning } from './components/ContentWarning'
 import { ErrorMessage } from './components/ErrorMessage'
 import { LoadingState } from './components/LoadingState'
+import { embedLinks } from './lib/embed-links'
 
 /** `unverified`: the safety check (preset) could not run, so nothing plays. */
 export type EmbedPlayback = VideoPlayback | 'unverified'
@@ -68,22 +68,29 @@ export function EmbedApp({ params, video, playback, profile, error, isLoading }:
     return <ErrorMessage message={error || 'Video not found'} />
   }
 
+  const links = embedLinks({
+    videoId: params.videoId,
+    authorPubkey: video.pubkey,
+    instance: params.instance,
+  })
+
   // NSFW safety comes before anything that could reveal the video.
   if (isBlocked) {
-    const watchUrl = `https://nostu.be${buildVideoPath(params.videoId, 'video')}`
     return playback === 'hidden' ? (
       <ContentWarning
         title="Sensitive content"
-        message="This video is marked as sensitive. It only plays for viewers who enabled sensitive content in their nostube settings."
+        message={links.sensitiveMessage}
         color={params.accentColor}
-        watchUrl={watchUrl}
+        watchUrl={links.watchUrl}
+        watchLabel={links.watchLabel}
       />
     ) : (
       <ContentWarning
         title="Couldn't verify this video"
         message="The safety check couldn't be completed, so this video won't play here."
         color={params.accentColor}
-        watchUrl={watchUrl}
+        watchUrl={links.watchUrl}
+        watchLabel={links.watchLabel}
       />
     )
   }
@@ -149,9 +156,10 @@ export function EmbedApp({ params, video, playback, profile, error, isLoading }:
           author={profile}
           authorPubkey={video.pubkey}
           visible={controlsVisible}
-          videoId={params.videoId}
+          watchUrl={links.watchUrl}
+          profileUrl={links.profileUrl}
           onOpenVideo={() => {
-            // Pause video when opening in nostube
+            // Pause the video when its page opens
             const videoEl = document.querySelector('video')
             if (videoEl) {
               videoEl.pause()

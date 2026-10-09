@@ -7,6 +7,7 @@ import type { VideoEvent } from '@nostube/core/video-event'
 import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { NostubeHostProvider, useNostubeHostValue } from '@nostube/widgets/host'
 import { VideoPlayer } from '@nostube/widgets/player'
+import { TimelineProvider, type TimelineContextValue } from '@nostube/widgets/timeline'
 import { VideoGrid } from '@nostube/widgets'
 import { AgeConfirm } from './AgeConfirm'
 import { useAgeGate } from './use-age-gate'
@@ -43,11 +44,22 @@ export function SiteHome({ client, config }: SiteHomeProps) {
   )
   const host = useNostubeHostValue(hostConfig, client.relayPool, hostRelays)
 
+  // A site has no reports, mutes or preset: the timeline only needs the creator's Blossom servers.
+  const timeline = useMemo<TimelineContextValue>(
+    () => ({
+      client,
+      policy: { blossomServers: hostConfig.blossomServers, getAllMissingVideos: () => ({}) },
+    }),
+    [client, hostConfig.blossomServers]
+  )
+
   return (
     <EventStoreProvider eventStore={client.eventStore}>
       <NostubeHostProvider value={host}>
         <TooltipProvider>
-          <Homepage client={client} config={config} />
+          <TimelineProvider value={timeline}>
+            <Homepage client={client} config={config} />
+          </TimelineProvider>
         </TooltipProvider>
       </NostubeHostProvider>
     </EventStoreProvider>
@@ -56,7 +68,7 @@ export function SiteHome({ client, config }: SiteHomeProps) {
 
 function Homepage({ client, config }: SiteHomeProps) {
   const profile = useCreatorProfile(client, config)
-  const { videos, loading, error } = useCreatorVideos(client, config)
+  const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
   const [selected, setSelected] = useState<VideoEvent | null>(null)
   const [pending, setPending] = useState<VideoEvent | null>(null)
   const gate = useAgeGate()
@@ -112,11 +124,24 @@ function Homepage({ client, config }: SiteHomeProps) {
         </section>
       )}
 
-      {error && <p className="text-red-600">Could not load videos: {error}</p>}
+      {error && <p className="text-red-600">Could not load videos.</p>}
       {loading ? (
         <p className="py-12 text-center text-muted-foreground">Loading videos…</p>
       ) : (
-        <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
+        <>
+          <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
+          {hasMore && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                className="rounded-md border border-border px-4 py-2 text-sm"
+              >
+                Load more
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

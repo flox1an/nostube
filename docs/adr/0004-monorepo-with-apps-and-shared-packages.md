@@ -41,7 +41,7 @@ packages/widgets   player, video card, comments, login, shadcn/ui base       [pl
 
 ## Status of the first slice
 
-- `apps/site` is a skeleton: it loads `/api/config` (contract v1), registers it with `setInstanceConfig`, builds a client with `createNostubeClient` and shows the start creator's profile and videos with the widgets. It is not wired into the Rust server or the Docker image yet.
+- `apps/site` is a skeleton: it loads `/api/config` (contract v1), registers it with `setInstanceConfig`, builds a client with `createNostubeClient` and shows the start creator's profile and videos with the widgets. It loads videos with the same `useTimeline` as nostube (policy: only the creator's Blossom servers) and has a "Load more" button. It is not wired into the Rust server or the Docker image yet.
 - `VideoCard` and `VideoGrid` are new, small components; `apps/web` keeps its own card. The player is the one from `apps/web`.
 - Widgets use Tailwind utility classes, like web (Tailwind v4). An app that consumes them adds `@source '../../../packages/widgets/src'` to its CSS.
 - **Timeline policy is injected.** `useTimeline` reads the client and the viewer's filter policy (blocked authors, preset NSFW authors, reported events, Blossom servers, YouTube/audio switches, missing videos) from `TimelineProvider` (`@nostube/widgets/timeline`, strict `useTimelineContext`). `apps/web` fills it in `TimelineBridge`, mounted around the router and in `TestApp`, never in the embed (it would pull `nostr/core` back into the embed bundle). Trust-score filtering is not part of it: callers apply it (`useTrustFilter`).

@@ -28,6 +28,13 @@ const config: InstanceConfig = {
   search: { mode: 'off' },
 }
 
+// The fake events carry no valid signature, so the store must not verify them.
+function makeStore() {
+  const store = new EventStore()
+  store.verifyEvent = () => true
+  return store
+}
+
 const jsonResponse = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }))
 
@@ -86,7 +93,7 @@ describe('SiteHome', () => {
     tags: [['server', 'https://blossom.example/']],
   }
   const client = {
-    eventStore: new EventStore(),
+    eventStore: makeStore(),
     getTimelineLoader: () => () => of(video),
     relayPool: {
       request: (_relays: string[], filters: { kinds?: number[] }[]) =>
@@ -107,7 +114,7 @@ describe('SiteHome', () => {
       tags: [...video.tags, ['content-warning', 'nudity']],
     }
     const gatedClient = {
-      eventStore: new EventStore(),
+      eventStore: makeStore(),
       getTimelineLoader: () => () => of(nsfw),
       relayPool: { request: () => of(profile) },
     } as unknown as NostubeClient

@@ -7,5 +7,26 @@
       "title": "敏感内容",
       "play": "播放视频"
     }
+  },
+  "video": {
+    "share": {
+      "title": "分享此视频",
+      "description": "在您喜欢的平台上分享此视频或复制链接。",
+      "linkTab": "链接",
+      "embedTab": "嵌入",
+      "embedCode": "嵌入代码",
+      "copyEmbed": "复制嵌入代码",
+      "embedDescription": "复制此代码并粘贴到您的网站以嵌入视频。",
+      "includeTimestamp": "包含当前时间戳",
+      "viaEmail": "通过邮件分享",
+      "onWhatsapp": "分享到 WhatsApp",
+      "onX": "分享到 X",
+      "onReddit": "分享到 Reddit",
+      "onFacebook": "分享到 Facebook",
+      "onPinterest": "分享到 Pinterest"
+    }
+  },
+  "common": {
+    "copy": "复制"
   }
 }

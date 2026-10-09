@@ -176,22 +176,6 @@
       "deleteCommentConfirmMessage": "Esto publicará una solicitud de eliminación en todos los relés. El comentario puede seguir siendo visible en algunos relés.",
       "commentDeleted": "Comentario eliminado"
     },
-    "share": {
-      "title": "Compartir este video",
-      "description": "Comparta este video en su plataforma favorita o copie el enlace.",
-      "linkTab": "Enlace",
-      "embedTab": "Incrustar",
-      "embedCode": "Código de incrustación",
-      "copyEmbed": "Copiar código de incrustación",
-      "embedDescription": "Copie y pegue este código en su sitio web para incrustar el video.",
-      "includeTimestamp": "Incluir marca de tiempo actual",
-      "viaEmail": "Compartir por Correo",
-      "onWhatsapp": "Compartir en WhatsApp",
-      "onX": "Compartir en X",
-      "onReddit": "Compartir en Reddit",
-      "onFacebook": "Compartir en Facebook",
-      "onPinterest": "Compartir en Pinterest"
-    },
     "availability": {
       "alertTitle": "Disponibilidad Limitada",
       "alertDescription": "Este vídeo está disponible en {{count}} servidor. Considera replicarlo a tus servidores para mejor redundancia.",

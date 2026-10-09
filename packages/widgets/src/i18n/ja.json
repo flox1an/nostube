@@ -7,5 +7,26 @@
       "title": "センシティブなコンテンツ",
       "play": "動画を再生"
     }
+  },
+  "video": {
+    "share": {
+      "title": "この動画をシェア",
+      "description": "お好みのプラットフォームでシェアするか、リンクをコピーしてください。",
+      "linkTab": "リンク",
+      "embedTab": "埋め込み",
+      "embedCode": "埋め込みコード",
+      "copyEmbed": "埋め込みコードをコピー",
+      "embedDescription": "このコードをコピーしてウェブサイトに貼り付けると動画を埋め込めます。",
+      "includeTimestamp": "現在のタイムスタンプを含める",
+      "viaEmail": "メールでシェア",
+      "onWhatsapp": "WhatsApp でシェア",
+      "onX": "X でシェア",
+      "onReddit": "Reddit でシェア",
+      "onFacebook": "Facebook でシェア",
+      "onPinterest": "Pinterest でシェア"
+    }
+  },
+  "common": {
+    "copy": "コピー"
   }
 }

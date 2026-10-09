@@ -5,14 +5,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@nostube/widgets/components/dialog'
-import { Input } from '@nostube/widgets/components/input'
-import { Button } from '@nostube/widgets/components/button'
-import { Checkbox } from '@nostube/widgets/components/checkbox'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@nostube/widgets/components/tabs'
-import { Textarea } from '@nostube/widgets/components/textarea'
+} from './dialog'
+import { Input } from './input'
+import { Button } from './button'
+import { Checkbox } from './checkbox'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
+import { Textarea } from './textarea'
 import { Clock, Mail, Send, Globe, Share2, Link as LinkIcon, Code } from 'lucide-react'
-import { TwitterIcon, FacebookIcon } from '@/components/icons/brands'
+import { TwitterIcon, FacebookIcon } from './brand-icons'
 import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,8 +20,9 @@ export interface ShareButtonProps {
   shareOpen: boolean
   setShareOpen: (open: boolean) => void
   shareUrl: string
-  includeTimestamp: boolean
-  setIncludeTimestamp: (v: boolean) => void
+  /** Leave both out to hide the option (a page without a play position). */
+  includeTimestamp?: boolean
+  setIncludeTimestamp?: (v: boolean) => void
   shareLinks: {
     mailto: string
     whatsapp: string
@@ -36,7 +37,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
   shareOpen,
   setShareOpen,
   shareUrl,
-  includeTimestamp,
+  includeTimestamp = false,
   setIncludeTimestamp,
   shareLinks,
 }) => {
@@ -125,20 +126,22 @@ const ShareButton: React.FC<ShareButtonProps> = ({
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="timestamp-checkbox"
-                checked={includeTimestamp}
-                onCheckedChange={checked => setIncludeTimestamp(!!checked)}
-              />
-              <label
-                htmlFor="timestamp-checkbox"
-                className="flex items-center gap-2 cursor-pointer select-none"
-              >
-                <Clock className="w-4 h-4" />
-                <span>{t('video.share.includeTimestamp')}</span>
-              </label>
-            </div>
+            {setIncludeTimestamp && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="timestamp-checkbox"
+                  checked={includeTimestamp}
+                  onCheckedChange={checked => setIncludeTimestamp(!!checked)}
+                />
+                <label
+                  htmlFor="timestamp-checkbox"
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>{t('video.share.includeTimestamp')}</span>
+                </label>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-4 justify-center mt-2">
               <a
@@ -213,20 +216,22 @@ const ShareButton: React.FC<ShareButtonProps> = ({
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="embed-timestamp-checkbox"
-                checked={includeTimestamp}
-                onCheckedChange={checked => setIncludeTimestamp(!!checked)}
-              />
-              <label
-                htmlFor="embed-timestamp-checkbox"
-                className="flex items-center gap-2 cursor-pointer select-none text-sm"
-              >
-                <Clock className="w-4 h-4" />
-                <span>{t('video.share.includeTimestamp')}</span>
-              </label>
-            </div>
+            {setIncludeTimestamp && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="embed-timestamp-checkbox"
+                  checked={includeTimestamp}
+                  onCheckedChange={checked => setIncludeTimestamp(!!checked)}
+                />
+                <label
+                  htmlFor="embed-timestamp-checkbox"
+                  className="flex items-center gap-2 cursor-pointer select-none text-sm"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>{t('video.share.includeTimestamp')}</span>
+                </label>
+              </div>
+            )}
 
             <div className="text-xs text-muted-foreground">{t('video.share.embedDescription')}</div>
           </TabsContent>

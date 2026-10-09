@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { YoutubeIcon, InstagramIcon, TwitterIcon, FacebookIcon } from '@/components/icons/brands'
+import {
+  YoutubeIcon,
+  InstagramIcon,
+  TwitterIcon,
+  FacebookIcon,
+} from '@nostube/widgets/components/brand-icons'
 import { Badge } from '@nostube/widgets/components/badge'
 import { nip19 } from 'nostr-tools'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'

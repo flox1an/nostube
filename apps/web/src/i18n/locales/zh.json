@@ -176,22 +176,6 @@
       "deleteCommentConfirmMessage": "这将向所有中继发布删除请求。该评论可能仍在部分中继上可见。",
       "commentDeleted": "评论已删除"
     },
-    "share": {
-      "title": "分享此视频",
-      "description": "在您喜欢的平台上分享此视频或复制链接。",
-      "linkTab": "链接",
-      "embedTab": "嵌入",
-      "embedCode": "嵌入代码",
-      "copyEmbed": "复制嵌入代码",
-      "embedDescription": "复制此代码并粘贴到您的网站以嵌入视频。",
-      "includeTimestamp": "包含当前时间戳",
-      "viaEmail": "通过邮件分享",
-      "onWhatsapp": "分享到 WhatsApp",
-      "onX": "分享到 X",
-      "onReddit": "分享到 Reddit",
-      "onFacebook": "分享到 Facebook",
-      "onPinterest": "分享到 Pinterest"
-    },
     "availability": {
       "alertTitle": "有限可用性",
       "alertDescription": "此视频仅在 {{count}} 台服务器上可用。考虑将其镜像到您的服务器以获得更好的冗余。",

@@ -176,22 +176,6 @@
       "deleteCommentConfirmMessage": "Dadurch wird eine Löschanfrage an alle Relays veröffentlicht. Der Kommentar ist möglicherweise noch auf einigen Relays sichtbar.",
       "commentDeleted": "Kommentar gelöscht"
     },
-    "share": {
-      "title": "Dieses Video teilen",
-      "description": "Teile dieses Video auf deiner bevorzugten Plattform oder kopiere den Link.",
-      "linkTab": "Link",
-      "embedTab": "Einbetten",
-      "embedCode": "Einbettungscode",
-      "copyEmbed": "Einbettungscode kopieren",
-      "embedDescription": "Kopiere und füge diesen Code in deine Website ein, um das Video einzubetten.",
-      "includeTimestamp": "Aktuelle Zeitmarke einbeziehen",
-      "viaEmail": "Per E-Mail teilen",
-      "onWhatsapp": "Auf WhatsApp teilen",
-      "onX": "Auf X teilen",
-      "onReddit": "Auf Reddit teilen",
-      "onFacebook": "Auf Facebook teilen",
-      "onPinterest": "Auf Pinterest teilen"
-    },
     "availability": {
       "alertTitle": "Begrenzte Verfügbarkeit",
       "alertDescription": "Dieses Video ist auf {{count}} Server verfügbar. Erwäge, es auf deine Server zu spiegeln für bessere Redundanz.",

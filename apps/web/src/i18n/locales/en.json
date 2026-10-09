@@ -192,22 +192,6 @@
       "deleteCommentConfirmMessage": "This will publish a deletion request to all relays. The comment may still be visible on some relays.",
       "commentDeleted": "Comment deleted"
     },
-    "share": {
-      "title": "Share this video",
-      "description": "Share this video on your favorite platform or copy the link.",
-      "linkTab": "Link",
-      "embedTab": "Embed",
-      "embedCode": "Embed Code",
-      "copyEmbed": "Copy Embed Code",
-      "embedDescription": "Copy and paste this code into your website to embed the video.",
-      "includeTimestamp": "Include current timestamp",
-      "viaEmail": "Share via Email",
-      "onWhatsapp": "Share on WhatsApp",
-      "onX": "Share on X",
-      "onReddit": "Share on Reddit",
-      "onFacebook": "Share on Facebook",
-      "onPinterest": "Share on Pinterest"
-    },
     "availability": {
       "alertTitle": "Limited Availability",
       "alertDescription": "This video is available on {{count}} server. Consider mirroring it to your servers for better redundancy.",

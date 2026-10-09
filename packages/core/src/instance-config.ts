@@ -46,7 +46,31 @@ export interface InstanceSite {
   theme: { accent: string; font: SiteFont }
   /** Everything of the creators is shown except these: `<kind>:<pubkey>:<d>` or an event id. */
   videos: { hidden: string[] }
+  /**
+   * Where links to Nostr content outside the site go (a mention of someone else, a video of
+   * another creator, a note). Each is an https URL with `{nip19}` where the npub, nprofile,
+   * naddr, nevent or note identifier goes.
+   */
+  links: { profile: string; video: string; note: string }
 }
+
+export const SITE_LINK_KEYS = ['profile', 'video', 'note'] as const
+export type SiteLinkKey = (typeof SITE_LINK_KEYS)[number]
+
+/** The links an instance starts with: njump for people and notes, nostube for videos. */
+export const DEFAULT_SITE_LINKS: InstanceSite['links'] = {
+  profile: 'https://njump.me/{nip19}',
+  video: 'https://nostu.be/v/{nip19}',
+  note: 'https://njump.me/{nip19}',
+}
+
+/** True for an https URL with a `{nip19}` placeholder. */
+export const isLinkTemplate = (v: unknown): v is string =>
+  typeof v === 'string' && /^https:\/\/[^\s{}]+/.test(v) && v.includes('{nip19}') && !/\s/.test(v)
+
+/** The URL for an identifier: the template with `{nip19}` replaced. */
+export const fillLinkTemplate = (template: string, nip19: string) =>
+  template.split('{nip19}').join(nip19)
 
 export interface InstanceConfig {
   version: 1
@@ -90,6 +114,7 @@ export function validateSite(value: unknown): string[] {
     tagline?: unknown
     theme?: { accent?: unknown; font?: unknown } | null
     videos?: { hidden?: unknown } | null
+    links?: Record<string, unknown> | null
   } | null
   if (!site || typeof site !== 'object') return ['site must be an object']
   if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
@@ -104,6 +129,12 @@ export function validateSite(value: unknown): string[] {
   const hidden = site.videos?.hidden
   if (!Array.isArray(hidden) || !hidden.every(isHiddenVideoRef))
     e.push('site.videos.hidden must be a list of <kind>:<pubkey>:<d> or event ids')
+  const links = site.links
+  if (!links || typeof links !== 'object') e.push('site.links must be an object')
+  else
+    for (const key of SITE_LINK_KEYS)
+      if (!isLinkTemplate(links[key]))
+        e.push(`site.links.${key} must be an https URL containing {nip19}`)
   return e
 }
 
@@ -184,6 +215,11 @@ export function parseInstanceConfig(json: unknown): ParseResult {
         tagline: site.tagline,
         theme: { accent: site.theme.accent, font: site.theme.font },
         videos: { hidden: site.videos.hidden },
+        links: {
+          profile: site.links.profile,
+          video: site.links.video,
+          note: site.links.note,
+        },
       },
     },
   }

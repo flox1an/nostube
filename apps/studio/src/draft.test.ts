@@ -1,7 +1,8 @@
+import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
-import { fromDraft, isRefHidden, setRefHidden, toDraft } from './draft'
+import { LINK_PRESETS, fromDraft, isRefHidden, linkPresetOf, setRefHidden, toDraft } from './draft'
 
 const PK = 'a'.repeat(64)
 const config: AdminConfig = {
@@ -12,7 +13,12 @@ const config: AdminConfig = {
   interactionRelays: [],
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
-  site: { tagline: 'Hi', theme: { accent: '#6d28d9', font: 'sans' }, videos: { hidden: [] } },
+  site: {
+    tagline: 'Hi',
+    theme: { accent: '#6d28d9', font: 'sans' },
+    videos: { hidden: [] },
+    links: DEFAULT_SITE_LINKS,
+  },
 }
 
 describe('draft', () => {
@@ -39,6 +45,11 @@ describe('draft', () => {
     ['creator', { creatorsText: 'nope' }],
     ['relay', { videoSourcesText: 'https://relay.example' }],
     ['hidden video', { hiddenText: 'not a video' }],
+    [
+      'link without a placeholder',
+      { links: { ...DEFAULT_SITE_LINKS, note: 'https://example.org/' } },
+    ],
+    ['link over http', { links: { ...DEFAULT_SITE_LINKS, profile: 'http://example.org/{nip19}' } }],
     ['quota', { quota: '-1' }],
     ['external search', { searchMode: 'external' as const, searchUrl: 'http://x' }],
   ])('reports an invalid %s and builds nothing', (_name, patch) => {
@@ -73,5 +84,14 @@ describe('hidden video lines', () => {
     expect(setRefHidden('', ref, true)).toBe(ref)
     expect(setRefHidden(ref, ref, true)).toBe(ref)
     expect(setRefHidden(`${naddr}\nsomething else`, ref, false)).toBe('something else')
+  })
+})
+
+describe('link presets', () => {
+  it('recognises a preset and everything else as custom', () => {
+    for (const preset of LINK_PRESETS) expect(linkPresetOf(preset.links)).toBe(preset.id)
+    expect(linkPresetOf({ ...DEFAULT_SITE_LINKS, video: 'https://example.org/v/{nip19}' })).toBe(
+      'custom'
+    )
   })
 })

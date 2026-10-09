@@ -1,3 +1,4 @@
+import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { nip19 } from 'nostr-tools'
@@ -14,8 +15,12 @@ import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
 
 // The real player needs a browser; the gate tests only need to see what it is given.
 vi.mock('@nostube/widgets/player', () => ({
-  VideoPlayer: (props: { contentWarning?: string }) => (
-    <div data-testid="player" data-warning={props.contentWarning ?? ''} />
+  VideoPlayer: (props: { contentWarning?: string; initialPlayPos?: number }) => (
+    <div
+      data-testid="player"
+      data-warning={props.contentWarning ?? ''}
+      data-start={props.initialPlayPos ?? 0}
+    />
   ),
 }))
 
@@ -30,7 +35,12 @@ const config: InstanceConfig = {
   videoSources: ['wss://videos.example'],
   interactionRelays: ['wss://interact.example'],
   search: { mode: 'off' },
-  site: { tagline: '', theme: { accent: '#6d28d9', font: 'sans' }, videos: { hidden: [] } },
+  site: {
+    tagline: '',
+    theme: { accent: '#6d28d9', font: 'sans' },
+    videos: { hidden: [] },
+    links: DEFAULT_SITE_LINKS,
+  },
 }
 
 // The fake events carry no valid signature, so the store must not verify them.
@@ -205,6 +215,46 @@ describe('SiteHome', () => {
     input.remove()
   })
 
+  it('renders links, mentions and timestamps in the description', async () => {
+    const other = 'b'.repeat(64)
+    const described = {
+      ...video,
+      content: `Watch https://example.com/more at 1:23 with nostr:${nip19.npubEncode(other)} #travel`,
+    }
+    const describedClient = {
+      eventStore: makeStore(),
+      getTimelineLoader: () => () => of(described),
+      relayPool: { request: () => of(profile) },
+    } as unknown as NostubeClient
+    renderSite(describedClient)
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    const external = await screen.findByRole('link', { name: 'https://example.com/more' })
+    expect(external.getAttribute('target')).toBe('_blank')
+    expect(external.getAttribute('rel')).toContain('noopener')
+    const seek = screen.getByRole('link', { name: '1:23' })
+    expect(seek.getAttribute('href')).toMatch(/\/v\/nevent1.*\?t=83$/)
+    const mention = screen.getByRole('link', { name: /^@/ })
+    expect(mention.getAttribute('href')).toBe(`https://njump.me/${nip19.npubEncode(other)}`)
+    // Tags have no page on the site: plain text, no link.
+    expect(screen.queryByRole('link', { name: '#travel' })).toBeNull()
+    expect(screen.getByText('#travel')).toBeTruthy()
+  })
+
+  it('starts a video at the time in the link', async () => {
+    const link = nip19.neventEncode({ id: video.id, author: creator })
+    renderSite(client, `/v/${link}?t=83`)
+    await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+    expect(screen.getByTestId('player').getAttribute('data-start')).toBe('83')
+  })
+
+  it('starts at 0 without a time or with a bad one', async () => {
+    const link = nip19.neventEncode({ id: video.id, author: creator })
+    renderSite(client, `/v/${link}?t=abc`)
+    await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
+    expect(screen.getByTestId('player').getAttribute('data-start')).toBe('0')
+  })
+
   it('reports a video link that is not valid', async () => {
     renderSite(client, '/v/not-a-link')
     await waitFor(() => expect(screen.getByText('This video link is not valid.')).toBeTruthy())
@@ -294,10 +344,7 @@ describe('SiteHome', () => {
 describe('theme', () => {
   it('sets the accent, a readable text colour and the font on the root', () => {
     const root = document.createElement('div')
-    applyTheme(
-      { tagline: '', theme: { accent: '#ffcc00', font: 'serif' }, videos: { hidden: [] } },
-      root
-    )
+    applyTheme({ theme: { accent: '#ffcc00', font: 'serif' } }, root)
     expect(root.style.getPropertyValue('--primary')).toBe('#ffcc00')
     expect(root.style.getPropertyValue('--primary-foreground')).toBe('#111111')
     expect(root.style.getPropertyValue('--accent')).toBe('')

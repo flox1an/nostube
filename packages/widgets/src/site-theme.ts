@@ -36,7 +36,10 @@ export function readableOn(hex: string): string {
  * font picks one of three system stacks. `--accent` stays alone: in the shared theme it is the
  * hover background, and a saturated colour there makes menus unreadable.
  */
-export function applyTheme(site: InstanceSite, root: HTMLElement = document.documentElement) {
+export function applyTheme(
+  site: Pick<InstanceSite, 'theme'>,
+  root: HTMLElement = document.documentElement
+) {
   const { accent, font } = site.theme
   root.style.setProperty('--primary', accent)
   root.style.setProperty('--primary-foreground', readableOn(accent))

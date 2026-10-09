@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_SITE_LINKS,
   allowSignerRelays,
+  fillLinkTemplate,
   decideLoad,
   isRelayAllowed,
   parseInstanceConfig,
@@ -27,7 +29,16 @@ const good = (): InstanceConfig => ({
     tagline: 'Hello',
     theme: { accent: '#ff8800', font: 'serif' },
     videos: { hidden: [] },
+    links: DEFAULT_SITE_LINKS,
   },
+})
+
+describe('site link templates', () => {
+  it('fill the identifier in', () => {
+    expect(fillLinkTemplate('https://x.example/{nip19}/{nip19}', 'npub1abc')).toBe(
+      'https://x.example/npub1abc/npub1abc'
+    )
+  })
 })
 
 describe('parseInstanceConfig site', () => {
@@ -50,6 +61,9 @@ describe('parseInstanceConfig site', () => {
     ['tagline', { tagline: 3 }],
     ['hidden', { videos: { hidden: ['nope'] } }],
     ['hidden missing', { videos: {} }],
+    ['link over http', { links: { ...good().site.links, profile: 'http://x.example/{nip19}' } }],
+    ['link without placeholder', { links: { ...good().site.links, note: 'https://x.example/' } }],
+    ['links missing', { links: undefined }],
   ])('rejects an invalid %s', (_name, patch) => {
     expect(withSite({ ...good().site, ...patch }).ok).toBe(false)
   })

@@ -1,6 +1,12 @@
 import { nip19 } from 'nostr-tools'
 import { toHiddenVideoRef } from '@nostube/core/hidden-videos'
-import { SITE_FONTS, validateSite, type SiteFont } from '@nostube/core/instance-config'
+import {
+  DEFAULT_SITE_LINKS,
+  SITE_FONTS,
+  validateSite,
+  type InstanceSite,
+  type SiteFont,
+} from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
 
 /** The form's own shape: lists as one entry per line, numbers as typed. */
@@ -10,6 +16,7 @@ export interface Draft {
   accent: string
   font: SiteFont
   hiddenText: string
+  links: InstanceSite['links']
   creatorsText: string
   writersText: string
   videoSourcesText: string
@@ -33,6 +40,7 @@ export function toDraft(c: AdminConfig): Draft {
     accent: c.site.theme.accent,
     font: c.site.theme.font,
     hiddenText: c.site.videos.hidden.join('\n'),
+    links: { ...c.site.links },
     creatorsText: c.creators.join('\n'),
     writersText: c.allowedWriters.join('\n'),
     videoSourcesText: c.videoSources.join('\n'),
@@ -95,8 +103,17 @@ export function fromDraft(d: Draft): DraftResult {
     tagline: d.tagline.trim(),
     theme: { accent: d.accent.toLowerCase(), font: d.font },
     videos: { hidden: [...new Set(hidden)] },
+    links: {
+      profile: d.links.profile.trim(),
+      video: d.links.video.trim(),
+      note: d.links.note.trim(),
+    },
   }
-  errors.push(...validateSite(site).filter(e => !e.includes('hidden')))
+  errors.push(
+    ...validateSite(site)
+      .filter(e => !e.includes('hidden'))
+      .map(e => (e.startsWith('site.links.') ? `Links: ${e.slice('site.links.'.length)}` : e))
+  )
   if (!SITE_FONTS.includes(d.font)) errors.push('Choose one of the fonts.')
   const creators = keys('Creators', d.creatorsText, errors)
   const allowedWriters = keys('Allowed writers', d.writersText, errors)
@@ -144,4 +161,34 @@ export function setRefHidden(hiddenText: string, refs: string | string[], hidden
   const all = Array.isArray(refs) ? refs : [refs]
   const kept = toLines(hiddenText).filter(line => !all.includes(refOf(line)))
   return (hidden ? [...kept, all[0]] : kept).join('\n')
+}
+
+/** Ready-made choices for where links to other Nostr content go. */
+export const LINK_PRESETS: { id: string; label: string; links: InstanceSite['links'] }[] = [
+  {
+    id: 'default',
+    label: 'nostu.be for videos, njump.me for people and notes',
+    links: DEFAULT_SITE_LINKS,
+  },
+  {
+    id: 'njump',
+    label: 'njump.me for everything',
+    links: {
+      profile: 'https://njump.me/{nip19}',
+      video: 'https://njump.me/{nip19}',
+      note: 'https://njump.me/{nip19}',
+    },
+  },
+]
+
+/** The preset the links match, or `custom`. */
+export function linkPresetOf(links: InstanceSite['links']): string {
+  return (
+    LINK_PRESETS.find(
+      p =>
+        p.links.profile === links.profile &&
+        p.links.video === links.video &&
+        p.links.note === links.note
+    )?.id ?? 'custom'
+  )
 }

@@ -83,6 +83,39 @@ pub struct Site {
     /// Videos the site does not show: `<kind>:<pubkey hex>:<d>` for addressable events,
     /// or the event id (64 hex) for the others. Everything else of the creators is shown.
     pub hidden_videos: Vec<String>,
+    /// Where links to Nostr content outside the site go.
+    pub links: Links,
+}
+
+/// URL templates with `{nip19}` where the npub, nprofile, naddr, nevent or note identifier goes.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct Links {
+    pub profile: String,
+    pub video: String,
+    pub note: String,
+}
+
+impl Default for Links {
+    fn default() -> Self {
+        Links {
+            profile: "https://njump.me/{nip19}".into(),
+            video: "https://nostu.be/v/{nip19}".into(),
+            note: "https://njump.me/{nip19}".into(),
+        }
+    }
+}
+
+fn check_link(name: &str, template: &str) -> Result<(), BoxError> {
+    let ok = template.starts_with("https://")
+        && template.len() > "https://".len()
+        && template.contains("{nip19}")
+        && !template.chars().any(char::is_whitespace);
+    if ok {
+        Ok(())
+    } else {
+        Err(format!("site.links.{name} must be an https URL containing {{nip19}}: {template}").into())
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq)]
@@ -95,7 +128,13 @@ pub enum Font {
 
 impl Default for Site {
     fn default() -> Self {
-        Site { tagline: String::new(), accent: "#6d28d9".into(), font: Font::Sans, hidden_videos: vec![] }
+        Site {
+            tagline: String::new(),
+            accent: "#6d28d9".into(),
+            font: Font::Sans,
+            hidden_videos: vec![],
+            links: Links::default(),
+        }
     }
 }
 
@@ -108,6 +147,9 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
     if !(a.len() == 7 && a[0] == b'#' && a[1..].iter().all(u8::is_ascii_hexdigit)) {
         return Err(format!("site.accent must be #rrggbb: {}", site.accent).into());
     }
+    check_link("profile", &site.links.profile)?;
+    check_link("video", &site.links.video)?;
+    check_link("note", &site.links.note)?;
     for v in &site.hidden_videos {
         let ok = is_hex64(v)
             || matches!(v.splitn(3, ':').collect::<Vec<_>>().as_slice(),
@@ -292,6 +334,11 @@ impl Config {
                 "tagline": self.site.tagline,
                 "theme": { "accent": self.site.accent, "font": self.site.font },
                 "videos": { "hidden": self.site.hidden_videos },
+                "links": {
+                    "profile": self.site.links.profile,
+                    "video": self.site.links.video,
+                    "note": self.site.links.note,
+                },
             },
         })
     }
@@ -477,7 +524,7 @@ tls = {{ mode = "local-ca" }}
             interaction_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
-            site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, hidden_videos: vec![] },
+            site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, ..Site::default() },
         };
         let next = cfg.with_edits(&edited).unwrap();
         assert_eq!(next.site.tagline, "New");
@@ -486,5 +533,25 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.revision, cfg.revision + 1);
         let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
         assert!(cfg.with_edits(&bad).is_err());
+    }
+
+    #[test]
+    fn site_links_have_defaults_and_must_be_https_templates() {
+        let cfg = Config::parse(&sample("")).unwrap();
+        assert_eq!(cfg.public_json()["site"]["links"]["video"], "https://nostu.be/v/{nip19}");
+        let custom = Config::parse(&sample(
+            "[site.links]\nprofile = \"https://example.org/p/{nip19}\"\nvideo = \"https://example.org/v/{nip19}\"\nnote = \"https://example.org/n/{nip19}\"\n",
+        ))
+        .unwrap();
+        assert_eq!(custom.site.links.profile, "https://example.org/p/{nip19}");
+        for bad in [
+            "profile = \"http://example.org/{nip19}\"",
+            "profile = \"https://example.org/\"",
+            "profile = \"https://exa mple.org/{nip19}\"",
+            "profile = \"\"",
+            "other = \"https://example.org/{nip19}\"",
+        ] {
+            assert!(Config::parse(&sample(&format!("[site.links]\n{bad}\n"))).is_err(), "{bad}");
+        }
     }
 }

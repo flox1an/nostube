@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { buildShareLinks } from '@nostube/core/share-links'
 import { getPublishDate, type VideoEvent } from '@nostube/core/video-event'
 import { formatDate } from '@nostube/widgets'
+import { RichTextContent } from '@nostube/widgets/components/RichTextContent'
 import ShareButton from '@nostube/widgets/components/ShareButton'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { VideoPlayer } from '@nostube/widgets/player'
@@ -11,7 +12,9 @@ import { AgeConfirm } from './AgeConfirm'
 import { Breadcrumb } from './Breadcrumb'
 import type { AgeGate } from './use-age-gate'
 import { playerBoxStyle } from './player-box'
+import { siteLinks } from './site-links'
 import { useEscapeToHome } from './use-escape-to-home'
+import { useSeekEvents } from './use-seek-events'
 import { useVideoById } from './use-video-by-id'
 import { videoPath } from './video-path'
 
@@ -87,6 +90,11 @@ function VideoDetails({
   authorName?: string
 }) {
   const [shareOpen, setShareOpen] = useState(false)
+  const [mediaElement, setMediaElement] = useState<HTMLMediaElement | null>(null)
+  useSeekEvents(mediaElement)
+  const [searchParams] = useSearchParams()
+  const startAt = Math.max(0, Number.parseInt(searchParams.get('t') ?? '', 10) || 0)
+  const links = useMemo(() => siteLinks(config), [config])
   // The canonical origin (not whatever host the viewer used) makes the link and the embed stable.
   const shareUrl = `${config.origin}${videoPath(video)}`
   const shareLinks = useMemo(
@@ -118,6 +126,8 @@ function VideoDetails({
             title={video.title}
             authorName={authorName}
             className="h-full w-full"
+            initialPlayPos={startAt}
+            onVideoElementReady={setMediaElement}
           />
         </div>
       </div>
@@ -134,7 +144,13 @@ function VideoDetails({
         />
       </div>
       {video.description && (
-        <p className="whitespace-pre-line text-sm text-muted-foreground">{video.description}</p>
+        <RichTextContent
+          content={video.description}
+          videoLink={video.link}
+          authorPubkey={video.pubkey}
+          links={links}
+          className="break-words text-sm text-muted-foreground [&_a]:text-primary [&_a]:underline-offset-2 [&_a:hover]:underline"
+        />
       )}
       {video.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Tags">

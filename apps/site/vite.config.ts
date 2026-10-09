@@ -50,6 +50,11 @@ function devConfig(env: NodeJS.ProcessEnv): Plugin {
               tagline: '',
               theme: { accent: '#6d28d9', font: 'sans' },
               videos: { hidden: [] },
+              links: {
+                profile: 'https://njump.me/{nip19}',
+                video: 'https://nostu.be/v/{nip19}',
+                note: 'https://njump.me/{nip19}',
+              },
             },
           })
         )

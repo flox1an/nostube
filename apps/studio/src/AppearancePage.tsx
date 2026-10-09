@@ -12,7 +12,7 @@ import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { Textarea } from '@nostube/widgets/components/textarea'
 import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
-import type { Draft } from './draft'
+import { LINK_PRESETS, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
 
 const FONT_LABELS: Record<SiteFont, string> = {
@@ -44,15 +44,8 @@ export function AppearancePage({ draft, update }: PageProps) {
 
   useEffect(() => {
     if (!preview.current || !ACCENT.test(draft.accent)) return
-    applyTheme(
-      {
-        tagline: draft.tagline,
-        theme: { accent: draft.accent, font: draft.font },
-        videos: { hidden: [] },
-      },
-      preview.current
-    )
-  }, [draft.accent, draft.font, draft.tagline])
+    applyTheme({ theme: { accent: draft.accent, font: draft.font } }, preview.current)
+  }, [draft.accent, draft.font])
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -142,6 +135,67 @@ export function AppearancePage({ draft, update }: PageProps) {
                 ))}
               </div>
             </fieldset>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Links to other Nostr content</CardTitle>
+            <CardDescription>
+              A description can mention people, videos of other creators and notes. Your site opens
+              your own videos itself; everything else goes to the viewer you choose here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Field id="link-preset" label="Open them on">
+              <select
+                id="link-preset"
+                value={linkPresetOf(draft.links)}
+                onChange={e => {
+                  const preset = LINK_PRESETS.find(p => p.id === e.target.value)
+                  if (preset) update({ links: { ...preset.links } })
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {LINK_PRESETS.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+                {linkPresetOf(draft.links) === 'custom' && <option value="custom">Custom</option>}
+              </select>
+            </Field>
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted-foreground">Edit the addresses</summary>
+              <div className="space-y-3 pt-3">
+                {(
+                  [
+                    ['profile', 'People'],
+                    ['video', 'Videos'],
+                    ['note', 'Notes'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <Field
+                    key={key}
+                    id={`link-${key}`}
+                    label={label}
+                    hint={
+                      key === 'profile'
+                        ? 'An https:// address with {nip19} where the identifier goes.'
+                        : undefined
+                    }
+                  >
+                    <Input
+                      id={`link-${key}`}
+                      value={draft.links[key]}
+                      className="font-mono text-xs"
+                      spellCheck={false}
+                      onChange={e => update({ links: { ...draft.links, [key]: e.target.value } })}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </details>
           </CardContent>
         </Card>
 

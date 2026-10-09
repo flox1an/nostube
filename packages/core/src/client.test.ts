@@ -1,3 +1,4 @@
+import { DEFAULT_SITE_LINKS } from './instance-config'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { delay, from, lastValueFrom, throwError, toArray } from 'rxjs'
 import type { Filter, NostrEvent } from 'nostr-tools'
@@ -133,7 +134,12 @@ describe('instance scoping', () => {
     videoSources: ['wss://videos.example'],
     interactionRelays: ['wss://interact.example'],
     search: { mode: 'off' },
-    site: { tagline: '', theme: { accent: '#6d28d9', font: 'sans' }, videos: { hidden: [] } },
+    site: {
+      tagline: '',
+      theme: { accent: '#6d28d9', font: 'sans' },
+      videos: { hidden: [] },
+      links: DEFAULT_SITE_LINKS,
+    },
   }
 
   afterEach(() => {

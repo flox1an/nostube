@@ -499,6 +499,16 @@ struct SiteBody {
     tagline: String,
     theme: ThemeBody,
     videos: VideosBody,
+    links: LinksBody,
+}
+
+/// All three are required: an empty `links` object must not silently mean the defaults.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LinksBody {
+    profile: String,
+    video: String,
+    note: String,
 }
 
 #[derive(Deserialize)]
@@ -579,6 +589,11 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
             accent: put.site.theme.accent,
             font: put.site.theme.font,
             hidden_videos: put.site.videos.hidden,
+            links: config::Links {
+                profile: put.site.links.profile,
+                video: put.site.links.video,
+                note: put.site.links.note,
+            },
         },
     };
     // Validate first; nothing is written unless the whole edit checks out (#7).
@@ -886,7 +901,7 @@ mod tests {
             "interactionRelays": ["wss://relay.example"],
             "search": { "mode": "external", "url": "https://search.example" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
-            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] } }
+            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" } }
         })
     }
 
@@ -938,6 +953,13 @@ mod tests {
             (json, put_body("#112233").replace("Renamed", "  ")),
             (json, {
                 let mut v = put_value("#112233");
+                v["site"]["links"] = serde_json::json!({});
+                v.to_string()
+            }),
+            (json, put_body("#112233").replace("https://example.org/p/{nip19}", "http://example.org/p/{nip19}")),
+            (json, put_body("#112233").replace("https://example.org/n/{nip19}", "https://example.org/n/")),
+            (json, {
+                let mut v = put_value("#112233");
                 v.as_object_mut().unwrap().remove("storage");
                 v.to_string()
             }),
@@ -966,6 +988,7 @@ mod tests {
         assert_eq!((after.revision, after.title.as_str()), (5, "Renamed"));
         assert_eq!((after.site.accent.as_str(), after.site.tagline.as_str()), ("#112233", "Hi"));
         assert_eq!(after.site.hidden_videos, vec![format!("34235:{PK}:intro")]);
+        assert_eq!(after.site.links.video, "https://example.org/v/{nip19}");
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert_eq!(after.search, Search::External { url: "https://search.example".into() });

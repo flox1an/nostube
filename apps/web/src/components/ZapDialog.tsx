@@ -7,12 +7,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { EmojiPicker } from '@/components/EmojiPicker'
 import { useProfile, useEventZaps } from '@/hooks'

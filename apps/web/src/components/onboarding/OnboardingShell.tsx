@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import { cn } from '@/lib/utils'
 
 export interface OnboardingStepInfo {

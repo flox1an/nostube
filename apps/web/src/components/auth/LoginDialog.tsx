@@ -3,18 +3,18 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Shield, Upload, AlertCircle, QrCode, ExternalLink } from 'lucide-react'
-import { Button } from '@/components/ui/button.tsx'
-import { Input } from '@/components/ui/input.tsx'
-import { Badge } from '@/components/ui/badge.tsx'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Badge } from '@nostube/widgets/components/badge'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog.tsx'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx'
-import { Alert, AlertDescription } from '@/components/ui/alert.tsx'
+} from '@nostube/widgets/components/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import { useLoginActions } from '@/hooks/useLoginActions'
 import { useTranslation } from 'react-i18next'
 import { QRCodeLogin } from './QRCodeLogin'

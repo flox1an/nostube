@@ -4,7 +4,7 @@ import { Loader2, Smartphone, RefreshCw, Copy, Check, ExternalLink } from 'lucid
 import { NostrConnectSigner } from 'applesauce-signers'
 import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
 import { DEFAULT_RELAYS, subscriptionMethod, publishMethod } from '@/nostr/core'
 import { useTranslation } from 'react-i18next'

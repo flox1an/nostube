@@ -5,12 +5,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@nostube/widgets/components/tabs'
+import { Textarea } from '@nostube/widgets/components/textarea'
 import { Clock, Mail, Send, Globe, Share2, Link as LinkIcon, Code } from 'lucide-react'
 import { TwitterIcon, FacebookIcon } from '@/components/icons/brands'
 import React, { useState, useMemo } from 'react'

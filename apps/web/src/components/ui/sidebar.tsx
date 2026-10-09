@@ -5,11 +5,11 @@ import { PanelLeft } from 'lucide-react'
 
 import { useIsMobile } from '@nostube/widgets/hooks/useIsMobile'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Separator } from '@nostube/widgets/components/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import {
   Tooltip,
   TooltipContent,

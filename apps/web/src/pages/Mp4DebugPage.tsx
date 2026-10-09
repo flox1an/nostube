@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- debug page logging raw mp4box structures */
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@nostube/widgets/components/card'
+import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Loader2, Info, AlertCircle } from 'lucide-react'
 import * as MP4Box from 'mp4box'
 import type { Movie } from 'mp4box'

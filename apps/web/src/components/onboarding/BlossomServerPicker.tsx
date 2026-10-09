@@ -6,10 +6,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { Link } from 'lucide-react'
 import { ServerCard } from './ServerCard'
 import { RECOMMENDED_BLOSSOM_SERVERS } from '@/lib/blossom-servers'

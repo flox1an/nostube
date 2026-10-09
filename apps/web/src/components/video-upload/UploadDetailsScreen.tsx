@@ -5,8 +5,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
-import { Badge } from '@/components/ui/badge'
+} from '@nostube/widgets/components/accordion'
+import { Badge } from '@nostube/widgets/components/badge'
 import type { VideoVariant } from '@/lib/video-processing'
 import type { BrowserTranscodeState, SubtitleVariant, TaggedPerson } from '@/types/upload-draft'
 import type { TranscodeStatus } from '@/hooks/useDvmTranscode'

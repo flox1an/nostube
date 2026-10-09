@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { Zap, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEventZaps, useCurrentUser } from '@/hooks'

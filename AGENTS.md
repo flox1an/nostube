@@ -25,7 +25,7 @@ nostube is a Nostr-based video platform built with React 18, TypeScript, Tailwin
 
 ## Project Structure & Modules
 
-`src/components/` hosts UI, with reusable primitives in `components/ui/`. Hooks live in `src/hooks/`, shared helpers in `src/lib/`, and nostr-specific logic in `src/nostr/` plus background work in `src/workers/`. Routing is in `AppRouter.tsx` and `src/pages/`, state providers in `src/providers/` and `src/contexts/`. Tests sit in `src/test/` and alongside modules as `*.test.ts(x)`. Static assets live under `public/`, custom ESLint rules under `eslint-rules/`, and production bundles go to `dist/`.
+`src/components/` hosts UI, with the app-bound primitives in `components/ui/`. The generic shadcn primitives (button, dialog, input, select, tabs, ...) live in `@nostube/widgets/components/*` and import `cn` from `../cn`; add new shared primitives there by hand (the shadcn CLI writes to `components/ui/`), keep app-bound ones (hooks, relays, router) in web. Hooks live in `src/hooks/`, shared helpers in `src/lib/`, and nostr-specific logic in `src/nostr/` plus background work in `src/workers/`. Routing is in `AppRouter.tsx` and `src/pages/`, state providers in `src/providers/` and `src/contexts/`. Tests sit in `src/test/` and alongside modules as `*.test.ts(x)`. Static assets live under `public/`, custom ESLint rules under `eslint-rules/`, and production bundles go to `dist/`.
 
 ## Applesauce Patterns & Custom Hooks
 

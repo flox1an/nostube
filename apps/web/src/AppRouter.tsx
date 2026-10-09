@@ -21,7 +21,7 @@ import {
   UploadPageLoader,
   VideoNotesPageLoader,
 } from '@/components/page-loaders'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { nip19 } from 'nostr-tools'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 

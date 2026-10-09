@@ -6,8 +6,12 @@ import { useCurrentUser } from '../hooks/useCurrentUser'
 import { NotificationDropdown } from './NotificationDropdown'
 import type { Notification } from '../types/notification'
 import { isVideoNotification, isUploadNotification, isZapNotification } from '../types/notification'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui/dropdown-menu'
-import { Button } from './ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@nostube/widgets/components/dropdown-menu'
+import { Button } from '@nostube/widgets/components/button'
 
 export function NotificationBell() {
   const { user } = useCurrentUser()

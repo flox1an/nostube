@@ -1,7 +1,7 @@
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'

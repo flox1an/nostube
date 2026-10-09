@@ -1,6 +1,6 @@
 import type { SubtitleVariant } from '@/types/upload-draft'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { Trash2, LucideBookUp, Copy } from 'lucide-react'
 import {
   Table,
@@ -9,14 +9,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@nostube/widgets/components/table'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 import {
   Tooltip,
   TooltipContent,

@@ -3,8 +3,8 @@ import type { NostrEvent } from 'nostr-tools'
 import { Link } from 'react-router-dom'
 import { Check, Lock, X, AlertTriangle, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Progress } from '@nostube/widgets/components/progress'
 import { TranscodeVariantPicker } from '@/components/video-upload/TranscodeVariantPicker'
 import type { BlossomServer } from '@nostube/core'
 import { useCurrentUser } from '@/hooks/useCurrentUser'

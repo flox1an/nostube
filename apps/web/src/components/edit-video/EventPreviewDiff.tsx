@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
 
 interface EventPreviewDiffProps {

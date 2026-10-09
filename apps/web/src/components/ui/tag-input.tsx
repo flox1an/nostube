@@ -2,9 +2,9 @@ import * as React from 'react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Input } from '@nostube/widgets/components/input'
+import { Badge } from '@nostube/widgets/components/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
 import { useTagIndex, type TagIndexEntry } from '@/hooks'
 
 interface TagInputProps {

@@ -1,6 +1,6 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSubscriptionsVideos } from '@/hooks'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'

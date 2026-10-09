@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Button } from './button'
+import { Button } from '@nostube/widgets/components/button'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RichTextContent } from '@/components/RichTextContent'

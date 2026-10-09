@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+} from '@nostube/widgets/components/dialog'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
 import { LanguageSelect } from '@/components/ui/language-select'
 import { TagInput } from '@/components/ui/tag-input'
 import { Tag, Loader2 } from 'lucide-react'

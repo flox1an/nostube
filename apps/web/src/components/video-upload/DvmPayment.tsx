@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { Loader2, Zap, Wallet, AlertCircle, ExternalLink } from 'lucide-react'
 import { Wallet as CashuWallet, getEncodedToken, normalizeProofAmounts } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'

@@ -24,7 +24,7 @@ import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { useProfile, useMuteUser, useNostrPublish, useAppContext } from '@/hooks'
 import { isBetaUser } from '@/lib/beta-users'
 import { nowInSecs } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
@@ -41,13 +41,13 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import { getDateLocale } from '@/lib/date-locale'
 import type { Comment } from './types'
 

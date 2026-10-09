@@ -1,5 +1,5 @@
 import { VideoCardSkeleton } from '@/components/VideoCard'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { cn } from '@/lib/utils'
 
 /**

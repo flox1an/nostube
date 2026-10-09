@@ -19,7 +19,7 @@ import {
   useUserRelays,
   useReportedPubkeys,
 } from '@/hooks'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { CommentInput } from '@/components/CommentInput'
 import { AuthDialog } from '@/components/auth/AuthDialog'
 import { nowInSecs } from '@/lib/utils'

@@ -8,7 +8,7 @@ import {
 } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useMemo, useEffect, useState, useRef } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { useNavigate } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'

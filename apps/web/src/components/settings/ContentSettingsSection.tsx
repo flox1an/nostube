@@ -10,10 +10,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+} from '@nostube/widgets/components/alert-dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Label } from '@nostube/widgets/components/label'
+import { Switch } from '@nostube/widgets/components/switch'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import {
   Select,
@@ -21,7 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 import { type NsfwFilter, type PreferredQuality } from '@nostube/core'
 import { NSFW_SAFETY_ENABLED } from '@nostube/core/content-safety'
 

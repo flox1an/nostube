@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { Ban, EyeOff, Flag, MoreVertical, VideoOff, Volume2, VolumeX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import { ReportDialog } from '@/components/ReportDialog'
 import { useCurrentUser } from '@/hooks'
 import { useMuteUser } from '@/hooks/useMuteUser'

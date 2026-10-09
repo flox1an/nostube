@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Separator } from '@/components/ui/separator'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Separator } from '@nostube/widgets/components/separator'
 import { TagInput } from '@/components/ui/tag-input'
 import { Pencil, Loader2 } from 'lucide-react'
 import { LanguageSelect } from '@/components/ui/language-select'

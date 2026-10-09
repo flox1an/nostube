@@ -8,8 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
+} from '@nostube/widgets/components/dialog'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { formatDateTime } from '@nostube/core/format-utils'

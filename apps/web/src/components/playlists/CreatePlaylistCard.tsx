@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Plus, Loader2, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
+import { Switch } from '@nostube/widgets/components/switch'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import { useCurrentUser } from '@/hooks'
 import { usePrivateRelays } from '@/contexts/PrivateRelaysContext'
 

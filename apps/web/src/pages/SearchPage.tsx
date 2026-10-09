@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { SearchFiltersButton } from '@/components/SearchFiltersButton'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useSearchVideos } from '@/hooks/useSearchVideos'
 import { useCallback, useEffect, useMemo } from 'react'

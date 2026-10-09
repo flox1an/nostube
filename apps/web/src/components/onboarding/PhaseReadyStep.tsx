@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@nostube/widgets/components/button'
+import { Card, CardContent } from '@nostube/widgets/components/card'
 import { Compass, Upload, Settings } from 'lucide-react'
 
 interface PhaseReadyStepProps {

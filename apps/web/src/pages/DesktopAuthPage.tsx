@@ -1,7 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { useState } from 'react'
 

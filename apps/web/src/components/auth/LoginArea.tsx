@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { User } from 'lucide-react'
-import { Button } from '@/components/ui/button.tsx'
+import { Button } from '@nostube/widgets/components/button'
 import { AuthDialog } from './AuthDialog'
 import { AccountSwitcher } from './AccountSwitcher'
 import { cn } from '@/lib/utils'

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { ChevronLeft, ChevronRight, Save, Trash2 } from 'lucide-react'
 
 export type UploadScreen = 'source' | 'details' | 'review'

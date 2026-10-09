@@ -6,8 +6,8 @@ import { processEvent } from '@nostube/core/video-event'
 import { buildVideoUrl } from '@/utils/video-utils'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { CreatePlaylistDialog } from './CreatePlaylistDialog'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@nostube/widgets/components/card'
+import { Button } from '@nostube/widgets/components/button'
 import { Trash2 } from 'lucide-react'
 import {
   AlertDialog,
@@ -18,22 +18,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
+} from '@nostube/widgets/components/accordion'
 import { Loader2 } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
 import { nip19 } from 'nostr-tools'
 import { Pencil } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import { formatDateSimple } from '@nostube/core/format-utils'
 
 interface PlaylistVideoItemProps {

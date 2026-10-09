@@ -1,4 +1,4 @@
-import { Checkbox } from '@/components/ui/checkbox'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
 import {
   BROWSER_TRANSCODE_AUDIO_BITRATE,
   assignMp4ResolutionCodecs,

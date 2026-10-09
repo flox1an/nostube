@@ -5,10 +5,10 @@ import { Link } from 'react-router-dom'
 import { type NostrEvent } from 'nostr-tools'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@nostube/widgets/components/badge'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@nostube/widgets/components/separator'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { useAppContext, useMuteUser, useNostrPublish } from '@/hooks'
 import { use$, useEventStore } from 'applesauce-react/hooks'
@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,7 +32,7 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import {
   MoreVertical,
   TrashIcon,
@@ -53,7 +53,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { nowInSecs, cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { AddToPlaylistButton } from '@/components/AddToPlaylistButton'
 import { VideoReactionButtons } from '@/components/VideoReactionButtons'
 import ShareButton from '@/components/ShareButton'

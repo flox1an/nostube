@@ -6,11 +6,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
+import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
 import { useTranslation } from 'react-i18next'
 import { useNostrPublish } from '@/hooks/useNostrPublish'
 import { useAppContext } from '@/hooks/useAppContext'

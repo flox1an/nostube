@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import { useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type TrustScoreResult, getGlobalScore } from '@/nostr/contextvm'

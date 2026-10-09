@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { clearBrowserCacheDataOnReload } from '@/lib/cache-clear'
 import { resetNostrRuntimeCache } from '@/nostr/core'
 import {
@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import { Trash2, Loader2 } from 'lucide-react'
 
 export function CacheSettingsSection() {

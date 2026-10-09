@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@nostube/widgets/components/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@nostube/widgets/components/card'
 import { FollowImportStep } from './FollowImportStep'
 
 interface PhaseFeedStepProps {

@@ -4,7 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 
 import { LANGUAGES } from '@/lib/languages'
 

@@ -5,8 +5,8 @@ import { isVideoNotification, isUploadNotification, isZapNotification } from '..
 import { NotificationItem } from './NotificationItem'
 import { UploadNotificationItem } from './UploadNotificationItem'
 import { ZapNotificationItem } from './ZapNotificationItem'
-import { ScrollArea } from './ui/scroll-area'
-import { Button } from './ui/button'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
+import { Button } from '@nostube/widgets/components/button'
 
 interface NotificationDropdownProps {
   notifications: Notification[]

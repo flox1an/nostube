@@ -13,7 +13,7 @@ import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn, nowInSecs } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { ZapButton } from './ZapButton'
 import { ReactionsDialog } from './ReactionsDialog'
 

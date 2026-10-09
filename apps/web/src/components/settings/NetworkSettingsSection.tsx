@@ -2,11 +2,11 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { useAppContext, useSelectedPreset, useUserBlossomServers } from '@/hooks'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Button } from '@nostube/widgets/components/button'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
+import { Badge } from '@nostube/widgets/components/badge'
 import { XIcon, Cog, LoaderIcon, ChevronDown, ChevronRight, LockKeyhole } from 'lucide-react'
 import { normalizeRelayUrl, cn } from '@/lib/utils'
 import { isBlossomServerBlocked } from '@/constants/relays'
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import { toast } from '@/hooks/useToast'
 import {
   type RelayTag,

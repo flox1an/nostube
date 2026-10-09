@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card } from '@nostube/widgets/components/card'
+import { Button } from '@nostube/widgets/components/button'
 import { ImageOff, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { UploadDraft } from '@/types/upload-draft'

@@ -6,7 +6,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import { useTheme } from '@/providers/theme-provider'
 
 export function ThemeToggle() {

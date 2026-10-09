@@ -1,16 +1,16 @@
 import { useState, useMemo } from 'react'
 import { Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Badge } from '@nostube/widgets/components/badge'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PeoplePicker, type SelectedPerson } from '@/components/ui/people-picker'
 import { useNostrPublish } from '@/hooks/useNostrPublish'

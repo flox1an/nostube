@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,11 +10,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import { Trash2, Loader2 } from 'lucide-react'
 import { useMissingVideos } from '@/hooks/useMissingVideos'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@nostube/widgets/components/badge'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { RefreshCw } from 'lucide-react'
 import { formatDistance } from 'date-fns/formatDistance'
 import { getDateLocale } from '@/lib/date-locale'

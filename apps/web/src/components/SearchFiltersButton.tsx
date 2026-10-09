@@ -1,10 +1,10 @@
 import { SlidersHorizontal, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Separator } from '@/components/ui/separator'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Label } from '@nostube/widgets/components/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
+import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
+import { Separator } from '@nostube/widgets/components/separator'
 import {
   DEFAULT_SEARCH_FILTERS,
   getActiveSearchFilterCount,

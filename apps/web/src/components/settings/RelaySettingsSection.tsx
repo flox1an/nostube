@@ -3,17 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { useAppContext, useSelectedPreset } from '@/hooks'
 import { type RelayTag } from '@nostube/core'
 import { normalizeRelayUrl } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { XIcon, Cog } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '../ui/badge'
+} from '@nostube/widgets/components/dropdown-menu'
+import { Badge } from '@nostube/widgets/components/badge'
 
 export function RelaySettingsSection() {
   const { t } = useTranslation()

@@ -5,9 +5,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
+} from '@nostube/widgets/components/select'
+import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
+import { Label } from '@nostube/widgets/components/label'
 import { useTheme } from '@/providers/theme-provider'
 import { availableThemes } from '@/lib/themes'
 

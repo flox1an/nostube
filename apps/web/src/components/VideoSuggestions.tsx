@@ -12,7 +12,7 @@ import {
 import { buildDesktopPlayerUrl, buildVideoPath } from '@/utils/video-utils'
 import { getKindsForType, type VideoType } from '@nostube/core/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'

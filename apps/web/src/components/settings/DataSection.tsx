@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useCurrentUser, useFollowSet } from '@/hooks'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Switch } from '@/components/ui/switch'
+import { Button } from '@nostube/widgets/components/button'
+import { Progress } from '@nostube/widgets/components/progress'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
+import { Switch } from '@nostube/widgets/components/switch'
 import { Download, CheckCircle2, X } from 'lucide-react'
 
 // ─── View Sharing ────────────────────────────────────

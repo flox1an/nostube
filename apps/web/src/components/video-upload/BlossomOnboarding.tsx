@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@nostube/widgets/components/card'
+import { Button } from '@nostube/widgets/components/button'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Upload, Server, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'

@@ -1,6 +1,6 @@
 import { useCurrentUser } from '@/hooks'
 import { useFollowSet } from '@/hooks/useFollowSet'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
 import { UserPlusIcon, UserCheckIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'

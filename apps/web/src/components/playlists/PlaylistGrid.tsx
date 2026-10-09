@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createTimelineLoader } from 'applesauce-loaders/loaders'
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { PlaylistCard } from './PlaylistCard'
 import { CreatePlaylistCard } from './CreatePlaylistCard'
 import type { Playlist } from '@/hooks/usePlaylist'

@@ -22,7 +22,7 @@ import {
 } from '@nostube/core'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   getCachedPreset,
   setCachedPreset,

@@ -6,10 +6,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Label } from '@nostube/widgets/components/label'
 import {
   Loader2,
   Copy,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFollowSet } from '@/hooks/useFollowSet'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { markFollowImported, markFollowSkipped } from '@/lib/onboarding-progress'
 

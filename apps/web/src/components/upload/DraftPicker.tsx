@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import type { UploadDraft } from '@/types/upload-draft'

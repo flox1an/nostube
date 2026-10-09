@@ -19,7 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 
 interface SettingsCategory {
   id: string

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@nostube/widgets/components/button'
+import { Badge } from '@nostube/widgets/components/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import { ReplaceVideoFlow } from './ReplaceVideoFlow'
 import { type ParsedImeta } from '@/lib/imeta-builder'
 import { Play, ArrowRightLeft, Plus, Trash2, Link as LinkIcon, HardDrive } from 'lucide-react'

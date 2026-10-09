@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { EyeOff, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import type { ContentSafetyGate as ContentSafetyGateState } from '@nostube/core/content-safety'
 
 export type ContentSafetyScreenState = 'hidden' | 'loading'

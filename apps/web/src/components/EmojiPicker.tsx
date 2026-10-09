@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Smile } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@nostube/widgets/components/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
 
 import { EMOJI_CATEGORIES } from '@/constants/emojis'
 

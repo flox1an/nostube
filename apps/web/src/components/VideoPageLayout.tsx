@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { PanelRight } from 'lucide-react'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useTranslation } from 'react-i18next'

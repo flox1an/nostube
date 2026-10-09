@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useSelectedPreset } from '@/hooks'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { XIcon, LoaderIcon } from 'lucide-react'
 import { type CachingServer } from '@nostube/core'
 

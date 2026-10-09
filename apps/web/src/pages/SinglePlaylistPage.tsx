@@ -20,19 +20,19 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Lock, Pencil, Trash2, AlertCircle, Loader2 } from 'lucide-react'
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoCard } from '@/components/VideoCard'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +42,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile, useCurrentUser, usePlaylists } from '@/hooks'

@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
 import { useWalletContext } from '@/contexts/WalletContext'
 import { formatSats } from '@nostube/core/zap-utils'
 import { useCurrentUser } from '@/hooks'
@@ -18,9 +18,15 @@ import {
   Radio,
   ChevronsUpDown,
 } from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@nostube/widgets/components/card'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
 import {
   Command,
   CommandEmpty,

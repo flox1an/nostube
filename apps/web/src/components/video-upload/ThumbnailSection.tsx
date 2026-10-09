@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { FileDropzone } from './FileDropzone'
 import { UploadServer } from '../UploadServer'
 import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { useTranslation } from 'react-i18next'
 import { Trash2, Check, Link as LinkIcon, Upload as UploadIcon, Film, Loader2 } from 'lucide-react'
-import { Slider } from '@/components/ui/slider'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
+import { Slider } from '@nostube/widgets/components/slider'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
+import { Input } from '@nostube/widgets/components/input'
 import { useToast } from '@/hooks/useToast'
 
 interface ThumbnailSectionProps {

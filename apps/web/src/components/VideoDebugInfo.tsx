@@ -4,13 +4,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+} from '@nostube/widgets/components/dialog'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@nostube/widgets/components/collapsible'
 import { extractBlossomHash } from '@nostube/core/video-event'
 import { useTranslation } from 'react-i18next'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,7 +22,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import {
   Check,
   Circle,

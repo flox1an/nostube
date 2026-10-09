@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { decodeProfilePointer } from '@nostube/core/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Textarea } from '@nostube/widgets/components/textarea'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoCard } from '@/components/VideoCard'
 import { PlaylistThumbnailCollage } from '@/components/playlists/PlaylistThumbnailCollage'

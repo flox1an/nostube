@@ -19,7 +19,7 @@ import { ContentSafetyGate } from '@/components/ContentSafetyGate'
 import { getAppHeight } from '@/lib/app-height'
 import { buildVideoPath } from '@/utils/video-utils'
 import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import {
   useAppContext,
   useReportedPubkeys,

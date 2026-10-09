@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Wallet, Zap, Radio, Coins } from 'lucide-react'
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { DropdownMenuItem } from '@nostube/widgets/components/dropdown-menu'
 import { useWalletContext } from '@/contexts/WalletContext'
 import { formatSats } from '@nostube/core/zap-utils'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import { WalletSection } from '@/components/settings/WalletSection'
 
 export function WalletMenuItem() {

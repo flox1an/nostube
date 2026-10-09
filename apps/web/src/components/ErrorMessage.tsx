@@ -1,6 +1,6 @@
 import { AlertCircle, WifiOff, Lock, AlertTriangle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
+import { Button } from '@nostube/widgets/components/button'
 import { type AppError } from '@/lib/error-utils'
 
 interface ErrorMessageProps {

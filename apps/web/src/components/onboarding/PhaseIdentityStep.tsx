@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@nostube/widgets/components/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@nostube/widgets/components/card'
+import { Input } from '@nostube/widgets/components/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import { QRCodeLogin } from '@/components/auth/QRCodeLogin'
 import { SeedBackupStep } from './SeedBackupStep'
 import { useCurrentUser } from '@/hooks/useCurrentUser'

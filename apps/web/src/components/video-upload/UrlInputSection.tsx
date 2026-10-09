@@ -1,6 +1,6 @@
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Button } from '@nostube/widgets/components/button'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

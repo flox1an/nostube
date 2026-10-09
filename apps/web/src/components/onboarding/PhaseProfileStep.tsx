@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Camera, Loader2 } from 'lucide-react'
 import type { Signer } from '@/lib/blossom-auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
+import { Textarea } from '@nostube/widgets/components/textarea'
 import {
   useAppContext,
   useCurrentUser,

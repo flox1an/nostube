@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx'
+} from '@nostube/widgets/components/dropdown-menu'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useNavigate } from 'react-router-dom'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
@@ -16,7 +16,7 @@ import { useProfile, removeAccountFromStorage, saveActiveAccount } from '@/hooks
 import { getDisplayName } from 'applesauce-core/helpers'
 import type { IAccount } from 'applesauce-accounts'
 import { WalletMenuItem } from './WalletMenuItem'
-import { Button } from '../ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { useTranslation } from 'react-i18next'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 
@@ -31,8 +31,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+} from '@nostube/widgets/components/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@nostube/widgets/components/dialog'
 function AccountSwitchItem({ account, onClick }: { account: IAccount; onClick: () => void }) {
   const accountProfile = useProfile({ pubkey: account.pubkey })
   const displayName = getDisplayName(accountProfile)

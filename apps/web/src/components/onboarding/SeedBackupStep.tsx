@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Label } from '@nostube/widgets/components/label'
 import { Download, Key, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import {
   encryptNsecToNcryptsec,

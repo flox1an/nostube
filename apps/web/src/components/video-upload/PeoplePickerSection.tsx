@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Label } from '@/components/ui/label'
+import { Label } from '@nostube/widgets/components/label'
 import { PeoplePicker, type SelectedPerson } from '@/components/ui/people-picker'
 
 interface PeoplePickerSectionProps {

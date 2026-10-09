@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowLeft, Check, ListPlus, Loader2, Lock, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from '@nostube/widgets/components/dialog'
 import {
   Command,
   CommandEmpty,
@@ -17,11 +17,11 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { DropdownMenuItem } from '@nostube/widgets/components/dropdown-menu'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
 import { useCurrentUser, usePlaylists, useToast } from '@/hooks'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { useTranslation } from 'react-i18next'
 
 interface AddToPlaylistButtonProps {

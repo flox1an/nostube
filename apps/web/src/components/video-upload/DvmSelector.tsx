@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import type { TrackedDvm } from '@/lib/dvm-utils'
 import { Bot, Cpu, Clock, Users } from 'lucide-react'
 

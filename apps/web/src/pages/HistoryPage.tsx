@@ -9,7 +9,7 @@ import {
   processEvent,
   type VideoEvent,
 } from '@nostube/core/video-event'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { Trash2 } from 'lucide-react'
 import {
@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+} from '@nostube/widgets/components/alert-dialog'
 import { useTranslation } from 'react-i18next'
 
 export function HistoryPage() {

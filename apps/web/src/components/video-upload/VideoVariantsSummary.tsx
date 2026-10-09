@@ -1,10 +1,10 @@
 import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { ChevronDown, ChevronUp, CheckCircle, Copy, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@nostube/widgets/components/card'
+import { Badge } from '@nostube/widgets/components/badge'
 import { VideoVariantsTable } from './VideoVariantsTable'
 
 interface VideoVariantsSummaryProps {

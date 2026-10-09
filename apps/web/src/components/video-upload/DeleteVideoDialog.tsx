@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+} from '@nostube/widgets/components/alert-dialog'
+import { Button } from '@nostube/widgets/components/button'
 import { useTranslation } from 'react-i18next'
 import type { VideoVariant } from '@/lib/video-processing'
 

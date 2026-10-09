@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LoginArea } from '@/components/auth/LoginArea'
 import { GlobalSearchBar } from '@/components/GlobalSearchBar'
 import { NotificationBell } from '@/components/NotificationBell'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { useCurrentUser } from '@/hooks'
 import { cn } from '@/lib/utils'
 import {

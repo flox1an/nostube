@@ -1,7 +1,7 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
 import { VideoCard } from '@/components/VideoCard'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { Link } from 'react-router-dom'
 import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'

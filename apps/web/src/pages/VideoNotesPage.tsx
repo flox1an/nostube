@@ -11,9 +11,9 @@ import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { formatDuration } from '@nostube/core/formatDuration'
 import { formatFileSize } from '@nostube/core/blossom-utils'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@nostube/widgets/components/card'
+import { Button } from '@nostube/widgets/components/button'
+import { Badge } from '@nostube/widgets/components/badge'
 import {
   Play,
   Import,

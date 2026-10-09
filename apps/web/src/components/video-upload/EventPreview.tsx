@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@nostube/widgets/components/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@nostube/widgets/components/collapsible'
 import { useTranslation } from 'react-i18next'
 
 interface EventPreviewProps {

@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import { Copy, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useAppContextSafe } from '@/hooks/useAppContext'

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@nostube/widgets/components/button'
+import { CardHeader, CardTitle, CardDescription } from '@nostube/widgets/components/card'
 import { ServerCard } from './ServerCard'
 import { RECOMMENDED_BLOSSOM_SERVERS, deriveServerName } from '@/lib/blossom-servers'
 import { Upload, RefreshCw, Plus } from 'lucide-react'

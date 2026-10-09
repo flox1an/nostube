@@ -1,7 +1,7 @@
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import type { VideoVariant } from '@/lib/video-processing'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Trash2,
   Play,
@@ -20,16 +20,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@nostube/widgets/components/table'
 import { useState } from 'react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@nostube/widgets/components/tooltip'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@nostube/widgets/components/dialog'
 import { HlsPreviewDialog } from './HlsPreviewDialog'
 import { normalizeUploadMedia } from '@/lib/upload-media'
 

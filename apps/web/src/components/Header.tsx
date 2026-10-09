@@ -1,5 +1,5 @@
 import { LoginArea } from '@/components/auth/LoginArea'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { MenuIcon, Upload, Search, ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAppContext } from '@/hooks/useAppContext'

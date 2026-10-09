@@ -1,11 +1,11 @@
-import { Label } from '@/components/ui/label'
+import { Label } from '@nostube/widgets/components/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@nostube/widgets/components/select'
 import { useTranslation } from 'react-i18next'
 
 interface ExpirationSectionProps {

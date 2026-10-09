@@ -1,7 +1,7 @@
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Progress } from '@/components/ui/progress'
+import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Progress } from '@nostube/widgets/components/progress'
 import {
   useDvmTranscodeManager,
   type TranscodeStatus,

@@ -1,11 +1,15 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Progress } from '@/components/ui/progress'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
+import { Button } from '@nostube/widgets/components/button'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@nostube/widgets/components/collapsible'
+import { Progress } from '@nostube/widgets/components/progress'
+import { ToggleGroup, ToggleGroupItem } from '@nostube/widgets/components/toggle-group'
 import { useVideoTranscode } from '@/hooks/useVideoTranscode'
 import type { TranscodeSourceMeta } from '@/lib/video-transcode'
 import { formatDuration } from '@nostube/core/formatDuration'

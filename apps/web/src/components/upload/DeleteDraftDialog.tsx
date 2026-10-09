@@ -8,9 +8,9 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+} from '@nostube/widgets/components/alert-dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Progress } from '@nostube/widgets/components/progress'
 import { useTranslation } from 'react-i18next'
 import type { UploadDraft } from '@/types/upload-draft'
 import { countBlobDeletionTargets, type DeleteBlobsProgress } from '@/lib/blossom-upload'

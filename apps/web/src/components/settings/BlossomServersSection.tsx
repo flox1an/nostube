@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppContext, useUserBlossomServers, useSelectedPreset } from '@/hooks'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { Cog, XIcon } from 'lucide-react'
 import { type BlossomServer, type BlossomServerTag } from '@nostube/core'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@nostube/widgets/components/badge'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-} from '@/components/ui/dropdown-menu'
+} from '@nostube/widgets/components/dropdown-menu'
 import { isBlossomServerBlocked } from '@/constants/relays'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/useToast'

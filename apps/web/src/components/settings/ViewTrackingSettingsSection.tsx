@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useAppContext } from '@/hooks'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { ScrollArea } from '@nostube/widgets/components/scroll-area'
 import { XIcon } from 'lucide-react'
 
 /**

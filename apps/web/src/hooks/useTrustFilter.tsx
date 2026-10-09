@@ -13,8 +13,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+} from '@nostube/widgets/components/alert-dialog'
+import { Button } from '@nostube/widgets/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getInstanceConfig } from '@nostube/core/instance-config'

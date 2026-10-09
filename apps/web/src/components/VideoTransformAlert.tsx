@@ -1,6 +1,6 @@
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { AlertCircle, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { useCurrentUser } from '@/hooks'
 import { useTranslation } from 'react-i18next'
 import { type VideoVariant } from '@nostube/core/video-event'

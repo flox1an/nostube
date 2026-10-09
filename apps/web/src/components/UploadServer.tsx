@@ -1,7 +1,7 @@
 import { type BlobDescriptor } from '@/lib/blossom-auth'
 import { Check, ExternalLink } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
+import { Badge } from '@nostube/widgets/components/badge'
+import { Label } from '@nostube/widgets/components/label'
 import { formatBlobUrl } from '@/lib/utils'
 
 export interface UploadServerProps {

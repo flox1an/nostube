@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
@@ -7,13 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+} from '@nostube/widgets/components/dialog'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
 import { Plus } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
 import { useFormDialog } from '@/hooks'
-import { Label } from '@/components/ui/label'
+import { Label } from '@nostube/widgets/components/label'
 import { useTranslation } from 'react-i18next'
 
 interface CreatePlaylistDialogProps {

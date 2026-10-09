@@ -5,14 +5,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@nostube/widgets/components/dialog'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Label } from '@nostube/widgets/components/label'
 import { useWalletContext } from '@/contexts/WalletContext'
 import { useCurrentUser } from '@/hooks'
 import { Loader2, ExternalLink, Radio, Coins, Lock, Unlock } from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 
 // Default Cashu mints
 const DEFAULT_CASHU_MINTS = ['https://mint.minibits.cash/Bitcoin', 'https://mint.coinos.io']

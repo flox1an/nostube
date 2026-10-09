@@ -8,11 +8,17 @@ import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { type PresetBufferList, type PresetModerationEntry } from '@nostube/core'
 import { PubkeyListEditor } from '@/components/presets/PubkeyListEditor'
 import { LoginArea } from '@/components/auth/LoginArea'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
+import { Textarea } from '@nostube/widgets/components/textarea'
+import { Label } from '@nostube/widgets/components/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@nostube/widgets/components/card'
 import { normalizeRelayUrl } from '@/lib/utils'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 

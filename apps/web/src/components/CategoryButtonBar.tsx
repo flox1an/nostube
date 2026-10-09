@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { TAG_CATEGORIES } from '@/lib/tag-categories'
 import { Check, ChevronDown, Globe, Plus, Wifi } from 'lucide-react'
 import { cn, normalizeRelayUrl } from '@/lib/utils'
@@ -11,7 +11,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
 import { useEffect, useRef, useState } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useTranslation } from 'react-i18next'

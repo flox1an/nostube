@@ -1,5 +1,5 @@
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@nostube/widgets/components/radio-group'
+import { Label } from '@nostube/widgets/components/label'
 import { Upload, Link } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

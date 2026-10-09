@@ -1,6 +1,6 @@
 import { Check, ChevronsUpDown, Wifi, Plus } from 'lucide-react'
 import { cn, normalizeRelayUrl } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Command,
   CommandEmpty,
@@ -9,7 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
 import { useState } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 

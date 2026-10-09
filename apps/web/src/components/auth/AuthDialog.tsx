@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { KeyRound, UserPlus } from 'lucide-react'
-import { Button } from '@/components/ui/button.tsx'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog.tsx'
+} from '@nostube/widgets/components/dialog'
 import { useTranslation } from 'react-i18next'
 import LoginDialog from './LoginDialog'
 import SignupDialog from './SignupDialog'

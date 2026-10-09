@@ -1,6 +1,6 @@
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { Checkbox } from '@nostube/widgets/components/checkbox'
+import { Label } from '@nostube/widgets/components/label'
+import { Input } from '@nostube/widgets/components/input'
 import { useTranslation } from 'react-i18next'
 
 interface ContentWarningProps {

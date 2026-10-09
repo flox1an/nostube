@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
-import { Button } from '@/components/ui/button'
+import { Button } from '@nostube/widgets/components/button'
 import { EmojiPicker } from '@/components/EmojiPicker'
 
 interface CommentInputProps {

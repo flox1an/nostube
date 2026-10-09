@@ -4,7 +4,7 @@
  * Loading placeholder for comments with appropriate sizing based on depth.
  */
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@nostube/widgets/components/skeleton'
 
 interface CommentSkeletonProps {
   depth?: number

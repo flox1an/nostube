@@ -29,7 +29,7 @@ export default function HiddenVideosPicker(props: PickerProps) {
   if (booted instanceof Error) {
     return (
       <p className="text-sm text-muted-foreground">
-        The videos could not be loaded ({booted.message}). You can still edit the list as text.
+        The videos could not be loaded ({booted.message}).
       </p>
     )
   }

@@ -1,6 +1,6 @@
 import { useMemo, type RefObject } from 'react'
-import type { VideoVariant } from '@/utils/video-event'
-import type { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
+import type { VideoVariant } from '@nostube/core/video-event'
+import type { PlaybackUrlLadder } from '@nostube/core/playback-url-ladder'
 import { useHls } from '../hooks/useHls'
 import { useDash } from '../hooks/useDash'
 import type { PlaybackEngine, PlaybackEngineMode, QualityOption } from './types'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { processEvent, type Event } from './video-event'
+import { processEvent, type Event } from '@nostube/core/video-event'
 
 const hash = '161734deb1ac5581dd33f5552b65370b0a78ec7198d7c41b7e1fdddc34b1c550'
 

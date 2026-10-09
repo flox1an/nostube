@@ -63,7 +63,7 @@ import type { ContributedVariantDebugRecord } from '@/hooks/useContributedVarian
 import { LabelVideoDialog } from '@/components/LabelVideoDialog'
 import { EditVideoDialog } from '@/components/EditVideoDialog'
 import { ReportDialog } from '@/components/ReportDialog'
-import { type VideoEvent, isAddressableKind, getPublishDate } from '../utils/video-event'
+import { type VideoEvent, isAddressableKind, getPublishDate } from '@nostube/core/video-event'
 import { type BlossomServer } from '@nostube/core'
 import { cacheEvents } from '@/nostr/core'
 import { useTranslation } from 'react-i18next'
@@ -71,7 +71,7 @@ import { getDateLocale } from '@/lib/date-locale'
 import { isBetaUser } from '@/lib/beta-users'
 import { getLanguageDisplay } from '@/lib/language-flags'
 import ngeohash from 'ngeohash'
-import { getOriginLink } from '@/utils/origin-utils'
+import { getOriginLink } from '@nostube/core/origin-utils'
 
 interface ProfileMetadata {
   name?: string

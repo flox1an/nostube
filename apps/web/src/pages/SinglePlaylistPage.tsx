@@ -46,8 +46,8 @@ import {
 
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { usePlaylistDetails, useProfile, useCurrentUser, usePlaylists } from '@/hooks'
-import { type VideoEvent, getPublishDate } from '@/utils/video-event'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { type VideoEvent, getPublishDate } from '@nostube/core/video-event'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 type SortOrder = 'playlist' | 'published_at' | 'created_at'
 

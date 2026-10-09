@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 interface ShortsFeedState {
   // Current list of videos in the feed

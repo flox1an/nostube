@@ -5,7 +5,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { useAppContext } from './useAppContext'
 import { buildVideoViewEvent, type ViewEventSource, type ViewSegment } from '@/lib/view-events'
 import { enqueueViewEvent } from '@/lib/view-event-outbox'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 type TrackableVideo =
   | Pick<NostrEvent, 'id' | 'kind' | 'pubkey' | 'tags'>

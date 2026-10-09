@@ -1,8 +1,8 @@
 import { nip19 } from 'nostr-tools'
-import type { VideoEvent, VideoVariant } from '@/utils/video-event'
-import { getTypeForKind } from '@/lib/video-types'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
-import { getInstanceConfig } from '@/lib/instance-config'
+import type { VideoEvent, VideoVariant } from '@nostube/core/video-event'
+import { getTypeForKind } from '@nostube/core/video-types'
+import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 export const SEARCH_SERVICE_URL = 'https://nostube-search.apps2.slidestr.net'
 

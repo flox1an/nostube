@@ -6,7 +6,7 @@ import {
   type ChunkedUploadProgress,
 } from '@/lib/blossom-upload'
 import { type VideoVariant, processUploadedVideo, processVideoUrl } from '@/lib/video-processing'
-import { parseBlossomUrl } from '@/lib/blossom-url'
+import { parseBlossomUrl } from '@nostube/core/blossom-url'
 
 export type VideoFileUploadStatus =
   'idle' | 'uploading' | 'probing' | 'mirroring' | 'done' | 'error'

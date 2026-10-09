@@ -54,7 +54,7 @@ vi.mock('./core', () => ({
   getTimelineLoader: (...args: unknown[]) => mocks.getTimelineLoader(...args),
 }))
 
-vi.mock('@/utils/video-event', () => ({
+vi.mock('@nostube/core/video-event', () => ({
   processEvents: (...args: unknown[]) => mocks.processEvents(...args),
   getPublishDate: (...args: unknown[]) => mocks.getPublishDate(...args),
 }))

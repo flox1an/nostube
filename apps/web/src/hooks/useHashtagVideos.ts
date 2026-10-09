@@ -10,7 +10,7 @@ import {
   isAudioVideo,
   isYouTubeVideo,
   type VideoEvent,
-} from '@/utils/video-event'
+} from '@nostube/core/video-event'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useReportedPubkeys } from './useReportedPubkeys'
 import type { NostrEvent } from 'nostr-tools'

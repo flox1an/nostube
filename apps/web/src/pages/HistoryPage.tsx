@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useAppContext, useVideoHistory } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { VideoGrid } from '@/components/VideoGrid'
-import { isAudioVideo, isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
+import {
+  isAudioVideo,
+  isYouTubeVideo,
+  processEvent,
+  type VideoEvent,
+} from '@nostube/core/video-event'
 import { Button } from '@/components/ui/button'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { Trash2 } from 'lucide-react'
 import {
   AlertDialog,

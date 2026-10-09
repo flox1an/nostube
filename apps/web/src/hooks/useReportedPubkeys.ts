@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useReports } from './useReports'
-import type { ProcessedReportEvent, ReportedPubkeys } from '@/types/reports'
+import type { ProcessedReportEvent, ReportedPubkeys } from '@nostube/core/reports'
 import { useSelectedPreset } from './useSelectedPreset'
 import { useMutedPubkeys } from './useMutedPubkeys'
 

@@ -38,7 +38,7 @@ import { DesktopAccountSync } from '@/desktop/DesktopAccountSync'
 import { DesktopActivityReporter } from '@/desktop/DesktopActivityReporter'
 import { isTauri } from '@tauri-apps/api/core'
 import { DEFAULT_VIEW_TRACKING_RELAYS } from '@/constants/relays'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 const instance = getInstanceConfig()
 

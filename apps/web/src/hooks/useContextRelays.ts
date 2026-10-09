@@ -5,7 +5,7 @@ import { combineRelays } from '@/lib/utils'
 import { useReadRelays } from './useReadRelays'
 import { useUserRelays } from './useUserRelays'
 import { presetRelays, METADATA_RELAYS } from '@/constants/relays'
-import { getInstanceConfig, instanceRelays } from '@/lib/instance-config'
+import { getInstanceConfig, instanceRelays } from '@nostube/core/instance-config'
 
 // Instance build: hints, seen relays, outbox and presets never widen the relay set.
 const instance = getInstanceConfig()

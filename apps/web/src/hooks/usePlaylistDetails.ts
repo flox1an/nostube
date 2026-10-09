@@ -6,9 +6,9 @@ import { createAddressLoader, createEventLoader } from 'applesauce-loaders/loade
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import type { Event as NostrEvent } from 'nostr-tools'
 
-import { decodeAddressPointer, decodeEventPointer } from '@/lib/nip19'
+import { decodeAddressPointer, decodeEventPointer } from '@nostube/core/nip19'
 import { combineRelays } from '@/lib/utils'
-import { processEvents } from '@/utils/video-event'
+import { processEvents } from '@nostube/core/video-event'
 
 import { useAppContext } from './useAppContext'
 import { useCurrentUser } from './useCurrentUser'

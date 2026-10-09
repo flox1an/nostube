@@ -9,7 +9,7 @@ import {
 } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
-import { allowSignerRelays } from '@/lib/instance-config'
+import { allowSignerRelays } from '@nostube/core/instance-config'
 
 const STORAGE_KEY_ACCOUNTS = 'nostr:accounts'
 const STORAGE_KEY_ACTIVE = 'nostr:active-account'

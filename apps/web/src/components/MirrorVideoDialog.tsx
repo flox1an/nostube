@@ -26,7 +26,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { formatFileSize } from '@/lib/blossom-utils'
+import { formatFileSize } from '@nostube/core/blossom-utils'
 import { mirrorBlobsToServers, type MirrorServerOutcome } from '@/lib/blossom-upload'
 import {
   publishMirrorAnnouncements,
@@ -43,7 +43,7 @@ import {
 } from '@/lib/blossom-blob-extractor'
 import type { BlobDescriptor } from '@/lib/blossom-auth'
 import type { BlossomServer } from '@nostube/core'
-import type { VideoEvent, VideoVariant } from '@/utils/video-event'
+import type { VideoEvent, VideoVariant } from '@nostube/core/video-event'
 import { useTranslation } from 'react-i18next'
 
 interface MirrorVideoDialogProps {

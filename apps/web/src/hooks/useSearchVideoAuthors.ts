@@ -9,7 +9,7 @@ import type { PeopleHit } from '@/lib/search-client'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useReportedPubkeys } from '@/hooks/useReportedPubkeys'
-import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import { isNSFWAuthor } from '@nostube/core/nsfw-authors'
 
 export interface ProfileResult {
   pubkey: string

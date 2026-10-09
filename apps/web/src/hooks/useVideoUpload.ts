@@ -33,7 +33,7 @@ import {
   subscribeToBrowserTranscodeUploads,
 } from '@/lib/browser-transcode-upload-manager'
 import type { BrowserTranscodeVariant, TranscodeSourceMeta } from '@/lib/video-transcode'
-import { parseBlossomUrl } from '@/lib/blossom-url'
+import { parseBlossomUrl } from '@nostube/core/blossom-url'
 import { detectLanguageFromFilename, generateSubtitleId } from '@/lib/subtitle-utils'
 import { generateBlurhash } from '@/lib/blurhash-encode'
 import {

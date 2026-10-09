@@ -1,8 +1,8 @@
 import { createRef } from 'react'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VideoVariant } from '@/utils/video-event'
-import { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
+import type { VideoVariant } from '@nostube/core/video-event'
+import { PlaybackUrlLadder } from '@nostube/core/playback-url-ladder'
 import {
   usePlaybackEngine,
   resolvePlaybackMode,

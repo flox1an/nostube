@@ -16,7 +16,7 @@ import type { BlossomServer } from '@nostube/core'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 
 // Mock dependencies
-vi.mock('@/workers/blurhashDataURL', () => ({
+vi.mock('./blurhashDataURL', () => ({
   blurHashToDataURL: vi.fn((blurhash?: string) =>
     blurhash ? `data:image/webp;base64,mock-${blurhash}` : undefined
   ),
@@ -33,7 +33,7 @@ vi.mock('nostr-tools', () => ({
   },
 }))
 
-vi.mock('@/lib/video-types', () => ({
+vi.mock('./video-types', () => ({
   getTypeForKind: vi.fn((kind: number) => {
     if (kind === 21 || kind === 34235) return 'horizontal'
     if (kind === 22 || kind === 34236) return 'vertical'
@@ -46,7 +46,7 @@ vi.mock('@/lib/video-types', () => ({
   }),
 }))
 
-vi.mock('@/lib/media-url-generator', () => ({
+vi.mock('./media-url-generator', () => ({
   generateMediaUrls: vi.fn(({ urls }) => ({ urls })),
 }))
 

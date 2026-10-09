@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useAppContext, useStableRelays } from '@/hooks'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import type { ValidationStatus } from '@/hooks/usePlaylistValidation'
-import { processEvent } from '@/utils/video-event'
+import { processEvent } from '@nostube/core/video-event'
 import { createEventLoader } from 'applesauce-loaders/loaders'
 
 interface ThumbnailItemProps {

@@ -8,6 +8,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "types": ["vitest/globals"],
     "strict": false,
     "strictNullChecks": true,
     "noUnusedLocals": true,

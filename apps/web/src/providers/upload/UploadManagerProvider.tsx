@@ -52,7 +52,7 @@ import {
   TRANSCODE_JOB_TIMEOUT_MS,
   type DVMFeedback,
 } from '@/lib/dvm-transcode-session'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@nostube/core/video-event'
 import { getTrackedDvms } from '@/hooks/useDvmTracker'
 import { mirrorBlobsToServers } from '@/lib/blossom-upload'
 import { workflowStateFromUploadTask } from '@/lib/video-publishing-workflow'

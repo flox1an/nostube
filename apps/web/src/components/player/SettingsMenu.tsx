@@ -10,7 +10,7 @@ import {
   Captions,
 } from 'lucide-react'
 import { type QualityOption } from './engines'
-import { type TextTrack } from '@/utils/video-event'
+import { type TextTrack } from '@nostube/core/video-event'
 import { useProfile } from '@/hooks/useProfile'
 import { UserAvatar } from '@/components/UserAvatar'
 import { getLanguageLabel } from '@/lib/utils'

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAppContext } from '@/hooks'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { isSearchOff, SEARCH_SERVICE_URL } from '@/lib/search-client'
-import { YOUTUBE_REGEX } from '@/utils/origin-utils'
+import { YOUTUBE_REGEX } from '@nostube/core/origin-utils'
 import type { RecommendationVideo } from '@/types/recommendation'
 
 const TIMEOUT_MS = 5000

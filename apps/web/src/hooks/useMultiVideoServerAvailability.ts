@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { VideoVariant, TextTrack } from '@/utils/video-event'
+import type { VideoVariant, TextTrack } from '@nostube/core/video-event'
 import type { BlossomServer } from '@nostube/core'
-import { extractBlossomHash } from '@/utils/video-event'
-import { normalizeServerUrl } from '@/lib/blossom-utils'
+import { extractBlossomHash } from '@nostube/core/video-event'
+import { normalizeServerUrl } from '@nostube/core/blossom-utils'
 
 export type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'
 

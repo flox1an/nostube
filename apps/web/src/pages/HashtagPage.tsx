@@ -3,10 +3,10 @@ import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { useStableRelays } from '@/hooks'
 import { useHashtagVideos } from '@/hooks/useHashtagVideos'
 import { useEffect, useMemo } from 'react'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function HashtagPage() {
   const { t } = useTranslation()

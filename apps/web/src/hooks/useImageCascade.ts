@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppContextSafe } from '@/hooks/useAppContext'
-import { parseBlossomUrl } from '@/lib/blossom-url'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
+import { parseBlossomUrl } from '@nostube/core/blossom-url'
+import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
 import {
   presetThumbnailUrl,
   insecureThumbnailUrl,
   type PresetThumbnailPreset,
 } from '@/lib/preset-thumbnail-url'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 export type ImageCascadeVariant = 'preview' | 'inline' | 'avatar'
 

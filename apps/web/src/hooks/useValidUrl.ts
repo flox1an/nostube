@@ -1,5 +1,5 @@
 import { useMediaUrls } from './useMediaUrls'
-import type { MediaType } from '@/lib/media-url-generator'
+import type { MediaType } from '@nostube/core/media-url-generator'
 
 interface UseValidUrlOptions {
   urls: string[]

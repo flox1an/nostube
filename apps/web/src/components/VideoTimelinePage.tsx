@@ -1,7 +1,7 @@
 import { VideoGrid } from '@/components/VideoGrid'
 import { InfiniteScrollTrigger } from '@/components/InfiniteScrollTrigger'
 import { useInfiniteScroll } from '@/hooks'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 import { useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 

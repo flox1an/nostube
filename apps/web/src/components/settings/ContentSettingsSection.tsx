@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { type NsfwFilter, type PreferredQuality } from '@nostube/core'
-import { NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
+import { NSFW_SAFETY_ENABLED } from '@nostube/core/content-safety'
 
 export function ContentSettingsSection() {
   const { t } = useTranslation()

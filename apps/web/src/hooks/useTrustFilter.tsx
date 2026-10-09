@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import type { VideoEvent } from '@/utils/video-event'
-import { getInstanceConfig } from '@/lib/instance-config'
+import type { VideoEvent } from '@nostube/core/video-event'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 /** Minimum personalized trust score (0–1) to pass the filter */
 export const MIN_PERSONAL_SCORE = 0.4

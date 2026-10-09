@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
-import { type VideoVariant } from '@/utils/video-event'
+import { type VideoVariant } from '@nostube/core/video-event'
 
 // Quality levels in descending order (highest first)
 const QUALITY_ORDER = ['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p']

@@ -1,5 +1,5 @@
-import type { VideoEvent, VideoVariant, TextTrack } from '@/utils/video-event'
-import { extractBlossomHash } from '@/utils/video-event'
+import type { VideoEvent, VideoVariant, TextTrack } from '@nostube/core/video-event'
+import { extractBlossomHash } from '@nostube/core/video-event'
 
 export type BlobType = 'video' | 'thumbnail' | 'subtitle'
 

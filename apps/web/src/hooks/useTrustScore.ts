@@ -34,7 +34,7 @@ import {
   clearAllCached,
   pruneExpired,
 } from '@/lib/trust-score-db'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (fast synchronous reads, backed by IndexedDB)

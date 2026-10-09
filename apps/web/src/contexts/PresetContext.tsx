@@ -30,7 +30,7 @@ import {
   LOAD_TIMEOUT,
   type CacheResult,
 } from '@/lib/preset-storage'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 type PresetStatus = 'loading' | 'loaded' | 'error'
 

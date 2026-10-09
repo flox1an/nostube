@@ -30,7 +30,7 @@ import {
   isRelayAllowed,
   isVideoKind,
   scopeVideoRequest,
-} from '@/lib/instance-config'
+} from '@nostube/core/instance-config'
 
 const instance = getInstanceConfig()
 

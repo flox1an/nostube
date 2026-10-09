@@ -7,8 +7,8 @@ import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
-import { getKindsForType } from '@/lib/video-types'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { getKindsForType } from '@nostube/core/video-types'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function ShortsPage() {
   const { t } = useTranslation()

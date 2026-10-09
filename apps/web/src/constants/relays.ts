@@ -10,10 +10,10 @@ import {
   deriveServerName,
 } from '@/lib/blossom-servers'
 
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 // Re-export from unified blossom-url module for backwards compatibility
-export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@/lib/blossom-url'
+export { BLOCKED_BLOSSOM_SERVERS, isBlossomServerBlocked } from '@nostube/core/blossom-url'
 
 // Instance build: no public relay is ever added; the interaction relays replace the
 // profile/indexer/zap relays (nostube-server ADR 0005). Null in the nostu.be build.

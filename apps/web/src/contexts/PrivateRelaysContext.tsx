@@ -23,7 +23,7 @@ import {
   type PrivateRelayStatus,
 } from '@/nostr/private-relays'
 import { useUserRelaysContext } from './UserRelaysContext'
-import { isRelayAllowed } from '@/lib/instance-config'
+import { isRelayAllowed } from '@nostube/core/instance-config'
 
 interface PrivateRelaysContextValue {
   relays: string[]

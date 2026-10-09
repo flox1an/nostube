@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { type TextTrack } from '@/utils/video-event'
+import { type TextTrack } from '@nostube/core/video-event'
 import { findValidUrl } from '@/lib/url-validator'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 

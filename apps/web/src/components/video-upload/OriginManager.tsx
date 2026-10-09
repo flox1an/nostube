@@ -11,7 +11,7 @@ import {
   getIdentity,
   getPlatformName,
   getPlatformColor,
-} from '@/utils/origin-utils'
+} from '@nostube/core/origin-utils'
 
 interface OriginManagerProps {
   origins: string[][][] // Array of tag sets

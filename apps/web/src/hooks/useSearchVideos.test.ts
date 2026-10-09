@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { filterSearchVideosForSafety } from './useSearchVideos'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 const nsfwPubkey = 'nsfw-pubkey'
 const blockedPubkey = 'blocked-pubkey'

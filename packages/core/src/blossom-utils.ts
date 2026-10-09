@@ -1,5 +1,5 @@
 import type { NostrEvent } from 'nostr-tools'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from './video-event'
 
 /**
  * Encode a Nostr auth event as standard Base64 for the Blossom Authorization header.

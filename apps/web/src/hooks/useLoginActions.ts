@@ -5,7 +5,7 @@ import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-si
 import { nip19 } from 'nostr-tools'
 import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
 import { isNip05, resolveNip05ToBunkerUri } from '@/lib/nip05-bunker'
-import { allowSignerRelays } from '@/lib/instance-config'
+import { allowSignerRelays } from '@nostube/core/instance-config'
 import { decryptNcryptsec } from '@/lib/nip49'
 
 // NOTE: This file should not be edited except for adding new login methods.

@@ -21,7 +21,7 @@ import type { BlossomServer } from '@nostube/core'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useAppContext } from '@/hooks'
 import { useContributeVariant } from '@/hooks/useContributeVariant'
-import { isBlossomServerBlocked } from '@/lib/blossom-url'
+import { isBlossomServerBlocked } from '@nostube/core/blossom-url'
 import { deriveServerName } from '@/lib/blossom-servers'
 import {
   availableResolutions,
@@ -31,7 +31,7 @@ import {
   type ResolutionOption,
   type TranscodeSourceMeta,
 } from '@/lib/video-transcode'
-import { isMp4VideoVariant, type VideoEvent, type VideoVariant } from '@/utils/video-event'
+import { isMp4VideoVariant, type VideoEvent, type VideoVariant } from '@nostube/core/video-event'
 
 function normalizeServerUrl(url: string): string {
   const trimmed = url.trim()

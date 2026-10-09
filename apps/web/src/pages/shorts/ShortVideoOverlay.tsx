@@ -29,9 +29,9 @@ import {
   getPublishDate,
   generateEventLink,
   buildEventRelays,
-} from '@/utils/video-event'
+} from '@nostube/core/video-event'
 import { buildVideoPath } from '@/utils/video-utils'
-import { decodeVideoEventIdentifier } from '@/lib/nip19'
+import { decodeVideoEventIdentifier } from '@nostube/core/nip19'
 import { useProfile, useReadRelays, useCommentCount, usePreloadVideoData } from '@/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
 import { MessageCircle, Share2, ExternalLink, Flag, Volume2, VolumeX } from 'lucide-react'
@@ -42,7 +42,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { VideoComments } from '@/components/VideoComments'
 import { presetRelays } from '@/constants/relays'
 import { getDateLocale } from '@/lib/date-locale'
-import { getOriginLink } from '@/utils/origin-utils'
+import { getOriginLink } from '@nostube/core/origin-utils'
 
 // Module-scope constant — avoids recreation on every render.
 const PRESET_RELAY_URLS = presetRelays.map(relay => relay.url)

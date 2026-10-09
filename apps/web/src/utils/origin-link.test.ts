@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getOriginLink } from './origin-utils'
+import { getOriginLink } from '@nostube/core/origin-utils'
 
 describe('getOriginLink', () => {
   it('returns a public web URL unchanged', () => {

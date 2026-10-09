@@ -1,6 +1,6 @@
 import { getTimelineLoader } from './core'
 import { type VideoType } from '@nostube/core'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 
 // Kind 21 (videos)
 export const videoLoader = () => {

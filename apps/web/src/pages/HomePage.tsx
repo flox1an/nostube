@@ -9,11 +9,11 @@ import { useStableRelays, useContinueWatching, useSubscriptionsVideos } from '@/
 import { useAppContext } from '@/hooks/useAppContext'
 import { useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getPublishDate } from '@/utils/video-event'
-import type { VideoEvent } from '@/utils/video-event'
+import { getPublishDate } from '@nostube/core/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
-import { getKindsForType } from '@/lib/video-types'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { getKindsForType } from '@nostube/core/video-types'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 /** Compact horizontal shelf of videos with a heading and "View all" link. Hidden when empty. */
 function HomeShelf({

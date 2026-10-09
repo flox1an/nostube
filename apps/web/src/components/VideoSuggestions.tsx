@@ -8,9 +8,9 @@ import {
   getPublishDate,
   isAudioVideo,
   isYouTubeVideo,
-} from '@/utils/video-event'
+} from '@nostube/core/video-event'
 import { buildDesktopPlayerUrl, buildVideoPath } from '@/utils/video-utils'
-import { getKindsForType, type VideoType } from '@/lib/video-types'
+import { getKindsForType, type VideoType } from '@nostube/core/video-types'
 import { formatDistance } from 'date-fns/formatDistance'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useReportedPubkeys, useProfile, useAppContext, useReadRelays } from '@/hooks'
@@ -18,7 +18,7 @@ import { useImageCascade } from '@/hooks/useImageCascade'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { PlayProgressBar } from './PlayProgressBar'
 import React, { useEffect, useMemo, useState } from 'react'
-import { blurHashToDataURL } from '@/workers/blurhashDataURL'
+import { blurHashToDataURL } from '@nostube/core/blurhashDataURL'
 import { filterVideoSuggestions } from '@/lib/filter-video-suggestions'
 import { useTrustScores, useGlobalScores } from '@/hooks/useTrustScore'
 import { useFollowSet } from '@/hooks/useFollowSet'
@@ -31,7 +31,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { getDateLocale } from '@/lib/date-locale'
 import { useSearchRecommendations } from '@/hooks/useSearchRecommendations'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { isNSFWAuthor } from '@/lib/nsfw-authors'
+import { isNSFWAuthor } from '@nostube/core/nsfw-authors'
 import type { RecommendationVideo } from '@/types/recommendation'
 
 function formatDuration(seconds: number): string {

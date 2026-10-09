@@ -7,7 +7,7 @@ import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PresetCard } from '@/components/presets/PresetCard'
 import { DEFAULT_PRESET_PUBKEY } from '@nostube/core'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function PresetsPage() {
   const { t } = useTranslation()

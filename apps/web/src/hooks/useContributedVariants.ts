@@ -4,7 +4,7 @@ import { filter as rxFilter } from 'rxjs/operators'
 import { INDEXER_RELAYS } from '@/constants/relays'
 import { useAppContext } from '@/hooks/useAppContext'
 import { relayPool } from '@/nostr/core'
-import { extractBlossomHash, type VideoEvent, type VideoVariant } from '@/utils/video-event'
+import { extractBlossomHash, type VideoEvent, type VideoVariant } from '@nostube/core/video-event'
 
 export type ContributedMediaType = 'video' | 'image' | 'subtitle' | 'audio' | 'other'
 

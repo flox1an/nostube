@@ -6,7 +6,7 @@ import { Search, X, User, Loader2, Clock } from 'lucide-react'
 import { useSearchVideoAuthors } from '@/hooks/useSearchVideoAuthors'
 import { UserAvatar } from '@/components/UserAvatar'
 import { buildProfileUrlFromPubkey, buildProfilePath } from '@/lib/nprofile'
-import { decodeProfilePointer } from '@/lib/nip19'
+import { decodeProfilePointer } from '@nostube/core/nip19'
 import { cn } from '@/lib/utils'
 import { getSearchHistory, addSearchHistory, removeSearchHistory } from '@/lib/search-history'
 

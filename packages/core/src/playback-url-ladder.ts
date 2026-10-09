@@ -1,5 +1,5 @@
 import type { BlossomServer, CachingServer } from '@nostube/core'
-import { extractBlossomHash } from '@/lib/blossom-url'
+import { extractBlossomHash } from './blossom-url'
 import {
   generateMediaUrls,
   type GeneratedUrls,
@@ -9,7 +9,7 @@ import {
   type UrlSource,
 } from './media-url-generator'
 import { filterCompatibleVariants } from './codec-compatibility'
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant } from './video-event'
 
 export interface PlaybackUrlLadderOptions {
   urls: string[]

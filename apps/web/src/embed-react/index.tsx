@@ -6,11 +6,15 @@ import { parseURLParams, validateParams } from './lib/url-params'
 import { decodeVideoIdentifier, buildRelayList } from './lib/nostr-decoder'
 import { NostrClient } from './lib/nostr-client'
 import { ProfileFetcher } from './lib/profile-fetcher'
-import { processEvent, type VideoEvent } from '@/utils/video-event'
+import { processEvent, type VideoEvent } from '@nostube/core/video-event'
 import type { Profile } from './lib/profile-fetcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@nostube/core'
-import { getEffectiveNsfwFilter, getVideoPlayback, NSFW_SAFETY_ENABLED } from '@/lib/content-safety'
+import {
+  getEffectiveNsfwFilter,
+  getVideoPlayback,
+  NSFW_SAFETY_ENABLED,
+} from '@nostube/core/content-safety'
 import { parsePresetEvent } from '@/hooks/usePresets'
 import { getCachedPreset, LOAD_TIMEOUT } from '@/lib/preset-storage'
 import { METADATA_RELAYS, presetRelays } from '@/constants/relays'

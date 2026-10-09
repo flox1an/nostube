@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { useContinueWatching } from './useContinueWatching'
-import type { Event } from '@/utils/video-event'
+import type { Event } from '@nostube/core/video-event'
 import type { PlayPositionEntry } from '@/lib/play-position-db'
 
 vi.mock('@/hooks/useCurrentUser', () => ({

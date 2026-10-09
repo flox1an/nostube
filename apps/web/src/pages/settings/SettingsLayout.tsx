@@ -12,7 +12,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import {
   Select,
   SelectContent,

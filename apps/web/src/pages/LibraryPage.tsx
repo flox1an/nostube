@@ -13,7 +13,7 @@ import {
 } from '@/hooks'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { AuthDialog } from '@/components/auth/AuthDialog'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 interface LibrarySectionProps {
   icon: React.ElementType

@@ -1,5 +1,5 @@
 import { VideoCard, VideoCardSkeleton } from '@/components/VideoCard'
-import { type VideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '@nostube/core/video-event'
 import { cn } from '@/lib/utils'
 import { chunk } from '@/lib/array-utils'
 import { Card, CardContent } from '@/components/ui/card'

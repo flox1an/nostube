@@ -2,9 +2,9 @@
 
 declare global {
   interface ImportMetaEnv {
-    /** `off` disables nostube's NSFW safety for self-hosted builds; see src/lib/content-safety.ts */
+    /** `off` disables nostube's NSFW safety for self-hosted builds; see packages/core/src/content-safety.ts */
     readonly VITE_NSFW_SAFETY?: string
-    /** `true` builds the nostube-server instance build; see src/lib/instance-config.ts */
+    /** `true` builds the nostube-server instance build; see packages/core/src/instance-config.ts */
     readonly VITE_INSTANCE_BUILD?: string
   }
 }

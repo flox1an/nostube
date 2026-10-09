@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { VideoGrid } from './VideoGrid'
 import { BrowserRouter } from 'react-router-dom'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 // Mock dependencies
 vi.mock('@/nostr/core', () => ({

@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostrEvent } from 'nostr-tools'
 import { useContributedVariants } from './useContributedVariants'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 const relayEvents: NostrEvent[] = []
 const fetchMock = vi.fn()

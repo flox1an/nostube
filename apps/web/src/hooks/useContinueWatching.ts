@@ -4,7 +4,12 @@ import { useVideoHistory } from '@/hooks/useVideoHistory'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { getRecentlyPlayedVideos, type PlayPositionEntry } from '@/lib/play-position-db'
-import { isAudioVideo, isYouTubeVideo, processEvent, type VideoEvent } from '@/utils/video-event'
+import {
+  isAudioVideo,
+  isYouTubeVideo,
+  processEvent,
+  type VideoEvent,
+} from '@nostube/core/video-event'
 
 const SINCE_MS = 1000 * 60 * 60 * 24 * 90 // 90 days, matches play-position-db pruning window
 // A video counts as "in progress" once meaningfully started (avoid accidental taps)

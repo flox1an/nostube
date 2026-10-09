@@ -20,7 +20,7 @@
 import { useEffect } from 'react'
 import { useMediaUrls } from './useMediaUrls'
 import { requestPrefetch, cancelPrefetch } from '@/lib/video-prefetch-cache'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 // Re-exported so callers keep importing the lookup from one place.
 export { getPrefetchedVideoBlob } from '@/lib/video-prefetch-cache'

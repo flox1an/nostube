@@ -32,7 +32,7 @@ vi.mock('@/hooks/useMediaUrls', () => ({
   }),
 }))
 
-vi.mock('@/workers/blurhashDataURL', () => ({
+vi.mock('@nostube/core/blurhashDataURL', () => ({
   blurHashToDataURL: () => null,
 }))
 

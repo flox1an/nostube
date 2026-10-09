@@ -15,8 +15,8 @@ import {
   type SearchSortFilter,
   type SearchTypeFilter,
 } from '@/lib/search-filters'
-import { getKindsForType } from '@/lib/video-types'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { getKindsForType } from '@nostube/core/video-types'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useTranslation } from 'react-i18next'
 
 const typeFilters: SearchTypeFilter[] = ['all', 'videos', 'shorts', 'audio']

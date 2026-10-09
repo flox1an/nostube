@@ -1,4 +1,4 @@
-import { deduplicateByIdentifier, type VideoEvent } from '@/utils/video-event'
+import { deduplicateByIdentifier, type VideoEvent } from '@nostube/core/video-event'
 
 export interface FilterOptions {
   currentVideoId?: string

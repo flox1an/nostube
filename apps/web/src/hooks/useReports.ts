@@ -1,7 +1,7 @@
 import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo } from 'react'
 import type { Filter } from 'nostr-tools'
-import type { ProcessedReportEvent } from '@/types/reports'
+import type { ProcessedReportEvent } from '@nostube/core/reports'
 
 export type { ProcessedReportEvent }
 

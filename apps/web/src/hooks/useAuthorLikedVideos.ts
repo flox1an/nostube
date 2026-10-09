@@ -2,7 +2,7 @@ import { useEventStore, use$ } from 'applesauce-react/hooks'
 import { useMemo, useEffect, useState } from 'react'
 import { useAppContext } from './useAppContext'
 import { useStableRelays } from './useStableRelays'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 import { isUpvoteReaction } from './useEventStats'
 
 // Video event kinds

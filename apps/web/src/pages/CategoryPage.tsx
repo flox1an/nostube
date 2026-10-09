@@ -5,11 +5,11 @@ import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useCategoryVideos } from '@/hooks/useCategoryVideos'
 import { useEffect, useMemo } from 'react'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 import { getCategoryBySlug } from '@/lib/tag-categories'
 import { useTranslation } from 'react-i18next'
 import { useTrustFilter } from '@/hooks/useTrustFilter'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 export function CategoryPage() {
   const { t } = useTranslation()

@@ -8,9 +8,9 @@ import type {
   LoaderStats,
 } from 'hls.js'
 import type { BlossomServer, CachingServer } from '@nostube/core'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
-import { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
-import { emitHlsFailoverDebug, isHlsDebugEnabled } from '@/lib/hls-failover-debug'
+import { isAllowedEventMediaUrl } from './media-url-policy'
+import { PlaybackUrlLadder } from './playback-url-ladder'
+import { emitHlsFailoverDebug, isHlsDebugEnabled } from './hls-failover-debug'
 
 interface HlsBlossomLoaderOptions {
   blossomServers: BlossomServer[]

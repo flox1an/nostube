@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { WalletConnect } from 'applesauce-wallet-connect'
 import { parseWalletConnectURI } from 'applesauce-wallet-connect/helpers'
-import { allowSignerRelays } from '@/lib/instance-config'
+import { allowSignerRelays } from '@nostube/core/instance-config'
 import type { ActionRunner } from 'applesauce-actions'
 import { Wallet } from '@cashu/cashu-ts'
 import * as WalletHelpers from 'applesauce-wallet/helpers'

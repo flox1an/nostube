@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { useEventStore } from 'applesauce-react/hooks'
 import { createEventLoader } from 'applesauce-loaders/loaders'
-import { processEvents } from '@/utils/video-event'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { processEvents } from '@nostube/core/video-event'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useTranslation } from 'react-i18next'
 
 export function LikedVideosPage() {

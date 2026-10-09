@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import Hls from 'hls.js'
 import { useAppContextSafe } from '@/hooks/useAppContext'
-import { createBlossomHlsLoader } from '@/lib/hls-blossom-loader'
-import { isHlsDebugEnabled } from '@/lib/hls-failover-debug'
+import { createBlossomHlsLoader } from '@nostube/core/hls-blossom-loader'
+import { isHlsDebugEnabled } from '@nostube/core/hls-failover-debug'
 import type { BlossomServer, CachingServer } from '@nostube/core'
-import type { PlaybackUrlLadder } from '@/lib/playback-url-ladder'
+import type { PlaybackUrlLadder } from '@nostube/core/playback-url-ladder'
 
 export interface HlsQualityLevel {
   index: number

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SegmentStatus } from '@/components/hls-segment-grid'
 import type { BlossomServer } from '@nostube/core'
-import { blossomServerCandidates } from '@/lib/hls-playlist-fetch'
+import { blossomServerCandidates } from '@nostube/core/hls-playlist-fetch'
 
 async function headOk(url: string, signal: AbortSignal): Promise<boolean> {
   try {

@@ -3,8 +3,8 @@ import { AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { useTranslation } from 'react-i18next'
-import { type VideoVariant } from '@/utils/video-event'
-import { isBlossomUrl } from '@/lib/blossom-url'
+import { type VideoVariant } from '@nostube/core/video-event'
+import { isBlossomUrl } from '@nostube/core/blossom-url'
 import {
   needsLowerResolutionVariants,
   needsIOSCompatibleVariants,

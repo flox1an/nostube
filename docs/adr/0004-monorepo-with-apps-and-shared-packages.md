@@ -18,13 +18,15 @@ apps/web       Nostube (discovery UI, nostu.be), including the embed player
 apps/server    Rust server; embeds the built site, studio and embed
 apps/site      creator homepage (videos, profile, playlists), no discovery  [planned]
 apps/studio    upload and management UI                                      [planned]
-packages/core      headless Nostr/Blossom logic, no React                    [started: app config types]
+packages/core      headless Nostr/Blossom logic, no React                    [started: media URL, HLS, video event, instance config]
 packages/widgets   player, video card, comments, login, shadcn/ui base       [planned]
 ```
 
 - **Extract on demand.** The web app moves unchanged into `apps/web`. Packages start empty and take a file only when `site`, `studio` or the embed needs it; `tsc` and lint confirm each move. `site` is built first as a thin slice (one creator, a grid, the player).
 - **Internal packages, no publishing.** Apps import TypeScript source from workspace packages. No versioning or npm publish until an outside consumer needs it.
 - **Core means "no React", not "no browser".** It keeps using IndexedDB (nostr-idb) and Web Workers and does not run in Node.
+- **Core is imported by subpath** (`@nostube/core/media-url-generator`), not through a barrel. Only the type-only modules `app-config` and `preset` are exported from the package root. A barrel would evaluate the whole cluster (including `hls.js`) on the first import and could break the instance boot order, where `setInstanceConfig` must run before the app modules.
+- **Known exceptions to injected config** (removed in the config-injection step): core still reads `import.meta.env.VITE_NSFW_SAFETY` (`content-safety`), `VITE_INSTANCE_BUILD` (`instance-config`) and `DEV` (debug logging), so it runs only in Vite-built apps.
 - **Config is injected.** Core builds its client from a passed-in config (`createNostubeClient(config)`). Site and studio get the config from the server and cannot override it from `localStorage`. Preset, trust and missing-video logic is injected policy, not an import of the timeline.
 - **The embed player** is built as a single `embed.html` plus a transcode worker and one chunk; the server must serve these side by side with relative paths and must not send a CSP that blocks its inline scripts. The server hosts it on the instance's own origin.
 - **SEO and link previews** stay a later stage. The web app is deployed from its Dockerfile (no Vercel); the server gets a static SPA first, and meta-tag injection later in Rust if needed.

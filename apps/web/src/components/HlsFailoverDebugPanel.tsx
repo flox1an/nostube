@@ -3,8 +3,8 @@ import {
   isHlsDebugEnabled,
   subscribeHlsFailoverDebug,
   type HlsFailoverDebugEntry,
-} from '@/lib/hls-failover-debug'
-import { extractBlossomHash } from '@/lib/blossom-url'
+} from '@nostube/core/hls-failover-debug'
+import { extractBlossomHash } from '@nostube/core/blossom-url'
 
 interface HlsFailoverDebugPanelProps {
   videoId?: string

@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { useAppContext } from '@/hooks/useAppContext'
 import { useFollowedAuthors, useStableRelays } from '@/hooks'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { getTimelineLoader } from '@/nostr/core'
-import { getPublishDate } from '@/utils/video-event'
-import type { VideoEvent } from '@/utils/video-event'
+import { getPublishDate } from '@nostube/core/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 /**
  * Shared subscriptions timeline: long-form + shorts from followed authors,

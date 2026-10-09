@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { decodeProfilePointer } from '@/lib/nip19'
+import { decodeProfilePointer } from '@nostube/core/nip19'
 import { nip19 } from 'nostr-tools'
 import { cn, combineRelays } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -47,9 +47,9 @@ import { hasLightningAddress } from '@/lib/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
 import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 import type { NostrEvent } from 'nostr-tools'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 import { useEventStore } from 'applesauce-react/hooks'
 import { use$ } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -62,9 +62,9 @@ import { toast } from 'sonner'
 import type { Signer } from '@/lib/blossom-auth'
 import type { ReactNode } from 'react'
 import { ContentSafetyRoute } from '@/components/ContentSafetyGate'
-import { getContentSafetyGate } from '@/lib/content-safety'
-import { getInstanceConfig } from '@/lib/instance-config'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { getContentSafetyGate } from '@nostube/core/content-safety'
+import { getInstanceConfig } from '@nostube/core/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
@@ -824,7 +824,7 @@ function AuthorPageContent() {
           .filter((e): e is NostrEvent => !!e)
 
         // Process events to VideoEvent format
-        const { processEvents } = await import('@/utils/video-event')
+        const { processEvents } = await import('@nostube/core/video-event')
         const processedVideos = processEvents(events, relays, {
           blossomServers: config.blossomServers,
           nsfwPubkeys: presetContent.nsfwPubkeys,
@@ -855,7 +855,7 @@ function AuthorPageContent() {
 
     try {
       const { createEventLoader } = await import('applesauce-loaders/loaders')
-      const { processEvents } = await import('@/utils/video-event')
+      const { processEvents } = await import('@nostube/core/video-event')
 
       // Check which events are missing from store
       const missingIds = likedEventIds.filter(id => !eventStoreInstance.getEvent(id))
@@ -956,7 +956,7 @@ function AuthorPageContent() {
       try {
         const { createEventLoader, createAddressLoader } =
           await import('applesauce-loaders/loaders')
-        const { processEvents } = await import('@/utils/video-event')
+        const { processEvents } = await import('@nostube/core/video-event')
 
         const latestPinEvent = [...pinEvents].sort((a, b) => b.created_at - a.created_at)[0]
         if (!latestPinEvent) {

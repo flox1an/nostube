@@ -12,7 +12,7 @@ import {
   setInstanceConfig,
   type ConfigResponse,
   type InstanceConfig,
-} from './lib/instance-config'
+} from '@nostube/core/instance-config'
 
 async function fetchConfig(): Promise<ConfigResponse> {
   try {

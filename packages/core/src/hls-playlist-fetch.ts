@@ -1,4 +1,4 @@
-import { extractBlossomHash } from '@/lib/blossom-url'
+import { extractBlossomHash } from './blossom-url'
 import type { BlossomServer } from '@nostube/core'
 
 /**

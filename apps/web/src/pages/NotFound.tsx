@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 

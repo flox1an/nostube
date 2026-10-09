@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import type { MediaUrlOptions, MediaType } from '@/lib/media-url-generator'
-import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@/lib/playback-url-ladder'
+import type { MediaUrlOptions, MediaType } from '@nostube/core/media-url-generator'
+import { PlaybackUrlLadder, type PlaybackUrlLadderOptions } from '@nostube/core/playback-url-ladder'
 import { discoverUrlsWithCache } from '@/lib/url-discovery'
 import { validateMediaUrl, type ValidationOptions } from '@/lib/url-validator'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
+import { isAllowedEventMediaUrl } from '@nostube/core/media-url-policy'
 import { useAppContextSafe } from '@/hooks/useAppContext'
 import { INDEXER_RELAYS } from '@/constants/relays'
-import { getInstanceConfig } from '@/lib/instance-config'
-import type { VideoVariant } from '@/utils/video-event'
+import { getInstanceConfig } from '@nostube/core/instance-config'
+import type { VideoVariant } from '@nostube/core/video-event'
 
 export interface UseMediaUrlsOptions extends Omit<MediaUrlOptions, 'blossomServers'> {
   variants?: VideoVariant[]

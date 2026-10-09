@@ -3,7 +3,7 @@ import { useAppContext } from './useAppContext'
 import { DEFAULT_RELAYS, relayPool } from '@/nostr/core'
 import { type NostrEvent } from 'nostr-tools'
 import type { TrackedDvm } from '@/lib/dvm-utils'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 /** How far back to look for DVM announcements (seconds) */
 const DVM_ACTIVITY_WINDOW_SECS = 30 * 60 // 30 minutes

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { needsLowerResolutionVariants } from './video-transformation-detection'
 
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant } from '@nostube/core/video-event'
 
 describe('needsLowerResolutionVariants', () => {
   it('treats a lone MP4 with unknown dimensions as needing contributed resolutions', () => {

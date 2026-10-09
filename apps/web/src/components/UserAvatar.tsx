@@ -2,7 +2,7 @@ import React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { cn } from '@/lib/utils'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 interface UserAvatarProps {
   /** User's profile picture URL */

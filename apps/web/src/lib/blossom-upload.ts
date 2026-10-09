@@ -1,6 +1,10 @@
 import { type BlobDescriptor, createBlossomAuthorization, type Signer } from '@/lib/blossom-auth'
 import { createSHA256 } from 'hash-wasm'
-import { encodeAuthToken, extractServerDomain, normalizeServerUrl } from './blossom-utils'
+import {
+  encodeAuthToken,
+  extractServerDomain,
+  normalizeServerUrl,
+} from '@nostube/core/blossom-utils'
 
 export interface UploadFileWithProgressProps {
   file: File

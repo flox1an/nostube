@@ -7,7 +7,7 @@ import { useAppContext } from './useAppContext'
 import { MEDIA_FOLLOWS_KIND, useFollowSetContext } from '@/contexts/FollowSetContext'
 import { useNostrPublish } from './useNostrPublish'
 import { nowInSecs } from '@/lib/utils'
-import { getKindsForType } from '@/lib/video-types'
+import { getKindsForType } from '@nostube/core/video-types'
 
 const BATCH_SIZE = 50 // Number of pubkeys to check per query
 

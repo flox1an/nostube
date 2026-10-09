@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { filterVideoSuggestions } from './filter-video-suggestions'
-import type { VideoEvent } from '@/utils/video-event'
+import type { VideoEvent } from '@nostube/core/video-event'
 
 describe('filterVideoSuggestions', () => {
   const createMockVideo = (overrides: Partial<VideoEvent> = {}): VideoEvent => ({

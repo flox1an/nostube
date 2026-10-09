@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef, type RefObject } from 'react'
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant } from '@nostube/core/video-event'
 import { useAppContext } from '@/hooks/useAppContext'
 
 interface UseVideoVariantSelectorOptions {

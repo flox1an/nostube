@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { EyeOff, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import type { ContentSafetyGate as ContentSafetyGateState } from '@/lib/content-safety'
+import type { ContentSafetyGate as ContentSafetyGateState } from '@nostube/core/content-safety'
 
 export type ContentSafetyScreenState = 'hidden' | 'loading'
 

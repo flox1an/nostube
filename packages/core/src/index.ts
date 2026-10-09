@@ -1,2 +1,2 @@
-export * from "./app-config";
-export * from "./preset";
+export * from './app-config'
+export * from './preset'

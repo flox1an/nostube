@@ -14,7 +14,7 @@ import {
   TRANSCODE_JOB_TIMEOUT_MS,
   type DVMFeedback,
 } from '@/lib/dvm-transcode-session'
-import { extractBlossomHash } from '@/utils/video-event'
+import { extractBlossomHash } from '@nostube/core/video-event'
 import type { VideoVariant } from '@/lib/video-processing'
 import { useMemo } from 'react'
 

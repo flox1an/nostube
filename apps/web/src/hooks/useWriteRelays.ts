@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useAppContext } from './useAppContext'
 import { useUserRelaysContext } from '@/contexts/UserRelaysContext'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 /**
  * Returns write relays from app configuration

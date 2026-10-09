@@ -10,7 +10,7 @@ import { getDateLocale } from '@/lib/date-locale'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { formatDuration } from '@/lib/formatDuration'
-import { formatFileSize } from '@/lib/blossom-utils'
+import { formatFileSize } from '@nostube/core/blossom-utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { RichTextContent } from '@/components/RichTextContent'
 import { PublishNoteDialog } from '@/components/PublishNoteDialog'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 const PAGE_SIZE = 20
 

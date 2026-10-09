@@ -3,7 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useEventModel } from 'applesauce-react/hooks'
 import { UserBlossomServersModel } from 'applesauce-common/models'
 import { isBlossomServerBlocked } from '@/constants/relays'
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from '@nostube/core/instance-config'
 
 // Stable empty array to prevent infinite re-renders when user is not logged in
 const EMPTY_ARRAY: URL[] = []

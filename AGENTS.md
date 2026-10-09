@@ -9,7 +9,7 @@ This repository holds several apps. The sections from "Project Overview & Stack"
 | `apps/web` | The Nostube web app (nostu.be): embed player, Node server for the oEmbed/playlist APIs, Tauri desktop wrapper |
 | `apps/server` | The self-hosted Rust server (relay, Blossom, admin) that embeds a web build. It has its own `CONTEXT.md`, `AGENTS.md` and `docs/adr/` |
 
-Root `docs/adr/` holds ADRs for the whole repo and for the web app; `apps/server/docs/adr/` holds the server's ADRs (their numbering is independent). `packages/core` (`@nostube/core`, TypeScript source, no build step) holds the shared app config types; it must not import React or `apps/web` code. Planned additions (`packages/widgets`, `apps/site`, `apps/studio`) are described in ADR 0004 and do not exist yet. Install dependencies once at the root with `npm ci` (npm workspaces, one root `package-lock.json`); `overrides` live in the root `package.json`.
+Root `docs/adr/` holds ADRs for the whole repo and for the web app; `apps/server/docs/adr/` holds the server's ADRs (their numbering is independent). `packages/core` (`@nostube/core`, TypeScript source, no build step) holds the React-free logic shared by the apps (app config types, media URL ladder, HLS loader, video event parsing, instance config). Import it by subpath (`@nostube/core/media-url-generator`), never through a barrel; core must not import React or `@/` app code (ESLint enforces it, run `npm run lint --workspace @nostube/core`). Core tests run with `npm test --workspace @nostube/core`. Planned additions (`packages/widgets`, `apps/site`, `apps/studio`) are described in ADR 0004 and do not exist yet. Install dependencies once at the root with `npm ci` (npm workspaces, one root `package-lock.json`); `overrides` live in the root `package.json`.
 
 
 ## Project Overview & Stack
@@ -55,7 +55,7 @@ Run from `apps/web`.
 
 - `npm run dev` – installs if needed and launches Vite with HMR.
 - `npm run build` – optimized bundle plus `dist/404.html` copy for static hosts.
-- `npm run build:instance` – nostube-server instance build into `dist-instance/` (reads `/api/config` at startup; see `src/lib/instance-config.ts`).
+- `npm run build:instance` – nostube-server instance build into `dist-instance/` (reads `/api/config` at startup; see `packages/core/src/instance-config.ts`).
 - `npm run test` – installs, runs `tsc --noEmit`, ESLint, Vitest, and a production build.
 - `npm run typecheck`, `npm run format`, `npm run format:check` – targeted verifications.
 - `npm run start` previews the build on port 8080; `npm run deploy` publishes via Surge.

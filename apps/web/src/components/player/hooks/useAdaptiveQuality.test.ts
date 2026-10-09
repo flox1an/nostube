@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useRef } from 'react'
 import { useAdaptiveQuality } from './useAdaptiveQuality'
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant } from '@nostube/core/video-event'
 
 const variants: VideoVariant[] = [
   {

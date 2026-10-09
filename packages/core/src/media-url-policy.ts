@@ -1,4 +1,4 @@
-import { getInstanceConfig } from '@/lib/instance-config'
+import { getInstanceConfig } from './instance-config'
 
 export type MediaUrlTrust = 'event' | 'configured-service'
 

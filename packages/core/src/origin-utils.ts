@@ -1,5 +1,5 @@
-import { decodeNip19 } from '@/lib/nip19'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
+import { decodeNip19 } from './nip19'
+import { isAllowedEventMediaUrl } from './media-url-policy'
 
 export const YOUTUBE_REGEX =
   /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?/\s]{11})/i

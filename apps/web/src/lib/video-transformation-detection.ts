@@ -1,5 +1,5 @@
-import { type VideoVariant } from '@/utils/video-event'
-import { isCodecSupported } from './codec-compatibility'
+import { type VideoVariant } from '@nostube/core/video-event'
+import { isCodecSupported } from '@nostube/core/codec-compatibility'
 
 /**
  * Extract quality/resolution from variant data

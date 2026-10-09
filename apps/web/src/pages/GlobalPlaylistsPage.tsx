@@ -9,7 +9,7 @@ import { useGlobalPlaylists, type GlobalPlaylist } from '@/hooks'
 import { useProfile } from '@/hooks/useProfile'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { useReadRelays } from '@/hooks'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 interface GlobalPlaylistCardProps {
   playlist: GlobalPlaylist

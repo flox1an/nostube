@@ -9,7 +9,7 @@ const { generateMediaUrls } = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock('@/lib/media-url-generator', () => ({
+vi.mock('@nostube/core/media-url-generator', () => ({
   generateMediaUrls,
 }))
 

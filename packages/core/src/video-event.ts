@@ -1,15 +1,15 @@
-import { getTypeForKind, type VideoType } from '@/lib/video-types'
-import { blurHashToDataURL } from '@/workers/blurhashDataURL'
+import { getTypeForKind, type VideoType } from './video-types'
+import { blurHashToDataURL } from './blurhashDataURL'
 import { nip19 } from 'nostr-tools'
 import type { BlossomServer } from '@nostube/core'
 import { YOUTUBE_REGEX } from './origin-utils'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
-import { generateMediaUrls } from '@/lib/media-url-generator'
-import { isNSFWAuthor } from '@/lib/nsfw-authors'
-import { isAllowedEventMediaUrl } from '@/lib/media-url-policy'
-import { getExplicitContentWarning, hasNsfwPlatformAttributes } from '@/lib/nsfw-platform-detection'
-import { filterCompatibleVariants } from '@/lib/codec-compatibility'
-import { sanitizeRelayUrl } from '@/lib/common-utils'
+import { generateMediaUrls } from './media-url-generator'
+import { isNSFWAuthor } from './nsfw-authors'
+import { isAllowedEventMediaUrl } from './media-url-policy'
+import { getExplicitContentWarning, hasNsfwPlatformAttributes } from './nsfw-platform-detection'
+import { filterCompatibleVariants } from './codec-compatibility'
+import { sanitizeRelayUrl } from './common-utils'
 
 // Define a simple Event interface that matches what we need
 export interface Event {

@@ -1,5 +1,5 @@
 import { probeTranscodeSource, type TranscodeSourceMeta } from '@/lib/video-transcode'
-import type { VideoVariant } from '@/utils/video-event'
+import type { VideoVariant } from '@nostube/core/video-event'
 
 /**
  * Download a video variant from its URL (trying fallbacks in order), stream-accumulate

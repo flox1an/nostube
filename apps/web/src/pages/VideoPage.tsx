@@ -14,9 +14,9 @@ import {
   generateEventLink,
   buildEventRelays,
   sortVideoVariantsByQuality,
-} from '@/utils/video-event'
-import { YOUTUBE_REGEX } from '@/utils/origin-utils'
-import { decodeVideoEventIdentifier, type VideoEventIdentifier } from '@/lib/nip19'
+} from '@nostube/core/video-event'
+import { YOUTUBE_REGEX } from '@nostube/core/origin-utils'
+import { decodeVideoEventIdentifier, type VideoEventIdentifier } from '@nostube/core/nip19'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -57,12 +57,12 @@ import { parseVideoChapters } from '@/lib/video-chapters'
 import { Button } from '@/components/ui/button'
 import { MirrorVideoDialog } from '@/components/MirrorVideoDialog'
 import { ContributeVariantDialog } from '@/components/ContributeVariantDialog'
-import { filterCompatibleVariants } from '@/lib/codec-compatibility'
+import { filterCompatibleVariants } from '@nostube/core/codec-compatibility'
 import { useTranslation } from 'react-i18next'
 import type { BlossomServerTag, NsfwFilter } from '@nostube/core'
 import { ContentSafetyGate, ContentSafetyRoute } from '@/components/ContentSafetyGate'
-import { getContentSafetyGate, getVideoPlayback } from '@/lib/content-safety'
-import { appTitle, pageTitle } from '@/lib/instance-config'
+import { getContentSafetyGate, getVideoPlayback } from '@nostube/core/content-safety'
+import { appTitle, pageTitle } from '@nostube/core/instance-config'
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_URLS: string[] = []

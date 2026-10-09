@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { extractBlossomHash } from '@/utils/video-event'
-import { normalizeServerUrl } from '@/lib/blossom-utils'
+import { extractBlossomHash } from '@nostube/core/video-event'
+import { normalizeServerUrl } from '@nostube/core/blossom-utils'
 import type { BlossomServer } from '@nostube/core'
 
 export type ServerStatus = 'unknown' | 'checking' | 'available' | 'unavailable' | 'error'

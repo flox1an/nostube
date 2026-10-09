@@ -1,4 +1,4 @@
-import { isYouTubeVideo, type VideoEvent, getPublishDate } from '@/utils/video-event'
+import { isYouTubeVideo, type VideoEvent, getPublishDate } from '@nostube/core/video-event'
 
 export type SearchTypeFilter = 'all' | 'videos' | 'shorts' | 'audio'
 export type SearchDurationFilter = 'any' | 'short' | 'medium' | 'long'

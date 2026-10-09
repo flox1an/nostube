@@ -8,7 +8,7 @@
  * platforms including iOS.
  */
 import { memo, useMemo, useCallback } from 'react'
-import { type VideoEvent } from '@/utils/video-event'
+import { type VideoEvent } from '@nostube/core/video-event'
 import { useAppContext, useIsPortrait } from '@/hooks'
 import { useImageCascade } from '@/hooks/useImageCascade'
 import { useValidUrl } from '@/hooks/useValidUrl'

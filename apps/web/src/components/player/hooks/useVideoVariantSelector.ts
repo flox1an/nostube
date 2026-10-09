@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, type RefObject } from 'react'
 import type { VideoVariant } from '@nostube/core/video-event'
-import { useAppContext } from '@/hooks/useAppContext'
+import { useNostubeHost } from '@nostube/widgets/host'
 
 interface UseVideoVariantSelectorOptions {
   videoRef: RefObject<HTMLMediaElement | null>
@@ -33,7 +33,7 @@ export function useVideoVariantSelector({
   urls,
   sha256,
 }: UseVideoVariantSelectorOptions): UseVideoVariantSelectorResult {
-  const { config } = useAppContext()
+  const { config } = useNostubeHost()
   const preferredQuality = config.preferredQuality ?? '720p'
 
   // Compute default quality index based on user preference

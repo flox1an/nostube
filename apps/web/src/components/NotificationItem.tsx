@@ -1,7 +1,7 @@
 import { formatDistance } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import type { VideoNotification } from '../types/notification'
-import { UserAvatar } from './UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { getDateLocale } from '../lib/date-locale'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 

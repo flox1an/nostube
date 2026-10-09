@@ -1,7 +1,7 @@
 import { DesktopVideoLink } from '@/desktop/DesktopVideoLink'
 import { useDesktopWindowCoordinator } from '@/desktop/useDesktopWindowCoordinator'
 import { Link } from 'react-router-dom'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'

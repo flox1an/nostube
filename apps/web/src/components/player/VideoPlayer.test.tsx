@@ -15,9 +15,9 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => nativeWindow,
 }))
 
-vi.mock('@/hooks', () => ({
-  useAppContext: () => ({ config: {} }),
-  useIsMobile: () => false,
+vi.mock('@nostube/widgets/host', () => ({
+  useNostubeHost: () => ({ config: {} }),
+  useNostubeHostSafe: () => undefined,
 }))
 
 vi.mock('@nostube/widgets/hooks/useMediaUrls', () => ({
@@ -36,7 +36,7 @@ vi.mock('@nostube/core/blurhashDataURL', () => ({
   blurHashToDataURL: () => null,
 }))
 
-vi.mock('../PlayPauseOverlay', () => ({
+vi.mock('@nostube/widgets/components/PlayPauseOverlay', () => ({
   PlayPauseOverlay: () => null,
 }))
 

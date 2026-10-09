@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { type TextTrack } from '@nostube/core/video-event'
 import { findValidUrl } from '@nostube/core/url-validator'
-import { useAppContextSafe } from '@/hooks/useAppContext'
+import { useNostubeHostSafe } from '@nostube/widgets/host'
 
 interface ValidatedTextTrack extends TextTrack {
   validatedUrl: string
@@ -21,10 +21,10 @@ export function useValidatedTextTracks(textTracks: TextTrack[]): UseValidatedTex
   const [isValidating, setIsValidating] = useState(false)
 
   // Get blossom servers from config
-  const appContext = useAppContextSafe()
+  const host = useNostubeHostSafe()
   const blossomServers = useMemo(
-    () => appContext?.config?.blossomServers?.map(s => s.url) || [],
-    [appContext?.config?.blossomServers]
+    () => host?.config?.blossomServers?.map(s => s.url) || [],
+    [host?.config?.blossomServers]
   )
 
   // Serialize for stable comparison

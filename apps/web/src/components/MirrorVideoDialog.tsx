@@ -23,7 +23,12 @@ import {
   AlertCircle,
   SkipForward,
 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@nostube/widgets/components/tooltip'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { formatFileSize } from '@nostube/core/blossom-utils'

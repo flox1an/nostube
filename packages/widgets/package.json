@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./cn": "./src/cn.ts",
     "./hooks/*": "./src/hooks/*.ts",
+    "./components/*": "./src/components/*.tsx",
     "./*": "./src/*.tsx"
   },
   "scripts": {
@@ -15,13 +17,17 @@
   },
   "dependencies": {
     "@nostube/core": "*",
+    "@radix-ui/react-avatar": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.2.16",
     "applesauce-core": "^6.2.0",
     "applesauce-loaders": "^6.2.0",
     "applesauce-react": "^6.0.0",
     "applesauce-relay": "^6.2.1",
+    "clsx": "^2.1.1",
     "hls.js": "^1.7.1",
     "nostr-tools": "^2.25.0",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "react": "^19.2.8",

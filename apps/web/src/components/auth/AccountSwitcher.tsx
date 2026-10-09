@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useNavigate } from 'react-router-dom'
 import { useAccountManager, useActiveAccount } from 'applesauce-react/hooks'
 import { useProfile, removeAccountFromStorage, saveActiveAccount } from '@/hooks'

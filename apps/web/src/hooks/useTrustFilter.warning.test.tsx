@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useTrustFilter } from './useTrustFilter'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import type { ReactElement } from 'react'
 
 vi.mock('@/hooks/useTrustScore', () => ({

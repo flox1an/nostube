@@ -3,7 +3,7 @@ import { nip19 } from 'nostr-tools'
 import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { cn } from '@/lib/utils'
 

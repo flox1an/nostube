@@ -66,7 +66,7 @@ import { getContentSafetyGate } from '@nostube/core/content-safety'
 import { getInstanceConfig } from '@nostube/core/instance-config'
 import { appTitle, pageTitle } from '@nostube/core/instance-config'
 import { useImageCascade } from '@nostube/widgets/hooks/useImageCascade'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarImage, AvatarFallback } from '@nostube/widgets/components/avatar'
 
 // Instance build: no hosted avatar generator (api.dicebear.com); components fall back to
 // their character/initial fallback instead of a remote URL.

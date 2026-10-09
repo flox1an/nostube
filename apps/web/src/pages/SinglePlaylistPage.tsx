@@ -23,7 +23,7 @@ import { GripVertical, Lock, Pencil, Trash2, AlertCircle, Loader2 } from 'lucide
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoGrid } from '@/components/VideoGrid'
 import { VideoCard } from '@/components/VideoCard'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {

@@ -25,7 +25,7 @@ import { useProfile, useMuteUser, useNostrPublish, useAppContext } from '@/hooks
 import { isBetaUser } from '@/lib/beta-users'
 import { nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
 import { CommentInput } from '@/components/CommentInput'
 import { CommentReactions } from '@/components/CommentReactions'

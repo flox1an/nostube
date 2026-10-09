@@ -8,7 +8,7 @@ import { NostrClient } from './lib/nostr-client'
 import { ProfileFetcher } from './lib/profile-fetcher'
 import { processEvent, type VideoEvent } from '@nostube/core/video-event'
 import type { Profile } from './lib/profile-fetcher'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@nostube/widgets/components/tooltip'
 import { APP_CONFIG_STORAGE_KEY, type NsfwFilter } from '@nostube/core'
 import {
   getEffectiveNsfwFilter,

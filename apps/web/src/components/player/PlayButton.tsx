@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Play, Pause } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Kbd } from '@/components/ui/kbd'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
+import { Kbd } from '@nostube/widgets/components/kbd'
 
 interface PlayButtonProps {
   isPlaying: boolean

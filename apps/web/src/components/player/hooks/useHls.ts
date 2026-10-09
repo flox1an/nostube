@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import Hls from 'hls.js'
-import { useAppContextSafe } from '@/hooks/useAppContext'
+import { useNostubeHostSafe } from '@nostube/widgets/host'
 import { createBlossomHlsLoader } from '@nostube/core/hls-blossom-loader'
 import { isHlsDebugEnabled } from '@nostube/core/hls-failover-debug'
 import type { BlossomServer, CachingServer } from '@nostube/core'
@@ -70,9 +70,9 @@ export function useHls(
   autoPlay = true
 ): UseHlsResult {
   const hlsRef = useRef<Hls | null>(null)
-  const appContext = useAppContextSafe()
-  const blossomServers = appContext?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
-  const cachingServers = appContext?.config.cachingServers ?? EMPTY_CACHING_SERVERS
+  const host = useNostubeHostSafe()
+  const blossomServers = host?.config.blossomServers ?? EMPTY_BLOSSOM_SERVERS
+  const cachingServers = host?.config.cachingServers ?? EMPTY_CACHING_SERVERS
   // State for HLS-specific data (set via HLS event callbacks)
   const [hlsLevels, setHlsLevels] = useState<HlsQualityLevel[]>(EMPTY_LEVELS)
   const [hlsCurrentLevel, setHlsCurrentLevel] = useState(-1)

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'
 import { TrustBadgeDisplay } from '@/components/TrustBadge'

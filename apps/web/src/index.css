@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source '../../../packages/widgets/src';
 
 @custom-variant dark (&:is(.dark *));
 

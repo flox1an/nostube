@@ -1,7 +1,7 @@
 import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTrustScore } from '@/hooks/useTrustScore'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@nostube/widgets/components/tooltip'
 import { TrustScoreDialog } from '@/components/TrustScoreDebugPanel'
 import { getTrustColor } from '@/lib/trust-score-colors'
 import { useState } from 'react'

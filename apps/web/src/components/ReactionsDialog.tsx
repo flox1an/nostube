@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { UserAvatar } from '@/components/UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { useProfile } from '@nostube/widgets/hooks/useProfile'
 import { formatDateTime } from '@nostube/core/format-utils'
 import { buildProfileUrlFromPubkey } from '@/lib/nprofile'

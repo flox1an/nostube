@@ -7,7 +7,12 @@ import { useZap } from '@/hooks/useZap'
 import { useWalletContext as useWallet } from '@/contexts/WalletContext'
 import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@nostube/widgets/components/tooltip'
 
 interface ZapButtonProps {
   eventId?: string // Optional - not provided when zapping a profile directly

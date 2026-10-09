@@ -23,7 +23,12 @@ import {
 } from '@/components/ui/table'
 import { useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@nostube/widgets/components/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { HlsPreviewDialog } from './HlsPreviewDialog'
 import { normalizeUploadMedia } from '@/lib/upload-media'

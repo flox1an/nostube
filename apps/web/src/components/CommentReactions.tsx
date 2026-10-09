@@ -10,7 +10,12 @@ import {
 import { useZap } from '@/hooks/useZap'
 import { useWallet } from '@/hooks/useWallet'
 import { isUpvoteReaction } from '@/hooks/useEventStats'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@nostube/widgets/components/tooltip'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { useEventStore } from 'applesauce-react/hooks'
 import { getSeenRelays } from 'applesauce-core/helpers/relays'
@@ -19,7 +24,7 @@ import { cn, nowInSecs } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { formatSats } from '@nostube/core/zap-utils'
 import { ZapDialog } from './ZapDialog'
-import { UserAvatar } from './UserAvatar'
+import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 
 interface CommentReactionsProps {
   eventId: string

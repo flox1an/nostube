@@ -45,7 +45,7 @@ import {
 } from '@/hooks'
 import { hasLightningAddress } from '@nostube/core/zap-utils'
 import { useSelectedPreset } from '@/hooks/useSelectedPreset'
-import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
+import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { authorVideoLoader } from '@/nostr/loaders'
 import type { VideoEvent } from '@nostube/core/video-event'
 import type { NostrEvent } from 'nostr-tools'

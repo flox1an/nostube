@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NostrEvent } from 'nostr-tools'
 import type { ReactNode } from 'react'
 import type { NostubeClient } from '@nostube/core/client'
-import { TimelineProvider, type TimelinePolicy } from '@nostube/widgets/timeline'
+import { TimelineProvider, type TimelinePolicy } from '../timeline'
 import { useTimeline } from './useTimeline'
 
 const mocks = vi.hoisted(() => ({

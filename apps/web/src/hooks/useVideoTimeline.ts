@@ -3,7 +3,7 @@ import { type VideoType } from '@nostube/core'
 import { useReadRelays } from './useReadRelays'
 import { getKindsForType } from '@nostube/core/video-types'
 import { hashObjectBigInt } from '@/lib/utils'
-import { useTimeline } from '@/nostr/useTimeline'
+import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
 
 export default function useVideoTimeline(type: VideoType, authors?: string[]) {
   const readRelays = useReadRelays()

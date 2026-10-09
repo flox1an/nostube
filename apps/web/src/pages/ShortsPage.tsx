@@ -1,6 +1,6 @@
 import { VideoTimelinePage } from '@/components/VideoTimelinePage'
 import { CategoryButtonBar } from '@/components/CategoryButtonBar'
-import { useInfiniteTimeline } from '@/nostr/useInfiniteTimeline'
+import { useInfiniteTimeline } from '@nostube/widgets/hooks/useInfiniteTimeline'
 import { videoTypeLoader } from '@/nostr/loaders'
 import { useStableRelays } from '@/hooks'
 import { useAppContext } from '@/hooks/useAppContext'

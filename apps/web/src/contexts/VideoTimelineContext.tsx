@@ -4,7 +4,7 @@ import { type VideoEvent } from '@nostube/core/video-event'
 import { useAppContext } from '@/hooks/useAppContext'
 import { getKindsForType } from '@nostube/core/video-types'
 import { hashObjectBigInt } from '@/lib/utils'
-import { useTimeline } from '@/nostr/useTimeline'
+import { useTimeline } from '@nostube/widgets/hooks/useTimeline'
 import { type Filter } from 'nostr-tools'
 
 interface TimelineRequest {

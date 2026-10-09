@@ -538,12 +538,18 @@ async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) ->
             "local-ca · https :{https_port} · http :{http_port} · router name {}",
             router_name.as_deref().unwrap_or("—")
         ),
+        config::Tls::Proxy { port } => format!("proxy · plain HTTP :{port}, TLS at the reverse proxy"),
+    };
+    let tls_mode = match &cfg.tls {
+        config::Tls::LocalCa { .. } => "local-ca",
+        config::Tls::Proxy { .. } => "proxy",
     };
     let nostr = state.secrets.lock().unwrap().nostr_pubkey.clone();
     Json(serde_json::json!({
         "revision": cfg.revision,
         "origin": cfg.origin,
         "tls": tls,
+        "tlsMode": tls_mode,
         "bootId": state.boot_id,
         "nostrPubkey": nostr,
         "config": editable_json(&cfg),
@@ -612,7 +618,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
 /// Writes the validated config (keeping `config.prev`) and stops the listener so the supervisor
 /// restarts the process on it. Used by the studio endpoint.
 fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
-    if let Some(e) = preflight(state) {
+    if let Some(e) = preflight(state, &next.tls) {
         return Err(format!("preflight failed: {e}"));
     }
     let path = state.data.join("config.toml");
@@ -631,12 +637,15 @@ fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
 }
 
 /// The studio cannot change listeners; startup validates their bind addresses.
-/// Preflight checks TLS material and writable storage before a config is applied.
-fn preflight(state: &AdminState) -> Option<String> {
-    for file in ["ca.pem", "ca-key.pem", "leaf.pem"] {
-        let p = state.data.join("tls").join(file);
-        if std::fs::File::open(&p).is_err() {
-            return Some(format!("cannot read {}", p.display()));
+/// Preflight checks TLS material (local CA only) and writable storage before a config is applied.
+fn preflight(state: &AdminState, tls: &config::Tls) -> Option<String> {
+    // Only the local CA keeps TLS material in the data dir; behind a proxy there is none.
+    if matches!(tls, config::Tls::LocalCa { .. }) {
+        for file in ["ca.pem", "ca-key.pem", "leaf.pem"] {
+            let p = state.data.join("tls").join(file);
+            if std::fs::File::open(&p).is_err() {
+                return Some(format!("cannot read {}", p.display()));
+            }
         }
     }
     let probe = state.data.join(".preflight");
@@ -847,15 +856,22 @@ mod tests {
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
     /// router and a valid session cookie.
     fn studio_fixture() -> (Router, PathBuf, String) {
+        studio_fixture_for("{ mode = \"local-ca\" }", true)
+    }
+
+    /// `tls` is the TOML value of `tls`; `tls_files` writes the placeholder CA files.
+    fn studio_fixture_for(tls: &str, tls_files: bool) -> (Router, PathBuf, String) {
         let dir = std::env::temp_dir().join(format!("nss-studio-test-{}", random_hex(4)));
         std::fs::create_dir_all(dir.join("tls")).unwrap();
-        for f in ["ca.pem", "ca-key.pem", "leaf.pem"] {
-            std::fs::write(dir.join("tls").join(f), "x").unwrap();
+        if tls_files {
+            for f in ["ca.pem", "ca-key.pem", "leaf.pem"] {
+                std::fs::write(dir.join("tls").join(f), "x").unwrap();
+            }
         }
         std::fs::write(
             dir.join("config.toml"),
             format!(
-                "revision = 4\norigin = \"https://flox-mac.local\"\ntitle = \"Flox\"\ncreators = [\"{PK}\"]\nallowed_writers = [\"{PK}\"]\nvideo_sources = [\"wss://flox-mac.local\"]\ninteraction_relays = []\nsearch = {{ mode = \"off\" }}\ntls = {{ mode = \"local-ca\" }}\n[storage]\nquota_gib = 7\nfree_space_reserve_gib = 2\n"
+                "revision = 4\norigin = \"https://flox-mac.local\"\ntitle = \"Flox\"\ncreators = [\"{PK}\"]\nallowed_writers = [\"{PK}\"]\nvideo_sources = [\"wss://flox-mac.local\"]\ninteraction_relays = []\nsearch = {{ mode = \"off\" }}\ntls = {tls}\n[storage]\nquota_gib = 7\nfree_space_reserve_gib = 2\n"
             ),
         )
         .unwrap();
@@ -996,6 +1012,30 @@ mod tests {
         // Not editable: origin and TLS.
         assert_eq!(after.origin, before.origin);
         assert!(matches!(after.tls, config::Tls::LocalCa { .. }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn behind_a_proxy_saving_needs_no_tls_files() {
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"proxy\", port = 8080 }", false);
+        assert!(!dir.join("tls").join("ca.pem").exists());
+        let (status, body) = call(&app, "GET", Some(&cookie), None, "").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["tlsMode"], "proxy");
+        assert!(body["tls"].as_str().unwrap().contains("proxy"));
+        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(dir.join("config.prev").exists());
+        let after = Config::load(&dir.join("config.toml")).unwrap();
+        assert!(matches!(after.tls, config::Tls::Proxy { port: 8080 }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn with_a_local_ca_missing_tls_files_still_block_saving() {
+        let (app, dir, cookie) = studio_fixture_for("{ mode = \"local-ca\" }", false);
+        let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         std::fs::remove_dir_all(&dir).ok();
     }
 }

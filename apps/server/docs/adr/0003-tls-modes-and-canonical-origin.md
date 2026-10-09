@@ -16,3 +16,7 @@ Each instance has exactly one canonical origin, chosen at setup. Only it goes in
 ## Consequences
 
 `local-ca` viewers need a one-time CA trust step per device (iOS: profile plus the full-trust toggle; Firefox on Linux: manual import), and guest devices only work with a public name (`files` + split DNS). Since `.local` and bare-IP aliases are each a single host name, URLs on those aliases cannot rely on subdomains.
+
+## Addendum: the `proxy` mode as built
+
+`proxy` is implemented as `[tls] mode = "proxy"` with a `port` (default 8080): plain HTTP, no CA, no certificate files, no port-80 onboarding. The canonical origin is given at the first start (`--origin` or `NOSTUBE_ORIGIN`); an origin implies this mode, and a first start in proxy mode without one stops with a message. `trusted_proxies` is **not** built: the server reads no forwarded headers (the origin comes from the config, the proxy must pass `Host` on), so there is no setting to trust them with. It returns when something needs the client address. To keep plain HTTP from being reachable by accident, the binary binds loopback by default in this mode; the container image sets `NOSTUBE_BIND=0.0.0.0` because it is only reached over the container network. See `docs/deploy.md`.

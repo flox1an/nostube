@@ -1,0 +1,33 @@
+# Nostube Server with automatic HTTPS: the instance plus Caddy as the TLS proxy.
+#
+#   1. Point the DNS name of NOSTUBE_ORIGIN at this host; ports 80 and 443 must be reachable.
+#   2. NOSTUBE_ORIGIN=https://videos.example.org docker compose up -d
+#   3. docker compose logs nostube   (the first start prints the admin setup link)
+#
+# The instance publishes no port of its own: it speaks plain HTTP, only Caddy may reach it.
+services:
+  nostube:
+    image: ghcr.io/flox1an/nostube-server:main
+    restart: always # not on-failure: saving in the studio ends the process on purpose
+    stop_grace_period: 40s # running uploads get up to 30 s to finish
+    environment:
+      NOSTUBE_ORIGIN: ${NOSTUBE_ORIGIN:?set NOSTUBE_ORIGIN, e.g. https://videos.example.org}
+    volumes:
+      - ./data:/data
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    # Gets and renews the certificate for the origin by itself; WebSockets and large uploads pass.
+    command: caddy reverse-proxy --from ${NOSTUBE_ORIGIN} --to nostube:8080
+    volumes:
+      - caddy_data:/data
+    depends_on:
+      - nostube
+
+volumes:
+  caddy_data:

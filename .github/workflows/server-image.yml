@@ -1,0 +1,118 @@
+name: Server image
+
+# Builds the Nostube Server image (apps/server/Dockerfile: web assets and binary are built inside
+# the image). Every run builds it and smoke-tests the container; only main and server-v* tags
+# push it to ghcr.io.
+
+on:
+  push:
+    branches: ['main']
+    tags: ['server-v*']
+    paths:
+      - 'apps/server/**'
+      - 'apps/site/**'
+      - 'apps/studio/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'scripts/build-server-web.sh'
+      - 'package-lock.json'
+      - '.github/workflows/server-image.yml'
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'apps/server/**'
+      - 'apps/site/**'
+      - 'apps/studio/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'scripts/build-server-web.sh'
+      - 'package-lock.json'
+      - '.github/workflows/server-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Image name
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nostube-server" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.name.outputs.image }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=match,pattern=server-v(.*),group=1
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          load: true
+          tags: nostube-server:ci
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the container
+        run: |
+          docker run -d --name smoke -p 8080:8080 \
+            -e NOSTUBE_ORIGIN=https://ci.example.org nostube-server:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/api/health
+          # The site, the studio, the embed player and the public config are all served.
+          for path in / /studio/ /embed.html /api/config; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+          done
+          curl -fsS http://127.0.0.1:8080/api/config | grep -q '"origin":"https://ci.example.org"'
+          # The studio's API wants a login, and the setup link names the public origin.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/admin/config)" = "401"
+          docker logs smoke 2>&1 | grep -q 'https://ci.example.org/admin/setup#token='
+          # docker stop must end the server by itself (SIGTERM), not by the SIGKILL after 10 s.
+          start=$(date +%s)
+          docker stop smoke >/dev/null
+          elapsed=$(( $(date +%s) - start ))
+          echo "stopped in ${elapsed}s"
+          test "$elapsed" -lt 9
+          test "$(docker inspect smoke --format '{{.State.ExitCode}}')" = "0"
+
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

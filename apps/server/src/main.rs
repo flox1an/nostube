@@ -42,7 +42,7 @@ async fn main() {
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
     // Startup failures end with one line naming the cause (#7), then exit.
-    let cli = match Cli::parse(std::env::args().skip(1)) {
+    let cli = match Cli::parse(std::env::args().skip(1), |name| std::env::var(name).ok()) {
         Ok(cli) => cli,
         Err(e) => {
             eprintln!("{e}");
@@ -72,36 +72,113 @@ async fn main() {
     }
 }
 
-/// Listener overrides do not change an existing canonical origin.
-struct Cli {
-    data: PathBuf,
-    bind: std::net::IpAddr,
-    port: Option<u16>,
-    http_port: Option<u16>,
+/// How the instance gets its TLS, chosen at the first start.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum TlsKind {
+    LocalCa,
+    Proxy,
 }
 
+/// The command line, with `NOSTUBE_*` environment fallbacks so a container needs no arguments.
+/// Flags win over the environment. Everything here is a transport or first-start choice: an
+/// existing config keeps its canonical origin and TLS mode.
+#[derive(Debug)]
+struct Cli {
+    data: PathBuf,
+    /// Default: all interfaces for `local-ca`, loopback behind a proxy (plain HTTP must not be
+    /// reachable from outside by accident; the container image sets `0.0.0.0`).
+    bind: Option<std::net::IpAddr>,
+    port: Option<u16>,
+    http_port: Option<u16>,
+    /// First start only: the canonical origin (`https://host`) of an instance behind a proxy.
+    origin: Option<String>,
+    /// First start only. `proxy` when an origin is given, else `local-ca`.
+    tls: Option<TlsKind>,
+}
+
+const USAGE: &str = "usage: nostube-server [--data <dir>] [--bind <IP>] [--port <port>] [--http-port <port|0>] \
+[--origin <https://host>] [--tls <proxy|local-ca>] (each also as NOSTUBE_DATA, NOSTUBE_BIND, NOSTUBE_PORT, \
+NOSTUBE_HTTP_PORT, NOSTUBE_ORIGIN, NOSTUBE_TLS)";
+
 impl Cli {
-    fn parse(mut args: impl Iterator<Item = String>) -> Result<Cli, BoxError> {
-        let mut cli = Cli { data: "data".into(), bind: std::net::Ipv4Addr::UNSPECIFIED.into(), port: None, http_port: None };
+    fn parse(args: impl Iterator<Item = String>, env: impl Fn(&str) -> Option<String>) -> Result<Cli, BoxError> {
+        let mut cli = Cli { data: "data".into(), bind: None, port: None, http_port: None, origin: None, tls: None };
+        for name in ["data", "bind", "port", "http-port", "origin", "tls"] {
+            let var = format!("NOSTUBE_{}", name.to_uppercase().replace('-', "_"));
+            if let Some(value) = env(&var).filter(|v| !v.trim().is_empty()) {
+                cli.set(name, value).map_err(|e| format!("{var}: {e}"))?;
+            }
+        }
+        let mut args = args;
         while let Some(a) = args.next() {
             match a.as_str() {
-                "--data" => cli.data = args.next().ok_or("--data needs a directory")?.into(),
-                "--bind" => cli.bind = args.next().ok_or("--bind needs an IP address")?.parse()
-                    .map_err(|e| format!("invalid --bind: {e}"))?,
-                "--port" => {
-                    let port = args.next().ok_or("--port needs a port")?.parse()
-                        .map_err(|e| format!("invalid --port: {e}"))?;
-                    if port == 0 { return Err("--port must be between 1 and 65535".into()); }
-                    cli.port = Some(port);
-                }
-                "--http-port" => cli.http_port = Some(args.next().ok_or("--http-port needs a port (0 = off)")?.parse()
-                    .map_err(|e| format!("invalid --http-port: {e}"))?),
                 "admin" | "reset" | "config" | "rollback" => {}
-                _ => return Err(format!("unknown argument {a}; usage: nostube-server [--data <dir>] [--bind <IP>] [--port <HTTPS port>] [--http-port <port|0>]").into()),
+                flag if flag.starts_with("--") && ["data", "bind", "port", "http-port", "origin", "tls"].contains(&&flag[2..]) => {
+                    let value = args.next().ok_or(format!("{flag} needs a value"))?;
+                    cli.set(&flag[2..], value).map_err(|e| format!("{flag}: {e}"))?;
+                }
+                _ => return Err(format!("unknown argument {a}; {USAGE}").into()),
             }
         }
         Ok(cli)
     }
+
+    fn set(&mut self, name: &str, value: String) -> Result<(), BoxError> {
+        match name {
+            "data" => self.data = value.into(),
+            "bind" => self.bind = Some(value.parse().map_err(|e| format!("invalid IP address: {e}"))?),
+            "port" => {
+                let port: u16 = value.parse().map_err(|e| format!("invalid port: {e}"))?;
+                if port == 0 {
+                    return Err("the port must be between 1 and 65535".into());
+                }
+                self.port = Some(port);
+            }
+            "http-port" => self.http_port = Some(value.parse().map_err(|e| format!("invalid port: {e}"))?),
+            "origin" => self.origin = Some(value.trim().trim_end_matches('/').to_owned()),
+            "tls" => {
+                self.tls = Some(match value.as_str() {
+                    "proxy" => TlsKind::Proxy,
+                    "local-ca" => TlsKind::LocalCa,
+                    other => return Err(format!("unknown TLS mode {other} (proxy or local-ca)").into()),
+                })
+            }
+            _ => unreachable!("every name is listed above"),
+        }
+        Ok(())
+    }
+
+    /// The TLS mode of a first start: what was asked for, else `proxy` if an origin was given.
+    fn first_start_kind(&self) -> TlsKind {
+        self.tls.unwrap_or(if self.origin.is_some() { TlsKind::Proxy } else { TlsKind::LocalCa })
+    }
+}
+
+/// SIGTERM (`docker stop`, systemd, a redeploy) and Ctrl-C end the instance the same way a config
+/// apply does: stop accepting, give running uploads time to finish, then exit with status 0.
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        match signal(SignalKind::terminate()) {
+            Ok(mut term) => {
+                tokio::select! { _ = term.recv() => {}, _ = tokio::signal::ctrl_c() => {} }
+            }
+            Err(_) => {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
+}
+
+/// How this run serves: with its own local CA, or as plain HTTP behind a proxy.
+enum Serving {
+    LocalCa { ca: tls::LocalCa, names: tls::LocalNames, https_port: u16, http_port: u16 },
+    Proxy { port: u16 },
 }
 
 async fn run(cli: Cli) -> Result<(), BoxError> {
@@ -110,62 +187,98 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         .install_default()
         .map_err(|_| "rustls provider already installed")?;
 
-    let data = cli.data;
+    let data = cli.data.clone();
     std::fs::create_dir_all(&data)?;
-    // First start needs nothing: the default config is written and the admin
-    // registers at /admin/setup with the logged token, everything else is the
-    // web UI (#17 flow).
+    // First start needs nothing but, behind a proxy, the public origin: the default config is
+    // written and the admin registers at /admin/setup with the logged token, everything else is
+    // the studio (#17 flow).
     let config_path = data.join("config.toml");
     let cfg = if config_path.exists() {
-        Config::load(&config_path)?
+        let cfg = Config::load(&config_path)?;
+        if cli.origin.as_deref().is_some_and(|o| o != cfg.origin) {
+            tracing::warn!(
+                "ignoring the origin {:?}: this instance already has the origin {} (changing it is a hostname transition, not a flag)",
+                cli.origin,
+                cfg.origin
+            );
+        }
+        cfg
     } else {
-        let names = tls::LocalNames::detect(None)?;
-        let cfg = Config::default_for(
-            &names.local_name,
-            cli.port.unwrap_or(443),
-            cli.http_port.unwrap_or(80),
-        );
+        let cfg = match cli.first_start_kind() {
+            TlsKind::Proxy => {
+                let origin = cli.origin.as_deref().ok_or(
+                    "behind a proxy the first start needs the public origin: --origin https://host (or NOSTUBE_ORIGIN)",
+                )?;
+                Config::default_for_proxy(origin, cli.port.unwrap_or(8080))?
+            }
+            TlsKind::LocalCa => {
+                let names = tls::LocalNames::detect(None)?;
+                Config::default_for(&names.local_name, cli.port.unwrap_or(443), cli.http_port.unwrap_or(80))
+            }
+        };
         std::fs::write(&config_path, cfg.to_toml()?)?;
         tracing::info!(
-            "first start: wrote default {} (origin {}; refine at /admin after setup)",
+            "first start: wrote default {} (origin {}; refine in the studio after setup)",
             config_path.display(),
             cfg.origin
         );
         cfg
     };
-    let config::Tls::LocalCa { router_name, https_port, http_port } = &cfg.tls;
-    let (https_port, http_port) = (*https_port, *http_port);
-    // Transport overrides for this run; the config file keeps its values.
-    let https_port = cli.port.unwrap_or(https_port);
-    let mut setup_origin = nostr::prelude::Url::parse(&cfg.origin)?;
-    setup_origin.set_port((https_port != 443).then_some(https_port)).map_err(|_| "invalid setup port")?;
-    // `http_port = 0` (or `--http-port 0`) disables the port-80 onboarding
-    // listener (e.g. behind a proxy that owns port 80).
-    let http_port = cli.http_port.unwrap_or(http_port);
-    if http_port != 0 && http_port == https_port {
-        return Err("HTTPS and HTTP onboarding ports must differ (use --http-port 0 to disable onboarding)".into());
-    }
-    let names = tls::LocalNames::detect(router_name.clone())?;
-    let covered = names.local_name.eq_ignore_ascii_case(&cfg.origin_host)
-        || names.router_name.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
-        || cfg.origin_host.parse().is_ok_and(|ip| names.ips.contains(&ip));
-    if !covered {
-        return Err(format!(
-            "origin host {} is not one of the certificate names ({}, router name {:?}, IPs {:?})",
-            cfg.origin_host, names.local_name, names.router_name, names.ips
-        )
-        .into());
-    }
-    let ca = tls::local_ca(&data.join("tls"), &names).await?;
 
-    // Broken secrets only disable the admin area, never the instance (#7).
     let boot_id = admin::random_boot_id();
     let handle = Arc::new(axum_server::Handle::new());
+    {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            shutdown_signal().await;
+            tracing::info!("shutting down: finishing running requests (up to 30 s)");
+            handle.graceful_shutdown(Some(std::time::Duration::from_secs(30)));
+        });
+    }
+
+    let (covered_hosts, setup_origin, serving) = match &cfg.tls {
+        config::Tls::LocalCa { router_name, https_port, http_port } => {
+            // Transport overrides for this run; the config file keeps its values.
+            let https_port = cli.port.unwrap_or(*https_port);
+            let mut setup_origin = nostr::prelude::Url::parse(&cfg.origin)?;
+            setup_origin.set_port((https_port != 443).then_some(https_port)).map_err(|_| "invalid setup port")?;
+            // `http_port = 0` (or `--http-port 0`) disables the port-80 onboarding
+            // listener (e.g. behind a proxy that owns port 80).
+            let http_port = cli.http_port.unwrap_or(*http_port);
+            if http_port != 0 && http_port == https_port {
+                return Err("HTTPS and HTTP onboarding ports must differ (use --http-port 0 to disable onboarding)".into());
+            }
+            let names = tls::LocalNames::detect(router_name.clone())?;
+            let covered = names.local_name.eq_ignore_ascii_case(&cfg.origin_host)
+                || names.router_name.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(&cfg.origin_host))
+                || cfg.origin_host.parse().is_ok_and(|ip| names.ips.contains(&ip));
+            if !covered {
+                return Err(format!(
+                    "origin host {} is not one of the certificate names ({}, router name {:?}, IPs {:?})",
+                    cfg.origin_host, names.local_name, names.router_name, names.ips
+                )
+                .into());
+            }
+            let ca = tls::local_ca(&data.join("tls"), &names).await?;
+            (
+                tls::covered_hosts(&names),
+                setup_origin.origin().ascii_serialization(),
+                Serving::LocalCa { ca, names, https_port, http_port },
+            )
+        }
+        config::Tls::Proxy { port } => (
+            vec![cfg.origin_host.clone()],
+            cfg.origin.clone(),
+            Serving::Proxy { port: cli.port.unwrap_or(*port) },
+        ),
+    };
+
+    // Broken secrets only disable the admin area, never the instance (#7).
     let admin = match admin::AdminState::open(
         &data,
         &cfg.origin_host,
-        tls::covered_hosts(&names),
-        &setup_origin.origin().ascii_serialization(),
+        covered_hosts,
+        &setup_origin,
         boot_id.clone(),
         handle.clone(),
     ) {
@@ -208,37 +321,54 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         admin,
     };
 
-    if http_port != 0 {
-        // Port 80 is a nice-to-have (CA onboarding); a busy or privileged port
-        // must not keep the instance from starting — warn and serve.
-        match tokio::net::TcpListener::bind(SocketAddr::new(cli.bind, http_port)).await {
-            Ok(http) => {
-                let onboarding = tls::onboarding_router(&ca, cfg.origin.clone());
-                tracing::info!("CA onboarding at http://{}:{http_port}/ca", names.local_name);
-                tokio::spawn(async move {
-                    if let Err(e) = axum::serve(http, onboarding).await {
-                        tracing::error!("port {} listener stopped: {e}", http_port);
+    match serving {
+        Serving::LocalCa { ca, names, https_port, http_port } => {
+            let bind = cli.bind.unwrap_or(std::net::Ipv4Addr::UNSPECIFIED.into());
+            if http_port != 0 {
+                // Port 80 is a nice-to-have (CA onboarding); a busy or privileged port
+                // must not keep the instance from starting — warn and serve.
+                match tokio::net::TcpListener::bind(SocketAddr::new(bind, http_port)).await {
+                    Ok(http) => {
+                        let onboarding = tls::onboarding_router(&ca, cfg.origin.clone());
+                        tracing::info!("CA onboarding at http://{}:{http_port}/ca", names.local_name);
+                        tokio::spawn(async move {
+                            if let Err(e) = axum::serve(http, onboarding).await {
+                                tracing::error!("port {} listener stopped: {e}", http_port);
+                            }
+                        });
                     }
-                });
+                    Err(e) => tracing::warn!(
+                        "CA onboarding on http port {http_port} unavailable ({e}); serve /ca another way or change http_port"
+                    ),
+                }
+            } else {
+                tracing::info!("http onboarding listener disabled (http_port = 0)");
             }
-            Err(e) => tracing::warn!(
-                "CA onboarding on http port {http_port} unavailable ({e}); serve /ca another way or change http_port"
-            ),
-        }
-    } else {
-        tracing::info!("http onboarding listener disabled (http_port = 0)");
-    }
 
-    tracing::info!("serving {} on HTTPS {}:{https_port}", cfg.origin, cli.bind);
-    let address = SocketAddr::new(cli.bind, https_port);
-    let listener = std::net::TcpListener::bind(address)
-        .map_err(|e| format!("cannot bind HTTPS listener {address}: {e}"))?;
-    listener.set_nonblocking(true)?;
-    axum_server::from_tcp_rustls(listener, ca.rustls.clone())?
-        .handle((*handle).clone())
-        .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
-        .await?;
-    // A config apply brought us here: the supervisor (launchd) restarts the process.
+            tracing::info!("serving {} on HTTPS {}:{https_port}", cfg.origin, bind);
+            let address = SocketAddr::new(bind, https_port);
+            let listener = std::net::TcpListener::bind(address)
+                .map_err(|e| format!("cannot bind HTTPS listener {address}: {e}"))?;
+            listener.set_nonblocking(true)?;
+            axum_server::from_tcp_rustls(listener, ca.rustls.clone())?
+                .handle((*handle).clone())
+                .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
+                .await?;
+        }
+        Serving::Proxy { port } => {
+            let bind = cli.bind.unwrap_or(std::net::Ipv4Addr::LOCALHOST.into());
+            tracing::info!("serving {} as plain HTTP on {bind}:{port} (TLS ends at the proxy)", cfg.origin);
+            let address = SocketAddr::new(bind, port);
+            let listener = std::net::TcpListener::bind(address)
+                .map_err(|e| format!("cannot bind HTTP listener {address}: {e}"))?;
+            listener.set_nonblocking(true)?;
+            axum_server::from_tcp(listener)?
+                .handle((*handle).clone())
+                .serve(Router::new().fallback(dispatch).with_state(app).into_make_service())
+                .await?;
+        }
+    }
+    // A config apply or a signal brought us here: a supervisor restarts the process if it should run.
     tracing::info!("stopped; restart the service to run the applied config");
     Ok(())
 }
@@ -339,4 +469,66 @@ fn is_blossom(method: &Method, path: &str) -> bool {
 fn is_blob_name(seg: &str) -> bool {
     let hash = seg.split_once('.').map_or(seg, |(h, _)| h);
     hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn parse(args: &[&str], env: &[(&str, &str)]) -> Result<Cli, BoxError> {
+        let env: HashMap<String, String> = env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        Cli::parse(args.iter().map(|a| a.to_string()), move |name| env.get(name).cloned())
+    }
+
+    #[test]
+    fn a_container_is_configured_by_the_environment_alone() {
+        let cli = parse(
+            &[],
+            &[
+                ("NOSTUBE_DATA", "/data"),
+                ("NOSTUBE_ORIGIN", "https://videos.example.org/"),
+                ("NOSTUBE_BIND", "0.0.0.0"),
+                ("NOSTUBE_PORT", "8081"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(cli.data, PathBuf::from("/data"));
+        assert_eq!(cli.origin.as_deref(), Some("https://videos.example.org"));
+        assert_eq!(cli.bind, Some("0.0.0.0".parse().unwrap()));
+        assert_eq!(cli.port, Some(8081));
+        // An origin implies the proxy mode.
+        assert_eq!(cli.first_start_kind(), TlsKind::Proxy);
+    }
+
+    #[test]
+    fn flags_win_over_the_environment_and_the_defaults_are_safe() {
+        let cli = parse(&["--data", "/mnt/x", "--port", "9000"], &[("NOSTUBE_DATA", "/data"), ("NOSTUBE_PORT", "8081")]).unwrap();
+        assert_eq!(cli.data, PathBuf::from("/mnt/x"));
+        assert_eq!(cli.port, Some(9000));
+        let bare = parse(&[], &[]).unwrap();
+        assert_eq!(bare.data, PathBuf::from("data"));
+        assert_eq!(bare.bind, None); // each mode picks its own default: loopback behind a proxy
+        assert_eq!(bare.first_start_kind(), TlsKind::LocalCa);
+    }
+
+    #[test]
+    fn the_subcommands_still_parse_and_bad_values_say_where_they_came_from() {
+        assert!(parse(&["admin", "reset"], &[("NOSTUBE_DATA", "/data")]).is_ok());
+        assert!(parse(&["config", "rollback", "--data", "/d"], &[]).is_ok());
+        let err = parse(&[], &[("NOSTUBE_PORT", "0")]).unwrap_err().to_string();
+        assert!(err.contains("NOSTUBE_PORT"), "{err}");
+        assert!(parse(&["--tls", "plain"], &[]).is_err());
+        assert!(parse(&["--bogus"], &[]).is_err());
+        assert!(parse(&["--origin"], &[]).is_err());
+        // An empty variable counts as unset (compose passes `NOSTUBE_ORIGIN=` when it is blank).
+        assert!(parse(&[], &[("NOSTUBE_ORIGIN", "  ")]).unwrap().origin.is_none());
+    }
+
+    #[test]
+    fn an_explicit_tls_mode_beats_the_origin_hint() {
+        let cli = parse(&["--tls", "local-ca", "--origin", "https://x.example"], &[]).unwrap();
+        assert_eq!(cli.first_start_kind(), TlsKind::LocalCa);
+        assert_eq!(parse(&["--tls", "proxy"], &[]).unwrap().first_start_kind(), TlsKind::Proxy);
+    }
 }

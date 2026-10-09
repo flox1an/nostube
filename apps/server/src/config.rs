@@ -47,6 +47,17 @@ pub enum Tls {
         #[serde(default = "http_port")]
         http_port: u16,
     },
+    /// TLS ends at a reverse proxy in front of the instance (Caddy, nginx, Coolify, Traefik).
+    /// The server speaks plain HTTP on `port` and reads no forwarded headers: the canonical
+    /// origin comes from the config, and the proxy has to pass `Host` on unchanged.
+    Proxy {
+        #[serde(default = "proxy_port")]
+        port: u16,
+    },
+}
+
+fn proxy_port() -> u16 {
+    8080
 }
 
 fn https_port() -> u16 {
@@ -294,6 +305,20 @@ impl Config {
             storage: Storage::default(),
             site: Site::default(),
         }
+    }
+
+    /// First start behind a TLS-terminating proxy: the origin is given (`https://host`), the own
+    /// relay is `wss://host`, and the server listens on plain HTTP on `port`.
+    pub fn default_for_proxy(origin: &str, port: u16) -> Result<Config, BoxError> {
+        let origin = origin.trim_end_matches('/');
+        let origin_host = origin_host(origin)?.to_owned();
+        let authority = origin.trim_start_matches("https://").to_owned();
+        let mut cfg = Config::default_for(&origin_host, 443, 0);
+        cfg.origin = origin.to_owned();
+        cfg.video_sources = vec![format!("wss://{authority}")];
+        cfg.interaction_relays = vec![format!("wss://{authority}")];
+        cfg.tls = Tls::Proxy { port };
+        Ok(cfg)
     }
 
     /// Back to the `<data>/config.toml` file format (same schema as `load` reads).
@@ -552,6 +577,34 @@ tls = {{ mode = "local-ca" }}
             "other = \"https://example.org/{nip19}\"",
         ] {
             assert!(Config::parse(&sample(&format!("[site.links]\n{bad}\n"))).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_proxy_config_parses_and_the_default_has_no_port_in_its_relay_urls() {
+        let cfg = Config::parse(&sample("").replace("tls = { mode = \"local-ca\" }", "tls = { mode = \"proxy\" }")).unwrap();
+        assert!(matches!(cfg.tls, Tls::Proxy { port: 8080 }));
+        let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
+        assert!(matches!(again.tls, Tls::Proxy { port: 8080 }));
+
+        let first = Config::default_for_proxy("https://videos.example.org/", 9000).unwrap();
+        assert_eq!(first.origin, "https://videos.example.org");
+        assert_eq!(first.origin_host, "videos.example.org");
+        assert_eq!(first.video_sources, vec!["wss://videos.example.org"]);
+        assert_eq!(first.interaction_relays, vec!["wss://videos.example.org"]);
+        assert!(matches!(first.tls, Tls::Proxy { port: 9000 }));
+        assert!(Config::parse(&first.to_toml().unwrap()).is_ok());
+        // An origin on a port keeps it in the relay URL.
+        assert_eq!(
+            Config::default_for_proxy("https://videos.example.org:8443", 8080).unwrap().video_sources,
+            vec!["wss://videos.example.org:8443"]
+        );
+    }
+
+    #[test]
+    fn a_proxy_origin_must_be_https_without_a_path() {
+        for bad in ["http://videos.example.org", "videos.example.org", "https://videos.example.org/app", "https://"] {
+            assert!(Config::default_for_proxy(bad, 8080).is_err(), "{bad}");
         }
     }
 }

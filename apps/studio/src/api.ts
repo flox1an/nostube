@@ -18,6 +18,8 @@ export interface AdminState {
   revision: number
   origin: string
   tls: string
+  /** `local-ca`: the instance runs its own CA; `proxy`: TLS ends at a reverse proxy. */
+  tlsMode: 'local-ca' | 'proxy'
   bootId: string
   nostrPubkey: string | null
   config: AdminConfig

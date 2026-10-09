@@ -75,9 +75,12 @@ export function AccountPage({ state, reload }: { state: AdminState; reload: () =
           <CardTitle>This device</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
-          <Button asChild variant="outline">
-            <a href="/ca.pem">Download the instance CA</a>
-          </Button>
+          {/* Only an instance with its own CA has one to install; behind a proxy TLS is public. */}
+          {state.tlsMode === 'local-ca' && (
+            <Button asChild variant="outline">
+              <a href="/ca.pem">Download the instance CA</a>
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

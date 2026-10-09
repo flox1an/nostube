@@ -1,0 +1,11 @@
+# Used instead of the repository's .dockerignore for apps/server/Dockerfile (BuildKit looks for
+# <Dockerfile>.dockerignore first). The root file excludes apps/server, which this image needs.
+**/node_modules
+**/dist
+**/dist-instance
+**/target
+.git
+.claude
+.worktrees
+apps/server/web
+apps/server/research

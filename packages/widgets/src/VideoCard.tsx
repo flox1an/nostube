@@ -27,7 +27,7 @@ export function VideoCard({
       onClick={() => onSelect?.(video)}
       className="group flex w-full flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
     >
-      <span className="relative block aspect-video overflow-hidden rounded-lg bg-neutral-200 dark:bg-neutral-800">
+      <span className="relative block aspect-video overflow-hidden bg-neutral-200 sm:rounded-lg dark:bg-neutral-800">
         {locked && (
           <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-neutral-400">
             {lockedLabel}
@@ -48,8 +48,10 @@ export function VideoCard({
           </span>
         )}
       </span>
-      <span className="line-clamp-2 text-sm font-medium">{video.title}</span>
-      <span className="text-xs text-neutral-500">{formatDate(getPublishDate(video))}</span>
+      <span className="line-clamp-2 px-4 text-sm font-medium sm:px-0">{video.title}</span>
+      <span className="px-4 text-xs text-neutral-500 sm:px-0">
+        {formatDate(getPublishDate(video))}
+      </span>
     </button>
   )
 }

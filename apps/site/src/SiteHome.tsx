@@ -27,7 +27,7 @@ function Site({ client, config }: SiteHomeProps) {
   // A video page has its own breadcrumb instead of the large header.
   const onVideoPage = useMatch('/v/:id') !== null
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-6xl space-y-4 px-4 py-3 sm:space-y-6 sm:py-6">
       {!onVideoPage && (
         <header>
           <Link to="/" className="flex items-center gap-4">

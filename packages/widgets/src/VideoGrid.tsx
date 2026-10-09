@@ -33,15 +33,18 @@ export function VideoGrid({
 
 const GRID_CLASSES = 'grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 
-/** Placeholder cards with the size of the real ones, shown while the first page loads. */
+/**
+ * Placeholder cards with the size of the real ones, shown while the first page loads. Like the
+ * cards, they are meant to run edge to edge on a phone: the page lets the grid bleed (`-mx-4`).
+ */
 export function VideoGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <ul className={GRID_CLASSES} aria-busy="true" aria-label="Loading videos">
       {Array.from({ length: count }, (_, i) => (
         <li key={i} className="flex flex-col gap-2">
-          <Skeleton className="aspect-video w-full rounded-lg" />
-          <Skeleton className="h-4 w-4/5" />
-          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />
+          <Skeleton className="mx-4 h-4 w-4/5 sm:mx-0" />
+          <Skeleton className="mx-4 h-3 w-1/3 sm:mx-0" />
         </li>
       ))}
     </ul>

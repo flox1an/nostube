@@ -10,6 +10,7 @@ import { VideoPlayer } from '@nostube/widgets/player'
 import { AgeConfirm } from './AgeConfirm'
 import { Breadcrumb } from './Breadcrumb'
 import type { AgeGate } from './use-age-gate'
+import { playerBoxStyle } from './player-box'
 import { useEscapeToHome } from './use-escape-to-home'
 import { useVideoById } from './use-video-by-id'
 import { videoPath } from './video-path'
@@ -95,22 +96,31 @@ function VideoDetails({
 
   return (
     <article className="space-y-3">
-      <VideoPlayer
-        key={video.id}
-        urls={video.urls}
-        textTracks={video.textTracks}
-        mime={video.mimeType ?? ''}
-        mediaType={video.mediaType}
-        poster={video.images[0] ?? ''}
-        posterHash={video.thumbnailVariants[0]?.hash}
-        sha256={video.x}
-        authorPubkey={video.pubkey}
-        eventId={video.id}
-        videoVariants={video.videoVariants}
-        contentWarning={gate.warningFor(video)}
-        title={video.title}
-        authorName={authorName}
-      />
+      {/* Edge to edge on a phone: cancel the page's side padding. */}
+      <div className="-mx-4 sm:mx-0">
+        <div
+          className="mx-auto overflow-hidden sm:rounded-lg"
+          style={playerBoxStyle(video.dimensions)}
+        >
+          <VideoPlayer
+            key={video.id}
+            urls={video.urls}
+            textTracks={video.textTracks}
+            mime={video.mimeType ?? ''}
+            mediaType={video.mediaType}
+            poster={video.images[0] ?? ''}
+            posterHash={video.thumbnailVariants[0]?.hash}
+            sha256={video.x}
+            authorPubkey={video.pubkey}
+            eventId={video.id}
+            videoVariants={video.videoVariants}
+            contentWarning={gate.warningFor(video)}
+            title={video.title}
+            authorName={authorName}
+            className="h-full w-full"
+          />
+        </div>
+      </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <h2 className="text-xl font-semibold">{video.title}</h2>

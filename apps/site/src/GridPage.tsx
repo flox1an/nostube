@@ -38,10 +38,15 @@ export function GridPage({ config, gate }: { config: InstanceConfig; gate: AgeGa
         </Alert>
       )}
       {loading ? (
-        <VideoGridSkeleton />
+        <div className="-mx-4 sm:mx-0">
+          <VideoGridSkeleton />
+        </div>
       ) : (
         <>
-          <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
+          {/* On a phone the cards run edge to edge: the page's side padding is cancelled here. */}
+          <div className="-mx-4 sm:mx-0">
+            <VideoGrid videos={videos} onSelect={select} isLocked={gate.isLocked} />
+          </div>
           {hasMore && (
             <div className="text-center">
               <Button type="button" variant="outline" onClick={loadMore}>

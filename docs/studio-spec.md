@@ -1,6 +1,6 @@
 # apps/studio: Spec (Entwurf)
 
-Stand: 9. Oktober 2026. Entwurf, noch nicht umgesetzt. Vorher wird die Site (`apps/site`) fertig gebaut und aufgeräumt; das Studio folgt danach.
+Stand: 9. Oktober 2026. Der erste Schnitt ist umgesetzt: Gerüst unter `/studio/`, Passwort-Login über den serverseitigen Login, die Bereiche Aussehen, Instanz und Konto sowie `GET/PUT /api/admin/config`. Das Studio ist die **einzige** Admin-Oberfläche; das alte serverseitige Dashboard ist entfernt (`/admin` leitet auf `/studio/` um, nur Einrichtung und Login bleiben serverseitig). Noch offen: Signer, Moderation, Videos und Upload.
 
 ## Ziel
 
@@ -42,7 +42,7 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
    - Kommentare der eigenen Videos durchsehen (aus den `interactionRelays`).
    - Autoren und einzelne Events stummschalten. Das Studio pflegt die **Mute-Liste des Owners** (NIP-51, Kind 10000: `p`-Tags für Autoren, `e`-Tags für einzelne Events) und veröffentlicht sie über den Signer.
    - Die Site liest die Liste des Owners (Pubkey aus `/api/config`) und blendet die Einträge aus. Die Site braucht dafür nur einen Filter, keine Moderationslogik.
-4. **Einstellungen**: Titel, Creators, Relays, Suche, Speicher-Limits sowie das Aussehen der Site (Untertitel, Akzentfarbe, Schrift) und welche Videos ausgeblendet sind (`site` im Config-Vertrag, Server-ADR 0005; alle Videos der Creators sind sichtbar, außer den ausgeblendeten). Das ist die heutige Config-Bearbeitung unter `/admin`; das Studio wird dafür die Oberfläche.
+4. **Einstellungen** (erledigt): Titel, Creators, Relays, Suche, Speicher-Limits sowie das Aussehen der Site (Untertitel, Akzentfarbe, Schrift) und welche Videos ausgeblendet sind (`site` im Config-Vertrag, Server-ADR 0005; alle Videos der Creators sind sichtbar, außer den ausgeblendeten). Das ist die heutige Config-Bearbeitung unter `/admin`; das Studio wird dafür die Oberfläche.
 
 ## Grenzen der Moderation per Mute-Liste
 
@@ -59,14 +59,14 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 ## Offene Fragen
 
 1. **Vorsignierte Events halten:** Hält der Server vorsignierte Events dauerhaft (Datenbank, überlebt Neustarts) oder lädt sie das Studio nur bei Bedarf hoch? Und wie verhindert man Konflikte, wenn ein Video nach dem Vorsignieren noch bearbeitet wird (addressable Event mit gleichem `d`-Tag)?
-2. **Studio und `/admin`:** Wird das heutige `/admin` des Servers durch das Studio ersetzt oder bleibt es als Minimal-Fallback (Setup, Notfall-Reset)? Der Erst-Setup per Token (`/admin/setup`) muss ohne Studio-Bundle funktionieren.
+2. **Studio und `/admin`:** Entschieden: Das Studio ersetzt das Dashboard. Einrichtung (`/admin/setup`) und Login (`/admin/login`) bleiben serverseitig, weil sie ohne Studio-Bundle funktionieren müssen. Offen: ein Notfall-Zugang, falls das Studio-Bundle fehlt (heute `nostube-server admin reset` und `config rollback` auf der Kommandozeile).
 3. **Mehrere Creators:** Die Config kennt `creators` als Liste. Wessen Mute-Liste gilt, wenn es mehrere gibt (nur der erste, alle zusammen)?
 4. **Upload-Code:** Wie viel vom Wizard und vom Transcoding wandert nach `packages/widgets`, und wie viel bleibt in `apps/web`? Das hängt von der Größe des Bausteins ab und sollte beim ersten Upload-Slice entschieden werden.
 5. **Berechtigungen bei Uploads:** Schreibrechte laufen heute über `allowed_writers` in der Config. Das Studio muss konsistent damit sein (der eingeloggte Owner muss dort stehen).
 
 ## Reihenfolge (Vorschlag für den ersten Schnitt)
 
-1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, `Signer`-Interface mit Managed und NIP-07, Onboarding mit beiden Optionen.
+1. Gerüst: `apps/studio`, Einbettung unter `/studio/`, CI-Check, Passwort-Login, Bereiche Aussehen, Instanz, Konto (**erledigt**). Noch offen in diesem Schritt: `Signer`-Interface mit Managed und NIP-07, Onboarding mit beiden Optionen.
 2. Mute-Liste: Anzeige und Bearbeitung, Site liest sie.
 3. Einstellungen (Config).
 4. Videos und Upload.

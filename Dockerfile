@@ -7,6 +7,7 @@ ARG VITE_NSFW_SAFETY=on
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/site/package.json apps/site/
+COPY apps/studio/package.json apps/studio/
 COPY packages/core/package.json packages/core/
 COPY packages/widgets/package.json packages/widgets/
 RUN npm ci --ignore-scripts
@@ -27,6 +28,7 @@ ENV NODE_ENV=production PORT=8080
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/site/package.json apps/site/
+COPY apps/studio/package.json apps/studio/
 COPY packages/core/package.json packages/core/
 COPY packages/widgets/package.json packages/widgets/
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force

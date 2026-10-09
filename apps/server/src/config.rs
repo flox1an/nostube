@@ -71,8 +71,7 @@ impl Default for Storage {
     }
 }
 
-/// How the public site looks and which videos it shows. Not part of `Edited`: the admin form
-/// does not edit it yet (the studio will), and every edit keeps the current value.
+/// How the public site looks and which videos it shows.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(deny_unknown_fields, default)]
 pub struct Site {
@@ -124,7 +123,7 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
     Ok(())
 }
 
-/// The fields the admin may edit (#17): origin and TLS mode are fixed in the first cut.
+/// The fields the studio may edit (#17): origin and TLS mode are fixed in the first cut.
 pub struct Edited {
     pub title: String,
     pub creators: Vec<String>,
@@ -133,6 +132,7 @@ pub struct Edited {
     pub interaction_relays: Vec<String>,
     pub search: Search,
     pub storage: Storage,
+    pub site: Site,
 }
 
 fn check_relays(video_sources: &[String], interaction_relays: &[String]) -> Result<(), BoxError> {
@@ -153,6 +153,7 @@ fn check_search(search: &Search) -> Result<(), BoxError> {
     Ok(())
 }
 
+#[derive(Clone)]
 pub struct Config {
     pub revision: u64,
     pub origin: String,
@@ -211,6 +212,7 @@ impl Config {
         }
         check_relays(&e.video_sources, &e.interaction_relays)?;
         check_search(&e.search)?;
+        check_site(&e.site)?;
         Ok(Config {
             revision: self.revision + 1,
             origin: self.origin.clone(),
@@ -223,7 +225,7 @@ impl Config {
             search: e.search.clone(),
             tls: self.tls.clone(),
             storage: e.storage.clone(),
-            site: self.site.clone(),
+            site: e.site.clone(),
         })
     }
 
@@ -412,6 +414,7 @@ tls = {{ mode = "local-ca" }}
                 interaction_relays: vec![],
                 search: Search::External { url: "https://search.example".into() },
                 storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
+                site: Site::default(),
             })
             .unwrap();
         assert_eq!(next.revision, 4);
@@ -428,6 +431,7 @@ tls = {{ mode = "local-ca" }}
                 interaction_relays: vec![],
                 search: Search::Off,
                 storage: Storage::default(),
+                site: Site::default(),
             })
             .is_err());
     }
@@ -463,7 +467,7 @@ tls = {{ mode = "local-ca" }}
     }
 
     #[test]
-    fn site_survives_admin_edits_and_the_toml_round_trip() {
+    fn site_edits_round_trip_through_toml() {
         let cfg = Config::parse(&sample("[site]\ntagline = \"Keep me\"\naccent = \"#00aa55\"\nfont = \"mono\"\n")).unwrap();
         let edited = Edited {
             title: "Renamed".into(),
@@ -473,10 +477,14 @@ tls = {{ mode = "local-ca" }}
             interaction_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
+            site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, hidden_videos: vec![] },
         };
         let next = cfg.with_edits(&edited).unwrap();
-        assert_eq!(next.site, cfg.site);
+        assert_eq!(next.site.tagline, "New");
         let reloaded = Config::parse(&next.to_toml().unwrap()).unwrap();
-        assert_eq!(reloaded.site, cfg.site);
+        assert_eq!(reloaded.site, next.site);
+        assert_eq!(reloaded.revision, cfg.revision + 1);
+        let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
+        assert!(cfg.with_edits(&bad).is_err());
     }
 }

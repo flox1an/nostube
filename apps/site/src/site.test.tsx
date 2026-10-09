@@ -9,7 +9,7 @@ import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-con
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
-import { applyTheme, readableOn } from './theme'
+import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
 
 // The real player needs a browser; the gate tests only need to see what it is given.
 vi.mock('@nostube/widgets/player', () => ({

@@ -19,7 +19,7 @@ use axum::{
     http::{header, HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
-    Router,
+    Json, Router,
 };
 use hmac::{Hmac, Mac};
 use nostr::prelude::{Event, PublicKey};
@@ -302,19 +302,21 @@ pub fn router(state: AdminState) -> Router {
         .route("/admin/bind-nostr", post(bind_nostr))
         .route("/admin/unbind-nostr", post(unbind_nostr))
         .route("/admin/logout", post(logout))
-        .route("/admin/config", post(config_post))
+        .route("/api/admin/config", get(config_get).put(config_put))
         .with_state(state)
 }
 
 // ── Pages ───────────────────────────────────────────────────────────────────
 
+/// The studio is the admin interface; this server-rendered part keeps only setup and login,
+/// which have to work without the studio bundle.
 async fn index(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
     if !state.secrets.lock().unwrap().registered() {
         return Redirect::to("/admin/setup").into_response();
     }
     match authed(&state, &headers) {
         Auth::Redirect(r) => r.into_response(),
-        Auth::Ok => dashboard(&state, None).await,
+        Auth::Ok => Redirect::to("/studio/").into_response(),
     }
 }
 
@@ -446,166 +448,162 @@ async fn logout() -> Response {
         .into_response()
 }
 
-// ── Dashboard + config apply ────────────────────────────────────────────────
+// ── Studio API ──────────────────────────────────────────────────────────────
 
-async fn dashboard(state: &AdminState, error: Option<String>) -> Response {
-    let cfg = match Config::load(&state.data.join("config.toml")) {
-        Ok(c) => c,
-        Err(e) => return page("Admin", &format!("<p class=error>{}</p>", esc(&e.to_string()))).into_response(),
-    };
-    let nostr = state.secrets.lock().unwrap().nostr_pubkey.clone();
-    page("Admin", &dashboard_body(&cfg, nostr.as_ref(), state, error)).into_response()
+fn is_authed(state: &AdminState, headers: &HeaderMap) -> bool {
+    matches!(authed(state, headers), Auth::Ok)
 }
 
-fn dashboard_body(cfg: &Config, nostr: Option<&String>, state: &AdminState, error: Option<String>) -> String {
-    let (search_mode, search_url) = match &cfg.search {
-        Search::Off => ("off", String::new()),
-        Search::Local => ("local", String::new()),
-        Search::External { url } => ("external", url.clone()),
-    };
-    let lines = |v: &[String]| v.join("\n");
-    let error = error.map(|e| format!("<p class=error>{}</p>", esc(&e.to_string()))).unwrap_or_default();
-    let tls = match &cfg.tls {
-        config::Tls::LocalCa { router_name, https_port, http_port } => format!(
-            "local-ca · https :{} · http :{} · router name {}",
-            https_port,
-            http_port,
-            router_name.as_deref().unwrap_or("—")
-        ),
-    };
-    let hexes = |v: &[nostr::prelude::PublicKey]| -> Vec<String> { v.iter().map(|k| k.to_hex()).collect() };
-    format!(
-        r#"<h1>Instance admin</h1>
-{error}
-<p><b>{title}</b> · revision {rev} · <form method=post action=/admin/logout style=display:inline><button>Log out</button></form></p>
-<p>Origin <code>{origin}</code> (fixed) · TLS {tls} · boot <code>{boot}</code></p>
-<form method=post action=/admin/config>
-  <label>Title <input name=title value="{title}" required></label>
-  <label>Displayed creators <small>(one hex or npub key per line; first one is the start page)</small>
-    <textarea name=creators rows=3>{creators}</textarea></label>
-  <label>Allowed writers <small>(one key per line; write access for relay and Blossom)</small>
-    <textarea name=allowed_writers rows=3>{writers}</textarea></label>
-  <label>Video sources <small>(one ws(s):// relay per line)</small>
-    <textarea name=video_sources rows=3>{video}</textarea></label>
-  <label>Interaction relays <small>(one ws(s):// relay per line)</small>
-    <textarea name=interaction_relays rows=3>{inter}</textarea></label>
-  <label>Search
-    <select name=search_mode>
-      <option value=off{off}>off</option>
-      <option value=local{loc}>local</option>
-      <option value=external{ext}>external</option>
-    </select>
-    <input name=search_url value="{surl}" placeholder="https:// search instance"></label>
-  <label>Storage quota (GiB, 0 = unlimited) <input name=quota_gib type=number min=0 value={quota}></label>
-  <label>Free-space reserve (GiB) <input name=reserve_gib type=number min=0 value={reserve}></label>
-  <p>Applying validates and preflights, keeps one previous config (<code>config.prev</code>) and restarts the instance; the browser then polls <code>/api/health</code> for the new boot ID.</p>
-  <button>Validate &amp; apply</button>
-</form>
-<h2>Admin login</h2>
-<p>Nostr key: {nostr_state}</p>
-<div id=nostrbox hidden>
-  <button onclick="bindNostr('/admin/bind-nostr')">Bind this browser's NIP-07 key</button>
-  <button onclick="fetch('/admin/unbind-nostr',{{method:'POST'}}).then(() => location.reload())">Unbind</button>
-</div>
-<p><a href=/ca.pem>Instance CA</a> for new devices.</p>
-<script>
-const $box = document.getElementById('nostrbox');
-if (window.nostr) $box.hidden = false;
-async function bindNostr(path) {{
-  const ev = await window.nostr.signEvent({{
-    kind: 27235, created_at: Math.floor(Date.now() / 1000), tags: [['u', location.origin + path], ['method', 'POST']], content: '',
-  }});
-  const res = await fetch(path, {{ method: 'POST', headers: {{ Authorization: 'Nostr ' + btoa(JSON.stringify(ev)) }} }});
-  if (res.ok) location.reload(); else alert(await res.text());
-}}
-</script>"#,
-        title = esc(&cfg.title),
-        rev = cfg.revision,
-        origin = esc(&cfg.origin),
-        boot = state.boot_id,
-        creators = esc(&lines(&hexes(&cfg.creators))),
-        writers = esc(&lines(&hexes(&cfg.allowed_writers))),
-        video = esc(&lines(&cfg.video_sources)),
-        inter = esc(&lines(&cfg.interaction_relays)),
-        off = if search_mode == "off" { " selected" } else { "" },
-        loc = if search_mode == "local" { " selected" } else { "" },
-        ext = if search_mode == "external" { " selected" } else { "" },
-        surl = esc(&search_url),
-        quota = cfg.storage.quota_gib,
-        reserve = cfg.storage.free_space_reserve_gib,
-        tls = esc(&tls),
-        nostr_state = nostr
-            .map(|k| format!("<code>{}</code> bound", esc(k)))
-            .unwrap_or_else(|| "none bound".into()),
-    )
+fn json_error(status: StatusCode, message: &str) -> Response {
+    (status, Json(serde_json::json!({ "error": message }))).into_response()
+}
+
+/// Everything the studio edits, in the camelCase shape of the public contract.
+fn editable_json(cfg: &Config) -> serde_json::Value {
+    let keys = |v: &[nostr::prelude::PublicKey]| v.iter().map(|k| k.to_hex()).collect::<Vec<_>>();
+    serde_json::json!({
+        "title": cfg.title,
+        "creators": keys(&cfg.creators),
+        "allowedWriters": keys(&cfg.allowed_writers),
+        "videoSources": cfg.video_sources,
+        "interactionRelays": cfg.interaction_relays,
+        "search": cfg.search,
+        "storage": { "quotaGib": cfg.storage.quota_gib, "freeSpaceReserveGib": cfg.storage.free_space_reserve_gib },
+        "site": cfg.public_json()["site"],
+    })
 }
 
 #[derive(Deserialize)]
-struct ConfigForm {
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct ConfigPut {
     title: String,
-    creators: String,
-    allowed_writers: String,
-    video_sources: String,
-    interaction_relays: String,
-    search_mode: String,
-    search_url: String,
+    creators: Vec<String>,
+    allowed_writers: Vec<String>,
+    video_sources: Vec<String>,
+    interaction_relays: Vec<String>,
+    search: Search,
+    storage: StorageBody,
+    site: SiteBody,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct StorageBody {
     quota_gib: u64,
-    reserve_gib: u64,
+    free_space_reserve_gib: u64,
 }
 
-fn lines_of(s: &str) -> Vec<String> {
-    s.lines().map(str::trim).filter(|l| !l.is_empty()).map(ToOwned::to_owned).collect()
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SiteBody {
+    tagline: String,
+    theme: ThemeBody,
+    videos: VideosBody,
 }
 
-async fn config_post(
-    State(state): State<Arc<AdminState>>,
-    headers: HeaderMap,
-    Form(f): Form<ConfigForm>,
-) -> Response {
-    if let Auth::Redirect(r) = authed(&state, &headers) {
-        return r.into_response();
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ThemeBody {
+    accent: String,
+    font: config::Font,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VideosBody {
+    hidden: Vec<String>,
+}
+
+/// The config for the studio plus what it shows read-only (origin, TLS, boot id, bound key).
+async fn config_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
     }
-    let search = match f.search_mode.as_str() {
-        "off" => Search::Off,
-        "local" => Search::Local,
-        "external" => Search::External { url: f.search_url.trim().to_owned() },
-        other => {
-            return page("Admin", &format!("<p class=error>unknown search mode {other}</p>"))
-                .into_response()
-        }
+    let cfg = match Config::load(&state.data.join("config.toml")) {
+        Ok(c) => c,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     };
-    let edited = Edited {
-        title: f.title.clone(),
-        creators: lines_of(&f.creators),
-        allowed_writers: lines_of(&f.allowed_writers),
-        video_sources: lines_of(&f.video_sources),
-        interaction_relays: lines_of(&f.interaction_relays),
-        search,
-        storage: Storage { quota_gib: f.quota_gib, free_space_reserve_gib: f.reserve_gib },
+    let tls = match &cfg.tls {
+        config::Tls::LocalCa { router_name, https_port, http_port } => format!(
+            "local-ca · https :{https_port} · http :{http_port} · router name {}",
+            router_name.as_deref().unwrap_or("—")
+        ),
+    };
+    let nostr = state.secrets.lock().unwrap().nostr_pubkey.clone();
+    Json(serde_json::json!({
+        "revision": cfg.revision,
+        "origin": cfg.origin,
+        "tls": tls,
+        "bootId": state.boot_id,
+        "nostrPubkey": nostr,
+        "config": editable_json(&cfg),
+    }))
+    .into_response()
+}
+
+/// Saves the edited config: validates everything, keeps `config.prev`, restarts the instance.
+/// The body must be JSON (a cross-site form post cannot send that), and the session cookie is
+/// SameSite=Strict. Origin, TLS and the revision are not editable.
+async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    let is_json = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("application/json"));
+    if !is_json {
+        return json_error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "content-type must be application/json");
+    }
+    let put: ConfigPut = match serde_json::from_slice(&body) {
+        Ok(p) => p,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
     };
     let current = match Config::load(&state.data.join("config.toml")) {
         Ok(c) => c,
-        Err(e) => return page("Admin", &format!("<p class=error>{}</p>", esc(&e.to_string()))).into_response(),
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    let edited = Edited {
+        title: put.title,
+        creators: put.creators,
+        allowed_writers: put.allowed_writers,
+        video_sources: put.video_sources,
+        interaction_relays: put.interaction_relays,
+        search: put.search,
+        storage: Storage {
+            quota_gib: put.storage.quota_gib,
+            free_space_reserve_gib: put.storage.free_space_reserve_gib,
+        },
+        site: config::Site {
+            tagline: put.site.tagline,
+            accent: put.site.theme.accent,
+            font: put.site.theme.font,
+            hidden_videos: put.site.videos.hidden,
+        },
     };
     // Validate first; nothing is written unless the whole edit checks out (#7).
     let next = match current.with_edits(&edited) {
         Ok(c) => c,
-        Err(e) => return dashboard(&state, Some(e.to_string())).await.into_response(),
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &e.to_string()),
     };
-    if let Some(e) = preflight(&state) {
-        return dashboard(&state, Some(format!("preflight failed: {e}"))).await.into_response();
+    if let Err(e) = apply(&state, &next) {
+        return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e);
+    }
+    Json(serde_json::json!({ "ok": true, "revision": next.revision })).into_response()
+}
+
+// ── Config apply ────────────────────────────────────────────────────────────
+
+/// Writes the validated config (keeping `config.prev`) and stops the listener so the supervisor
+/// restarts the process on it. Used by the studio endpoint.
+fn apply(state: &AdminState, next: &Config) -> Result<(), String> {
+    if let Some(e) = preflight(state) {
+        return Err(format!("preflight failed: {e}"));
     }
     let path = state.data.join("config.toml");
-    if let Err(e) = std::fs::copy(&path, state.data.join("config.prev")) {
-        return dashboard(&state, Some(format!("cannot keep config.prev: {e}"))).await.into_response();
-    }
-    let text = match next.to_toml() {
-        Ok(t) => t,
-        Err(e) => return dashboard(&state, Some(e.to_string())).await.into_response(),
-    };
-    if let Err(e) = std::fs::write(&path, text) {
-        return dashboard(&state, Some(format!("cannot write config: {e}"))).await.into_response();
-    }
+    std::fs::copy(&path, state.data.join("config.prev")).map_err(|e| format!("cannot keep config.prev: {e}"))?;
+    let text = next.to_toml().map_err(|e| e.to_string())?;
+    std::fs::write(&path, text).map_err(|e| format!("cannot write config: {e}"))?;
     tracing::info!("admin: config revision {} applied; restarting", next.revision);
     // The response must reach the browser before the listener stops accepting.
     let handle = state.handle.clone();
@@ -614,15 +612,11 @@ async fn config_post(
         // New connections are refused immediately; in-flight uploads keep up to 30 s (#7).
         handle.graceful_shutdown(Some(Duration::from_secs(30)));
     });
-    page(
-        "Applying",
-        "<h1>Applying…</h1><p>The instance is restarting. Log back in afterwards; sessions survive the restart.</p>",
-    )
-    .into_response()
+    Ok(())
 }
 
-/// The web form cannot change listeners; startup validates their bind addresses.
-/// Preflight checks TLS material and writable storage before applying the form.
+/// The studio cannot change listeners; startup validates their bind addresses.
+/// Preflight checks TLS material and writable storage before a config is applied.
 fn preflight(state: &AdminState) -> Option<String> {
     for file in ["ca.pem", "ca-key.pem", "leaf.pem"] {
         let p = state.data.join("tls").join(file);
@@ -828,6 +822,157 @@ mod tests {
         assert!(verify_nip98(&state, &headers(auth("/admin/config", "macbook-2.local")), "/admin/login/nostr").is_err());
         assert!(verify_nip98(&state, &headers(auth("/admin/login/nostr", "evil.example")), "/admin/login/nostr").is_err());
         assert!(verify_nip98(&state, &HeaderMap::new(), "/admin/login/nostr").is_err());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    // ── studio API ──
+
+    const PK: &str = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d";
+
+    /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
+    /// router and a valid session cookie.
+    fn studio_fixture() -> (Router, PathBuf, String) {
+        let dir = std::env::temp_dir().join(format!("nss-studio-test-{}", random_hex(4)));
+        std::fs::create_dir_all(dir.join("tls")).unwrap();
+        for f in ["ca.pem", "ca-key.pem", "leaf.pem"] {
+            std::fs::write(dir.join("tls").join(f), "x").unwrap();
+        }
+        std::fs::write(
+            dir.join("config.toml"),
+            format!(
+                "revision = 4\norigin = \"https://flox-mac.local\"\ntitle = \"Flox\"\ncreators = [\"{PK}\"]\nallowed_writers = [\"{PK}\"]\nvideo_sources = [\"wss://flox-mac.local\"]\ninteraction_relays = []\nsearch = {{ mode = \"off\" }}\ntls = {{ mode = \"local-ca\" }}\n[storage]\nquota_gib = 7\nfree_space_reserve_gib = 2\n"
+            ),
+        )
+        .unwrap();
+        let mut s = Secrets::create(&dir).unwrap();
+        s.password_hash = Some(password_hash("correct horse").unwrap());
+        s.setup_token = None;
+        s.save(&dir).unwrap();
+        let secret = s.session_secret.clone();
+        let state = AdminState::open(
+            &dir,
+            "flox-mac.local",
+            vec!["flox-mac.local".into()],
+            "https://flox-mac.local",
+            "boot".into(),
+            Arc::new(axum_server::Handle::new()),
+        )
+        .unwrap();
+        let cookie = session_cookie(&secret).split(';').next().unwrap().to_owned();
+        (router(state), dir, cookie)
+    }
+
+    async fn call(app: &Router, method: &str, cookie: Option<&str>, content_type: Option<&str>, body: &str) -> (StatusCode, serde_json::Value) {
+        use tower::ServiceExt;
+        let mut req = axum::http::Request::builder().method(method).uri("/api/admin/config");
+        if let Some(c) = cookie {
+            req = req.header(header::COOKIE, c);
+        }
+        if let Some(t) = content_type {
+            req = req.header(header::CONTENT_TYPE, t);
+        }
+        let res = app.clone().oneshot(req.body(axum::body::Body::from(body.to_owned())).unwrap()).await.unwrap();
+        let status = res.status();
+        let bytes = axum::body::to_bytes(res.into_body(), 1 << 20).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    }
+
+    fn put_value(accent: &str) -> serde_json::Value {
+        serde_json::json!({
+            "title": "Renamed",
+            "creators": [PK],
+            "allowedWriters": [PK],
+            "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
+            "interactionRelays": ["wss://relay.example"],
+            "search": { "mode": "external", "url": "https://search.example" },
+            "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
+            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] } }
+        })
+    }
+
+    fn put_body(accent: &str) -> String {
+        put_value(accent).to_string()
+    }
+
+    #[tokio::test]
+    async fn studio_api_needs_a_session_and_answers_json() {
+        let (app, dir, _cookie) = studio_fixture();
+        let (status, body) = call(&app, "GET", None, None, "").await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert_eq!(body["error"], "not logged in");
+        let (status, _) = call(&app, "PUT", None, Some("application/json"), &put_body("#112233")).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn studio_api_reads_the_site_settings() {
+        let (app, dir, cookie) = studio_fixture();
+        let (status, body) = call(&app, "GET", Some(&cookie), None, "").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["revision"], 4);
+        assert_eq!(body["origin"], "https://flox-mac.local");
+        assert_eq!(body["bootId"], "boot");
+        assert!(body["nostrPubkey"].is_null());
+        assert_eq!(body["config"]["title"], "Flox");
+        assert_eq!(body["config"]["creators"][0], PK);
+        assert_eq!(body["config"]["storage"]["quotaGib"], 7);
+        assert_eq!(body["config"]["site"]["theme"]["font"], "sans");
+        // What the studio reads is accepted as it is when saved back.
+        let (status, _) = call(&app, "PUT", Some(&cookie), Some("application/json"), &body["config"].to_string()).await;
+        assert_eq!(status, StatusCode::OK);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn studio_api_rejects_bad_requests_without_touching_the_config() {
+        let (app, dir, cookie) = studio_fixture();
+        let before = std::fs::read(dir.join("config.toml")).unwrap();
+        let json = Some("application/json");
+        for (ct, body) in [
+            (json, put_body("red")),
+            (json, put_body("#12345")),
+            (json, "not json".to_owned()),
+            (json, put_body("#112233").replace("\"title\"", "\"extra\":1,\"title\"")),
+            (json, put_body("#112233").replace("mono", "comic")),
+            (json, put_body("#112233").replace("Renamed", "  ")),
+            (json, {
+                let mut v = put_value("#112233");
+                v.as_object_mut().unwrap().remove("storage");
+                v.to_string()
+            }),
+            (json, put_body("#112233").replace("wss://relay.example", "https://relay.example")),
+            (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
+            (Some("text/plain"), put_body("#112233")),
+            (None, put_body("#112233")),
+        ] {
+            let (status, _) = call(&app, "PUT", Some(&cookie), ct, &body).await;
+            assert!(status.is_client_error(), "{ct:?} {body}");
+        }
+        assert_eq!(std::fs::read(dir.join("config.toml")).unwrap(), before);
+        assert!(!dir.join("config.prev").exists());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn studio_api_applies_the_edit_and_keeps_origin_and_tls() {
+        let (app, dir, cookie) = studio_fixture();
+        let before = Config::load(&dir.join("config.toml")).unwrap();
+        let (status, body) = call(&app, "PUT", Some(&cookie), Some("application/json"), &put_body("#112233")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["revision"], 5);
+        assert!(dir.join("config.prev").exists());
+        let after = Config::load(&dir.join("config.toml")).unwrap();
+        assert_eq!((after.revision, after.title.as_str()), (5, "Renamed"));
+        assert_eq!((after.site.accent.as_str(), after.site.tagline.as_str()), ("#112233", "Hi"));
+        assert_eq!(after.site.hidden_videos, vec![format!("34235:{PK}:intro")]);
+        assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
+        assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
+        assert_eq!(after.search, Search::External { url: "https://search.example".into() });
+        assert_eq!((after.storage.quota_gib, after.storage.free_space_reserve_gib), (100, 3));
+        // Not editable: origin and TLS.
+        assert_eq!(after.origin, before.origin);
+        assert!(matches!(after.tls, config::Tls::LocalCa { .. }));
         std::fs::remove_dir_all(&dir).ok();
     }
 }

@@ -27,7 +27,7 @@ Contract version 1 has exactly these fields, all required:
 | `site.theme.font` | `sans`, `serif` or `mono` (system font stacks, no web fonts) |
 | `site.videos.hidden` | videos not shown: `<kind>:<pubkey>:<d>` (addressable events) or an event id (64 hex); everything else of the `creators` is shown. May be `[]` |
 
-This changes the earlier rule that the theme stays with the viewer: the creator sets accent and font, while light or dark still follows the viewer's system. In `config.toml` the section is `[site]` (`tagline`, `accent`, `font`, `hidden_videos`) and may be left out: the server fills the defaults, and the wire format always carries explicit values. The admin form does not edit `site` yet; saving there keeps it unchanged.
+This changes the earlier rule that the theme stays with the viewer: the creator sets accent and font, while light or dark still follows the viewer's system. In `config.toml` the section is `[site]` (`tagline`, `accent`, `font`, `hidden_videos`) and may be left out: the server fills the defaults, and the wire format always carries explicit values. The studio edits `site` together with the other editable fields through `GET/PUT /api/admin/config` (session cookie required, JSON body, validated as a whole, `config.prev` kept, then restart). The old server-rendered admin form was removed; `/admin` redirects to `/studio/`, and only setup and login stay server-rendered.
 
 **Missing, off and empty stay apart.** A missing field rejects the whole config. Off is written explicitly. An empty list means "none on purpose". No value, missing or empty, ever selects an app default. The client ignores unknown fields, and a breaking change bumps `version`.
 

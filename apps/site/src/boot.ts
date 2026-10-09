@@ -1,7 +1,7 @@
 import { createNostubeClient, type NostubeClient } from '@nostube/core/client'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { loadSiteConfig } from './site-config'
-import { applyTheme } from './theme'
+import { applyTheme } from '@nostube/widgets/site-theme'
 
 export interface SiteBoot {
   config: InstanceConfig

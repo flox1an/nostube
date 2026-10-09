@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+@import '@nostube/widgets/theme.css';
+@source '../../../packages/widgets/src';
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

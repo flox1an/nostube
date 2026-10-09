@@ -83,6 +83,34 @@ const HIDDEN_VIDEO = /^(?:[0-9a-f]{64}|\d+:[0-9a-f]{64}:.+)$/
 const isWs = (u: unknown) => typeof u === 'string' && /^wss?:\/\/[^/\s]+\/?$/.test(u)
 const isOrigin = (u: unknown) => typeof u === 'string' && /^https:\/\/[^/\s]+$/.test(u)
 
+/** Strict validation of the `site` object; the server and the studio apply the same rules. */
+export function validateSite(value: unknown): string[] {
+  const e: string[] = []
+  const site = value as {
+    tagline?: unknown
+    theme?: { accent?: unknown; font?: unknown } | null
+    videos?: { hidden?: unknown } | null
+  } | null
+  if (!site || typeof site !== 'object') return ['site must be an object']
+  if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
+  const theme = site.theme
+  if (!theme || typeof theme !== 'object') e.push('site.theme must be an object')
+  else {
+    if (typeof theme.accent !== 'string' || !ACCENT.test(theme.accent))
+      e.push('site.theme.accent must be #rrggbb')
+    if (!SITE_FONTS.includes(theme.font as SiteFont))
+      e.push(`site.theme.font must be one of ${SITE_FONTS.join(', ')}`)
+  }
+  const hidden = site.videos?.hidden
+  if (!Array.isArray(hidden) || !hidden.every(isHiddenVideoRef))
+    e.push('site.videos.hidden must be a list of <kind>:<pubkey>:<d> or event ids')
+  return e
+}
+
+/** True for `<kind>:<pubkey>:<d>` (addressable events) or a 64-hex event id. */
+export const isHiddenVideoRef = (v: unknown): v is string =>
+  typeof v === 'string' && HIDDEN_VIDEO.test(v)
+
 /** Strict v1 validation. Missing never means "use the app default"; unknown fields are ignored. */
 export function parseInstanceConfig(json: unknown): ParseResult {
   if (json === null || typeof json !== 'object' || Array.isArray(json)) {
@@ -117,31 +145,7 @@ export function parseInstanceConfig(json: unknown): ParseResult {
     else if (s.mode === 'external' && !(typeof s.url === 'string' && /^https:\/\/\S+$/.test(s.url)))
       e.push('search.url must be an https URL for external search')
   }
-  if ('site' in c) {
-    const site = c.site as {
-      tagline?: unknown
-      theme?: { accent?: unknown; font?: unknown } | null
-      videos?: { hidden?: unknown } | null
-    } | null
-    if (!site || typeof site !== 'object') e.push('site must be an object')
-    else {
-      if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
-      const theme = site.theme
-      if (!theme || typeof theme !== 'object') e.push('site.theme must be an object')
-      else {
-        if (typeof theme.accent !== 'string' || !ACCENT.test(theme.accent))
-          e.push('site.theme.accent must be #rrggbb')
-        if (!SITE_FONTS.includes(theme.font as SiteFont))
-          e.push(`site.theme.font must be one of ${SITE_FONTS.join(', ')}`)
-      }
-      const hidden = site.videos?.hidden
-      if (
-        !Array.isArray(hidden) ||
-        !hidden.every(v => typeof v === 'string' && HIDDEN_VIDEO.test(v))
-      )
-        e.push('site.videos.hidden must be a list of <kind>:<pubkey>:<d> or event ids')
-    }
-  }
+  if ('site' in c) e.push(...validateSite(c.site))
   if ('startPage' in c && creatorsOk) {
     const creators = c.creators as string[]
     const sp = c.startPage as { kind?: unknown; creator?: unknown } | null

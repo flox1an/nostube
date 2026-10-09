@@ -243,13 +243,20 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     Ok(())
 }
 
-/// ADR 0004 dispatch order: relay, /admin, /api, Blossom, root files, app shell.
+/// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
+/// Blossom, the studio (`/studio/*`), root files, app shell.
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
         return relay::handle(app.relay, req).await;
     }
     if path == "/admin" || path.starts_with("/admin/") {
+        return match &app.admin {
+            Some(router) => router.clone().oneshot(req).await.into_response(),
+            None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        };
+    }
+    if path.starts_with("/api/admin/") {
         return match &app.admin {
             Some(router) => router.clone().oneshot(req).await.into_response(),
             None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
@@ -275,16 +282,45 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return StatusCode::METHOD_NOT_ALLOWED.into_response();
     }
     let file = path.trim_start_matches('/');
+    if file == "studio" || file.starts_with("studio/") {
+        return studio_asset(file);
+    }
     if let Some(asset) = (!file.is_empty()).then(|| Web::get(file)).flatten() {
-        let cache = if file.starts_with("assets/") { "public, max-age=31536000, immutable" } else { "no-cache" };
-        let mime = mime_guess::from_path(file).first_or_octet_stream();
-        return ([(header::CONTENT_TYPE, mime.as_ref()), (header::CACHE_CONTROL, cache)], asset.data).into_response();
+        return asset_response(file, asset.data);
     }
     if file.starts_with("assets/") {
         return StatusCode::NOT_FOUND.into_response();
     }
     let shell = Web::get("index.html").expect("embedded index.html");
     ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], shell.data).into_response()
+}
+
+/// The studio is its own single-page app under `/studio/`: files by path, the app shell for every
+/// other route, 404 when it was not built into this binary or a hashed asset is missing.
+fn studio_asset(file: &str) -> Response {
+    let file = if file == "studio" { "studio/" } else { file };
+    let found = (file != "studio/").then(|| Web::get(file)).flatten();
+    if let Some(asset) = found {
+        return asset_response(file, asset.data);
+    }
+    if file.starts_with("studio/assets/") {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    match Web::get("studio/index.html") {
+        Some(shell) => asset_response("studio/index.html", shell.data),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// Hashed build assets never change; everything else (the shells) is revalidated.
+fn asset_response(file: &str, data: std::borrow::Cow<'static, [u8]>) -> Response {
+    let cache = if file.starts_with("assets/") || file.starts_with("studio/assets/") {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    };
+    let mime = mime_guess::from_path(file).first_or_octet_stream();
+    ([(header::CONTENT_TYPE, mime.as_ref().to_owned()), (header::CACHE_CONTROL, cache.to_owned())], data).into_response()
 }
 
 fn is_blossom(method: &Method, path: &str) -> bool {

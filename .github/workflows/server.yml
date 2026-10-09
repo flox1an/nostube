@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/server/**'
       - 'apps/site/**'
+      - 'apps/studio/**'
       - 'apps/web/embed.html'
       - 'apps/web/vite.embed.config.ts'
       - 'apps/web/src/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'apps/server/**'
       - 'apps/site/**'
+      - 'apps/studio/**'
       - 'apps/web/embed.html'
       - 'apps/web/vite.embed.config.ts'
       - 'apps/web/src/**'
@@ -45,7 +47,7 @@ jobs:
 
       # The server embeds apps/server/web/dist at compile time (RustEmbed), so the
       # site and embed build has to exist before cargo runs.
-      - name: Build embedded web assets (site + embed player)
+      - name: Build embedded web assets (site, studio, embed player)
         run: scripts/build-server-web.sh
 
       - name: Setup Rust

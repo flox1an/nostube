@@ -19,7 +19,7 @@ import { registerCommonAccountTypes } from 'applesauce-accounts/accounts'
 // Import applesauce-common to register EventFactory extensions (note, reaction, etc.)
 import 'applesauce-common'
 import { DEFAULT_RELAYS, eventStore, publishMethod } from '@/nostr/core'
-import { restoreAccountsToManager } from '@/hooks/useAccountPersistence'
+import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { useTrustScoreProvider } from '@/hooks/useTrustScore'
 import { useLoginTimeTracking } from '@/hooks/useLoginTimeTracking'

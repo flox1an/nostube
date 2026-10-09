@@ -3,10 +3,10 @@ import { AccountsContext } from 'applesauce-react'
 import { ExtensionAccount, NostrConnectAccount, SimpleAccount } from 'applesauce-accounts/accounts'
 import { ExtensionSigner, NostrConnectSigner, SimpleSigner } from 'applesauce-signers'
 import { nip19 } from 'nostr-tools'
-import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
-import { isNip05, resolveNip05ToBunkerUri } from '@/lib/nip05-bunker'
+import { saveAccountToStorage, saveActiveAccount } from './useAccountPersistence'
+import { isNip05, resolveNip05ToBunkerUri } from '@nostube/core/nip05-bunker'
 import { allowSignerRelays } from '@nostube/core/instance-config'
-import { decryptNcryptsec } from '@/lib/nip49'
+import { decryptNcryptsec } from '@nostube/core/nip49'
 
 // NOTE: This file should not be edited except for adding new login methods.
 

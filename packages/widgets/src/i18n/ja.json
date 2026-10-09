@@ -24,10 +24,17 @@
       "onReddit": "Reddit でシェア",
       "onFacebook": "Facebook でシェア",
       "onPinterest": "Pinterest でシェア"
+    },
+    "comments": {
+      "addComment": "コメントを追加...",
+      "commentButton": "コメント"
     }
   },
   "common": {
-    "copy": "コピー"
+    "copy": "コピー",
+    "back": "戻る",
+    "cancel": "キャンセル",
+    "copied": "コピーしました！"
   },
   "richText": {
     "video": "動画",
@@ -83,6 +90,118 @@
     "videoTable": {
       "uploadedTo": "アップロード先",
       "mirroredTo": "ミラー先"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "ログイン",
+      "subtitle": "お好みの方法で安全にアカウントにアクセス",
+      "extension": "拡張機能",
+      "nsec": "秘密鍵",
+      "protectedKey": "保護キー",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "詳細",
+      "bunker": "バンカー",
+      "extensionDescription": "ブラウザ拡張機能でワンクリックログイン",
+      "loggingIn": "ログイン中...",
+      "loginWithExtension": "拡張機能でログイン",
+      "enterProtectedKey": "パスワード保護キー",
+      "protectedKeyPassword": "バックアップパスワード",
+      "loginWithProtectedKey": "ロック解除してログイン",
+      "uploadProtectedKeyFile": "暗号化キーファイルをアップロード",
+      "rawKeyWarning": "生の秘密鍵はアカウントを完全に制御します。鍵の出所がわかっている場合のみ使用してください。",
+      "rawKeyConfirmation": "確認",
+      "enterNsec": "nsec を入力",
+      "nsecPlaceholder": "nsec1...",
+      "uploadKeyFile": "またはキーファイルをアップロード",
+      "uploadNsecFile": "Nsec ファイルをアップロード",
+      "verifying": "検証中...",
+      "loginWithNsec": "Nsec でログイン",
+      "bunkerUri": "バンカー URI",
+      "bunkerInputLabel": "バンカー URI または NIP-05 アドレス",
+      "bunkerPlaceholder": "bunker:// または bunker.example.com",
+      "bunkerUriError": "URI は bunker:// で始まる必要があります",
+      "bunkerInputError": "bunker:// URI または NIP-05 アドレス (user@domain) を入力してください",
+      "resolvingNip05": "アドレス解決中...",
+      "connecting": "接続中...",
+      "loginWithBunker": "バンカーでログイン",
+      "authRequired": "認証が必要です。以下をタップして接続を承認してください：",
+      "openAuth": "認証を開く",
+      "noAccount": "アカウントをお持ちでない方",
+      "signUp": "新規登録",
+      "keyPlaceholder": "ncryptsec1... または nsec1...",
+      "qr": "QR",
+      "recommended": "推奨",
+      "qrDescription": "Nostrサイナーアプリでスキャンしてください",
+      "qrApps": "Amber、Nostrudel、その他のNIP-46サイナー",
+      "qrMobileDescription": "この端末のNostrサイナーアプリでサインイン",
+      "qrAnotherDevice": "または別の端末でこのコードをスキャンしてください："
+    },
+    "signup": {
+      "title": "アカウント作成",
+      "downloadTitle": "キーをダウンロード",
+      "settingUpTitle": "アカウント設定中",
+      "generateDescription": "アカウントの安全なキーを生成",
+      "keepSafeDescription": "キーは安全に保管してください — ログインに必要です",
+      "finalizingDescription": "アカウント設定を完了中",
+      "introText": "アカウントの安全なキーを生成します。このキーは後でログインする際に必要です。",
+      "generating": "キー生成中...",
+      "generateButton": "キーを生成",
+      "important": "重要：",
+      "importantItem1": "これがアカウントにアクセスする唯一の方法です",
+      "importantItem2": "安全な場所に保管してください",
+      "importantItem3": "このキーを誰とも共有しないでください",
+      "downloadKey": "キーをダウンロード",
+      "savedKey": "キーを保存しました。続行",
+      "errorTitle": "エラー",
+      "errorMessage": "キーの生成に失敗しました。もう一度お試しください。",
+      "keyDownloaded": "キーをダウンロードしました",
+      "keyDownloadedMessage": "キーがダウンロードされました。安全に保管してください！",
+      "accountCreated": "アカウント作成完了",
+      "accountCreatedMessage": "ログインしました。"
+    },
+    "account": {
+      "profile": "プロフィール",
+      "playlists": "プレイリスト",
+      "switchAccount": "アカウント切り替え",
+      "addAccount": "別のアカウントを追加",
+      "logout": "ログアウト",
+      "editTags": "タグを編集"
+    },
+    "entry": {
+      "title": "nostube へようこそ",
+      "subtitle": "続行方法を選択してください",
+      "createAccount": "アカウント作成",
+      "signIn": "サインイン"
+    }
+  },
+  "onboarding": {
+    "seedBackup": {
+      "yourKey": "あなたの Nostr 秘密鍵",
+      "protectedTitle": "パスワード保護バックアップを作成",
+      "protectedDescription": "このバックアップは Nostr ncryptsec 形式を使用します。ファイルを保存し、パスワードを覚えておいてください。後でアカウントを復元するために必要です。",
+      "important": "これがあなたの復元バックアップです",
+      "warning1": "このバックアップまたはパスワードを失うと、NosTube はアカウントを復元できません",
+      "warning2": "安全な場所に保管してください — パスワードマネージャー、暗号化ドライブ、またはオフラインバックアップ",
+      "warning3": "このバックアップをオンラインで公開したり、誰かと共有したりしないでください",
+      "downloadProtectedKey": "パスワード保護バックアップをダウンロード",
+      "encrypting": "暗号化バックアップを作成中...",
+      "downloadAgain": "再ダウンロード",
+      "downloaded": "バックアップファイルをダウンロードしました！",
+      "confirmBackup": "暗号化バックアップを保存しました。NosTube はパスワードを復元できません",
+      "passwordLabel": "バックアップパスワード",
+      "confirmPasswordLabel": "バックアップパスワード（確認）",
+      "passwordPlaceholder": "バックアップパスワードを入力",
+      "confirmPasswordPlaceholder": "同じパスワードを再度入力",
+      "passwordHint": "8 文字以上を使用してください。このパスワードとバックアップファイルでアカウントを復元します。",
+      "rawKeyAdvanced": "高度：生の秘密鍵を表示",
+      "rawKeyWarning": "生の秘密鍵はアカウントを完全に制御します。この文字列を持つ人は誰でもあなたとして公開できます。",
+      "rawKeyConfirmationPlaceholder": "「{{phrase}}」と入力",
+      "showRawKey": "生の鍵を表示",
+      "hideRawKey": "生の鍵を非表示",
+      "downloadRawKey": "生の鍵をダウンロード",
+      "continue": "nostube に進む"
     }
   }
 }

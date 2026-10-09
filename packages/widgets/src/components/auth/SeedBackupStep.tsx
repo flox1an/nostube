@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@nostube/widgets/components/button'
-import { Input } from '@nostube/widgets/components/input'
-import { Checkbox } from '@nostube/widgets/components/checkbox'
-import { Label } from '@nostube/widgets/components/label'
+import { Button } from '../button'
+import { Input } from '../input'
+import { Checkbox } from '../checkbox'
+import { Label } from '../label'
 import { Download, Key, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import {
   encryptNsecToNcryptsec,
   NIP49_RAW_KEY_CONFIRMATION,
   type Nip49KeySecurity,
-} from '@/lib/nip49'
+} from '@nostube/core/nip49'
 
 interface SeedBackupStepProps {
   nsec: string

@@ -10,6 +10,7 @@ import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { VideoPlayer } from '@nostube/widgets/player'
 import { AgeConfirm } from './AgeConfirm'
 import { Breadcrumb } from './Breadcrumb'
+import { Comments } from './Comments'
 import type { AgeGate } from './use-age-gate'
 import { playerBoxStyle } from './player-box'
 import { siteLinks } from './site-links'
@@ -161,6 +162,16 @@ function VideoDetails({
           ))}
         </ul>
       )}
+      <Comments
+        target={{
+          videoId: video.id,
+          authorPubkey: video.pubkey,
+          videoKind: video.kind,
+          identifier: video.identifier,
+        }}
+        links={links}
+        relays={config.interactionRelays}
+      />
     </article>
   )
 }

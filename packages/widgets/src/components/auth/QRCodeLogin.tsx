@@ -4,14 +4,22 @@ import { Loader2, Smartphone, RefreshCw, Copy, Check, ExternalLink } from 'lucid
 import { NostrConnectSigner } from 'applesauce-signers'
 import { NostrConnectAccount } from 'applesauce-accounts/accounts'
 import { AccountsContext } from 'applesauce-react'
-import { Button } from '@nostube/widgets/components/button'
-import { saveAccountToStorage, saveActiveAccount } from '@/hooks/useAccountPersistence'
-import { DEFAULT_RELAYS, subscriptionMethod, publishMethod } from '@/nostr/core'
+import { Button } from '../button'
+import { saveAccountToStorage, saveActiveAccount } from '../../hooks/useAccountPersistence'
 import { useTranslation } from 'react-i18next'
 
-// Relays used for nostrconnect communication (the preset relays; the interaction relays in
-// the instance build)
-const NOSTRCONNECT_RELAYS = DEFAULT_RELAYS
+interface QRCodeLoginProps {
+  onLogin: () => void
+  onError: (error: string) => void
+  /** Phones prioritize the same-device signer-app deep link; desktop keeps QR as primary. */
+  isMobile?: boolean
+  /**
+   * Relays the nostrconnect handshake runs on. The host app initializes
+   * `NostrConnectSigner.subscriptionMethod`/`publishMethod` (the signer falls back to those
+   * statics); the web app passes its default relays, instance builds their interaction relays.
+   */
+  relays: string[]
+}
 
 // Build a bunker:// URI from signer properties for persistence
 function buildBunkerUri(remotePubkey: string, relays: string[], secret?: string): string {
@@ -30,7 +38,7 @@ interface QRCodeLoginProps {
   isMobile?: boolean
 }
 
-export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginProps) {
+export function QRCodeLogin({ onLogin, onError, isMobile = false, relays }: QRCodeLoginProps) {
   const { t } = useTranslation()
   const accountManager = useContext(AccountsContext)
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null)
@@ -54,12 +62,9 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginP
     }
 
     try {
-      // Create a new signer for client-initiated connection
-      const signer = new NostrConnectSigner({
-        relays: NOSTRCONNECT_RELAYS,
-        subscriptionMethod,
-        publishMethod,
-      })
+      // Create a new signer for client-initiated connection; the transport comes from the
+      // host-initialized NostrConnectSigner statics.
+      const signer = new NostrConnectSigner({ relays })
       signerRef.current = signer
 
       // Generate the nostrconnect:// URI
@@ -67,7 +72,8 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginP
         name: 'nostube',
         url: window.location.origin,
         image: new URL('/apple-touch-icon.png', window.location.origin).toString(),
-        permissions: NostrConnectSigner.buildSigningPermissions([0, 1, 3, 7, 10002]),
+        // 1111 (NIP-22 comments) so a connected signer can sign site comments.
+        permissions: NostrConnectSigner.buildSigningPermissions([0, 1, 3, 7, 1111, 10002]),
       })
 
       setNostrConnectUri(uri)
@@ -93,7 +99,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginP
       if (!remotePubkey) {
         throw new Error('Failed to get remote signer pubkey')
       }
-      const bunkerUri = buildBunkerUri(remotePubkey, NOSTRCONNECT_RELAYS, signer.secret)
+      const bunkerUri = buildBunkerUri(remotePubkey, relays, signer.secret)
 
       // Persist account
       saveAccountToStorage(account, 'bunker', bunkerUri)
@@ -112,7 +118,7 @@ export function QRCodeLogin({ onLogin, onError, isMobile = false }: QRCodeLoginP
       console.error('QR code login failed:', error)
       onError(error instanceof Error ? error.message : 'Connection failed')
     }
-  }, [accountManager, onLogin, onError])
+  }, [accountManager, onLogin, onError, relays])
 
   // Generate QR code on mount
   useEffect(() => {

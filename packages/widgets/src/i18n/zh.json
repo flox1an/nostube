@@ -24,10 +24,17 @@
       "onReddit": "分享到 Reddit",
       "onFacebook": "分享到 Facebook",
       "onPinterest": "分享到 Pinterest"
+    },
+    "comments": {
+      "addComment": "添加评论...",
+      "commentButton": "评论"
     }
   },
   "common": {
-    "copy": "复制"
+    "copy": "复制",
+    "back": "返回",
+    "cancel": "取消",
+    "copied": "已复制！"
   },
   "richText": {
     "video": "视频",
@@ -83,6 +90,118 @@
     "videoTable": {
       "uploadedTo": "已上传到",
       "mirroredTo": "已镜像到"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "登录",
+      "subtitle": "使用您首选的方式安全访问账户",
+      "extension": "扩展",
+      "nsec": "私钥",
+      "protectedKey": "受保护密钥",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "高级",
+      "bunker": "远程签名",
+      "extensionDescription": "使用浏览器扩展一键登录",
+      "loggingIn": "正在登录...",
+      "loginWithExtension": "使用扩展登录",
+      "enterProtectedKey": "密码保护的密钥",
+      "protectedKeyPassword": "备份密码",
+      "loginWithProtectedKey": "解锁并登录",
+      "uploadProtectedKeyFile": "上传加密密钥文件",
+      "rawKeyWarning": "原始私钥可完全控制您的账户。请仅在您知道密钥来源的情况下使用。",
+      "rawKeyConfirmation": "确认",
+      "enterNsec": "输入您的 nsec",
+      "nsecPlaceholder": "nsec1...",
+      "uploadKeyFile": "或上传密钥文件",
+      "uploadNsecFile": "上传 Nsec 文件",
+      "verifying": "验证中...",
+      "loginWithNsec": "使用 Nsec 登录",
+      "bunkerUri": "远程签名 URI",
+      "bunkerInputLabel": "远程签名 URI 或 NIP-05 地址",
+      "bunkerPlaceholder": "bunker:// 或 bunker.example.com",
+      "bunkerUriError": "URI 必须以 bunker:// 开头",
+      "bunkerInputError": "请输入 bunker:// URI 或 NIP-05 地址 (user@domain)",
+      "resolvingNip05": "正在解析地址...",
+      "connecting": "正在连接...",
+      "loginWithBunker": "使用远程签名登录",
+      "authRequired": "需要授权。点击下方批准连接：",
+      "openAuth": "打开授权",
+      "noAccount": "没有账户？",
+      "signUp": "注册",
+      "keyPlaceholder": "ncryptsec1... 或 nsec1...",
+      "qr": "二维码",
+      "recommended": "推荐",
+      "qrDescription": "用你的 Nostr 签名应用扫码",
+      "qrApps": "Amber、Nostrudel 或其他 NIP-46 签名器",
+      "qrMobileDescription": "在本设备上用你的 Nostr 签名应用登录",
+      "qrAnotherDevice": "或用其他设备扫描此二维码："
+    },
+    "signup": {
+      "title": "创建账户",
+      "downloadTitle": "下载您的密钥",
+      "settingUpTitle": "正在设置账户",
+      "generateDescription": "为您的账户生成安全密钥",
+      "keepSafeDescription": "请妥善保管密钥 — 您将需要它登录",
+      "finalizingDescription": "正在完成账户设置",
+      "introText": "我们将为您的账户生成一个安全密钥。您之后需要此密钥登录。",
+      "generating": "正在生成密钥...",
+      "generateButton": "生成我的密钥",
+      "important": "重要：",
+      "importantItem1": "这是您访问账户的唯一方式",
+      "importantItem2": "请将其存放在安全的地方",
+      "importantItem3": "切勿与任何人分享此密钥",
+      "downloadKey": "下载密钥",
+      "savedKey": "我已保存密钥，继续",
+      "errorTitle": "错误",
+      "errorMessage": "生成密钥失败。请重试。",
+      "keyDownloaded": "密钥已下载",
+      "keyDownloadedMessage": "您的密钥已下载。请妥善保管！",
+      "accountCreated": "账户已创建",
+      "accountCreatedMessage": "您已登录成功。"
+    },
+    "account": {
+      "profile": "个人资料",
+      "playlists": "播放列表",
+      "switchAccount": "切换账户",
+      "addAccount": "添加另一个账户",
+      "logout": "退出登录",
+      "editTags": "编辑标签"
+    },
+    "entry": {
+      "title": "欢迎来到 nostube",
+      "subtitle": "选择你的继续方式",
+      "createAccount": "创建账号",
+      "signIn": "登录"
+    }
+  },
+  "onboarding": {
+    "seedBackup": {
+      "yourKey": "您的 Nostr 私钥",
+      "protectedTitle": "创建密码保护的备份",
+      "protectedDescription": "此备份使用 Nostr ncryptsec 格式。保存文件并记住密码以备日后恢复账户。",
+      "important": "这是您的恢复备份",
+      "warning1": "如果您丢失此备份或其密码，NosTube 无法恢复您的账户",
+      "warning2": "将其存放在安全的地方 — 密码管理器、加密驱动器或离线备份",
+      "warning3": "切勿在线发布此备份或与任何人分享",
+      "downloadProtectedKey": "下载密码保护的备份",
+      "encrypting": "正在创建加密备份...",
+      "downloadAgain": "再次下载",
+      "downloaded": "备份文件已下载！",
+      "confirmBackup": "我已保存加密备份并理解 NosTube 无法恢复其密码",
+      "passwordLabel": "备份密码",
+      "confirmPasswordLabel": "确认备份密码",
+      "passwordPlaceholder": "输入备份密码",
+      "confirmPasswordPlaceholder": "再次输入相同密码",
+      "passwordHint": "至少使用 8 个字符。您需要此密码和备份文件来恢复账户。",
+      "rawKeyAdvanced": "高级：显示原始私钥",
+      "rawKeyWarning": "您的原始私钥可完全控制您的账户。任何拥有此字符串的人都可以以您的身份发布内容。",
+      "rawKeyConfirmationPlaceholder": "输入\"{{phrase}}\"",
+      "showRawKey": "显示原始密钥",
+      "hideRawKey": "隐藏原始密钥",
+      "downloadRawKey": "下载原始密钥",
+      "continue": "进入 nostube"
     }
   }
 }

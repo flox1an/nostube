@@ -17,14 +17,14 @@ export {
   canRestoreExtensionAccount,
   restoreAccount,
   clearAllAccounts,
-} from './useAccountPersistence'
-export type { AccountMethod, PersistedAccount } from './useAccountPersistence'
+} from '@nostube/widgets/hooks/useAccountPersistence'
+export type { AccountMethod, PersistedAccount } from '@nostube/widgets/hooks/useAccountPersistence'
 
 // ============================================================================
 // AUTH & USER
 // ============================================================================
 export { useCurrentUser } from './useCurrentUser'
-export { useLoginActions } from './useLoginActions'
+export { useLoginActions } from '@nostube/widgets/hooks/useLoginActions'
 export { useLoggedInAccounts } from './useLoggedInAccounts'
 export type { Account } from './useLoggedInAccounts'
 

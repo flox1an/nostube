@@ -24,10 +24,17 @@
       "onReddit": "Share on Reddit",
       "onFacebook": "Share on Facebook",
       "onPinterest": "Share on Pinterest"
+    },
+    "comments": {
+      "addComment": "Add a comment...",
+      "commentButton": "Comment"
     }
   },
   "common": {
-    "copy": "Copy"
+    "copy": "Copy",
+    "back": "Back",
+    "cancel": "Cancel",
+    "copied": "Copied!"
   },
   "richText": {
     "video": "Video",
@@ -83,6 +90,118 @@
     "videoTable": {
       "uploadedTo": "Uploaded to",
       "mirroredTo": "Mirrored to"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "subtitle": "Access your account securely with your preferred method",
+      "extension": "Extension",
+      "nsec": "Nsec",
+      "protectedKey": "Secret Key",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "Advanced",
+      "bunker": "Bunker",
+      "extensionDescription": "Login with one click using the browser extension",
+      "loggingIn": "Logging in...",
+      "loginWithExtension": "Login with Extension",
+      "enterProtectedKey": "Password-protected key",
+      "protectedKeyPassword": "Backup password",
+      "loginWithProtectedKey": "Unlock and log in",
+      "uploadProtectedKeyFile": "Upload encrypted key file",
+      "rawKeyWarning": "Raw private keys give full control of your account. Use this only if you know where the key came from.",
+      "rawKeyConfirmation": "Confirmation",
+      "enterNsec": "Enter your nsec",
+      "nsecPlaceholder": "nsec1...",
+      "uploadKeyFile": "Or upload a key file",
+      "uploadNsecFile": "Upload Nsec File",
+      "verifying": "Verifying...",
+      "loginWithNsec": "Login with Nsec",
+      "bunkerUri": "Bunker URI",
+      "bunkerInputLabel": "Bunker URI or NIP-05 address",
+      "bunkerPlaceholder": "bunker:// or bunker.example.com",
+      "bunkerUriError": "URI must start with bunker://",
+      "bunkerInputError": "Enter a bunker:// URI or NIP-05 address (user@domain)",
+      "resolvingNip05": "Resolving address...",
+      "connecting": "Connecting...",
+      "loginWithBunker": "Login with Bunker",
+      "authRequired": "Authorization required. Tap below to approve the connection:",
+      "openAuth": "Open Authorization",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "keyPlaceholder": "ncryptsec1... or nsec1...",
+      "qr": "QR",
+      "recommended": "Recommended",
+      "qrDescription": "Scan with your Nostr signer app",
+      "qrApps": "Amber, Nostrudel, or other NIP-46 signers",
+      "qrMobileDescription": "Sign in with your Nostr signer app on this device",
+      "qrAnotherDevice": "Or scan this code from another device:"
+    },
+    "signup": {
+      "title": "Create Your Account",
+      "downloadTitle": "Download Your Key",
+      "settingUpTitle": "Setting Up Your Account",
+      "generateDescription": "Generate a secure key for your account",
+      "keepSafeDescription": "Keep your key safe - you'll need it to log in",
+      "finalizingDescription": "Finalizing your account setup",
+      "introText": "We'll generate a secure key for your account. You'll need this key to log in later.",
+      "generating": "Generating key...",
+      "generateButton": "Generate my key",
+      "important": "Important:",
+      "importantItem1": "This is your only way to access your account",
+      "importantItem2": "Store it somewhere safe",
+      "importantItem3": "Never share this key with anyone",
+      "downloadKey": "Download Key",
+      "savedKey": "I've saved my key, continue",
+      "errorTitle": "Error",
+      "errorMessage": "Failed to generate key. Please try again.",
+      "keyDownloaded": "Key downloaded",
+      "keyDownloadedMessage": "Your key has been downloaded. Keep it safe!",
+      "accountCreated": "Account created",
+      "accountCreatedMessage": "You are now logged in."
+    },
+    "account": {
+      "profile": "Profile",
+      "playlists": "Playlists",
+      "switchAccount": "Switch Account",
+      "addAccount": "Add another account",
+      "logout": "Log out",
+      "editTags": "Edit tags"
+    },
+    "entry": {
+      "title": "Welcome to nostube",
+      "subtitle": "Choose how you want to continue",
+      "createAccount": "Create account",
+      "signIn": "Sign in"
+    }
+  },
+  "onboarding": {
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "protectedTitle": "Create a password-protected backup",
+      "protectedDescription": "This backup uses the Nostr ncryptsec format. Save the file and remember the password to recover your account later.",
+      "important": "This is your recovery backup",
+      "warning1": "If you lose this backup or its password, NosTube cannot recover your account",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or offline backup",
+      "warning3": "Never publish this backup online or share it with anyone",
+      "downloadProtectedKey": "Download password-protected backup",
+      "encrypting": "Creating encrypted backup...",
+      "downloadAgain": "Download Again",
+      "downloaded": "Backup file downloaded!",
+      "confirmBackup": "I have saved my encrypted backup and understand NosTube cannot recover its password",
+      "passwordLabel": "Backup password",
+      "confirmPasswordLabel": "Confirm backup password",
+      "passwordPlaceholder": "Enter a backup password",
+      "confirmPasswordPlaceholder": "Enter the same password again",
+      "passwordHint": "Use at least 8 characters. You will need this password and the backup file to recover your account.",
+      "rawKeyAdvanced": "Advanced: reveal raw private key",
+      "rawKeyWarning": "Your raw private key gives full control of your account. Anyone with this string can publish as you.",
+      "rawKeyConfirmationPlaceholder": "Type \"{{phrase}}\"",
+      "showRawKey": "Show raw key",
+      "hideRawKey": "Hide raw key",
+      "downloadRawKey": "Download raw key",
+      "continue": "Continue to nostube"
     }
   }
 }

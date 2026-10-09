@@ -1,6 +1,7 @@
 import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
+import { AccountManager } from 'applesauce-accounts'
 import { nip19 } from 'nostr-tools'
 import { MemoryRouter } from 'react-router-dom'
 import { NEVER, of } from 'rxjs'
@@ -79,7 +80,11 @@ describe('loadSiteConfig', () => {
 function renderSite(client: NostubeClient, path = '/', siteConfig: InstanceConfig = config) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <SiteHome client={client} config={siteConfig} />
+      <SiteHome
+        client={client}
+        config={siteConfig}
+        accountManager={new AccountManager()}
+      />
     </MemoryRouter>
   )
 }

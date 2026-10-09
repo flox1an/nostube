@@ -30,7 +30,7 @@ export function App({ boot }: { boot: Promise<SiteBoot> }) {
   }
   return (
     <BrowserRouter>
-      <SiteHome client={state.client} config={state.config} />
+      <SiteHome client={state.client} config={state.config} accountManager={state.accountManager} />
     </BrowserRouter>
   )
 }

@@ -1,9 +1,9 @@
 import { memo } from 'react'
 import { Smile } from 'lucide-react'
-import { Button } from '@nostube/widgets/components/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@nostube/widgets/components/popover'
+import { Button } from './button'
+import { Popover, PopoverContent, PopoverTrigger } from './popover'
 
-import { EMOJI_CATEGORIES } from '@/constants/emojis'
+import { EMOJI_CATEGORIES } from '../constants/emojis'
 
 interface EmojiPickerProps {
   open: boolean

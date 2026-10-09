@@ -6,7 +6,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { merge, Subject } from 'rxjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoComments } from './VideoComments'
-import type { Comment, VideoCommentsProps } from './types'
+import type { Comment, VideoCommentsProps } from '@nostube/core/comments'
 
 // Each pool.request() call records one Subject per relay so tests can drive
 // relay responses (events / EOSE) independently.
@@ -36,7 +36,7 @@ vi.mock('@/hooks', () => ({
   useReportedPubkeys: () => undefined,
 }))
 vi.mock('@/components/auth/AuthDialog', () => ({ AuthDialog: () => null }))
-vi.mock('@/components/CommentInput', () => ({ CommentInput: () => null }))
+vi.mock('@nostube/widgets/components/CommentInput', () => ({ CommentInput: () => null }))
 vi.mock('./CommentItem', () => ({
   CommentItem: ({ comment }: { comment: Comment }) => <p>{comment.content}</p>,
 }))

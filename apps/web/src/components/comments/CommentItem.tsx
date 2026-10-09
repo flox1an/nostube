@@ -27,7 +27,7 @@ import { nowInSecs } from '@/lib/utils'
 import { Button } from '@nostube/widgets/components/button'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { RichTextContent } from '@/components/RichTextContent'
-import { CommentInput } from '@/components/CommentInput'
+import { CommentInput } from '@nostube/widgets/components/CommentInput'
 import { CommentReactions } from '@/components/CommentReactions'
 import { ReportDialog } from '@/components/ReportDialog'
 import { TrustBadge } from '@/components/TrustBadge'
@@ -49,7 +49,7 @@ import {
   DropdownMenuItem,
 } from '@nostube/widgets/components/dropdown-menu'
 import { getDateLocale } from '@/lib/date-locale'
-import type { Comment } from './types'
+import type { Comment } from '@nostube/core/comments'
 
 export interface CommentItemProps {
   comment: Comment

@@ -24,10 +24,17 @@
       "onReddit": "Поделиться в Reddit",
       "onFacebook": "Поделиться в Facebook",
       "onPinterest": "Поделиться в Pinterest"
+    },
+    "comments": {
+      "addComment": "Добавить комментарий...",
+      "commentButton": "Комментировать"
     }
   },
   "common": {
-    "copy": "Копировать"
+    "copy": "Копировать",
+    "back": "Back",
+    "cancel": "Отмена",
+    "copied": "Скопировано!"
   },
   "richText": {
     "video": "Видео",
@@ -83,6 +90,118 @@
     "videoTable": {
       "uploadedTo": "Загружено на",
       "mirroredTo": "Зеркалировано на"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Вход",
+      "subtitle": "Войдите в свой аккаунт безопасно удобным способом",
+      "extension": "Расширение",
+      "nsec": "Nsec",
+      "protectedKey": "Secret Key",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "Advanced",
+      "bunker": "Bunker",
+      "extensionDescription": "Войдите одним кликом через расширение браузера",
+      "loggingIn": "Вход...",
+      "loginWithExtension": "Войти через расширение",
+      "enterProtectedKey": "Password-protected key",
+      "protectedKeyPassword": "Backup password",
+      "loginWithProtectedKey": "Unlock and log in",
+      "uploadProtectedKeyFile": "Upload encrypted key file",
+      "rawKeyWarning": "Raw private keys give full control of your account. Use this only if you know where the key came from.",
+      "rawKeyConfirmation": "Confirmation",
+      "enterNsec": "Введите ваш nsec",
+      "nsecPlaceholder": "nsec1...",
+      "uploadKeyFile": "Или загрузите файл ключа",
+      "uploadNsecFile": "Загрузить файл Nsec",
+      "verifying": "Проверка...",
+      "loginWithNsec": "Войти через Nsec",
+      "bunkerUri": "Bunker URI",
+      "bunkerInputLabel": "Bunker URI or NIP-05 address",
+      "bunkerPlaceholder": "bunker://",
+      "bunkerUriError": "URI должен начинаться с bunker://",
+      "bunkerInputError": "Enter a bunker:// URI or NIP-05 address (user@domain)",
+      "resolvingNip05": "Resolving address...",
+      "connecting": "Подключение...",
+      "loginWithBunker": "Войти через Bunker",
+      "authRequired": "Требуется авторизация. Нажмите ниже, чтобы подтвердить подключение:",
+      "openAuth": "Открыть авторизацию",
+      "noAccount": "Нет аккаунта?",
+      "signUp": "Зарегистрироваться",
+      "keyPlaceholder": "ncryptsec1... или nsec1...",
+      "qr": "QR",
+      "recommended": "Рекомендуется",
+      "qrDescription": "Отсканируйте вашим Nostr-подписантом",
+      "qrApps": "Amber, Nostrudel и другие NIP-46 подписанты",
+      "qrMobileDescription": "Войдите с помощью Nostr-подписанта на этом устройстве",
+      "qrAnotherDevice": "Или отсканируйте этот код с другого устройства:"
+    },
+    "signup": {
+      "title": "Создать аккаунт",
+      "downloadTitle": "Скачать ваш ключ",
+      "settingUpTitle": "Настройка аккаунта",
+      "generateDescription": "Создать защищенный ключ для вашего аккаунта",
+      "keepSafeDescription": "Храните ключ в безопасности - он понадобится для входа",
+      "finalizingDescription": "Завершение настройки аккаунта",
+      "introText": "Мы создадим защищенный ключ для вашего аккаунта. Этот ключ понадобится для входа позже.",
+      "generating": "Генерация ключа...",
+      "generateButton": "Создать мой ключ",
+      "important": "Важно:",
+      "importantItem1": "Это единственный способ доступа к вашему аккаунту",
+      "importantItem2": "Сохраните его в безопасном месте",
+      "importantItem3": "Никогда не делитесь этим ключом",
+      "downloadKey": "Скачать ключ",
+      "savedKey": "Я сохранил ключ, продолжить",
+      "errorTitle": "Ошибка",
+      "errorMessage": "Не удалось создать ключ. Попробуйте снова.",
+      "keyDownloaded": "Ключ скачан",
+      "keyDownloadedMessage": "Ваш ключ был скачан. Храните его в безопасности!",
+      "accountCreated": "Аккаунт создан",
+      "accountCreatedMessage": "Вы вошли в систему."
+    },
+    "account": {
+      "profile": "Профиль",
+      "playlists": "Плейлисты",
+      "switchAccount": "Сменить аккаунт",
+      "addAccount": "Добавить другой аккаунт",
+      "logout": "Выйти",
+      "editTags": "Редактировать теги"
+    },
+    "entry": {
+      "title": "Добро пожаловать в nostube",
+      "subtitle": "Выберите, как продолжить",
+      "createAccount": "Создать аккаунт",
+      "signIn": "Войти"
+    }
+  },
+  "onboarding": {
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "protectedTitle": "Create a password-protected backup",
+      "protectedDescription": "This backup uses the Nostr ncryptsec format. Save the file and remember the password to recover your account later.",
+      "important": "This is your recovery backup",
+      "warning1": "If you lose this backup or its password, NosTube cannot recover your account",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or offline backup",
+      "warning3": "Never publish this backup online or share it with anyone",
+      "downloadProtectedKey": "Download password-protected backup",
+      "encrypting": "Creating encrypted backup...",
+      "downloadAgain": "Download Again",
+      "downloaded": "Backup file downloaded!",
+      "confirmBackup": "I have saved my encrypted backup and understand NosTube cannot recover its password",
+      "passwordLabel": "Backup password",
+      "confirmPasswordLabel": "Confirm backup password",
+      "passwordPlaceholder": "Enter a backup password",
+      "confirmPasswordPlaceholder": "Enter the same password again",
+      "passwordHint": "Use at least 8 characters. You will need this password and the backup file to recover your account.",
+      "rawKeyAdvanced": "Advanced: reveal raw private key",
+      "rawKeyWarning": "Your raw private key gives full control of your account. Anyone with this string can publish as you.",
+      "rawKeyConfirmationPlaceholder": "Type \"{{phrase}}\"",
+      "showRawKey": "Show raw key",
+      "hideRawKey": "Hide raw key",
+      "downloadRawKey": "Download raw key",
+      "continue": "Continue to nostube"
     }
   }
 }

@@ -11,14 +11,15 @@ import {
 import { Input } from '@nostube/widgets/components/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
 import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
-import { QRCodeLogin } from '@/components/auth/QRCodeLogin'
-import { SeedBackupStep } from './SeedBackupStep'
+import { QRCodeLogin } from '@nostube/widgets/components/auth/QRCodeLogin'
+import { DEFAULT_RELAYS } from '@/nostr/core'
+import { SeedBackupStep } from '@nostube/widgets/components/auth/SeedBackupStep'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useLoginActions } from '@/hooks/useLoginActions'
-import { isNip05 } from '@/lib/nip05-bunker'
+import { useLoginActions } from '@nostube/widgets/hooks/useLoginActions'
+import { isNip05 } from '@nostube/core/nip05-bunker'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { AlertCircle, CheckCircle2, KeyRound, Sparkles, Shield } from 'lucide-react'
-import { isNcryptsec } from '@/lib/nip49'
+import { isNcryptsec } from '@nostube/core/nip49'
 import { markNewUser } from '@/lib/onboarding-progress'
 
 interface PhaseIdentityStepProps {
@@ -224,7 +225,7 @@ export function PhaseIdentityStep({ onComplete }: PhaseIdentityStepProps) {
         </TabsList>
 
         <TabsContent value="qr" className="pt-4">
-          <QRCodeLogin onLogin={onComplete} onError={setError} />
+          <QRCodeLogin onLogin={onComplete} onError={setError} relays={DEFAULT_RELAYS} />
         </TabsContent>
         <TabsContent value="extension" className="pt-4">
           <Button onClick={handleExtensionLogin} disabled={isLoading} className="w-full">

@@ -20,7 +20,9 @@ import { AuthDialog } from './AuthDialog'
 
 describe('AuthDialog', () => {
   it('leads with a Create account / Sign in choice before either flow', () => {
-    render(<AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} />)
+    render(
+      <AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} relays={['wss://relay.example']} />
+    )
 
     expect(screen.getByTestId('auth-entry-create-account')).toBeInTheDocument()
     expect(screen.getByTestId('auth-entry-sign-in')).toBeInTheDocument()
@@ -29,7 +31,9 @@ describe('AuthDialog', () => {
   })
 
   it('routes "Sign in" to the existing LoginDialog flow', () => {
-    render(<AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} />)
+    render(
+      <AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} relays={['wss://relay.example']} />
+    )
 
     fireEvent.click(screen.getByTestId('auth-entry-sign-in'))
 
@@ -37,7 +41,9 @@ describe('AuthDialog', () => {
   })
 
   it('routes "Create account" to the existing SignupDialog flow', () => {
-    render(<AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} />)
+    render(
+      <AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} relays={['wss://relay.example']} />
+    )
 
     fireEvent.click(screen.getByTestId('auth-entry-create-account'))
 
@@ -45,12 +51,23 @@ describe('AuthDialog', () => {
   })
 
   it('resets to the choice screen each time it is reopened', () => {
-    const { rerender } = render(<AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} />)
+    const { rerender } = render(
+      <AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} relays={['wss://relay.example']} />
+    )
     fireEvent.click(screen.getByTestId('auth-entry-sign-in'))
     expect(screen.getByTestId('login-dialog')).toBeInTheDocument()
 
-    rerender(<AuthDialog isOpen={false} onClose={vi.fn()} onLogin={vi.fn()} />)
-    rerender(<AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} />)
+    rerender(
+      <AuthDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        onLogin={vi.fn()}
+        relays={['wss://relay.example']}
+      />
+    )
+    rerender(
+      <AuthDialog isOpen onClose={vi.fn()} onLogin={vi.fn()} relays={['wss://relay.example']} />
+    )
 
     expect(screen.getByTestId('auth-entry-create-account')).toBeInTheDocument()
   })

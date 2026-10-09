@@ -24,10 +24,17 @@
       "onReddit": "Partager sur Reddit",
       "onFacebook": "Partager sur Facebook",
       "onPinterest": "Partager sur Pinterest"
+    },
+    "comments": {
+      "addComment": "Ajouter un commentaire...",
+      "commentButton": "Commenter"
     }
   },
   "common": {
-    "copy": "Copier"
+    "copy": "Copier",
+    "back": "Back",
+    "cancel": "Annuler",
+    "copied": "Copié !"
   },
   "richText": {
     "video": "Vidéo",
@@ -83,6 +90,118 @@
     "videoTable": {
       "uploadedTo": "Téléchargé sur",
       "mirroredTo": "Mis en miroir sur"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Se connecter",
+      "subtitle": "Accédez à votre compte en toute sécurité avec votre méthode préférée",
+      "extension": "Extension",
+      "nsec": "Nsec",
+      "protectedKey": "Secret Key",
+      "qrOpen": "Use Signer",
+      "qrRefresh": "New Code",
+      "advanced": "Advanced",
+      "bunker": "Bunker",
+      "extensionDescription": "Connexion en un clic à l'aide de l'extension de navigateur",
+      "loggingIn": "Connexion en cours...",
+      "loginWithExtension": "Se connecter avec l'extension",
+      "enterProtectedKey": "Password-protected key",
+      "protectedKeyPassword": "Backup password",
+      "loginWithProtectedKey": "Unlock and log in",
+      "uploadProtectedKeyFile": "Upload encrypted key file",
+      "rawKeyWarning": "Raw private keys give full control of your account. Use this only if you know where the key came from.",
+      "rawKeyConfirmation": "Confirmation",
+      "enterNsec": "Entrez votre nsec",
+      "nsecPlaceholder": "nsec1...",
+      "uploadKeyFile": "Ou téléchargez un fichier de clé",
+      "uploadNsecFile": "Télécharger le fichier Nsec",
+      "verifying": "Vérification...",
+      "loginWithNsec": "Se connecter avec Nsec",
+      "bunkerUri": "URI Bunker",
+      "bunkerInputLabel": "URI Bunker ou adresse NIP-05",
+      "bunkerPlaceholder": "bunker:// ou bunker.example.com",
+      "bunkerUriError": "L'URI doit commencer par bunker://",
+      "bunkerInputError": "Entrez une URI bunker:// ou une adresse NIP-05 (user@domaine)",
+      "resolvingNip05": "Résolution de l'adresse...",
+      "connecting": "Connexion...",
+      "loginWithBunker": "Se connecter avec Bunker",
+      "authRequired": "Autorisation requise. Appuyez ci-dessous pour approuver la connexion :",
+      "openAuth": "Ouvrir l'autorisation",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "signUp": "S'inscrire",
+      "keyPlaceholder": "ncryptsec1... ou nsec1...",
+      "qr": "QR",
+      "recommended": "Recommandé",
+      "qrDescription": "Scanne avec ton app de signature Nostr",
+      "qrApps": "Amber, Nostrudel ou autres signers NIP-46",
+      "qrMobileDescription": "Connecte-toi avec ton app de signature Nostr sur cet appareil",
+      "qrAnotherDevice": "Ou scanne ce code depuis un autre appareil :"
+    },
+    "signup": {
+      "title": "Créer votre compte",
+      "downloadTitle": "Télécharger votre clé",
+      "settingUpTitle": "Configuration de votre compte",
+      "generateDescription": "Générer une clé sécurisée pour votre compte",
+      "keepSafeDescription": "Conservez votre clé en sécurité - vous en aurez besoin pour vous connecter",
+      "finalizingDescription": "Finalisation de la configuration de votre compte",
+      "introText": "Nous allons générer une clé sécurisée pour votre compte. Vous aurez besoin de cette clé pour vous connecter ultérieurement.",
+      "generating": "Génération de la clé...",
+      "generateButton": "Générer ma clé",
+      "important": "Important :",
+      "importantItem1": "C'est votre seul moyen d'accéder à votre compte",
+      "importantItem2": "Conservez-la dans un endroit sûr",
+      "importantItem3": "Ne partagez jamais cette clé avec qui que ce soit",
+      "downloadKey": "Télécharger la clé",
+      "savedKey": "J'ai enregistré ma clé, continuer",
+      "errorTitle": "Erreur",
+      "errorMessage": "Échec de la génération de la clé. Veuillez réessayer.",
+      "keyDownloaded": "Clé téléchargée",
+      "keyDownloadedMessage": "Votre clé a été téléchargée. Conservez-la en sécurité !",
+      "accountCreated": "Compte créé",
+      "accountCreatedMessage": "Vous êtes maintenant connecté."
+    },
+    "account": {
+      "profile": "Profil",
+      "playlists": "Listes de lecture",
+      "switchAccount": "Changer de compte",
+      "addAccount": "Ajouter un autre compte",
+      "logout": "Se déconnecter",
+      "editTags": "Modifier les tags"
+    },
+    "entry": {
+      "title": "Bienvenue sur nostube",
+      "subtitle": "Choisis comment continuer",
+      "createAccount": "Créer un compte",
+      "signIn": "Se connecter"
+    }
+  },
+  "onboarding": {
+    "seedBackup": {
+      "yourKey": "Your Nostr Secret Key",
+      "protectedTitle": "Create a password-protected backup",
+      "protectedDescription": "This backup uses the Nostr ncryptsec format. Save the file and remember the password to recover your account later.",
+      "important": "This is your recovery backup",
+      "warning1": "If you lose this backup or its password, NosTube cannot recover your account",
+      "warning2": "Store it somewhere safe - a password manager, encrypted drive, or offline backup",
+      "warning3": "Never publish this backup online or share it with anyone",
+      "downloadProtectedKey": "Download password-protected backup",
+      "encrypting": "Creating encrypted backup...",
+      "downloadAgain": "Download Again",
+      "downloaded": "Backup file downloaded!",
+      "confirmBackup": "I have saved my encrypted backup and understand NosTube cannot recover its password",
+      "passwordLabel": "Backup password",
+      "confirmPasswordLabel": "Confirm backup password",
+      "passwordPlaceholder": "Enter a backup password",
+      "confirmPasswordPlaceholder": "Enter the same password again",
+      "passwordHint": "Use at least 8 characters. You will need this password and the backup file to recover your account.",
+      "rawKeyAdvanced": "Advanced: reveal raw private key",
+      "rawKeyWarning": "Your raw private key gives full control of your account. Anyone with this string can publish as you.",
+      "rawKeyConfirmationPlaceholder": "Type \"{{phrase}}\"",
+      "showRawKey": "Show raw key",
+      "hideRawKey": "Hide raw key",
+      "downloadRawKey": "Download raw key",
+      "continue": "Continue to nostube"
     }
   }
 }

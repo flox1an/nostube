@@ -2,30 +2,27 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useState } from 'react'
-import { Key } from 'lucide-react'
-import { Button } from '@nostube/widgets/components/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@nostube/widgets/components/dialog'
-import { toast, useLoginActions } from '@/hooks'
+import { AlertCircle, Key } from 'lucide-react'
+import { Button } from '../button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
+import { Alert, AlertDescription } from '../alert'
+import { useLoginActions } from '../../hooks/useLoginActions'
 import { generateSecretKey, nip19 } from 'nostr-tools'
 import { useTranslation } from 'react-i18next'
-import { SeedBackupStep } from '@/components/onboarding/SeedBackupStep'
-import { markNewUser } from '@/lib/onboarding-progress'
+import { SeedBackupStep } from './SeedBackupStep'
 
 interface SignupDialogProps {
   isOpen: boolean
   onClose: () => void
+  /** Called once the new account is logged in (the host marks onboarding, shows a toast, …). */
+  onComplete?: () => void
 }
 
-const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
+const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onComplete }) => {
   const { t } = useTranslation()
   const [step, setStep] = useState<'generate' | 'backup' | 'done'>('generate')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [nsec, setNsec] = useState('')
   const login = useLoginActions()
 
@@ -38,11 +35,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
       setStep('backup')
     } catch (error) {
       console.error('Failed to generate key:', error)
-      toast({
-        title: t('auth.signup.errorTitle'),
-        description: t('auth.signup.errorMessage'),
-        variant: 'destructive',
-      })
+      setError(t('auth.signup.errorMessage', 'Could not create an account. Please try again.'))
     } finally {
       setIsLoading(false)
     }
@@ -52,20 +45,15 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
     setIsLoading(true)
     try {
       await login.nsec(nsec)
-      markNewUser()
+      onComplete?.()
       setStep('done')
       onClose()
-
-      toast({
-        title: t('auth.signup.accountCreated'),
-        description: t('auth.signup.accountCreatedMessage'),
-      })
     } catch (error) {
-      toast({
-        title: t('auth.signup.errorTitle'),
-        description: error instanceof Error ? error.message : t('auth.signup.errorMessage'),
-        variant: 'destructive',
-      })
+      setError(
+        error instanceof Error
+          ? error.message
+          : t('auth.signup.errorMessage', 'Could not create an account. Please try again.')
+      )
       setIsLoading(false)
     }
   }
@@ -87,6 +75,13 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
         </DialogHeader>
 
         <div className="px-6 py-8 space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {step === 'generate' && (
             <div className="text-center space-y-6">
               <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center">

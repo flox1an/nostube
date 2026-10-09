@@ -3,29 +3,25 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Shield, Upload, AlertCircle, QrCode, ExternalLink } from 'lucide-react'
-import { Button } from '@nostube/widgets/components/button'
-import { Input } from '@nostube/widgets/components/input'
-import { Badge } from '@nostube/widgets/components/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@nostube/widgets/components/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nostube/widgets/components/tabs'
-import { Alert, AlertDescription } from '@nostube/widgets/components/alert'
-import { useLoginActions } from '@/hooks/useLoginActions'
+import { Button } from '../button'
+import { Input } from '../input'
+import { Badge } from '../badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
+import { Alert, AlertDescription } from '../alert'
+import { useLoginActions } from '../../hooks/useLoginActions'
 import { useTranslation } from 'react-i18next'
 import { QRCodeLogin } from './QRCodeLogin'
-import { isNip05 } from '@/lib/nip05-bunker'
-import { isNcryptsec } from '@/lib/nip49'
+import { isNip05 } from '@nostube/core/nip05-bunker'
+import { isNcryptsec } from '@nostube/core/nip49'
 
 interface LoginDialogProps {
   isOpen: boolean
   onClose: () => void
   onLogin: () => void
   onSignup?: () => void
+  /** Relays for the NIP-46 nostrconnect handshake. */
+  relays: string[]
 }
 
 // NIP-07 browser extensions don't exist on mobile browsers (iOS/Android Chrome,
@@ -36,7 +32,13 @@ const isMobileBrowser =
   typeof window !== 'undefined' &&
   (Boolean(window.matchMedia?.('(pointer: coarse)')?.matches) ||
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
-const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onSignup }) => {
+const LoginDialog: React.FC<LoginDialogProps> = ({
+  isOpen,
+  onClose,
+  onLogin,
+  onSignup,
+  relays,
+}) => {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -285,6 +287,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 }}
                 onError={setError}
                 isMobile={isMobileBrowser}
+                relays={relays}
               />
             </TabsContent>
 

@@ -20,15 +20,24 @@ import {
   useReportedPubkeys,
 } from '@/hooks'
 import { Button } from '@nostube/widgets/components/button'
-import { CommentInput } from '@/components/CommentInput'
+import { CommentInput } from '@nostube/widgets/components/CommentInput'
 import { AuthDialog } from '@/components/auth/AuthDialog'
 import { nowInSecs } from '@/lib/utils'
 import { useCommentHighlightStore } from '@/stores/commentHighlightStore'
 import { getReplacedEventIds } from '@nostube/core/replaced-events'
-import type { Comment, VideoCommentsProps } from './types'
-import { mapEventToComment, buildCommentTree } from './utils'
+import {
+  buildCommentFilters,
+  buildCommentReplyTags,
+  buildLegacyReplyTags,
+  buildTopLevelCommentTags,
+  mapEventToComment,
+  buildCommentTree,
+  videoAddressOf,
+  type Comment,
+  type VideoCommentsProps,
+} from '@nostube/core/comments'
 import { CommentItem } from './CommentItem'
-import { CommentSkeleton } from './CommentSkeleton'
+import { CommentSkeleton } from '@nostube/widgets/components/comments/CommentSkeleton'
 
 export function VideoComments({
   videoId,
@@ -130,15 +139,10 @@ export function VideoComments({
     return config.relays.filter(r => r.tags.includes('read')).map(r => r.url)
   }, [relays, config.relays])
 
-  // Build address for addressable events (kinds 34235, 34236)
-  // Address format: <kind>:<pubkey>:<d-tag>
-  const isAddressable = videoKind === 34235 || videoKind === 34236
-  const videoAddress = useMemo(() => {
-    if (isAddressable && identifier) {
-      return `${videoKind}:${authorPubkey}:${identifier}`
-    }
-    return null
-  }, [isAddressable, videoKind, authorPubkey, identifier])
+  const videoAddress = useMemo(
+    () => videoAddressOf({ videoId, authorPubkey, videoKind, identifier }),
+    [videoId, authorPubkey, videoKind, identifier]
+  )
 
   // Build filters to query comments
   // For addressable events: query by both address (#A/#a) and event ID (#E/#e) for compatibility
@@ -146,30 +150,9 @@ export function VideoComments({
   // Also include old event IDs for kind 1 comments that reference previous versions
   const filters = useMemo(() => {
     // Collect all known event IDs (current + old replaced ones)
-    const allEventIds = [videoId]
-    if (videoAddress) {
-      const oldIds = getReplacedEventIds(videoAddress)
-      for (const id of oldIds) {
-        if (!allEventIds.includes(id)) allEventIds.push(id)
-      }
-    }
-
-    // Query by event ID (for backwards compatibility and non-addressable events)
-    const baseFilters = [
-      { kinds: [1], '#e': allEventIds, limit: 100 },
-      { kinds: [1111], '#E': allEventIds, limit: 100 },
-    ] as Filter[]
-
-    // For addressable events, also query by address
-    if (videoAddress) {
-      baseFilters.push(
-        { kinds: [1], '#a': [videoAddress], limit: 100 } as Filter,
-        { kinds: [1111], '#A': [videoAddress], limit: 100 } as Filter
-      )
-    }
-
-    return baseFilters
-  }, [videoId, videoAddress])
+    const allEventIds = videoAddress ? getReplacedEventIds(videoAddress) : []
+    return buildCommentFilters({ videoId, authorPubkey, videoKind, identifier }, allEventIds)
+  }, [videoId, videoAddress, authorPubkey, videoKind, identifier])
 
   // Load comments from relays when filters change.
   // pool.request completes on relay EOSE; a createTimelineLoader would never
@@ -275,37 +258,12 @@ export function VideoComments({
     // Get a relay hint (use first video event relay or first write relay)
     const relayHint = videoEventRelays[0] || writeRelays[0] || readRelays[0] || ''
 
-    // NIP-22: Top-level comment on a video event
-    // For addressable events (kinds 34235, 34236), use A/a tags with address format
-    // For regular events (kinds 21, 22), use E/e tags with event ID
-    const tags: string[][] = []
-
-    if (isAddressable && videoAddress) {
-      // Addressable event: use A/a tags with address, plus e tag for current event ID
-      tags.push(
-        // Root scope: the video address
-        ['A', videoAddress, relayHint],
-        ['K', String(videoKind)],
-        ['P', authorPubkey, relayHint],
-        // Parent (same as root for top-level comments) - use both address and event ID
-        ['a', videoAddress, relayHint],
-        ['e', videoId, relayHint], // Include event ID for compatibility
-        ['k', String(videoKind)],
-        ['p', authorPubkey, relayHint]
-      )
-    } else {
-      // Regular event: use E/e tags with event ID
-      tags.push(
-        ['E', videoId, relayHint, authorPubkey],
-        ['K', String(videoKind || 34235)],
-        ['P', authorPubkey, relayHint],
-        ['e', videoId, relayHint, authorPubkey],
-        ['k', String(videoKind || 34235)],
-        ['p', authorPubkey, relayHint]
-      )
-    }
-
-    tags.push(['client', 'nostube'])
+    // NIP-22: Top-level comment on a video event. Addressable events use A/a tags with the
+    // address, regular events E/e tags with the event ID.
+    const tags = [
+      ...buildTopLevelCommentTags({ videoId, authorPubkey, videoKind, identifier }, relayHint),
+      ['client', 'nostube'],
+    ]
 
     const draftEvent = {
       kind: 1111,
@@ -362,46 +320,33 @@ export function VideoComments({
     // - Replying to kind 1111 → use kind 1111 with NIP-22 tags
     const isReplyToKind1 = replyTo.kind === 1
 
-    const tags: string[][] = []
     let replyKind: number
+    let tags: string[][]
 
     if (isReplyToKind1) {
       // NIP-10: Reply to a kind 1 note using kind 1 threading
       // Root tag = the video event, Reply tag = the comment being replied to
       replyKind = 1
-      tags.push(
-        ['e', videoId, relayHint, 'root'],
-        ['e', replyTo.id, relayHint, 'reply'],
-        ['p', authorPubkey, relayHint],
-        ['p', replyTo.pubkey, relayHint],
-        ['client', 'nostube']
-      )
+      tags = [
+        ...buildLegacyReplyTags(
+          { videoId, authorPubkey, videoKind, identifier },
+          { id: replyTo.id, pubkey: replyTo.pubkey },
+          relayHint
+        ),
+        ['client', 'nostube'],
+      ]
     } else {
       // NIP-22: Reply to a kind 1111 comment
       // Root scope uses A tag for addressable events, E tag for regular events
       replyKind = 1111
-
-      if (isAddressable && videoAddress) {
-        tags.push(
-          ['A', videoAddress, relayHint],
-          ['K', String(videoKind)],
-          ['P', authorPubkey, relayHint]
-        )
-      } else {
-        tags.push(
-          ['E', videoId, relayHint, authorPubkey],
-          ['K', String(videoKind || 34235)],
-          ['P', authorPubkey, relayHint]
-        )
-      }
-
-      // Parent: the comment being replied to
-      tags.push(
-        ['e', replyTo.id, relayHint, replyTo.pubkey],
-        ['k', '1111'],
-        ['p', replyTo.pubkey, relayHint],
-        ['client', 'nostube']
-      )
+      tags = [
+        ...buildCommentReplyTags(
+          { videoId, authorPubkey, videoKind, identifier },
+          { id: replyTo.id, pubkey: replyTo.pubkey },
+          relayHint
+        ),
+        ['client', 'nostube'],
+      ]
     }
 
     const draftEvent = {

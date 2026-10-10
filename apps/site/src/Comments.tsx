@@ -70,8 +70,14 @@ export function Comments({
   const [isLoading, setIsLoading] = useState(true)
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set())
 
-  const filters = useMemo(() => buildCommentFilters(target), [target])
-  const { videoId } = target
+  // Keyed by the target's fields: the caller builds a new object on every render (the page
+  // re-renders each second with the playhead), and a new identity would restart the request
+  // and flash the skeleton.
+  const { videoId, authorPubkey, videoKind, identifier } = target
+  const filters = useMemo(
+    () => buildCommentFilters({ videoId, authorPubkey, videoKind, identifier }),
+    [videoId, authorPubkey, videoKind, identifier]
+  )
 
   // The creators' mute lists, from the same relays as the comments. Comments wait for them
   // (relay EOSE), so a muted one does not flash up first.

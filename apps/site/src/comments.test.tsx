@@ -122,3 +122,46 @@ it('hides what any creator muted, by author or by comment, and does not count it
   expect(screen.queryByText('muted single comment')).toBeNull()
   expect(screen.getByText('1 comment')).toBeTruthy()
 })
+
+it('does not restart the comment request when the page re-renders with an equal target', () => {
+  const requests: Filter[][] = []
+  const pool = {
+    request: (_relays: string[], filters: Filter[]) => {
+      requests.push(filters)
+      return EMPTY
+    },
+  }
+  const host = {
+    pool,
+    config: {},
+    relays: { read: [], metadata: [], indexer: [], zap: [] },
+  } as unknown as NostubeHost
+  const client = { requestVisitorIdentity: () => EMPTY } as unknown as NostubeClient
+  const store = new EventStore()
+  const manager = new AccountManager()
+  const relays = ['wss://instance.example']
+  const creators: string[] = []
+  const page = () => (
+    <EventStoreProvider eventStore={store}>
+      <NostubeHostProvider value={host}>
+        <TimelineProvider value={{ client, policy: {} } as unknown as TimelineContextValue}>
+          <AccountsProvider manager={manager}>
+            {/* A fresh target object per render, like the page does on every playhead tick. */}
+            <Comments
+              target={{ videoId: 'a'.repeat(64), authorPubkey: 'c'.repeat(64) }}
+              links={{} as never}
+              relays={relays}
+              creators={creators}
+            />
+          </AccountsProvider>
+        </TimelineProvider>
+      </NostubeHostProvider>
+    </EventStoreProvider>
+  )
+
+  const { rerender } = render(page())
+  const before = requests.length
+  rerender(page())
+  rerender(page())
+  expect(requests.length).toBe(before)
+})

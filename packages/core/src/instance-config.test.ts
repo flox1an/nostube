@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_PROFILE_RELAYS,
   DEFAULT_SITE_LINKS,
   allowSignerRelays,
   fillLinkTemplate,
@@ -24,6 +25,7 @@ const good = (): InstanceConfig => ({
   startPage: { kind: 'creator-profile', creator: CREATOR },
   videoSources: [RELAY],
   interactionRelays: [RELAY],
+  profileRelays: [],
   search: { mode: 'local' },
   site: {
     tagline: 'Hello',
@@ -121,6 +123,16 @@ describe('parseInstanceConfig', () => {
   it('rejects an origin with a path and an empty external search url', () => {
     expect(parseInstanceConfig({ ...good(), origin: 'https://studio.local/app' }).ok).toBe(false)
     expect(parseInstanceConfig({ ...good(), search: { mode: 'external', url: '' } }).ok).toBe(false)
+  })
+
+  it('reads profileRelays: absent keeps the public defaults, empty stays empty', () => {
+    const { profileRelays: _p, ...oldServer } = good()
+    const absent = parseInstanceConfig(oldServer)
+    expect(absent.ok && absent.config.profileRelays).toEqual(DEFAULT_PROFILE_RELAYS)
+    const empty = parseInstanceConfig({ ...good(), profileRelays: [] })
+    expect(empty.ok && empty.config.profileRelays).toEqual([])
+    expect(parseInstanceConfig({ ...good(), profileRelays: ['https://x.example'] }).ok).toBe(false)
+    expect(parseInstanceConfig({ ...good(), profileRelays: null }).ok).toBe(false)
   })
 })
 

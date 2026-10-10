@@ -20,12 +20,18 @@ struct Raw {
     allowed_writers: Vec<String>,
     video_sources: Vec<String>,
     interaction_relays: Vec<String>,
+    /// Newer than ADR 0005, so a config file without it keeps the public defaults (ADR 0008).
+    #[serde(default = "default_profile_relays")]
+    profile_relays: Vec<String>,
     search: Search,
     tls: Tls,
     #[serde(default)]
     storage: Storage,
     #[serde(default)]
     site: Site,
+    /// Opt-in (ADR 0009); absent = no outbox work at all.
+    #[serde(default, skip_serializing_if = "Mirror::is_off")]
+    mirror: Mirror,
 }
 
 /// Same shape in TOML and in the public config JSON.
@@ -80,6 +86,33 @@ impl Default for Storage {
     fn default() -> Self {
         Storage { quota_gib: 0, free_space_reserve_gib: 5 }
     }
+}
+
+/// Where the outbox copies this instance's own content (ADR 0009): its writers' events to
+/// `relays`, its blobs to `blossom`. Only targets the owner lists here; empty = off.
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct Mirror {
+    pub relays: Vec<String>,
+    pub blossom: Vec<String>,
+}
+
+impl Mirror {
+    pub fn is_off(&self) -> bool {
+        self.relays.is_empty() && self.blossom.is_empty()
+    }
+}
+
+/// Relays like the other relay lists; Blossom servers over HTTPS, or HTTP for a server on the
+/// LAN (as `ws://` is allowed for relays).
+fn check_mirror(mirror: &Mirror) -> Result<(), BoxError> {
+    check_relays(&[&mirror.relays])?;
+    for url in &mirror.blossom {
+        if !(url.starts_with("https://") || url.starts_with("http://")) {
+            return Err(format!("mirror Blossom URL must start with https:// or http://: {url}").into());
+        }
+    }
+    Ok(())
 }
 
 /// How the public site looks and which videos it shows.
@@ -183,13 +216,21 @@ pub struct Edited {
     pub allowed_writers: Vec<String>,
     pub video_sources: Vec<String>,
     pub interaction_relays: Vec<String>,
+    pub profile_relays: Vec<String>,
     pub search: Search,
     pub storage: Storage,
     pub site: Site,
+    pub mirror: Mirror,
 }
 
-fn check_relays(video_sources: &[String], interaction_relays: &[String]) -> Result<(), BoxError> {
-    for url in video_sources.iter().chain(interaction_relays) {
+/// The site's public discovery relays for the signed-in visitor's own profile (ADR 0008); the
+/// same list as `DEFAULT_PROFILE_RELAYS` in `packages/core/src/instance-config.ts`.
+fn default_profile_relays() -> Vec<String> {
+    vec!["wss://purplepag.es".into(), "wss://index.hzrd149.com".into()]
+}
+
+fn check_relays(lists: &[&[String]]) -> Result<(), BoxError> {
+    for url in lists.iter().copied().flatten() {
         if !(url.starts_with("wss://") || url.starts_with("ws://")) {
             return Err(format!("relay URL must start with ws:// or wss://: {url}").into());
         }
@@ -217,10 +258,14 @@ pub struct Config {
     pub allowed_writers: Vec<PublicKey>,
     pub video_sources: Vec<String>,
     pub interaction_relays: Vec<String>,
+    /// Where the site looks up a signed-in visitor's profile besides the instance relays;
+    /// empty = only the instance relays (local only).
+    pub profile_relays: Vec<String>,
     pub search: Search,
     pub tls: Tls,
     pub storage: Storage,
     pub site: Site,
+    pub mirror: Mirror,
 }
 
 impl Config {
@@ -238,9 +283,10 @@ impl Config {
         if raw.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
-        check_relays(&raw.video_sources, &raw.interaction_relays)?;
+        check_relays(&[&raw.video_sources, &raw.interaction_relays, &raw.profile_relays])?;
         check_search(&raw.search)?;
         check_site(&raw.site)?;
+        check_mirror(&raw.mirror)?;
         Ok(Config {
             revision: raw.revision,
             origin: raw.origin,
@@ -250,10 +296,12 @@ impl Config {
             allowed_writers: keys("allowed_writers", &raw.allowed_writers)?,
             video_sources: raw.video_sources,
             interaction_relays: raw.interaction_relays,
+            profile_relays: raw.profile_relays,
             search: raw.search,
             tls: raw.tls,
             storage: raw.storage,
             site: raw.site,
+            mirror: raw.mirror,
         })
     }
 
@@ -263,9 +311,10 @@ impl Config {
         if e.title.trim().is_empty() {
             return Err("title must not be empty".into());
         }
-        check_relays(&e.video_sources, &e.interaction_relays)?;
+        check_relays(&[&e.video_sources, &e.interaction_relays, &e.profile_relays])?;
         check_search(&e.search)?;
         check_site(&e.site)?;
+        check_mirror(&e.mirror)?;
         Ok(Config {
             revision: self.revision + 1,
             origin: self.origin.clone(),
@@ -275,10 +324,12 @@ impl Config {
             allowed_writers: keys("allowed_writers", &e.allowed_writers)?,
             video_sources: e.video_sources.clone(),
             interaction_relays: e.interaction_relays.clone(),
+            profile_relays: e.profile_relays.clone(),
             search: e.search.clone(),
             tls: self.tls.clone(),
             storage: e.storage.clone(),
             site: e.site.clone(),
+            mirror: e.mirror.clone(),
         })
     }
 
@@ -300,10 +351,12 @@ impl Config {
             allowed_writers: vec![],
             video_sources: vec![format!("wss://{authority}")],
             interaction_relays: vec![format!("wss://{authority}")],
+            profile_relays: default_profile_relays(),
             search: Search::Off,
             tls: Tls::LocalCa { router_name: None, https_port, http_port },
             storage: Storage::default(),
             site: Site::default(),
+            mirror: Mirror::default(),
         }
     }
 
@@ -331,10 +384,12 @@ impl Config {
             allowed_writers: self.allowed_writers.iter().map(PublicKey::to_hex).collect(),
             video_sources: self.video_sources.clone(),
             interaction_relays: self.interaction_relays.clone(),
+            profile_relays: self.profile_relays.clone(),
             search: self.search.clone(),
             tls: self.tls.clone(),
             storage: self.storage.clone(),
             site: self.site.clone(),
+            mirror: self.mirror.clone(),
         };
         Ok(toml::to_string_pretty(&raw)?)
     }
@@ -354,6 +409,7 @@ impl Config {
             "startPage": start_page,
             "videoSources": self.video_sources,
             "interactionRelays": self.interaction_relays,
+            "profileRelays": self.profile_relays,
             "search": self.search,
             "site": {
                 "tagline": self.site.tagline,
@@ -425,7 +481,9 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json["startPage"]["creator"], PK);
         assert_eq!(json["search"], serde_json::json!({ "mode": "off" }));
         assert_eq!(json["interactionRelays"], serde_json::json!([]));
-        assert_eq!(json.as_object().unwrap().len(), 10);
+        assert_eq!(json.as_object().unwrap().len(), 11);
+        // A config file from before the field keeps the public profile lookup (ADR 0008).
+        assert_eq!(json["profileRelays"], serde_json::json!(["wss://purplepag.es", "wss://index.hzrd149.com"]));
         assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#6d28d9", "font": "sans" }));
         assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
@@ -448,6 +506,15 @@ tls = {{ mode = "local-ca" }}
         ] {
             assert!(Config::parse(&sample("").replacen(from, to, 1)).is_err(), "{from} -> {to}");
         }
+    }
+
+    #[test]
+    fn an_empty_profile_relay_list_stays_local_only() {
+        let cfg = Config::parse(&sample("profile_relays = []\n")).unwrap();
+        assert_eq!(cfg.public_json()["profileRelays"], serde_json::json!([]));
+        let again = Config::parse(&cfg.to_toml().unwrap()).unwrap();
+        assert!(again.profile_relays.is_empty());
+        assert!(Config::parse(&sample("profile_relays = [\"https://purplepag.es\"]\n")).is_err());
     }
 
     #[test]
@@ -484,11 +551,16 @@ tls = {{ mode = "local-ca" }}
                 allowed_writers: vec![PK.into()],
                 video_sources: vec!["wss://flox-mac.local".into()],
                 interaction_relays: vec![],
+                profile_relays: vec![],
                 search: Search::External { url: "https://search.example".into() },
                 storage: Storage { quota_gib: 100, free_space_reserve_gib: 5 },
                 site: Site::default(),
+                mirror: Mirror { relays: vec!["wss://m.example".into()], blossom: vec!["https://b.example".into()] },
             })
             .unwrap();
+        // Off stays out of the file; set, it survives the round trip.
+        assert!(!cfg.to_toml().unwrap().contains("[mirror]"));
+        assert_eq!(Config::parse(&next.to_toml().unwrap()).unwrap().mirror, next.mirror);
         assert_eq!(next.revision, 4);
         assert_eq!(next.title, "Renamed");
         assert_eq!(next.origin, cfg.origin);
@@ -501,9 +573,11 @@ tls = {{ mode = "local-ca" }}
                 allowed_writers: vec![PK.into()],
                 video_sources: vec!["https://nope".into()],
                 interaction_relays: vec![],
+                profile_relays: vec![],
                 search: Search::Off,
                 storage: Storage::default(),
                 site: Site::default(),
+                mirror: Mirror::default(),
             })
             .is_err());
     }
@@ -533,6 +607,9 @@ tls = {{ mode = "local-ca" }}
             &format!("[site]\nhidden_videos = [\"+34235:{PK}:d\"]\n"),
             &format!("[site]\nhidden_videos = [\"34235:{PK}:a\\nb\"]\n"),
             "[site]\nunknown = 1\n",
+            "[mirror]\nrelays = [\"https://relay.example\"]\n",
+            "[mirror]\nblossom = [\"ftp://blossom.example\"]\n",
+            "[mirror]\nunknown = 1\n",
         ] {
             assert!(Config::parse(&sample(extra)).is_err(), "{extra}");
         }
@@ -547,9 +624,11 @@ tls = {{ mode = "local-ca" }}
             allowed_writers: vec![PK.into()],
             video_sources: vec!["wss://flox-mac.local".into()],
             interaction_relays: vec![],
+            profile_relays: vec![],
             search: Search::Off,
             storage: Storage::default(),
             site: Site { tagline: "New".into(), accent: "#112233".into(), font: Font::Serif, ..Site::default() },
+            mirror: Mirror::default(),
         };
         let next = cfg.with_edits(&edited).unwrap();
         assert_eq!(next.site.tagline, "New");

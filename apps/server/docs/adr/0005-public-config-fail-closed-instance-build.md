@@ -57,6 +57,8 @@ The exception uses `NostubeClient.requestVisitorIdentity` on the same relay pool
 only the group allowlist for two fixed kinds (0 and 10002) and one exact public key.
 Responses for other authors or kinds are discarded before verified store ingestion.
 Ordinary pool queries and publishing retain their original restrictions.
+The two discovery relays are the default of the optional `profileRelays` field since ADR 0008;
+an empty list keeps the lookup on the instance relays.
 
 **Config changes.** The app checks `/api/config` again on tab focus and relay reconnect. When `revision` differs it reloads the page, which ends running queries and rebuilds every loader from the new scope.
 

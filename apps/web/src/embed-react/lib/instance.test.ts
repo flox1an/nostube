@@ -11,6 +11,7 @@ const config = (accent = '#0d9488'): InstanceConfig => ({
   startPage: { kind: 'creator-profile', creator: 'a'.repeat(64) },
   videoSources: ['wss://videos.example.org'],
   interactionRelays: [],
+  profileRelays: [],
   search: { mode: 'off' },
   site: {
     tagline: '',

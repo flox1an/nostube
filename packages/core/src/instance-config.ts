@@ -86,6 +86,12 @@ export const isLinkTemplate = (v: unknown): v is string =>
 export const fillLinkTemplate = (template: string, nip19: string) =>
   template.split('{nip19}').join(nip19)
 
+/**
+ * Public discovery relays for the signed-in visitor's own profile on the site, when the server
+ * does not send `profileRelays` (a server from before the field). The server has the same default.
+ */
+export const DEFAULT_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://index.hzrd149.com']
+
 export interface InstanceConfig {
   version: 1
   revision: number
@@ -95,6 +101,11 @@ export interface InstanceConfig {
   startPage: { kind: 'creator-profile'; creator: string } | null
   videoSources: string[]
   interactionRelays: string[]
+  /**
+   * Where the site looks up the signed-in visitor's profile besides the instance relays.
+   * Optional on the wire (absent: `DEFAULT_PROFILE_RELAYS`); empty: only the instance relays.
+   */
+  profileRelays: string[]
   search: InstanceSearch
   site: InstanceSite
 }
@@ -156,7 +167,10 @@ export function validateSite(value: unknown): string[] {
 export const isHiddenVideoRef = (v: unknown): v is string =>
   typeof v === 'string' && HIDDEN_VIDEO.test(v)
 
-/** Strict v1 validation. Missing never means "use the app default"; unknown fields are ignored. */
+/**
+ * Strict v1 validation. Missing never means "use the app default" (the one exception is
+ * `profileRelays`, newer than the contract); unknown fields are ignored.
+ */
 export function parseInstanceConfig(json: unknown): ParseResult {
   if (json === null || typeof json !== 'object' || Array.isArray(json)) {
     return { ok: false, kind: 'invalid', errors: ['body is not a JSON object'] }
@@ -183,6 +197,9 @@ export function parseInstanceConfig(json: unknown): ParseResult {
     if (k in c && !(Array.isArray(c[k]) && (c[k] as unknown[]).every(isWs)))
       e.push(`${k} must be a list of ws(s):// relay URLs`)
   }
+  // Optional (nostube-server ADR 0008): absent keeps the defaults, a present value must be valid.
+  if ('profileRelays' in c && !(Array.isArray(c.profileRelays) && c.profileRelays.every(isWs)))
+    e.push('profileRelays must be a list of ws(s):// relay URLs')
   if ('search' in c) {
     const s = c.search as { mode?: unknown; url?: unknown } | null
     if (!s || typeof s !== 'object' || !['off', 'local', 'external'].includes(s.mode as string))
@@ -224,6 +241,7 @@ export function parseInstanceConfig(json: unknown): ParseResult {
       startPage,
       videoSources,
       interactionRelays,
+      profileRelays: (c.profileRelays as string[] | undefined) ?? [...DEFAULT_PROFILE_RELAYS],
       search,
       site: {
         tagline: site.tagline,

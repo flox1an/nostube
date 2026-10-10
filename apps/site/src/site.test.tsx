@@ -42,6 +42,7 @@ const config: InstanceConfig = {
   startPage: { kind: 'creator-profile', creator },
   videoSources: ['wss://videos.example'],
   interactionRelays: ['wss://interact.example'],
+  profileRelays: [],
   search: { mode: 'off' },
   site: {
     tagline: '',

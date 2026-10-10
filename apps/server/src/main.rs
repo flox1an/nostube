@@ -7,6 +7,7 @@ mod branding;
 mod config;
 mod data_lock;
 mod login_guard;
+mod outbox;
 mod relay;
 mod signer;
 mod tls;
@@ -36,6 +37,8 @@ struct App {
     boot_id: String,
     /// `/admin` router; `None` when the secrets file is broken (#7).
     admin: Option<Router>,
+    /// Queues stored blobs for the mirror Blossom servers (ADR 0009).
+    outbox: outbox::Outbox,
 }
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -302,8 +305,11 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
             writers: cfg.allowed_writers.clone(),
             name: cfg.title.clone(),
             description: format!("Relay of {}", cfg.title),
+            mirror_relays: cfg.mirror.relays.clone(),
         },
     )?;
+    // Same file as the relay, so an event and its outbox jobs are stored in one transaction.
+    let outbox = outbox::Outbox::open(&data.join("relay.sqlite"), cfg.mirror.clone())?;
 
     let branding = Arc::new(branding::Branding::open(&data, cfg.public_json()));
     // Broken secrets only disable the admin area, never the instance (#7).
@@ -314,14 +320,18 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         &setup_origin,
         boot_id.clone(),
         handle.clone(),
-        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone() },
+        admin::Stores { relay: relay.clone(), blossom: state.clone(), branding: branding.clone(), outbox: outbox.clone() },
     ) {
-        Ok(a) => Some(admin::router(a)),
+        Ok(a) => Some(a),
         Err(e) => {
             tracing::warn!("admin disabled: {e}");
             None
         }
     };
+    // Without the admin area there is no managed key: blob jobs fail with that reason.
+    let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
+    let admin = admin.map(admin::router);
+    let worker = outbox::spawn(outbox.clone(), signer);
 
     let app = App {
         blossom: almond::create_app(state),
@@ -329,6 +339,7 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
         branding,
         boot_id,
         admin,
+        outbox,
     };
 
     match serving {
@@ -378,6 +389,11 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
                 .await?;
         }
     }
+    // Deliveries still running stay pending and go out after the restart.
+    if let Some(worker) = worker {
+        worker.abort();
+        let _ = worker.await;
+    }
     // A config apply or a signal brought us here: a supervisor restarts the process if it should run.
     tracing::info!("stopped; restart the service to run the applied config");
     Ok(())
@@ -425,7 +441,11 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         };
     }
     if is_blossom(req.method(), &path) {
-        return app.blossom.oneshot(req).await.into_response();
+        // A stored upload is queued for the mirrors, unless another instance's outbox sent it.
+        let stored = matches!((req.method(), path.as_str()), (&Method::PUT, "/upload" | "/mirror") | (&Method::PATCH, "/upload"))
+            && !outbox::is_mirror_delivery(req.headers());
+        let res = app.blossom.oneshot(req).await.into_response();
+        return if stored { app.outbox.after_upload(res).await } else { res };
     }
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
         return StatusCode::METHOD_NOT_ALLOWED.into_response();

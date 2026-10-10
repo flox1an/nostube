@@ -106,7 +106,11 @@
     "branding": {
       "title": "徽标、网站图标和横幅",
       "description": "公开站点使用的图片。无需保存，立即生效。",
-      "slots": { "logo": "徽标", "favicon": "网站图标", "banner": "横幅" },
+      "slots": {
+        "logo": "徽标",
+        "favicon": "网站图标",
+        "banner": "横幅"
+      },
       "hints": {
         "logo": "显示在页眉和视频页面中，替代头像。PNG、JPEG、WebP 或 SVG，最大 {{size}}。",
         "favicon": "浏览器标签页上的图标。PNG、JPEG、WebP、SVG 或 ICO，最大 {{size}}。",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "每行一个 ws:// 或 wss:// 中继。",
       "interactionRelays": "互动中继",
       "interactionRelaysHint": "每行一个 ws:// 或 wss:// 中继。用于个人资料，以后也用于评论和打闪（zap）。",
+      "profileRelaysTitle": "访客资料",
+      "profileRelaysDescription": "访客在网站上登录时，会在互动中继、这些中继以及访客在其中列出的中继上查找其名称和头像。将列表留空可让实例仅限本地：网站不会询问任何公共中继，只有当访客资料位于互动中继上时才会显示。",
+      "profileRelays": "资料查询中继",
+      "profileRelaysHint": "每行一个 ws:// 或 wss:// 中继。留空表示仅限本地。",
+      "profileRelaysLocalOnly": "仅限本地",
+      "profileRelaysDefaults": "公共默认值",
+      "profileRelaysLocal": "仅限本地：不在公共中继上查询资料。",
+      "mirrorTitle": "镜像到其他服务器",
+      "mirrorDescription": "在后台把本实例自己的事件和视频复制到你列出的服务器。目标不可用时会持续重试。两个列表都留空则所有内容只保留在本实例上。",
+      "mirrorRelays": "镜像中继",
+      "mirrorRelaysHint": "每行一个 ws:// 或 wss:// 中继。创作者的每个新事件都会发送到那里。",
+      "mirrorBlossom": "镜像 Blossom 服务器",
+      "mirrorBlossomHint": "每行一个 https:// 服务器。上传的视频会复制到那里。这需要托管的签名密钥，因为镜像请求由服务器签名。",
       "search": "搜索",
       "searchModes": {
         "off": "关闭",
@@ -270,6 +287,27 @@
       "downloads": "下载",
       "served": "已提供的数据"
     },
+    "mirror": {
+      "title": "镜像状态",
+      "description": "队列已复制到你的镜像服务器的内容。目标的更改在保存后生效。",
+      "loadFailed": "无法加载镜像状态。",
+      "empty": "队列中还没有任何内容。",
+      "target": "目标",
+      "kind": "类型",
+      "done": "完成",
+      "pending": "等待中",
+      "failed": "失败",
+      "kinds": {
+        "event": "事件",
+        "blob": "文件"
+      },
+      "problems": "问题",
+      "gaveUp": "尝试 {{count}} 次后放弃。点击重试可再次尝试。",
+      "nextAttempt": "目前已尝试 {{count}} 次。下次尝试：{{time}}。",
+      "retry": "重试失败项",
+      "refresh": "刷新",
+      "retried_other": "已将 {{count}} 个任务重新排队。"
+    },
     "errors": {
       "serverStatus": "服务器返回了 {{status}}。",
       "noNip07": "此浏览器中未找到 NIP-07 签名器。",
@@ -296,6 +334,7 @@
       "notVideoLink": "隐藏的视频：“{{line}}”不是视频链接。",
       "notKey": "{{label}}：“{{line}}”不是 hex 或 npub 密钥。",
       "notRelay": "{{label}}：“{{line}}”必须是 ws:// 或 wss:// 中继 URL。",
+      "notServer": "{{label}}：“{{line}}”必须是 http:// 或 https:// 服务器地址。",
       "notCount": "{{label}}：必须是 0 或更大的整数。",
       "accent": "强调色：请使用 #rrggbb 格式。",
       "link": "链接（{{kind}}）：需为包含 {nip19} 的 https:// 地址。",
@@ -306,8 +345,11 @@
         "writers": "允许写入者",
         "videoSources": "视频来源",
         "interactionRelays": "互动中继",
+        "profileRelays": "资料查询中继",
         "quota": "存储配额",
-        "reserve": "预留可用空间"
+        "reserve": "预留可用空间",
+        "mirrorRelays": "镜像中继",
+        "mirrorBlossom": "镜像 Blossom 服务器"
       }
     }
   }

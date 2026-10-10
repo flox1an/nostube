@@ -2601,6 +2601,7 @@ dependencies = [
  "axum",
  "axum-server",
  "base64 0.22.1",
+ "futures-util",
  "hmac 0.12.1",
  "libc",
  "mime_guess",
@@ -2609,6 +2610,7 @@ dependencies = [
  "qrcode",
  "rand 0.9.5",
  "rcgen",
+ "reqwest",
  "rusqlite",
  "rust-embed",
  "rustls",
@@ -2617,6 +2619,7 @@ dependencies = [
  "sha2 0.10.9",
  "time",
  "tokio",
+ "tokio-tungstenite 0.29.0",
  "toml",
  "tower",
  "tracing",
@@ -4054,8 +4057,12 @@ checksum = "8f72a05e828585856dacd553fba484c242c46e391fb0e58917c942ee9202915c"
 dependencies = [
  "futures-util",
  "log",
+ "rustls",
+ "rustls-pki-types",
  "tokio",
+ "tokio-rustls",
  "tungstenite 0.29.0",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -4281,6 +4288,8 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.9.5",
+ "rustls",
+ "rustls-pki-types",
  "sha1 0.10.7",
  "thiserror 2.0.21",
 ]

@@ -106,7 +106,11 @@
     "branding": {
       "title": "Logotipo, favicon y banner",
       "description": "Imágenes para el sitio público. Se aplican al instante, sin guardar.",
-      "slots": { "logo": "Logotipo", "favicon": "Favicon", "banner": "Banner" },
+      "slots": {
+        "logo": "Logotipo",
+        "favicon": "Favicon",
+        "banner": "Banner"
+      },
       "hints": {
         "logo": "En la cabecera y en las páginas de vídeo, en lugar de la foto de perfil. PNG, JPEG, WebP o SVG, hasta {{size}}.",
         "favicon": "El icono de la pestaña del navegador. PNG, JPEG, WebP, SVG o ICO, hasta {{size}}.",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "Un relay ws:// o wss:// por línea.",
       "interactionRelays": "Relays de interacción",
       "interactionRelaysHint": "Un relay ws:// o wss:// por línea. Se usa para perfiles y, más adelante, comentarios y zaps.",
+      "profileRelaysTitle": "Perfiles de visitantes",
+      "profileRelaysDescription": "Cuando un visitante inicia sesión en el sitio, su nombre e imagen se buscan en los relays de interacción, en estos relays y en los relays que el visitante indica allí. Deja la lista vacía para que la instancia sea solo local: el sitio no consulta ningún relay público y muestra el perfil del visitante solo si está en los relays de interacción.",
+      "profileRelays": "Relays para buscar perfiles",
+      "profileRelaysHint": "Un relay ws:// o wss:// por línea. Vacío significa solo local.",
+      "profileRelaysLocalOnly": "Solo local",
+      "profileRelaysDefaults": "Valores públicos predeterminados",
+      "profileRelaysLocal": "Solo local: no se buscan perfiles en relays públicos.",
+      "mirrorTitle": "Replicar en otros servidores",
+      "mirrorDescription": "Copia en segundo plano los eventos y vídeos propios de esta instancia a los servidores que indiques. Sigue reintentando mientras un destino no responda. Deja ambas listas vacías para que todo quede en esta instancia.",
+      "mirrorRelays": "Relays de réplica",
+      "mirrorRelaysHint": "Un relay ws:// o wss:// por línea. Cada evento nuevo de tus creadores se envía allí.",
+      "mirrorBlossom": "Servidores Blossom de réplica",
+      "mirrorBlossomHint": "Un servidor https:// por línea. Los vídeos subidos se copian allí. Requiere la clave de firma gestionada, porque el servidor firma las solicitudes de réplica.",
       "search": "Búsqueda",
       "searchModes": {
         "off": "Desactivada",
@@ -270,6 +287,29 @@
       "downloads": "Descargas",
       "served": "Datos servidos"
     },
+    "mirror": {
+      "title": "Estado de la réplica",
+      "description": "Lo que la cola ha copiado a tus servidores de réplica. Los cambios en los destinos se aplican al guardar.",
+      "loadFailed": "No se pudo cargar el estado de la réplica.",
+      "empty": "Todavía no hay nada en la cola.",
+      "target": "Destino",
+      "kind": "Tipo",
+      "done": "Hecho",
+      "pending": "En espera",
+      "failed": "Fallido",
+      "kinds": {
+        "event": "Evento",
+        "blob": "Archivo"
+      },
+      "problems": "Problemas",
+      "gaveUp": "Se rindió tras {{count}} intentos. Reintenta para volver a probar.",
+      "nextAttempt": "{{count}} intentos hasta ahora. Próximo intento: {{time}}.",
+      "retry": "Reintentar los fallidos",
+      "refresh": "Actualizar",
+      "retried_one": "{{count}} tarea puesta de nuevo en cola.",
+      "retried_many": "{{count}} tareas puestas de nuevo en cola.",
+      "retried_other": "{{count}} tareas puestas de nuevo en cola."
+    },
     "errors": {
       "serverStatus": "El servidor respondió {{status}}.",
       "noNip07": "No se encontró ningún firmante NIP-07 en este navegador.",
@@ -296,6 +336,7 @@
       "notVideoLink": "Videos ocultos: «{{line}}» no es un enlace de video.",
       "notKey": "{{label}}: «{{line}}» no es una clave hex ni npub.",
       "notRelay": "{{label}}: «{{line}}» debe ser una URL de relay ws:// o wss://.",
+      "notServer": "{{label}}: \"{{line}}\" debe ser una dirección de servidor http:// o https://.",
       "notCount": "{{label}}: debe ser un número entero, 0 o mayor.",
       "accent": "Color de acento: usa el formato #rrggbb.",
       "link": "Enlaces ({{kind}}): una dirección https:// que contenga {nip19}.",
@@ -306,8 +347,11 @@
         "writers": "Escritores permitidos",
         "videoSources": "Fuentes de video",
         "interactionRelays": "Relays de interacción",
+        "profileRelays": "Relays para buscar perfiles",
         "quota": "Cuota de almacenamiento",
-        "reserve": "Reserva de espacio libre"
+        "reserve": "Reserva de espacio libre",
+        "mirrorRelays": "Relays de réplica",
+        "mirrorBlossom": "Servidores Blossom de réplica"
       }
     }
   }

@@ -106,7 +106,11 @@
     "branding": {
       "title": "Logo, favicon et bannière",
       "description": "Images du site public. Elles s'appliquent immédiatement, sans enregistrer.",
-      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Bannière" },
+      "slots": {
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "banner": "Bannière"
+      },
       "hints": {
         "logo": "Dans l'en-tête et sur les pages vidéo, à la place de la photo de profil. PNG, JPEG, WebP ou SVG, jusqu'à {{size}}.",
         "favicon": "L'icône de l'onglet du navigateur. PNG, JPEG, WebP, SVG ou ICO, jusqu'à {{size}}.",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "Un relais ws:// ou wss:// par ligne.",
       "interactionRelays": "Relais d'interaction",
       "interactionRelaysHint": "Un relais ws:// ou wss:// par ligne. Utilisé pour les profils et, plus tard, les commentaires et les zaps.",
+      "profileRelaysTitle": "Profils des visiteurs",
+      "profileRelaysDescription": "Quand un visiteur se connecte sur le site, son nom et son image sont recherchés sur les relais d'interaction, sur ces relais et sur les relais que le visiteur y indique. Laissez la liste vide pour garder l'instance uniquement locale : le site n'interroge alors aucun relais public et n'affiche le profil du visiteur que s'il se trouve sur les relais d'interaction.",
+      "profileRelays": "Relais de recherche de profils",
+      "profileRelaysHint": "Un relais ws:// ou wss:// par ligne. Vide signifie local uniquement.",
+      "profileRelaysLocalOnly": "Local uniquement",
+      "profileRelaysDefaults": "Valeurs publiques par défaut",
+      "profileRelaysLocal": "Local uniquement : aucune recherche de profil sur des relais publics.",
+      "mirrorTitle": "Répliquer vers d'autres serveurs",
+      "mirrorDescription": "Copie en arrière-plan les événements et vidéos propres à cette instance vers les serveurs que vous indiquez. Les tentatives reprennent tant qu'une cible est hors service. Laissez les deux listes vides pour tout garder sur cette instance.",
+      "mirrorRelays": "Relais miroirs",
+      "mirrorRelaysHint": "Un relais ws:// ou wss:// par ligne. Chaque nouvel événement de vos créateurs y est envoyé.",
+      "mirrorBlossom": "Serveurs Blossom miroirs",
+      "mirrorBlossomHint": "Un serveur https:// par ligne. Les vidéos téléversées y sont copiées. Cela nécessite la clé de signature gérée, car le serveur signe les requêtes de réplication.",
       "search": "Recherche",
       "searchModes": {
         "off": "Désactivée",
@@ -270,6 +287,29 @@
       "downloads": "Téléchargements",
       "served": "Données servies"
     },
+    "mirror": {
+      "title": "État de la réplication",
+      "description": "Ce que la file d'attente a copié vers vos serveurs miroirs. Les modifications des cibles s'appliquent après l'enregistrement.",
+      "loadFailed": "L'état de la réplication n'a pas pu être chargé.",
+      "empty": "Rien n'est encore en file d'attente.",
+      "target": "Cible",
+      "kind": "Type",
+      "done": "Terminé",
+      "pending": "En attente",
+      "failed": "Échoué",
+      "kinds": {
+        "event": "Événement",
+        "blob": "Fichier"
+      },
+      "problems": "Problèmes",
+      "gaveUp": "Abandon après {{count}} tentatives. Relancez pour réessayer.",
+      "nextAttempt": "{{count}} tentatives jusqu'ici. Prochaine tentative : {{time}}.",
+      "retry": "Relancer les échecs",
+      "refresh": "Actualiser",
+      "retried_one": "{{count}} tâche remise en file.",
+      "retried_many": "{{count}} tâches remises en file.",
+      "retried_other": "{{count}} tâches remises en file."
+    },
     "errors": {
       "serverStatus": "Le serveur a répondu {{status}}.",
       "noNip07": "Aucun signataire NIP-07 trouvé dans ce navigateur.",
@@ -296,6 +336,7 @@
       "notVideoLink": "Vidéos masquées : « {{line}} » n'est pas un lien vidéo.",
       "notKey": "{{label}} : « {{line}} » n'est pas une clé hex ou npub.",
       "notRelay": "{{label}} : « {{line}} » doit être une URL de relais ws:// ou wss://.",
+      "notServer": "{{label}} : \"{{line}}\" doit être une adresse de serveur http:// ou https://.",
       "notCount": "{{label}} : doit être un nombre entier, 0 ou plus.",
       "accent": "Couleur d'accent : utilisez le format #rrggbb.",
       "link": "Liens ({{kind}}) : une adresse https:// contenant {nip19}.",
@@ -306,8 +347,11 @@
         "writers": "Auteurs autorisés",
         "videoSources": "Sources vidéo",
         "interactionRelays": "Relais d'interaction",
+        "profileRelays": "Relais de recherche de profils",
         "quota": "Quota de stockage",
-        "reserve": "Réserve d'espace libre"
+        "reserve": "Réserve d'espace libre",
+        "mirrorRelays": "Relais miroirs",
+        "mirrorBlossom": "Serveurs Blossom miroirs"
       }
     }
   }

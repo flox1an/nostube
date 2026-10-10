@@ -386,6 +386,8 @@ Quellen: \[Runtimeausgabe\](/path/to/nostube/server/standalone.ts:6), \[Appdefau
 
 „Eine URL konfigurierbar machen“ genügt nicht, wenn ein leerer Wert wieder einen zentralen Default aktiviert. Der Offline-Trace muss diese unsichtbaren Rückwege nachweisen. Die derzeitige \[browserorientierte ADR\](/path/to/nostube/docs/adr/[0002-browser-based-transcoding.md](http://0002-browser-based-transcoding.md)) ist mit einem expliziten Creator-Serverprofil abzugleichen; keine stillschweigende Umkehr der Produktentscheidung.
 
+Stand (Oktober 2026): Site, Videoseite und Embed einer Instanz mit `profile_relays = []` stellen keine Anfrage an einen fremden Host mehr (geprüft mit `apps/server/scripts/check-local-profile.mjs`, Server-ADR 0008). Die Profilsuche für angemeldete Besucher bleibt standardmäßig öffentlich (`purplepag.es`, `index.hzrd149.com`); „Nur lokal“ im Studio leert die Liste. Der Embed-Player der Instanz nutzt nur deren Relays und lädt kein externes Preset.
+
 ### Lokale Mehrfeldsuche und vollständiger Videokatalog
 
 NIP-50 definiert einen Suchfilter, aber keinen einheitlichen Algorithmus. Matching im Eventinhalt ist vorgesehen, weitere Felder optional; tokenisierte Mehrfeldsuche ist möglich, aber nicht verlässlich bei jedem Relay zugesagt. Deshalb braucht der Homepage-Kernweg keine NIP-50-Unterstützung. \[NIP-50\]([https://github.com/nostr-protocol/nips/blob/master/50.md](https://github.com/nostr-protocol/nips/blob/master/50.md)).
@@ -437,6 +439,8 @@ Gesichert werden Konfiguration/Recovery, optionaler Upload-/Verwaltungszustand, 
 Bei Neustart erkennt das Hauptprogramm unvollständige Serveruploads und bereits gespeicherte Ausgaben. Der Browser erkennt unterbrochene Verarbeitung getrennt; der Server kann deren Encoderzustand nicht rekonstruieren. Gesundheitsstatus trennt „öffentliche Seite erreichbar“, „Relay liest/schreibt“, „Speicher bereit“ und „Creator-Browser unterstützt die gewählte Verarbeitung“. Compose-Startreihenfolge allein garantiert keine Bereitschaft. \[Compose-Bereitschaft\]([https://docs.docker.com/compose/how-tos/startup-order/](https://docs.docker.com/compose/how-tos/startup-order/)).
 
 Externe Synchronisierung ist eine dauerhafte Outbox mit Ziel, Status und Retry. Medien nur auf explizit ausgewählte Blossom-Server spiegeln und Hash/Größe bestätigen. Eventverbreitung getrennt beobachten. Für spätere Verbreitung offline erzeugter Events bleiben signierte Events und offene Aufträge lokal erhalten. Öffentliche Medien-URLs von einer ausschließlich lokalen Namenswelt auf einen extern nutzbaren Ursprung umzustellen ist eine bewusste Publikations-/Adressentscheidung, keine beliebige URL-Ersetzung.
+
+**Stand der Umsetzung (Server-ADR 0009):** Die Outbox für die eigenen Inhalte der Instanz ist umgesetzt, als Opt-in `[mirror]` in der `config.toml` (`relays`, `blossom`; leer = aus, dann gibt es weder Hintergrundaufgabe noch ausgehende Verbindung). Aufträge liegen in `relay.sqlite`, Event-Aufträge in derselben Transaktion wie das Event. Wiederholung mit Backoff und Jitter, nach 24 Fehlversuchen „failed“ bis zum Retry im Studio. Blobs werden per BUD-04 `PUT /mirror` gespiegelt, signiert mit dem Managed Key (ADR 0007), und gelten erst als erledigt, wenn das Ziel dieselbe Prüfsumme und Größe bestätigt. Noch offen: kind-1063-Ankündigungen der Kopien und alles, was Inhalte von außen holt.
 
 ## 11. Vorgehen zur Validierung des Vorschlags
 

@@ -1,4 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next'
+import { DEFAULT_PROFILE_RELAYS } from '@nostube/core/instance-config'
+import { Button } from '@nostube/widgets/components/button'
 import {
   Card,
   CardContent,
@@ -11,6 +13,7 @@ import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLa
 import { Textarea } from '@nostube/widgets/components/textarea'
 import type { AdminState } from './api'
 import { Field } from './fields'
+import { MirrorCard } from './MirrorCard'
 import type { PageProps } from './AppearancePage'
 
 const lines = 'font-mono text-xs'
@@ -94,6 +97,93 @@ export function InstancePage({ draft, update, state }: PageProps & { state: Admi
           </Field>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.instance.profileRelaysTitle')}</CardTitle>
+          <CardDescription>{t('studio.instance.profileRelaysDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Field
+            id="profile-relays"
+            label={t('studio.instance.profileRelays')}
+            hint={
+              draft.profileRelaysText.trim()
+                ? t('studio.instance.profileRelaysHint')
+                : t('studio.instance.profileRelaysLocal')
+            }
+          >
+            <Textarea
+              id="profile-relays"
+              rows={3}
+              className={lines}
+              spellCheck={false}
+              value={draft.profileRelaysText}
+              onChange={e => update({ profileRelaysText: e.target.value })}
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!draft.profileRelaysText.trim()}
+              onClick={() => update({ profileRelaysText: '' })}
+            >
+              {t('studio.instance.profileRelaysLocalOnly')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => update({ profileRelaysText: DEFAULT_PROFILE_RELAYS.join('\n') })}
+            >
+              {t('studio.instance.profileRelaysDefaults')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('studio.instance.mirrorTitle')}</CardTitle>
+          <CardDescription>{t('studio.instance.mirrorDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Field
+            id="mirror-relays"
+            label={t('studio.instance.mirrorRelays')}
+            hint={t('studio.instance.mirrorRelaysHint')}
+          >
+            <Textarea
+              id="mirror-relays"
+              rows={3}
+              className={lines}
+              spellCheck={false}
+              value={draft.mirrorRelaysText}
+              onChange={e => update({ mirrorRelaysText: e.target.value })}
+            />
+          </Field>
+          <Field
+            id="mirror-blossom"
+            label={t('studio.instance.mirrorBlossom')}
+            hint={t('studio.instance.mirrorBlossomHint')}
+          >
+            <Textarea
+              id="mirror-blossom"
+              rows={3}
+              className={lines}
+              spellCheck={false}
+              value={draft.mirrorBlossomText}
+              onChange={e => update({ mirrorBlossomText: e.target.value })}
+            />
+          </Field>
+        </CardContent>
+      </Card>
+
+      {(state.config.mirror.relays.length > 0 || state.config.mirror.blossom.length > 0) && (
+        <MirrorCard />
+      )}
 
       <Card>
         <CardHeader>

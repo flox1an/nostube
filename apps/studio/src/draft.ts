@@ -22,6 +22,11 @@ export interface Draft {
   writersText: string
   videoSourcesText: string
   interactionRelaysText: string
+  /** Empty: local only, the site looks a visitor's profile up only on the instance relays. */
+  profileRelaysText: string
+  /** Empty lists: the outbox is off. */
+  mirrorRelaysText: string
+  mirrorBlossomText: string
   searchMode: 'off' | 'local' | 'external'
   searchUrl: string
   quota: string
@@ -46,6 +51,9 @@ export function toDraft(c: AdminConfig): Draft {
     writersText: c.allowedWriters.join('\n'),
     videoSourcesText: c.videoSources.join('\n'),
     interactionRelaysText: c.interactionRelays.join('\n'),
+    profileRelaysText: c.profileRelays.join('\n'),
+    mirrorRelaysText: c.mirror.relays.join('\n'),
+    mirrorBlossomText: c.mirror.blossom.join('\n'),
     searchMode: c.search.mode,
     searchUrl: c.search.mode === 'external' ? c.search.url : '',
     quota: String(c.storage.quotaGib),
@@ -78,6 +86,14 @@ function relays(label: string, text: string, errors: string[]): string[] {
   return toLines(text).filter(line => {
     const ok = /^wss?:\/\/[^/\s]+\/?$/.test(line)
     if (!ok) errors.push(i18n.t('studio.errors.notRelay', { label, line }))
+    return ok
+  })
+}
+
+function servers(label: string, text: string, errors: string[]): string[] {
+  return toLines(text).filter(line => {
+    const ok = /^https?:\/\/[^/\s]+\/?$/.test(line)
+    if (!ok) errors.push(i18n.t('studio.errors.notServer', { label, line }))
     return ok
   })
 }
@@ -131,6 +147,9 @@ export function fromDraft(d: Draft): DraftResult {
   const allowedWriters = keys(label('writers'), d.writersText, errors)
   const videoSources = relays(label('videoSources'), d.videoSourcesText, errors)
   const interactionRelays = relays(label('interactionRelays'), d.interactionRelaysText, errors)
+  const profileRelays = relays(label('profileRelays'), d.profileRelaysText, errors)
+  const mirrorRelays = relays(label('mirrorRelays'), d.mirrorRelaysText, errors)
+  const mirrorBlossom = servers(label('mirrorBlossom'), d.mirrorBlossomText, errors)
   const quotaGib = count(label('quota'), d.quota, errors)
   const freeSpaceReserveGib = count(label('reserve'), d.reserve, errors)
   let search: AdminConfig['search'] = { mode: 'off' }
@@ -148,6 +167,8 @@ export function fromDraft(d: Draft): DraftResult {
       allowedWriters,
       videoSources,
       interactionRelays,
+      profileRelays,
+      mirror: { relays: mirrorRelays, blossom: mirrorBlossom },
       search,
       storage: { quotaGib, freeSpaceReserveGib },
       site,

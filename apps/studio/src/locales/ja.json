@@ -106,7 +106,11 @@
     "branding": {
       "title": "ロゴ、ファビコン、バナー",
       "description": "公開サイト用の画像です。保存しなくてもすぐに反映されます。",
-      "slots": { "logo": "ロゴ", "favicon": "ファビコン", "banner": "バナー" },
+      "slots": {
+        "logo": "ロゴ",
+        "favicon": "ファビコン",
+        "banner": "バナー"
+      },
       "hints": {
         "logo": "ヘッダーと動画ページで、プロフィール画像の代わりに表示されます。PNG、JPEG、WebP、SVG、最大 {{size}}。",
         "favicon": "ブラウザのタブに表示されるアイコンです。PNG、JPEG、WebP、SVG、ICO、最大 {{size}}。",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "1 行に 1 つの ws:// または wss:// リレー。",
       "interactionRelays": "インタラクション用リレー",
       "interactionRelaysHint": "1 行に 1 つの ws:// または wss:// リレー。プロフィールに使われ、今後はコメントや zap にも使われます。",
+      "profileRelaysTitle": "訪問者のプロフィール",
+      "profileRelaysDescription": "訪問者がサイトにサインインすると、名前と画像をインタラクション用リレー、ここにあるリレー、そして訪問者がそこで指定しているリレーから探します。リストを空にするとインスタンスはローカルのみになります。サイトは公開リレーに問い合わせず、訪問者のプロフィールはインタラクション用リレーにある場合だけ表示されます。",
+      "profileRelays": "プロフィール検索用リレー",
+      "profileRelaysHint": "1 行に 1 つの ws:// または wss:// リレー。空にするとローカルのみ。",
+      "profileRelaysLocalOnly": "ローカルのみ",
+      "profileRelaysDefaults": "公開の既定値",
+      "profileRelaysLocal": "ローカルのみ：公開リレーでプロフィールを検索しません。",
+      "mirrorTitle": "他のサーバーへミラーする",
+      "mirrorDescription": "このインスタンス自身のイベントと動画を、指定したサーバーへバックグラウンドでコピーします。宛先が停止中は再試行を続けます。両方のリストを空にすると、すべてこのインスタンスだけに残ります。",
+      "mirrorRelays": "ミラー用リレー",
+      "mirrorRelaysHint": "1 行に 1 つの ws:// または wss:// リレー。クリエイターの新しいイベントはすべてここへ送られます。",
+      "mirrorBlossom": "ミラー用 Blossom サーバー",
+      "mirrorBlossomHint": "1 行に 1 つの https:// サーバー。アップロードした動画がここへコピーされます。サーバーがミラー要求に署名するため、管理された署名鍵が必要です。",
       "search": "検索",
       "searchModes": {
         "off": "オフ",
@@ -270,6 +287,27 @@
       "downloads": "ダウンロード",
       "served": "配信データ量"
     },
+    "mirror": {
+      "title": "ミラーの状態",
+      "description": "キューがミラーサーバーへコピーした内容です。宛先の変更は保存後に反映されます。",
+      "loadFailed": "ミラーの状態を読み込めませんでした。",
+      "empty": "まだキューに何もありません。",
+      "target": "宛先",
+      "kind": "種類",
+      "done": "完了",
+      "pending": "待機中",
+      "failed": "失敗",
+      "kinds": {
+        "event": "イベント",
+        "blob": "ファイル"
+      },
+      "problems": "問題",
+      "gaveUp": "{{count}} 回の試行の後に諦めました。再試行で、もう一度試せます。",
+      "nextAttempt": "これまで {{count}} 回試行しました。次の試行：{{time}}。",
+      "retry": "失敗したものを再試行",
+      "refresh": "更新",
+      "retried_other": "{{count}} 件のジョブをキューに戻しました。"
+    },
     "errors": {
       "serverStatus": "サーバーが {{status}} を返しました。",
       "noNip07": "このブラウザに NIP-07 署名ツールが見つかりません。",
@@ -296,6 +334,7 @@
       "notVideoLink": "非表示の動画：「{{line}}」は動画のリンクではありません。",
       "notKey": "{{label}}：「{{line}}」は hex または npub 鍵ではありません。",
       "notRelay": "{{label}}：「{{line}}」は ws:// または wss:// のリレー URL である必要があります。",
+      "notServer": "{{label}}：「{{line}}」は http:// または https:// のサーバーアドレスにしてください。",
       "notCount": "{{label}}：0 以上の整数である必要があります。",
       "accent": "アクセントカラー：#rrggbb 形式を使ってください。",
       "link": "リンク（{{kind}}）：{nip19} を含む https:// アドレスが必要です。",
@@ -306,8 +345,11 @@
         "writers": "書き込みを許可する鍵",
         "videoSources": "動画ソース",
         "interactionRelays": "インタラクション用リレー",
+        "profileRelays": "プロフィール検索用リレー",
         "quota": "ストレージ容量上限",
-        "reserve": "空き容量の確保"
+        "reserve": "空き容量の確保",
+        "mirrorRelays": "ミラー用リレー",
+        "mirrorBlossom": "ミラー用 Blossom サーバー"
       }
     }
   }

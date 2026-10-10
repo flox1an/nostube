@@ -12,6 +12,11 @@ use crate::relay::{MAX_FUTURE_SECS, MAX_MESSAGE_BYTES};
 /// against guessing it; a low factor keeps the unlock at startup cheap (NIP-49 allows any value).
 const LOG_N: u8 = 12;
 
+/// The unlocked managed key, shared by the admin area (which creates it) and the outbox (which
+/// signs its mirror requests with it). `None`: no key; `Err`: `secrets.toml` has one that cannot
+/// be unlocked.
+pub type Shared = std::sync::Arc<parking_lot::Mutex<Option<Result<Keys, String>>>>;
+
 /// The key as an `ncryptsec`, encrypted with `password`.
 pub fn encrypt(secret: &SecretKey, password: &str) -> Result<String, String> {
     let fail = |e: &dyn std::fmt::Display| format!("cannot encrypt the managed key: {e}");

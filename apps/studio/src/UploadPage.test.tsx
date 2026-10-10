@@ -54,6 +54,8 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
     allowedWriters: writers,
     videoSources: ['wss://videos.example.org'],
     interactionRelays: [],
+    profileRelays: [],
+    mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
     site: {

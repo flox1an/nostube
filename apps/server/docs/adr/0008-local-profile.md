@@ -1,0 +1,22 @@
+# Local only: the visitor's profile lookup is an instance setting, and the embed stays on the instance relays
+
+The fully local profile (CONTEXT.md) promises that the site, a video page and the embed work with no request leaving the instance. Two paths broke that promise. The site looked up a signed-in visitor's own profile on two public discovery relays (`purplepag.es`, `index.hzrd149.com`, ADR 0005 "Signed-in visitor identity"). The embed player served by the instance read its relay constants before the instance config was registered, so it dialled nostube's six public read relays plus `purplepag.es` for the moderation preset.
+
+**`profileRelays` (still contract version 1).** The public config gains an optional field, `profileRelays`: `ws(s)://` relays where the site looks up the signed-in visitor's NIP-65 list and profile besides the instance relays. In `config.toml` it is `profile_relays`; the server validates it like the other relay lists and always writes it into `/api/config` and the studio's config. The studio edits it on the Instance page, with a one-click "Local only" (the empty list) and "Public defaults".
+
+- **Absent means the public defaults** (`wss://purplepag.es`, `wss://index.hzrd149.com`), in the server for a `config.toml` written before the field and in the site for a server from before the field. This is a deliberate exception to ADR 0005's "no value selects an app default": the field is newer than the contract, the public lookup is the behaviour every existing instance has, and only an explicit choice takes it away. The defaults live twice, in `config.rs` and `@nostube/core/instance-config` (`DEFAULT_PROFILE_RELAYS`).
+- **Empty means local only.** The visitor's identity is then looked up only on the instance relays, and the outbox relays the visitor's NIP-65 list names are not followed either (they would be public relays). A visitor whose profile is not on the instance relays shows as their key.
+- **A present but invalid value rejects the config** like any other invalid field: falling back to the public defaults would silently undo a local-only choice.
+
+**The embed on an instance uses only the instance relays.** When the embed has read the instance config, the video, the author's profile and the author's Blossom list come from `videoSources` ∪ `interactionRelays`; relay hints in the `naddr`/`nevent`, the `?relays=` parameter and the public defaults are not used (as in the instance build, ADR 0005). It does not load nostube's moderation preset: the preset gate is off on an instance (ADR 0005), and the preset lives on public relays. A flagged video then goes by its content warning and the viewer's NSFW setting, as on the site. When the config cannot be read, the embed keeps today's public behaviour.
+
+The apps/web instance build's default upload server is the instance's own Blossom (its origin) instead of three public servers.
+
+**Check.** `apps/server/scripts/check-local-profile.mjs` starts the server on a throwaway data folder with `profile_relays = []`, seeds a creator video on its own relay and Blossom, opens the site signed in as a visitor, a video page and the embed in a headless Chromium browser, and lists every request and WebSocket to another host (deploy.md, "Checking that an instance stays local"). Before this change it listed `purplepag.es` and `index.hzrd149.com` on the site and video page, and `relay.nostu.be`, `relay.divine.video`, `relay.primal.net`, `nos.lol`, `offchain.pub`, `nostr.wine` and `purplepag.es` on the embed; after it, none. Fonts, avatars (no dicebear) and thumbnails (no imgproxy) were already local on an instance.
+
+## Considered Options
+
+- **Drop the public lookup on every instance**: rejected. The owner wants visitors to see their own name and picture by default; most visitors' profiles are not on the instance relays.
+- **Required field, bump the contract version**: rejected. A site and a server from different builds would stop each other for a field that has a safe old meaning.
+- **Lazy getters for the relay constants in `apps/web/src/constants/relays.ts`**: rejected for this. Every web consumer would change; the embed is the only entry that registers the config after its modules are evaluated, so it resolves its relays itself.
+- **Fail closed in the embed when the config cannot be read**: not done here. It would leave the embed blank whenever `/api/config` is briefly unreachable; the site's own fail-closed load (ADR 0005) is unchanged.

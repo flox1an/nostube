@@ -120,6 +120,8 @@ pub struct RelayConfig {
     pub writers: Vec<PublicKey>,
     pub name: String,
     pub description: String,
+    /// Mirror relays (ADR 0009): each newly stored writer event gets an outbox job per target.
+    pub mirror_relays: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -131,6 +133,7 @@ struct Inner {
     writer: Mutex<Connection>,
     readers: Mutex<Vec<Connection>>,
     writers: Vec<PublicKey>,
+    mirror_relays: Vec<String>,
     nip11: String,
     live: broadcast::Sender<Arc<Event>>,
 }
@@ -178,11 +181,13 @@ impl Relay {
     pub fn open(db: &Path, cfg: RelayConfig) -> Result<Relay, BoxError> {
         let writer = connect(db)?;
         writer.execute_batch(SCHEMA)?;
+        writer.execute_batch(crate::outbox::SCHEMA)?;
         let relay = Relay(Arc::new(Inner {
             path: db.to_owned(),
             writer: Mutex::new(writer),
             readers: Mutex::new(Vec::new()),
             writers: cfg.writers,
+            mirror_relays: cfg.mirror_relays,
             nip11: nip11_doc(cfg.name, cfg.description),
             live: broadcast::channel(1024).0,
         }));
@@ -190,7 +195,14 @@ impl Relay {
         Ok(relay)
     }
 
+    #[cfg(test)]
     async fn ingest(&self, ev: Event) -> RelayMessage<'static> {
+        self.ingest_from(ev, false).await
+    }
+
+    /// `mirrored`: another instance's outbox sent it (`outbox::is_mirror_delivery`), so it is
+    /// stored but not passed on to this instance's mirrors.
+    async fn ingest_from(&self, ev: Event, mirrored: bool) -> RelayMessage<'static> {
         let id = ev.id;
         if ev.verify().is_err() {
             return RelayMessage::ok(id, false, "invalid: bad event id or signature");
@@ -209,7 +221,8 @@ impl Relay {
             let inner = self.0.clone();
             let row = ev.clone();
             let saved = tokio::task::spawn_blocking(move || {
-                admit(&mut inner.writer.lock(), &inner.writers, &row)
+                let mirror: &[String] = if mirrored { &[] } else { &inner.mirror_relays };
+                admit(&mut inner.writer.lock(), &inner.writers, mirror, &row)
             })
             .await;
             match saved {
@@ -271,14 +284,14 @@ impl Relay {
         .await?
     }
 
-    async fn session(self, mut ws: WebSocket) {
+    async fn session(self, mut ws: WebSocket, mirrored: bool) {
         let mut live = self.0.live.subscribe();
         let mut subs: HashMap<SubscriptionId, Vec<Filter>> = HashMap::new();
         loop {
             let out: Vec<RelayMessage> = tokio::select! {
                 msg = ws.recv() => match msg {
                     Some(Ok(Message::Text(text))) => match ClientMessage::from_json(text.as_str()) {
-                        Ok(ClientMessage::Event(ev)) => vec![self.ingest(ev.into_owned()).await],
+                        Ok(ClientMessage::Event(ev)) => vec![self.ingest_from(ev.into_owned(), mirrored).await],
                         Ok(ClientMessage::Req { subscription_id, filters }) => {
                             let id = subscription_id.into_owned();
                             if id.as_str().chars().count() > MAX_SUBID_LEN {
@@ -327,7 +340,7 @@ impl Relay {
     }
 }
 
-fn connect(path: &Path) -> rusqlite::Result<Connection> {
+pub(crate) fn connect(path: &Path) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
     conn.execute_batch(STARTUP)?;
     Ok(conn)
@@ -789,14 +802,16 @@ fn check_visitor_deletion(conn: &Connection, ev: &Event) -> Result<(), &'static 
     Ok(())
 }
 
-/// Validates visitor events and records/persists them; writer events pass straight through.
+/// Validates visitor events and records/persists them; writer events pass straight through and
+/// are queued for the `mirror` relays.
 fn admit(
     conn: &mut Connection,
     writers: &[PublicKey],
+    mirror: &[String],
     ev: &Event,
 ) -> rusqlite::Result<Result<Saved, &'static str>> {
     if writers.contains(&ev.pubkey) {
-        return persist(conn, ev).map(Ok);
+        return persist(conn, ev, mirror).map(Ok);
     }
     let Some(scope) = visitor_scope(ev) else {
         return Ok(Err("restricted: only this instance's allowed writers may publish"));
@@ -804,7 +819,7 @@ fn admit(
     if let Err(refusal) = check_visitor(conn, writers, ev, scope) {
         return Ok(Err(refusal));
     }
-    let saved = persist(conn, ev)?;
+    let saved = persist(conn, ev, &[])?;
     if matches!(saved, Saved::Stored | Saved::Duplicate) && ev.kind.as_u16() != 5 {
         conn.execute(
             "INSERT OR IGNORE INTO visitor_event (event_hash, author) VALUES (?, ?)",
@@ -817,8 +832,9 @@ fn admit(
 
 /// Upstream `persist_event`, minus NIP-26 and with deletion as real deletes: keeps only the
 /// newest replaceable/addressable version (tie: lowest id), applies kind-5 `e` deletions of
-/// the same author, and refuses events their author already deleted.
-fn persist(conn: &mut Connection, ev: &Event) -> rusqlite::Result<Saved> {
+/// the same author, and refuses events their author already deleted. A stored event gets an
+/// outbox job per `mirror` target in the same transaction.
+fn persist(conn: &mut Connection, ev: &Event, mirror: &[String]) -> rusqlite::Result<Saved> {
     let tx = conn.transaction()?;
     let id = ev.id.as_bytes().as_slice();
     let author = ev.pubkey.as_bytes().as_slice();
@@ -913,6 +929,7 @@ fn persist(conn: &mut Connection, ev: &Event) -> rusqlite::Result<Saved> {
         }
     }
 
+    crate::outbox::enqueue_event(&tx, mirror, &ev.id)?;
     tx.commit()?;
     Ok(Saved::Stored)
 }
@@ -1052,11 +1069,12 @@ pub async fn handle(relay: Relay, req: Request<Body>) -> Response {
             .into_response();
     }
     let (mut parts, _) = req.into_parts();
+    let mirrored = crate::outbox::is_mirror_delivery(&parts.headers);
     match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
         Ok(ws) => ws
             .max_message_size(MAX_MESSAGE_BYTES)
             .max_frame_size(MAX_MESSAGE_BYTES)
-            .on_upgrade(move |socket| relay.session(socket))
+            .on_upgrade(move |socket| relay.session(socket, mirrored))
             .into_response(),
         Err(rejection) => rejection.into_response(),
     }
@@ -1076,7 +1094,7 @@ mod tests {
             N.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_file(&path);
-        let cfg = RelayConfig { writers, name: "t".into(), description: "t".into() };
+        let cfg = RelayConfig { writers, name: "t".into(), description: "t".into(), mirror_relays: vec![] };
         Relay::open(&path, cfg).unwrap()
     }
 
@@ -1089,7 +1107,7 @@ mod tests {
     }
 
     fn put(relay: &Relay, e: &Event) -> Saved {
-        persist(&mut relay.0.writer.lock(), e).unwrap()
+        persist(&mut relay.0.writer.lock(), e, &[]).unwrap()
     }
 
     fn get(relay: &Relay, filters: &[Filter], now: i64) -> Vec<Event> {
@@ -1317,7 +1335,7 @@ mod tests {
         let prior = open(vec![writer.public_key(), foreign.public_key()]);
         assert!(ok_status(prior.ingest(foreign_video.clone()).await).0);
         let relay_foreign = Relay::open(&prior.0.path, RelayConfig {
-            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(),
+            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
         }).unwrap();
         let id = video.id.to_hex();
         let author = writer.public_key().to_hex();
@@ -1413,5 +1431,36 @@ mod tests {
         assert_eq!(stats.by_kind, vec![(0, 1), (1, 2), (5, 1), (34235, 2)]);
         assert!(stats.database_bytes >= std::fs::metadata(&relay.0.path).unwrap().len());
         assert!(stats.database_bytes > 0);
+    }
+
+    #[tokio::test]
+    async fn only_new_writer_events_are_queued_for_the_mirror_relays() {
+        let (writer, visitor) = (Keys::generate(), Keys::generate());
+        let targets = vec!["wss://a.example".to_owned(), "wss://b.example".to_owned()];
+        let relay = Relay::open(&open(vec![]).0.path, RelayConfig {
+            writers: vec![writer.public_key()], name: "t".into(), description: "t".into(), mirror_relays: targets.clone(),
+        }).unwrap();
+        let queued = |id: &EventId| -> Vec<String> {
+            let conn = relay.0.writer.lock();
+            let mut stmt = conn.prepare("SELECT target FROM outbox WHERE kind = 'event' AND ref_id = ? ORDER BY target").unwrap();
+            stmt.query_map([id.to_hex()], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+        };
+        let now = Timestamp::now().as_secs();
+        let video = ev(&writer, 21, now, "video", &[]);
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        assert_eq!(queued(&video.id), targets);
+        // A replay is a duplicate: no second job.
+        assert!(ok_status(relay.ingest(video.clone()).await).0);
+        let n: i64 = relay.0.writer.lock().query_row("SELECT COUNT(*) FROM outbox", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 2);
+        // A visitor's comment is stored, but it is not this instance's content.
+        let comment = ev(&visitor, 1111, now, "nice", &[&["E", &video.id.to_hex()], &["K", "21"], &["P", &writer.public_key().to_hex()], &["e", &video.id.to_hex()], &["k", "21"], &["p", &writer.public_key().to_hex()]]);
+        assert!(ok_status(relay.ingest(comment.clone()).await).0);
+        assert!(queued(&comment.id).is_empty());
+        // A writer event another instance's outbox delivered is stored, not passed on.
+        let copy = ev(&writer, 1, now, "from a mirror", &[]);
+        assert!(ok_status(relay.ingest_from(copy.clone(), true).await).0);
+        assert!(queued(&copy.id).is_empty());
+        assert_eq!(get(&relay, &[filter(&format!(r#"{{"ids":["{}"]}}"#, copy.id))], now as i64).len(), 1);
     }
 }

@@ -467,6 +467,7 @@ The player enforces the viewer's own safety settings. Embedders can't override t
 - Viewers who chose "warning" must click through an overlay; there is no autoplay
 - If the moderation preset can't be loaded, the player fails closed and plays nothing
 - Self-hosted deployments can disable this at build time with `VITE_NSFW_SAFETY=off`; the operator then takes responsibility for the content
+- The player served by a nostube-server instance uses only that instance's relays and no moderation preset (it lives on public relays); there, flagged videos go by their `content-warning` tag
 
 ---
 

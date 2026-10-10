@@ -1,4 +1,4 @@
-import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
+import { DEFAULT_PROFILE_RELAYS, DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
@@ -20,6 +20,8 @@ const config: AdminConfig = {
   allowedWriters: [PK],
   videoSources: ['wss://relay.example'],
   interactionRelays: [],
+  profileRelays: DEFAULT_PROFILE_RELAYS,
+  mirror: { relays: [], blossom: [] },
   search: { mode: 'off' },
   storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
   site: {
@@ -48,11 +50,38 @@ describe('draft', () => {
     expect(result.config?.site.videos.hidden).toEqual([`34235:${PK}:intro`])
   })
 
+  it('saves an emptied profile relay list as local only, not as the defaults', () => {
+    const result = fromDraft({ ...toDraft(config), profileRelaysText: '  \n' })
+    expect(result.config?.profileRelays).toEqual([])
+  })
+
+  it('keeps the mirror targets and lets both lists be emptied (off)', () => {
+    const on = fromDraft({
+      ...toDraft(config),
+      mirrorRelaysText: 'wss://mirror.example\n',
+      mirrorBlossomText: 'https://blossom.example/',
+    })
+    expect(on.config?.mirror).toEqual({
+      relays: ['wss://mirror.example'],
+      blossom: ['https://blossom.example/'],
+    })
+    const off = fromDraft({ ...toDraft(on.config!), mirrorRelaysText: '', mirrorBlossomText: ' ' })
+    expect(off.config?.mirror).toEqual({ relays: [], blossom: [] })
+  })
+
+  it.each([
+    ['mirror relay', { mirrorRelaysText: 'https://relay.example' }],
+    ['mirror Blossom server', { mirrorBlossomText: 'wss://blossom.example' }],
+  ])('rejects a %s that is not an address of its kind', (_name, change) => {
+    expect(fromDraft({ ...toDraft(config), ...change }).config).toBeNull()
+  })
+
   it.each([
     ['title', { title: '  ' }],
     ['accent', { accent: 'red' }],
     ['creator', { creatorsText: 'nope' }],
     ['relay', { videoSourcesText: 'https://relay.example' }],
+    ['profile relay', { profileRelaysText: 'purplepag.es' }],
     ['hidden video', { hiddenText: 'not a video' }],
     [
       'link without a placeholder',

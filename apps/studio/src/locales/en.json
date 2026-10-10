@@ -106,7 +106,11 @@
     "branding": {
       "title": "Logo, favicon and banner",
       "description": "Images for the public site. They apply right away, without saving.",
-      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Banner" },
+      "slots": {
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "banner": "Banner"
+      },
       "hints": {
         "logo": "In the header and on video pages, instead of the profile picture. PNG, JPEG, WebP or SVG, up to {{size}}.",
         "favicon": "The icon in the browser tab. PNG, JPEG, WebP, SVG or ICO, up to {{size}}.",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "One ws:// or wss:// relay per line.",
       "interactionRelays": "Interaction relays",
       "interactionRelaysHint": "One ws:// or wss:// relay per line. Used for profiles and, later, comments and zaps.",
+      "profileRelaysTitle": "Visitor profiles",
+      "profileRelaysDescription": "When a visitor signs in on the site, their name and picture are looked up on the interaction relays, on these relays and on the relays the visitor lists there. Leave the list empty to keep the instance local only: the site then asks no public relay and shows the visitor's profile only if it is on the interaction relays.",
+      "profileRelays": "Profile lookup relays",
+      "profileRelaysHint": "One ws:// or wss:// relay per line. Empty means local only.",
+      "profileRelaysLocalOnly": "Local only",
+      "profileRelaysDefaults": "Public defaults",
+      "profileRelaysLocal": "Local only: no public profile lookups.",
+      "mirrorTitle": "Mirror to other servers",
+      "mirrorDescription": "Copies this instance's own events and videos to servers you list, in the background. It keeps retrying while a target is down. Leave both lists empty to keep everything on this instance.",
+      "mirrorRelays": "Mirror relays",
+      "mirrorRelaysHint": "One ws:// or wss:// relay per line. Every new event of your creators is sent there.",
+      "mirrorBlossom": "Mirror Blossom servers",
+      "mirrorBlossomHint": "One https:// server per line. Uploaded videos are copied there. This needs the managed signing key, because the server signs the mirror requests.",
       "search": "Search",
       "searchModes": {
         "off": "Off",
@@ -270,6 +287,28 @@
       "downloads": "Downloads",
       "served": "Data served"
     },
+    "mirror": {
+      "title": "Mirror status",
+      "description": "What the outbox has copied to your mirror servers. Changes to the target lists apply after saving.",
+      "loadFailed": "The mirror status could not be loaded.",
+      "empty": "Nothing has been queued yet.",
+      "target": "Target",
+      "kind": "Kind",
+      "done": "Done",
+      "pending": "Waiting",
+      "failed": "Failed",
+      "kinds": {
+        "event": "Event",
+        "blob": "File"
+      },
+      "problems": "Problems",
+      "gaveUp": "Gave up after {{count}} attempts. Retry to try again.",
+      "nextAttempt": "{{count}} attempts so far. Next attempt: {{time}}.",
+      "retry": "Retry failed",
+      "refresh": "Refresh",
+      "retried_one": "{{count}} job queued again.",
+      "retried_other": "{{count}} jobs queued again."
+    },
     "errors": {
       "serverStatus": "The server answered {{status}}.",
       "noNip07": "No NIP-07 signer found in this browser.",
@@ -296,6 +335,7 @@
       "notVideoLink": "Hidden videos: \"{{line}}\" is not a video link.",
       "notKey": "{{label}}: \"{{line}}\" is not a hex or npub key.",
       "notRelay": "{{label}}: \"{{line}}\" must be a ws:// or wss:// relay URL.",
+      "notServer": "{{label}}: \"{{line}}\" must be an http:// or https:// server address.",
       "notCount": "{{label}} must be a whole number, 0 or more.",
       "accent": "Accent colour: use the form #rrggbb.",
       "link": "Links ({{kind}}): an https:// address containing {nip19}.",
@@ -306,8 +346,11 @@
         "writers": "Allowed writers",
         "videoSources": "Video sources",
         "interactionRelays": "Interaction relays",
+        "profileRelays": "Profile lookup relays",
         "quota": "Storage quota",
-        "reserve": "Free-space reserve"
+        "reserve": "Free-space reserve",
+        "mirrorRelays": "Mirror relays",
+        "mirrorBlossom": "Mirror Blossom servers"
       }
     }
   }

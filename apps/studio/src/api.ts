@@ -10,6 +10,10 @@ export interface AdminConfig {
   allowedWriters: string[]
   videoSources: string[]
   interactionRelays: string[]
+  /** Public discovery for a signed-in visitor's own profile on the site; empty = local only. */
+  profileRelays: string[]
+  /** Where the outbox copies this instance's own events and blobs; both empty = off. */
+  mirror: { relays: string[]; blossom: string[] }
   search: SearchConfig
   storage: { quotaGib: number; freeSpaceReserveGib: number }
   site: InstanceSite
@@ -176,6 +180,43 @@ export async function loadStats(): Promise<AdminStats> {
   const res = await fetch('/api/admin/stats', { credentials: 'same-origin' })
   if (!res.ok) throw new Error(await errorMessage(res))
   return (await res.json()) as AdminStats
+}
+
+/** What the outbox holds per target and kind (`GET /api/admin/outbox`). */
+export interface OutboxStatus {
+  relays: string[]
+  blossom: string[]
+  counts: {
+    target: string
+    kind: 'event' | 'blob'
+    pending: number
+    done: number
+    failed: number
+  }[]
+  /** Failed jobs and jobs waiting for a retry, newest first. */
+  problems: {
+    kind: 'event' | 'blob'
+    target: string
+    ref: string
+    status: 'pending' | 'failed'
+    attempts: number
+    lastError: string
+    /** Unix seconds; only for `pending`. */
+    nextAttemptAt: number | null
+    updatedAt: number
+  }[]
+}
+
+export async function loadOutbox(): Promise<OutboxStatus> {
+  const res = await fetch('/api/admin/outbox', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  return (await res.json()) as OutboxStatus
+}
+
+/** Gives failed jobs (of one target, or all) a fresh set of attempts. Answers how many. */
+export async function retryOutbox(target?: string): Promise<number> {
+  return (await postJson<{ retried: number }>('/api/admin/outbox/retry', target ? { target } : {}))
+    .retried
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))

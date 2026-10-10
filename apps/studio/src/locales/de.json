@@ -106,7 +106,11 @@
     "branding": {
       "title": "Logo, Favicon und Banner",
       "description": "Bilder für die öffentliche Seite. Sie gelten sofort, ohne Speichern.",
-      "slots": { "logo": "Logo", "favicon": "Favicon", "banner": "Banner" },
+      "slots": {
+        "logo": "Logo",
+        "favicon": "Favicon",
+        "banner": "Banner"
+      },
       "hints": {
         "logo": "Im Kopf der Seite und auf Videoseiten, statt des Profilbilds. PNG, JPEG, WebP oder SVG, höchstens {{size}}.",
         "favicon": "Das Symbol im Browser-Tab. PNG, JPEG, WebP, SVG oder ICO, höchstens {{size}}.",
@@ -160,6 +164,19 @@
       "videoSourcesHint": "Ein ws://- oder wss://-Relay pro Zeile.",
       "interactionRelays": "Interaktions-Relays",
       "interactionRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Wird für Profile und später für Kommentare und Zaps verwendet.",
+      "profileRelaysTitle": "Profile von Besuchern",
+      "profileRelaysDescription": "Meldet sich jemand auf der Seite an, werden Name und Bild auf den Interaktions-Relays, auf diesen Relays und auf den dort hinterlegten Relays der Person gesucht. Bleibt die Liste leer, bleibt die Instanz rein lokal: Die Seite fragt kein öffentliches Relay und zeigt das Profil nur, wenn es auf den Interaktions-Relays liegt.",
+      "profileRelays": "Relays für die Profilsuche",
+      "profileRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Leer heißt nur lokal.",
+      "profileRelaysLocalOnly": "Nur lokal",
+      "profileRelaysDefaults": "Öffentliche Standards",
+      "profileRelaysLocal": "Nur lokal: keine Profilsuche auf öffentlichen Relays.",
+      "mirrorTitle": "Auf andere Server spiegeln",
+      "mirrorDescription": "Kopiert die eigenen Events und Videos dieser Instanz im Hintergrund auf die Server, die du hier einträgst. Ist ein Ziel nicht erreichbar, wird es immer wieder versucht. Bleiben beide Listen leer, bleibt alles auf dieser Instanz.",
+      "mirrorRelays": "Spiegel-Relays",
+      "mirrorRelaysHint": "Ein ws://- oder wss://-Relay pro Zeile. Jedes neue Event deiner Creators wird dorthin gesendet.",
+      "mirrorBlossom": "Spiegel-Blossom-Server",
+      "mirrorBlossomHint": "Ein https://-Server pro Zeile. Hochgeladene Videos werden dorthin kopiert. Dafür braucht es den verwalteten Signierschlüssel, weil der Server die Spiegelanfragen signiert.",
       "search": "Suche",
       "searchModes": {
         "off": "Aus",
@@ -270,6 +287,28 @@
       "downloads": "Downloads",
       "served": "Ausgelieferte Daten"
     },
+    "mirror": {
+      "title": "Spiegel-Status",
+      "description": "Was die Warteschlange auf deine Spiegelserver kopiert hat. Änderungen an den Zielen gelten nach dem Speichern.",
+      "loadFailed": "Der Spiegel-Status konnte nicht geladen werden.",
+      "empty": "Noch nichts in der Warteschlange.",
+      "target": "Ziel",
+      "kind": "Art",
+      "done": "Fertig",
+      "pending": "Wartend",
+      "failed": "Fehlgeschlagen",
+      "kinds": {
+        "event": "Event",
+        "blob": "Datei"
+      },
+      "problems": "Probleme",
+      "gaveUp": "Nach {{count}} Versuchen aufgegeben. Mit „Erneut versuchen“ geht es weiter.",
+      "nextAttempt": "Bisher {{count}} Versuche. Nächster Versuch: {{time}}.",
+      "retry": "Fehlgeschlagene erneut versuchen",
+      "refresh": "Aktualisieren",
+      "retried_one": "{{count}} Auftrag wieder eingereiht.",
+      "retried_other": "{{count}} Aufträge wieder eingereiht."
+    },
     "errors": {
       "serverStatus": "Der Server antwortete mit {{status}}.",
       "noNip07": "In diesem Browser wurde kein NIP-07-Signer gefunden.",
@@ -296,6 +335,7 @@
       "notVideoLink": "Ausgeblendete Videos: „{{line}}“ ist kein Videolink.",
       "notKey": "{{label}}: „{{line}}“ ist kein Hex- oder npub-Schlüssel.",
       "notRelay": "{{label}}: „{{line}}“ muss eine ws://- oder wss://-Relay-URL sein.",
+      "notServer": "{{label}}: „{{line}}“ muss eine http://- oder https://-Serveradresse sein.",
       "notCount": "{{label}}: muss eine ganze Zahl ab 0 sein.",
       "accent": "Akzentfarbe: Verwende das Format #rrggbb.",
       "link": "Links ({{kind}}): eine https://-Adresse mit {nip19}.",
@@ -306,8 +346,11 @@
         "writers": "Schreibberechtigte",
         "videoSources": "Videoquellen",
         "interactionRelays": "Interaktions-Relays",
+        "profileRelays": "Relays für die Profilsuche",
         "quota": "Speicherkontingent",
-        "reserve": "Freier Speicher als Reserve"
+        "reserve": "Freier Speicher als Reserve",
+        "mirrorRelays": "Spiegel-Relays",
+        "mirrorBlossom": "Spiegel-Blossom-Server"
       }
     }
   }

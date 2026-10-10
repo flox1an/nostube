@@ -104,6 +104,8 @@ describe('ConnectKey onboarding', () => {
     allowedWriters: [],
     videoSources: [],
     interactionRelays: [],
+    profileRelays: [],
+    mirror: { relays: [], blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
     site: {

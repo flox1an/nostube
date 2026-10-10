@@ -43,7 +43,7 @@ enable public Prometheus metrics or add NIP-45 `COUNT` support to the relay.
 
 | What               | How                                                            | Why                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database, the stored videos, and `branding/` with the logo, favicon and banner uploaded in the studio |
+| The data folder    | mount it at `/data`                                            | everything the instance keeps lives there: `config.toml`, `secrets.toml` (with `signer.key` once a managed key exists), the relay database (which also holds the mirror outbox, ADR 0009), the stored videos, and `branding/` with the logo, favicon and banner uploaded in the studio |
 | The public address | `NOSTUBE_ORIGIN=https://videos.example.org` on the first start | it ends up in links, in the public config and in published events. After the first start it is read from `/data/config.toml`; changing it later is a hostname transition and not a variable (the server warns when the two differ)      |
 
 Everything else is optional: `NOSTUBE_PORT` (default 8080), `NOSTUBE_BIND` (the image binds all
@@ -159,6 +159,26 @@ cargo build --release --manifest-path apps/server/Cargo.toml
 ```
 
 Run it under systemd with `Restart=always` for the reason given above.
+
+## Checking that an instance stays local
+
+By default the site looks up a signed-in visitor's own name and picture on two public relays
+(`purplepag.es`, `index.hzrd149.com`). For an instance that must not reach the internet, click
+"Local only" under "Visitor profiles" on the studio's Instance page (or set
+`profile_relays = []` in `config.toml`); visitors then show with their key unless their profile is
+on the instance relays (ADR 0008).
+
+`apps/server/scripts/check-local-profile.mjs` proves it on macOS: it starts a server on a
+throwaway data folder with `profile_relays = []`, seeds a creator video on its own relay and
+Blossom, opens the site (signed in as a visitor), the video page and the embed in headless Brave
+(`--browser` for another Chromium) and lists every request and WebSocket to another host. It
+exits 1 when it finds one. `--default-profile-relays` runs it with the public lookup instead,
+`--serve` only seeds and keeps the instance running for a look of your own.
+
+```sh
+scripts/build-server-web.sh && cargo build --manifest-path apps/server/Cargo.toml
+node apps/server/scripts/check-local-profile.mjs
+```
 
 ## Not covered yet
 

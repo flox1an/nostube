@@ -96,6 +96,8 @@ pub struct Stores {
     pub blossom: almond::AppState,
     /// Shared with `main`, which serves the images and the public config from it.
     pub branding: Arc<crate::branding::Branding>,
+    /// Mirror status and retries (ADR 0009).
+    pub outbox: crate::outbox::Outbox,
 }
 
 /// Admin state shared with the axum router.
@@ -110,8 +112,8 @@ pub struct AdminState {
     /// Slows down password guessing; one count for the whole instance (see `login_guard`).
     login_guard: Mutex<LoginGuard>,
     stores: Stores,
-    /// The unlocked managed key; `Err` when `secrets.toml` has one that cannot be unlocked.
-    managed: parking_lot::Mutex<Option<Result<Keys, String>>>,
+    /// The unlocked managed key; shared with the outbox, which signs mirror requests with it.
+    managed: crate::signer::Shared,
 }
 
 impl AdminState {
@@ -161,8 +163,13 @@ impl AdminState {
             handle,
             login_guard: Mutex::new(LoginGuard::default()),
             stores,
-            managed: parking_lot::Mutex::new(managed),
+            managed: Arc::new(parking_lot::Mutex::new(managed)),
         })
+    }
+
+    /// The managed key holder, for the outbox; a key created later in the studio shows up there.
+    pub fn signer(&self) -> crate::signer::Shared {
+        self.managed.clone()
     }
 
     /// `nostube-server admin reset`: forget password and bound key, issue a new
@@ -358,6 +365,8 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/signer/sign", post(signer_sign))
         .route("/api/admin/signer/export", post(signer_export))
         .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
+        .route("/api/admin/outbox", get(outbox_get))
+        .route("/api/admin/outbox/retry", post(outbox_retry))
         .with_state(state)
 }
 
@@ -577,9 +586,11 @@ fn editable_json(cfg: &Config) -> serde_json::Value {
         "allowedWriters": keys(&cfg.allowed_writers),
         "videoSources": cfg.video_sources,
         "interactionRelays": cfg.interaction_relays,
+        "profileRelays": cfg.profile_relays,
         "search": cfg.search,
         "storage": { "quotaGib": cfg.storage.quota_gib, "freeSpaceReserveGib": cfg.storage.free_space_reserve_gib },
         "site": cfg.public_json()["site"],
+        "mirror": cfg.mirror,
     })
 }
 
@@ -591,9 +602,11 @@ struct ConfigPut {
     allowed_writers: Vec<String>,
     video_sources: Vec<String>,
     interaction_relays: Vec<String>,
+    profile_relays: Vec<String>,
     search: Search,
     storage: StorageBody,
     site: SiteBody,
+    mirror: config::Mirror,
 }
 
 #[derive(Deserialize)]
@@ -743,6 +756,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         allowed_writers: put.allowed_writers,
         video_sources: put.video_sources,
         interaction_relays: put.interaction_relays,
+        profile_relays: put.profile_relays,
         search: put.search,
         storage: Storage {
             quota_gib: put.storage.quota_gib,
@@ -759,6 +773,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
                 note: put.site.links.note,
             },
         },
+        mirror: put.mirror,
     };
     // Validate first; nothing is written unless the whole edit checks out (#7).
     let next = match current.with_edits(&edited) {
@@ -829,6 +844,42 @@ async fn branding_delete(
             Json(serde_json::json!({ "ok": true })).into_response()
         }
         Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot remove the {}: {e}", slot.name())),
+    }
+}
+
+// ── Outbox (ADR 0009) ───────────────────────────────────────────────────────
+
+/// Mirror targets, job counts per target and the recent problems.
+async fn outbox_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    match state.stores.outbox.status().await {
+        Ok(status) => Json(status).into_response(),
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RetryBody {
+    /// Only this target's failed jobs; all failed jobs when absent.
+    #[serde(default)]
+    target: Option<String>,
+}
+
+/// Failed jobs get a fresh set of attempts, due now. Body `{}` or `{"target": "<url>"}`.
+async fn outbox_retry(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let RetryBody { target } = match serde_json::from_slice(&body) {
+        Ok(b) => b,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
+    };
+    match state.stores.outbox.retry(target).await {
+        Ok(n) => Json(serde_json::json!({ "retried": n })).into_response(),
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     }
 }
 
@@ -1250,10 +1301,12 @@ mod tests {
         cfg.storage_max_size = 7 * config::GIB;
         cfg.storage_min_free = 2 * config::GIB;
         let blossom = almond::build_state(&cfg.validate().unwrap()).await.unwrap();
-        let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into() };
+        let relay = crate::relay::RelayConfig { writers: vec![], name: "t".into(), description: "t".into(), mirror_relays: vec![] };
         let public = Config::load(&dir.join("config.toml")).map_or(serde_json::json!({ "site": {} }), |c| c.public_json());
         let branding = Arc::new(crate::branding::Branding::open(dir, public));
-        Stores { relay: Relay::open(&dir.join("relay.sqlite"), relay).unwrap(), blossom, branding }
+        let relay = Relay::open(&dir.join("relay.sqlite"), relay).unwrap();
+        let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        Stores { relay, blossom, branding, outbox }
     }
 
     /// A data dir with a valid config, TLS placeholder files and a registered admin; returns the
@@ -1331,9 +1384,11 @@ mod tests {
             "allowedWriters": [PK],
             "videoSources": ["wss://flox-mac.local", "wss://relay.example"],
             "interactionRelays": ["wss://relay.example"],
+            "profileRelays": [],
             "search": { "mode": "external", "url": "https://search.example" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
-            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" } }
+            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" } },
+            "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
         })
     }
 
@@ -1396,6 +1451,7 @@ mod tests {
                 v.to_string()
             }),
             (json, put_body("#112233").replace("wss://relay.example", "https://relay.example")),
+            (json, put_body("#112233").replace("https://blossom.example", "ftp://blossom.example")),
             (json, put_body("#112233").replace(&format!("\"creators\":[\"{PK}\"]"), "\"creators\":[\"nope\"]")),
             (Some("text/plain"), put_body("#112233")),
             (None, put_body("#112233")),
@@ -1423,11 +1479,30 @@ mod tests {
         assert_eq!(after.site.links.video, "https://example.org/v/{nip19}");
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
+        assert!(after.profile_relays.is_empty());
         assert_eq!(after.search, Search::External { url: "https://search.example".into() });
         assert_eq!((after.storage.quota_gib, after.storage.free_space_reserve_gib), (100, 3));
+        assert_eq!(after.mirror.relays, vec!["wss://mirror.example"]);
+        assert_eq!(after.mirror.blossom, vec!["https://blossom.example"]);
         // Not editable: origin and TLS.
         assert_eq!(after.origin, before.origin);
         assert!(matches!(after.tls, config::Tls::LocalCa { .. }));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn outbox_status_and_retry_need_the_session_and_retry_needs_json() {
+        let (app, dir, cookie) = studio_fixture().await;
+        let c = Some(cookie.as_str());
+        assert_eq!(send(&app, "/api/admin/outbox", None, None).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(send(&app, "/api/admin/outbox/retry", None, Some("{}")).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(call_raw(&app, "/api/admin/outbox/retry", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(send(&app, "/api/admin/outbox/retry", c, Some(r#"{"all":true}"#)).await.0, StatusCode::BAD_REQUEST);
+        let (status, _, body) = send(&app, "/api/admin/outbox/retry", c, Some(r#"{"target":"wss://a.example"}"#)).await;
+        assert_eq!((status, body), (StatusCode::OK, serde_json::json!({ "retried": 0 })));
+        let (status, _, body) = send(&app, "/api/admin/outbox", c, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, serde_json::json!({ "relays": [], "blossom": [], "counts": [], "problems": [] }));
         std::fs::remove_dir_all(&dir).ok();
     }
 

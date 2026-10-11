@@ -155,6 +155,40 @@ describe('useTimeline', () => {
     )
   })
 
+  it.each([
+    ['every source returned a short page', true, false],
+    ['a source may still have an older page', false, true],
+  ])('offers more only when it can: %s', async (_name, exhausted, hasMore) => {
+    const subjects: Subject<NostrEvent>[] = []
+    const timelineLoader = Object.assign(
+      vi.fn(() => {
+        const subject = new Subject<NostrEvent>()
+        subjects.push(subject)
+        return subject
+      }),
+      { exhausted: () => exhausted }
+    )
+
+    const loader = () => timelineLoader
+    const { result } = renderTimeline(() =>
+      useTimeline(undefined, {
+        loader,
+        directMode: true,
+        relays: ['wss://relay.example'],
+        firstUsefulTimeoutMs: 1,
+        pageSettleMs: 1000,
+      })
+    )
+    await flushQueuedInitialLoad()
+    act(() => {
+      subjects[0].next(makeEvent({ id: 'only', created_at: 10 }))
+      subjects[0].complete()
+    })
+
+    await waitFor(() => expect(result.current.phase).toBe('ready'))
+    expect(result.current.hasMore).toBe(hasMore)
+  })
+
   it('keeps loading while the subscription is open and no event has reached the store yet', async () => {
     const subject = new Subject<NostrEvent>()
     mocks.timeline.mockReturnValue(new Subject<NostrEvent[]>())

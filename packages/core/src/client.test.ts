@@ -120,6 +120,52 @@ describe('getTimelineLoader', () => {
     expect(await loadPage(loader)).toEqual([])
     expect(request).toHaveBeenCalledTimes(2)
   })
+
+  describe('endOnShortPage', () => {
+    const videos = (n: number, prefix = 'v') =>
+      Array.from({ length: n }, (_, i) => makeEvent(`${prefix}-${100 - i}`, 100 - i))
+    const loaderFor = (relays: string[], endOnShortPage = true) =>
+      getTimelineLoader('t', { kinds: [21], limit: 5 }, relays, { skipCache: true, endOnShortPage })
+
+    it('is exhausted after a page every relay filled short, and asks no further page', async () => {
+      const request = mockRelays({ 'wss://a': videos(3), 'wss://b': videos(4, 'b') })
+      const loader = loaderFor(['wss://a', 'wss://b'])
+      await loadPage(loader)
+      expect(loader.exhausted?.()).toBe(true)
+      expect(await loadPage(loader)).toEqual([])
+      expect(request).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps going while a relay filled the whole page, and ends once it runs short', async () => {
+      mockRelays({ 'wss://a': videos(7), 'wss://b': videos(2, 'b') })
+      const loader = loaderFor(['wss://a', 'wss://b'])
+      await loadPage(loader)
+      expect(loader.exhausted?.()).toBe(false)
+      await loadPage(loader) // the remaining two of a
+      expect(loader.exhausted?.()).toBe(true)
+    })
+
+    it('does not count the deletions that ride along as videos', async () => {
+      mockRelays({
+        'wss://a': [
+          ...videos(2),
+          ...Array.from({ length: 10 }, (_, i) => makeEvent(`d-${i}`, 50 - i, 5)),
+        ],
+      })
+      const loader = loaderFor(['wss://a'])
+      expect(
+        (await loadPage(loader)).filter(label => label.startsWith('d-')).length
+      ).toBeGreaterThan(2)
+      expect(loader.exhausted?.()).toBe(true) // more events than the limit, but only 2 videos
+    })
+
+    it('is not exhausted by a short page unless asked for', async () => {
+      mockRelays({ 'wss://a': videos(3) })
+      const loader = loaderFor(['wss://a'], false)
+      await loadPage(loader)
+      expect(loader.exhausted?.()).toBe(false)
+    })
+  })
 })
 
 describe('instance scoping', () => {

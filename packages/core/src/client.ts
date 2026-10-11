@@ -142,8 +142,11 @@ function withIdleTimeout<T>(source: Observable<T>, message: string, debug: boole
   })
 }
 
-/** Loads the next page on each call; the observable completes when the page is done. */
-export type PageLoader = () => Observable<NostrEvent>
+/**
+ * Loads the next page on each call; the observable completes when the page is done. `exhausted`
+ * is true once no source has an older page left (only a loader made by the client sets it).
+ */
+export type PageLoader = (() => Observable<NostrEvent>) & { exhausted?: () => boolean }
 
 export interface NostubeClientConfig {
   /** Relays for lookups and for timeline loaders that name no relays. */
@@ -381,7 +384,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
     _key: FilterKey,
     baseFilters: Filter,
     relays: string[] = defaultRelays,
-    options?: { skipCache?: boolean }
+    options?: { skipCache?: boolean; endOnShortPage?: boolean }
   ): PageLoader {
     const limit = baseFilters.limit ?? 100
     const pageFilters = (until?: number) => {
@@ -410,6 +413,7 @@ export function createNostubeClient(config: NostubeClientConfig) {
       cursor.loading = true
       const until = cursor.until
       let oldest = Infinity
+      let received = 0
       let answered = false
       return requests[index](until).pipe(
         tap({
@@ -417,10 +421,15 @@ export function createNostubeClient(config: NostubeClientConfig) {
             // Deletions ride along in the same window; they must not drive the cursor.
             if (!baseFilters.kinds || baseFilters.kinds.includes(event.kind)) {
               oldest = Math.min(oldest, event.created_at)
+              received += 1
             }
           },
           complete: () => {
             answered = true
+            // Set here, not in finalize: the caller reads `exhausted()` as the page completes.
+            // ponytail: a relay that caps `limit` below ours looks exhausted after its first
+            // page; opt-in for sources whose relays are known to honour it.
+            if (options?.endOnShortPage && received < limit) cursor.done = true
           },
         }),
         catchError(() => {
@@ -441,13 +450,15 @@ export function createNostubeClient(config: NostubeClientConfig) {
       )
     }
 
-    return () =>
+    const loader: PageLoader = () =>
       defer(() => merge(...requests.map((_, index) => loadPage(index)))).pipe(
         tap(event => {
           if (event.kind === 5) void cacheEvents([event])
         }),
         filterDuplicateEvents(eventStore)
       )
+    loader.exhausted = () => cursors.every(cursor => cursor.done)
+    return loader
   }
 
   return {

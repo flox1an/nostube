@@ -22,6 +22,11 @@ export interface UseTimelineOptions {
   includeAudio?: boolean
   enabled?: boolean
   skipCache?: boolean
+  /**
+   * Stop offering more once every relay answered a page shorter than the filter's `limit`. Only
+   * for relays that honour the limit (the instance's own); a relay that caps it lower looks done.
+   */
+  endOnShortPage?: boolean
   cacheKey?: string
   staleTimeMs?: number
   firstEventTimeoutMs?: number
@@ -74,6 +79,7 @@ export function useTimeline(
     directMode = false,
     includeAudio,
     enabled = true,
+    endOnShortPage = false,
     skipCache = false,
     cacheKey,
     staleTimeMs,
@@ -87,9 +93,12 @@ export function useTimeline(
 
     const key =
       cacheKey ?? String(hashObjectBigInt({ filters, relays: [...relays].sort(), skipCache }))
-    const timelineLoader = client.getTimelineLoader(key, filters, relays, { skipCache })
+    const timelineLoader = client.getTimelineLoader(key, filters, relays, {
+      skipCache,
+      endOnShortPage,
+    })
     return () => timelineLoader
-  }, [cacheKey, client, filters, providedLoader, relays, skipCache])
+  }, [cacheKey, client, endOnShortPage, filters, providedLoader, relays, skipCache])
 
   const loader = providedLoader ?? generatedLoader
 
@@ -271,6 +280,8 @@ export function useTimeline(
             return
           }
 
+          // The loader knows when every source returned a short page: nothing older is left.
+          if (timelineLoader.exhausted?.()) setExhausted(true)
           finish('ready')
         },
         error: err => {

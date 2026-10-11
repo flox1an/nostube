@@ -27,6 +27,8 @@ export function useCreatorVideos(config: InstanceConfig): CreatorVideos {
   const { videos, isInitialLoading, phase, hasMore, loadMore } = useTimeline(filters, {
     relays: config.videoSources,
     enabled: Boolean(creator),
+    // The instance's relays answer with the full limit when they have it, so a short page is the end.
+    endOnShortPage: true,
   })
   return { videos, loading: isInitialLoading, error: phase === 'error', hasMore, loadMore }
 }

@@ -196,7 +196,7 @@ impl Relay {
     }
 
     #[cfg(test)]
-    async fn ingest(&self, ev: Event) -> RelayMessage<'static> {
+    pub(crate) async fn ingest(&self, ev: Event) -> RelayMessage<'static> {
         self.ingest_from(ev, false).await
     }
 
@@ -263,6 +263,24 @@ impl Relay {
             inner.release(conn);
         });
         rx
+    }
+
+    /// The stored events matching `filter`, newest first, for the pages the server writes itself
+    /// (`seo`). A stored event that no longer parses is left out.
+    pub async fn stored(&self, filter: Filter) -> Result<Vec<Event>, BoxError> {
+        let inner = self.0.clone();
+        tokio::task::spawn_blocking(move || -> Result<Vec<Event>, BoxError> {
+            let conn = inner.reader()?;
+            let mut events = Vec::new();
+            let result = run_query(&conn, &[filter], Timestamp::now().as_secs() as i64, |json| {
+                events.extend(Event::from_json(json).ok());
+                true
+            });
+            inner.release(conn);
+            result?;
+            Ok(events)
+        })
+        .await?
     }
 
     /// Event counts and database size for the admin overview, read on a read connection.

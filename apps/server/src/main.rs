@@ -9,6 +9,7 @@ mod data_lock;
 mod login_guard;
 mod outbox;
 mod relay;
+mod seo;
 mod signer;
 mod tls;
 
@@ -406,7 +407,8 @@ fn revision(value: Option<String>) -> Option<String> {
 }
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
-/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), root files, app shell.
+/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), `sitemap.xml` and
+/// `robots.txt`, root files, app shell (with the head for its route).
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
@@ -457,6 +459,11 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     if file == "studio" || file.starts_with("studio/") {
         return studio_asset(file);
     }
+    match file {
+        "sitemap.xml" => return seo::sitemap(&app.relay, &app.branding.public_config()).await,
+        "robots.txt" => return seo::robots(&app.branding.public_config()),
+        _ => {}
+    }
     if let Some(asset) = (!file.is_empty()).then(|| Web::get(file)).flatten() {
         return asset_response(file, asset.data);
     }
@@ -464,7 +471,9 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
         return StatusCode::NOT_FOUND.into_response();
     }
     let shell = Web::get("index.html").expect("embedded index.html");
-    ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], shell.data).into_response()
+    let shell = std::str::from_utf8(&shell.data).expect("index.html is UTF-8");
+    let html = seo::shell(&app.relay, &app.branding.public_config(), &path, shell).await;
+    ([(header::CONTENT_TYPE, "text/html; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], html).into_response()
 }
 
 /// The studio is its own single-page app under `/studio/`: files by path, the app shell for every

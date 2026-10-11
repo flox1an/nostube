@@ -16,6 +16,12 @@
     "breadcrumb": {
       "label": "Breadcrumb"
     },
+    "pages": {
+      "label": "Information",
+      "about": "About",
+      "imprint": "Imprint",
+      "privacy": "Privacy policy"
+    },
     "ageGate": {
       "title": "This video has a content warning",
       "body": "It may contain content that is not suitable for everyone. Confirm that you are 18 or older to continue. Your confirmation is stored in this browser.",
@@ -51,7 +57,6 @@
       "label_one": "Like ({{count}} like)",
       "label_other": "Like ({{count}} likes)",
       "liking": "Liking…",
-      "signInToLike": "Sign in to like",
       "refused": "refused",
       "noRelays": "no relay confirmed it",
       "failed": "The like could not be published: {{reason}}"

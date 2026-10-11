@@ -40,6 +40,23 @@ export type InstanceSearch = { mode: 'off' } | { mode: 'local' } | { mode: 'exte
 export const SITE_FONTS = ['sans', 'serif', 'mono'] as const
 export type SiteFont = (typeof SITE_FONTS)[number]
 
+/** The optional pages of the site, linked in its footer. */
+export const SITE_PAGES = ['about', 'imprint', 'privacy'] as const
+export type SitePageKey = (typeof SITE_PAGES)[number]
+
+/** One text per language (`de`, `en`, ...), as the admin wrote it. */
+export type SitePages = Record<SitePageKey, Record<string, string>>
+
+export const SITE_PAGE_MAX_CHARS = 20_000
+export const noSitePages = (): SitePages => ({ about: {}, imprint: {}, privacy: {} })
+const PAGE_LANG = /^[a-z]{2}$/
+export const isPageText = (v: unknown): v is string =>
+  typeof v === 'string' && v.trim() !== '' && [...v].length <= SITE_PAGE_MAX_CHARS
+
+/** The text for the visitor's language, else English, else the first language by code. */
+export const pageText = (texts: Record<string, string>, language: string): string | undefined =>
+  texts[language] ?? texts.en ?? texts[Object.keys(texts).sort()[0]]
+
 /** How the instance's site looks and which videos it shows (the viewer's light/dark follows the system). */
 export interface InstanceSite {
   tagline: string
@@ -52,6 +69,8 @@ export interface InstanceSite {
    * naddr, nevent or note identifier goes.
    */
   links: { profile: string; video: string; note: string }
+  /** The about, imprint and privacy texts; a page without any text does not exist. */
+  pages: SitePages
   /**
    * Images the admin uploaded (`/branding/<slot>?v=<hash>`, same origin); absent when the slot
    * is empty. Not part of the studio's config edit: the server adds them to the public config.
@@ -140,6 +159,7 @@ export function validateSite(value: unknown): string[] {
     theme?: { accent?: unknown; font?: unknown } | null
     videos?: { hidden?: unknown } | null
     links?: Record<string, unknown> | null
+    pages?: Record<string, unknown> | null
   } | null
   if (!site || typeof site !== 'object') return ['site must be an object']
   if (typeof site.tagline !== 'string') e.push('site.tagline must be a string')
@@ -160,6 +180,26 @@ export function validateSite(value: unknown): string[] {
     for (const key of SITE_LINK_KEYS)
       if (!isLinkTemplate(links[key]))
         e.push(`site.links.${key} must be an https URL containing {nip19}`)
+  // Optional on the wire (a server from before the field): absent means no pages.
+  if (site.pages !== undefined) {
+    const pages = site.pages
+    if (!pages || typeof pages !== 'object' || Array.isArray(pages))
+      e.push('site.pages must be an object')
+    else
+      for (const key of SITE_PAGES) {
+        const texts = pages[key]
+        if (texts === undefined) continue
+        const ok =
+          !!texts &&
+          typeof texts === 'object' &&
+          !Array.isArray(texts) &&
+          Object.entries(texts).every(([lang, text]) => PAGE_LANG.test(lang) && isPageText(text))
+        if (!ok)
+          e.push(
+            `site.pages.${key} must map two-letter language codes to non-empty texts of at most ${SITE_PAGE_MAX_CHARS} characters`
+          )
+      }
+  }
   return e
 }
 
@@ -252,6 +292,10 @@ export function parseInstanceConfig(json: unknown): ParseResult {
           video: site.links.video,
           note: site.links.note,
         },
+        // Absent (a server from before the field) means no pages; validated above when present.
+        pages: Object.fromEntries(
+          SITE_PAGES.map(k => [k, { ...(site.pages as Partial<SitePages> | undefined)?.[k] }])
+        ) as SitePages,
         // Optional: a field that is not a branding URL of this server is left out, the rest stays.
         ...Object.fromEntries(
           BRANDING_SLOTS.filter(s => isBrandingUrl(s, site[s])).map(s => [s, site[s]])

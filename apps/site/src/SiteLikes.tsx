@@ -7,7 +7,7 @@ import { use$, useActiveAccount, useEventStore } from 'applesauce-react/hooks'
 import { isAddressableKind, type VideoEvent } from '@nostube/core/video-event'
 import { useNostubeHost } from '@nostube/widgets/host'
 import { Button } from '@nostube/widgets/components/button'
-import { AuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
+import type { IAccount } from 'applesauce-accounts'
 
 type LikeTarget = Pick<VideoEvent, 'id' | 'kind' | 'pubkey' | 'identifier'>
 
@@ -51,15 +51,26 @@ export function isVideoLike(event: NostrEvent, video: LikeTarget): boolean {
   return address !== undefined && event.tags.some(t => t[0] === 'a' && t[1] === address)
 }
 
-/** The like button of a video: everyone sees the count, signed-in visitors like it once. */
-export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string[] }) {
+/** The like button of a video. Only a signed-in visitor can react, so a guest sees nothing. */
+export function SiteLikes(props: { video: VideoEvent; relays: string[] }) {
+  const account = useActiveAccount()
+  return account ? <LikeButton {...props} account={account} /> : null
+}
+
+function LikeButton({
+  video,
+  relays,
+  account,
+}: {
+  video: VideoEvent
+  relays: string[]
+  account: IAccount
+}) {
   const { t } = useTranslation()
   const { pool } = useNostubeHost()
   const eventStore = useEventStore()
-  const account = useActiveAccount()
-  const [authOpen, setAuthOpen] = useState(false)
   // Pending and failed state belong to one video and one visitor, so either changing resets them.
-  const key = `${video.id}|${account?.pubkey ?? ''}`
+  const key = `${video.id}|${account.pubkey}`
   const inFlight = useRef(new Set<string>())
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
@@ -102,14 +113,10 @@ export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string
     () => new Set((reactions ?? []).filter(e => isVideoLike(e, video)).map(e => e.pubkey)),
     [reactions, video]
   )
-  const liked = !!account && likers.has(account.pubkey)
+  const liked = likers.has(account.pubkey)
   const busy = pending === key
 
   const like = async () => {
-    if (!account) {
-      setAuthOpen(true)
-      return
-    }
     if (liked || inFlight.current.has(key)) return
     inFlight.current.add(key)
     setPending(key)
@@ -153,7 +160,6 @@ export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string
         aria-label={
           busy ? t('site.reactions.liking') : t('site.reactions.label', { count: likers.size })
         }
-        title={account ? undefined : t('site.reactions.signInToLike')}
         disabled={busy || liked}
         onClick={() => void like()}
       >
@@ -164,14 +170,6 @@ export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
-      )}
-      {!account && (
-        <AuthDialog
-          isOpen={authOpen}
-          onClose={() => setAuthOpen(false)}
-          onLogin={() => setAuthOpen(false)}
-          relays={relays}
-        />
       )}
     </div>
   )

@@ -16,6 +16,12 @@
     "breadcrumb": {
       "label": "面包屑导航"
     },
+    "pages": {
+      "label": "站点信息",
+      "about": "关于",
+      "imprint": "法律声明",
+      "privacy": "隐私政策"
+    },
     "ageGate": {
       "title": "此视频带有内容警告",
       "body": "其中可能包含不适合所有人观看的内容。请确认你已年满 18 岁后继续。你的确认会保存在此浏览器中。",
@@ -49,7 +55,6 @@
     "reactions": {
       "label_other": "点赞（{{count}} 个赞）",
       "liking": "正在点赞…",
-      "signInToLike": "登录后点赞",
       "refused": "已拒绝",
       "noRelays": "没有中继确认",
       "failed": "无法发布点赞：{{reason}}"

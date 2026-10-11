@@ -1,4 +1,4 @@
-import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
@@ -10,6 +10,7 @@ import type { NostubeClient } from '@nostube/core/client'
 import { getInstanceConfig, setInstanceConfig } from '@nostube/core/instance-config'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { browserLanguage } from './i18n'
+import i18n from './i18n'
 import { loadSiteConfig } from './site-config'
 import { SiteHome } from './SiteHome'
 import { applyTheme, readableOn } from '@nostube/widgets/site-theme'
@@ -49,6 +50,7 @@ const config: InstanceConfig = {
     theme: { accent: '#6d28d9', font: 'sans' },
     videos: { hidden: [] },
     links: DEFAULT_SITE_LINKS,
+    pages: noSitePages(),
   },
 }
 
@@ -156,6 +158,56 @@ describe('SiteHome', () => {
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
     expect(screen.getByText('Fresh every week')).toBeTruthy()
+  })
+
+  describe('pages', () => {
+    const withPages = {
+      ...config,
+      site: {
+        ...config.site,
+        pages: {
+          about: { en: 'We make videos.\nVisit https://example.org', de: 'Wir machen Videos.' },
+          imprint: { de: 'Impressum von Alice' },
+          privacy: {},
+        },
+      },
+    }
+
+    it('links only the pages that have a text, and opens one at its own URL', async () => {
+      renderSite(client, '/', withPages)
+      const footer = await screen.findByRole('navigation', { name: 'Information' })
+      expect([...footer.querySelectorAll('a')].map(a => a.textContent)).toEqual([
+        'About',
+        'Imprint',
+      ])
+      fireEvent.click(screen.getByRole('link', { name: 'Imprint' }))
+      // Not written in English: the first language by code stands in.
+      expect(await screen.findByText('Impressum von Alice')).toBeTruthy()
+      expect(screen.getByRole('heading', { name: 'Imprint' })).toBeTruthy()
+    })
+
+    it('shows the text and the labels in the visitor’s language', async () => {
+      await i18n.changeLanguage('de')
+      try {
+        renderSite(client, '/about', withPages)
+        expect(await screen.findByText('Wir machen Videos.')).toBeTruthy()
+        expect(screen.getByRole('heading', { name: 'Über uns' })).toBeTruthy()
+        expect(screen.getByRole('link', { name: 'Impressum' })).toBeTruthy()
+      } finally {
+        await i18n.changeLanguage('en')
+      }
+    })
+
+    it('has no footer without pages, and sends a page without text back to the start', async () => {
+      const { unmount } = renderSite(client)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      expect(screen.queryByRole('navigation', { name: 'Information' })).toBeNull()
+      unmount()
+
+      renderSite(client, '/privacy', withPages)
+      await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+      expect(screen.queryByRole('heading', { name: 'Privacy policy' })).toBeNull()
+    })
   })
 
   it('shows the instance logo instead of the creator picture, in the header and the breadcrumb', async () => {

@@ -89,15 +89,16 @@ describe('SiteLikes', () => {
       // Someone else cannot delete Alice's like.
       event('8', 5, '', [['e', alicesLike.id]]),
     ]
-    const publish = renderLikes(events, async () => [])
+    const publish = renderLikes(events, async () => [], PrivateKeyAccount.generateNew())
 
     const button = await screen.findByRole('button', { name: 'Like (2 likes)' })
     expect(button.getAttribute('aria-pressed')).toBe('false')
-
-    // A guest is asked to sign in instead of publishing.
-    fireEvent.click(button)
-    expect(await screen.findByRole('dialog')).toBeTruthy()
     expect(publish).not.toHaveBeenCalled()
+  })
+
+  it('shows a guest no like button, since only a signed-in visitor can react', () => {
+    renderLikes([event('a', 7, '+', [['e', video.id]])], async () => [])
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('only matches the exact address and the video author', () => {

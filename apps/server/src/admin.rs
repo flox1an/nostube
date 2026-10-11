@@ -623,6 +623,8 @@ struct SiteBody {
     theme: ThemeBody,
     videos: VideosBody,
     links: LinksBody,
+    /// Required like `links`: a PUT without it must not silently erase the pages.
+    pages: config::Pages,
 }
 
 /// All three are required: an empty `links` object must not silently mean the defaults.
@@ -772,6 +774,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
                 video: put.site.links.video,
                 note: put.site.links.note,
             },
+            pages: put.site.pages,
         },
         mirror: put.mirror,
     };
@@ -1387,7 +1390,7 @@ mod tests {
             "profileRelays": [],
             "search": { "mode": "external", "url": "https://search.example" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
-            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" } },
+            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} } },
             "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
         })
     }
@@ -1447,6 +1450,14 @@ mod tests {
             (json, put_body("#112233").replace("https://example.org/n/{nip19}", "https://example.org/n/")),
             (json, {
                 let mut v = put_value("#112233");
+                v["site"].as_object_mut().unwrap().remove("pages");
+                v.to_string()
+            }),
+            (json, put_body("#112233").replace("\"de\"", "\"deu\"")),
+            (json, put_body("#112233").replace("\"Imprint\"", "\"  \"")),
+            (json, put_body("#112233").replace("\"about\"", "\"unknown\"")),
+            (json, {
+                let mut v = put_value("#112233");
                 v.as_object_mut().unwrap().remove("storage");
                 v.to_string()
             }),
@@ -1477,6 +1488,9 @@ mod tests {
         assert_eq!((after.site.accent.as_str(), after.site.tagline.as_str()), ("#112233", "Hi"));
         assert_eq!(after.site.hidden_videos, vec![format!("34235:{PK}:intro")]);
         assert_eq!(after.site.links.video, "https://example.org/v/{nip19}");
+        assert_eq!(after.site.pages.about.get("de").map(String::as_str), Some("Über uns"));
+        assert_eq!(after.site.pages.imprint.get("en").map(String::as_str), Some("Imprint"));
+        assert!(after.site.pages.privacy.is_empty());
         assert_eq!(after.video_sources, vec!["wss://flox-mac.local", "wss://relay.example"]);
         assert_eq!(after.interaction_relays, vec!["wss://relay.example"]);
         assert!(after.profile_relays.is_empty());

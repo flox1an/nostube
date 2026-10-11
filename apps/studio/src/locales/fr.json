@@ -32,6 +32,7 @@
         "upload": "Mise en ligne",
         "moderation": "Modération",
         "appearance": "Apparence",
+        "sitePages": "Pages",
         "instance": "Instance",
         "account": "Compte",
         "overview": "Vue d’ensemble"
@@ -102,6 +103,26 @@
       "previewTitle": "Votre titre",
       "previewVideo": "Un titre de vidéo",
       "previewButton": "Bouton principal"
+    },
+    "pages": {
+      "intro": "Pages facultatives vers lesquelles le site renvoie dans son pied de page. Rédige chacune dans les langues de ton choix : les visiteurs voient leur propre langue, sinon l'anglais, sinon la première langue rédigée. Une page sans texte n'est ni affichée ni liée.",
+      "kinds": {
+        "about": "À propos",
+        "imprint": "Mentions légales",
+        "privacy": "Politique de confidentialité"
+      },
+      "descriptions": {
+        "about": "Qui tu es et de quoi parle le site.",
+        "imprint": "Mentions légales, là où la loi de ton pays en exige.",
+        "privacy": "Comment les données des visiteurs sont traitées."
+      },
+      "language": "Langue",
+      "text": "Texte",
+      "size": "{{count}} / {{max}} caractères. Texte brut : les sauts de ligne et les adresses web fonctionnent.",
+      "useStandard": "Insérer le texte standard",
+      "useStandardAll": "Texte standard pour toutes les langues vides",
+      "standardHint": "Le texte standard décrit ce que le site et le serveur Nostube font des données des visiteurs et renvoie aux mentions légales pour l'exploitant. Il utilise les relais de profils de visiteurs réglés sur la page Instance au moment de l'insertion ; insérez-le à nouveau après les avoir modifiés. Vérifiez qu'il correspond à votre exploitation. Il ne constitue pas un conseil juridique.",
+      "replaceConfirm": "Remplacer le texte actuel de cette langue par le texte standard ?"
     },
     "branding": {
       "title": "Logo, favicon et bannière",
@@ -340,6 +361,7 @@
       "notCount": "{{label}} : doit être un nombre entier, 0 ou plus.",
       "accent": "Couleur d'accent : utilisez le format #rrggbb.",
       "link": "Liens ({{kind}}) : une adresse https:// contenant {nip19}.",
+      "pageText": "{{page}} : chaque texte doit faire {{max}} caractères au plus.",
       "font": "Choisissez l'une des polices.",
       "searchUrl": "Recherche : la recherche externe nécessite une URL https://.",
       "labels": {

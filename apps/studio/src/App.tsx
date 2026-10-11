@@ -10,6 +10,7 @@ import { ConnectKey } from './ConnectKey'
 import { InstancePage } from './InstancePage'
 import { Nav } from './Nav'
 import { OverviewPage } from './OverviewPage'
+import { PagesPage } from './PagesPage'
 import { VideosPage } from './VideosPage'
 
 const UploadPage = lazy(() => import('./UploadPage'))
@@ -208,6 +209,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           onBranding={(slot, url) => setBranding(b => ({ ...b, [slot]: url }))}
         />
       )}
+      {page === 'sitePages' && <PagesPage draft={draft} update={update} />}
       {page === 'instance' && <InstancePage draft={draft} update={update} state={state} />}
       {page === 'account' && <AccountPage state={state} reload={() => void reload()} />}
       {page === 'overview' && <OverviewPage />}

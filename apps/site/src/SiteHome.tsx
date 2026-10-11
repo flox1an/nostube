@@ -3,12 +3,13 @@ import { Link, Navigate, Route, Routes, useMatch } from 'react-router-dom'
 import { AccountsContext, AccountsProvider } from 'applesauce-react/providers'
 import type { AccountManager } from 'applesauce-accounts'
 import type { NostubeClient } from '@nostube/core/client'
-import type { InstanceConfig } from '@nostube/core/instance-config'
+import { SITE_PAGES, type InstanceConfig } from '@nostube/core/instance-config'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { restoreAccountsToManager } from '@nostube/widgets/hooks/useAccountPersistence'
 import { useBatchedProfileLoader } from '@nostube/widgets/hooks/useBatchedProfiles'
 import { AuthArea } from './AuthArea'
 import { GridPage } from './GridPage'
+import { SiteFooter, SitePage } from './SitePage'
 import { VideoView } from './VideoView'
 import { useAgeGate } from './use-age-gate'
 import { useCreatorProfile } from './use-creator-profile'
@@ -104,8 +105,12 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
             />
           }
         />
+        {SITE_PAGES.map(page => (
+          <Route key={page} path={`/${page}`} element={<SitePage config={config} page={page} />} />
+        ))}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <SiteFooter config={config} />
     </div>
   )
 }

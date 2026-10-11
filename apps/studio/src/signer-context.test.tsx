@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminConfig, SignerInfo } from './api'
 import { ConnectKey } from './ConnectKey'
 import { SignerProvider, useSigner, type SignerState } from './signer-context'
@@ -113,6 +113,7 @@ describe('ConnectKey onboarding', () => {
       theme: { accent: '#6d28d9', font: 'sans' },
       videos: { hidden: [] },
       links: DEFAULT_SITE_LINKS,
+      pages: noSitePages(),
     },
   }
   const renderBanner = (onConnected: (pubkey: string) => Promise<void>) =>

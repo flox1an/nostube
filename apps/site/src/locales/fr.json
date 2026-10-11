@@ -16,6 +16,12 @@
     "breadcrumb": {
       "label": "Fil d’Ariane"
     },
+    "pages": {
+      "label": "Informations",
+      "about": "À propos",
+      "imprint": "Mentions légales",
+      "privacy": "Politique de confidentialité"
+    },
     "ageGate": {
       "title": "Cette vidéo comporte un avertissement de contenu",
       "body": "Elle peut contenir des contenus qui ne conviennent pas à tout le monde. Confirmez que vous avez 18 ans ou plus pour continuer. Votre confirmation est enregistrée dans ce navigateur.",
@@ -53,7 +59,6 @@
       "label_many": "J’aime ({{count}} j’aime)",
       "label_other": "J’aime ({{count}} j’aime)",
       "liking": "Envoi du j’aime…",
-      "signInToLike": "Se connecter pour aimer",
       "refused": "refusé",
       "noRelays": "aucun relais ne l’a confirmé",
       "failed": "Le j’aime n’a pas pu être publié : {{reason}}"

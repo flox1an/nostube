@@ -32,6 +32,7 @@
         "upload": "上传",
         "moderation": "审核",
         "appearance": "外观",
+        "sitePages": "页面",
         "instance": "实例",
         "account": "账户",
         "overview": "概览"
@@ -102,6 +103,26 @@
       "previewTitle": "你的标题",
       "previewVideo": "视频标题",
       "previewButton": "主按钮"
+    },
+    "pages": {
+      "intro": "站点页脚会链接的可选页面。可按需用多种语言撰写：访客看到自己的语言，否则显示英文，否则显示第一个已撰写的语言。没有任何文本的页面不会显示，也没有链接。",
+      "kinds": {
+        "about": "关于",
+        "imprint": "法律声明",
+        "privacy": "隐私政策"
+      },
+      "descriptions": {
+        "about": "你是谁，站点是关于什么的。",
+        "imprint": "法律声明（Impressum），适用于你所在国家法律要求的情形。",
+        "privacy": "如何处理访客的数据。"
+      },
+      "language": "语言",
+      "text": "文本",
+      "size": "{{count}} / {{max}} 个字符。纯文本：换行和网址可正常使用。",
+      "useStandard": "插入标准文本",
+      "useStandardAll": "为所有空白语言插入标准文本",
+      "standardHint": "标准文本说明 Nostube 站点和服务器如何处理访客数据，并通过法律声明指向运营者。它采用插入时在“实例”页面设置的访客个人资料中继；更改后请重新插入。请核对它是否符合您的运营情况。它不构成法律意见。",
+      "replaceConfirm": "用标准文本替换此语言的当前文本？"
     },
     "branding": {
       "title": "徽标、网站图标和横幅",
@@ -338,6 +359,7 @@
       "notCount": "{{label}}：必须是 0 或更大的整数。",
       "accent": "强调色：请使用 #rrggbb 格式。",
       "link": "链接（{{kind}}）：需为包含 {nip19} 的 https:// 地址。",
+      "pageText": "{{page}}：每段文本最多 {{max}} 个字符。",
       "font": "请选择一种字体。",
       "searchUrl": "搜索：外部搜索需要 https:// URL。",
       "labels": {

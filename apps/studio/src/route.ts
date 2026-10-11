@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 
 export type PageId =
-  'videos' | 'upload' | 'moderation' | 'appearance' | 'instance' | 'account' | 'overview'
+  | 'videos'
+  | 'upload'
+  | 'moderation'
+  | 'appearance'
+  | 'sitePages'
+  | 'instance'
+  | 'account'
+  | 'overview'
 export type GroupId = 'content' | 'site' | 'server'
 
 /** Stable ids only: the names shown are translated at render (`studio.nav.*`). */
@@ -19,6 +26,7 @@ export const PAGES: PageDef[] = [
   { id: 'upload', group: 'content', editsConfig: false },
   { id: 'moderation', group: 'content', editsConfig: false },
   { id: 'appearance', group: 'site', editsConfig: true },
+  { id: 'sitePages', group: 'site', editsConfig: true },
   { id: 'instance', group: 'server', editsConfig: true },
   { id: 'account', group: 'server', editsConfig: false },
   { id: 'overview', group: 'server', editsConfig: false },

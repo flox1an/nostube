@@ -1,4 +1,4 @@
-import { DEFAULT_SITE_LINKS } from './instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages } from './instance-config'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { delay, from, lastValueFrom, throwError, toArray } from 'rxjs'
 import { RelayGroup } from 'applesauce-relay'
@@ -141,6 +141,7 @@ describe('instance scoping', () => {
       theme: { accent: '#6d28d9', font: 'sans' },
       videos: { hidden: [] },
       links: DEFAULT_SITE_LINKS,
+      pages: noSitePages(),
     },
   }
 

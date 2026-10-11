@@ -16,6 +16,12 @@
     "breadcrumb": {
       "label": "Ruta de navegación"
     },
+    "pages": {
+      "label": "Información",
+      "about": "Acerca de",
+      "imprint": "Aviso legal",
+      "privacy": "Política de privacidad"
+    },
     "ageGate": {
       "title": "Este vídeo tiene una advertencia de contenido",
       "body": "Puede contener contenido que no es apto para todo el mundo. Confirma que tienes 18 años o más para continuar. Tu confirmación se guarda en este navegador.",
@@ -53,7 +59,6 @@
       "label_many": "Me gusta ({{count}} me gusta)",
       "label_other": "Me gusta ({{count}} me gusta)",
       "liking": "Enviando me gusta…",
-      "signInToLike": "Inicia sesión para dar me gusta",
       "refused": "rechazado",
       "noRelays": "ningún relé lo confirmó",
       "failed": "No se pudo publicar el me gusta: {{reason}}"

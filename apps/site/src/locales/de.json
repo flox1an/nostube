@@ -16,6 +16,12 @@
     "breadcrumb": {
       "label": "Brotkrumennavigation"
     },
+    "pages": {
+      "label": "Informationen",
+      "about": "Über uns",
+      "imprint": "Impressum",
+      "privacy": "Datenschutz"
+    },
     "ageGate": {
       "title": "Dieses Video hat eine Inhaltswarnung",
       "body": "Es kann Inhalte enthalten, die nicht für alle geeignet sind. Bestätige, dass du mindestens 18 Jahre alt bist, um fortzufahren. Deine Bestätigung wird in diesem Browser gespeichert.",
@@ -51,7 +57,6 @@
       "label_one": "Gefällt mir ({{count}} Like)",
       "label_other": "Gefällt mir ({{count}} Likes)",
       "liking": "Wird geliked…",
-      "signInToLike": "Zum Liken anmelden",
       "refused": "abgelehnt",
       "noRelays": "kein Relay hat es bestätigt",
       "failed": "Das Like konnte nicht veröffentlicht werden: {{reason}}"

@@ -3,9 +3,12 @@ import { toHiddenVideoRef } from '@nostube/core/hidden-videos'
 import {
   DEFAULT_SITE_LINKS,
   SITE_FONTS,
+  SITE_PAGES,
+  SITE_PAGE_MAX_CHARS,
   validateSite,
   type InstanceSite,
   type SiteFont,
+  type SitePages,
 } from '@nostube/core/instance-config'
 import type { AdminConfig } from './api'
 import i18n from './i18n'
@@ -18,6 +21,7 @@ export interface Draft {
   font: SiteFont
   hiddenText: string
   links: InstanceSite['links']
+  pages: SitePages
   creatorsText: string
   writersText: string
   videoSourcesText: string
@@ -47,6 +51,7 @@ export function toDraft(c: AdminConfig): Draft {
     font: c.site.theme.font,
     hiddenText: c.site.videos.hidden.join('\n'),
     links: { ...c.site.links },
+    pages: structuredClone(c.site.pages),
     creatorsText: c.creators.join('\n'),
     writersText: c.allowedWriters.join('\n'),
     videoSourcesText: c.videoSources.join('\n'),
@@ -125,6 +130,17 @@ export function fromDraft(d: Draft): DraftResult {
       video: d.links.video.trim(),
       note: d.links.note.trim(),
     },
+    // A language left empty is no text; the page itself is gone when no language is left.
+    pages: Object.fromEntries(
+      SITE_PAGES.map(page => [
+        page,
+        Object.fromEntries(
+          Object.entries(d.pages[page])
+            .map(([lang, text]) => [lang, text.trim()])
+            .filter(([, text]) => text)
+        ),
+      ])
+    ) as SitePages,
   }
   // The core names the field that is wrong (`site.theme.accent`, `site.links.note`); the message
   // shown is ours. The form cannot produce its other errors (the hidden list is checked above).
@@ -136,6 +152,13 @@ export function fromDraft(d: Draft): DraftResult {
         if (link) {
           return i18n.t('studio.errors.link', {
             kind: i18n.t(`studio.appearance.linkKinds.${link}`),
+          })
+        }
+        const page = /^site\.pages\.(about|imprint|privacy)\b/.exec(e)?.[1]
+        if (page) {
+          return i18n.t('studio.errors.pageText', {
+            page: i18n.t(`studio.pages.kinds.${page}`),
+            max: SITE_PAGE_MAX_CHARS,
           })
         }
         return e.startsWith('site.theme.accent') ? i18n.t('studio.errors.accent') : e

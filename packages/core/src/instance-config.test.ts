@@ -9,6 +9,9 @@ import {
   parseInstanceConfig,
   scopeVideoRequest,
   setInstanceConfig,
+  noSitePages,
+  pageText,
+  SITE_PAGE_MAX_CHARS,
   type InstanceConfig,
 } from './instance-config'
 
@@ -32,6 +35,7 @@ const good = (): InstanceConfig => ({
     theme: { accent: '#ff8800', font: 'serif' },
     videos: { hidden: [] },
     links: DEFAULT_SITE_LINKS,
+    pages: { about: { en: 'About us', de: 'Über uns' }, imprint: {}, privacy: {} },
   },
 })
 
@@ -82,6 +86,43 @@ describe('parseInstanceConfig site', () => {
       logo: '/branding/logo?v=0123456789abcdef',
     })
     expect(withSite({ ...good().site, logo: 42, banner: '//evil.example/x' }).ok).toBe(true)
+  })
+
+  it('keeps the page texts, and reads a config without pages as no pages', () => {
+    const pages = { about: { en: 'About', de: 'Über' }, imprint: {}, privacy: { fr: 'Vie privée' } }
+    const kept = withSite({ ...good().site, pages })
+    expect(kept.ok && kept.config.site.pages).toEqual(pages)
+    const { pages: _pages, ...old } = good().site
+    const absent = withSite(old)
+    expect(absent.ok && absent.config.site.pages).toEqual(noSitePages())
+    // A page the config leaves out is an empty one.
+    const partial = withSite({ ...good().site, pages: { about: { en: 'About' } } })
+    expect(partial.ok && partial.config.site.pages).toEqual({
+      about: { en: 'About' },
+      imprint: {},
+      privacy: {},
+    })
+  })
+
+  it.each([
+    ['pages as a list', []],
+    ['a page as a string', { about: 'text' }],
+    ['a language that is not two letters', { about: { deu: 'Über' } }],
+    ['an uppercase language', { about: { DE: 'Über' } }],
+    ['an empty text', { imprint: { en: '  ' } }],
+    ['a text that is not a string', { privacy: { en: 3 } }],
+    ['a text over the limit', { about: { en: 'x'.repeat(SITE_PAGE_MAX_CHARS + 1) } }],
+  ])('rejects %s', (_name, pages) => {
+    expect(withSite({ ...good().site, pages }).ok).toBe(false)
+  })
+})
+
+describe('pageText', () => {
+  it('prefers the visitor’s language, then English, then the first language by code', () => {
+    expect(pageText({ de: 'Hallo', en: 'Hello' }, 'de')).toBe('Hallo')
+    expect(pageText({ de: 'Hallo', en: 'Hello' }, 'fr')).toBe('Hello')
+    expect(pageText({ ja: 'こんにちは', de: 'Hallo' }, 'fr')).toBe('Hallo')
+    expect(pageText({}, 'en')).toBeUndefined()
   })
 })
 

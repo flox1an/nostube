@@ -1,0 +1,54 @@
+import { useTranslation } from 'react-i18next'
+import { Link, Navigate } from 'react-router-dom'
+import {
+  SITE_PAGES,
+  pageText,
+  type InstanceConfig,
+  type SitePageKey,
+} from '@nostube/core/instance-config'
+import { RichTextContent } from '@nostube/widgets/components/RichTextContent'
+import { siteLinks } from './site-links'
+
+/** The pages the admin wrote (and the text of each in the visitor's language). */
+function usePages(config: InstanceConfig) {
+  const { i18n } = useTranslation()
+  const language = i18n.resolvedLanguage ?? 'en'
+  return SITE_PAGES.flatMap(page => {
+    const text = pageText(config.site.pages[page], language)
+    return text === undefined ? [] : [{ page, text }]
+  })
+}
+
+/** The about, imprint or privacy page; a page the admin left empty does not exist. */
+export function SitePage({ config, page }: { config: InstanceConfig; page: SitePageKey }) {
+  const { t } = useTranslation()
+  const text = usePages(config).find(p => p.page === page)?.text
+  if (text === undefined) return <Navigate to="/" replace />
+  return (
+    <article className="space-y-3">
+      <h2 className="text-xl font-semibold">{t(`site.pages.${page}`)}</h2>
+      <RichTextContent content={text} links={siteLinks(config)} className="break-words text-sm" />
+    </article>
+  )
+}
+
+/** Links to the pages that exist; nothing at all when there are none. */
+export function SiteFooter({ config }: { config: InstanceConfig }) {
+  const { t } = useTranslation()
+  const pages = usePages(config)
+  if (pages.length === 0) return null
+  return (
+    <footer>
+      <nav
+        aria-label={t('site.pages.label')}
+        className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-4 text-sm text-muted-foreground"
+      >
+        {pages.map(({ page }) => (
+          <Link key={page} to={`/${page}`} className="hover:text-foreground hover:underline">
+            {t(`site.pages.${page}`)}
+          </Link>
+        ))}
+      </nav>
+    </footer>
+  )
+}

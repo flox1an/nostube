@@ -1,4 +1,8 @@
-import { DEFAULT_PROFILE_RELAYS, DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
+import {
+  DEFAULT_PROFILE_RELAYS,
+  DEFAULT_SITE_LINKS,
+  SITE_PAGE_MAX_CHARS,
+} from '@nostube/core/instance-config'
 import { nip19 } from 'nostr-tools'
 import { describe, expect, it } from 'vitest'
 import type { AdminConfig } from './api'
@@ -29,6 +33,7 @@ const config: AdminConfig = {
     theme: { accent: '#6d28d9', font: 'sans' },
     videos: { hidden: [] },
     links: DEFAULT_SITE_LINKS,
+    pages: { about: { en: 'About', de: 'Über uns' }, imprint: {}, privacy: {} },
   },
 }
 
@@ -90,10 +95,35 @@ describe('draft', () => {
     ['link over http', { links: { ...DEFAULT_SITE_LINKS, profile: 'http://example.org/{nip19}' } }],
     ['quota', { quota: '-1' }],
     ['external search', { searchMode: 'external' as const, searchUrl: 'http://x' }],
+    [
+      'page text over the limit',
+      {
+        pages: {
+          ...toDraft(config).pages,
+          privacy: { en: 'x'.repeat(SITE_PAGE_MAX_CHARS + 1) },
+        },
+      },
+    ],
   ])('reports an invalid %s and builds nothing', (_name, patch) => {
     const result = fromDraft({ ...toDraft(config), ...patch })
     expect(result.config).toBeNull()
     expect(result.errors.length).toBeGreaterThan(0)
+  })
+
+  it('drops the languages left empty, trims the texts, and is rid of a page with none left', () => {
+    const result = fromDraft({
+      ...toDraft(config),
+      pages: {
+        about: { en: '  About  ', de: '   ' },
+        imprint: { fr: '' },
+        privacy: { ja: 'x' },
+      },
+    })
+    expect(result.config?.site.pages).toEqual({
+      about: { en: 'About' },
+      imprint: {},
+      privacy: { ja: 'x' },
+    })
   })
 })
 

@@ -32,6 +32,7 @@
         "upload": "Upload",
         "moderation": "Moderation",
         "appearance": "Appearance",
+        "sitePages": "Pages",
         "instance": "Instance",
         "account": "Account",
         "overview": "Overview"
@@ -102,6 +103,26 @@
       "previewTitle": "Your title",
       "previewVideo": "A video title",
       "previewButton": "Primary button"
+    },
+    "pages": {
+      "intro": "Optional pages the site links in its footer. Write each in the languages you want: visitors see their own language, otherwise English, otherwise the first language written. A page without any text is not shown and not linked.",
+      "kinds": {
+        "about": "About",
+        "imprint": "Imprint",
+        "privacy": "Privacy policy"
+      },
+      "descriptions": {
+        "about": "Who you are and what the site is about.",
+        "imprint": "Legal notice (Impressum), where the law of your country asks for one.",
+        "privacy": "How visitors' data is handled."
+      },
+      "language": "Language",
+      "text": "Text",
+      "size": "{{count}} / {{max}} characters. Plain text: line breaks and web addresses work.",
+      "useStandard": "Insert the standard text",
+      "useStandardAll": "Standard text for all empty languages",
+      "standardHint": "The standard text describes what the Nostube site and server do with visitors' data and points to the imprint for the operator. It uses the visitor profile relays set on the Instance page at the moment you insert it; insert it again after changing them. Check that it matches how you run the instance. It is not legal advice.",
+      "replaceConfirm": "Replace the current text of this language with the standard text?"
     },
     "branding": {
       "title": "Logo, favicon and banner",
@@ -339,6 +360,7 @@
       "notCount": "{{label}} must be a whole number, 0 or more.",
       "accent": "Accent colour: use the form #rrggbb.",
       "link": "Links ({{kind}}): an https:// address containing {nip19}.",
+      "pageText": "{{page}}: each text must be at most {{max}} characters.",
       "font": "Choose one of the fonts.",
       "searchUrl": "Search: the external search needs an https:// URL.",
       "labels": {

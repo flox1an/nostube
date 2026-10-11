@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } from 'nostr-tools'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SITE_LINKS } from '@nostube/core/instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
 import type { AdminState } from './api'
 import { bootInstanceClient } from './instance-client'
 import { SignerProvider } from './signer-context'
@@ -63,6 +63,7 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
       theme: { accent: '#6d28d9', font: 'sans' },
       videos: { hidden: [] },
       links: DEFAULT_SITE_LINKS,
+      pages: noSitePages(),
     },
   },
   branding: { logo: null, favicon: null, banner: null },

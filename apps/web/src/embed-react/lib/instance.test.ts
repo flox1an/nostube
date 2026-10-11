@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SITE_LINKS, type InstanceConfig } from '@nostube/core/instance-config'
+import { DEFAULT_SITE_LINKS, noSitePages, type InstanceConfig } from '@nostube/core/instance-config'
 import { accentFor, loadEmbedInstance } from './instance'
 
 const config = (accent = '#0d9488'): InstanceConfig => ({
@@ -18,6 +18,7 @@ const config = (accent = '#0d9488'): InstanceConfig => ({
     theme: { accent, font: 'sans' },
     videos: { hidden: [] },
     links: DEFAULT_SITE_LINKS,
+    pages: noSitePages(),
   },
 })
 const answer =

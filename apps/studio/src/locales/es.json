@@ -32,6 +32,7 @@
         "upload": "Subir",
         "moderation": "Moderación",
         "appearance": "Apariencia",
+        "sitePages": "Páginas",
         "instance": "Instancia",
         "account": "Cuenta",
         "overview": "Resumen"
@@ -102,6 +103,26 @@
       "previewTitle": "Tu título",
       "previewVideo": "Un título de video",
       "previewButton": "Botón principal"
+    },
+    "pages": {
+      "intro": "Páginas opcionales a las que el sitio enlaza en su pie. Escribe cada una en los idiomas que quieras: los visitantes ven su propio idioma, si no el inglés, si no el primer idioma escrito. Una página sin texto no se muestra ni se enlaza.",
+      "kinds": {
+        "about": "Acerca de",
+        "imprint": "Aviso legal",
+        "privacy": "Política de privacidad"
+      },
+      "descriptions": {
+        "about": "Quién eres y de qué trata el sitio.",
+        "imprint": "Aviso legal, donde la ley de tu país lo exija.",
+        "privacy": "Cómo se tratan los datos de los visitantes."
+      },
+      "language": "Idioma",
+      "text": "Texto",
+      "size": "{{count}} / {{max}} caracteres. Texto sin formato: los saltos de línea y las direcciones web funcionan.",
+      "useStandard": "Insertar el texto estándar",
+      "useStandardAll": "Texto estándar para todos los idiomas vacíos",
+      "standardHint": "El texto estándar describe lo que el sitio y el servidor de Nostube hacen con los datos de los visitantes y remite al aviso legal para el operador. Usa los relés de perfiles de visitantes configurados en la página Instancia en el momento de insertarlo; insértelo de nuevo tras cambiarlos. Compruebe que se ajusta a cómo gestiona la instancia. No es asesoramiento jurídico.",
+      "replaceConfirm": "¿Reemplazar el texto actual de este idioma por el texto estándar?"
     },
     "branding": {
       "title": "Logotipo, favicon y banner",
@@ -340,6 +361,7 @@
       "notCount": "{{label}}: debe ser un número entero, 0 o mayor.",
       "accent": "Color de acento: usa el formato #rrggbb.",
       "link": "Enlaces ({{kind}}): una dirección https:// que contenga {nip19}.",
+      "pageText": "{{page}}: cada texto puede tener como máximo {{max}} caracteres.",
       "font": "Elige una de las fuentes.",
       "searchUrl": "Búsqueda: la búsqueda externa necesita una URL https://.",
       "labels": {

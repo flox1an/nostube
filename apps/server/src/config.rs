@@ -1,6 +1,8 @@
 //! Instance config: `<data>/config.toml`, created on first start and edited at `/admin`.
 //! Existing config files still require every public field (ADR 0005).
 
+use std::collections::BTreeMap;
+
 use nostr::prelude::PublicKey;
 use serde::{Deserialize, Serialize};
 
@@ -129,6 +131,41 @@ pub struct Site {
     pub hidden_videos: Vec<String>,
     /// Where links to Nostr content outside the site go.
     pub links: Links,
+    /// The about, imprint and privacy texts; may all be empty.
+    pub pages: Pages,
+}
+
+/// Longest text of one page in one language, in characters.
+pub const PAGE_MAX_CHARS: usize = 20_000;
+
+/// The texts of the optional pages (about, imprint, privacy), one per language (a two-letter
+/// lowercase code such as `de`). A page without any text does not exist on the site.
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields, default)]
+pub struct Pages {
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub about: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub imprint: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub privacy: BTreeMap<String, String>,
+}
+
+fn check_pages(pages: &Pages) -> Result<(), BoxError> {
+    for (page, texts) in [("about", &pages.about), ("imprint", &pages.imprint), ("privacy", &pages.privacy)] {
+        for (lang, text) in texts {
+            if !(lang.len() == 2 && lang.bytes().all(|b| b.is_ascii_lowercase())) {
+                return Err(format!("site.pages.{page}: language must be two lowercase letters: {lang}").into());
+            }
+            if text.trim().is_empty() || text.chars().count() > PAGE_MAX_CHARS {
+                return Err(format!(
+                    "site.pages.{page}.{lang} must be a non-empty text of at most {PAGE_MAX_CHARS} characters"
+                )
+                .into());
+            }
+        }
+    }
+    Ok(())
 }
 
 /// URL templates with `{nip19}` where the npub, nprofile, naddr, nevent or note identifier goes.
@@ -178,6 +215,7 @@ impl Default for Site {
             font: Font::Sans,
             hidden_videos: vec![],
             links: Links::default(),
+            pages: Pages::default(),
         }
     }
 }
@@ -194,6 +232,7 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
     check_link("profile", &site.links.profile)?;
     check_link("video", &site.links.video)?;
     check_link("note", &site.links.note)?;
+    check_pages(&site.pages)?;
     for v in &site.hidden_videos {
         let ok = is_hex64(v)
             || matches!(v.splitn(3, ':').collect::<Vec<_>>().as_slice(),
@@ -420,6 +459,11 @@ impl Config {
                     "video": self.site.links.video,
                     "note": self.site.links.note,
                 },
+                "pages": {
+                    "about": self.site.pages.about,
+                    "imprint": self.site.pages.imprint,
+                    "privacy": self.site.pages.privacy,
+                },
             },
         })
     }
@@ -637,6 +681,35 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(reloaded.revision, cfg.revision + 1);
         let bad = Edited { site: Site { accent: "red".into(), ..Site::default() }, ..edited };
         assert!(cfg.with_edits(&bad).is_err());
+    }
+
+    #[test]
+    fn site_pages_are_per_language_empty_by_default_and_round_trip_through_toml() {
+        let cfg = Config::parse(&sample("")).unwrap();
+        assert_eq!(cfg.public_json()["site"]["pages"], serde_json::json!({ "about": {}, "imprint": {}, "privacy": {} }));
+        assert!(!cfg.to_toml().unwrap().contains("pages.about"), "empty pages add no tables to the file");
+
+        let cfg = Config::parse(&sample(
+            "[site.pages.imprint]\nde = \"Zeile 1\\n\\nZeile 2\"\nen = \"Line 1\"\n[site.pages.about]\nfr = \"À propos\"\n",
+        ))
+        .unwrap();
+        let json = cfg.public_json();
+        assert_eq!(json["site"]["pages"]["imprint"]["de"], "Zeile 1\n\nZeile 2");
+        assert_eq!(json["site"]["pages"]["about"]["fr"], "À propos");
+        assert_eq!(Config::parse(&cfg.to_toml().unwrap()).unwrap().site.pages, cfg.site.pages);
+
+        for bad in [
+            "[site.pages.about]\ndeu = \"x\"\n",
+            "[site.pages.about]\nDE = \"x\"\n",
+            "[site.pages.about]\nde = \"  \"\n",
+            "[site.pages.legal]\nde = \"x\"\n",
+        ] {
+            assert!(Config::parse(&sample(bad)).is_err(), "{bad}");
+        }
+        let too_long = format!("[site.pages.about]\nde = \"{}\"\n", "x".repeat(PAGE_MAX_CHARS + 1));
+        assert!(Config::parse(&sample(&too_long)).is_err());
+        let at_limit = format!("[site.pages.about]\nde = \"{}\"\n", "ä".repeat(PAGE_MAX_CHARS));
+        assert!(Config::parse(&sample(&at_limit)).is_ok(), "the limit counts characters, not bytes");
     }
 
     #[test]

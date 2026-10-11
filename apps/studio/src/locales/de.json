@@ -32,6 +32,7 @@
         "upload": "Hochladen",
         "moderation": "Moderation",
         "appearance": "Aussehen",
+        "sitePages": "Seiten",
         "instance": "Instanz",
         "account": "Konto",
         "overview": "Übersicht"
@@ -102,6 +103,26 @@
       "previewTitle": "Dein Titel",
       "previewVideo": "Ein Videotitel",
       "previewButton": "Hauptschaltfläche"
+    },
+    "pages": {
+      "intro": "Optionale Seiten, die die Website im Fußbereich verlinkt. Schreibe jede in den Sprachen, die du möchtest: Besucher sehen ihre eigene Sprache, sonst Englisch, sonst die erste geschriebene Sprache. Eine Seite ohne Text wird weder angezeigt noch verlinkt.",
+      "kinds": {
+        "about": "Über uns",
+        "imprint": "Impressum",
+        "privacy": "Datenschutzerklärung"
+      },
+      "descriptions": {
+        "about": "Wer du bist und worum es auf der Website geht.",
+        "imprint": "Anbieterkennzeichnung (Impressum), wo das Recht deines Landes sie verlangt.",
+        "privacy": "Wie mit den Daten der Besucher umgegangen wird."
+      },
+      "language": "Sprache",
+      "text": "Text",
+      "size": "{{count}} / {{max}} Zeichen. Reiner Text: Zeilenumbrüche und Webadressen funktionieren.",
+      "useStandard": "Standardtext einfügen",
+      "useStandardAll": "Standardtext für alle leeren Sprachen",
+      "standardHint": "Der Standardtext beschreibt, was die Nostube-Website und der Server mit den Daten der Besucher tun, und verweist für den Betreiber auf das Impressum. Er verwendet die auf der Seite Instanz eingestellten Relays für Besucherprofile zum Zeitpunkt des Einfügens; fügen Sie ihn nach einer Änderung erneut ein. Prüfen Sie, ob er zu Ihrem Betrieb passt. Er ist keine Rechtsberatung.",
+      "replaceConfirm": "Den aktuellen Text dieser Sprache durch den Standardtext ersetzen?"
     },
     "branding": {
       "title": "Logo, Favicon und Banner",
@@ -339,6 +360,7 @@
       "notCount": "{{label}}: muss eine ganze Zahl ab 0 sein.",
       "accent": "Akzentfarbe: Verwende das Format #rrggbb.",
       "link": "Links ({{kind}}): eine https://-Adresse mit {nip19}.",
+      "pageText": "{{page}}: Jeder Text darf höchstens {{max}} Zeichen lang sein.",
       "font": "Wähle eine der Schriften.",
       "searchUrl": "Suche: Die externe Suche braucht eine https://-URL.",
       "labels": {

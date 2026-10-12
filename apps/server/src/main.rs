@@ -408,8 +408,8 @@ fn revision(value: Option<String>) -> Option<String> {
 }
 
 /// ADR 0004 dispatch order: relay, /admin, /api (`/api/admin/*` goes to the admin router),
-/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), `sitemap.xml` and
-/// `robots.txt`, root files, app shell (with the head for its route).
+/// Blossom, branding images (`/branding/*`), the studio (`/studio/*`), `sitemap.xml`, `feed.xml`,
+/// `atom.xml` and `robots.txt`, root files, app shell (with the head for its route).
 async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     let path = req.uri().path().to_owned();
     if path == "/" && (relay::is_ws_upgrade(&req) || relay::wants_nip11(&req)) {
@@ -490,6 +490,8 @@ async fn dispatch(State(app): State<App>, req: Request<Body>) -> Response {
     }
     match file {
         "sitemap.xml" => return seo::sitemap(&app.relay, &app.branding.public_config()).await,
+        "feed.xml" => return seo::feed(&app.relay, &app.branding.public_config(), false).await,
+        "atom.xml" => return seo::feed(&app.relay, &app.branding.public_config(), true).await,
         "robots.txt" => return seo::robots(&app.branding.public_config()),
         _ => {}
     }

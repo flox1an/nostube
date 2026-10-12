@@ -1,6 +1,6 @@
 //! What crawlers and link previews read without running the site's JavaScript: the head of the
 //! app shell for each route (title, description, canonical URL, Open Graph, Twitter player card),
-//! `/sitemap.xml` and `/robots.txt`. The data comes from the public config and from the
+//! `/sitemap.xml`, `/robots.txt` and the RSS and Atom feeds. The data comes from the public config and from the
 //! instance's own relay; a video that is only on other relays gets the head of the site.
 
 use std::{collections::BTreeMap, fmt, fmt::Write as _};
@@ -30,6 +30,11 @@ const DESCRIPTION_MAX: usize = 200;
 const SITEMAP_MAX: usize = 50_000;
 /// `deriveTitleFromContent` in `packages/core/src/video-event.ts`.
 const UNTITLED: &str = "Untitled video";
+/// Most entries a feed holds.
+const FEED_MAX: usize = 100;
+/// Where the feeds are served (`feed` takes `atom` for the second).
+const RSS_PATH: &str = "/feed.xml";
+const ATOM_PATH: &str = "/atom.xml";
 
 /// The part of the public config (`/api/config`) these pages need.
 #[derive(Deserialize)]
@@ -173,6 +178,83 @@ pub fn robots(public: &[u8]) -> Response {
     ([(header::CONTENT_TYPE, "text/plain; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], text).into_response()
 }
 
+/// `/feed.xml` (RSS 2.0) and `/atom.xml` (Atom): the newest shown videos of the creators, newest
+/// first, each with its playable file as enclosure.
+pub async fn feed(relay: &Relay, public: &[u8], atom: bool) -> Response {
+    let Some(p) = Public::parse(public) else { return StatusCode::INTERNAL_SERVER_ERROR.into_response() };
+    let events = if p.creators.is_empty() { Ok(vec![]) } else { relay.stored(video_filter(&p).limit(FEED_MAX)).await };
+    let events = match events {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!("seo: reading the videos for the feed: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    let videos: Vec<Video> = events.iter().filter(|ev| p.shows(ev)).map(Video::from_event).filter(|v| !v.link.is_empty()).collect();
+    let (xml, mime) = if atom { (atom_feed(&p, &videos), "application/atom+xml") } else { (rss_feed(&p, &videos), "application/rss+xml") };
+    ([(header::CONTENT_TYPE, format!("{mime}; charset=utf-8")), (header::CACHE_CONTROL, "no-cache".to_owned())], xml).into_response()
+}
+
+/// The file's absolute URL, MIME type and size in bytes (0 when unknown: RSS requires a length).
+fn enclosure(p: &Public, v: &Video) -> Option<(String, String, u64)> {
+    let (url, mime) = v.media.as_ref()?;
+    Some((p.absolute(url)?, mime.clone().unwrap_or_else(|| "video/mp4".to_owned()), v.size.unwrap_or(0)))
+}
+
+fn rss_feed(p: &Public, videos: &[Video]) -> String {
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\" xmlns:media=\"http://search.yahoo.com/mrss/\">\n<channel>\n",
+    );
+    let description = if p.site.tagline.trim().is_empty() { &p.title } else { &p.site.tagline };
+    let _ = writeln!(xml, "<title>{}</title>\n<link>{}/</link>\n<description>{}</description>", Esc(&p.title), Esc(&p.origin), Esc(description));
+    let _ = writeln!(xml, "<atom:link href=\"{}{RSS_PATH}\" rel=\"self\" type=\"application/rss+xml\" />", Esc(&p.origin));
+    if let Some(at) = videos.first().and_then(|v| rfc2822(v.created_at)) {
+        let _ = writeln!(xml, "<lastBuildDate>{at}</lastBuildDate>");
+    }
+    for v in videos {
+        let url = format!("{}/v/{}", p.origin, v.link);
+        let _ = write!(xml, "<item><title>{}</title><link>{}</link><guid isPermaLink=\"true\">{}</guid>", Esc(&v.title), Esc(&url), Esc(&url));
+        if let Some(at) = rfc2822(v.created_at) {
+            let _ = write!(xml, "<pubDate>{at}</pubDate>");
+        }
+        if !v.description.is_empty() {
+            let _ = write!(xml, "<description>{}</description>", Esc(&v.description));
+        }
+        if let Some((file, mime, size)) = enclosure(p, v) {
+            let _ = write!(xml, "<enclosure url=\"{}\" length=\"{size}\" type=\"{}\" /><media:content url=\"{}\" type=\"{}\" medium=\"video\" />", Esc(&file), Esc(&mime), Esc(&file), Esc(&mime));
+        }
+        xml.push_str("</item>\n");
+    }
+    xml.push_str("</channel>\n</rss>\n");
+    xml
+}
+
+fn atom_feed(p: &Public, videos: &[Video]) -> String {
+    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\" xmlns:media=\"http://search.yahoo.com/mrss/\">\n");
+    let updated = iso_datetime(videos.first().map_or_else(|| nostr::prelude::Timestamp::now().as_secs(), |v| v.created_at)).unwrap_or_default();
+    let _ = writeln!(xml, "<id>{}/</id>\n<title>{}</title>\n<updated>{updated}</updated>", Esc(&p.origin), Esc(&p.title));
+    if !p.site.tagline.trim().is_empty() {
+        let _ = writeln!(xml, "<subtitle>{}</subtitle>", Esc(&p.site.tagline));
+    }
+    let _ = writeln!(xml, "<link rel=\"alternate\" href=\"{}/\" />\n<link rel=\"self\" type=\"application/atom+xml\" href=\"{}{ATOM_PATH}\" />", Esc(&p.origin), Esc(&p.origin));
+    for v in videos {
+        let url = format!("{}/v/{}", p.origin, v.link);
+        let at = iso_datetime(v.created_at).unwrap_or_default();
+        let _ = write!(xml, "<entry><id>{}</id><title>{}</title><link rel=\"alternate\" href=\"{}\" /><updated>{at}</updated><published>{at}</published>", Esc(&url), Esc(&v.title), Esc(&url));
+        // Atom requires an author per entry or on the feed; every video here is the instance's.
+        let _ = write!(xml, "<author><name>{}</name></author>", Esc(&p.title));
+        if !v.description.is_empty() {
+            let _ = write!(xml, "<summary>{}</summary>", Esc(&v.description));
+        }
+        if let Some((file, mime, size)) = enclosure(p, v) {
+            let _ = write!(xml, "<link rel=\"enclosure\" href=\"{}\" type=\"{}\" length=\"{size}\" /><media:content url=\"{}\" type=\"{}\" medium=\"video\" />", Esc(&file), Esc(&mime), Esc(&file), Esc(&mime));
+        }
+        xml.push_str("</entry>\n");
+    }
+    xml.push_str("</feed>\n");
+    xml
+}
+
 fn video_filter(p: &Public) -> Filter {
     Filter::new().kinds(VIDEO_KINDS.map(Kind::from)).authors(p.creators.iter().copied())
 }
@@ -236,6 +318,8 @@ struct Video {
     created_at: u64,
     /// Whole seconds, from `imeta` or the `duration` tag.
     duration: Option<u64>,
+    /// Bytes, from `imeta`.
+    size: Option<u64>,
 }
 
 impl Video {
@@ -279,6 +363,7 @@ impl Video {
             media,
             created_at: ev.created_at.as_secs(),
             duration,
+            size: imeta.iter().find_map(|e| field(e, "size")).and_then(|s| s.parse().ok()),
         }
     }
 }
@@ -300,6 +385,13 @@ fn embed_url(p: &Public, link: &str) -> String {
 fn iso_datetime(secs: u64) -> Option<String> {
     let at = time::OffsetDateTime::from_unix_timestamp(secs as i64).ok()?;
     Some(format!("{}T{:02}:{:02}:{:02}Z", at.date(), at.hour(), at.minute(), at.second()))
+}
+
+/// `Sun, 12 Oct 2026 08:30:00 GMT` (RFC 822 as RSS takes it).
+fn rfc2822(secs: u64) -> Option<String> {
+    let at = time::OffsetDateTime::from_unix_timestamp(secs as i64).ok()?;
+    let (day, month) = (at.weekday().to_string(), at.month().to_string());
+    Some(format!("{}, {:02} {} {} {:02}:{:02}:{:02} GMT", &day[..3], at.day(), &month[..3], at.year(), at.hour(), at.minute(), at.second()))
 }
 
 /// JSON for a `<script>` element: `<` as `\u003c`, so nothing in it can end the element early.
@@ -379,6 +471,8 @@ fn head(p: &Public, canonical: Option<&str>, video: Option<&Video>) -> String {
     if let Some(icon) = p.site.favicon.as_deref() {
         let _ = write!(h, "<link rel=\"icon\" href=\"{}\" />", Esc(icon));
     }
+    let _ = write!(h, "<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{}\" href=\"{}{RSS_PATH}\" />", Esc(&p.title), Esc(&p.origin));
+    let _ = write!(h, "<link rel=\"alternate\" type=\"application/atom+xml\" title=\"{}\" href=\"{}{ATOM_PATH}\" />", Esc(&p.title), Esc(&p.origin));
     h
 }
 
@@ -510,5 +604,29 @@ mod tests {
         assert!(xml.contains("<lastmod>2025-10-09T08:53:20Z</lastmod>"), "{xml}");
         assert!(xml.contains("<video:video><video:thumbnail_loc>https://cdn.example/t.jpg</video:thumbnail_loc><video:title>Tom &amp; &quot;Jerry&quot;</video:title><video:description>A &lt;b&gt;long&lt;/b&gt; description</video:description><video:content_loc>https://cdn.example/v.mp4</video:content_loc>"), "{xml}");
         assert!(xml.contains("<video:duration>61</video:duration><video:publication_date>2025-10-09T08:53:20Z</video:publication_date></video:video>"), "{xml}");
+    }
+
+    #[tokio::test]
+    async fn the_feeds_list_the_shown_videos_with_an_enclosure_and_every_page_links_them() {
+        let (relay, public, shown, hidden, foreign) = fixture().await;
+        let url = format!("https://videos.example/v/{}", link(&shown).unwrap());
+        for atom in [false, true] {
+            let res = feed(&relay, &public, atom).await;
+            let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+            let xml = std::str::from_utf8(&body).unwrap();
+            assert_eq!(xml.matches(if atom { "<entry>" } else { "<item>" }).count(), 1, "{xml}");
+            assert!(xml.contains(&url) && xml.contains("<title>Tom &amp; &quot;Jerry&quot;</title>"), "{xml}");
+            assert!(xml.contains("https://cdn.example/v.mp4"), "{xml}");
+            for other in [&hidden, &foreign] {
+                assert!(!xml.contains(&link(other).unwrap()), "{xml}");
+            }
+            if !atom {
+                assert!(xml.contains("<pubDate>Thu, 09 Oct 2025 08:53:20 GMT</pubDate>"), "{xml}");
+                assert!(xml.contains("<enclosure url=\"https://cdn.example/v.mp4\" length=\"0\" type=\"video/mp4\" />"), "{xml}");
+            }
+        }
+        let home = shell(&relay, &public, "/", SHELL).await;
+        assert!(home.contains("rel=\"alternate\" type=\"application/rss+xml\" title=\"My &lt;Site&gt;\" href=\"https://videos.example/feed.xml\""), "{home}");
+        assert!(home.contains("type=\"application/atom+xml\" title=\"My &lt;Site&gt;\" href=\"https://videos.example/atom.xml\""), "{home}");
     }
 }

@@ -73,6 +73,15 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
    - **Profile von Besuchern** (umgesetzt, Seite „Instanz“): Liste der Relays, auf denen die Site Name und Bild angemeldeter Besucher zusätzlich zu den Instanz-Relays sucht (`profile_relays`, im Config-Vertrag optional als `profileRelays`, Server-ADR 0008). Standard sind die öffentlichen Relays `purplepag.es` und `index.hzrd149.com`; „Nur lokal“ leert die Liste mit einem Klick, dann fragt die Site kein öffentliches Relay, auch nicht die eigenen Relays des Besuchers. „Öffentliche Standards“ stellt die Liste wieder her.
    - **Spiegeln auf andere Server** (umgesetzt, Seite „Instanz“): Ziel-Relays und Ziel-Blossom-Server für die eigenen Events und Videos der Instanz (`[mirror]`, Server-ADR 0009). Beide Listen leer heißt: nichts verlässt die Instanz. Unter den Zielen zeigt das Studio je Ziel die erledigten, wartenden und fehlgeschlagenen Aufträge, die letzten Fehler und einen Retry für aufgegebene Aufträge. Blobs spiegelt der Server nur mit dem Managed Key.
 
+### Bedienung (12. Oktober 2026)
+
+- Das Onboarding wählt eine allein verfügbare Identität vor; danach zeigt die Videoseite eine Checkliste für Upload, Logo, Seiten, Lightning-Adresse und Website.
+- Die Sprache steht im Header. Die Speicherleiste erscheint nur bei Änderungen; nur Änderungen an Schreibrechten, Speicherlimits oder Spiegelzielen warnen vor einem Neustart. Das Warten auf den Neustart begrenzt einzelne Health-Anfragen auf höchstens fünf Sekunden und auf die verbleibende Wartezeit.
+- Die Lightning-Adresse unter „Aussehen“ wird beim Managed Key als `lud16` im Kanalprofil veröffentlicht. Creator und Schreibberechtigte erscheinen als Profil-Chips; Relay-Einstellungen liegen unter „Erweitert“.
+- Nach dem Upload zeigt eine Erfolgskarte Vorschau, Ansehen, Link kopieren, Bearbeiten und „Upload another“. Letzteres leert das Formular einschließlich Titel. Spiegel-Relays werden im Erfolgstext berücksichtigt; das Kopieren auf fremde Server blockiert weitere Uploads nicht.
+- Videozeilen zeigen Dauer, Ausblendestatus und einen Website-Link. Ab sechs geladenen Videos gibt es eine Titelsuche. Auf kleinen Screens stehen die Aktionen unter der Vorschau und dem zweizeiligen Titel; im Bearbeiten-Dialog bleiben die Speicheraktionen sichtbar.
+- Auf der Site sind Videokarten echte Links. Videoseiten zeigen den Site-Header und weitere Videos; Gäste sehen die Like-Zahl und erhalten erst beim Interagieren den passenden Anmeldehinweis. Tags und Beschreibungshashtags führen zu `/t/<tag>`; dort zählen die expliziten `t`-Tags des Events, nicht Hashtags, die nur im Beschreibungstext stehen.
+
 ## Grenzen der Moderation per Mute-Liste
 
 - **Nur nachträglich:** Es gibt keine Freigabe-Warteschlange vorab. Falls später gewünscht, braucht es einen serverseitigen Filter am eigenen Relay.
@@ -87,7 +96,7 @@ Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio 
 
 ## Offene Fragen
 
-1. **Vorsignierte Events halten:** Hält der Server vorsignierte Events dauerhaft (Datenbank, überlebt Neustarts) oder lädt sie das Studio nur bei Bedarf hoch? Und wie verhindert man Konflikte, wenn ein Video nach dem Vorsignieren noch bearbeitet wird (addressable Event mit gleichem `d`-Tag)?
+1. **Vorsignierte Events halten:** Entschieden (2026-10-12, Issue #120): Der Server hält vorsignierte Events dauerhaft in SQLite und released sie über die Outbox (Periodischer Scan plus Catch-up beim Start). Der Termin steht im `published_at`-Tag, `created_at` bleibt „jetzt“ (der Managed-Signer und Relays lehnen Zukunfts-Timestamps ab). Editieren vor dem Termin ersetzt das gespeicherte Event per Re-Presign (gleicher `d`-Tag), Abbrechen läuft wie Löschen. Risiko-Akzeptanz dokumentiert: Die DB hält signierte Events (schlimmster Fall: frühzeitiges Release genau dieser Videos), und Blobs sind vor dem Termin öffentlich abrufbar (content-addressed, ohne Event nicht auffindbar).
 2. **Studio und `/admin`:** Entschieden: Das Studio ersetzt das Dashboard. Einrichtung (`/admin/setup`) und Login (`/admin/login`) bleiben serverseitig, weil sie ohne Studio-Bundle funktionieren müssen. Offen: ein Notfall-Zugang, falls das Studio-Bundle fehlt (heute `nostube-server admin reset` und `config rollback` auf der Kommandozeile).
 3. **Mehrere Creators:** Entschieden: Die Site wendet die Mute-Listen aller Creators zusammen an (Vereinigung). Das Studio bearbeitet die Liste des verbundenen Keys.
 4. **Upload-Code:** Wie viel vom Wizard und vom Transcoding wandert nach `packages/widgets`, und wie viel bleibt in `apps/web`? Das hängt von der Größe des Bausteins ab und sollte beim ersten Upload-Slice entschieden werden.

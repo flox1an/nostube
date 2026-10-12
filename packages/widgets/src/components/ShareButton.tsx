@@ -31,6 +31,8 @@ export interface ShareButtonProps {
     facebook: string
     pinterest: string
   }
+  /** A visible text next to the icon: a small outline button for a row of labelled actions. */
+  label?: string
 }
 
 const ShareButton: React.FC<ShareButtonProps> = ({
@@ -40,6 +42,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
   includeTimestamp = false,
   setIncludeTimestamp,
   shareLinks,
+  label,
 }) => {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('link')
@@ -84,9 +87,11 @@ const ShareButton: React.FC<ShareButtonProps> = ({
         <Button
           title={t('video.share.title')}
           aria-label={t('video.share.title')}
-          variant="secondary"
+          variant={label ? 'outline' : 'secondary'}
+          size={label ? 'sm' : 'default'}
         >
-          <LinkIcon className="w-6 h-6" />
+          <LinkIcon className={label ? 'h-4 w-4' : 'w-6 h-6'} />
+          {label}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">

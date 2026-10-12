@@ -72,8 +72,11 @@ pub const NEEDS_KEY: &str = "mirroring blobs needs the managed signing key";
 /// Recent problems shown in the studio.
 const PROBLEMS: i64 = 50;
 
-// ponytail: one media lifecycle lock orders uploads, accepted video edits and cleanup.
-// Use per-hash locks plus coordinate locking if concurrent large mirror deliveries matter.
+// Orders local media changes: uploads, accepted events, scheduling and local cleanup. Never held
+// across a call to a mirror target (see `work`); the worker keeps a mirror and a mirror delete of
+// the same blob and target apart instead (`spawn`'s `busy`).
+// ponytail: one global lock, and an upload holds it while Almond receives the body, so uploads
+// serialize; per-hash locks if parallel uploads matter.
 pub(crate) static MEDIA_LIFECYCLE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 pub(crate) fn initialize(conn: &Connection) -> rusqlite::Result<()> {
@@ -388,8 +391,11 @@ impl Outbox {
                     Outcome::Retry(e) if attempts < MAX_ATTEMPTS => ("pending", now + backoff(attempts, jitter) as i64, Some(e)),
                     Outcome::Retry(e) | Outcome::Fail(e) => ("failed", now, Some(e)),
                 };
+                // Only a still pending job: cleanup may have canceled a blob job, or an upload a
+                // blob-delete job, while its remote request ran without the lifecycle lock.
                 conn.execute(
-                    "UPDATE outbox SET status = ?1, attempts = ?2, next_attempt_at = ?3, last_error = ?4, updated_at = ?5 WHERE id = ?6",
+                    "UPDATE outbox SET status = ?1, attempts = ?2, next_attempt_at = ?3, last_error = ?4, updated_at = ?5
+                     WHERE id = ?6 AND status = 'pending'",
                     params![status, attempts, next, error, now, id],
                 )
             })
@@ -433,41 +439,49 @@ pub fn spawn(outbox: Outbox, keys: crate::signer::Shared) -> Option<tokio::task:
     Some(tokio::spawn(async move {
         let http = http_client();
         let mut running = JoinSet::new();
-        let mut busy = HashSet::new();
+        // (target, ref) of running jobs: a blob and a blob-delete job for the same target never
+        // run at once, so a mirror that lands late cannot undo a delete (or the reverse).
+        let mut busy: HashSet<(String, String)> = HashSet::new();
         let mut tick = tokio::time::interval(POLL);
         loop {
             tokio::select! {
-                Some(Ok(id)) = running.join_next() => { busy.remove(&id); }
+                Some(Ok(key)) = running.join_next() => { busy.remove(&key); }
                 _ = tick.tick() => {}
             }
             let free = CONCURRENCY - running.len();
             if free == 0 {
                 continue;
             }
-            let jobs = match outbox.due(free + busy.len()).await {
+            // Each running key can hide at most two due rows (its own and a blob/blob-delete sibling).
+            let jobs = match outbox.due(free + 2 * busy.len()).await {
                 Ok(j) => j,
                 Err(e) => {
                     tracing::warn!("outbox: {e}");
                     continue;
                 }
             };
-            let jobs: Vec<Job> = jobs.into_iter().filter(|j| !busy.contains(&j.id)).take(free).collect();
+            let mut started = 0;
             for job in jobs {
-                busy.insert(job.id);
+                if started == free { break; }
+                let key = (job.target.clone(), job.ref_id.clone());
+                if !busy.insert(key.clone()) { continue; }
+                started += 1;
                 let (outbox, keys, http) = (outbox.clone(), keys.clone(), http.clone());
                 running.spawn(async move {
                     work(&outbox, &keys, &http, &job).await;
-                    job.id
+                    key
                 });
             }
         }
     }))
 }
 
-/// Delivers one job and records the outcome.
+/// Delivers one job and records the outcome. Local media work (the status re-check, cleanup, the
+/// retained check) runs under `MEDIA_LIFECYCLE`; the lock is released before any request to a
+/// mirror target, which may take up to `MIRROR_TIMEOUT`.
 async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Client, job: &Job) {
-    let _media_guard = if job.kind != "event" { Some(MEDIA_LIFECYCLE.lock().await) } else { None };
-    // A selected upload may have been canceled by cleanup while it waited for the lock.
+    let media_guard = if job.kind != "event" { Some(MEDIA_LIFECYCLE.lock().await) } else { None };
+    // A selected job may have been canceled by cleanup (or superseded by an upload) since `due`.
     let id = job.id;
     match outbox.db(move |conn| conn.query_row("SELECT status FROM outbox WHERE id = ?", [id], |r| r.get::<_, String>(0))).await {
         Ok(status) if status == "pending" => {}
@@ -495,15 +509,26 @@ async fn work(outbox: &Outbox, keys: &crate::signer::Shared, http: &reqwest::Cli
             Ok(retained) if retained.contains(&job.ref_id) => Outcome::Done,
             Ok(_) => match mirror_key(keys) {
                 Err(e) => Outcome::Fail(e),
-                Ok(k) => match delete_mirror(http, &k, &job.target, &job.ref_id).await {
-                    Ok(()) => Outcome::Done,
-                    Err(e) => Outcome::Retry(e),
-                },
+                Ok(k) => {
+                    drop(media_guard);
+                    // Accepted race: an event that references the hash again while this request
+                    // runs does not stop it. The local copy is already gone (cleanup removes it
+                    // before a blob-delete is due), so only a re-upload brings the blob back, and
+                    // its mirror job waits for this one (`busy`).
+                    match delete_mirror(http, &k, &job.target, &job.ref_id).await {
+                        Ok(()) => Outcome::Done,
+                        Err(e) => Outcome::Retry(e),
+                    }
+                }
             },
         },
         _ => match mirror_key(keys) {
             Err(e) => Outcome::Fail(e),
             Ok(k) => {
+                drop(media_guard);
+                // Cleanup may remove the local blob while the target fetches it: the target then
+                // fails the fetch (a retry that `record` drops) or keeps a copy that the queued
+                // blob-delete removes after this job (`busy`).
                 let (size, url) = (job.size.unwrap_or_default() as u64, job.source_url.as_deref().unwrap_or_default());
                 match mirror(http, &k, &job.target, &job.ref_id, size, url).await {
                     Ok(()) => Outcome::Done,
@@ -1130,7 +1155,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn inflight_mirror_finishes_before_cleanup_and_cannot_resurrect_a_removed_blob() {
+    async fn inflight_mirror_blocks_no_edit_and_its_late_answer_cannot_resurrect_a_cleaned_blob() {
         let keys = Keys::generate();
         let started = Arc::new(tokio::sync::Notify::new());
         let release = Arc::new(tokio::sync::Notify::new());
@@ -1176,19 +1201,42 @@ mod tests {
             tokio::spawn(async move { work(&outbox, &shared(Some(keys)), &http_client(), &job).await })
         };
         started.notified().await;
-        let mut editing = {
-            let relay = relay.clone();
-            let update = video_event(&keys, 20, "clip", &[]);
-            tokio::spawn(async move { accepted(&relay, update).await })
-        };
-        assert!(tokio::time::timeout(Duration::from_millis(20), &mut editing).await.is_err());
+        // The edit and its cleanup do not wait for the mirror request.
+        let wait = Duration::from_secs(5);
+        tokio::time::timeout(wait, accepted(&relay, video_event(&keys, 20, "clip", &[]))).await.expect("edit waited for the mirror");
+        let cleanup = outbox.due(100).await.unwrap().into_iter().find(|j| j.kind == "cleanup").unwrap();
+        tokio::time::timeout(wait, work(&outbox, &shared(Some(keys.clone())), &http_client(), &cleanup)).await.expect("cleanup waited for the mirror");
+        assert!(!path.exists());
         release.notify_one();
         sending.await.unwrap();
-        editing.await.unwrap();
-        run_due(&outbox, &shared(Some(keys.clone()))).await;
+        let (status, attempts, _, _) = row(&outbox, "blob", &target);
+        assert_eq!((status.as_str(), attempts), ("done", 0), "the late answer leaves the canceled job alone");
         run_due(&outbox, &shared(Some(keys))).await;
-        assert!(!path.exists() && !present.load(Ordering::SeqCst));
+        assert!(!present.load(Ordering::SeqCst));
         assert_eq!(*order.lock(), ["upload", "delete"]);
+    }
+
+    #[tokio::test]
+    async fn a_mirror_target_that_never_answers_does_not_hold_the_media_lifecycle_lock() {
+        // Accepts the connection, reads nothing, answers nothing.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let target = format!("http://{}", listener.local_addr().unwrap());
+        let (outbox, _relay, path) = fixture(Mirror { relays: vec![], blossom: vec![target] });
+        outbox.after_upload(descriptor()).await;
+        let job = outbox.due(1).await.unwrap().remove(0);
+        let sending = {
+            let outbox = outbox.clone();
+            tokio::spawn(async move { work(&outbox, &shared(Some(Keys::generate())), &http_client(), &job).await })
+        };
+        // Once the target has the connection, the mirror request is in flight.
+        let (_held, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept()).await.unwrap().unwrap();
+        // What every upload and relay write takes first.
+        let lock = tokio::time::timeout(Duration::from_secs(1), MEDIA_LIFECYCLE.lock()).await;
+        assert!(lock.is_ok(), "the mirror request holds the media lifecycle lock");
+        drop(lock);
+        assert!(!sending.is_finished());
+        sending.abort();
+        std::fs::remove_file(path).ok();
     }
 
     #[tokio::test]

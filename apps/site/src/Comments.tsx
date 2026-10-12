@@ -23,9 +23,9 @@ import { CommentInput } from '@nostube/widgets/components/CommentInput'
 import { CommentSkeleton } from '@nostube/widgets/components/comments/CommentSkeleton'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { RichTextContent, type RichTextLinks } from '@nostube/widgets/components/RichTextContent'
-import { AuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
 import { useTimelineContext } from '@nostube/widgets/timeline'
 import { formatDate } from '@nostube/widgets'
+import { SiteAuthDialog } from './AuthArea'
 import { useVisitorProfile } from './use-visitor-profile'
 
 const RELAY_HINT = ''
@@ -254,7 +254,8 @@ export function Comments({
           <Button variant="outline" size="sm" onClick={() => setAuthOpen(true)}>
             {t('site.comments.signInToComment')}
           </Button>
-          <AuthDialog
+          <SiteAuthDialog
+            action="comment"
             isOpen={authOpen}
             onClose={() => setAuthOpen(false)}
             onLogin={() => setAuthOpen(false)}

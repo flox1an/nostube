@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Upload, Video } from 'lucide-react'
 import { videoRef } from '@nostube/core/hidden-videos'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { getPublishDate } from '@nostube/core/video-event'
-import { formatDate } from '@nostube/widgets'
+import { formatDate, formatDuration } from '@nostube/widgets'
+import { Badge } from '@nostube/widgets/components/badge'
 import { Button } from '@nostube/widgets/components/button'
+import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { useCreatorVideos } from '@nostube/widgets/hooks/useCreatorVideos'
 import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { isRefHidden, setRefHidden } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { VideoActions } from './VideoActions'
+import { hashFor } from './route'
+
+/** Fewer videos than this fit on a screen; more get a search box. */
+const SEARCH_FROM = 6
 
 interface PickerProps {
   hiddenText: string
@@ -53,6 +60,7 @@ function VideoList({
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
   const [hideBusy, setHideBusy] = useState(false)
   const [hideError, setHideError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
   const setHidden = async (refs: string[], on: boolean) => {
     setHideBusy(true)
     setHideError(null)
@@ -71,8 +79,22 @@ function VideoList({
   if (loading) return <Skeleton className="h-40 w-full" />
   if (error) return <p className="text-sm text-destructive">{t('studio.videos.loadFailed')}</p>
   if (videos.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t('studio.videos.none')}</p>
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border p-8 text-center">
+        <Video className="h-8 w-8 text-muted-foreground" />
+        <p className="font-medium">{t('studio.videos.emptyTitle')}</p>
+        <p className="text-sm text-muted-foreground">{t('studio.videos.emptyHint')}</p>
+        <Button asChild>
+          <a href={hashFor('upload')}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t('studio.nav.pages.upload')}
+          </a>
+        </Button>
+      </div>
+    )
   }
+  const needle = query.trim().toLowerCase()
+  const shown = needle ? videos.filter(v => v.title.toLowerCase().includes(needle)) : videos
 
   return (
     <div className="space-y-3">
@@ -81,18 +103,31 @@ function VideoList({
           {hideError}
         </p>
       )}
-      <ul className="divide-y divide-border rounded-md border border-border">
-        {videos.map(video => (
-          <Row
-            key={videoRef(video)}
-            video={video}
-            instance={instance}
-            hidden={isRefHidden(hiddenText, videoRef(video)) || isRefHidden(hiddenText, video.id)}
-            hideBusy={hideBusy}
-            onHiddenChange={on => void setHidden([videoRef(video), video.id], on)}
-          />
-        ))}
-      </ul>
+      {videos.length >= SEARCH_FROM && (
+        <Input
+          type="search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder={t('studio.videos.search')}
+          aria-label={t('studio.videos.search')}
+        />
+      )}
+      {shown.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('studio.videos.noMatch')}</p>
+      ) : (
+        <ul className="divide-y divide-border rounded-md border border-border">
+          {shown.map(video => (
+            <Row
+              key={videoRef(video)}
+              video={video}
+              instance={instance}
+              hidden={isRefHidden(hiddenText, videoRef(video)) || isRefHidden(hiddenText, video.id)}
+              hideBusy={hideBusy}
+              onHiddenChange={on => void setHidden([videoRef(video), video.id], on)}
+            />
+          ))}
+        </ul>
+      )}
       {hasMore && (
         <Button type="button" variant="outline" size="sm" onClick={loadMore}>
           {t('studio.videos.loadMore')}
@@ -118,7 +153,7 @@ function Row({
   const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   return (
-    <li className="flex flex-wrap items-center gap-3 p-2">
+    <li className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 p-2 sm:grid-cols-[5rem_minmax(0,1fr)_auto]">
       <div
         className={`h-12 w-20 shrink-0 overflow-hidden rounded bg-muted ${hidden ? 'opacity-50' : ''}`}
       >
@@ -128,23 +163,30 @@ function Row({
       </div>
       <div className="min-w-0 flex-1">
         <p
-          className={`truncate text-sm font-medium ${hidden ? 'text-muted-foreground line-through' : ''}`}
+          className={`line-clamp-2 break-words text-sm font-medium ${hidden ? 'text-muted-foreground' : ''}`}
         >
           {video.title}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
+          {video.duration > 0 ? ` · ${formatDuration(video.duration)}` : ''}
           {video.contentWarning ? ` · ${t('studio.videos.contentWarning')}` : ''}
-          {hidden ? ` · ${t('studio.videos.hidden')}` : ''}
-        </p>
+          {hidden && (
+            <Badge variant="secondary" className="ml-1">
+              {t('studio.videos.hidden')}
+            </Badge>
+          )}
+        </div>
       </div>
-      <VideoActions
-        video={video}
-        instance={instance}
-        hidden={hidden}
-        hideBusy={hideBusy}
-        onHiddenChange={onHiddenChange}
-      />
+      <div className="col-span-2 flex justify-end sm:col-span-1">
+        <VideoActions
+          video={video}
+          instance={instance}
+          hidden={hidden}
+          hideBusy={hideBusy}
+          onHiddenChange={onHiddenChange}
+        />
+      </div>
     </li>
   )
 }

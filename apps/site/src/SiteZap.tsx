@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@nostube/widgets/components/dialog'
-import { AuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
 import { formatDuration } from '@nostube/widgets'
+import { SiteAuthDialog } from './AuthArea'
 import {
   checkInvoice,
   checkZapAmount,
@@ -244,7 +244,8 @@ export function SiteZap({
       </Button>
 
       {!account && (
-        <AuthDialog
+        <SiteAuthDialog
+          action="zap"
           isOpen={authOpen}
           onClose={() => setAuthOpen(false)}
           onLogin={() => setAuthOpen(false)}

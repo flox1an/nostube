@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { InstanceConfig } from '@nostube/core/instance-config'
 import { buildShareLinks } from '@nostube/core/share-links'
 import { getPublishDate, type VideoEvent } from '@nostube/core/video-event'
@@ -24,15 +24,17 @@ import { VideoPlayer } from '@nostube/widgets/player'
 import { AgeConfirm } from './AgeConfirm'
 import { Breadcrumb } from './Breadcrumb'
 import { Comments } from './Comments'
+import { VideoLinks } from './GridPage'
 import type { AgeGate } from './use-age-gate'
 import { playerBoxStyle } from './player-box'
 import { siteLinks } from './site-links'
 import { SiteLikes } from './SiteLikes'
 import { SiteZap } from './SiteZap'
+import { useCreatorVideos } from './use-creator-videos'
 import { useEscapeToHome } from './use-escape-to-home'
 import { useSeekEvents } from './use-seek-events'
 import { useVideoById } from './use-video-by-id'
-import { videoPath } from './video-path'
+import { tagPath, videoPath } from './video-path'
 
 /** One video at its own URL (`/v/<naddr>`), so it can be shared and opened directly. */
 export function VideoView({
@@ -97,7 +99,33 @@ export function VideoView({
           authorName={authorName}
         />
       )}
+      {!gate.isLocked(video) && <MoreVideos config={config} gate={gate} current={video} />}
     </div>
+  )
+}
+
+/** The creator's other videos below the current one, so a video page is no dead end. */
+function MoreVideos({
+  config,
+  gate,
+  current,
+}: {
+  config: InstanceConfig
+  gate: AgeGate
+  current: VideoEvent
+}) {
+  const { t } = useTranslation()
+  const { videos } = useCreatorVideos(config)
+  const others = useMemo(
+    () => videos.filter(v => v.id !== current.id).slice(0, 8),
+    [videos, current.id]
+  )
+  if (others.length === 0) return null
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-lg font-semibold">{t('site.video.moreVideos')}</h3>
+      <VideoLinks videos={others} gate={gate} />
+    </section>
   )
 }
 
@@ -187,6 +215,7 @@ function VideoDetails({
             shareLinks={shareLinks}
             includeTimestamp={includeTimestamp}
             setIncludeTimestamp={setIncludeTimestamp}
+            label={t('site.video.share')}
           />
         </div>
       </div>
@@ -195,8 +224,13 @@ function VideoDetails({
       {video.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label={t('site.video.tags')}>
           {video.tags.map(tag => (
-            <li key={tag} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
-              #{tag}
+            <li key={tag}>
+              <Link
+                to={tagPath(tag)}
+                className="block rounded-full bg-secondary px-2.5 py-0.5 text-xs hover:underline"
+              >
+                #{tag}
+              </Link>
             </li>
           ))}
         </ul>

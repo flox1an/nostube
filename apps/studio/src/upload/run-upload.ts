@@ -3,6 +3,7 @@ import { buildVideoEvent, type UploadedBlob } from '@nostube/core/video-publish'
 import { prepareSubtitleFile } from '@nostube/core/subtitle-utils'
 import i18n from '../i18n'
 import type { VideoProbe } from './probe-video'
+import { PublishError } from './sign'
 
 export type StepId = 'check' | 'hash' | 'video' | 'thumbnail' | 'subtitles' | 'publish'
 export type StepStatus = 'pending' | 'running' | 'done' | 'error'
@@ -36,6 +37,8 @@ export interface StepState {
   /** 0 to 1 while the step runs and reports it. */
   progress?: number
   error?: string
+  /** Raw words behind `error` (the relays' answers), shown smaller. */
+  detail?: string
 }
 
 export interface PublishedVideo {
@@ -187,7 +190,11 @@ export async function runUpload(
       set(id, { status: 'done', progress: 1 })
       return true
     } catch (error) {
-      set(id, { status: 'error', error: messageOf(error) })
+      set(id, {
+        status: 'error',
+        error: messageOf(error),
+        detail: error instanceof PublishError ? error.detail : undefined,
+      })
       return false
     }
   }

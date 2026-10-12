@@ -106,13 +106,17 @@ export const fillLinkTemplate = (template: string, nip19: string) =>
   template.split('{nip19}').join(nip19)
 
 /**
- * Public discovery relays for the signed-in visitor's own profile on the site, when the server
- * does not send `profileRelays` (a server from before the field). The server has the same default.
+ * Public discovery relays always used for the signed-in visitor's own profile on the site.
+ * The server also uses these as the default configured lookup relays.
  */
 export const DEFAULT_PROFILE_RELAYS = ['wss://purplepag.es', 'wss://index.hzrd149.com']
 
 /** Where the outbox mirrors an instance set up "into the Nostr network" (server ADR 0009). */
-export const NETWORK_MIRROR_RELAYS = ['wss://relay.nostu.be', 'wss://relay.primal.net', 'wss://nos.lol']
+export const NETWORK_MIRROR_RELAYS = [
+  'wss://relay.nostu.be',
+  'wss://relay.primal.net',
+  'wss://nos.lol',
+]
 
 /** The app's default Blossom upload servers; also the mirror preset of a channel identity. */
 export const DEFAULT_BLOSSOM_SERVERS = [
@@ -131,8 +135,8 @@ export interface InstanceConfig {
   videoSources: string[]
   interactionRelays: string[]
   /**
-   * Where the site looks up the signed-in visitor's profile besides the instance relays.
-   * Optional on the wire (absent: `DEFAULT_PROFILE_RELAYS`); empty: only the instance relays.
+   * Additional lookup relays for the signed-in visitor, besides the mandatory public defaults.
+   * Optional on the wire (absent: `DEFAULT_PROFILE_RELAYS`); empty: no additional relays.
    */
   profileRelays: string[]
   search: InstanceSearch

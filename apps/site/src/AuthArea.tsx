@@ -6,8 +6,22 @@ import type { NostubeClient } from '@nostube/core/client'
 import { useLoginActions } from '@nostube/widgets/hooks/useLoginActions'
 import { UserAvatar } from '@nostube/widgets/components/UserAvatar'
 import { Button } from '@nostube/widgets/components/button'
-import { AuthDialog } from '@nostube/widgets/components/auth/AuthDialog'
+import { AuthDialog, type AuthDialogProps } from '@nostube/widgets/components/auth/AuthDialog'
 import { useVisitorProfile } from './use-visitor-profile'
+
+/**
+ * The sign-in dialog of the site: says what an account is for (or which action asked for one)
+ * and offers signing in with an existing key as prominently as creating one.
+ */
+export function SiteAuthDialog({
+  action,
+  ...props
+}: Omit<AuthDialogProps, 'description' | 'equalChoices'> & {
+  action?: 'like' | 'zap' | 'comment'
+}) {
+  const { t } = useTranslation()
+  return <AuthDialog {...props} equalChoices description={t(`site.auth.why.${action ?? 'any'}`)} />
+}
 
 /** The header's visitor controls: sign in, or the signed-in key with a sign-out button. */
 export function AuthArea({ client, relays }: { client: NostubeClient; relays: string[] }) {
@@ -51,7 +65,7 @@ export function AuthArea({ client, relays }: { client: NostubeClient; relays: st
         <LogIn className="h-4 w-4" />
         {t('site.auth.signIn')}
       </Button>
-      <AuthDialog
+      <SiteAuthDialog
         isOpen={authOpen}
         onClose={() => setAuthOpen(false)}
         onLogin={() => setAuthOpen(false)}

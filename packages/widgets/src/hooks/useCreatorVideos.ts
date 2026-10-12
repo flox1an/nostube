@@ -16,13 +16,22 @@ export interface CreatorVideos {
 /**
  * The start creator's videos, newest first, from the configured video sources: the same timeline
  * hook as nostube, with paging, de-duplication and kind-5 deletions. Nothing is left out here
- * (the site hides what the creator hid). Needs a TimelineProvider.
+ * (the site hides what the creator hid). With `tag`, only the videos with that `t` tag (as written
+ * or lower-cased, since relays match tags exactly). Needs a TimelineProvider.
  */
-export function useCreatorVideos(config: InstanceConfig): CreatorVideos {
+export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorVideos {
   const creator = config.startPage?.creator
   const filters = useMemo<Filter | undefined>(
-    () => (creator ? { kinds: getKindsForType('all'), authors: [creator], limit: 50 } : undefined),
-    [creator]
+    () =>
+      creator
+        ? {
+            kinds: getKindsForType('all'),
+            authors: [creator],
+            ...(tag ? { '#t': [...new Set([tag, tag.toLowerCase()])] } : {}),
+            limit: 50,
+          }
+        : undefined,
+    [creator, tag]
   )
   const { videos, isInitialLoading, phase, hasMore, loadMore } = useTimeline(filters, {
     relays: config.videoSources,

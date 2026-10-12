@@ -45,6 +45,19 @@ describe('VideoGrid', () => {
     expect(onSelect).toHaveBeenCalledWith(video)
   })
 
+  it('renders links that leave modified clicks to the browser', () => {
+    const onSelect = vi.fn()
+    const video = makeVideo({ title: 'Linked' })
+    render(<VideoGrid videos={[video]} onSelect={onSelect} getHref={v => `/v/${v.id}`} />)
+    const card = screen.getByRole('link')
+    expect(card.getAttribute('href')).toBe(`/v/${video.id}`)
+    expect(fireEvent.click(card, { ctrlKey: true })).toBe(true)
+    expect(fireEvent.click(card, { metaKey: true })).toBe(true)
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(fireEvent.click(card)).toBe(false)
+    expect(onSelect).toHaveBeenCalledWith(video)
+  })
+
   it('shows the empty message when there are no videos', () => {
     render(<VideoGrid videos={[]} emptyMessage="Nothing here" />)
     expect(screen.getByText('Nothing here')).toBeTruthy()

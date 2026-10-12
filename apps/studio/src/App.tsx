@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@nostube/widgets/components/alert'
 import { Button } from '@nostube/widgets/components/button'
+import { InterfaceLanguageSelect } from '@nostube/widgets/components/InterfaceLanguageSelect'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { AccountPage } from './AccountPage'
 import { AppearancePage } from './AppearancePage'
@@ -10,6 +11,7 @@ import { Onboarding } from './OnboardingWizard'
 import { needsOnboarding } from './onboarding-config'
 import { InstancePage } from './InstancePage'
 import { Nav } from './Nav'
+import { NextSteps } from './NextSteps'
 import { OverviewPage } from './OverviewPage'
 import { PagesPage } from './PagesPage'
 import { VideosPage } from './VideosPage'
@@ -24,7 +26,7 @@ import {
   type AdminConfig,
   type AdminState,
 } from './api'
-import { fromDraft, toDraft, type Draft } from './draft'
+import { fromDraft, needsRestart, toDraft, type Draft } from './draft'
 import { PAGES, useRoute } from './route'
 import { SignerProvider } from './signer-context'
 
@@ -103,8 +105,8 @@ export function App() {
 }
 
 /**
- * The frame of every studio screen: the title, a way over to the public site and, once logged in,
- * a way out.
+ * The frame of every studio screen: the title, the studio language (this browser only), a way
+ * over to the public site and, once logged in, a way out.
  */
 export function Shell({
   children,
@@ -122,6 +124,7 @@ export function Shell({
           {t('studio.shell.title')}
         </h1>
         <div className="flex flex-wrap items-center gap-3">
+          <InterfaceLanguageSelect />
           <a
             href="/"
             target="_blank"
@@ -157,6 +160,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
   const result = fromDraft(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
   const editsConfig = PAGES.find(p => p.id === page)!.editsConfig
+  const restart = result.config !== null && needsRestart(config, result.config)
 
   const update = (patch: Partial<Draft>) => setDraft(d => ({ ...d, ...patch }))
 
@@ -213,7 +217,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       )}
-
+      {page === 'videos' && <NextSteps config={config} branding={branding} />}
       {page === 'videos' && (
         <VideosPage hiddenText={draft.hiddenText} onHiddenChange={saveHidden} />
       )}
@@ -240,7 +244,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
         </Suspense>
       )}
 
-      {editsConfig && (
+      {editsConfig && (dirty || saving !== null) && (
         <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
           {result.errors.length > 0 && (
             <ul className="list-disc pl-5 text-sm text-destructive">
@@ -250,6 +254,7 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
             </ul>
           )}
           <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm font-medium">{t('studio.app.unsaved')}</p>
             <Button
               type="button"
               onClick={save}
@@ -269,7 +274,11 @@ function Studio({ state, reload }: { state: AdminState; reload: () => Promise<vo
             >
               {t('studio.app.discard')}
             </Button>
-            <p className="text-xs text-muted-foreground">{t('studio.app.saveHint')}</p>
+            {restart && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {t('studio.app.restartWarning')}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -1,9 +1,11 @@
+import { DEFAULT_PROFILE_RELAYS } from '@nostube/core/instance-config'
+
 /**
  * The standard privacy policy: what the Nostube site and server do with a visitor's data, in the
  * languages of the site. It describes this software only (no cookies, no tracking, what a sign-in,
  * a like, a comment or a zap sends where) and names the operator through the imprint. Every
  * sentence is a fact of the code (apps/site, packages/widgets, apps/server), so a change there
- * means a change here. The one instance setting it depends on is the list of profile lookup relays.
+ * means a change here. It names the mandatory public defaults and additional profile lookup relays.
  */
 
 /** Heading first, then the paragraphs of one section. */
@@ -11,9 +13,7 @@ type Section = [heading: string, ...paragraphs: string[]]
 
 interface Policy {
   sections: Section[]
-  /** After a sign-in, when the profile is looked up on this server's relay only. */
-  profileLocal: string
-  /** The same, with public lookup relays (`{relays}`). */
+  /** After a sign-in, with mandatory and additional public lookup relays (`{relays}`). */
   profileOpen: string
 }
 
@@ -64,7 +64,6 @@ const en: Policy = {
       'Depending on the law that applies to you, you may ask the operator for information about data stored about you, for correction or deletion, and you may object to processing or complain to a data protection authority. About visitors, the server itself stores only what they publish themselves, so deleting your own comments yourself (see above) is the quickest way. You reach the operator through the imprint.',
     ],
   ],
-  profileLocal: "For this it asks only this server's relay; no public relay is asked.",
   profileOpen:
     "For this it asks this server's relay, the public relays {relays} and the relays you list in your own profile. Those relays see your IP address and your public key.",
 }
@@ -116,8 +115,6 @@ const de: Policy = {
       'Je nach dem für Sie geltenden Recht können Sie vom Betreiber Auskunft über gespeicherte Daten, Berichtigung oder Löschung verlangen, der Verarbeitung widersprechen oder sich bei einer Datenschutzbehörde beschweren. Der Server selbst speichert über Besucher nur, was diese selbst veröffentlichen; am schnellsten löschen Sie daher Ihre eigenen Kommentare selbst (siehe oben). Den Betreiber erreichen Sie über das Impressum.',
     ],
   ],
-  profileLocal:
-    'Dafür wird nur das Relay dieses Servers gefragt; kein öffentliches Relay wird angefragt.',
   profileOpen:
     'Dafür fragt sie das Relay dieses Servers, die öffentlichen Relays {relays} und die Relays, die Sie in Ihrem eigenen Profil angeben. Diese Relays sehen Ihre IP-Adresse und Ihren öffentlichen Schlüssel.',
 }
@@ -169,8 +166,6 @@ const fr: Policy = {
       "Selon le droit qui vous est applicable, vous pouvez demander à l'exploitant des informations sur les données conservées à votre sujet, leur rectification ou leur suppression, vous opposer à un traitement ou saisir une autorité de protection des données. Sur les visiteurs, le serveur lui-même ne conserve que ce qu'ils publient eux-mêmes ; le plus rapide est donc de supprimer vous-même vos commentaires (voir plus haut). Vous joignez l'exploitant via les mentions légales.",
     ],
   ],
-  profileLocal:
-    "Pour cela, il n'interroge que le relais de ce serveur ; aucun relais public n'est interrogé.",
   profileOpen:
     'Pour cela, il interroge le relais de ce serveur, les relais publics {relays} et les relais que vous indiquez dans votre propre profil. Ces relais voient votre adresse IP et votre clé publique.',
 }
@@ -222,8 +217,6 @@ const es: Policy = {
       'Según la ley que le sea aplicable, puede pedir al operador información sobre los datos guardados sobre usted, su rectificación o supresión, oponerse al tratamiento o reclamar ante una autoridad de protección de datos. Sobre los visitantes, el propio servidor solo guarda lo que ellos mismos publican, así que lo más rápido es borrar usted mismo sus comentarios (véase arriba). Puede contactar con el operador a través del aviso legal.',
     ],
   ],
-  profileLocal:
-    'Para ello solo consulta el relé de este servidor; no se consulta ningún relé público.',
   profileOpen:
     'Para ello consulta el relé de este servidor, los relés públicos {relays} y los relés que usted indique en su propio perfil. Esos relés ven su dirección IP y su clave pública.',
 }
@@ -275,8 +268,6 @@ const ru: Policy = {
       'В зависимости от применимого к вам права вы можете запросить у оператора сведения о хранимых о вас данных, их исправление или удаление, возразить против обработки или подать жалобу в орган по защите данных. О посетителях сам сервер хранит только то, что они публикуют сами, поэтому быстрее всего самому удалить свои комментарии (см. выше). С оператором можно связаться через выходные данные.',
     ],
   ],
-  profileLocal:
-    'Для этого запрашивается только релей этого сервера; публичные релеи не запрашиваются.',
   profileOpen:
     'Для этого запрашиваются релей этого сервера, публичные релеи {relays} и релеи, которые вы указали в собственном профиле. Эти релеи видят ваш IP-адрес и ваш публичный ключ.',
 }
@@ -328,7 +319,6 @@ const zh: Policy = {
       '根据适用于您的法律，您可以要求运营者提供关于您的已存数据的信息，要求更正或删除，反对处理，或向数据保护机构投诉。服务器本身只保存访客自己发布的内容，因此最快的方式是自己删除您的评论（见上文）。您可以通过法律声明联系运营者。',
     ],
   ],
-  profileLocal: '为此只查询本服务器的中继，不会查询任何公共中继。',
   profileOpen:
     '为此会查询本服务器的中继、公共中继 {relays}，以及您在自己的个人资料中列出的中继。这些中继会看到您的 IP 地址和公钥。',
 }
@@ -380,8 +370,6 @@ const ja: Policy = {
       'お客様に適用される法律に応じて、運営者に対し、保存されているお客様のデータの開示、訂正または削除を求めたり、処理に異議を唱えたり、データ保護当局に苦情を申し立てたりできる場合があります。サーバー自体が訪問者について保存するのは訪問者自身が公開したものだけなので、ご自身のコメントを自分で削除する（上記参照）のが最も早い方法です。運営者へは運営者情報からご連絡ください。',
     ],
   ],
-  profileLocal:
-    'そのために問い合わせるのはこのサーバーのリレーだけで、公開リレーには問い合わせません。',
   profileOpen:
     'そのために、このサーバーのリレー、公開リレー {relays}、およびお客様ご自身のプロフィールに記載したリレーに問い合わせます。これらのリレーには、お客様の IP アドレスと公開鍵が見えます。',
 }
@@ -392,15 +380,16 @@ const POLICIES: Record<string, Policy> = { en, de, fr, es, ru, zh, ja }
 export const DEFAULT_PAGE_LANGUAGES = Object.keys(POLICIES)
 
 /**
- * The standard privacy policy in one language. `profileRelays` are the public relays the site asks
- * for a signed-in visitor's profile (the studio's "Visitor profiles" setting); none means local only.
+ * The standard privacy policy in one language. `profileRelays` are additional public relays for
+ * a signed-in visitor's profile; mandatory public defaults are always included.
  */
 export function privacyPolicy(language: string, profileRelays: string[]): string | undefined {
   const policy = POLICIES[language]
   if (!policy) return undefined
-  const profile = profileRelays.length
-    ? policy.profileOpen.replace('{relays}', profileRelays.join(', '))
-    : policy.profileLocal
+  const profile = policy.profileOpen.replace(
+    '{relays}',
+    [...new Set([...DEFAULT_PROFILE_RELAYS, ...profileRelays])].join(', ')
+  )
   return policy.sections
     .map(([heading, ...paragraphs]) =>
       [heading, ...paragraphs].join('\n').replace('{profile}', profile)

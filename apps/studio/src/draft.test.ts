@@ -10,10 +10,13 @@ import {
   LINK_PRESETS,
   fromDraft,
   isKeyConnected,
+  isLightningAddress,
+  needsRestart,
   isRefHidden,
   linkPresetOf,
   setRefHidden,
   toDraft,
+  type Draft,
 } from './draft'
 
 const PK = 'a'.repeat(64)
@@ -33,6 +36,7 @@ const config: AdminConfig = {
     videos: { hidden: [] },
     links: DEFAULT_SITE_LINKS,
     pages: { about: { en: 'About', de: 'Über uns' }, imprint: {}, privacy: {} },
+    lightning: 'flox@getalby.com',
   },
 }
 
@@ -54,9 +58,10 @@ describe('draft', () => {
     expect(result.config?.site.videos.hidden).toEqual([`34235:${PK}:intro`])
   })
 
-  it('saves an emptied profile relay list as local only, not as the defaults', () => {
+  it('saves an emptied additional profile relay list as empty, not as the defaults', () => {
     const result = fromDraft({ ...toDraft(config), profileRelaysText: '  \n' })
     expect(result.config?.profileRelays).toEqual([])
+    expect(fromDraft(toDraft(result.config!)).config).toEqual(result.config)
   })
 
   it('keeps the mirror targets and lets both lists be emptied (off)', () => {
@@ -94,6 +99,7 @@ describe('draft', () => {
     ['link over http', { links: { ...DEFAULT_SITE_LINKS, profile: 'http://example.org/{nip19}' } }],
     ['quota', { quota: '-1' }],
     ['external search', { searchMode: 'external' as const, searchUrl: 'http://x' }],
+    ['lightning address', { lightning: 'flox at getalby' }],
     [
       'page text over the limit',
       {
@@ -123,6 +129,29 @@ describe('draft', () => {
       imprint: {},
       privacy: { ja: 'x' },
     })
+  })
+
+  it('checks a Lightning address like the server and saves it trimmed', () => {
+    expect(['', 'a@b.co'].every(isLightningAddress)).toBe(true)
+    for (const bad of ['flox', 'a@localhost', 'a b@c.d', 'a@b@c.d', `a@${'b'.repeat(250)}.co`]) {
+      expect(isLightningAddress(bad)).toBe(false)
+    }
+    expect(fromDraft({ ...toDraft(config), lightning: ' x@y.z ' }).config?.site.lightning).toBe(
+      'x@y.z'
+    )
+  })
+
+  it('needs a restart only for writers, storage and mirror changes', () => {
+    const edit = (patch: Partial<Draft>) => fromDraft({ ...toDraft(config), ...patch }).config!
+    expect(needsRestart(config, edit({ title: 'New', lightning: '', creatorsText: '' }))).toBe(
+      false
+    )
+    expect(needsRestart(config, edit({ videoSourcesText: 'wss://other.example' }))).toBe(false)
+    expect(needsRestart(config, edit({ writersText: '' }))).toBe(true)
+    expect(needsRestart(config, edit({ quota: '10' }))).toBe(true)
+    expect(needsRestart(config, edit({ reserve: '1' }))).toBe(true)
+    expect(needsRestart(config, edit({ mirrorRelaysText: 'wss://mirror.example' }))).toBe(true)
+    expect(needsRestart(config, edit({ mirrorBlossomText: 'https://b.example' }))).toBe(true)
   })
 })
 

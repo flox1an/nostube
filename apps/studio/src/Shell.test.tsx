@@ -15,6 +15,8 @@ describe('Shell', () => {
     expect(link.getAttribute('rel')).toContain('noopener')
     expect(screen.getByRole('heading', { name: 'Nostube Studio' })).toBeTruthy()
     expect(screen.getByText('content')).toBeTruthy()
+    // The studio language (this browser only) sits next to the site link.
+    expect(screen.getByRole('combobox', { name: 'Language' })).toBeTruthy()
   })
 
   it('offers a log out only once logged in, and calls it', () => {

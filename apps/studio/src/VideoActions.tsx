@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Eye, EyeOff, FileVideo, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { ExternalLink, Eye, EyeOff, FileVideo, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { buildVideoDeletion } from '@nostube/core/video-lifecycle'
@@ -29,8 +29,9 @@ import { VideoEditor } from './VideoEditor'
 import { publishVideoChange } from './upload/publish-video-change'
 
 /**
- * A video row's actions: an Edit button and a menu (replace, hide/show on the site, delete). Edit,
- * replace and delete are offered to the video's author only; hiding is a site setting.
+ * A video row's actions: View on site, an Edit button and a menu (replace, hide/show on the site,
+ * delete). Edit, replace and delete are offered to the video's author only; hiding is a site
+ * setting.
  */
 export function VideoActions({
   video,
@@ -115,6 +116,21 @@ export function VideoActions({
   return (
     <>
       <div className="flex shrink-0 items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="ghost" size="icon">
+              <a
+                href={`/v/${video.link}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('studio.videos.viewOnSite')}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('studio.videos.viewOnSite')}</TooltipContent>
+        </Tooltip>
         {canEdit && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -183,7 +199,7 @@ export function VideoActions({
         <DialogContent
           hideCloseButton
           aria-describedby={undefined}
-          className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+          className="max-h-[90vh] overflow-y-auto pb-0 sm:max-w-2xl"
           onEscapeKeyDown={e => e.preventDefault()}
           onInteractOutside={e => e.preventDefault()}
         >

@@ -11,7 +11,13 @@
     },
     "auth": {
       "signIn": "Sign in",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "why": {
+        "any": "Sign in to like, comment and send zaps. Watching needs no account.",
+        "like": "Sign in to like this video. Watching needs no account.",
+        "zap": "Sign in to send the creator a zap. Watching needs no account.",
+        "comment": "Sign in to comment on this video. Watching needs no account."
+      }
     },
     "breadcrumb": {
       "label": "Breadcrumb"
@@ -33,13 +39,19 @@
       "retry": "Try again",
       "loadMore": "Load more"
     },
+    "tag": {
+      "title": "Videos tagged #{{tag}}",
+      "back": "All videos"
+    },
     "video": {
       "invalidLink": "This video link is not valid.",
       "notFound": "Video not found.",
       "loading": "Loading video",
       "tags": "Tags",
       "more": "More",
-      "less": "Less"
+      "less": "Less",
+      "share": "Share",
+      "moreVideos": "More videos"
     },
     "comments": {
       "title": "Comments",

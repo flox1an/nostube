@@ -14,6 +14,10 @@ export interface AuthDialogProps {
   onComplete?: () => void
   /** Relays for the NIP-46 nostrconnect handshake (the web defaults / instance interaction relays). */
   relays: string[]
+  /** Replaces the subtitle, e.g. with why signing in is needed right now. */
+  description?: string
+  /** Give "Sign in" the same weight as "Create account" (visitors who may already have a key). */
+  equalChoices?: boolean
 }
 
 type Step = 'choice' | 'login' | 'signup'
@@ -24,7 +28,15 @@ type Step = 'choice' | 'login' | 'signup'
  * Delegates to the existing LoginDialog/SignupDialog for the actual flows —
  * this only adds the choice screen in front of them.
  */
-export function AuthDialog({ isOpen, onClose, onLogin, onComplete, relays }: AuthDialogProps) {
+export function AuthDialog({
+  isOpen,
+  onClose,
+  onLogin,
+  onComplete,
+  relays,
+  description,
+  equalChoices = false,
+}: AuthDialogProps) {
   const { t } = useTranslation()
   const [step, setStep] = useState<Step>('choice')
 
@@ -57,12 +69,14 @@ export function AuthDialog({ isOpen, onClose, onLogin, onComplete, relays }: Aut
             {t('auth.entry.title', { defaultValue: 'Welcome to nostube' })}
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground mt-2">
-            {t('auth.entry.subtitle', { defaultValue: 'Choose how you want to continue' })}
+            {description ??
+              t('auth.entry.subtitle', { defaultValue: 'Choose how you want to continue' })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="px-6 py-8 space-y-3">
           <Button
+            variant={equalChoices ? 'outline' : 'default'}
             className="w-full rounded-full py-6"
             onClick={() => setStep('signup')}
             data-testid="auth-entry-create-account"
@@ -71,7 +85,7 @@ export function AuthDialog({ isOpen, onClose, onLogin, onComplete, relays }: Aut
             {t('auth.entry.createAccount', { defaultValue: 'Create account' })}
           </Button>
           <Button
-            variant="secondary"
+            variant={equalChoices ? 'outline' : 'secondary'}
             className="w-full rounded-full py-6"
             onClick={() => setStep('login')}
             data-testid="auth-entry-sign-in"

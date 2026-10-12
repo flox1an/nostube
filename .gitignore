@@ -3,6 +3,9 @@ target/
 dist/
 .DS_Store
 *.log
+# local German working docs — repo keeps English docs only
+docs/competitor-analysis/
+
 # media never belongs in the repo
 *.mp4
 *.m4v
@@ -13,3 +16,9 @@ dist/
 *.mp3
 *.wav
 *.flac
+
+# local video fixtures, subtitles and download metadata
+/test-media/
+
+# local server instance state, including secrets and TLS keys
+/apps/server/tmp3/

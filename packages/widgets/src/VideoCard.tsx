@@ -11,19 +11,22 @@ export interface VideoCardProps {
   /** Show a placeholder instead of the thumbnail (content the viewer has not unlocked yet). */
   locked?: boolean
   lockedLabel?: string
+  /**
+   * The card's URL. With it the card is a link (new tab, copy link, crawlers); a plain left click
+   * still goes to `onSelect` so the app keeps its routing and age gate.
+   */
+  href?: string
 }
 
 /** Thumbnail, title, duration and date of one video. Styling is Tailwind utilities only. */
-export function VideoCard({ video, onSelect, locked = false, lockedLabel }: VideoCardProps) {
+export function VideoCard({ video, onSelect, locked = false, lockedLabel, href }: VideoCardProps) {
   const { t, i18n } = useTranslation()
   const thumbnail = video.thumbnailVariants[0]?.url ?? video.images[0]
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect?.(video)}
-      className="group flex w-full flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-    >
+  const className =
+    'group flex w-full flex-col gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500'
+  const body = (
+    <>
       <span className="relative block aspect-video overflow-hidden bg-neutral-200 sm:rounded-lg dark:bg-neutral-800">
         {locked && (
           <span className="absolute inset-0 flex items-center justify-center text-sm font-medium text-neutral-400">
@@ -49,6 +52,29 @@ export function VideoCard({ video, onSelect, locked = false, lockedLabel }: Vide
       <span className="px-4 text-xs text-neutral-500 sm:px-0">
         {formatDate(getPublishDate(video), i18n.resolvedLanguage)}
       </span>
+    </>
+  )
+  if (href) {
+    return (
+      <a
+        href={href}
+        className={className}
+        onClick={event => {
+          const plain =
+            event.button === 0 &&
+            !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          if (!onSelect || !plain) return
+          event.preventDefault()
+          onSelect(video)
+        }}
+      >
+        {body}
+      </a>
+    )
+  }
+  return (
+    <button type="button" onClick={() => onSelect?.(video)} className={className}>
+      {body}
     </button>
   )
 }

@@ -11,7 +11,13 @@
     },
     "auth": {
       "signIn": "登录",
-      "signOut": "退出登录"
+      "signOut": "退出登录",
+      "why": {
+        "any": "登录后即可点赞、评论和打赏。观看视频无需账号。",
+        "like": "登录后即可为此视频点赞。观看视频无需账号。",
+        "zap": "登录后即可打赏创作者。观看视频无需账号。",
+        "comment": "登录后即可评论此视频。观看视频无需账号。"
+      }
     },
     "breadcrumb": {
       "label": "面包屑导航"
@@ -33,13 +39,19 @@
       "retry": "重试",
       "loadMore": "加载更多"
     },
+    "tag": {
+      "title": "带有 #{{tag}} 标签的视频",
+      "back": "全部视频"
+    },
     "video": {
       "invalidLink": "此视频链接无效。",
       "notFound": "未找到视频。",
       "loading": "正在加载视频",
       "tags": "标签",
       "more": "展开",
-      "less": "收起"
+      "less": "收起",
+      "share": "分享",
+      "moreVideos": "更多视频"
     },
     "comments": {
       "title": "评论",

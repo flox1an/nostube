@@ -23,9 +23,20 @@ export async function signChecked(
   return signed
 }
 
+/** A publication no relay took: `message` says what to do, `detail` keeps the relays' own words. */
+export class PublishError extends Error {
+  constructor(
+    message: string,
+    readonly detail: string
+  ) {
+    super(message)
+  }
+}
+
 /**
  * Publishes a signed event and returns the relays that took it. "Sent" is not enough: when no
- * relay says yes (not a writer, blocked), this throws `failure` with the relays' own reasons.
+ * relay says yes, this throws `failure` with the relays' refusals (not a writer, blocked), or
+ * advice when none was reached.
  */
 export async function publishChecked(
   client: NostubeClient,
@@ -36,10 +47,24 @@ export async function publishChecked(
   const responses = await client.relayPool.publish(relays, signed)
   const accepted = responses.filter(r => r.ok).map(r => r.from)
   if (accepted.length === 0) {
-    const why = responses
-      .map(r => `${r.from}: ${r.message || i18n.t('studio.errors.relayRejected')}`)
-      .join('; ')
-    throw new Error(i18n.t(failure, { reasons: why || i18n.t('studio.errors.noRelayAnswered') }))
+    const answers = responses.map(r => ({
+      from: r.from,
+      message: r.message || i18n.t('studio.errors.relayRejected'),
+      // NIP-01: a relay that refuses says why behind a machine-readable prefix (`blocked: …`);
+      // anything else (`Unknown error`, `Timeout`) means the relay was not reached at all.
+      refused: !r.message || /^[a-z-]+:/.test(r.message),
+    }))
+    const refusals = answers.filter(a => a.refused)
+    const reasons =
+      refusals.length > 0
+        ? refusals.map(a => a.message).join('; ')
+        : i18n.t(
+            answers.length > 0 ? 'studio.errors.relayUnreachable' : 'studio.errors.noRelayAnswered'
+          )
+    throw new PublishError(
+      i18n.t(failure, { reasons }),
+      answers.map(a => `${a.from}: ${a.message}`).join('; ')
+    )
   }
   return accepted
 }

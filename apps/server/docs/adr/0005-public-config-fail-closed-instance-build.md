@@ -51,17 +51,20 @@ This changes the earlier rule that the theme stays with the viewer: the creator 
 **Video catalog queries** use only `videoSources` and only `creators`. Relay hints, preset relays, outbox relays and the user's NIP-65 never widen them. The author page of a non-creator still opens (no route restriction), but it sends no video request. Video-by-id lookups are also restricted to `creators`.
 
 **Signed-in visitor identity (Site).** The visitor's own profile is an explicit exception to
-interaction-relay isolation: `apps/site` discovers that key's NIP-65 list (kind 10002) through
-the instance relays plus `purplepag.es` and `index.hzrd149.com`, then loads its profile
-(kind 0) from the listed write relays and those discovery relays. Read-only NIP-65 relays
-are not used for the visitor's published profile. This never widens video catalog, creator
-metadata, comment/reaction publishing or zap-receipt routes, and adds no public relay for guests.
+interaction-relay isolation: `apps/site` always discovers that key's NIP-65 list (kind 10002)
+and profile (kind 0) through the instance relays, mandatory public defaults
+(`wss://purplepag.es`, `wss://index.hzrd149.com`) and configured additional `profileRelays`,
+then follows the visitor's listed write relays. Read-only NIP-65 relays are not used for the
+visitor's published profile. `profileRelays: []` means no additional relays, not a public
+opt-out; there is no “Local only” visitor setting (ADR 0008's updated decision).
+This never widens video catalog, creator metadata, embed, comment/reaction publishing or
+zap-receipt routes, and adds no public identity queries for guests.
 The exception uses `NostubeClient.requestVisitorIdentity` on the same relay pool, bypassing
 only the group allowlist for two fixed kinds (0 and 10002) and one exact public key.
 Responses for other authors or kinds are discarded before verified store ingestion.
-Ordinary pool queries and publishing retain their original restrictions.
-The two discovery relays are the default of the optional `profileRelays` field since ADR 0008;
-an empty list keeps the lookup on the instance relays.
+Ordinary pool queries and publishing retain their original restrictions. Public discovery
+and write relays learn the visitor's IP address and queried key; an avatar can also contact
+its published URL's host. A signed-in site therefore cannot promise zero external traffic.
 
 **Config changes.** The app checks `/api/config` again on tab focus and relay reconnect. When `revision` differs it reloads the page, which ends running queries and rebuilds every loader from the new scope.
 

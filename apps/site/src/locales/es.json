@@ -11,7 +11,13 @@
     },
     "auth": {
       "signIn": "Iniciar sesión",
-      "signOut": "Cerrar sesión"
+      "signOut": "Cerrar sesión",
+      "why": {
+        "any": "Inicia sesión para dar me gusta, comentar y enviar zaps. Para ver los vídeos no necesitas una cuenta.",
+        "like": "Inicia sesión para dar me gusta a este vídeo. Para ver los vídeos no necesitas una cuenta.",
+        "zap": "Inicia sesión para enviar un zap al creador. Para ver los vídeos no necesitas una cuenta.",
+        "comment": "Inicia sesión para comentar este vídeo. Para ver los vídeos no necesitas una cuenta."
+      }
     },
     "breadcrumb": {
       "label": "Ruta de navegación"
@@ -33,13 +39,19 @@
       "retry": "Reintentar",
       "loadMore": "Cargar más"
     },
+    "tag": {
+      "title": "Vídeos con #{{tag}}",
+      "back": "Todos los vídeos"
+    },
     "video": {
       "invalidLink": "Este enlace de vídeo no es válido.",
       "notFound": "Vídeo no encontrado.",
       "loading": "Cargando vídeo",
       "tags": "Etiquetas",
       "more": "Más",
-      "less": "Menos"
+      "less": "Menos",
+      "share": "Compartir",
+      "moreVideos": "Más vídeos"
     },
     "comments": {
       "title": "Comentarios",

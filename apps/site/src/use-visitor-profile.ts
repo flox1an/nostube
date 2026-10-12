@@ -8,9 +8,9 @@ import { DEFAULT_PROFILE_RELAYS, getInstanceConfig } from '@nostube/core/instanc
 import { useNostubeHost } from '@nostube/widgets/host'
 
 /**
- * Where the signed-in visitor's identity is looked up: the instance relays plus the instance's
- * `profileRelays` (public discovery by default) and the visitor's own outboxes. An empty
- * `profileRelays` keeps it on the instance relays (local only, nostube-server ADR 0008).
+ * The signed-in visitor always uses public profile discovery, plus the instance's
+ * configured relays and the visitor's NIP-65 outboxes. An empty config list only
+ * removes custom lookup relays; it cannot disable discovery of the visitor's identity.
  * Only the visitor's identity goes there, never the video catalog.
  */
 export function visitorProfileRelays(
@@ -18,9 +18,7 @@ export function visitorProfileRelays(
   profileRelays: string[],
   outboxes: string[]
 ): string[] {
-  return profileRelays.length
-    ? mergeRelaySets(outboxes, instanceRelays, profileRelays)
-    : mergeRelaySets(instanceRelays)
+  return mergeRelaySets(outboxes, instanceRelays, profileRelays, DEFAULT_PROFILE_RELAYS)
 }
 
 export function useVisitorProfile(client: NostubeClient, pubkey?: string) {

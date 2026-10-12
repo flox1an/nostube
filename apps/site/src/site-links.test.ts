@@ -24,8 +24,9 @@ describe('siteLinks', () => {
     })
   })
 
-  it('has no page for tags and seeks with a query for timestamps', () => {
-    expect(links.hashtag('travel')).toBeNull()
+  it('opens tags on the site and seeks with a query for timestamps', () => {
+    expect(links.hashtag('travel')).toEqual({ to: '/t/travel' })
+    expect(links.hashtag('c#')).toEqual({ to: '/t/c%23' })
     expect(links.timestamp('naddr1xyz', 83.9)).toEqual({ to: '/v/naddr1xyz?t=83' })
   })
 

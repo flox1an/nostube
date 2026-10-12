@@ -12,7 +12,8 @@ use crate::{branding::Branding, relay::Relay};
 static SYNC: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// The profile from the public config: `name` is the title, `about` the tagline, `picture` and
-/// `banner` the branding images as absolute URLs. An empty or missing value leaves the field out.
+/// `banner` the branding images as absolute URLs, `lud16` the lightning address. An empty or
+/// missing value leaves the field out.
 fn derive(public: &Value) -> Value {
     let origin = public["origin"].as_str().unwrap_or_default();
     let site = &public["site"];
@@ -22,6 +23,7 @@ fn derive(public: &Value) -> Value {
         ("about", site["tagline"].as_str().map(str::to_owned)),
         ("picture", image("logo")),
         ("banner", image("banner")),
+        ("lud16", site["lightning"].as_str().map(str::to_owned)),
     ]
     .into_iter()
     .filter_map(|(field, value)| Some((field.to_owned(), Value::from(value.filter(|v| !v.is_empty())?))))
@@ -122,13 +124,17 @@ mod tests {
         p["site"]["logo"] = "/branding/logo?v=1".into();
         p["site"]["banner"] = "/branding/banner?v=2".into();
         p["site"]["favicon"] = "/branding/favicon?v=3".into();
+        p["site"]["lightning"] = "channel@wallet.example".into();
         assert_eq!(derive(&p), serde_json::json!({
             "name": "Channel",
             "about": "Videos",
             "picture": "https://tube.example/branding/logo?v=1",
             "banner": "https://tube.example/branding/banner?v=2",
+            "lud16": "channel@wallet.example",
         }));
-        assert_eq!(derive(&public("Channel", "")), serde_json::json!({ "name": "Channel" }));
+        let mut empty = public("Channel", "");
+        empty["site"]["lightning"] = "".into();
+        assert_eq!(derive(&empty), serde_json::json!({ "name": "Channel" }));
     }
 
     #[tokio::test]

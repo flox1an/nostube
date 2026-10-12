@@ -11,7 +11,13 @@
     },
     "auth": {
       "signIn": "Se connecter",
-      "signOut": "Se déconnecter"
+      "signOut": "Se déconnecter",
+      "why": {
+        "any": "Connectez-vous pour aimer, commenter et envoyer des zaps. Aucun compte n’est nécessaire pour regarder.",
+        "like": "Connectez-vous pour aimer cette vidéo. Aucun compte n’est nécessaire pour regarder.",
+        "zap": "Connectez-vous pour envoyer un zap au créateur. Aucun compte n’est nécessaire pour regarder.",
+        "comment": "Connectez-vous pour commenter cette vidéo. Aucun compte n’est nécessaire pour regarder."
+      }
     },
     "breadcrumb": {
       "label": "Fil d’Ariane"
@@ -33,13 +39,19 @@
       "retry": "Réessayer",
       "loadMore": "Charger plus"
     },
+    "tag": {
+      "title": "Vidéos avec #{{tag}}",
+      "back": "Toutes les vidéos"
+    },
     "video": {
       "invalidLink": "Ce lien vidéo n’est pas valide.",
       "notFound": "Vidéo introuvable.",
       "loading": "Chargement de la vidéo",
       "tags": "Mots-clés",
       "more": "Plus",
-      "less": "Moins"
+      "less": "Moins",
+      "share": "Partager",
+      "moreVideos": "Plus de vidéos"
     },
     "comments": {
       "title": "Commentaires",

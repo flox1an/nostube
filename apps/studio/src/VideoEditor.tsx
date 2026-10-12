@@ -18,6 +18,7 @@ import { makeUploadDeps } from './upload/make-deps'
 import { probeVideo, type VideoProbe } from './upload/probe-video'
 import type { PublishedVideo } from './upload/run-upload'
 import { runVideoEdit, type EditSubtitle, type VideoEditCache } from './upload/run-video-edit'
+import { PublishError } from './upload/sign'
 
 export function VideoEditor({
   event,
@@ -64,6 +65,7 @@ export function VideoEditor({
   const due = fromLocalInput(dueText)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetail, setErrorDetail] = useState<string>()
   const [progress, setProgress] = useState(0)
   const [preview, setPreview] = useState<string>()
   const cache = useRef<VideoEditCache>(new Map())
@@ -97,6 +99,7 @@ export function VideoEditor({
     setProbe(null)
     setReading(true)
     setError(null)
+    setErrorDetail(undefined)
     try {
       const result = await probeVideo(chosen)
       if (version !== selection.current) return
@@ -113,6 +116,7 @@ export function VideoEditor({
     busy.current = true
     setRunning(true)
     setError(null)
+    setErrorDetail(undefined)
     try {
       const deps = makeUploadDeps({ signer, pubkey, title })
       await runVideoEdit(
@@ -152,6 +156,7 @@ export function VideoEditor({
           ? t(`studio.videos.${message}`)
           : message
       )
+      setErrorDetail(e instanceof PublishError ? e.detail : undefined)
     } finally {
       busy.current = false
       setRunning(false)
@@ -169,7 +174,7 @@ export function VideoEditor({
 
   return (
     <section
-      className="w-full space-y-4 rounded-md border p-4"
+      className="w-full space-y-4"
       aria-label={t(replace ? 'studio.videos.replace' : 'studio.videos.edit')}
     >
       {replace && (
@@ -241,58 +246,66 @@ export function VideoEditor({
         onReasonChange={setReason}
         disabled={running}
       />
-      <ThumbnailSection
-        thumbnailSource={thumbnailSource}
-        onThumbnailSourceChange={setThumbnailSource}
-        thumbnailBlob={thumbnail ?? null}
-        onThumbnailDrop={files => {
-          if (!busy.current && files[0]) setThumbnail(files[0])
-        }}
-        onDeleteThumbnail={async () => {
-          if (!busy.current) setThumbnail(null)
-        }}
-        thumbnailUploadInfo={{
-          uploadedBlobs: thumbnail === undefined && oldThumbnail ? [{ url: oldThumbnail }] : [],
-          uploading: running,
-        }}
-        videoUrl={preview ?? oldVideo}
-        disabled={running}
-        onUrlFetchError={message => setError(`${message.title}: ${message.description}`)}
-      />
-      <SubtitleSection
-        subtitles={subtitles.map(subtitle => ({
-          id: subtitle.id,
-          filename: subtitle.file?.name ?? subtitle.url?.split('/').pop() ?? subtitle.id,
-          lang: subtitle.lang,
-          uploadedBlobs: subtitle.url ? [{ url: subtitle.url }] : [],
-          mirroredBlobs: [],
-        }))}
-        disabled={running}
-        onDrop={files => {
-          if (busy.current) return
-          setSubtitlesChanged(true)
-          setSubtitles(current => [
-            ...current,
-            ...files.map(file => ({
-              id: generateSubtitleId(),
-              file,
-              lang: detectLanguageFromFilename(file.name),
-            })),
-          ])
-        }}
-        onRemove={id => {
-          if (busy.current) return
-          setSubtitlesChanged(true)
-          setSubtitles(current => current.filter(subtitle => subtitle.id !== id))
-        }}
-        onLanguageChange={(id, lang) => {
-          if (busy.current) return
-          setSubtitlesChanged(true)
-          setSubtitles(current =>
-            current.map(subtitle => (subtitle.id === id ? { ...subtitle, lang } : subtitle))
-          )
-        }}
-      />
+      {/* The widget's preview is tall; a modal must keep its Save button in reach. */}
+      <div className="[&_img]:max-h-[200px] [&_video]:max-h-[200px]">
+        <ThumbnailSection
+          thumbnailSource={thumbnailSource}
+          onThumbnailSourceChange={setThumbnailSource}
+          thumbnailBlob={thumbnail ?? null}
+          onThumbnailDrop={files => {
+            if (!busy.current && files[0]) setThumbnail(files[0])
+          }}
+          onDeleteThumbnail={async () => {
+            if (!busy.current) setThumbnail(null)
+          }}
+          thumbnailUploadInfo={{
+            uploadedBlobs: thumbnail === undefined && oldThumbnail ? [{ url: oldThumbnail }] : [],
+            uploading: running,
+          }}
+          videoUrl={preview ?? oldVideo}
+          disabled={running}
+          onUrlFetchError={message => setError(`${message.title}: ${message.description}`)}
+        />
+      </div>
+      <div role="group" aria-labelledby={`${fieldPrefix}-subtitles`} className="space-y-1.5">
+        <p id={`${fieldPrefix}-subtitles`} className="text-sm font-medium leading-none">
+          {t('studio.upload.subtitles')}
+        </p>
+        <SubtitleSection
+          subtitles={subtitles.map(subtitle => ({
+            id: subtitle.id,
+            filename: subtitle.file?.name ?? subtitle.url?.split('/').pop() ?? subtitle.id,
+            lang: subtitle.lang,
+            uploadedBlobs: subtitle.url ? [{ url: subtitle.url }] : [],
+            mirroredBlobs: [],
+          }))}
+          disabled={running}
+          onDrop={files => {
+            if (busy.current) return
+            setSubtitlesChanged(true)
+            setSubtitles(current => [
+              ...current,
+              ...files.map(file => ({
+                id: generateSubtitleId(),
+                file,
+                lang: detectLanguageFromFilename(file.name),
+              })),
+            ])
+          }}
+          onRemove={id => {
+            if (busy.current) return
+            setSubtitlesChanged(true)
+            setSubtitles(current => current.filter(subtitle => subtitle.id !== id))
+          }}
+          onLanguageChange={(id, lang) => {
+            if (busy.current) return
+            setSubtitlesChanged(true)
+            setSubtitles(current =>
+              current.map(subtitle => (subtitle.id === id ? { ...subtitle, lang } : subtitle))
+            )
+          }}
+        />
+      </div>
       {running && (
         <>
           <p role="status">{t('studio.videos.saving')}</p>
@@ -300,11 +313,12 @@ export function VideoEditor({
         </>
       )}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+        <div role="alert" className="space-y-1">
+          <p className="text-sm text-destructive">{error}</p>
+          {errorDetail && <p className="break-all text-xs text-muted-foreground">{errorDetail}</p>}
+        </div>
       )}
-      <div className="flex gap-2">
+      <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background py-4">
         <Button type="button" disabled={!canSave} onClick={() => void save()}>
           {error ? t('studio.upload.retry') : t('studio.videos.save')}
         </Button>

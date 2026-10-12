@@ -15,14 +15,7 @@ import {
 import { Input } from '@nostube/widgets/components/input'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import { Textarea } from '@nostube/widgets/components/textarea'
-import {
-  loadStats,
-  nip07,
-  nostrPost,
-  saveConfig,
-  waitForRestart,
-  type AdminState,
-} from './api'
+import { loadStats, nip07, nostrPost, saveConfig, waitForRestart, type AdminState } from './api'
 import { Field } from './fields'
 import {
   identityChoices,
@@ -33,7 +26,6 @@ import {
   type PublishingLists,
 } from './onboarding-config'
 import { bytesText } from './OverviewPage'
-import { hashFor } from './route'
 import { useSigner } from './signer-context'
 
 /** What the wizard needs of a relay pool: find the owner's profile, copy it to the instance. */
@@ -90,9 +82,16 @@ export function Onboarding({
   pool?: ProfilePool
 }) {
   const { t, i18n } = useTranslation()
-  const { status, mode, pubkey: signerKey, connect, createManaged, error: signerError } = useSigner()
+  const {
+    status,
+    mode,
+    pubkey: signerKey,
+    connect,
+    createManaged,
+    error: signerError,
+  } = useSigner()
   const [step, setStep] = useState(0)
-  const [identity, setIdentity] = useState<Identity | null>(null)
+  const [picked, setIdentity] = useState<Identity | null>(null)
   const [ownKey, setOwnKey] = useState<string | null>(null)
   const [bindLogin, setBindLogin] = useState(false)
   const [publishing, setPublishing] = useState<Publishing | null>(null)
@@ -121,6 +120,8 @@ export function Onboarding({
   const extension = nip07() !== undefined
   const managedKey = mode === 'managed' ? signerKey : null
   const choices = identityChoices({ extension, managedKey: managedKey !== null })
+  // A single choice needs no click: it is taken (the text still says what it means).
+  const identity = picked ?? (choices.length === 1 ? choices[0] : null)
   const wizard = { identity: identity ?? 'channel', title, tagline, ...lists }
   const checked = wizardConfig(state.config, wizard, null)
   const busy = phase !== null
@@ -162,9 +163,7 @@ export function Onboarding({
         if (!(await waitForRestart(state.bootId))) return setPhase('stalled')
       }
       if (profile) {
-        await Promise.allSettled(
-          relays.publish([state.origin.replace(/^https:/, 'wss:')], profile)
-        )
+        await Promise.allSettled(relays.publish([state.origin.replace(/^https:/, 'wss:')], profile))
       }
       onFinished()
     } catch (e) {
@@ -181,7 +180,15 @@ export function Onboarding({
         : true
 
   const listField = (id: keyof PublishingLists, label: string) => (
-    <Field id={id} label={label} hint={t('studio.onboarding.publishing.oneLine')}>
+    <Field
+      id={id}
+      label={label}
+      hint={t(
+        id === 'profileRelaysText'
+          ? 'studio.instance.profileRelaysHint'
+          : 'studio.onboarding.publishing.oneLine'
+      )}
+    >
       <Textarea
         id={id}
         rows={3}
@@ -278,6 +285,9 @@ export function Onboarding({
                   {t('studio.onboarding.publishing.advanced')}
                 </summary>
                 <div className="space-y-3 pt-3">
+                  <p className="text-muted-foreground">
+                    {t('studio.onboarding.publishing.advancedHint')}
+                  </p>
                   {listField('mirrorRelaysText', t('studio.onboarding.publishing.mirrorRelays'))}
                   {identity === 'channel' &&
                     listField('mirrorBlossomText', t('studio.onboarding.publishing.mirrorBlossom'))}
@@ -301,12 +311,7 @@ export function Onboarding({
               <Input id="tagline" value={tagline} onChange={e => setTagline(e.target.value)} />
             </Field>
             <p className="text-sm text-muted-foreground">
-              <Trans
-                i18nKey="studio.onboarding.site.appearance"
-                components={{
-                  link: <a href={hashFor('appearance')} className="underline" />,
-                }}
-              />
+              {t('studio.onboarding.site.appearance')}
             </p>
           </>
         )}
@@ -326,9 +331,7 @@ export function Onboarding({
                   ? t('studio.onboarding.summary.loginNostr')
                   : t('studio.onboarding.summary.loginPassword')}
               </dd>
-              <dt className="text-muted-foreground">
-                {t('studio.onboarding.steps.publishing')}
-              </dt>
+              <dt className="text-muted-foreground">{t('studio.onboarding.steps.publishing')}</dt>
               <dd>
                 {publishing === 'network'
                   ? t('studio.onboarding.publishing.networkTitle')
@@ -340,8 +343,7 @@ export function Onboarding({
                     {t('studio.onboarding.publishing.mirrorRelays')}
                   </dt>
                   <dd className="break-all">
-                    {checked.config.mirror.relays.join(', ') ||
-                      t('studio.onboarding.summary.none')}
+                    {checked.config.mirror.relays.join(', ') || t('studio.onboarding.summary.none')}
                   </dd>
                   <dt className="text-muted-foreground">
                     {t('studio.onboarding.publishing.mirrorBlossom')}
@@ -351,11 +353,12 @@ export function Onboarding({
                       t('studio.onboarding.summary.none')}
                   </dd>
                   <dt className="text-muted-foreground">
-                    {t('studio.onboarding.publishing.profileRelays')}
+                    {t('studio.instance.profileRelaysTitle')}
                   </dt>
                   <dd className="break-all">
-                    {checked.config.profileRelays.join(', ') ||
-                      t('studio.onboarding.summary.localOnly')}
+                    {[
+                      ...new Set([...DEFAULT_PROFILE_RELAYS, ...checked.config.profileRelays]),
+                    ].join(', ')}
                   </dd>
                 </>
               )}

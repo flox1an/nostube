@@ -633,6 +633,8 @@ struct SiteBody {
     links: LinksBody,
     /// Required like `links`: a PUT without it must not silently erase the pages.
     pages: config::Pages,
+    /// Required too: a PUT without it must not silently drop the lightning address.
+    lightning: String,
 }
 
 /// All three are required: an empty `links` object must not silently mean the defaults.
@@ -784,6 +786,7 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
                 note: put.site.links.note,
             },
             pages: put.site.pages,
+            lightning: put.site.lightning,
         },
         mirror: put.mirror,
     };
@@ -1237,6 +1240,7 @@ cursor:pointer;border:0;border-radius:.5rem;background:var(--primary);color:var(
 button:hover{filter:brightness(1.1)} button.secondary{margin-top:.75rem;background:transparent;color:var(--foreground);border:1px solid var(--input)}
 code{background:var(--code);padding:.1rem .3rem;border-radius:.25rem;font-size:.85em}
 .or{text-align:center;margin:1rem 0 0;font-size:.875rem}
+.hint{margin:1.25rem 0 0;font-size:.875rem}
 "#;
 
 fn page(title: &str, body: &str) -> Html<String> {
@@ -1304,7 +1308,8 @@ nostrButton.addEventListener('click', async () => {
 <form method=post action=/admin/login>
   <label>Password <input name=password type=password autocomplete=current-password autofocus required></label>
   <button>Log in</button>
-</form>{nostr}"#
+</form>{nostr}
+<p class=hint>Forgot the password? Run <code>nostube-server admin reset</code> on the server and register again with the setup token it prints.</p>"#
     )
 }
 
@@ -1506,7 +1511,7 @@ mod tests {
             "profileRelays": [],
             "search": { "mode": "external", "url": "https://search.example" },
             "storage": { "quotaGib": 100, "freeSpaceReserveGib": 3 },
-            "site": { "tagline": "Hi", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} } },
+            "site": { "tagline": "Hi", "lightning": "", "theme": { "accent": accent, "font": "mono" }, "videos": { "hidden": [format!("34235:{PK}:intro")] }, "links": { "profile": "https://example.org/p/{nip19}", "video": "https://example.org/v/{nip19}", "note": "https://example.org/n/{nip19}" }, "pages": { "about": { "de": "Über uns", "en": "About" }, "imprint": { "en": "Imprint" }, "privacy": {} } },
             "mirror": { "relays": ["wss://mirror.example"], "blossom": ["https://blossom.example"] }
         })
     }
@@ -2187,6 +2192,35 @@ mod tests {
         tokio::fs::write(&path, vec![0; 512 * 1024 + 1]).await.unwrap();
         assert_eq!(branding_call(&app, "PUT", "logo", c, json, body).await.0, StatusCode::PAYLOAD_TOO_LARGE);
         assert_eq!(std::fs::read(dir.join("branding/logo.png")).unwrap(), PNG);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_lightning_address_is_checked_applied_while_running_and_published_as_lud16() {
+        let (_, dir, cookie, _, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let keys = Keys::generate();
+        let mut live = stores(&dir).await;
+        live.relay = Relay::open(&dir.join("managed-relay.sqlite"), crate::relay::RelayConfig {
+            writers: vec![keys.public_key()], name: "t".into(), description: "t".into(), mirror_relays: vec![],
+        }).unwrap();
+        let relay = live.relay.clone();
+        let state = AdminState::open(&dir, "flox-mac.local", vec!["flox-mac.local".into()],
+            "https://flox-mac.local", "boot".into(), Arc::new(axum_server::Handle::new()), live).unwrap();
+        *state.managed.lock() = Some(Ok(keys.clone()));
+        let app = router(state);
+        let (c, json) = (Some(cookie.as_str()), Some("application/json"));
+        let mut edit = call(&app, "GET", c, None, "").await.1["config"].clone();
+        assert_eq!(edit["site"]["lightning"], "");
+        edit["site"]["lightning"] = "no address".into();
+        let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(body["error"].as_str().unwrap().starts_with("site.lightning must be a lightning address"), "{body}");
+        edit["site"]["lightning"] = "channel@wallet.example".into();
+        let (status, body) = call(&app, "PUT", c, json, &edit.to_string()).await;
+        assert_eq!((status, &body["restart"]), (StatusCode::OK, &serde_json::Value::Bool(false)), "{body}");
+        assert_eq!(call(&app, "GET", c, None, "").await.1["config"]["site"]["lightning"], "channel@wallet.example");
+        let profile = relay.stored(nostr::prelude::Filter::new().author(keys.public_key()).kind(nostr::prelude::Kind::Metadata)).await.unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&profile[0].content).unwrap()["lud16"], "channel@wallet.example");
         std::fs::remove_dir_all(&dir).ok();
     }
 

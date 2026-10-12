@@ -166,5 +166,8 @@ describe('studio video actions', () => {
     setup()
     expect(screen.queryByRole('button', { name: 'Edit metadata' })).toBeNull()
     expect(openMenu()).toEqual(['Hide on site'])
+    expect(screen.getByRole('link', { name: 'View on site' }).getAttribute('href')).toBe(
+      `/v/${video.link}`
+    )
   })
 })

@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { ThumbsUp } from 'lucide-react'
 import { map } from 'rxjs/operators'
 import type { Filter, NostrEvent } from 'nostr-tools'
-import { use$, useActiveAccount, useEventStore } from 'applesauce-react/hooks'
+import { use$, useAccountManager, useActiveAccount, useEventStore } from 'applesauce-react/hooks'
 import { isAddressableKind, type VideoEvent } from '@nostube/core/video-event'
 import { useNostubeHost } from '@nostube/widgets/host'
 import { Button } from '@nostube/widgets/components/button'
+import { SiteAuthDialog } from './AuthArea'
 import type { IAccount } from 'applesauce-accounts'
 
 type LikeTarget = Pick<VideoEvent, 'id' | 'kind' | 'pubkey' | 'identifier'>
@@ -51,28 +52,21 @@ export function isVideoLike(event: NostrEvent, video: LikeTarget): boolean {
   return address !== undefined && event.tags.some(t => t[0] === 'a' && t[1] === address)
 }
 
-/** The like button of a video. Only a signed-in visitor can react, so a guest sees nothing. */
-export function SiteLikes(props: { video: VideoEvent; relays: string[] }) {
+/**
+ * The like button of a video with its count, for everyone. A guest's click asks to sign in first;
+ * signing in from that dialog then sends the like.
+ */
+export function SiteLikes({ video, relays }: { video: VideoEvent; relays: string[] }) {
   const account = useActiveAccount()
-  return account ? <LikeButton {...props} account={account} /> : null
-}
-
-function LikeButton({
-  video,
-  relays,
-  account,
-}: {
-  video: VideoEvent
-  relays: string[]
-  account: IAccount
-}) {
+  const manager = useAccountManager()
   const { t } = useTranslation()
   const { pool } = useNostubeHost()
   const eventStore = useEventStore()
   // Pending and failed state belong to one video and one visitor, so either changing resets them.
-  const key = `${video.id}|${account.pubkey}`
+  const key = `${video.id}|${account?.pubkey ?? ''}`
   const inFlight = useRef(new Set<string>())
   const [pending, setPending] = useState<string | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
 
   const address = videoAddress(video)
@@ -113,16 +107,17 @@ function LikeButton({
     () => new Set((reactions ?? []).filter(e => isVideoLike(e, video)).map(e => e.pubkey)),
     [reactions, video]
   )
-  const liked = likers.has(account.pubkey)
+  const liked = account ? likers.has(account.pubkey) : false
   const busy = pending === key
 
-  const like = async () => {
-    if (liked || inFlight.current.has(key)) return
-    inFlight.current.add(key)
-    setPending(key)
+  const like = async (visitor: IAccount) => {
+    const likeKey = `${video.id}|${visitor.pubkey}`
+    if (likers.has(visitor.pubkey) || inFlight.current.has(likeKey)) return
+    inFlight.current.add(likeKey)
+    setPending(likeKey)
     setFailure(null)
     try {
-      const signed = (await account.signer.signEvent({
+      const signed = (await visitor.signer.signEvent({
         kind: 7,
         content: '+',
         tags: [...buildLikeTags(video), ['client', 'nostube']],
@@ -140,14 +135,20 @@ function LikeButton({
       eventStore.add(signed)
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err)
-      setFailure({ key, message: t('site.reactions.failed', { reason }) })
+      setFailure({ key: likeKey, message: t('site.reactions.failed', { reason }) })
     } finally {
-      inFlight.current.delete(key)
-      setPending(current => (current === key ? null : current))
+      inFlight.current.delete(likeKey)
+      setPending(current => (current === likeKey ? null : current))
     }
   }
 
   const error = failure?.key === key ? failure.message : null
+  const closeAuth = () => {
+    setAuthOpen(false)
+    // Signed in from this dialog: the like the guest asked for follows.
+    const signedIn = manager.active
+    if (signedIn) void like(signedIn)
+  }
 
   return (
     <div className="flex flex-col items-start gap-1">
@@ -161,7 +162,7 @@ function LikeButton({
           busy ? t('site.reactions.liking') : t('site.reactions.label', { count: likers.size })
         }
         disabled={busy || liked}
-        onClick={() => void like()}
+        onClick={() => (account ? void like(account) : setAuthOpen(true))}
       >
         <ThumbsUp className={liked ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden />
         <span aria-hidden>{likers.size}</span>
@@ -170,6 +171,15 @@ function LikeButton({
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
+      )}
+      {!account && (
+        <SiteAuthDialog
+          action="like"
+          isOpen={authOpen}
+          onClose={closeAuth}
+          onLogin={closeAuth}
+          relays={relays}
+        />
       )}
     </div>
   )

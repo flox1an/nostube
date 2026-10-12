@@ -11,13 +11,14 @@ export interface AdminConfig {
   allowedWriters: string[]
   videoSources: string[]
   interactionRelays: string[]
-  /** Public discovery for a signed-in visitor's own profile on the site; empty = local only. */
+  /** Additional visitor profile lookup relays; empty adds none to the mandatory public defaults. */
   profileRelays: string[]
   /** Where the outbox copies this instance's own events and blobs; both empty = off. */
   mirror: { relays: string[]; blossom: string[] }
   search: SearchConfig
   storage: { quotaGib: number; freeSpaceReserveGib: number }
-  site: InstanceSite
+  /** `lightning`: the channel's Lightning address for zaps, `""` when unset (admin-only, not public). */
+  site: InstanceSite & { lightning?: string }
 }
 
 export interface AdminState {
@@ -284,8 +285,13 @@ export async function waitForRestart(
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     await sleep(intervalMs)
+    const remainingMs = deadline - Date.now()
+    if (remainingMs <= 0) return false
     try {
-      const res = await fetch('/api/health', { cache: 'no-store' })
+      const res = await fetch('/api/health', {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(Math.min(5000, remainingMs)),
+      })
       const body = (await res.json()) as { boot?: string }
       if (res.ok && body.boot && body.boot !== previousBootId) return true
     } catch {

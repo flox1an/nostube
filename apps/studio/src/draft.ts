@@ -19,6 +19,8 @@ export interface Draft {
   tagline: string
   accent: string
   font: SiteFont
+  /** Lightning address (`name@domain.tld`) for zaps to the managed channel identity; empty = none. */
+  lightning: string
   hiddenText: string
   links: InstanceSite['links']
   pages: SitePages
@@ -26,7 +28,7 @@ export interface Draft {
   writersText: string
   videoSourcesText: string
   interactionRelaysText: string
-  /** Empty: local only, the site looks a visitor's profile up only on the instance relays. */
+  /** Additional visitor profile lookup relays; empty adds none to the mandatory public defaults. */
   profileRelaysText: string
   /** Empty lists: the outbox is off. */
   mirrorRelaysText: string
@@ -49,6 +51,7 @@ export function toDraft(c: AdminConfig): Draft {
     tagline: c.site.tagline,
     accent: c.site.theme.accent,
     font: c.site.theme.font,
+    lightning: c.site.lightning ?? '',
     hiddenText: c.site.videos.hidden.join('\n'),
     links: { ...c.site.links },
     pages: structuredClone(c.site.pages),
@@ -69,7 +72,7 @@ export function toDraft(c: AdminConfig): Draft {
 const HEX64 = /^[0-9a-f]{64}$/
 
 /** A pubkey as typed (hex or npub) in its hex form, or null. */
-function toHexKey(input: string): string | null {
+export function toHexKey(input: string): string | null {
   if (HEX64.test(input)) return input
   try {
     const decoded = nip19.decode(input)
@@ -101,6 +104,23 @@ function servers(label: string, text: string, errors: string[]): string[] {
     if (!ok) errors.push(i18n.t('studio.errors.notServer', { label, line }))
     return ok
   })
+}
+
+/** The server's rule: empty, or `local@domain` with a dot in the domain, no whitespace, ≤ 254 bytes. */
+export const isLightningAddress = (value: string) =>
+  value === '' ||
+  (new TextEncoder().encode(value).length <= 254 && /^[^@\s]+@[^@\s]*\.[^@\s]*$/.test(value))
+
+/** True when saving `next` restarts the server: the fields of `Config::needs_restart` (server `config.rs`). */
+export function needsRestart(saved: AdminConfig, next: AdminConfig): boolean {
+  const same = (a: string[], b: string[]) => a.join('\n') === b.join('\n')
+  return (
+    !same(saved.allowedWriters, next.allowedWriters) ||
+    saved.storage.quotaGib !== next.storage.quotaGib ||
+    saved.storage.freeSpaceReserveGib !== next.storage.freeSpaceReserveGib ||
+    !same(saved.mirror.relays, next.mirror.relays) ||
+    !same(saved.mirror.blossom, next.mirror.blossom)
+  )
 }
 
 function count(label: string, text: string, errors: string[]): number {
@@ -165,6 +185,8 @@ export function fromDraft(d: Draft): DraftResult {
       })
   )
   if (!SITE_FONTS.includes(d.font)) errors.push(i18n.t('studio.errors.font'))
+  const lightning = d.lightning.trim()
+  if (!isLightningAddress(lightning)) errors.push(i18n.t('studio.appearance.lightningInvalid'))
   const label = (key: string) => i18n.t(`studio.errors.labels.${key}`)
   const creators = keys(label('creators'), d.creatorsText, errors)
   const allowedWriters = keys(label('writers'), d.writersText, errors)
@@ -194,7 +216,7 @@ export function fromDraft(d: Draft): DraftResult {
       mirror: { relays: mirrorRelays, blossom: mirrorBlossom },
       search,
       storage: { quotaGib, freeSpaceReserveGib },
-      site,
+      site: { ...site, lightning },
     },
     errors: [],
   }

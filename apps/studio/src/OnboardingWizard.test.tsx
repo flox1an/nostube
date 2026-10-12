@@ -70,7 +70,12 @@ function serve(info: { mode: 'none' | 'managed' | 'own'; pubkey: string | null }
     if (url === '/api/admin/signer') return json(info)
     if (url === '/api/admin/stats') {
       return json({
-        relay: { url: 'wss://videos.example.org', totalEvents: 0, eventsByKind: [], databaseBytes: 1 },
+        relay: {
+          url: 'wss://videos.example.org',
+          totalEvents: 0,
+          eventsByKind: [],
+          databaseBytes: 1,
+        },
         blossom: {
           url: 'https://videos.example.org',
           files: 0,
@@ -118,11 +123,7 @@ const renderWizard = (state: AdminState, profilePool?: object) =>
   render(
     <StrictMode>
       <SignerProvider creatorKey={null}>
-        <Onboarding
-          state={state}
-          onFinished={vi.fn()}
-          pool={profilePool as never}
-        />
+        <Onboarding state={state} onFinished={vi.fn()} pool={profilePool as never} />
       </SignerProvider>
     </StrictMode>
   )
@@ -139,7 +140,7 @@ const click = async (name: string | RegExp) => {
 
 const continueThrough = async () => {
   await click('Next') // identity -> publishing
-  await click(/Only this instance/) // a tile, no preselection
+  await click(/Only on my site/) // a tile, no preselection
   await click('Next') // publishing -> site
   await click('Next') // site -> summary
 }
@@ -200,12 +201,16 @@ describe('onboarding config', () => {
   })
 
   it('keeps the site texts out of the key lists when nothing is chosen', () => {
-    const result = wizardConfig(fresh().config, {
-      identity: 'channel',
-      title: 'T',
-      tagline: '',
-      ...publishingPreset('local'),
-    }, null)
+    const result = wizardConfig(
+      fresh().config,
+      {
+        identity: 'channel',
+        title: 'T',
+        tagline: '',
+        ...publishingPreset('local'),
+      },
+      null
+    )
     expect(result.errors).toEqual([])
     expect(result.config!.creators).toEqual([])
   })
@@ -222,10 +227,15 @@ describe('Onboarding wizard', () => {
     fireEvent.click(await findLabel('Own identity'))
     await waitFor(() => expect(extension.getPublicKey).toHaveBeenCalled())
     await continueThrough()
+    expect(screen.getByText(DEFAULT_PROFILE_RELAYS.join(', '))).toBeTruthy()
     await click('Finish')
 
     await waitFor(() => expect(saved).toHaveLength(1))
-    expect(saved[0]).toMatchObject({ creators: [OWN], allowedWriters: [OWN] })
+    expect(saved[0]).toMatchObject({
+      creators: [OWN],
+      allowedWriters: [OWN],
+      profileRelays: [],
+    })
     // The extension key becomes the login key too.
     expect(fetch.mock.calls.some(([url]) => url === '/admin/bind-nostr')).toBe(true)
     expect(profile.get).toHaveBeenCalledWith(
@@ -237,15 +247,40 @@ describe('Onboarding wizard', () => {
     expect(profile.publish).not.toHaveBeenCalled()
   })
 
-  it('offers only the channel identity without an extension, with the install hint', async () => {
+  it('summarizes mandatory defaults and saves only the edited additional relays', async () => {
+    const { saved } = serve({ mode: 'none', pubkey: null })
+    renderWizard(fresh())
+    fireEvent.click(await findLabel('Channel identity'))
+    await click('Next')
+    await click(/Only on my site/)
+    fireEvent.click(screen.getByText('Advanced'))
+    const extras = [...DEFAULT_PROFILE_RELAYS, 'wss://profiles.example']
+    fireEvent.change(screen.getByLabelText('Additional profile lookup relays'), {
+      target: { value: extras.join('\n') },
+    })
+    await click('Next')
+    await click('Next')
+    expect(screen.getByText(extras.join(', '))).toBeTruthy()
+    await click('Finish')
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toMatchObject({ profileRelays: extras })
+  })
+
+  it('offers only the channel identity without an extension, taken without a click', async () => {
     delete (window as unknown as { nostr?: object }).nostr
     serve({ mode: 'none', pubkey: null })
-    renderWizard(fresh())
+    const { container } = renderWizard(fresh())
     expect(await findLabel('Channel identity')).toBeTruthy()
     expect(screen.queryByText('Own identity')).toBeNull()
-    expect(
-      screen.getByText(/Install an extension such as nos2x or Alby/)
-    ).toBeTruthy()
+    expect(screen.getByText(/Install an extension such as nos2x or Alby/)).toBeTruthy()
+    const tile = screen.getByRole('button', { name: /Channel identity/ })
+    expect(tile.getAttribute('aria-pressed')).toBe('true')
+    await click('Next')
+    await click(/Only on my site/)
+    await click('Next')
+    // The site step points at the Appearance page in words: it is not reachable yet.
+    expect(await screen.findByText(/on the Appearance page/)).toBeTruthy()
+    expect(container.querySelectorAll('a:empty')).toHaveLength(0)
   })
 
   it('creates the managed key at Finish, binds the optional Nostr login, saves once', async () => {
@@ -260,13 +295,15 @@ describe('Onboarding wizard', () => {
     await waitFor(() => expect(saved).toHaveLength(1))
     expect(saved[0]).toMatchObject({ creators: [MANAGED], allowedWriters: [MANAGED] })
     expect(
-      fetch.mock.calls.some(
-        ([url, init]) => url === '/api/admin/signer' && init?.method === 'POST'
-      )
+      fetch.mock.calls.some(([url, init]) => url === '/api/admin/signer' && init?.method === 'POST')
     ).toBe(true)
     expect(fetch.mock.calls.some(([url]) => url === '/admin/bind-nostr')).toBe(true)
     expect(profile.get).not.toHaveBeenCalled()
-    expect(fetch.mock.calls.filter(([url, init]) => url === '/api/admin/config' && init?.method === 'PUT')).toHaveLength(1)
+    expect(
+      fetch.mock.calls.filter(
+        ([url, init]) => url === '/api/admin/config' && init?.method === 'PUT'
+      )
+    ).toHaveLength(1)
   })
 
   it('copies the found kind 0 unchanged to the instance relay; without one it publishes nothing', async () => {
@@ -301,7 +338,7 @@ describe('Onboarding wizard', () => {
     renderWizard(fresh())
     fireEvent.click(await findLabel('Channel identity'))
     await click('Next')
-    await click(/Into the Nostr network/)
+    await click(/Also on the Nostr network/)
     await click('Back')
     expect(saved).toHaveLength(0)
     // Still only the signer status was read; the config itself was never written.

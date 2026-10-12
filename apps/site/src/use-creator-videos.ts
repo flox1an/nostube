@@ -6,9 +6,9 @@ import {
   type CreatorVideos,
 } from '@nostube/widgets/hooks/useCreatorVideos'
 
-/** The creator's videos without the ones the creator hid in the studio. */
-export function useCreatorVideos(config: InstanceConfig): CreatorVideos {
-  const all = useAllCreatorVideos(config)
+/** The creator's videos (with `tag`: those tagged so) without the ones the creator hid. */
+export function useCreatorVideos(config: InstanceConfig, tag?: string): CreatorVideos {
+  const all = useAllCreatorVideos(config, tag)
   const hidden = config.site.videos.hidden
   const videos = useMemo(
     () => all.videos.filter(v => !isHiddenVideo(v, hidden)),

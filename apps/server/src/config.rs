@@ -133,6 +133,9 @@ pub struct Site {
     pub links: Links,
     /// The about, imprint and privacy texts; may all be empty.
     pub pages: Pages,
+    /// Lightning address (`name@domain.tld`) for zaps to the managed channel identity; it goes
+    /// into the derived profile as `lud16`. Empty: none.
+    pub lightning: String,
 }
 
 /// Longest text of one page in one language, in characters.
@@ -211,11 +214,12 @@ impl Default for Site {
     fn default() -> Self {
         Site {
             tagline: String::new(),
-            accent: "#6d28d9".into(),
+            accent: "#8b5cf6".into(),
             font: Font::Sans,
             hidden_videos: vec![],
             links: Links::default(),
             pages: Pages::default(),
+            lightning: String::new(),
         }
     }
 }
@@ -228,6 +232,13 @@ fn check_site(site: &Site) -> Result<(), BoxError> {
     let a = site.accent.as_bytes();
     if !(a.len() == 7 && a[0] == b'#' && a[1..].iter().all(u8::is_ascii_hexdigit)) {
         return Err(format!("site.accent must be #rrggbb: {}", site.accent).into());
+    }
+    let l = &site.lightning;
+    let valid = l.split_once('@').is_some_and(|(local, domain)| {
+        !local.is_empty() && domain.contains('.') && !domain.contains('@')
+    });
+    if !l.is_empty() && (!valid || l.len() > 254 || l.chars().any(char::is_whitespace)) {
+        return Err(format!("site.lightning must be a lightning address like name@domain.tld: {l}").into());
     }
     check_link("profile", &site.links.profile)?;
     check_link("video", &site.links.video)?;
@@ -452,6 +463,8 @@ impl Config {
             "search": self.search,
             "site": {
                 "tagline": self.site.tagline,
+                // Public anyway: the derived channel profile carries it as `lud16`.
+                "lightning": self.site.lightning,
                 "theme": { "accent": self.site.accent, "font": self.site.font },
                 "videos": { "hidden": self.site.hidden_videos },
                 "links": {
@@ -535,7 +548,7 @@ tls = {{ mode = "local-ca" }}
         assert_eq!(json.as_object().unwrap().len(), 11);
         // A config file from before the field keeps the public profile lookup (ADR 0008).
         assert_eq!(json["profileRelays"], serde_json::json!(["wss://purplepag.es", "wss://index.hzrd149.com"]));
-        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#6d28d9", "font": "sans" }));
+        assert_eq!(json["site"]["theme"], serde_json::json!({ "accent": "#8b5cf6", "font": "sans" }));
         assert_eq!(json["site"]["videos"], serde_json::json!({ "hidden": [] }));
     }
 
@@ -657,6 +670,9 @@ tls = {{ mode = "local-ca" }}
             "[site]\nhidden_videos = [\"34235:abc:d\"]\n",
             &format!("[site]\nhidden_videos = [\"+34235:{PK}:d\"]\n"),
             &format!("[site]\nhidden_videos = [\"34235:{PK}:a\\nb\"]\n"),
+            "[site]\nlightning = \"nobody\"\n",
+            "[site]\nlightning = \"name@localhost\"\n",
+            "[site]\nlightning = \"na me@domain.tld\"\n",
             "[site]\nunknown = 1\n",
             "[mirror]\nrelays = [\"https://relay.example\"]\n",
             "[mirror]\nblossom = [\"ftp://blossom.example\"]\n",

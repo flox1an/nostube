@@ -11,7 +11,13 @@
     },
     "auth": {
       "signIn": "Anmelden",
-      "signOut": "Abmelden"
+      "signOut": "Abmelden",
+      "why": {
+        "any": "Melde dich an, um Videos zu liken, zu kommentieren und Zaps zu senden. Zum Ansehen brauchst du kein Konto.",
+        "like": "Melde dich an, um dieses Video zu liken. Zum Ansehen brauchst du kein Konto.",
+        "zap": "Melde dich an, um dem Creator einen Zap zu senden. Zum Ansehen brauchst du kein Konto.",
+        "comment": "Melde dich an, um dieses Video zu kommentieren. Zum Ansehen brauchst du kein Konto."
+      }
     },
     "breadcrumb": {
       "label": "Brotkrumennavigation"
@@ -33,13 +39,19 @@
       "retry": "Erneut versuchen",
       "loadMore": "Mehr laden"
     },
+    "tag": {
+      "title": "Videos mit #{{tag}}",
+      "back": "Alle Videos"
+    },
     "video": {
       "invalidLink": "Dieser Videolink ist ungültig.",
       "notFound": "Video nicht gefunden.",
       "loading": "Video wird geladen",
       "tags": "Schlagwörter",
       "more": "Mehr",
-      "less": "Weniger"
+      "less": "Weniger",
+      "share": "Teilen",
+      "moreVideos": "Weitere Videos"
     },
     "comments": {
       "title": "Kommentare",

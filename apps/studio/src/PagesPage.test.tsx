@@ -55,11 +55,11 @@ describe('PagesPage', () => {
 
     it('fills the current language, with the profile relays of the Instance page', () => {
       const update = vi.fn()
-      render(<PagesPage draft={privacyDraft({}, 'wss://purplepag.es\n')} update={update} />)
+      render(<PagesPage draft={privacyDraft({}, 'wss://profiles.example\n')} update={update} />)
       fireEvent.click(standardButton())
       const { privacy } = update.mock.calls[0][0].pages
       expect(Object.keys(privacy)).toEqual(['en'])
-      expect(privacy.en).toContain('wss://purplepag.es')
+      expect(privacy.en).toContain('wss://profiles.example')
     })
 
     it('asks before it replaces a text that is there', () => {

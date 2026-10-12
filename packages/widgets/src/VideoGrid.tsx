@@ -10,9 +10,11 @@ export interface VideoGridProps {
   isLocked?: (video: VideoEvent) => boolean
   /** Shown instead of the grid when there are no videos. */
   emptyMessage?: string
+  /** Each card's URL: cards become links (see `VideoCard.href`). */
+  getHref?: (video: VideoEvent) => string
 }
 
-export function VideoGrid({ videos, onSelect, isLocked, emptyMessage }: VideoGridProps) {
+export function VideoGrid({ videos, onSelect, isLocked, emptyMessage, getHref }: VideoGridProps) {
   const { t } = useTranslation()
   if (videos.length === 0) {
     return (
@@ -23,7 +25,12 @@ export function VideoGrid({ videos, onSelect, isLocked, emptyMessage }: VideoGri
     <ul className={GRID_CLASSES}>
       {videos.map(video => (
         <li key={video.id}>
-          <VideoCard video={video} onSelect={onSelect} locked={isLocked?.(video)} />
+          <VideoCard
+            video={video}
+            onSelect={onSelect}
+            locked={isLocked?.(video)}
+            href={getHref?.(video)}
+          />
         </li>
       ))}
     </ul>

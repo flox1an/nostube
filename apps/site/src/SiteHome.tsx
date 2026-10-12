@@ -49,51 +49,49 @@ function Site({ client, config }: { client: NostubeClient; config: InstanceConfi
   const profile = useCreatorProfile(client, config)
   const gate = useAgeGate()
   useBatchedProfileLoader()
-  // A video page has its own breadcrumb instead of the large header.
+  // The banner would push a video below the fold; the header (title, sign-in) stays everywhere.
   const onVideoPage = useMatch('/v/:id') !== null
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-3 sm:space-y-6 sm:py-6">
       <AccountRestoreInit />
-      {!onVideoPage && (
-        <>
-          {config.site.banner && (
-            // Edge to edge on a phone, like the grid below it.
-            <img
-              src={config.site.banner}
-              alt=""
-              className="-mx-4 aspect-[3/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:aspect-[5/1] sm:w-full sm:rounded-lg"
-            />
-          )}
-          <header className="flex items-start justify-between gap-4">
-            <Link to="/" className="flex min-w-0 items-center gap-4">
-              {config.site.logo ? (
-                <img
-                  src={config.site.logo}
-                  alt=""
-                  className="h-16 w-auto max-w-[40vw] shrink-0 object-contain sm:max-w-xs"
-                />
-              ) : (
-                profile?.picture && (
-                  <img
-                    src={profile.picture}
-                    alt=""
-                    className="h-16 w-16 rounded-full object-cover"
-                  />
-                )
-              )}
-              <div>
-                <h1 className="text-2xl font-semibold">{config.title}</h1>
-                {config.site.tagline && (
-                  <p className="text-sm text-muted-foreground">{config.site.tagline}</p>
-                )}
-              </div>
-            </Link>
-            <AuthArea client={client} relays={config.interactionRelays} />
-          </header>
-        </>
+      {!onVideoPage && config.site.banner && (
+        // Edge to edge on a phone, like the grid below it.
+        <img
+          src={config.site.banner}
+          alt=""
+          className="-mx-4 aspect-[3/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:aspect-[5/1] sm:w-full sm:rounded-lg"
+        />
       )}
+      <header className="flex items-start justify-between gap-4">
+        <Link to="/" className="flex min-w-0 items-center gap-4">
+          {config.site.logo ? (
+            <img
+              src={config.site.logo}
+              alt=""
+              className="h-16 w-auto max-w-[40vw] shrink-0 object-contain sm:max-w-xs"
+            />
+          ) : profile?.picture ? (
+            <img src={profile.picture} alt="" className="h-16 w-16 rounded-full object-cover" />
+          ) : (
+            <span
+              aria-hidden
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-muted text-2xl font-semibold text-muted-foreground"
+            >
+              {[...config.title][0]?.toUpperCase()}
+            </span>
+          )}
+          <div>
+            <h1 className="text-2xl font-semibold">{config.title}</h1>
+            {config.site.tagline && (
+              <p className="text-sm text-muted-foreground">{config.site.tagline}</p>
+            )}
+          </div>
+        </Link>
+        <AuthArea client={client} relays={config.interactionRelays} />
+      </header>
       <Routes>
         <Route path="/" element={<GridPage config={config} gate={gate} />} />
+        <Route path="/t/:tag" element={<GridPage config={config} gate={gate} />} />
         <Route
           path="/v/:id"
           element={

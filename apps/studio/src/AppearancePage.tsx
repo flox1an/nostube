@@ -12,7 +12,7 @@ import {
 import { Input } from '@nostube/widgets/components/input'
 import { THEME_BACKGROUNDS, applyTheme, contrastRatio } from '@nostube/widgets/site-theme'
 import { BrandingCard, type BrandingProps } from './BrandingCard'
-import { LINK_PRESETS, linkPresetOf, type Draft } from './draft'
+import { LINK_PRESETS, isLightningAddress, linkPresetOf, type Draft } from './draft'
 import { Field } from './fields'
 
 const ACCENT = /^#[0-9a-fA-F]{6}$/
@@ -66,6 +66,28 @@ export function AppearancePage({ draft, update, branding, onBranding }: PageProp
                 id="tagline"
                 value={draft.tagline}
                 onChange={e => update({ tagline: e.target.value })}
+              />
+            </Field>
+            <Field
+              id="lightning"
+              label={t('studio.appearance.lightning')}
+              hint={
+                isLightningAddress(draft.lightning.trim()) ? (
+                  t('studio.appearance.lightningHint')
+                ) : (
+                  <span className="text-destructive">
+                    {t('studio.appearance.lightningInvalid')}
+                  </span>
+                )
+              }
+            >
+              <Input
+                id="lightning"
+                inputMode="email"
+                autoComplete="off"
+                placeholder="name@getalby.com"
+                value={draft.lightning}
+                onChange={e => update({ lightning: e.target.value })}
               />
             </Field>
           </CardContent>

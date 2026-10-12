@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Local-only check (ADR 0008): starts a nostube-server on a throwaway data folder, seeds one
-// creator video on its own relay and Blossom, opens the site (signed in as a visitor), the
-// video page and the embed in a headless Chromium browser, and lists every request and
-// WebSocket that goes to another host than the instance. Exits 1 when there is one.
+// Scoped traffic check (ADR 0008): seeds a creator video only on a throwaway instance's
+// relay and Blossom, then opens the signed-in site, video page and embed in Chromium.
+// Public sockets on the site may query only the seeded visitor's kinds 0/10002;
+// external HTTP, public writes, public video queries and all external embed traffic fail.
 //
 //   node apps/server/scripts/check-local-profile.mjs [--server <binary>] [--browser <path>]
 //     [--default-profile-relays] [--port 9443] [--wait 10] [--serve]
@@ -31,7 +31,7 @@ const { values: opt } = parseArgs({
     },
     port: { type: 'string', default: '9443' },
     wait: { type: 'string', default: '10' },
-    // Leave `profile_relays` out of config.toml (the public defaults) instead of `[]`.
+    // Compare an omitted list with `[]`; both retain mandatory public identity lookup.
     'default-profile-relays': { type: 'boolean', default: false },
     // Only seed and keep the instance running, for a look with another browser.
     serve: { type: 'boolean', default: false },
@@ -215,21 +215,23 @@ const cdp = new WebSocket(webSocketDebuggerUrl)
 await new Promise(resolve => cdp.once('open', resolve))
 let nextId = 0
 const pending = new Map()
-const requests = []
+const sessions = new Map()
+const publicRelays = new Set(['wss://purplepag.es', 'wss://index.hzrd149.com'])
 const send = (method, params = {}, sessionId) =>
   new Promise((resolve, reject) => {
     const id = ++nextId
     pending.set(id, { resolve, reject })
     cdp.send(JSON.stringify({ id, method, params, sessionId }))
   })
-const watch = async sessionId => {
-  await send('Network.enable', {}, sessionId).catch(() => {})
+const watch = async (sessionId, traffic) => {
+  sessions.set(sessionId, traffic)
+  await send('Network.enable', {}, sessionId)
   await send(
     'Target.setAutoAttach',
     { autoAttach: true, waitForDebuggerOnStart: true, flatten: true },
     sessionId
-  ).catch(() => {})
-  await send('Runtime.runIfWaitingForDebugger', {}, sessionId).catch(() => {})
+  )
+  await send('Runtime.runIfWaitingForDebugger', {}, sessionId)
 }
 cdp.on('message', raw => {
   const msg = JSON.parse(raw)
@@ -238,48 +240,137 @@ cdp.on('message', raw => {
     pending.delete(msg.id)
     return msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result)
   }
-  if (msg.method === 'Network.requestWillBeSent') requests.push(msg.params.request.url)
-  if (msg.method === 'Network.webSocketCreated') requests.push(msg.params.url)
-  if (msg.method === 'Target.attachedToTarget') void watch(msg.params.sessionId)
+  const traffic = sessions.get(msg.sessionId)
+  if (!traffic) return
+  if (msg.method === 'Target.attachedToTarget') {
+    const watching = watch(msg.params.sessionId, traffic).catch(error =>
+      traffic.failures.push(`cannot watch child target: ${error.message}`)
+    )
+    traffic.watches.push(watching)
+  }
+  if (msg.method === 'Network.requestWillBeSent' || msg.method === 'Network.webSocketCreated') {
+    const isSocket = msg.method === 'Network.webSocketCreated'
+    const url = isSocket ? msg.params.url : msg.params.request.url
+    traffic.requests.push(url)
+    if (isSocket) traffic.sockets.set(`${msg.sessionId}:${msg.params.requestId}`, url)
+    if (!URL.canParse(url)) {
+      traffic.failures.push(`invalid request URL: ${url}`)
+      return
+    }
+    const parsed = new URL(url)
+    if (!/^(https?|wss?):$/.test(parsed.protocol)) return
+    if (parsed.host === `${host}:${opt.port}`) return
+    traffic.external.add(url)
+    if (
+      traffic.embed ||
+      !isSocket ||
+      !publicRelays.has(parsed.origin) ||
+      parsed.username ||
+      parsed.password
+    ) {
+      traffic.failures.push(
+        `unexpected external ${isSocket ? 'WebSocket' : 'HTTP request'}: ${url}`
+      )
+    } else {
+      traffic.publicSockets.add(parsed.origin)
+    }
+  }
+  if (msg.method === 'Network.webSocketFrameSent') {
+    const url = traffic.sockets.get(`${msg.sessionId}:${msg.params.requestId}`)
+    if (!url) {
+      traffic.failures.push('sent WebSocket frame without a captured socket URL')
+      return
+    }
+    if (!URL.canParse(url)) return // the socket URL has already failed above
+    if (new URL(url).host === `${host}:${opt.port}`) return
+    let frame
+    try {
+      frame = JSON.parse(msg.params.response.payloadData)
+    } catch {
+      traffic.failures.push(`non-JSON public WebSocket frame: ${url}`)
+      return
+    }
+    if (Array.isArray(frame) && frame[0] === 'CLOSE' && frame.length === 2) return
+    if (
+      !Array.isArray(frame) ||
+      frame[0] !== 'REQ' ||
+      typeof frame[1] !== 'string' ||
+      frame.length < 3 ||
+      frame
+        .slice(2)
+        .some(
+          filter =>
+            !filter ||
+            typeof filter !== 'object' ||
+            !Array.isArray(filter.kinds) ||
+            filter.kinds.length === 0 ||
+            filter.kinds.some(kind => kind !== 0 && kind !== 10002) ||
+            !Array.isArray(filter.authors) ||
+            filter.authors.length !== 1 ||
+            filter.authors[0] !== visitor
+        )
+    ) {
+      traffic.failures.push(
+        `public nonidentity request or write to ${url}: ${JSON.stringify(frame)}`
+      )
+      return
+    }
+    for (const filter of frame.slice(2))
+      for (const kind of filter.kinds) traffic.identityKinds.add(kind)
+  }
 })
-const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
-const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
-await send('Page.enable', {}, sessionId)
-await watch(sessionId)
-// Signed in as a visitor (nsec account), so the site looks the visitor's profile up.
-await send(
-  'Page.addScriptToEvaluateOnNewDocument',
-  {
-    source: `if (location.origin === ${JSON.stringify(origin)}) {
+
+const failures = []
+for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
+  // A fresh target/session per page prevents old sockets and workers contaminating the next check.
+  const traffic = {
+    embed: path.startsWith('/embed.html'),
+    requests: [],
+    sockets: new Map(),
+    publicSockets: new Set(),
+    identityKinds: new Set(),
+    external: new Set(),
+    failures: [],
+    watches: [],
+  }
+  const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
+  const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
+  await send('Page.enable', {}, sessionId)
+  await watch(sessionId, traffic)
+  // Signed in as a visitor (nsec account), so the site looks the visitor's profile up.
+  await send(
+    'Page.addScriptToEvaluateOnNewDocument',
+    {
+      source: `if (location.origin === ${JSON.stringify(origin)}) {
   localStorage.setItem('nostr:accounts', ${JSON.stringify(JSON.stringify([{ pubkey: visitor, method: 'nsec', createdAt: Date.now() }]))})
   localStorage.setItem('nostr:active-account', ${JSON.stringify(visitor)})
   sessionStorage.setItem('nostr:session-nsec-keys', ${JSON.stringify(JSON.stringify({ [visitor]: nip19.nsecEncode(visitorKey) }))})
 }`,
-  },
-  sessionId
-)
-
-const foreign = new Map()
-for (const path of ['/', `/v/${naddr}`, `/embed.html?v=${naddr}`]) {
-  requests.length = 0
+    },
+    sessionId
+  )
   await send('Page.navigate', { url: origin + path }, sessionId)
   await sleep(Number(opt.wait) * 1000)
-  const hosts = [
-    ...new Set(
-      requests
-        .map(u => URL.canParse(u) && new URL(u))
-        .filter(u => u && /^(https?|wss?):$/.test(u.protocol) && u.host !== `${host}:${opt.port}`)
-        .map(u => `${u.protocol}//${u.host}`)
-    ),
-  ]
+  await Promise.all(traffic.watches)
+  await send('Target.closeTarget', { targetId })
+  if (!traffic.embed) {
+    for (const url of publicRelays)
+      if (!traffic.publicSockets.has(url))
+        traffic.failures.push(`missing mandatory public socket: ${url}`)
+    for (const kind of [0, 10002])
+      if (!traffic.identityKinds.has(kind))
+        traffic.failures.push(
+          `no public visitor kind ${kind} REQ observed (check public connectivity or --wait)`
+        )
+  }
   console.log(
-    `${path.split('?')[0].slice(0, 12)}: ${requests.length} requests, foreign: ${hosts.join(', ') || 'none'}`
+    `${path.split('?')[0].slice(0, 12)}: ${traffic.requests.length} requests, external: ${[...traffic.external].join(', ') || 'none'}`
   )
-  for (const h of hosts) foreign.set(h, (foreign.get(h) ?? []).concat(path))
+  for (const failure of traffic.failures) failures.push(`${path}: ${failure}`)
 }
 console.log(
-  foreign.size
-    ? `FOREIGN HOSTS: ${[...foreign.keys()].join(', ')}`
-    : 'OK: no request left the instance'
+  failures.length
+    ? `FAILED:\n${failures.join('\n')}`
+    : 'OK: public traffic is visitor identity only; video sources and embed stayed on the instance'
 )
-process.exit(foreign.size ? 1 : 0)
+process.exit(failures.length ? 1 : 0)

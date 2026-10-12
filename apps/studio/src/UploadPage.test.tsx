@@ -48,7 +48,11 @@ vi.mock('./instance-client', () => ({
 const secret = generateSecretKey()
 const pubkey = getPublicKey(secret)
 
-const stateFor = (creators: string[], writers: string[]): AdminState => ({
+const stateFor = (
+  creators: string[],
+  writers: string[],
+  mirrorRelays: string[] = []
+): AdminState => ({
   revision: 1,
   origin: 'https://videos.example.org',
   tls: 'proxy',
@@ -62,7 +66,7 @@ const stateFor = (creators: string[], writers: string[]): AdminState => ({
     videoSources: ['wss://videos.example.org'],
     interactionRelays: [],
     profileRelays: [],
-    mirror: { relays: [], blossom: [] },
+    mirror: { relays: mirrorRelays, blossom: [] },
     search: { mode: 'off' },
     storage: { quotaGib: 0, freeSpaceReserveGib: 5 },
     site: {
@@ -122,12 +126,53 @@ describe('UploadPage', () => {
   it('publishes on the very first click, without asking the extension for its key', async () => {
     await renderPage(stateFor([pubkey], [pubkey]))
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('my clip')
+    // An extension signs here, so it will ask; the managed key would not.
+    expect(screen.getByText(/approve the upload/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))
     await screen.findByText('Published', {}, { timeout: 4000 })
     expect(screen.queryByText(/not ready/i)).toBeNull()
     expect(uploadBlob).toHaveBeenCalledTimes(2) // the video and its thumbnail
-    expect(screen.getByRole('link', { name: /\/v\/naddr1/ })).toBeTruthy()
-    expect(screen.getByText(/relay only/)).toBeTruthy()
+    const view = screen.getByRole('link', { name: 'View on the site' })
+    expect(view.getAttribute('href')).toMatch(/\/v\/naddr1/)
+    expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('#/videos')
+    expect(screen.getByText('my clip')).toBeTruthy()
+    expect(screen.getByText(/not copied to other relays/)).toBeTruthy()
+  })
+
+  it('says the video is copied on when mirror relays are configured', async () => {
+    await renderPage(stateFor([pubkey], [pubkey], ['wss://a.example', 'wss://b.example']))
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))
+    await screen.findByText(/copied to 2 other relays in the background/, {}, { timeout: 4000 })
+  })
+
+  it('clears the form for the next video after Upload another', async () => {
+    await renderPage(stateFor([pubkey], [pubkey]))
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))
+    await screen.findByRole('button', { name: 'Upload another' }, { timeout: 4000 })
+    fireEvent.click(screen.getByRole('button', { name: 'Upload another' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Upload another' })).toBeNull()
+    })
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('names what is missing next to the disabled button', async () => {
+    render(
+      <SignerProvider creatorKey={pubkey}>
+        <UploadPage state={stateFor([pubkey], [pubkey])} />
+      </SignerProvider>
+    )
+    expect(await screen.findByText('Choose a video file first.')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Video file'), {
+      target: { files: [new File(['video'], 'my_clip.mp4', { type: 'video/mp4' })] },
+    })
+    await screen.findByText(/640×360/)
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: ' ' } })
+    expect(screen.getByText('Add a title.')).toBeTruthy()
+    expect(
+      (screen.getByRole('button', { name: 'Upload and publish' }) as HTMLButtonElement).disabled
+    ).toBe(true)
   })
 
   it('does not upload for a key that is no creator and writer of the instance', async () => {
@@ -150,9 +195,37 @@ describe('UploadPage', () => {
     } as never)
     await renderPage(stateFor([pubkey], [pubkey]))
     fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))
-    await screen.findByText(/blocked: not a writer/, {}, { timeout: 4000 })
+    await screen.findByText(
+      'No relay accepted the video. blocked: not a writer',
+      {},
+      { timeout: 4000 }
+    )
+    expect(screen.getByText('wss://videos.example.org: blocked: not a writer')).toBeTruthy()
+    // No subtitles were chosen: that step did nothing.
+    expect(screen.getByText('skipped')).toBeTruthy()
     expect(screen.queryByText('Published')).toBeNull()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy())
+  })
+
+  it('gives advice instead of the raw error when the relay cannot be reached', async () => {
+    vi.mocked(bootInstanceClient).mockResolvedValueOnce({
+      config: { videoSources: ['wss://videos.example.org'] },
+      client: {
+        relayPool: {
+          publish: vi.fn(async () => [
+            { ok: false, from: 'wss://videos.example.org', message: 'Unknown error' },
+          ]),
+        },
+      },
+    } as never)
+    await renderPage(stateFor([pubkey], [pubkey]))
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and publish' }))
+    await screen.findByText(
+      /could not be reached. Check the instance address/,
+      {},
+      { timeout: 4000 }
+    )
+    expect(screen.getByText('wss://videos.example.org: Unknown error')).toBeTruthy()
   })
 
   describe('with a publish date', () => {

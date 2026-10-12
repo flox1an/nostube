@@ -33,8 +33,22 @@ describe('visitorProfileRelays', () => {
     expect(relays).toEqual([OUTBOX, INSTANCE, 'wss://purplepag.es/', 'wss://index.hzrd149.com/'])
   })
 
-  it('asks only the instance relays of a local-only instance, not even the visitor outboxes', () => {
+  it('keeps public discovery and visitor outboxes even when the instance config has no profile relays', () => {
     const config = served({ profileRelays: [] })
-    expect(visitorProfileRelays([INSTANCE], config.profileRelays, [OUTBOX])).toEqual([INSTANCE])
+    expect(visitorProfileRelays([INSTANCE], config.profileRelays, [OUTBOX])).toEqual([
+      OUTBOX,
+      INSTANCE,
+      'wss://purplepag.es/',
+      'wss://index.hzrd149.com/',
+    ])
+  })
+
+  it('adds configured profile relays without replacing public discovery', () => {
+    expect(visitorProfileRelays([INSTANCE], ['wss://custom.example'], [])).toEqual([
+      INSTANCE,
+      'wss://custom.example/',
+      'wss://purplepag.es/',
+      'wss://index.hzrd149.com/',
+    ])
   })
 })

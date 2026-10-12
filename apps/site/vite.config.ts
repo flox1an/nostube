@@ -48,7 +48,7 @@ function devConfig(env: NodeJS.ProcessEnv): Plugin {
             search: { mode: 'off' },
             site: {
               tagline: '',
-              theme: { accent: '#6d28d9', font: 'sans' },
+              theme: { accent: '#8b5cf6', font: 'sans' },
               videos: { hidden: [] },
               links: {
                 profile: 'https://njump.me/{nip19}',

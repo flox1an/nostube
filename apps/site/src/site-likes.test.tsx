@@ -4,12 +4,42 @@ import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
 import { PrivateKeyAccount } from 'applesauce-accounts/accounts'
 import { AccountsProvider, EventStoreProvider } from 'applesauce-react/providers'
+import { useAccountManager } from 'applesauce-react/hooks'
 import { finalizeEvent, matchFilter, verifyEvent, type Filter, type NostrEvent } from 'nostr-tools'
 import { of } from 'rxjs'
 import { describe, expect, it, vi } from 'vitest'
 import type { VideoEvent } from '@nostube/core/video-event'
 import { NostubeHostProvider, type NostubeHost } from '@nostube/widgets/host'
 import { isVideoLike, SiteLikes } from './SiteLikes'
+
+// The sign-in flows are the widgets' own; here a stand-in signs in with the account a test sets.
+const fakeAuth = vi.hoisted(() => ({ account: undefined as PrivateKeyAccount | undefined }))
+vi.mock('@nostube/widgets/components/auth/AuthDialog', () => ({
+  AuthDialog: (props: {
+    isOpen: boolean
+    description?: string
+    onLogin: () => void
+    onClose: () => void
+  }) => {
+    const manager = useAccountManager()
+    if (!props.isOpen) return null
+    return (
+      <div role="dialog">
+        <p>{props.description}</p>
+        <button
+          onClick={() => {
+            manager.addAccount(fakeAuth.account!)
+            manager.setActive(fakeAuth.account!)
+            props.onLogin()
+            props.onClose()
+          }}
+        >
+          Fake sign-in
+        </button>
+      </div>
+    )
+  },
+}))
 
 const creator = 'c'.repeat(64)
 const relays = ['wss://interact.example']
@@ -96,9 +126,22 @@ describe('SiteLikes', () => {
     expect(publish).not.toHaveBeenCalled()
   })
 
-  it('shows a guest no like button, since only a signed-in visitor can react', () => {
-    renderLikes([event('a', 7, '+', [['e', video.id]])], async () => [])
-    expect(screen.queryByRole('button')).toBeNull()
+  it('shows a guest the count, asks to sign in and then sends the like', async () => {
+    const account = PrivateKeyAccount.generateNew()
+    vi.spyOn(account.signer, 'signEvent').mockImplementation(async template =>
+      finalizeEvent(template, Uint8Array.from(account.signer.key))
+    )
+    const publish = renderLikes([event('a', 7, '+', [['e', video.id]])], async () => [
+      { ok: true, from: relays[0] },
+    ])
+    fireEvent.click(await screen.findByRole('button', { name: 'Like (1 like)' }))
+    expect(screen.getByText('Sign in to like this video. Watching needs no account.')).toBeTruthy()
+    fakeAuth.account = account
+    fireEvent.click(screen.getByRole('button', { name: 'Fake sign-in' }))
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1))
+    expect(publish.mock.calls[0][1]).toMatchObject({ kind: 7, pubkey: account.pubkey })
+    const liked = await screen.findByRole('button', { name: 'Like (2 likes)' })
+    expect(liked.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('only matches the exact address and the video author', () => {

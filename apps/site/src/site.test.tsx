@@ -1,5 +1,5 @@
 import { DEFAULT_SITE_LINKS, noSitePages } from '@nostube/core/instance-config'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { EventStore } from 'applesauce-core'
 import { AccountManager } from 'applesauce-accounts'
 import { nip19 } from 'nostr-tools'
@@ -274,11 +274,46 @@ describe('SiteHome', () => {
   it('opens a video at its own URL and opens it directly from a link', async () => {
     renderSite(client)
     await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
-    fireEvent.click(screen.getByText('My first upload'))
+    // A real link (new tab, copy link, crawlers); a plain click stays in the app.
+    const card = screen.getByText('My first upload').closest('a')!
+    expect(card.getAttribute('href')).toMatch(/^\/v\/nevent1/)
+    fireEvent.click(card)
     await waitFor(() => expect(screen.getByTestId('player')).toBeTruthy())
     expect(screen.getByRole('heading', { name: 'My first upload' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('link', { name: 'Site title' }))
+    const crumb = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    fireEvent.click(within(crumb).getByRole('link', { name: 'Site title' }))
     await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
+  })
+
+  it('lists the videos with a tag at /t/<tag>, reached from a tag on a video page', async () => {
+    // Fresh copies: the store of an earlier test marked `video` with its own (symbol) caches.
+    const fresh = (): typeof video => JSON.parse(JSON.stringify(video))
+    const tagged = { ...fresh(), tags: [...video.tags, ['t', 'travel']] }
+    const untagged = {
+      ...fresh(),
+      id: 'd'.repeat(64),
+      tags: [
+        ['title', 'Untagged'],
+        ['imeta', 'url https://media.example/b.mp4', 'm video/mp4', 'duration 30'],
+      ],
+    }
+    const taggedClient = {
+      eventStore: makeStore(),
+      getTimelineLoader: () => () => of(tagged, untagged),
+      relayPool: { request: () => of(profile), subscription: () => NEVER },
+    } as unknown as NostubeClient
+    renderSite(taggedClient)
+    await waitFor(() => expect(screen.getByText('Untagged')).toBeTruthy())
+    fireEvent.click(screen.getByText('My first upload'))
+    // The video page leads on: the creator's other videos below it.
+    const more = await screen.findByRole('heading', { name: 'More videos' })
+    expect(more.parentElement?.textContent).toContain('Untagged')
+    fireEvent.click(screen.getByRole('link', { name: '#travel' }))
+    expect(await screen.findByRole('heading', { name: 'Videos tagged #travel' })).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('My first upload')).toBeTruthy())
+    expect(screen.queryByText('Untagged')).toBeNull()
+    fireEvent.click(screen.getByRole('link', { name: 'All videos' }))
+    await waitFor(() => expect(screen.getByText('Untagged')).toBeTruthy())
   })
 
   it('shows placeholders while the videos load', async () => {
@@ -347,7 +382,8 @@ describe('SiteHome', () => {
     const crumb = await screen.findByRole('navigation', { name: 'Breadcrumb' })
     expect(crumb.textContent).toContain('Site title')
     await waitFor(() => expect(crumb.textContent).toContain('My first upload'))
-    expect(screen.queryByRole('heading', { name: 'Site title' })).toBeNull()
+    // The site header (title, sign-in) stays above the breadcrumb.
+    expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByTestId('player')).toBeNull())
     expect(screen.getByRole('heading', { name: 'Site title' })).toBeTruthy()
@@ -385,9 +421,8 @@ describe('SiteHome', () => {
     expect(seek.getAttribute('href')).toMatch(/\/v\/nevent1.*\?t=83$/)
     const mention = screen.getByRole('link', { name: /^@/ })
     expect(mention.getAttribute('href')).toBe(`https://njump.me/${nip19.npubEncode(other)}`)
-    // Tags have no page on the site: plain text, no link.
-    expect(screen.queryByRole('link', { name: '#travel' })).toBeNull()
-    expect(screen.getByText('#travel')).toBeTruthy()
+    // Tags open the site's own tag page.
+    expect(screen.getByRole('link', { name: '#travel' }).getAttribute('href')).toBe('/t/travel')
   })
 
   it('starts a long description collapsed and collapses it again on another video', async () => {

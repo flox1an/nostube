@@ -130,7 +130,7 @@ function PageCard({
 /** The optional about, imprint and privacy pages of the site, one text per language. */
 export function PagesPage({ draft, update }: PageProps) {
   const { t } = useTranslation()
-  // The standard text names the public profile lookup relays as set on the Instance page.
+  // The standard text names mandatory public defaults plus the Instance page's additional relays.
   const profileRelays = draft.profileRelaysText
     .split('\n')
     .map(line => line.trim())

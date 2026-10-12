@@ -27,9 +27,13 @@ chapters. Signed-in visitors can like videos and send Lightning zaps through the
 LNURL-pay provider (QR/external wallet or an injected WebLN wallet). Like publishing needs an
 accepting interaction relay; zap totals include only validated provider receipts.
 
-The signed-in visitor's name and avatar are discovered through public profile indexers and
-their NIP-65 write relays. This identity lookup does not widen the site's video sources or
-the relays used to publish interactions.
+The signed-in visitor's name and avatar are always discovered through the mandatory public
+profile indexers (`wss://purplepag.es`, `wss://index.hzrd149.com`), their NIP-65 write relays,
+the instance relays and any additional visitor-profile relays configured in Studio.
+`profile_relays = []` means no additional relays, not a public-lookup opt-out. Only that
+visitor's kinds 0 and 10002 use this exception: video sources, creator metadata, embed
+queries and interaction publishing retain their instance scope. Public relays learn the
+visitor's IP address and queried public key; a public avatar URL can also contact its host.
 The Site's first login dialog uses a translated, brand-neutral “Welcome” heading.
 
 **Server → Overview** in Studio shows the built-in relay's live event count and distribution
@@ -161,24 +165,35 @@ cargo build --release --manifest-path apps/server/Cargo.toml
 
 Run it under systemd with `Restart=always` for the reason given above.
 
-## Checking that an instance stays local
+## Checking video and visitor-profile traffic boundaries
 
-By default the site looks up a signed-in visitor's own name and picture on two public relays
-(`purplepag.es`, `index.hzrd149.com`). For an instance that must not reach the internet, click
-"Local only" under "Visitor profiles" on the studio's Instance page (or set
-`profile_relays = []` in `config.toml`); visitors then show with their key unless their profile is
-on the instance relays (ADR 0008).
+Signed-in visitor identity always uses the public defaults and NIP-65 write relays (ADR 0008).
+There is no “Local only” visitor setting: Studio's visitor-profile list adds discovery relays,
+and `profile_relays = []` adds none. An instance with signed-in visitors therefore cannot
+promise zero internet traffic. Video catalog and creator queries remain instance-scoped,
+and an embed with the instance config uses only instance relays.
 
-`apps/server/scripts/check-local-profile.mjs` proves it on macOS: it starts a server on a
-throwaway data folder with `profile_relays = []`, seeds a creator video on its own relay and
-Blossom, opens the site (signed in as a visitor), the video page and the embed in headless Brave
-(`--browser` for another Chromium) and lists every request and WebSocket to another host. It
-exits 1 when it finds one. `--default-profile-relays` runs it with the public lookup instead,
-`--serve` only seeds and keeps the instance running for a look of your own.
+`apps/server/scripts/check-local-profile.mjs` checks this boundary on macOS. It starts a
+throwaway instance with `profile_relays = []` and seeds a creator video, profile, thumbnail
+and media only on its own relay and Blossom. It opens the signed-in site, its video page
+and the embed in separate headless Brave targets (`--browser` selects another Chromium).
+On the site and video page, only `wss://purplepag.es` and `wss://index.hzrd149.com` may be
+external sockets. Every public `REQ` must filter only kinds 0/10002 and exactly the seeded
+visitor's public key; public `CLOSE`s are allowed, writes and other messages are not.
+Unexpected hosts, external HTTP, public video queries and any external embed traffic exit 1.
+The check also requires both public sockets and visitor kind 0/10002 requests to be observed;
+it needs public-relay connectivity and may need a longer `--wait` on a slow connection.
+
+Prerequisites: installed workspace dependencies, macOS `scutil`/mDNS, Brave or another
+Chromium browser, and freshly built Site/Studio/embed assets and server. The instance uses
+a throwaway local CA and browser profile. `--default-profile-relays` compares an omitted
+config list with the explicit empty list; both must retain public visitor lookup.
+`--serve` only seeds and keeps the instance running for manual inspection.
 
 ```sh
 scripts/build-server-web.sh && cargo build --manifest-path apps/server/Cargo.toml
 node apps/server/scripts/check-local-profile.mjs
+node apps/server/scripts/check-local-profile.mjs --default-profile-relays
 ```
 
 ## Not covered yet

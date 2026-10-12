@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { SITE_PAGE_MAX_CHARS, isPageText } from '@nostube/core/instance-config'
+import {
+  DEFAULT_PROFILE_RELAYS,
+  SITE_PAGE_MAX_CHARS,
+  isPageText,
+} from '@nostube/core/instance-config'
 import { widgetResources } from '@nostube/widgets/i18n'
 import { DEFAULT_PAGE_LANGUAGES, privacyPolicy } from './default-pages'
 
@@ -14,14 +18,16 @@ describe('standard privacy policy', () => {
     }
   })
 
-  it('names the public profile lookup relays, or says the lookup stays local', () => {
-    const relays = ['wss://purplepag.es', 'wss://index.hzrd149.com']
+  it('always names public defaults and adds custom lookup relays without duplicates', () => {
+    const extra = 'wss://profiles.example'
     for (const language of DEFAULT_PAGE_LANGUAGES) {
-      const open = privacyPolicy(language, relays)!
-      const local = privacyPolicy(language, [])!
-      expect(open, language).toContain('wss://purplepag.es, wss://index.hzrd149.com')
-      expect(local, language).not.toContain('wss://')
-      expect(open, language).not.toBe(local)
+      const defaults = privacyPolicy(language, [])!
+      const custom = privacyPolicy(language, [...DEFAULT_PROFILE_RELAYS, extra, extra])!
+      for (const relay of DEFAULT_PROFILE_RELAYS) {
+        expect(defaults, language).toContain(relay)
+        expect(custom.split(relay), language).toHaveLength(2)
+      }
+      expect(custom.split(extra), language).toHaveLength(2)
     }
   })
 

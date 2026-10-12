@@ -186,7 +186,21 @@
       "authorMismatch": "只有作者可以编辑或删除视频。管理员可以选择隐藏视频。",
       "notAddressable": "此处只能编辑或删除可寻址的视频事件。",
       "eventMissing": "当前视频事件不可用。请重新加载视频列表后再试。",
-      "assetMissing": "字幕缺少文件或 URL。"
+      "assetMissing": "字幕缺少文件或 URL。",
+      "scheduled": {
+        "title": "定时发布的视频",
+        "edit": "编辑",
+        "cancelPublication": "取消发布",
+        "cancelConfirm": "取消定时发布的视频“{{title}}”？",
+        "cancelHint": "视频及其文件将从此服务器删除，且无法恢复。",
+        "confirmCancel": "取消发布",
+        "keep": "保留",
+        "state": {
+          "scheduled": "定于 {{date}} 发布",
+          "released": "已于 {{date}} 发布",
+          "failed": "未发布"
+        }
+      }
     },
     "instance": {
       "languageHint": "仅适用于此浏览器中的 Studio。公开网站使用每位访客的浏览器语言。",
@@ -258,7 +272,13 @@
       "uploading": "正在上传…",
       "retry": "重试",
       "start": "上传并发布",
-      "approveHint": "你的签名器会请你批准上传和发布。"
+      "approveHint": "你的签名器会请你批准上传和发布。",
+      "publishAt": "发布时间",
+      "publishAtHint": "可选。留空则立即发布。在此之前，视频只保存在此服务器上。",
+      "publishAtPast": "请选择未来的日期和时间。",
+      "schedule": "上传并定时发布",
+      "scheduledTitle": "已安排",
+      "scheduledDescription": "视频已存储在此实例上，将于 {{date}} 公开。在此之前，它不在任何中继上，也不会出现在网站上。"
     },
     "moderation": {
       "title": "审核",

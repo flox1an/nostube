@@ -368,6 +368,8 @@ pub fn router(state: AdminState) -> Router {
         .route("/api/admin/branding/{slot}", axum::routing::put(branding_put).delete(branding_delete))
         .route("/api/admin/outbox", get(outbox_get))
         .route("/api/admin/outbox/retry", post(outbox_retry))
+        .route("/api/admin/schedule", get(schedule_get).post(schedule_post))
+        .route("/api/admin/schedule/cancel", post(schedule_cancel))
         .with_state(state)
 }
 
@@ -889,6 +891,63 @@ async fn outbox_retry(State(state): State<Arc<AdminState>>, headers: HeaderMap, 
     }
 }
 
+// ── Scheduled publishing (spec "Geplante Veröffentlichung") ─────────────────
+
+fn schedule_error(e: crate::schedule::Error) -> Response {
+    match e {
+        crate::schedule::Error::Rejected(why) => json_error(StatusCode::BAD_REQUEST, &why),
+        crate::schedule::Error::Failed(why) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &why),
+    }
+}
+
+/// Scheduled videos (pending first by due date) with their state.
+async fn schedule_get(State(state): State<Arc<AdminState>>, headers: HeaderMap) -> Response {
+    if !is_authed(&state, &headers) {
+        return json_error(StatusCode::UNAUTHORIZED, "not logged in");
+    }
+    match crate::schedule::list(&state.stores.outbox).await {
+        Ok(list) => Json(list).into_response(),
+        Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
+    }
+}
+
+/// Takes a signed video event whose `published_at` is in the future and holds it until then.
+/// Body: the event JSON. The same `d` tag as a pending video replaces it.
+async fn schedule_post(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let cfg = match Config::load(&state.data.join("config.toml")) {
+        Ok(cfg) => cfg,
+        Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    match crate::schedule::submit(&state.stores.outbox, &cfg.creators, &cfg.allowed_writers, &body).await {
+        Ok(accepted) => Json(accepted).into_response(),
+        Err(e) => schedule_error(e),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CancelBody {
+    id: String,
+}
+
+/// Drops a pending video and removes its blobs. Body `{"id": "<event id>"}`.
+async fn schedule_cancel(State(state): State<Arc<AdminState>>, headers: HeaderMap, body: axum::body::Bytes) -> Response {
+    if let Some(refusal) = refuse_write(&state, &headers) {
+        return refusal;
+    }
+    let CancelBody { id } = match serde_json::from_slice(&body) {
+        Ok(b) => b,
+        Err(e) => return json_error(StatusCode::BAD_REQUEST, &format!("invalid body: {e}")),
+    };
+    match crate::schedule::cancel(&state.stores.outbox, id).await {
+        Ok(()) => Json(serde_json::json!({ "cancelled": true })).into_response(),
+        Err(e) => schedule_error(e),
+    }
+}
+
 // ── Managed signer (ADR 0007) ───────────────────────────────────────────────
 
 /// The managed key, `Ok(None)` when there is none, `Err` when it cannot be unlocked.
@@ -1319,6 +1378,7 @@ mod tests {
         let branding = Arc::new(crate::branding::Branding::open(dir, public));
         let relay = Relay::open(&dir.join("relay.sqlite"), relay).unwrap();
         let outbox = crate::outbox::Outbox::open(&dir.join("relay.sqlite"), config::Mirror::default()).unwrap();
+        outbox.attach_storage(blossom.clone());
         Stores { relay, blossom, branding, outbox }
     }
 
@@ -1851,6 +1911,80 @@ mod tests {
         assert_eq!(send(&app, "/api/admin/signer", c, None).await.0, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(send(&app, "/api/admin/signer/sign", c, Some(event)).await.0, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(call(&app, "GET", c, None, "").await.0, StatusCode::OK);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn scheduled_videos_are_submitted_edited_and_cancelled_through_the_studio_endpoints() {
+        use sha2::Digest;
+        let (app, dir, cookie, blossom, _) = studio_fixture_with_stores("{ mode = \"local-ca\" }", true).await;
+        let c = Some(cookie.as_str());
+        let pubkey = send(&app, "/api/admin/signer", c, Some("{}")).await.2["pubkey"].as_str().unwrap().to_owned();
+        // The managed key becomes the creator, as the studio's config save does.
+        let config = std::fs::read_to_string(dir.join("config.toml")).unwrap().replace(PK, &pubkey);
+        std::fs::write(dir.join("config.toml"), config).unwrap();
+
+        let bytes = b"scheduled video";
+        let hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let path = blossom.storage.uploads.join(format!("{hash}.mp4"));
+        tokio::fs::create_dir_all(&blossom.storage.uploads).await.unwrap();
+        tokio::fs::write(&path, bytes).await.unwrap();
+        blossom.file_index.insert(hash.clone(), almond::models::FileMetadata {
+            location: almond::models::FileLocation::Local(path), extension: Some("mp4".into()),
+            mime_type: Some("video/mp4".into()), size: bytes.len() as u64, created_at: 1, pubkey: None,
+            expiration: None, origin: Default::default(),
+        }).await;
+
+        let due = now_secs() + 3600;
+        let template = |d: &str, due: u64| serde_json::json!({
+            "kind": 34235, "created_at": now_secs(), "content": "hello",
+            "tags": [["d", d], ["title", "Later"], ["published_at", due.to_string()],
+                     ["imeta", format!("url https://flox-mac.local/{hash}.mp4"), format!("x {hash}")]],
+        }).to_string();
+        let sign = |body: String| {
+            let app = app.clone();
+            let cookie = cookie.clone();
+            async move { send(&app, "/api/admin/signer/sign", Some(&cookie), Some(&body)).await.2.to_string() }
+        };
+        let signed = sign(template("later", due)).await;
+
+        // A studio write: session and JSON body.
+        assert_eq!(send(&app, "/api/admin/schedule", None, Some(&signed)).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(call_raw(&app, "/api/admin/schedule", c).await, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+        assert_eq!(send(&app, "/api/admin/schedule", None, None).await.0, StatusCode::UNAUTHORIZED);
+        // Refused: not in the future, and a key that is no creator.
+        let past = sign(template("later", now_secs() - 10)).await;
+        let (status, _, error) = send(&app, "/api/admin/schedule", c, Some(&past)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(error["error"].as_str().unwrap().contains("not in the future"), "{error}");
+        let stranger = nostr::prelude::Keys::generate();
+        use nostr::prelude::FinalizeEvent;
+        let foreign = nostr::prelude::EventBuilder::new(nostr::prelude::Kind::Custom(34235), "x")
+            .tags([nostr::prelude::Tag::parse(["d", "x"]).unwrap()]).finalize(&stranger).unwrap().as_json();
+        assert_eq!(send(&app, "/api/admin/schedule", c, Some(&foreign)).await.0, StatusCode::BAD_REQUEST);
+
+        let (status, _, accepted) = send(&app, "/api/admin/schedule", c, Some(&signed)).await;
+        assert_eq!(status, StatusCode::OK, "{accepted}");
+        let id = accepted["id"].as_str().unwrap().to_owned();
+        let (_, _, list) = send(&app, "/api/admin/schedule", c, None).await;
+        assert_eq!(list["items"][0]["id"], id.as_str());
+        assert_eq!(list["items"][0]["state"], "scheduled");
+        assert_eq!(list["items"][0]["event"]["pubkey"], pubkey.as_str());
+
+        // Edit before release: the same d tag replaces the held event.
+        let edited = sign(template("later", due + 60)).await;
+        assert_eq!(send(&app, "/api/admin/schedule", c, Some(&edited)).await.0, StatusCode::OK);
+        let (_, _, list) = send(&app, "/api/admin/schedule", c, None).await;
+        assert_eq!(list["items"].as_array().unwrap().len(), 1);
+        assert_eq!(list["items"][0]["dueAt"], due + 60);
+
+        // Cancelling drops it; a second cancel finds nothing.
+        let new_id = list["items"][0]["id"].as_str().unwrap().to_owned();
+        let cancel = serde_json::json!({ "id": new_id }).to_string();
+        assert_eq!(send(&app, "/api/admin/schedule/cancel", None, Some(&cancel)).await.0, StatusCode::UNAUTHORIZED);
+        assert_eq!(send(&app, "/api/admin/schedule/cancel", c, Some(&cancel)).await.0, StatusCode::OK);
+        assert_eq!(send(&app, "/api/admin/schedule/cancel", c, Some(&cancel)).await.0, StatusCode::BAD_REQUEST);
+        assert!(send(&app, "/api/admin/schedule", c, None).await.2["items"].as_array().unwrap().is_empty());
         std::fs::remove_dir_all(&dir).ok();
     }
 

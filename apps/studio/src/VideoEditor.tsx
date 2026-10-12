@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { NostrEvent } from 'nostr-tools'
+import type { EventTemplate, NostrEvent } from 'nostr-tools'
 import { Button } from '@nostube/widgets/components/button'
 import { Input } from '@nostube/widgets/components/input'
 import { Textarea } from '@nostube/widgets/components/textarea'
@@ -12,24 +12,27 @@ import { SubtitleSection } from '@nostube/widgets/components/SubtitleSection'
 import { Progress } from '@nostube/widgets/components/progress'
 import { detectLanguageFromFilename, generateSubtitleId } from '@nostube/core/subtitle-utils'
 import { Field } from './fields'
+import { fromLocalInput, isFuture, toLocalInput } from './datetime'
 import { useSigner } from './signer-context'
-import type { InstanceClient } from './instance-client'
 import { makeUploadDeps } from './upload/make-deps'
 import { probeVideo, type VideoProbe } from './upload/probe-video'
-import { publishVideoChange } from './upload/publish-video-change'
+import type { PublishedVideo } from './upload/run-upload'
 import { runVideoEdit, type EditSubtitle, type VideoEditCache } from './upload/run-video-edit'
 
 export function VideoEditor({
   event,
   getCurrent,
-  instance,
+  publish,
   replace,
+  dueAt,
   onClose,
 }: {
   event: NostrEvent
   getCurrent: () => NostrEvent
-  instance: InstanceClient
+  publish: (template: EventTemplate) => Promise<PublishedVideo>
   replace: boolean
+  /** A scheduled video: its publish date (unix seconds) can be changed here. */
+  dueAt?: number
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -57,6 +60,8 @@ export function VideoEditor({
       }))
   )
   const [subtitlesChanged, setSubtitlesChanged] = useState(false)
+  const [dueText, setDueText] = useState(dueAt === undefined ? '' : toLocalInput(dueAt))
+  const due = fromLocalInput(dueText)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
@@ -122,7 +127,20 @@ export function VideoEditor({
           thumbnail,
           subtitles: subtitlesChanged ? subtitles : undefined,
         },
-        { ...deps, publish: template => publishVideoChange(instance, signer, pubkey, template) },
+        {
+          ...deps,
+          publish: template =>
+            publish(
+              dueAt === undefined
+                ? template
+                : {
+                    ...template,
+                    tags: template.tags.map(tag =>
+                      tag[0] === 'published_at' ? ['published_at', String(due)] : tag
+                    ),
+                  }
+            ),
+        },
         cache.current,
         (done, total) => setProgress(total > 0 ? done / total : 0)
       )
@@ -146,7 +164,8 @@ export function VideoEditor({
     !running &&
     !reading &&
     (!replace || (!!file && !!probe)) &&
-    subtitles.every(subtitle => subtitle.lang)
+    subtitles.every(subtitle => subtitle.lang) &&
+    (dueAt === undefined || (due !== undefined && isFuture(due)))
 
   return (
     <section
@@ -188,6 +207,25 @@ export function VideoEditor({
           onChange={e => setDescription(e.target.value)}
         />
       </Field>
+      {dueAt !== undefined && (
+        <Field
+          id={`${fieldPrefix}-due`}
+          label={t('studio.upload.publishAt')}
+          hint={t(
+            due !== undefined && isFuture(due)
+              ? 'studio.upload.publishAtHint'
+              : 'studio.upload.publishAtPast'
+          )}
+        >
+          <Input
+            id={`${fieldPrefix}-due`}
+            type="datetime-local"
+            value={dueText}
+            disabled={running}
+            onChange={e => setDueText(e.target.value)}
+          />
+        </Field>
+      )}
       <Field id={`${fieldPrefix}-tags`} label={t('studio.upload.tags')}>
         <TagInput
           id={`${fieldPrefix}-tags`}

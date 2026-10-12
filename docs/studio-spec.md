@@ -43,6 +43,20 @@ Das Studio wählt den Signer nach der Antwort des Servers: den Managed-Key, sons
 
 Der Server braucht den Key nicht, um Events zeitgesteuert zu senden: Das Studio signiert vorab (mit dem Zeitstempel des Veröffentlichungstermins) und übergibt das Event dem Server, der es bis zum Termin zurückhält und dann an die Relays sendet. Das funktioniert mit beiden Betriebsarten. Der Server kann so nur veröffentlichen, was der Owner schon signiert hat. Was der Server selbst erfinden müsste (etwa automatische Reaktionen), braucht einen Bunker mit eingeschränkten Rechten und liegt außerhalb des ersten Schnitts.
 
+**Umsetzung (umgesetzt, Upload-Seite und Seite „Videos“):** Im Upload gibt es das optionale Feld „Veröffentlichen am“ (lokale Zeit). Ist ein Termin in der Zukunft gesetzt, signiert das Studio das vollständige Videoevent sofort (`created_at` = jetzt, Tag `published_at` = Termin; ein `created_at` in der Zukunft würde vom Managed-Signer und von Relays abgelehnt, 30 Minuten) und schickt es per `POST /api/admin/schedule` an den Server statt an die Relays. Der Server hält es in der Tabelle `scheduled` von `relay.sqlite`; bis zur Freigabe steht es in keiner Relay-Tabelle, ist also weder auf der Site noch im Embed noch für fremde Nostr-Clients sichtbar.
+
+- **Annahme (Vertrauensgrenze):** gültige Signatur, Pubkey in `creators` und `allowed_writers`, Kind 34235 oder 34236, `d`-Tag, jede referenzierte Blob liegt im Blossom-Speicher der Instanz, Termin in der Zukunft. Alles andere lehnt der Server mit 400 und Begründung ab.
+- **Freigabe:** ein Worker prüft etwa jede Minute auf fällige Events und gleich beim Start (überfällige Events nach einem Ausfall gehen beim nächsten Start raus). Das Event geht durch den normalen Weg des Relays; damit wirkt die Outbox (Server-ADR 0009) wie bei jedem anderen Event, auch für Spiegel-Relays. Die Zeile bleibt als Verlauf mit Zustand `released` (oder `failed` samt Grund, etwa wenn das Event zwischenzeitlich gelöscht wurde). Minutengenau, keine sekundengenaue Garantie.
+- **Bearbeiten vor der Freigabe:** das Studio signiert neu und ersetzt das gehaltene Event (gleicher `d`-Tag, Termin änderbar); Blobs der ersetzten Version räumt der Server auf, soweit nichts anderes sie braucht. Nach der Freigabe gilt der normale Bearbeitungsweg.
+- **Abbrechen vor der Freigabe:** wie Löschen: der Server verwirft das Event (`POST /api/admin/schedule/cancel`) und entfernt die Blobs aus Blossom (und von den Spiegeln). Blobs gehaltener Videos räumt keine Aufräumaufgabe weg.
+- **Liste:** die Seite „Videos“ zeigt gehaltene und freigegebene Videos mit Zustand (`GET /api/admin/schedule`).
+- **Nicht Teil davon:** keine Premieren oder Countdown-Seiten (zusammen mit Live-Streaming prüfen); Terminplanung gilt nur für den verbundenen Studio-Key (Studio-Zugang für mehrere Creators ist ein eigenes Thema).
+
+**Akzeptierte Risiken (dokumentiert, nicht behoben):**
+
+1. Die Server-Datenbank enthält signierte Events. Wer sie kompromittiert, kann genau diese Videos früher veröffentlichen, mehr nicht (im Managed-Modus bekäme er ohnehin den Key, siehe oben).
+2. Die Blobs sind vor der Freigabe öffentlich abrufbar: Blossom adressiert nach Hash, die URL ist der Hash. Ohne das Event ist sie nicht auffindbar. Eine Vorab-Platzierung der Blobs (Spiegel, CDN) ist ein brauchbarer Baustein für später.
+
 ## Funktionen (grobe Reihenfolge)
 
 1. **Anmeldung und Übersicht**: Login des Admins, Einrichtung des Signers (siehe Identität und Signer), Startseite mit Zustand der Instanz (Speicher, Relays, letzte Uploads).

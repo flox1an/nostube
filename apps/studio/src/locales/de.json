@@ -186,7 +186,21 @@
       "authorMismatch": "Nur der Autor kann das Video bearbeiten oder löschen. Administratoren können es stattdessen ausblenden.",
       "notAddressable": "Hier können nur adressierbare Video-Events bearbeitet oder gelöscht werden.",
       "eventMissing": "Das aktuelle Video-Event ist nicht verfügbar. Lade die Videoliste neu und versuche es erneut.",
-      "assetMissing": "Bei einem Untertitel fehlt die Datei oder URL."
+      "assetMissing": "Bei einem Untertitel fehlt die Datei oder URL.",
+      "scheduled": {
+        "title": "Geplante Videos",
+        "edit": "Bearbeiten",
+        "cancelPublication": "Veröffentlichung abbrechen",
+        "cancelConfirm": "Das geplante Video „{{title}}“ abbrechen?",
+        "cancelHint": "Das Video und seine Dateien werden von diesem Server entfernt. Das lässt sich nicht rückgängig machen.",
+        "confirmCancel": "Veröffentlichung abbrechen",
+        "keep": "Behalten",
+        "state": {
+          "scheduled": "Geplant für {{date}}",
+          "released": "Veröffentlicht {{date}}",
+          "failed": "Nicht veröffentlicht"
+        }
+      }
     },
     "instance": {
       "languageHint": "Gilt nur für Studio in diesem Browser. Die öffentliche Website verwendet die Browsersprache des jeweiligen Besuchers.",
@@ -258,7 +272,13 @@
       "uploading": "Wird hochgeladen…",
       "retry": "Erneut versuchen",
       "start": "Hochladen und veröffentlichen",
-      "approveHint": "Dein Signer bittet dich, den Upload und die Veröffentlichung zu bestätigen."
+      "approveHint": "Dein Signer bittet dich, den Upload und die Veröffentlichung zu bestätigen.",
+      "publishAt": "Veröffentlichen am",
+      "publishAtHint": "Optional. Leer lassen, um sofort zu veröffentlichen. Bis dahin liegt das Video nur auf diesem Server.",
+      "publishAtPast": "Wähle ein Datum und eine Uhrzeit in der Zukunft.",
+      "schedule": "Hochladen und planen",
+      "scheduledTitle": "Geplant",
+      "scheduledDescription": "Das Video liegt auf dieser Instanz und wird am {{date}} öffentlich. Bis dahin ist es auf keinem Relay und nicht auf der Seite."
     },
     "moderation": {
       "title": "Moderation",

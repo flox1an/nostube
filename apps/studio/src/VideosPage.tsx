@@ -9,6 +9,7 @@ import {
 } from '@nostube/widgets/components/card'
 import { Skeleton } from '@nostube/widgets/components/skeleton'
 import type { Draft } from './draft'
+import { ScheduledVideos } from './ScheduledVideos'
 
 const HiddenVideosPicker = lazy(() => import('./HiddenVideosPicker'))
 
@@ -31,7 +32,8 @@ export function VideosPage({
           <CardTitle>{t('studio.videos.title')}</CardTitle>
           <CardDescription>{t('studio.videos.description')}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <ScheduledVideos />
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             <HiddenVideosPicker
               hiddenText={draft.hiddenText}

@@ -1,5 +1,6 @@
 import { generateEventLink } from '@nostube/core/video-event'
 import { bootInstanceClient } from '../instance-client'
+import { scheduleVideo } from '../api'
 import type { Signer } from '../signer'
 import { uploadBlob } from './blossom-upload'
 import { probeVideo } from './probe-video'
@@ -28,10 +29,13 @@ export function makeUploadDeps({
   signer,
   pubkey,
   title,
+  publishAt,
 }: {
   signer: Signer
   pubkey: string
   title: string
+  /** Unix seconds in the future: sign now, let the server publish then. */
+  publishAt?: number
 }): UploadDeps {
   return {
     probe: probeVideo,
@@ -48,11 +52,15 @@ export function makeUploadDeps({
         sign: template => signChecked(signer, template, pubkey),
       }),
     publish: async template => {
-      const { config, client } = await bootInstanceClient()
       const signed = await signChecked(signer, template, pubkey)
+      if (publishAt) {
+        await scheduleVideo(signed)
+        return { eventId: signed.id, link: '', accepted: [], scheduledFor: publishAt }
+      }
+      const { config, client } = await bootInstanceClient()
+      const identifier = template.tags.find(t => t[0] === 'd')?.[1] ?? ''
       const relays = config.videoSources
       const accepted = await publishChecked(client, relays, signed, 'studio.errors.noRelayAccepted')
-      const identifier = template.tags.find(t => t[0] === 'd')?.[1] ?? ''
       return {
         eventId: signed.id,
         link: generateEventLink(signed, identifier, relays.slice(0, 3)),

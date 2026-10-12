@@ -1,3 +1,4 @@
+import type { NostrEvent } from 'nostr-tools'
 import type { BrandingSlot, InstanceSite } from '@nostube/core/instance-config'
 import i18n from './i18n'
 
@@ -223,6 +224,36 @@ export async function retryOutbox(target?: string): Promise<number> {
   return (await postJson<{ retried: number }>('/api/admin/outbox/retry', target ? { target } : {}))
     .retried
 }
+
+/** A video held by the server until its due date (`GET /api/admin/schedule`). */
+export interface ScheduledVideo {
+  id: string
+  kind: number
+  identifier: string
+  /** Unix seconds. */
+  dueAt: number
+  state: 'scheduled' | 'released' | 'failed'
+  /** Why a `failed` video was not released. */
+  error: string | null
+  releasedAt: number | null
+  /** The signed event the server holds. */
+  event: NostrEvent
+}
+
+export async function loadSchedule(): Promise<ScheduledVideo[]> {
+  const res = await fetch('/api/admin/schedule', { credentials: 'same-origin' })
+  if (!res.ok) throw new Error(await errorMessage(res))
+  const body: { items: ScheduledVideo[] } = await res.json()
+  return body.items
+}
+
+/** Hands a signed video event to the server, which publishes it on its `published_at`. */
+export const scheduleVideo = (signed: object) =>
+  postJson<{ id: string; dueAt: number }>('/api/admin/schedule', signed)
+
+/** Drops a scheduled video and removes its files. */
+export const cancelScheduled = (id: string) =>
+  postJson<{ cancelled: true }>('/api/admin/schedule/cancel', { id })
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

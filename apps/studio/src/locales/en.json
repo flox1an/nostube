@@ -186,7 +186,21 @@
       "authorMismatch": "Only the video's author can edit or delete it. Administrators may hide it instead.",
       "notAddressable": "Only addressable video events can be edited or deleted here.",
       "eventMissing": "The current video event is unavailable. Reload the video list before trying again.",
-      "assetMissing": "A subtitle is missing its file or URL."
+      "assetMissing": "A subtitle is missing its file or URL.",
+      "scheduled": {
+        "title": "Scheduled videos",
+        "edit": "Edit",
+        "cancelPublication": "Cancel publication",
+        "cancelConfirm": "Cancel the scheduled video “{{title}}”?",
+        "cancelHint": "The video and its files are removed from this server. This cannot be undone.",
+        "confirmCancel": "Cancel publication",
+        "keep": "Keep",
+        "state": {
+          "scheduled": "Scheduled for {{date}}",
+          "released": "Published {{date}}",
+          "failed": "Not published"
+        }
+      }
     },
     "instance": {
       "languageHint": "Applies only to Studio in this browser. The public site follows each visitor's browser language.",
@@ -258,7 +272,13 @@
       "uploading": "Uploading…",
       "retry": "Try again",
       "start": "Upload and publish",
-      "approveHint": "Your signer asks you to approve the upload and the publication."
+      "approveHint": "Your signer asks you to approve the upload and the publication.",
+      "publishAt": "Publish on",
+      "publishAtHint": "Optional. Leave empty to publish now. Until then only this server holds the video.",
+      "publishAtPast": "Choose a date and time in the future.",
+      "schedule": "Upload and schedule",
+      "scheduledTitle": "Scheduled",
+      "scheduledDescription": "The video is stored on this instance and goes public on {{date}}. Until then it is on no relay and not on the site."
     },
     "moderation": {
       "title": "Moderation",

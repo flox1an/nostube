@@ -273,32 +273,29 @@ export async function restoreAccount(
       }
 
       case 'bunker': {
-        if (!accountData.data) {
-          console.warn('Bunker URI missing for account')
+        if (!accountData.data || !accountData.clientKey) {
+          console.warn('Bunker URI or client key missing for account')
           return null
         }
-        try {
-          const options: { signer?: PrivateKeySigner } = {}
-          if (accountData.clientKey) {
-            options.signer = PrivateKeySigner.fromKey(accountData.clientKey)
-          }
+        const { remote, relays } = NostrConnectSigner.parseBunkerURI(accountData.data)
 
-          // Restored bunker sessions use the relays stored in the URI; they must pass the
-          // instance relay allowlist or the signer would be cut off after a reload.
-          allowSignerRelays(NostrConnectSigner.parseBunkerURI(accountData.data).relays)
+        // Restored bunker sessions use the relays stored in the URI; they must pass the
+        // instance relay allowlist or the signer would be cut off after a reload.
+        allowSignerRelays(relays)
 
-          const signer = await NostrConnectSigner.fromBunkerURI(accountData.data, options)
-          const pubkey = await signer.getPublicKey()
-          // Verify pubkey matches stored pubkey
-          if (pubkey !== accountData.pubkey) {
-            console.warn('Bunker pubkey does not match stored pubkey')
-            return null
-          }
-          return new NostrConnectAccount(pubkey, signer)
-        } catch (error) {
-          console.error('Failed to restore bunker account:', error)
-          return null
-        }
+        // Resume the session the remote signer already authorized for this client key instead of
+        // repeating the `connect` handshake: the bunker secret is single-use (QR logins never had
+        // one) and the remote signer may be offline at boot, so a fresh handshake would reject or
+        // hang and the account would be lost on reload. Requests go straight to the remote signer.
+        const signer = new NostrConnectSigner({
+          relays,
+          remote,
+          pubkey: accountData.pubkey,
+          signer: PrivateKeySigner.fromKey(accountData.clientKey),
+        })
+        signer.isConnected = true
+        await signer.open()
+        return new NostrConnectAccount(accountData.pubkey, signer)
       }
 
       default:

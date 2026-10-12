@@ -32,22 +32,25 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
-// jsdom lacks these browser APIs; the player and Radix components use them.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
+// jsdom lacks these browser APIs; the player and Radix components use them. Node-environment
+// tests (real nostr crypto, which jsdom's foreign Uint8Array realm breaks) have no window.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
 
-Object.defineProperty(window, 'scrollTo', { writable: true, value: vi.fn() })
+  Object.defineProperty(window, 'scrollTo', { writable: true, value: vi.fn() })
+}
 
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),

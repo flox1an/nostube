@@ -68,7 +68,7 @@ The one-time secret, issued while the instance has no admin, that lets its holde
 _Avoid_: setup link, invite, setup password
 
 **Managed key**:
-The creator key the instance generates, keeps encrypted and signs with for the studio (ADR 0007). Only the admin session can have it sign; it is a creator and allowed writer only through the config, like any other key, and gives no admin rights.
+The creator key the instance generates, keeps encrypted and signs with for the studio (ADR 0007). Only the admin session can have it sign; it is a creator and allowed writer only through the config, like any other key, and gives no admin rights. Its profile (kind 0) is derived by the server from the site title, tagline, logo and banner and republished only when that content changes; with the owner's own key the server never signs a profile.
 _Avoid_: server key, instance key, admin key
 
 **Public config**:

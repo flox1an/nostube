@@ -8,6 +8,7 @@ mod config;
 mod data_lock;
 mod login_guard;
 mod outbox;
+mod profile;
 mod relay;
 mod schedule;
 mod seo;
@@ -334,7 +335,12 @@ async fn run(cli: Cli) -> Result<(), BoxError> {
     // Without the admin area there is no managed key: blob jobs fail with that reason.
     let signer = admin.as_ref().map(admin::AdminState::signer).unwrap_or_default();
     let admin = admin.map(admin::router);
-    let worker = outbox::spawn(outbox.clone(), signer);
+    let worker = outbox::spawn(outbox.clone(), signer.clone());
+    // Restarts (and the first start with a managed key) publish a profile the settings changed.
+    {
+        let (relay, branding) = (relay.clone(), branding.clone());
+        tokio::spawn(async move { profile::sync(&relay, &branding, &signer).await });
+    }
     // The first scan releases anything that became due while the server was down.
     let releaser = schedule::spawn(outbox.clone(), relay.clone());
 

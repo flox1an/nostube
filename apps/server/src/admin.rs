@@ -173,6 +173,11 @@ impl AdminState {
         self.managed.clone()
     }
 
+    /// Rebuilds the channel profile from the site settings (#129); does nothing in own identity.
+    async fn sync_profile(&self) {
+        crate::profile::sync(&self.stores.relay, &self.stores.branding, &self.managed).await;
+    }
+
     /// `nostube-server admin reset`: forget password and bound key, issue a new
     /// setup token and print it (ADR 0002).
     pub fn reset(data: &Path) -> Result<(), BoxError> {
@@ -791,6 +796,10 @@ async fn config_put(State(state): State<Arc<AdminState>>, headers: HeaderMap, bo
         Ok(restart) => restart,
         Err(e) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, &e),
     };
+    // A restart syncs at startup.
+    if !restart {
+        state.sync_profile().await;
+    }
     Json(serde_json::json!({ "ok": true, "revision": next.revision, "restart": restart })).into_response()
 }
 
@@ -828,6 +837,7 @@ async fn branding_put(
     match state.stores.branding.store(slot, kind, bytes) {
         Ok(url) => {
             tracing::info!("branding: {} replaced", slot.name());
+            state.sync_profile().await;
             Json(serde_json::json!({ "url": url })).into_response()
         }
         Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot store the {}: {e}", slot.name())),
@@ -849,6 +859,7 @@ async fn branding_delete(
     match state.stores.branding.remove(slot) {
         Ok(()) => {
             tracing::info!("branding: {} removed", slot.name());
+            state.sync_profile().await;
             Json(serde_json::json!({ "ok": true })).into_response()
         }
         Err(e) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &format!("cannot remove the {}: {e}", slot.name())),

@@ -21,9 +21,8 @@ export const newIdentifier = (title: string) =>
   `${slug(title) || 'video'}-${crypto.randomUUID().slice(0, 8)}`
 
 /**
- * What the upload pipeline needs from the browser and the network, bound to the signer and the key
- * that was just connected. Built per upload from the key `connect()` returned: the page's state
- * may not have caught up with it yet.
+ * What the upload pipeline needs from the browser and the network, bound to the signer and the
+ * expected creator key: every signature is checked against that key.
  */
 export function makeUploadDeps({
   signer,

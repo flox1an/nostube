@@ -17,14 +17,18 @@ interface Found {
   /** Where the key lives, as the server reports it; `null` while loading or when that failed. */
   mode: SignerInfo['mode'] | null
   signer: Signer | null
-  /** The key of the signer: the managed key at once, an extension's once the owner connected it. */
+  /**
+   * The key everything is signed with, known without asking the extension: the managed key, the
+   * key the owner connected during onboarding, else the creator key from the config (own
+   * identity). Signing checks that the signer really uses it.
+   */
   pubkey: string | null
   /** Why the server's signer state could not be read. */
   error: string | null
 }
 
 export interface SignerState extends Found {
-  /** Asks the signer for its key (an extension shows its permission prompt). */
+  /** Onboarding only: asks the signer for its key (an extension shows its permission prompt). */
   connect: () => Promise<string>
   /** Onboarding: has the server create the managed key and signs with it from now on. */
   createManaged: () => Promise<string>
@@ -44,7 +48,14 @@ const managed = (pubkey: string): Found => ({
  * The signer for everything in the studio that has to be signed: the server's managed key when
  * the server holds one, else the browser's NIP-07 extension.
  */
-export function SignerProvider({ children }: { children: ReactNode }) {
+export function SignerProvider({
+  creatorKey,
+  children,
+}: {
+  /** The creator key of own identity (from the config), `null` before onboarding. */
+  creatorKey: string | null
+  children: ReactNode
+}) {
   const [found, setFound] = useState<Found>({
     status: 'loading',
     mode: null,
@@ -100,8 +111,8 @@ export function SignerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ ...found, connect, createManaged }),
-    [found, connect, createManaged]
+    () => ({ ...found, pubkey: found.pubkey ?? creatorKey, connect, createManaged }),
+    [found, creatorKey, connect, createManaged]
   )
   return <SignerContext.Provider value={value}>{children}</SignerContext.Provider>
 }

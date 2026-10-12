@@ -53,7 +53,7 @@ afterEach(() => {
 
 const renderList = () =>
   render(
-    <SignerProvider>
+    <SignerProvider creatorKey={null}>
       <ScheduledVideos />
     </SignerProvider>
   )

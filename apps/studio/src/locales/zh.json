@@ -49,10 +49,10 @@
       "deviceTitle": "此设备",
       "deviceDescription": "打开此实例的设备需要信任其证书颁发机构一次。",
       "downloadCa": "下载实例证书颁发机构",
-      "signerTitle": "签名密钥",
+      "identityTitle": "身份",
       "signerModes": {
-        "managed": "托管密钥：此服务器加密保存你的密钥并替你签名。控制了服务器的人也会得到这个密钥。",
-        "own": "自己的密钥：由浏览器的签名扩展（NIP-07）签名。服务器永远看不到密钥。",
+        "managed": "频道身份（托管密钥）：此服务器加密保存你的密钥并替你签名。控制了服务器的人也会得到这个密钥。",
+        "own": "自己的身份：由浏览器的签名扩展（NIP-07）签名。服务器永远看不到密钥。",
         "none": "尚未设置签名密钥。“视频”和“上传”页面提供选择。"
       },
       "signerKey": "公钥：",
@@ -147,9 +147,7 @@
     },
     "connect": {
       "neededTitle": "连接你的 Nostr 密钥以发布",
-      "notCreatorTitle": "此密钥不是该实例的创作者",
       "neededBody": "该实例还没有创作者，也没有人被允许上传。连接你的 Nostr 签名器密钥，即可同时成为两者。",
-      "notCreatorBody": "你的签名器密钥在这里还不是创作者和上传者。添加它以便用它发布。",
       "noSigner": "此浏览器中未找到 Nostr 签名器。请安装 NIP-07 扩展（nos2x、Alby 等）并重新加载此页面。",
       "connect": "连接我的密钥",
       "chooseTitle": "选择视频的签名方式",
@@ -171,7 +169,6 @@
       "contentWarning": "内容警告",
       "hidden": "已隐藏",
       "hide": "隐藏「{{title}}」",
-      "connect": "连接签名密钥以编辑自己的视频",
       "edit": "编辑元数据",
       "replace": "替换视频文件",
       "replaceHint": "即使方向改变，视频地址和原始发布日期也保持不变。未更改的缩略图和字幕将保留。",
@@ -283,7 +280,6 @@
     "moderation": {
       "title": "审核",
       "description": "你的视频下的评论。你静音的内容只会在本站隐藏：静音不会删除任何内容，评论仍保留在中继上，其他 Nostr 应用可能仍会显示它们。",
-      "connectFirst": "连接你的 Nostr 密钥，即可查看你视频下的评论并编辑静音列表。",
       "loadFailed": "无法加载评论和静音列表（{{message}}）。",
       "listOf": "{{npub}} 的静音列表",
       "listNote": "你的公开 Nostr 静音列表（NIP-51），保存在本实例的互动中继上。任何人都可以读取，其他 Nostr 应用也可能会应用它。",
@@ -369,7 +365,7 @@
       "noNip07": "此浏览器中未找到 NIP-07 签名器。",
       "noSigner": "此浏览器中未找到 Nostr 签名器。",
       "notPubkey": "签名器返回的不是公钥。",
-      "differentKey": "签名器使用的密钥与此处连接的密钥不同。",
+      "differentKey": "你的签名器使用的密钥与此实例的创作者密钥不同。请在签名器中切换到该密钥后重试。未发布任何内容。",
       "invalidSignature": "签名器返回了无效的签名。",
       "unsupportedType": "目前只能发布 MP4 和 WebM 文件（此文件为 {{type}}）。其他格式的转换正在计划中。",
       "unknownType": "目前只能发布 MP4 和 WebM 文件（此文件类型未知）。其他格式的转换正在计划中。",

@@ -12,7 +12,6 @@ import { InstanceProviders } from '@nostube/widgets/instance-providers'
 import { isRefHidden, setRefHidden } from './draft'
 import { bootInstanceClient, type InstanceClient } from './instance-client'
 import { VideoActions } from './VideoActions'
-import { useSigner } from './signer-context'
 
 interface PickerProps {
   hiddenText: string
@@ -52,8 +51,6 @@ function VideoList({
 }: PickerProps & { config: InstanceClient['config']; instance: InstanceClient }) {
   const { t } = useTranslation()
   const { videos, loading, error, hasMore, loadMore } = useCreatorVideos(config)
-  const { signer, pubkey, connect } = useSigner()
-  const [connectError, setConnectError] = useState<string | null>(null)
 
   if (!config.startPage) {
     return <p className="text-sm text-muted-foreground">{t('studio.videos.addCreator')}</p>
@@ -66,23 +63,6 @@ function VideoList({
 
   return (
     <div className="space-y-3">
-      {signer && !pubkey && (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setConnectError(null)
-            void connect().catch(e => setConnectError(e instanceof Error ? e.message : String(e)))
-          }}
-        >
-          {t('studio.videos.connect')}
-        </Button>
-      )}
-      {connectError && (
-        <p role="alert" className="text-sm text-destructive">
-          {connectError}
-        </p>
-      )}
       <ul className="divide-y divide-border rounded-md border border-border">
         {videos.map(video => (
           <Row

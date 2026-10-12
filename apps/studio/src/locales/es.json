@@ -49,10 +49,10 @@
       "deviceTitle": "Este dispositivo",
       "deviceDescription": "Los dispositivos que abren esta instancia deben confiar una vez en su autoridad de certificación.",
       "downloadCa": "Descargar la autoridad de certificación de la instancia",
-      "signerTitle": "Clave de firma",
+      "identityTitle": "Identidad",
       "signerModes": {
-        "managed": "Clave gestionada: este servidor guarda tu clave cifrada y firma por ti. Quien se apodere del servidor también obtiene la clave.",
-        "own": "Clave propia: firma la extensión de firma de tu navegador (NIP-07). El servidor nunca ve la clave.",
+        "managed": "Identidad de canal (clave gestionada): este servidor guarda tu clave cifrada y firma por ti. Quien se apodere del servidor también obtiene la clave.",
+        "own": "Identidad propia: firma la extensión de firma de tu navegador (NIP-07). El servidor nunca ve la clave.",
         "none": "Todavía no hay ninguna clave de firma. Las páginas Videos y Subir ofrecen la elección."
       },
       "signerKey": "Clave pública:",
@@ -147,9 +147,7 @@
     },
     "connect": {
       "neededTitle": "Conecta tu clave Nostr para publicar",
-      "notCreatorTitle": "Esta clave no es creadora de la instancia",
       "neededBody": "La instancia aún no tiene creador ni nadie con permiso para subir. Conecta la clave de tu firmante Nostr para ser ambas cosas.",
-      "notCreatorBody": "La clave de tu firmante aún no es creadora ni puede subir aquí. Añádela para publicar con ella.",
       "noSigner": "No se encontró ningún firmante Nostr en este navegador. Instala una extensión NIP-07 (nos2x, Alby, …) y recarga esta página.",
       "connect": "Conectar mi clave",
       "chooseTitle": "Elige cómo se firman tus videos",
@@ -171,7 +169,6 @@
       "contentWarning": "advertencia de contenido",
       "hidden": "Oculto",
       "hide": "Ocultar {{title}}",
-      "connect": "Conectar la clave de firma para editar tus videos",
       "edit": "Editar metadatos",
       "replace": "Reemplazar archivo de video",
       "replaceHint": "La dirección y la fecha original de publicación se conservan aunque cambie la orientación. Se mantienen las miniaturas y los subtítulos sin cambios.",
@@ -283,7 +280,6 @@
     "moderation": {
       "title": "Moderación",
       "description": "Comentarios en tus vídeos. Lo que silencias solo se oculta en este sitio: silenciar no borra nada, los comentarios siguen en los relays y otras apps de Nostr pueden seguir mostrándolos.",
-      "connectFirst": "Conecta tu clave de Nostr para ver los comentarios en tus vídeos y editar tu lista de silenciados.",
       "loadFailed": "No se pudieron cargar los comentarios ni la lista de silenciados ({{message}}).",
       "listOf": "Lista de silenciados de {{npub}}",
       "listNote": "Tu lista pública de silenciados de Nostr (NIP-51), guardada en los relays de interacción de esta instancia. Cualquiera puede leerla y otras apps de Nostr también pueden aplicarla.",
@@ -371,7 +367,7 @@
       "noNip07": "No se encontró ningún firmante NIP-07 en este navegador.",
       "noSigner": "No se encontró ningún firmante Nostr en este navegador.",
       "notPubkey": "El firmante devolvió algo que no es una clave pública.",
-      "differentKey": "El firmante firmó con una clave distinta de la conectada aquí.",
+      "differentKey": "Tu firmante usa una clave distinta de la clave de creador de esta instancia. Cambia a esa clave en tu firmante e inténtalo de nuevo. No se publicó nada.",
       "invalidSignature": "El firmante devolvió una firma no válida.",
       "unsupportedType": "Por ahora solo se pueden publicar archivos MP4 y WebM (este es {{type}}). Está prevista la conversión de otros formatos.",
       "unknownType": "Por ahora solo se pueden publicar archivos MP4 y WebM (este es de un tipo desconocido). Está prevista la conversión de otros formatos.",

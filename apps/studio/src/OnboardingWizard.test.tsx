@@ -213,7 +213,7 @@ describe('onboarding config', () => {
 
 describe('Onboarding wizard', () => {
   it('offers own and channel identity with an extension and binds the extension key', async () => {
-    const { saved } = serve({ mode: 'none', pubkey: null })
+    const { saved, fetch } = serve({ mode: 'none', pubkey: null })
     const profile = pool(null)
     renderWizard(fresh(), profile)
     expect(await screen.findByText('Own identity')).toBeTruthy()
